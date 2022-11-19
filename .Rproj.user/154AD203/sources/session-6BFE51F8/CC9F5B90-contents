@@ -49,7 +49,7 @@ class fixest:
       beta_hat = self.XXinv @ (self.X.transpose() @ self.Y)
       self.beta_hat = beta_hat.flatten()
       Y_predict = self.X @ self.beta_hat
-      self.u_hat = self.Y - Y_predict      
+      self.u_hat = self.Y - Y_predict.reshape((self.N, 1))     
 
     def vcov(self, vcov):
       
