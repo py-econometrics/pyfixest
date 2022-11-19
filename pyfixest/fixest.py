@@ -17,7 +17,7 @@ class fixest:
         self.has_fixef = False
         self.fixef_vars = None
         Y, X = patsy.dmatrices(fml_no_fixef, data)
-
+        self.coefnames = X.design_info.column_names
       else : 
         
         self.has_fixef = True
@@ -25,6 +25,7 @@ class fixest:
         fe = data[self.fixef_vars]
         self.fe = np.array(fe).reshape([self.N, len(self.fixef_vars)])
         Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
+        self.coefnames = X.design_info.column_names
 
       self.Y = np.array(Y)
       self.X = np.array(X)
@@ -63,11 +64,11 @@ class fixest:
     def inference(self, dof = 'default'):
   
       if dof == 'default':
-        dof = self.N - self.k
+        self.dof = self.N - self.k
   
       self.se = np.sqrt(np.diagonal(self.vcov))
       self.tstat = self.beta_hat / self.se
-      self.pvalue = 2*(1-t.cdf(self.tstat, df = dof))
+      self.pvalue = 2*(1-t.cdf(self.tstat, df = self.dof))
 
 
     

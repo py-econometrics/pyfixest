@@ -10,7 +10,7 @@ G = 25
 X = np.random.normal(0, 1, N * k).reshape((N,k))
 X = pd.DataFrame(X)
 X[1] = np.random.choice(list(range(0, 50)), N, True)
-X[2] = np.random.choice(list(range(0, 50)), N, True)
+X[2] = np.random.choice(list(range(0, 1000)), N, True)
 X[3] = np.random.choice(list(range(0, 1000)), N, True)
 
 beta = np.random.normal(0,1,k)
@@ -31,4 +31,9 @@ data['X2'] = data['X2'].astype('category')
 
 
 feols('Y ~ X1 | X2 + X3 + X4', 'iid', data)
+#   colnames      coef        se    tstat    pvalue
+# 0       X1  0.001469  0.003159  0.46505  0.641897
 feols('Y ~ X1 + X2 + X3 + X4', 'iid', data)
+#   colnames      coef        se    tstat    pvalue
+# 2048  X1    0.001469  0.003159     0.465050  6.418970e-01
+

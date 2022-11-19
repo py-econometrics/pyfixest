@@ -1,4 +1,5 @@
 from pyfixest.fixest import fixest 
+import pandas as pd
 
 def feols(fml, vcov, data):
   
@@ -32,13 +33,16 @@ def feols(fml, vcov, data):
   fxst.inference()
   
   res = {
+    'colnames' : fxst.coefnames, 
     'coef' : fxst.beta_hat, 
     'se' : fxst.se, 
     'tstat' : fxst.tstat, 
     'pvalue' : fxst.pvalue, 
-    'vcov' : fxst.vcov, 
-    'fixef_vars' : fxst.fixef_vars
-    }
+    #'vcov' : fxst.vcov, 
+    #'fixef_vars' : fxst.fixef_vars
+  }
+  
+  summary = pd.DataFrame(res)  
     
-  return res
+  return summary
 
