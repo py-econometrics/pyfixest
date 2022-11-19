@@ -75,8 +75,9 @@ class fixest:
     
       else:
         
-        cluster = vcov
-        cluster_df = data[cluster]
+        self.clustervar = vcov
+        # if there are missings - delete them!
+        cluster_df = self.data[self.clustervar]
         
         clustid = np.unique(cluster_df)
         self.G = len(clustid)
@@ -85,13 +86,12 @@ class fixest:
         for igx, g, in enumerate(clustid):
           Xg = self.X[np.where(cluster_df == g)]
           ug = self.u_hat[np.where(cluster_df == g)]
-          score_g = (np.transpose(self.X) @ self.u_hat).reshape((self.k, 1))
+          score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
           meat += np.dot(score_g, score_g.transpose())
           
         self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k) 
         self.vcov = self.tXXinv @ meat @ self.tXXinv
-        
-        
+
     def inference(self):
   
       self.se = np.sqrt(np.diagonal(self.vcov))

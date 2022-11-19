@@ -8,7 +8,7 @@ Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmake
 import pandas as pd
 import numpy as np
 from pyfixest.api import feols
-import statsmodels.api as sm
+import statsmodels.formula.api as sm
 
 # create data
 np.random.seed(123)
@@ -36,14 +36,22 @@ data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4'}, inplace = True)
 data['X4'] = data['X4'].astype('category')
 data['X3'] = data['X3'].astype('category')
 data['X2'] = data['X2'].astype('category')
+data['group_id'] = cluster
 
 
-feols('Y ~ X1 | X2 ', 'iid', data)
+feols('Y ~ X1 | X2 + X3 + X4', 'iid', data)
 #   colnames      coef        se    tstat    pvalue
-# 0       X1  1.380586  0.915999  1.50719  0.131765
-feols('Y ~ X1 + X2 ', 'iid', data)
+# 0       X1  0.001469  0.003159  0.46505  0.641896
+feols('Y ~ X1 + X2 + X3 + X4', 'iid', data)
 #   colnames      coef        se    tstat    pvalue
-50         X1    1.380586  0.915999   1.507190  0.131765
-sm.ols('Y ~ X1 + X2 ', data).fit().summary()
+# 2048         X1    0.001469  0.003159     0.465050  6.418959e-01
+sm.ols('Y ~ X1 + X2 + X3 + X4', data).fit().summary()
 #   colnames      coef        se    tstat    pvalue
-# X1             1.3806      0.916      1.507      0.132```
+# X1            0.0015      0.003      0.460      0.645    
+
+# cluster robust inference: 
+feols(fml = 'Y ~ X1 | X2 + X3 + X4', vcov = 'group_id', data = data)
+#   colnames      coef       se     tstat    pvalue
+# 0       X1  0.001469  0.00361  0.406966  0.684033
+```
+
