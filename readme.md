@@ -8,6 +8,7 @@ Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmake
 import pandas as pd
 import numpy as np
 from pyfixest.api import feols
+import statsmodels.api as sm
 
 # create data
 np.random.seed(123)
@@ -37,9 +38,12 @@ data['X3'] = data['X3'].astype('category')
 data['X2'] = data['X2'].astype('category')
 
 
-feols('Y ~ X1 | X2 + X3 + X4', 'iid', data)
+feols('Y ~ X1 | X2 ', 'iid', data)
 #   colnames      coef        se    tstat    pvalue
-# 0       X1  0.001469  0.003159  0.46505  0.641897
-feols('Y ~ X1 + X2 + X3 + X4', 'iid', data)
+# 0       X1  1.380586  0.915999  1.50719  0.131765
+feols('Y ~ X1 + X2 ', 'iid', data)
 #   colnames      coef        se    tstat    pvalue
-# 2048  X1    0.001469  0.003159     0.465050  6.418970e-01```
+50         X1    1.380586  0.915999   1.507190  0.131765
+sm.ols('Y ~ X1 + X2 ', data).fit().summary()
+#   colnames      coef        se    tstat    pvalue
+# X1             1.3806      0.916      1.507      0.132```

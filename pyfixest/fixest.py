@@ -64,11 +64,11 @@ class fixest:
     def inference(self, dof = 'default'):
   
       if dof == 'default':
-        self.dof = self.N - self.k
+        self.dof = self.N - self.k - 1
   
       self.se = np.sqrt(np.diagonal(self.vcov))
       self.tstat = self.beta_hat / self.se
-      self.pvalue = 2*(1-t.cdf(self.tstat, df = self.dof))
+      self.pvalue = 2*(1-t.cdf(np.abs(self.tstat), df = self.dof))
 
 
     
