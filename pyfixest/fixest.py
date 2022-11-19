@@ -1,6 +1,6 @@
 import numpy as np
 import patsy
-from scipy.stats import t
+from scipy.stats import norm
 import pyhdfe
 
 class fixest:
@@ -27,7 +27,7 @@ class fixest:
         Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
         self.coefnames = X.design_info.column_names
 
-      self.Y = np.array(Y)
+      self.Y = np.array(Y).flatten()
       self.X = np.array(X)
       self.k = X.shape[1]
 
@@ -38,37 +38,64 @@ class fixest:
       algorithm = pyhdfe.create(ids = self.fe, residualize_method = 'map')
       YX = np.concatenate([self.Y,self.X], axis = 1)
       residualized = algorithm.residualize(YX)
-      self.Y = residualized[:, [0]]
+      self.Y = residualized[:, [0]].flatten()
       self.X = residualized[:, 1:]
+      self.k = self.X.shape[1]
 
     def fit(self):
       
       # k without fixed effects
       #N, k = X.shape
       
-      self.XXinv = np.linalg.inv(self.X.transpose() @ self.X)
-      beta_hat = self.XXinv @ (self.X.transpose() @ self.Y)
+      self.tXXinv = np.linalg.inv(self.X.transpose() @ self.X)
+      beta_hat = self.tXXinv @ (self.X.transpose() @ self.Y)
       self.beta_hat = beta_hat.flatten()
-      Y_predict = self.X @ self.beta_hat
-      self.u_hat = self.Y - Y_predict.reshape((self.N, 1))     
+      Y_predict = (self.X @ self.beta_hat).flatten()
+      self.u_hat = self.Y - Y_predict
 
     def vcov(self, vcov):
       
       # compute vcov
       if vcov == 'iid': 
-        self.vcov = self.XXinv * np.mean(self.u_hat ** 2) 
+        
+        self.vcov = self.tXXinv * np.mean(self.u_hat ** 2) 
+        
       elif vcov == 'hetero': 
-        score = self.X.transpose() @ self.u_hat
-        self.vcov = self.XXinv @ (score @ score.transpose()) @  self.XXinv.transpose()
+        
+        vcov_type = "HC1"
+        if vcov_type == "HC1":
+          self.ssc = self.N / (self.N  - self.k)
+        else: 
+          self.ssc = 1
+        
+        score = (self.X.transpose() @ self.u_hat)
+        meat = score @ score.transpose()
+        self.vcov = self.ssc * self.tXXinv * np.diag(meat) @  self.tXXinv
     
-    def inference(self, dof = 'default'):
-  
-      if dof == 'default':
-        self.dof = self.N - self.k - 1
+      else:
+        
+        cluster = vcov
+        cluster_df = data[cluster]
+        
+        clustid = np.unique(cluster_df)
+        self.G = len(clustid)
+        
+        meat = np.zeros((self.k, self.k))
+        for igx, g, in enumerate(clustid):
+          Xg = self.X[np.where(cluster_df == g)]
+          ug = self.u_hat[np.where(cluster_df == g)]
+          score_g = (self.X.transpose() @ self.u_hat).reshape((self.k, 1))
+          meat += np.dot(score_g, score_g.transpose())
+          
+        self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k) 
+        self.vcov = self.tXXinv @ meat @ self.tXXinv
+        
+        
+    def inference(self):
   
       self.se = np.sqrt(np.diagonal(self.vcov))
       self.tstat = self.beta_hat / self.se
-      self.pvalue = 2*(1-t.cdf(np.abs(self.tstat), df = self.dof))
+      self.pvalue = 2*(1-norm.cdf(np.abs(self.tstat)))
 
 
     
