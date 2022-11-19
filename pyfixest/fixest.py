@@ -27,7 +27,7 @@ class fixest:
         Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
         self.coefnames = X.design_info.column_names
 
-      self.Y = np.array(Y).flatten()
+      self.Y = np.array(Y)
       self.X = np.array(X)
       self.k = X.shape[1]
 
@@ -38,7 +38,7 @@ class fixest:
       algorithm = pyhdfe.create(ids = self.fe, residualize_method = 'map')
       YX = np.concatenate([self.Y,self.X], axis = 1)
       residualized = algorithm.residualize(YX)
-      self.Y = residualized[:, [0]].flatten()
+      self.Y = residualized[:, [0]]
       self.X = residualized[:, 1:]
       self.k = self.X.shape[1]
 
@@ -47,11 +47,11 @@ class fixest:
       # k without fixed effects
       #N, k = X.shape
       
-      self.tXXinv = np.linalg.inv(self.X.transpose() @ self.X)
-      beta_hat = self.tXXinv @ (self.X.transpose() @ self.Y)
+      self.tXXinv = np.linalg.inv(np.transpose(self.X) @ self.X)
+      beta_hat = self.tXXinv @ (np.transpose(self.X) @ self.Y)
       self.beta_hat = beta_hat.flatten()
-      Y_predict = (self.X @ self.beta_hat).flatten()
-      self.u_hat = self.Y - Y_predict
+      self.Y_hat = (self.X @ self.beta_hat).reshape((self.N, 1))
+      self.u_hat = self.Y - self.Y_hat
 
     def vcov(self, vcov):
       
@@ -68,9 +68,10 @@ class fixest:
         else: 
           self.ssc = 1
         
-        score = (self.X.transpose() @ self.u_hat)
-        meat = score @ score.transpose()
-        self.vcov = self.ssc * self.tXXinv * np.diag(meat) @  self.tXXinv
+        meat = np.transpose(self.X) * (self.u_hat.flatten() ** 2) @ self.X
+        #meat = np.eye(self.N) * (self.u_hat ** 2)
+        #meat = np.outer(score, score)
+        self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv
     
       else:
         
@@ -84,7 +85,7 @@ class fixest:
         for igx, g, in enumerate(clustid):
           Xg = self.X[np.where(cluster_df == g)]
           ug = self.u_hat[np.where(cluster_df == g)]
-          score_g = (self.X.transpose() @ self.u_hat).reshape((self.k, 1))
+          score_g = (np.transpose(self.X) @ self.u_hat).reshape((self.k, 1))
           meat += np.dot(score_g, score_g.transpose())
           
         self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k) 
@@ -96,7 +97,12 @@ class fixest:
       self.se = np.sqrt(np.diagonal(self.vcov))
       self.tstat = self.beta_hat / self.se
       self.pvalue = 2*(1-norm.cdf(np.abs(self.tstat)))
-
+      
+    def performance(self):
+      
+      self.r_squared = 1 - np.sum(self.u_hat ** 2) / np.sum((self.Y - np.mean(self.Y))**2)
+      self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+      
 
     
   
