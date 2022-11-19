@@ -1,0 +1,38 @@
+import pandas as pd
+import numpy as np
+from pyfixest.api import feols
+
+# create data
+np.random.seed(123)
+N = 10000
+k = 3
+G = 25
+X = np.random.normal(0, 1, N * k).reshape((N,k))
+X = pd.DataFrame(X)
+X[1] = np.random.choice(list(range(0, 50)), N, True)
+X[2] = np.random.choice(list(range(0, 50)), N, True)
+beta = np.random.normal(0,1,k)
+beta[0] = 0.005
+u = np.random.normal(0,1,N)
+Y = 1 + X @ beta + u
+cluster = np.random.choice(list(range(0,G)), N)
+
+Y = pd.DataFrame(Y)
+Y.rename(columns = {0:'Y'}, inplace = True)
+X = pd.DataFrame(X)
+
+data = pd.concat([Y, X], axis = 1)
+data.rename(columns = {0:'X1'}, inplace = True)
+data.rename(columns = {1:'X2'}, inplace = True)
+data.rename(columns = {2:'X3'}, inplace = True)
+data.rename(columns = {3:'X4'}, inplace = True)
+data.columns
+data['X3'] = data['X3'].astype('category')
+data['X2'] = data['X2'].astype('category')
+
+fml = 'Y ~ X1 | X2 + X3'
+vcov = "hetero"
+
+feols('Y ~ X1 | X2 + X3', 'iid', data)
+feols('Y ~ X1 + X2 + X3', 'iid', data)
+
