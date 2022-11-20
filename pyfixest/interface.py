@@ -9,7 +9,7 @@ def feols(fml, vcov, data):
   Args: 
     
     fml (string, patsy Compatible): of the form Y ~ X1 + X2 | fe1 + fe2
-    vcov (string): either 'iid' or 'hetero'. 
+    vcov (string or named dictionary): either 'iid' or 'hetero'. 
     data (pd.DataFrame): DataFrame containing the data. 
     
   Returns: 
