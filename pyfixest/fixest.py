@@ -58,7 +58,7 @@ class fixest:
       
       if isinstance(vcov, dict): 
         vcov_type_detail = list(vcov.keys())[0]
-        self.clustervar = list(vcov.values())
+        self.clustervar = list(vcov.values())[0]
       elif isinstance(vcov, list):
         vcov_type_detail = vcov
       elif isinstance(vcov, str):
@@ -99,10 +99,10 @@ class fixest:
         clustid = np.unique(cluster_df)
         self.G = len(clustid)
         
-        meat = np.zeros((self.k, self.k))
-        
         if vcov_type_detail == "CRV1":
           
+          meat = np.zeros((self.k, self.k))
+
           for igx, g, in enumerate(clustid):
           
             Xg = self.X[np.where(cluster_df == g)]
@@ -127,22 +127,22 @@ class fixest:
             
             Xg = self.X[np.where(cluster_df == g)]
             Yg = self.Y[np.where(cluster_df == g)]
-            tXgXg = np.outer(Xg,Xg)
-            ug = self.tXy - np.transpose(Xg) @ Yg
+            tXgXg = np.transpose(Xg) @ Xg
 
+            # jackknife regression coefficient
             beta_jack[ixg,:] = (
-              np.linalg.pinv((tXX - tXgXg) @ ug)
-            )
+              np.linalg.pinv(tXX - tXgXg) @ (self.tXy - np.transpose(Xg) @ Yg)
+            ).flatten()
             
           beta_center = self.beta_hat
           
-          self.vcov = np.zeros(self.k, self.k)
-          for ixg, g in enumerate(self.bootclustid):
+          vcov = np.zeros((self.k, self.k))
+          for ixg, g in enumerate(clustid):
             beta_centered = beta_jack[ixg,:] - beta_center
-            self.vcov += np.outer(beta_centered, beta_centered)
+            vcov += np.outer(beta_centered, beta_centered)
           
           self.ssc = self.G / (self.G - 1)
-          
+          self.vcov = self.ssc * vcov
 
     def inference(self):
   
