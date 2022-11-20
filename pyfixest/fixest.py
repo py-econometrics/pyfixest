@@ -48,22 +48,40 @@ class fixest:
       #N, k = X.shape
       
       self.tXXinv = np.linalg.inv(np.transpose(self.X) @ self.X)
-      beta_hat = self.tXXinv @ (np.transpose(self.X) @ self.Y)
+      self.tXy = (np.transpose(self.X) @ self.Y)
+      beta_hat = self.tXXinv @ self.tXy
       self.beta_hat = beta_hat.flatten()
       self.Y_hat = (self.X @ self.beta_hat).reshape((self.N, 1))
       self.u_hat = self.Y - self.Y_hat
 
     def vcov(self, vcov):
       
+      if isinstance(vcov, dict): 
+        vcov_type_detail = list(vcov.keys())[0]
+        self.clustervar = list(vcov.values())
+      elif isinstance(vcov, list):
+        vcov_type_detail = vcov
+      elif isinstance(vcov, str):
+        vcov_type_detail = vcov
+      else: 
+        assert False, "arg vcov needs to be a dict, string or list"
+        
+      
+      if vcov_type_detail == "iid": 
+        vcov_type = "iid"
+      elif vcov_type_detail in ["hetero", "HC1"]:
+        vcov_type = "hetero"
+      elif vcov_type_detail in ["CRV1", "CRV3"]:
+        vcov_type = "CRV"
+        
       # compute vcov
-      if vcov == 'iid': 
+      if vcov_type == 'iid': 
         
         self.vcov = self.tXXinv * np.mean(self.u_hat ** 2) 
         
-      elif vcov == 'hetero': 
+      elif vcov_type == 'hetero': 
         
-        vcov_type = "HC1"
-        if vcov_type == "HC1":
+        if vcov_type_detail == "HC1":
           self.ssc = self.N / (self.N  - self.k)
         else: 
           self.ssc = 1
@@ -73,9 +91,8 @@ class fixest:
         #meat = np.outer(score, score)
         self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv
     
-      else:
+      elif vcov_type == "CRV":
         
-        self.clustervar = vcov
         # if there are missings - delete them!
         cluster_df = self.data[self.clustervar]
         
@@ -83,14 +100,49 @@ class fixest:
         self.G = len(clustid)
         
         meat = np.zeros((self.k, self.k))
-        for igx, g, in enumerate(clustid):
-          Xg = self.X[np.where(cluster_df == g)]
-          ug = self.u_hat[np.where(cluster_df == g)]
-          score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
-          meat += np.dot(score_g, score_g.transpose())
+        
+        if vcov_type_detail == "CRV1":
           
-        self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k) 
-        self.vcov = self.tXXinv @ meat @ self.tXXinv
+          for igx, g, in enumerate(clustid):
+          
+            Xg = self.X[np.where(cluster_df == g)]
+            ug = self.u_hat[np.where(cluster_df == g)]
+            score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
+            meat += np.dot(score_g, score_g.transpose())
+            
+          self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k) 
+          self.vcov = self.tXXinv @ meat @ self.tXXinv
+
+        elif vcov_type_detail == "CRV3": 
+          
+          # check: is fixed effect cluster fixed effect? 
+          # if not, either error or turn fixefs into dummies
+          # for now: don't allow for use with fixed effects
+          assert self.has_fixef == False, "CRV3 currently not supported with arbitrary fixed effects"
+            
+          beta_jack = np.zeros((self.G, self.k))
+          tXX = np.transpose(self.X) @ self.X
+          
+          for ixg, g in enumerate(clustid):
+            
+            Xg = self.X[np.where(cluster_df == g)]
+            Yg = self.Y[np.where(cluster_df == g)]
+            tXgXg = np.outer(Xg,Xg)
+            ug = self.tXy - np.transpose(Xg) @ Yg
+
+            beta_jack[ixg,:] = (
+              np.linalg.pinv((tXX - tXgXg) @ ug)
+            )
+            
+          beta_center = self.beta_hat
+          
+          self.vcov = np.zeros(self.k, self.k)
+          for ixg, g in enumerate(self.bootclustid):
+            beta_centered = beta_jack[ixg,:] - beta_center
+            self.vcov += np.outer(beta_centered, beta_centered)
+          
+          self.ssc = self.G / (self.G - 1)
+          
 
     def inference(self):
   
