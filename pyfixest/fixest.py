@@ -1,7 +1,7 @@
 import numpy as np
-import patsy
 from scipy.stats import norm
 import pyhdfe
+from formulaic import model_matrix
 
 class fixest:
   
@@ -16,16 +16,16 @@ class fixest:
         # if length = 1, then no fixed effect
         self.has_fixef = False
         self.fixef_vars = None
-        Y, X = patsy.dmatrices(fml_no_fixef, data)
-        self.coefnames = X.design_info.column_names
+        Y, X = model_matrix(fml_no_fixef, data)
+        self.coefnames = X.columns
       else : 
         
         self.has_fixef = True
         self.fixef_vars = fml_split[1].replace(" ", "").split("+")
         fe = data[self.fixef_vars]
         self.fe = np.array(fe).reshape([self.N, len(self.fixef_vars)])
-        Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
-        self.coefnames = X.design_info.column_names
+        Y, X = model_matrix(fml_no_fixef + '- 1', data)
+        self.coefnames = X.columns
 
       self.Y = np.array(Y)
       self.X = np.array(X)
