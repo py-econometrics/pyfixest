@@ -39,7 +39,7 @@ data['X2'] = data['X2'].astype('category')
 data['group_id'] = cluster
 
 
-feols('Y ~ X1 | X2 + X3 + X4', 'iid', data)
+feols('Y ~ X1 | X2 + X3 + X4', 'hetero', data)
 #   colnames      coef        se    tstat    pvalue
 # 0       X1  0.001469  0.003159  0.46505  0.641896
 feols('Y ~ X1 + X2 + X3 + X4', 'iid', data)
@@ -50,8 +50,13 @@ sm.ols('Y ~ X1 + X2 + X3 + X4', data).fit().summary()
 # X1            0.0015      0.003      0.460      0.645    
 
 # cluster robust inference: 
-feols(fml = 'Y ~ X1 | X2 + X3 + X4', vcov = 'group_id', data = data)
-#   colnames      coef       se     tstat    pvalue
-# 0       X1  0.001469  0.00361  0.406966  0.684033
+feols(fml = 'Y ~ X1', vcov = {'CRV1':'group_id'}, data = data)
+#     colnames        coef        se       tstat    pvalue
+# 0  Intercept -577.090042  1.072007 -538.326702  0.000000
+# 1         X1    1.389563  1.002708    1.385810  0.165805
+feols(fml = 'Y ~ X1', vcov = {'CRV3':'group_id'}, data = data)
+#     colnames        coef        se       tstat    pvalue
+# 0  Intercept -577.090042  1.139483 -506.449086  0.000000
+# 1         X1    1.389563  1.066219    1.303261  0.192486
 ```
 
