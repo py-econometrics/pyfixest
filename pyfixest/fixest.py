@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import norm
 import pyhdfe
 from formulaic import model_matrix
+import patsy
 
 class fixest:
   
@@ -16,17 +17,22 @@ class fixest:
         # if length = 1, then no fixed effect
         self.has_fixef = False
         self.fixef_vars = None
-        Y, X = model_matrix(fml_no_fixef, data)
-        self.coefnames = X.columns
+        #Y, X = model_matrix(fml_no_fixef, data)
+        #self.coefnames = X.columns
+        Y, X = patsy.dmatrices(fml_no_fixef, data)
+        self.coefnames = X.design_info.column_names
+
       else : 
         
         self.has_fixef = True
         self.fixef_vars = fml_split[1].replace(" ", "").split("+")
         fe = data[self.fixef_vars]
         self.fe = np.array(fe).reshape([self.N, len(self.fixef_vars)])
-        Y, X = model_matrix(fml_no_fixef + '- 1', data)
-        self.coefnames = X.columns
-
+        #Y, X = model_matrix(fml_no_fixef + '- 1', data)
+        #self.coefnames = X.columns
+        Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
+        self.coefnames = X.design_info.column_names
+        
       self.Y = np.array(Y)
       self.X = np.array(X)
       self.k = X.shape[1]
@@ -69,7 +75,7 @@ class fixest:
       
       if vcov_type_detail == "iid": 
         vcov_type = "iid"
-      elif vcov_type_detail in ["hetero", "HC1"]:
+      elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
         vcov_type = "hetero"
       elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
@@ -83,10 +89,16 @@ class fixest:
         
         if vcov_type_detail == "HC1":
           self.ssc = self.N / (self.N  - self.k)
-        else: 
+          u = self.u_hat.flatten()
+        elif vcov_type_detail in ["HC2", "HC3"]:
           self.ssc = 1
-        
-        meat = np.transpose(self.X) * (self.u_hat.flatten() ** 2) @ self.X
+          leverage = np.mean(self.X * (self.X @ self.tXXinv), axis = 1)
+          if vcov_type_detail == "HC2":
+            u = (1 - leverage) * self.u_hat.flatten()
+          else:
+            u = np.sqrt(1 - leverage) * self.u_hat.flatten()
+
+        meat = np.transpose(self.X) * (u ** 2) @ self.X
         #meat = np.eye(self.N) * (self.u_hat ** 2)
         #meat = np.outer(score, score)
         self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv
