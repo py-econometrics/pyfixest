@@ -1,4 +1,5 @@
 import numpy as np
+from pandas import isnull
 from scipy.stats import norm
 import pyhdfe
 from formulaic import model_matrix
@@ -7,35 +8,12 @@ class fixest:
   
     def __init__(self, fml, data):
   
-      self.data = data
-      self.N = data.shape[0]
-      fml_split = fml.split("|")
-      fml_no_fixef = fml_split[0].strip()
-    
-      if len(fml_split) == 1: 
-        # if length = 1, then no fixed effect
-        self.has_fixef = False
-        self.fixef_vars = None
-        Y, X = model_matrix(fml_no_fixef, data, na_action = "raise")
-        self.coefnames = X.columns
-        #Y, X = patsy.dmatrices(fml_no_fixef, data)
-        #self.coefnames = X.design_info.column_names
 
-      else : 
-        
-        self.has_fixef = True
-        self.fixef_vars = fml_split[1].replace(" ", "").split("+")
-        fe = data[self.fixef_vars]
-        self.fe = np.array(fe).reshape([self.N, len(self.fixef_vars)])
-        Y, X = model_matrix(fml_no_fixef + '- 1', data, na_action = "raise")
-        self.coefnames = X.columns
-        #Y, X = patsy.dmatrices(fml_no_fixef + '- 1', data)
-        #self.coefnames = X.design_info.column_names
-      
-      self.depvars = Y.columns  
-      self.Y = np.array(Y)
-      self.X = np.array(X)
-      self.k = X.shape[1]
+      self.Y, self.X, self.fe, self.depvars, self.coefnames, self.na_index, self.has_fixef, self.fixef_vars = model_matrix2(fml, data)
+
+      self.data = data
+      self.N = self.X.shape[0]
+      self.k = self.X.shape[1]
       self.n_regs = self.Y.shape[1]
 
   
@@ -116,7 +94,9 @@ class fixest:
         elif vcov_type == "CRV":
           
           # if there are missings - delete them!
-          cluster_df = self.data[self.clustervar]
+          cluster_df = np.array(self.data[self.clustervar])
+          # drop NAs
+          cluster_df = np.delete(cluster_df, 0, self.na_index)
           
           clustid = np.unique(cluster_df)
           self.G = len(clustid)
@@ -197,6 +177,53 @@ class fixest:
       
 
     
+ 
+
+def model_matrix2(fml, data):
   
+    fml_split = fml.split("|")
+    fml_no_fixef = fml_split[0].strip()
+
+    if len(fml_split) == 1: 
+      # if length = 1, then no fixed effect
+      has_fixef = False
+      fixef_vars = None
+      Y, X = model_matrix(fml_no_fixef, data, na_action = "ignore")
+    else: 
+      has_fixef = True
+      fixef_vars = fml_split[1].replace(" ", "").split("+")
+      fe = data[fixef_vars]
+      fe = np.array(fe)
+      fe_na = np.where(np.sum(isnull(fe), axis = 1) > 0)
+      Y, X = model_matrix(fml_no_fixef + " - 1", data, na_action = "ignore")
+
+    depvars = Y.columns  
+    coefnames = X.columns 
+
+    Y = np.array(Y)
+    X = np.array(X)
     
+    y_na = np.where(np.sum(np.isnan(Y), axis = 1) > 0)
+    x_na = np.where(np.sum(np.isnan(X), axis = 1) > 0)
   
+    na_index = np.array([])
+    if np.size(x_na) > 0:
+        na_index = np.union1d(na_index, x_na)
+    if np.size(y_na) > 0: 
+        na_index = np.union1d(na_index, y_na)
+    if has_fixef == True: 
+      if np.size(fe_na) > 0: 
+          na_index = np.union1d(na_index, fe_na)
+
+    na_index = na_index.astype('int')
+    
+    Y = np.delete(Y, 0, na_index)
+    X = np.delete(X, 0, na_index)
+    if has_fixef == True:
+      fe = np.delete(fe, 0, na_index)
+    else: 
+      fe = None
+    
+    return Y, X, fe, depvars, coefnames, na_index, has_fixef, fixef_vars
+
+    
