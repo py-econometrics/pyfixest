@@ -66,12 +66,13 @@ feols(fml = 'Y ~ X1', vcov = {'CRV3':'group_id'}, data = data)
 Currently supported: multiple dependent variables: 
 
 ```python
-feols(fml = 'Y + Y2 ~ X1', vcov = {'CRV3':'group_id'}, data = data)
-# [  depvar   colnames        coef        se       tstat    pvalue
-# 0      Y  Intercept -577.090042  1.139483 -506.449086  0.000000
-# 1      Y         X1    1.389563  1.066219    1.303261  0.192486,   depvar   colnames        coef        se       tstat    pvalue
-# 0     Y2  Intercept -577.092077  1.139712 -506.348923  0.000000
-# 1     Y2         X1    1.386202  1.066095    1.300261  0.193511]
+fit = feols(fml = 'Y + Y2 ~ X1 | X3 + X4 ', vcov = 'hetero', data = data)
+fit[0]
+#   depvar colnames      coef       se     tstat    pvalue
+# 0      Y       X1  0.018823  0.01947  0.966804  0.333642
+fit[1]
+#   depvar colnames      coef        se     tstat    pvalue
+# 0     Y2       X1  0.015098  0.019733  0.765114  0.444204
 ```
 
 Support for more [fixest formula-sugar](https://cran.r-project.org/web/packages/fixest/vignettes/multiple_estimations.html) is work in progress.
