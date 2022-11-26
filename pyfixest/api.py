@@ -32,17 +32,22 @@ def feols(fml, vcov, data):
   fxst.vcov(vcov = vcov)
   fxst.inference()
   
-  res = {
-    'colnames' : fxst.coefnames, 
-    'coef' : fxst.beta_hat, 
-    'se' : fxst.se, 
-    'tstat' : fxst.tstat, 
-    'pvalue' : fxst.pvalue, 
-    #'vcov' : fxst.vcov, 
-    #'fixef_vars' : fxst.fixef_vars
-  }
+  res = []
+  for x in range(0, fxst.n_regs):
+    res.append(
+      pd.DataFrame(
+        {
+        'depvar': fxst.depvars[x],
+        'colnames' : fxst.coefnames, 
+        'coef' : fxst.beta_hat[x], 
+        'se' : fxst.se[x], 
+        'tstat' : fxst.tstat[x], 
+        'pvalue' : fxst.pvalue[x], 
+        #'vcov' : fxst.vcov, 
+        #'fixef_vars' : fxst.fixef_vars
+        }
+      )
+    ) 
   
-  summary = pd.DataFrame(res)  
-    
-  return summary
+  return res
 
