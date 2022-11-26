@@ -10,7 +10,10 @@ def feols(fml, vcov, data):
   Args: 
     
     fml (string, patsy Compatible): of the form Y ~ X1 + X2 | fe1 + fe2
-    vcov (string): either 'iid' or 'hetero'. 
+    vcov (string or dict): either 'iid', 'hetero', 'HC1', 'HC2', 'HC3'. For 
+                           cluster robust inference, a dict {'CRV1':'clustervar'} 
+                           for CRV1 inference or {'CRV3':'clustervar'} for CRV3
+                           inference. 
     data (pd.DataFrame): DataFrame containing the data. 
     
   Returns: 
@@ -23,6 +26,8 @@ def feols(fml, vcov, data):
       - p-values
   '''
 
+  
+  
   fxst = fixest(fml, data)
   
   if fxst.has_fixef == True:
