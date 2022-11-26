@@ -44,8 +44,8 @@ class fixest:
       algorithm = pyhdfe.create(ids = self.fe, residualize_method = 'map')
       YX = np.concatenate([self.Y,self.X], axis = 1)
       residualized = algorithm.residualize(YX)
-      self.Y = residualized[:, [0]]
-      self.X = residualized[:, 1:]
+      self.Y = residualized[:, :self.n_regs]
+      self.X = residualized[:, self.n_regs:]
       self.k = self.X.shape[1]
 
     def fit(self):

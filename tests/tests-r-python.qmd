@@ -89,7 +89,7 @@ summary(res_multi)
 
 
 ```{python}
-fit2 = feols('y1 + y2 ~ x1 | species ', data = base, vcov = "hetero")
+fit = feols('y1 + y2 ~ x1 | species ', data = base, vcov = "hetero")
 fit[0]
 fit[1]
 
