@@ -136,7 +136,7 @@ class fixest:
               self.G / (self.G - 1) * (self.N-1) / (self.N-self.k)
             )
             self.vcov.append(
-              self.tXXinv @ meat @ self.tXXinv
+              self.ssc * self.tXXinv @ meat @ self.tXXinv
             )
   
           elif vcov_type_detail == "CRV3": 
