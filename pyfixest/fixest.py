@@ -2,7 +2,6 @@ import numpy as np
 from scipy.stats import norm
 import pyhdfe
 from formulaic import model_matrix
-import patsy
 
 class fixest:
   
