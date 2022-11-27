@@ -17,7 +17,7 @@ class fixest:
       self.n_regs = self.Y.shape[1]
 
   
-    def demean(self): 
+    def do_demean(self): 
       
       algorithm = pyhdfe.create(ids = self.fe, residualize_method = 'map')
       YX = np.concatenate([self.Y,self.X], axis = 1)
@@ -26,7 +26,7 @@ class fixest:
       self.X = residualized[:, self.n_regs:]
       self.k = self.X.shape[1]
 
-    def fit(self):
+    def do_fit(self):
       
       # k without fixed effects
       #N, k = X.shape
@@ -45,7 +45,7 @@ class fixest:
         self.Y_hat.append((self.X @ self.beta_hat[regs]).reshape((self.N, 1)))
         self.u_hat.append(self.Y[:,regs] - self.Y_hat[regs].flatten())
 
-    def vcov(self, vcov):
+    def do_vcov(self, vcov):
       
       if isinstance(vcov, dict): 
         vcov_type_detail = list(vcov.keys())[0]
@@ -67,7 +67,9 @@ class fixest:
        
       self.vcov = []
       self.ssc = []
+      
       for x in range(0,self.n_regs) :   
+        
         # compute vcov
         if vcov_type == 'iid': 
           
@@ -154,7 +156,7 @@ class fixest:
               self.ssc * vcov
               )
 
-    def inference(self):
+    def do_inference(self):
   
       self.se = []
       self.tstat = []

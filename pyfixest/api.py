@@ -31,11 +31,11 @@ def feols(fml, vcov, data):
   fxst = fixest(fml, data)
   
   if fxst.has_fixef == True:
-    fxst.demean() 
+    fxst.do_demean() 
  
-  fxst.fit()
-  fxst.vcov(vcov = vcov)
-  fxst.inference()
+  fxst.do_fit()
+  fxst.do_vcov(vcov = vcov)
+  fxst.do_inference()
   
   res = []
   for x in range(0, fxst.n_regs):
