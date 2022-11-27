@@ -191,19 +191,32 @@ def model_matrix2(fml, data):
       has_fixef = False
       fixef_vars = None
       Y, X = model_matrix(fml_no_fixef, data, na_action = "ignore")
+      depvars = Y.columns  
+      coefnames = X.columns 
+      X = np.array(X)
+      Y = np.array(Y)
     else: 
       has_fixef = True
       fixef_vars = fml_split[1].replace(" ", "").split("+")
       fe = data[fixef_vars]
       fe = np.array(fe)
       fe_na = np.where(np.sum(isnull(fe), axis = 1) > 0)
-      Y, X = model_matrix(fml_no_fixef + " - 1", data, na_action = "ignore")
-
-    depvars = Y.columns  
-    coefnames = X.columns 
-
-    Y = np.array(Y)
-    X = np.array(X)
+      coefvars = fml_no_fixef.replace(" ","").split("~")[1].split("+")
+      if any(data[coefvars].dtypes == 'category'):
+        Y, X = model_matrix(fml_no_fixef, data, na_action = "ignore")
+        depvars = Y.columns  
+        coefnames = X.columns 
+        X = np.array(X)
+        Y = np.array(Y)
+        # drop intercept
+        X = X[:,coefnames != 'Intercept']
+        coefnames = coefnames[np.where(coefnames != 'Intercept')]
+      else:
+        Y, X = model_matrix(fml_no_fixef + "- 1", data, na_action = "ignore")
+        depvars = Y.columns  
+        coefnames = X.columns 
+        X = np.array(X)
+        Y = np.array(Y)
     
     y_na = np.where(np.sum(np.isnan(Y), axis = 1) > 0)
     x_na = np.where(np.sum(np.isnan(X), axis = 1) > 0)
