@@ -134,8 +134,9 @@ class fixest:
 
                     for ixg, g in enumerate(clustid):
 
-                        Xg = self.X[np.where(cluster_df == g)]
-                        Yg = self.Y[:, x][np.where(cluster_df == g)]
+
+                        Xg = self.X[np.equal(ixg, cluster_df)]
+                        Yg = self.Y[np.equal(ixg, cluster_df)]
                         tXgXg = np.transpose(Xg) @ Xg
 
                         # jackknife regression coefficient
