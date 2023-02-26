@@ -20,10 +20,10 @@ base = r.base
 base.head()
 ```
 
-## HC1 errors 
+## HC1 errors
 
 ```{r}
-res_multi = feols(c(y1, y2) ~ x1 , base, vcov = "hetero")
+res_multi = fixest::feols(c(y1, y2) ~ x1 , base, vcov = "hetero")
 summary(res_multi)
 ```
 
@@ -35,41 +35,41 @@ fit[0]
 fit[1]
 ```
 
-## One-way CRV1 errors 
+## One-way CRV1 errors
 
 ```{r}
-res_multi = feols(c(y1, y2) ~ x1 , base, vcov = ~species)
+res_multi = fixest::feols(c(y1, y2) ~ x1 , base, vcov = ~species)
 summary(res_multi)
 ```
 
 in python
 
 ```{python}
-fit = feols('y1 + y2 ~ x1 ', data = base, vcov = {'CRV1':'species'})
+fit = feols(fml = 'y1 + y2 ~ x1 ', data = base, vcov = {'CRV1':'species'})
 fit[0]
 fit[1]
 ```
 
-## With fixed effecs 
+## With fixed effecs
 
-Minor deviations in interest in how the small sample adjustments are treated with fixed effects. 
+Minor deviations in interest in how the small sample adjustments are treated with fixed effects.
 
-HC1: 
+HC1:
 
 ```{r}
-res_multi = feols(y1 ~ x1 | species , base, vcov = "hetero")
+res_multi = fixest::feols(y1 ~ x1 | species , base, vcov = "hetero")
 summary(res_multi)
 ```
 
 ```{python}
-fit = feols('y1 ~ x1| species ', data = base, vcov = "hetero")
-fit[0]
+fit2 = feols('y1 ~ x1| species', data = base, vcov = "hetero")
+fit2[0]
 ```
 
-CRV1: 
+CRV1:
 
 ```{r}
-res_multi = feols(y1 ~ x1 | species , base, vcov = ~species)
+res_multi = fixest::feols(y1 ~ x1 | species , base, vcov = ~species)
 summary(res_multi)
 ```
 
@@ -80,13 +80,11 @@ fit[0]
 
 ## Multiple Estimations and Fixed effects
 
-
 ```{r}
-res_multi = feols(c(y1,y2) ~ x1 | species , base, vcov = "hetero")
+res_multi = fixest::feols(c(y1,y2) ~ x1 | species , base, vcov = "hetero")
 summary(res_multi)
 
 ```
-
 
 ```{python}
 fit = feols('y1 + y2 ~ x1 | species ', data = base, vcov = "hetero")
