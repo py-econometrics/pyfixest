@@ -1,0 +1,43 @@
+
+Marking files as viewed can help keep track of your progress, but will not affect your submitted review
+Viewed
+@@ -0,0 +1,40 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        python-version: ["3.9"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+
+      - name: install fixest
+        run: Rscript -e 'install.packages("fixest", repos="https://cloud.r-project.org")'
+        shell: bash
+
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install
+        run: |
+          pip install -e .
+          pip install -r requirements_test.txt
+      - name: Run tests
+        run: pytest
