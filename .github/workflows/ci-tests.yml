@@ -4,13 +4,7 @@ Viewed
 @@ -0,0 +1,40 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: push
 
 jobs:
   test:
