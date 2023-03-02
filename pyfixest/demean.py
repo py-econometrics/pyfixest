@@ -1,63 +1,105 @@
 import numpy as np
-from numba import jit, njit
+from numba import njit, prange
 
 @njit
-def ave(x, f):
+def ave(x, f, g):
 
     '''
     helper function: compute group-wise averages
     '''
 
-    N = x.shape[0]
-    res = np.zeros(N)
-    unique_f = np.unique(f)
-    for i, ival in enumerate(unique_f):
-        idx = np.where(np.equal(f, ival))
-        res[idx] = np.mean(x[idx])
+    # later: move argsort out of loops
+    #g = np.argsort(f)  # sort f to get group indices
+    group_means = np.bincount(f[g], x[g]) / np.bincount(f[g])
 
-    return res
+    return group_means[f]
 
 @njit
-def demean(x, fixef_vars, tol = 1e-10):
+def demean_jit(x, f, g, res, tol):
 
     '''
     demean variables by MAP algorithm
-    
-    Args: 
-        x (np.array): Variable(s) to demean
-        fixef_vars (np.array): fixef_vars to demean by
-        
-    Returns: 
-        A np.array of the same dimension as x, with demeaned x. 
-        
-    Examples: 
-        
+
+    Args:
+        x (np.array of dimension 2): Variable(s) to demean
+        f (np.array of dimension 2): fixed effects to demean by
+        g (np.array of diemsion 2): sorting index of f
+        res (np.arry of dimension 2): empty matrix, needed as
+            numba does not allow for matrix creation within a
+            compiled function
+        tol (float): precision for the iterative procedure
+
+    Returns:
+        A np.array of the same dimension as x, with demeaned x.
+
+    Examples:
+
         N = 100000
         fixef_vars = np.random.choice([0, 1, 2, 3, 4, 5, 6], N)
         fixef_vars.shape = (fixef_vars.shape[0], 1)
-        x = np.random.normal(0, 1, N)
+        x = np.random.normal(0, 1, N).reshape(N, 1)
         demean(x, g)
-    
+
     '''
-    
-    isna_fixef = np.sum(np.isnan(fixef_vars))
-    if isna_fixef > 0: 
-        raise Exception('Fixef Effects include missings, which is not allowed.')
 
-    #if len(fixef_vars.shape) == 1: 
-    #    fixef_vars = fixef_vars.reshape(len(fixef_vars), 1)
+    N, k_x = x.shape
+    _, k_f = f.shape
+    cx = x.flatten()
+    oldx = cx - 1
 
-    k_fixef = 1
-    
-    cx = x
-    oldx = x - 1
+    for i in range(k_x):
 
-    while np.sqrt(np.power(np.nansum(cx - oldx), 2)) >= tol:
-        oldx = cx
-        for i in range(k_fixef):
-            cx = cx - ave(cx, fixef_vars[:,i])
+        cx = x[:,i].flatten()
+        na_index = np.isnan(cx)
+        cx[na_index] = 0
+        oldx = cx - 1
 
-    return cx
+        while np.sqrt(np.power(np.nansum(cx - oldx), 2)) >= tol:
+            oldx = cx
+            for j in range(k_f):
+                cx += - ave(cx, f[:,j], g[:,j])
+
+        cx[na_index] = np.nan
+        res[:,i] = cx
+
+    return res
+
+
+def demean(x, f, tol=1e-6):
+
+    '''
+    demeaning algo that allows for missing values in x,
+    but not in f
+
+    Args:
+        x (np.array of dimension 2): Variable(s) to demean
+        f (np.array of dimension 2): fixef_vars to demean by
+        tol (float): precision for the iterative procedure. f
+                     default is 1e-06, which is fixest's default
+
+    Returns:
+        A np.array of the same dimension as x, with demeaned x.
+
+
+    tba: dropping of duplixates
+
+
+    '''
+
+    N, k_x = x.shape
+    _, k_f = f.shape
+
+    res = np.zeros((N, k_x))
+    g = np.empty((N, k_f), dtype=int)
+
+    for j in range(k_f):
+        g[:,j] = np.argsort(f[:,j])
+
+
+    res = demean_jit(x, f, g, res, tol)
+
+    return res
+
 
 
 
