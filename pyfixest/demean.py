@@ -42,7 +42,7 @@ def demean_jit(x, f, g, res, tol):
 
     '''
 
-    N, k_x = x.shape
+    _, k_x = x.shape
     _, k_f = f.shape
     cx = x.flatten()
     oldx = cx - 1
@@ -88,12 +88,16 @@ def demean(x, f, tol=1e-6):
 
     N, k_x = x.shape
     _, k_f = f.shape
+    f = f.astype(int)
 
     res = np.zeros((N, k_x))
     g = np.empty((N, k_f), dtype=int)
 
     for j in range(k_f):
         g[:,j] = np.argsort(f[:,j])
+
+    print('x', x.shape)
+    print('f', f.shape)
 
 
     res = demean_jit(x, f, g, res, tol)
