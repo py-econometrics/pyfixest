@@ -30,10 +30,6 @@ class Feols:
 
         #algorithm = pyhdfe.create(ids=self.fe, residualize_method='map')
         YX = np.concatenate([self.Y, self.X], axis=1)
-
-        print('shape fe',self.fe.shape)
-        print('shape YX',YX.shape)
-
         residualized = demean(YX, self.fe)
         #residualized = algorithm.residualize(YX)
         self.Y = residualized[:, :self.n_regs]
