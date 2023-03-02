@@ -2,26 +2,40 @@ import numpy as np
 from pandas import isnull
 from scipy.stats import norm
 import pyhdfe
-from pyfixest.utils import model_matrix2
+from pyfixest.utils import model_matrix2, unpack_fml, unpack_to_fml
+from pyfixest.demean import demean
 
 
-class fixest:
+class Feols:
 
     def __init__(self, fml, data):
 
         self.Y, self.X, self.fe, self.depvars, self.coefnames, self.na_index, self.has_fixef, self.fixef_vars = model_matrix2(
             fml, data)
 
+
+        #self.fml_dict = get_formula_dict(fml)
         self.data = data
         self.N = self.X.shape[0]
         self.k = self.X.shape[1]
         self.n_regs = self.Y.shape[1]
+        self.fixef_combinations = self.fe.shape
 
     def do_demean(self):
 
-        algorithm = pyhdfe.create(ids=self.fe, residualize_method='map')
+        # run algorithm in the following way:
+        # for each set of fixef effects:
+        #    for each covariate:
+        #       ... demean.
+
+        #algorithm = pyhdfe.create(ids=self.fe, residualize_method='map')
         YX = np.concatenate([self.Y, self.X], axis=1)
-        residualized = algorithm.residualize(YX)
+
+        print('shape fe',self.fe.shape)
+        print('shape YX',YX.shape)
+
+        residualized = demean(YX, self.fe)
+        #residualized = algorithm.residualize(YX)
         self.Y = residualized[:, :self.n_regs]
         self.X = residualized[:, self.n_regs:]
         self.k = self.X.shape[1]
@@ -38,7 +52,7 @@ class fixest:
         self.u_hat = []
 
         # loop over all dependent variables
-        for regs in range(0, self.n_regs):
+        for regs in range(self.n_regs):
             self.tXy.append(np.transpose(self.X) @ self.Y[:, regs])
             beta_hat = self.tXXinv @ self.tXy[regs]
             self.beta_hat.append(beta_hat.flatten())
@@ -68,7 +82,7 @@ class fixest:
         self.vcov = []
         self.ssc = []
 
-        for x in range(0, self.n_regs):
+        for x in range(self.n_regs):
 
             # compute vcov
             if vcov_type == 'iid':
@@ -135,8 +149,9 @@ class fixest:
                     for ixg, g in enumerate(clustid):
 
 
-                        Xg = self.X[np.equal(ixg, cluster_df)]
-                        Yg = self.Y[np.equal(ixg, cluster_df)]
+                        Xg = self.X[np.where(cluster_df == g)]
+                        Yg = self.Y[:, x][np.where(cluster_df == g)]
+
                         tXgXg = np.transpose(Xg) @ Xg
 
                         # jackknife regression coefficient
@@ -164,7 +179,7 @@ class fixest:
         self.se = []
         self.tstat = []
         self.pvalue = []
-        for x in range(0, self.n_regs):
+        for x in range(self.n_regs):
             self.se.append(
                 np.sqrt(np.diagonal(self.vcov[x]))
             )
