@@ -96,10 +96,6 @@ def demean(x, f, tol=1e-6):
     for j in range(k_f):
         g[:,j] = np.argsort(f[:,j])
 
-    print('x', x.shape)
-    print('f', f.shape)
-
-
     res = demean_jit(x, f, g, res, tol)
 
     return res
