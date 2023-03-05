@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -18,17 +20,30 @@ class Fixest:
 
         # deparse fxst.fml_dict:
         fixef_keys = list(self.var_dict.keys())
-        #fixef_list = [x.split("+") for x in fixef_keys]
 
         self.demeaned_data_dict = dict()
+        self.dropped_data_dict = dict()
         for f, fval in enumerate(fixef_keys):
           
             fval_list = fval.split("+")  
-            fe = np.array(self.data[fval_list]).astype(int)
+            fe = np.array(self.data[fval_list], dtype = 'float64')
+            fe_na = np.mean(np.isnan(fe), axis = 1) > 0
             if fe.ndim == 1:
                 fe.shape = (len(fe), 1)
+                
             cols = self.var_dict[fval]
             YX = np.array(self.data[cols], dtype = "float64")
+            
+            # drop data with missing fe's
+            fe = fe[~fe_na]
+            fe = fe.astype(int)
+
+            YX = YX[~fe_na, :]
+            na_deleted = sum(fe_na)
+            #if(na_deleted>0):
+            #    warnings.warn(na_deleted, 'observation(s) deleted due to missing values in fixed effects.')
+            self.dropped_data_dict[fval] = na_deleted
+            
             data_demean = pd.DataFrame(demean(YX, fe))
             data_demean.columns = cols
             self.demeaned_data_dict[fval] = data_demean
@@ -45,18 +60,25 @@ class Feols:
               data,
               na_action="ignore"
             )
+            
         coefnames = X.columns
         depvars = Y.columns
-
+        
         Y = np.array(Y, dtype = "float64")
         X = np.array(X, dtype = "float64")
-        
-        # drop intercept when fe projected out
+
+        # drop intercept when fixed effects 
+        # are present
         X = X[:, coefnames != 'Intercept']
         self.coefnames = coefnames[coefnames != 'Intercept']
-        
-        self.Y = Y
-        self.X = X
+
+
+        na_Y = np.isnan(Y).flatten()
+        na_X = (np.mean(np.isnan(X), axis = 1) > 0)
+        na_yx = na_Y + na_X
+      
+        self.Y = Y[na_yx == 0,:]
+        self.X = X[na_yx == 0,:]
         self.N, self.k = X.shape
 
     def fit(self):
