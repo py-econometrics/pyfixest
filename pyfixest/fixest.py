@@ -1,20 +1,31 @@
 import warnings
+import pyhdfe
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-import pyhdfe
-from pyfixest.utils import get_fml_dict
-from pyfixest.demean import demean
 from formulaic import model_matrix
+
+from pyfixest.demean import demean
+from pyfixest.FormulaParser import FixestFormulaParser
 
 
 class Fixest:
 
     def __init__(self, fml, data):
 
+        '''
+        Initiate the fixest object.
+        Deparse fml into formula dict, variable dict.
+        '''
+        fml = FixestFormulaParser(fml)
+        fml.get_fml_dict()
+        fml.get_var_dict()
+
         self.data = data
-        self.var_dict, self.fml_dict = get_fml_dict(fml)
+        self.fml_dict = fml.fml_dict
+        self.var_dict = fml.var_dict
+
 
     def demean(self):
 
@@ -24,30 +35,37 @@ class Fixest:
         self.demeaned_data_dict = dict()
         self.dropped_data_dict = dict()
         for f, fval in enumerate(fixef_keys):
-          
-            fval_list = fval.split("+")  
-            fe = np.array(self.data[fval_list], dtype = 'float64')
-            fe_na = np.mean(np.isnan(fe), axis = 1) > 0
-            if fe.ndim == 1:
-                fe.shape = (len(fe), 1)
-                
+            
             cols = self.var_dict[fval]
             YX = np.array(self.data[cols], dtype = "float64")
-            
-            # drop data with missing fe's
-            fe = fe[~fe_na]
-            fe = fe.astype(int)
 
-            YX = YX[~fe_na, :]
-            na_deleted = sum(fe_na)
-            #if(na_deleted>0):
-            #    warnings.warn(na_deleted, 'observation(s) deleted due to missing values in fixed effects.')
-            self.dropped_data_dict[fval] = na_deleted
+            if fval != "0":
+                fval_list = fval.split("+")
+                fe = np.array(self.data[fval_list], dtype = 'float64')
+                fe_na = np.mean(np.isnan(fe), axis = 1) > 0
+                if fe.ndim == 1:
+                    fe.shape = (len(fe), 1)
+    
+                # drop data with missing fe's
+                fe = fe[~fe_na]
+                fe = fe.astype(int)
+
+                YX = YX[~fe_na, :]
+                na_deleted = sum(fe_na)
+                self.dropped_data_dict[fval] = na_deleted
+                
+                algorithm = pyhdfe.create(ids=fe, residualize_method='map')
+                data_demean = pd.DataFrame(algorithm.residualize(YX))
+
+                
+            else: 
+                # no need to drop missing fe + no need to drop intercept
+                data_demean = pd.DataFrame(YX)
             
-            data_demean = pd.DataFrame(demean(YX, fe))
             data_demean.columns = cols
             self.demeaned_data_dict[fval] = data_demean
 
+                
 
 class Feols:
 
@@ -60,14 +78,14 @@ class Feols:
               data,
               na_action="ignore"
             )
-            
+
         coefnames = X.columns
         depvars = Y.columns
-        
+
         Y = np.array(Y, dtype = "float64")
         X = np.array(X, dtype = "float64")
 
-        # drop intercept when fixed effects 
+        # drop intercept when fixed effects
         # are present
         X = X[:, coefnames != 'Intercept']
         self.coefnames = coefnames[coefnames != 'Intercept']
@@ -76,7 +94,7 @@ class Feols:
         na_Y = np.isnan(Y).flatten()
         na_X = (np.mean(np.isnan(X), axis = 1) > 0)
         na_yx = na_Y + na_X
-      
+
         self.Y = Y[na_yx == 0,:]
         self.X = X[na_yx == 0,:]
         self.N, self.k = X.shape
@@ -145,8 +163,8 @@ class Feols:
             # if there are missings - delete them!
             cluster_df = np.array(self.data[self.clustervar])
             # drop NAs
-            if len(self.na_index) != 0:
-                cluster_df = np.delete(cluster_df, 0, self.na_index)
+            #if len(self.na_index) != 0:
+            #    cluster_df = np.delete(cluster_df, 0, self.na_index)
 
             clustid = np.unique(cluster_df)
             self.G = len(clustid)
