@@ -10,12 +10,22 @@ class FixestFormulaParser:
         For covars and fevars, where multiple estimation is supported,
         move the sublist to the beginning of the respective list
         '''
-
+        
+        # tba
+        # check if there is a variable '0' 
+        # in the formula and throw error if the case
+        # '0' used internally to denote absence of fixed
+        # effects
+        
         fml = "".join(fml.split())
         fml_split = fml.split('|')
         depvars, covars = fml_split[0].split("~")
-        fevars = fml_split[1]
-
+        
+        if len(fml_split) > 1: 
+            fevars = fml_split[1]
+        else: 
+            fevars = "0"
+            
         self.depvars = depvars.split("+")
         self.covars = _unpack_fml(covars)
         self.fevars = _unpack_fml(fevars)
