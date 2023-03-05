@@ -51,7 +51,9 @@ def get_fml_dict(fml):
     if isinstance(fevars, str): 
         fevars = [fevars]
 
-
+    # handle interaction terms
+    covars = [s.split(":") if ":" in s else s for s in covars]
+    fevars = [s.split(":") if ":" in s else s for s in fevars]
     
     var_dict = dict()
     for fevar in fevars_fml: 
@@ -163,14 +165,14 @@ def get_data():
     '''
     # create data
     np.random.seed(1234)
-    N = 100_000
+    N = 10_000
     k = 4
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
     X = pd.DataFrame(X)
     X[1] = np.random.choice(list(range(0, 50)), N, True)
     X[2] = np.random.choice(list(range(0, 100)), N, True)
-    X[3] = np.random.choice(list(range(0, 100)), N, True)
+    X[3] = np.random.choice(list(range(0, 1000)), N, True)
 
     beta = np.random.normal(0,1,k)
     beta[0] = 0.005
