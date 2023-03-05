@@ -100,11 +100,11 @@ def _unpack_fml(x):
             if sw_type == "sw":
                 res_s.append(varlist)
             elif sw_type == "sw0":
-                res_s.append([None] + varlist)
+                res_s.append(['0'] + varlist)
             elif sw_type in ["csw", "csw0"]:
                 varlist = ["+".join(varlist[:i+1]) for i, _ in enumerate(varlist)]
                 if sw_type == 'csw0':
-                    res_s.append([None] + varlist)
+                    res_s.append(['0'] + varlist)
                 else:
                     res_s.append(varlist)
             else:
