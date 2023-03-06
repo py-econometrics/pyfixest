@@ -34,36 +34,70 @@ class Fixest:
 
         self.demeaned_data_dict = dict()
         self.dropped_data_dict = dict()
+        
         for f, fval in enumerate(fixef_keys):
             
-            cols = self.var_dict[fval]
-            YX = np.array(self.data[cols], dtype = "float64")
-
-            if fval != "0":
-                fval_list = fval.split("+")
-                fe = np.array(self.data[fval_list], dtype = 'float64')
-                fe_na = np.mean(np.isnan(fe), axis = 1) > 0
-                if fe.ndim == 1:
-                    fe.shape = (len(fe), 1)
-    
-                # drop data with missing fe's
-                fe = fe[~fe_na]
-                fe = fe.astype(int)
-
-                YX = YX[~fe_na, :]
-                na_deleted = sum(fe_na)
-                self.dropped_data_dict[fval] = na_deleted
-                
-                algorithm = pyhdfe.create(ids=fe, residualize_method='map')
-                data_demean = pd.DataFrame(algorithm.residualize(YX))
-
-                
-            else: 
-                # no need to drop missing fe + no need to drop intercept
-                data_demean = pd.DataFrame(YX)
             
-            data_demean.columns = cols
-            self.demeaned_data_dict[fval] = data_demean
+            cols = self.var_dict[fval]
+            YX_df = self.data[cols]
+            YX_na_index = pd.isna(YX_df)
+            n = YX_df.shape[0]
+            
+            # deparse fml dict
+            var_dict2 = dict()
+            for x in self.fml_dict[fval]: 
+              variables = x.split('~')[1].split('+')
+              variables.insert(0, x.split('~')[0])
+              var_dict2[x] = variables 
+
+            n_fml = len(self.fml_dict[fval])
+            fml_na_index = np.zeros((n, n_fml))
+            
+            var_list = list(var_dict2.values())
+            
+            for x, xval in enumerate(var_list): 
+                fml_na_index[:,x] = YX_na_index[xval].sum(axis = 1).values
+            
+            fml_na_index = fml_na_index.astype(bool)
+            
+            fml_na_max = np.argsort(fml_na_index.sum(axis = 0))
+            # here: optimize by going from 'most missings to fewest'
+            
+            # drop NAs
+            YX_dict = dict()
+            for x, xval in enumerate(var_list): 
+              
+              YX = (np.array(YX_df[xval].dropna(), dtype = "float64"))
+              
+              if fval != "0":
+                  fval_list = fval.split("+")
+                  fe = np.array(self.data[fval_list], dtype = 'float64')
+                  if fe.ndim == 1:
+                      fe.shape = (len(fe), 1)
+      
+                  # drop missing YX from fe
+                  fe = fe[~fml_na_index[:,x]]
+                  # drop data with missing fe's
+                  fe_na = np.mean(np.isnan(fe), axis = 1) > 0
+                  fe = fe[~fe_na]
+                  fe = fe.astype(int)
+  
+                  YX = YX[~fe_na, :]
+                  na_deleted = sum(fe_na)
+                  self.dropped_data_dict[fval] = na_deleted
+                  
+                  algorithm = pyhdfe.create(ids=fe, residualize_method='map')
+                  data_demean = pd.DataFrame(algorithm.residualize(YX))
+  
+                  
+              else: 
+                  # no need to drop missing fe + no need to drop intercept
+                  data_demean = pd.DataFrame(YX)
+              
+              data_demean.columns = xval
+              YX_dict[list(var_dict2.keys())[x]] = data_demean
+            
+            self.demeaned_data_dict[fval] = YX_dict
 
                 
 
