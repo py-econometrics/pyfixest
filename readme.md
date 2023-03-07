@@ -5,8 +5,6 @@ This is a draft package (highly experimental!) for a Python clone of the excelle
 Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package.
 
 ```python
-import pandas as pd
-import numpy as np
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data
 
