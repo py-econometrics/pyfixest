@@ -6,8 +6,9 @@ import pandas as pd
 from scipy.stats import norm
 from formulaic import model_matrix
 
+
 from pyfixest.demean import demean
-from pyfixest.FormulaParser import FixestFormulaParser
+from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
 
 class Fixest:
@@ -34,70 +35,101 @@ class Fixest:
 
         self.demeaned_data_dict = dict()
         self.dropped_data_dict = dict()
+
         for f, fval in enumerate(fixef_keys):
-            
+
+
             cols = self.var_dict[fval]
-            YX = np.array(self.data[cols], dtype = "float64")
+            YX_df = self.data[cols]
+            YX_na_index = pd.isna(YX_df)
+            n = YX_df.shape[0]
 
-            if fval != "0":
-                fval_list = fval.split("+")
-                fe = np.array(self.data[fval_list], dtype = 'float64')
-                fe_na = np.mean(np.isnan(fe), axis = 1) > 0
-                if fe.ndim == 1:
-                    fe.shape = (len(fe), 1)
-    
-                # drop data with missing fe's
-                fe = fe[~fe_na]
-                fe = fe.astype(int)
+            # deparse fml dict
+            var_dict2 = dict()
+            for x in self.fml_dict[fval]:
+              variables = x.split('~')[1].split('+')
+              variables.insert(0, x.split('~')[0])
+              var_dict2[x] = variables
 
-                YX = YX[~fe_na, :]
-                na_deleted = sum(fe_na)
-                self.dropped_data_dict[fval] = na_deleted
-                
-                algorithm = pyhdfe.create(ids=fe, residualize_method='map')
-                data_demean = pd.DataFrame(algorithm.residualize(YX))
+            n_fml = len(self.fml_dict[fval])
+            fml_na_index = np.zeros((n, n_fml))
 
-                
-            else: 
-                # no need to drop missing fe + no need to drop intercept
-                data_demean = pd.DataFrame(YX)
-            
-            data_demean.columns = cols
-            self.demeaned_data_dict[fval] = data_demean
+            var_list = list(var_dict2.values())
 
-                
+            for x, xval in enumerate(var_list):
+                fml_na_index[:,x] = YX_na_index[xval].sum(axis = 1).values
+
+            fml_na_index = fml_na_index.astype(bool)
+
+            fml_na_max = np.argsort(fml_na_index.sum(axis = 0))
+            # here: optimize by going from 'most missings to fewest'
+
+            # drop NAs
+            YX_dict = dict()
+            for x, xval in enumerate(var_list):
+
+              YX = YX_df[xval].dropna()
+
+              if fval != "0":
+                  fval_list = fval.split("+")
+                  fe = np.array(self.data[fval_list], dtype = 'float64')
+                  if fe.ndim == 1:
+                      fe.shape = (len(fe), 1)
+
+                  # drop missing YX from fe
+                  fe = fe[~fml_na_index[:,x]]
+                  # drop data with missing fe's
+                  fe_na = np.mean(np.isnan(fe), axis = 1) > 0
+                  fe = fe[~fe_na]
+                  fe = fe.astype(int)
+
+                  YX = YX.iloc[~fe_na, :]
+                  na_deleted = sum(fe_na)
+                  self.dropped_data_dict[fval] = na_deleted
+                  
+                  fml = list(var_dict2.keys())[x]
+                  Y, X = model_matrix(fml + "-1", YX)
+                  YX = pd.concat([Y,X], axis = 1)
+                  colnames = YX.columns
+                  YX = np.array(YX)
+  
+                  algorithm = pyhdfe.create(ids=fe, residualize_method='map')
+                  data_demean = algorithm.residualize(YX)
+                  data_demean = pd.DataFrame(data_demean)
+                  data_demean.columns = colnames
+
+                  
+                  # return as pd.DataFrame
+
+              else:
+                  # no need to drop missing fe + no need to drop intercept
+                  fml = list(var_dict2.keys())[x]
+                  Y, X = model_matrix(fml, YX)
+                  data_demean = pd.concat([Y,X], axis = 1)
+                  
+              data_demean = pd.DataFrame(data_demean)
+              YX_dict[list(var_dict2.keys())[x]] = data_demean
+
+            self.demeaned_data_dict[fval] = YX_dict
+
+
 
 class Feols:
 
-    def __init__(self, fml, data):
+    def __init__(self, Y, X):
 
-        self.fml = fml
-        # if fixef in variable - drop intercept
-        Y, X = model_matrix(
-              fml,
-              data,
-              na_action="ignore"
-            )
+        
+        #coefnames = X.columns
+        #depvars = Y.columns
 
-        coefnames = X.columns
-        depvars = Y.columns
-
-        Y = np.array(Y, dtype = "float64")
-        X = np.array(X, dtype = "float64")
+        self.Y = np.array(Y, dtype = "float64")
+        self.X = np.array(X, dtype = "float64")
+        self.N, self.k = X.shape
 
         # drop intercept when fixed effects
         # are present
-        X = X[:, coefnames != 'Intercept']
-        self.coefnames = coefnames[coefnames != 'Intercept']
-
-
-        na_Y = np.isnan(Y).flatten()
-        na_X = (np.mean(np.isnan(X), axis = 1) > 0)
-        na_yx = na_Y + na_X
-
-        self.Y = Y[na_yx == 0,:]
-        self.X = X[na_yx == 0,:]
-        self.N, self.k = X.shape
+        #X = X[:, coefnames != 'Intercept']
+        #self.coefnames = coefnames[coefnames != 'Intercept']
 
     def fit(self):
         '''
@@ -110,7 +142,7 @@ class Feols:
         self.tXy = (np.transpose(self.X) @ self.Y)
         beta_hat = self.tXXinv @ self.tXy
         self.beta_hat = beta_hat.flatten()
-        self.Y_hat = (self.X @ self.beta_hat).reshape((self.N, 1))
+        self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y - self.Y_hat)
 
     def vcov(self, vcov = "hetero"):
@@ -146,14 +178,14 @@ class Feols:
 
             if vcov_type_detail in ["hetero", "HC1"]:
                 self.ssc = (self.N / (self.N - self.k))
-                u = self.u_hat.flatten()
+                u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
                 self.ssc = 1
                 leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
-                     u = (1 - leverage) * self.u_hat.flatten()
+                     u = (1 - leverage) * self.u_hat
                 else:
-                    u = np.sqrt(1 - leverage) * self.u_hat.flatten()
+                    u = np.sqrt(1 - leverage) * self.u_hat
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
             self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv

@@ -1,5 +1,7 @@
-from pyfixest.fixest import Fixest, Feols
 import pandas as pd
+import numpy as np
+
+from pyfixest.fixest import Fixest, Feols
 
 
 def feols(fml, vcov, data):
@@ -29,15 +31,23 @@ def feols(fml, vcov, data):
     fixest = Fixest(fml, data)
     fixest.demean()
     
-    
     model_res = dict()
-    for f, fval in enumerate(list(fixest.fml_dict.keys())):
-        mf = fixest.demeaned_data_dict[fval]
-        for fml in fixest.fml_dict[fval]:
-            FEOLS = Feols(fml, mf)
+    
+    for f, fval in enumerate(fixest.fml_dict.keys()):
+        model_frames = fixest.demeaned_data_dict[fval]
+        for x, fml in enumerate(model_frames):
+            
+            model_frame = model_frames[fml]
+            Y = np.array(model_frame.iloc[:,0])
+            X = model_frame.iloc[:,1:]
+            colnames = X.columns
+            X = np.array(X)
+            FEOLS = Feols(Y, X)
             FEOLS.fit()
+            FEOLS.data = fixest.data
             FEOLS.vcov(vcov = vcov)
             FEOLS.inference()
+            FEOLS.coefnames = colnames
             full_fml = fml + "|" + fval
             model_res[full_fml] = FEOLS
           
