@@ -1,26 +1,28 @@
 import numpy as np
-
 from numba import njit, prange
 
 @njit
-def ave(x, f):
+def ave(x, f, g):
 
     '''
     helper function: compute group-wise averages
     '''
 
-    group_means = np.bincount(f, x) / np.bincount(f)
+    # later: move argsort out of loops
+    #g = np.argsort(f)  # sort f to get group indices
+    group_means = np.bincount(f[g], x[g]) / np.bincount(f[g])
 
     return group_means[f]
 
 @njit
-def demean_jit(x, f, res, tol):
+def demean_jit(x, f, g, res, tol):
 
     '''
     demean variables by MAP algorithm
     Args:
         x (np.array of dimension 2): Variable(s) to demean
         f (np.array of dimension 2): fixed effects to demean by
+        g (np.array of diemsion 2): sorting index of f
         res (np.arry of dimension 2): empty matrix, needed as
             numba does not allow for matrix creation within a
             compiled function
@@ -37,6 +39,8 @@ def demean_jit(x, f, res, tol):
 
     _, k_x = x.shape
     _, k_f = f.shape
+    #cx = x.flatten()
+    #oldx = cx - 1
 
     for i in range(k_x):
 
@@ -48,7 +52,7 @@ def demean_jit(x, f, res, tol):
         while np.sqrt(np.power(np.nansum(cx - oldx), 2)) >= tol:
             oldx = cx
             for j in range(k_f):
-                cx += - ave(cx, f[:,j])
+                cx += - ave(cx, f[:,j], g[:,j])
 
         cx[na_index] = np.nan
         res[:,i] = cx
@@ -76,7 +80,11 @@ def demean(x, f, tol=1e-6):
     f = f.astype(int)
 
     res = np.zeros((N, k_x))
+    g = np.empty((N, k_f), dtype=int)
 
-    res = demean_jit(x, f, res, tol)
+    for j in range(k_f):
+        g[:,j] = np.argsort(f[:,j])
+
+    res = demean_jit(x, f, g, res, tol)
 
     return res
