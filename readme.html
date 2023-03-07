@@ -360,63 +360,69 @@ pre code {
 
 <div id="pyfixest" class="section level2">
 <h2>pyfixest</h2>
-<p>This is a draft package for a Python clone of the excellent fixest
+<p>This is a draft package (highly experimental!) for a Python clone of
+the excellent <a href="https://github.com/lrberge/fixest">fixest</a>
 package.</p>
-<p>Fixed effects are projected out via the PyHDFE package.</p>
-<pre class="python"><code>import pandas as pd
+<p>Fixed effects are projected out via the <a href="https://github.com/jeffgortmaker/pyhdfe">PyHDFE</a> package.</p>
+<pre class="python"><code># create some data
+import pandas as pd
 import numpy as np
+from pyfixest.api import feols
+from pyfixest.utils import get_data
 
 # create data
-np.random.seed(12312312)
-N = 10000
-k = 3
-G = 25
-X = np.random.normal(0, 1, N * k).reshape((N,k))
-X = pd.DataFrame(X)
-X[1] = np.random.choice(list(range(0, 50)), N, True)
-X[2] = np.random.choice(list(range(0, 50)), N, True)
-beta = np.random.normal(0,1,k)
-beta[0] = 0.005
-u = np.random.normal(0,1,N)
-Y = 1 + X @ beta + u
-cluster = np.random.choice(list(range(0,G)), N)
+np.random.seed(123)
+data = get_data()
 
-Y = pd.DataFrame(Y)
-Y.rename(columns = {0:&#39;Y&#39;}, inplace = True)
-X = pd.DataFrame(X)
+feols(&#39;Y ~ X1 | X2 + X3 + X4&#39;, &#39;hetero&#39;, data)
+#   colnames      coef        se    tstat    pvalue
+# 0       X1  0.001469  0.003159  0.46505  0.641896
+feols(&#39;Y ~ X1 + X2 + X3 + X4&#39;, &#39;iid&#39;, data)
+#   colnames      coef        se    tstat    pvalue
+# 2048         X1    0.001469  0.003159     0.465050  6.418959e-01
+sm.ols(&#39;Y ~ X1 + X2 + X3 + X4&#39;, data).fit().summary()
+#   colnames      coef        se    tstat    pvalue
+# X1            0.0015      0.003      0.460      0.645
 
-data = pd.concat([Y, X], axis = 1)
-data.rename(columns = {0:&#39;X1&#39;}, inplace = True)
-data.rename(columns = {1:&#39;X2&#39;}, inplace = True)
-data.rename(columns = {2:&#39;X3&#39;}, inplace = True)
-data.rename(columns = {3:&#39;X4&#39;}, inplace = True)
-data.columns
-data[&#39;X3&#39;] = data[&#39;X3&#39;].astype(&#39;category&#39;)
-data[&#39;X2&#39;] = data[&#39;X2&#39;].astype(&#39;category&#39;)
+# cluster robust inference:
+feols(fml = &#39;Y ~ X1&#39;, vcov = {&#39;CRV1&#39;:&#39;group_id&#39;}, data = data)
+#     colnames        coef        se       tstat    pvalue
+# 0  Intercept -577.090042  1.072007 -538.326702  0.000000
+# 1         X1    1.389563  1.002708    1.385810  0.165805
+feols(fml = &#39;Y ~ X1&#39;, vcov = {&#39;CRV3&#39;:&#39;group_id&#39;}, data = data)
+#     colnames        coef        se       tstat    pvalue
+# 0  Intercept -577.090042  1.139483 -506.449086  0.000000
+# 1         X1    1.389563  1.066219    1.303261  0.192486</code></pre>
+</div>
+<div id="multiple-estimations" class="section level2">
+<h2>Multiple Estimations</h2>
+<p>Currently supported: multiple dependent variables, <code>sw()</code>,
+<code>sw0()</code>, <code>csw()</code> and <code>csw0()</code>.</p>
+<pre class="python"><code># sw
+# multiple estimation: multiple dependent variables
+data.X2 = data.X2.astype(float)
+feols(fml = &#39;Y + Y2 ~ sw(X1, X2) | csw0(X3, X4)&#39;, vcov = {&#39;CRV1&#39;:&#39;group_id&#39;}, data = data)
+# fml          coefnames    coef    se  tstat   pvalue
+# 0 Y~X1|0     Intercept    7.386158    0.162152    45.550697   0.000000
+# 1 Y~X1|0           X1 -0.163744   0.166210    -0.985159   0.324546
+# 0 Y~X2|0     Intercept    20.069156   0.300012    66.894580   0.000000
+# 1 Y~X2|0           X2 -0.516267   0.009976    -51.751797  0.000000
+# 0 Y2~X1|0    Intercept    7.375426    0.162093    45.501283   0.000000
+# 1 Y2~X1|0          X1 -0.179765   0.164399    -1.093465   0.274190
+# 0 Y2~X2|0    Intercept    20.065154   0.302652    66.297875   0.000000
+# 1 Y2~X2|0          X2 -0.516542   0.010137    -50.956222  0.000000
+# 0 Y~X1|X3          X1 -0.117885   0.154998    -0.760557   0.446922
+# 0 Y~X2|X3          X2 -0.515981   0.009493    -54.354837  0.000000
+# 0 Y2~X1|X3           X1   -0.134384   0.153802    -0.873746   0.382257
+# 0 Y2~X2|X3           X2   -0.516327   0.009654    -53.485357  0.000000
+# 0 Y~X1|X3+X4       X1 -0.063646   0.082916    -0.767600   0.442725
+# 0 Y~X2|X3+X4       X2 -0.509159   0.000583    -872.642351 0.000000
+# 0 Y2~X1|X3+X4      X1 -0.079504   0.082208    -0.967109   0.333489
+# 0 Y2~X2|X3+X4      X2 -0.509534   0.001034    -492.767382 0.000000
 
-fml = &#39;Y ~ X1 + X2 + X3&#39;
-vcov = &quot;hetero&quot;
-
-res_fe = feols(&#39;Y ~ X1 | X2 + X3&#39;, &#39;hetero&#39;, data) 
-&gt;&gt;&gt; res_fe[&#39;coef&#39;]
-array([0.01228013])
-&gt;&gt;&gt; res_fe[&#39;se&#39;]
-array([1.22801306])
-&gt;&gt;&gt; res_fe[&#39;pvalue&#39;]
-array([0.99202149])
-&gt;&gt;&gt; res_fe[&#39;tstat&#39;]
-array([0.01])
-
-
-res = feols(&#39;Y ~ X1 + X2 + X3&#39;, &#39;hetero&#39;, data) 
-&gt;&gt;&gt; res[&#39;coef&#39;][-1]
-0.012280130646355025
-&gt;&gt;&gt; res[&#39;se&#39;][-1]
-1.2280130646353362
-&gt;&gt;&gt; res[&#39;pvalue&#39;][-1]
-0.9920214888642647
-&gt;&gt;&gt; res[&#39;tstat&#39;][-1]
-0.010000000000001355</code></pre>
+</code></pre>
+<p>Support for more <a href="https://cran.r-project.org/web/packages/fixest/vignettes/multiple_estimations.html">fixest
+formula-sugar</a> is work in progress.</p>
 </div>
 
 
