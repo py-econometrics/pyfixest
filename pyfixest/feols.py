@@ -6,8 +6,6 @@ import pandas as pd
 from scipy.stats import norm
 from formulaic import model_matrix
 
-
-from pyfixest.demean import demean
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
 
@@ -28,7 +26,7 @@ class Feols:
         #X = X[:, coefnames != 'Intercept']
         #self.coefnames = coefnames[coefnames != 'Intercept']
 
-    def fit(self):
+    def get_fit(self):
         '''
         regression estimation for a single model
         '''
@@ -42,7 +40,7 @@ class Feols:
         self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y - self.Y_hat)
 
-    def vcov(self, vcov = "hetero"):
+    def get_vcov(self, vcov = "hetero"):
 
         '''
         compute covariance matrices
@@ -147,7 +145,7 @@ class Feols:
 
                 self.vcov = self.ssc * vcov
 
-    def inference(self):
+    def get_inference(self):
 
         self.se = (
             np.sqrt(np.diagonal(self.vcov))
@@ -159,7 +157,7 @@ class Feols:
             2*(1-norm.cdf(np.abs(self.tstat)))
         )
 
-    def performance(self):
+    def get_performance(self):
 
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)

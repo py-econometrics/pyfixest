@@ -152,15 +152,31 @@ class Fixest:
                 colnames = X.columns
                 X = np.array(X)
                 FEOLS = Feols(Y, X)
-                FEOLS.fit()
+                FEOLS.get_fit()
                 FEOLS.data = self.data
-                FEOLS.vcov(vcov = vcov)
-                FEOLS.inference()
+                FEOLS.get_vcov(vcov = vcov)
+                FEOLS.get_inference()
                 FEOLS.coefnames = colnames
                 full_fml = fml + "|" + fval
                 self.model_res[full_fml] = FEOLS
         
-        return self         
+        return self    
+      
+      
+    def vcov(self, vcov): 
+      
+      '''
+      update inference on the fly
+      '''
+      
+      for model in list(self.model_res.keys()):
+            
+            fxst = self.model_res[model]
+
+            fxst.get_vcov(vcov = vcov)
+            fxst.get_inference()
+      
+      return self
       
             
     def summary(self, type = None): 
