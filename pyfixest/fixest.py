@@ -20,6 +20,7 @@ class Fixest:
         Initiate the fixest object.
         Deparse fml into formula dict, variable dict.
         '''
+        
         self.data = data
         self.model_res = dict()
 
@@ -64,8 +65,23 @@ class Fixest:
             YX_dict = dict()
             for x, xval in enumerate(var_list):
 
+              
               YX = YX_df[xval].dropna()
+              
+              # type checking of input data frame
+              legal_columns = YX.select_dtypes(include=['int', 'float', 'category']).columns.tolist()
+              
+              # convert all 
+              string_columns = YX.select_dtypes(include=['string', 'object']).columns.tolist()
+              YX[string_columns] = YX[string_columns].astype('category')
+              
+              #if not set(legal_columns) == set(YX.columns):
+              #    raise Exception("The model variables need to be restricted to types integer, float, or categorical.")
 
+              # get the categorical columns
+              cat_cols = YX.select_dtypes(include=['category']).columns.tolist()
+              cat_cols = [f'{item}[T.0]' for item in cat_cols]
+              
               if fval != "0":
                   fval_list = fval.split("+")
                   fe = np.array(self.data[fval_list], dtype = 'float64')
@@ -86,6 +102,9 @@ class Fixest:
                   fml = list(var_dict2.keys())[x]
                   Y, X = model_matrix(fml + "-1", YX)
                   YX = pd.concat([Y,X], axis = 1)
+                  # drop [T.0's] for categorical variables
+                  YX = YX.drop(cat_cols, axis = 1)
+                  
                   colnames = YX.columns
                   YX = np.array(YX)
   
@@ -179,7 +198,7 @@ class Fixest:
       return self
       
             
-    def summary(self, type = None): 
+    def tidy(self, type = None): 
       
         res = []
         for x in list(self.model_res.keys()):

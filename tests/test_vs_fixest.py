@@ -40,9 +40,9 @@ def data():
 
     data = pd.concat([Y, X], axis = 1)
     data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4'}, inplace = True)
-    data['X4'] = data['X4'].astype('category').astype(str)
-    data['X3'] = data['X3'].astype('category').astype(str)
-    data['X2'] = data['X2'].astype('category').astype(str)
+    data['X4'] = data['X4'].astype(str)
+    data['X3'] = data['X3'].astype(str)
+    data['X2'] = data['X2'].astype(str)
     data['group_id'] = cluster.astype(str)
     data['Y2'] = data.Y + np.random.normal(0, 1, N)
 
@@ -61,29 +61,29 @@ def test_py_vs_r(data):
     '''
 
 
-    fmls = ["Y~X1", "Y ~X1 + X2", "Y~ X1 | X2", "Y~ X1|X2+X3"]#, "Y ~ X1 + X2 | X3 + X4"]
+    fmls = ["Y~X1", "Y ~X1 + X2", "Y~ X1 | X2", "Y~ X1|X2+X3", "Y ~ X2 | X3 + X4"]
 
     for fml in fmls:
 
         # iid errors
         pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-        py_coef = pyfixest.summary().coef
-        py_se = pyfixest.summary().se
+        py_coef = pyfixest.tidy().coef
+        py_se = pyfixest.tidy().se
         r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
-        np.allclose(np.array(py_coef), stats.coef(r_fixest), atol = 1e-20)
-        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
+        np.allclose((np.array(py_coef)), (stats.coef(r_fixest)), atol = 1e-20)
+        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
         # heteroskedastic errors
-        py_se = pyfixest.vcov("HC1").summary().se
+        py_se = pyfixest.vcov("HC1").tidy().se
         r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
-        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
+        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
         # cluster robust errors
-        py_se = pyfixest.vcov({'CRV1':'group_id'}).summary().se
+        py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy().se
         r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
-        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
+        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
 
 
