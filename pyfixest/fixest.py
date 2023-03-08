@@ -159,6 +159,9 @@ class Fixest:
                 FEOLS.coefnames = colnames
                 full_fml = fml + "|" + fval
                 self.model_res[full_fml] = FEOLS
+        
+        return self         
+      
             
     def summary(self, type = None): 
       
