@@ -66,27 +66,22 @@ def test_py_vs_r(data):
     for fml in fmls:
 
         # iid errors
-        pyfixest = Fixest(data = data).feols(fml, vcov = 'iid').summary()
-        py_coef = pyfixest.coef
-        py_se = pyfixest.se
+        pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
+        py_coef = pyfixest.summary().coef
+        py_se = pyfixest.summary().se
         r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
         np.allclose(np.array(py_coef), stats.coef(r_fixest), atol = 1e-20)
         np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
         # heteroskedastic errors
-        pyfixest = Fixest(data = data).feols(fml, vcov = 'hetero').summary()
-        py_coef = pyfixest.coef
-        py_se = pyfixest.se
+        py_se = pyfixest.vcov("HC1").summary().se
         r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
         np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
         # cluster robust errors
-        pyfixest = Fixest(data = data).feols(fml, vcov = {'CRV1':'group_id'}).summary()
-        py_coef = pyfixest.coef
-        py_se = pyfixest.se
-
+        py_se = pyfixest.vcov({'CRV1':'group_id'}).summary().se
         r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
         np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
