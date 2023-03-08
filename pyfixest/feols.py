@@ -72,7 +72,7 @@ class Feols:
         elif vcov_type == 'hetero':
 
             if vcov_type_detail in ["hetero", "HC1"]:
-                self.ssc = (self.N / (self.N - self.k))
+                self.ssc = (self.N - 1) / (self.N - self.k)
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
                 self.ssc = 1
