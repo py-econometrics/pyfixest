@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.api import feols
+from pyfixest.fixest import Fixest
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -61,26 +61,34 @@ def test_py_vs_r(data):
     '''
 
 
-    fmls = ["Y~X1", "Y ~X1 + X2", "Y~ X1 | X2", "Y~ X1|X2+X3"]
+    fmls = ["Y~X1", "Y ~X1 + X2", "Y~ X1 | X2", "Y~ X1|X2+X3"]#, "Y ~ X1 + X2 | X3 + X4"]
 
     for fml in fmls:
 
         # iid errors
-        py_fixest = feols(fml, 'iid', data)
-        r_fixest = fixest.feols(ro.Formula(fml), se = 'iid',data=data)
-        # only test coef here
-        np.allclose(np.array(py_fixest[0].coef), stats.coef(r_fixest), rtol = 1e-10)
-        np.allclose(np.array(py_fixest[0].se), fixest.se(r_fixest), rtol = 1e-10)
+        pyfixest = Fixest(data = data).feols(fml, vcov = 'iid').summary()
+        py_coef = pyfixest.coef
+        py_se = pyfixest.se
+        r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
+
+        np.allclose(np.array(py_coef), stats.coef(r_fixest), atol = 1e-20)
+        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
         # heteroskedastic errors
-        py_fixest = feols(fml, 'hetero', data)
+        pyfixest = Fixest(data = data).feols(fml, vcov = 'hetero').summary()
+        py_coef = pyfixest.coef
+        py_se = pyfixest.se
         r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
-        np.allclose(np.array(py_fixest[0].se), fixest.se(r_fixest), rtol = 1e-10)
+
+        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
         # cluster robust errors
-        py_fixest = feols(fml, {'CRV1':'group_id'}, data)
+        pyfixest = Fixest(data = data).feols(fml, vcov = {'CRV1':'group_id'}).summary()
+        py_coef = pyfixest.coef
+        py_se = pyfixest.se
+
         r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
-        np.allclose(np.array(py_fixest[0].se), fixest.se(r_fixest), rtol = 1e-10)
+        np.allclose(np.array(py_se), fixest.se(r_fixest), atol = 1e-20)
 
 
 
