@@ -20,11 +20,11 @@ class Fixest:
         Initiate the fixest object.
         Deparse fml into formula dict, variable dict.
         '''
-        
+
         self.data = data
         self.model_res = dict()
 
-        
+
     def _demean(self):
 
         # deparse fxst.fml_dict:
@@ -65,23 +65,23 @@ class Fixest:
             YX_dict = dict()
             for x, xval in enumerate(var_list):
 
-              
+
               YX = YX_df[xval].dropna()
-              
+
               # type checking of input data frame
-              legal_columns = YX.select_dtypes(include=['int', 'float', 'category']).columns.tolist()
-              
-              # convert all 
-              string_columns = YX.select_dtypes(include=['string', 'object']).columns.tolist()
-              YX[string_columns] = YX[string_columns].astype('category')
-              
+              #legal_columns = YX.select_dtypes(include=['int', 'float', 'category']).columns.tolist()
+
+              # convert all
+              #string_columns = YX.select_dtypes(include=['string', 'object']).columns.tolist()
+              #YX[string_columns] = YX[string_columns].astype('category')
+
               #if not set(legal_columns) == set(YX.columns):
               #    raise Exception("The model variables need to be restricted to types integer, float, or categorical.")
 
               # get the categorical columns
               cat_cols = YX.select_dtypes(include=['category']).columns.tolist()
               cat_cols = [f'{item}[T.0]' for item in cat_cols]
-              
+
               if fval != "0":
                   fval_list = fval.split("+")
                   fe = np.array(self.data[fval_list], dtype = 'float64')
@@ -98,22 +98,22 @@ class Fixest:
                   YX = YX.iloc[~fe_na, :]
                   na_deleted = sum(fe_na)
                   self.dropped_data_dict[fval] = na_deleted
-                  
+
                   fml = list(var_dict2.keys())[x]
-                  Y, X = model_matrix(fml + "-1", YX)
+                  Y, X = model_matrix(fml, YX)
                   YX = pd.concat([Y,X], axis = 1)
-                  # drop [T.0's] for categorical variables
-                  YX = YX.drop(cat_cols, axis = 1)
-                  
+
+                  YX = YX.drop(("Intercept"), axis = 1)
+
                   colnames = YX.columns
                   YX = np.array(YX)
-  
+
                   algorithm = pyhdfe.create(ids=fe, residualize_method='map')
                   data_demean = algorithm.residualize(YX)
                   data_demean = pd.DataFrame(data_demean)
                   data_demean.columns = colnames
 
-                  
+
                   # return as pd.DataFrame
 
               else:
@@ -121,28 +121,28 @@ class Fixest:
                   fml = list(var_dict2.keys())[x]
                   Y, X = model_matrix(fml, YX)
                   data_demean = pd.concat([Y,X], axis = 1)
-                  
+
               data_demean = pd.DataFrame(data_demean)
               YX_dict[list(var_dict2.keys())[x]] = data_demean
 
             self.demeaned_data_dict[fval] = YX_dict
- 
+
     def feols(self, fml, vcov):
-    
+
         '''
         fixest function for regression modeling
         fixed effects are projected out via the PyHDFE package
-    
+
         Args:
-    
+
           fml (string, patsy Compatible): of the form Y ~ X1 + X2 | fe1 + fe2
           vcov (string or dict): either 'iid', 'hetero', 'HC1', 'HC2', 'HC3'. For
                                  cluster robust inference, a dict {'CRV1':'clustervar'}
                                  for CRV1 inference or {'CRV3':'clustervar'} for CRV3
                                  inference.
-    
+
         Returns:
-    
+
           A dictionariy with
             - estimated regression coefficients
             - standard errors
@@ -150,21 +150,21 @@ class Fixest:
             - t-statistics
             - p-values
         '''
-      
+
         fml = FixestFormulaParser(fml)
-        
+
         fml.get_fml_dict()
         fml.get_var_dict()
-        
+
         self.fml_dict = fml.fml_dict
         self.var_dict = fml.var_dict
-        
+
         self._demean()
-        
+
         for f, fval in enumerate(self.fml_dict.keys()):
             model_frames = self.demeaned_data_dict[fval]
             for x, fml in enumerate(model_frames):
-                
+
                 model_frame = model_frames[fml]
                 Y = np.array(model_frame.iloc[:,0])
                 X = model_frame.iloc[:,1:]
@@ -178,38 +178,38 @@ class Fixest:
                 FEOLS.coefnames = colnames
                 full_fml = fml + "|" + fval
                 self.model_res[full_fml] = FEOLS
-        
-        return self    
-      
-      
-    def vcov(self, vcov): 
-      
+
+        return self
+
+
+    def vcov(self, vcov):
+
       '''
       update inference on the fly
       '''
-      
+
       for model in list(self.model_res.keys()):
-            
+
             fxst = self.model_res[model]
 
             fxst.get_vcov(vcov = vcov)
             fxst.get_inference()
-      
+
       return self
-      
-            
-    def tidy(self, type = None): 
-      
+
+
+    def tidy(self, type = None):
+
         res = []
         for x in list(self.model_res.keys()):
-            
+
             fxst = self.model_res[x]
-          
+
             res.append(
                 pd.DataFrame(
                     {
                         'fml': x,
-                        'coefnames':fxst.coefnames, 
+                        'coefnames':fxst.coefnames,
                         'coef': fxst.beta_hat,
                         'se': fxst.se,
                         'tstat': fxst.tstat,
@@ -217,9 +217,9 @@ class Fixest:
                     }
                 )
             )
-        
+
         res = pd.concat(res, axis = 0).set_index('fml')
-        if type == "markdown": 
+        if type == "markdown":
             return res.to_markdown(floatfmt=".3f")
-        else: 
+        else:
             return res
