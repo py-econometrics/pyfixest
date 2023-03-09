@@ -127,6 +127,7 @@ class Fixest:
 
             self.demeaned_data_dict[fval] = YX_dict
 
+
     def feols(self, fml, vcov):
 
         '''

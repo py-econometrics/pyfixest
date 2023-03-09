@@ -175,6 +175,8 @@ def _pack_to_fml(unpacked):
         res = [res]
 
     return res
+
+
 def _find_sw(x):
     """
     Search for matches in a string.
@@ -214,40 +216,6 @@ def _find_sw(x):
     # No matches found
     else:
         return x, None
-
-def _find_sw(x):
-
-    '''
-    Args:
-        x (str): the string to search for matches in.
-
-    Returns:
-        (list[str] or str, str or None): If any matches were found, returns a tuple containing
-            a list of the elements found and the type of match (either 'sw', 'sw0', 'csw', or 'csw0').
-            Otherwise, returns the original string and None.
-
-    Example:
-        _find_sw('sw(var1, var2)') -> (['var1', ' var2'], 'sw')
-    '''
-    # check for sw
-    s = re.findall(r"sw\((.*?)\)", x)
-    # if not empty - check if csw
-    if s != []:
-        s1 = re.findall(r"csw\((.*?)\)", x)
-        if s1 != []:
-            return s1[0].split(","), "csw"
-        else:
-            return s[0].split(","), "sw"
-    else:
-        s = re.findall(r"sw0\((.*?)\)", x)
-        if s != []:
-            s1 = re.findall(r"csw0\((.*?)\)", x)
-            if s1 != []:
-                return s1[0].split(","), "csw0"
-            else:
-                return s[0].split(","), "sw0"
-        else:
-            return x, None
 
 
 def _flatten_list(lst):
