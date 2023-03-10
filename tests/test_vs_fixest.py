@@ -49,7 +49,15 @@ def data():
     return data
 
 
-def test_py_vs_r(data):
+@pytest.mark.parametrize("fml", [
+    ("Y~X1"),
+    ("Y~X1+X2"),
+    ("Y~X1|X2"),
+    ("Y~X1|X2+X3"),
+    ("Y~X2|X3+X4"),
+])
+
+def test_py_vs_r(data, fml):
 
     '''
     test pyfixest against fixest via rpy2
@@ -60,30 +68,44 @@ def test_py_vs_r(data):
         - tba: t-statistics, covariance matrices, other metrics
     '''
 
+    # iid errors
+    pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
-    fmls = ["Y~X1", "Y ~X1 + X2", "Y~ X1 | X2", "Y~ X1|X2+X3", "Y ~ X2 | X3 + X4"]
+    np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
+    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
-    for fml in fmls:
+    # heteroskedastic errors
+    py_se = pyfixest.vcov("HC1").tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
-        # iid errors
-        pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-        py_coef = pyfixest.tidy().coef
-        py_se = pyfixest.tidy().se
-        r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
+    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
-        np.allclose((np.array(py_coef)), (stats.coef(r_fixest)), atol = 1e-20)
-        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+    # cluster robust errors
+    py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
+    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
-        # heteroskedastic errors
-        py_se = pyfixest.vcov("HC1").tidy().se
-        r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
-        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
-        # cluster robust errors
-        py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy().se
-        r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
-        np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+# simple formulas (no multiple estimations)
+#    fmls = [
+#        'Y + Y2 ~ X1',
+#        'Y + Y2 ~ sw(X1, X3)',
+#        'Y + Y2 ~ sw0(X1, X3)',
+#        'Y + Y2 ~ cw0(X1, X3)',
+#        'Y + Y2 ~ csw0(X1, X3)',
+#        'Y + Y2 ~ X4 + sw(X1, X3)',
+#        'Y + Y2 ~ X4 + sw0(X1, X3)',
+#        'Y + Y2 ~ X4 + csw(X1, X3)',
+#        'Y + Y2 ~ X4 + csw0(X1, X3)',
+#        'Y + Y2 ~ X4 + sw(X1, X3) + X2',
+#        'Y + Y2 ~ X4 + sw0(X1, X3) + X2',
+#        'Y + Y2 ~ X4 + csw(X1, X3) + X2',
+#        'Y + Y2 ~ X4 + csw0(X1, X3) + X2',
+#    ]
 
 
 
