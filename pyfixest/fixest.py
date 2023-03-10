@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from formulaic import model_matrix
-from tabulate import tabulate
 
 
 from pyfixest.feols import Feols
@@ -224,12 +223,12 @@ class Fixest:
             return res.to_markdown(floatfmt=".3f")
         else:
             return res
-          
-    def summary(self): 
-      
-        
+
+    def summary(self):
+
+
         for x in list(self.model_res.keys()):
-            
+
             split = x.split("|")
             fe = split[1]
             depvar = split[0].split("~")[0]
