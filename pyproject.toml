@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Draft package for high dimensional fixed effect OLS estimation"
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
 license = "MIT"
-readme = "README.md"
+readme = "readme.md"
 
 [tool.poetry.dependencies]
 python=">=3.8,<3.11"
