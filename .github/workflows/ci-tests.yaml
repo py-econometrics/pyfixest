@@ -1,10 +1,8 @@
 
-Marking files as viewed can help keep track of your progress, but will not affect your submitted review
-Viewed
-@@ -0,0 +1,40 @@
+
 name: CI
 
-on: push
+on: [pull_request]
 
 jobs:
   test:
