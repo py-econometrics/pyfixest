@@ -70,21 +70,21 @@ def test_py_vs_r(data, fml):
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-    py_coef = pyfixest.tidy().coef
-    py_se = pyfixest.tidy().se
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
     np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
     np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
     # heteroskedastic errors
-    py_se = pyfixest.vcov("HC1").tidy().se
+    py_se = pyfixest.vcov("HC1").tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
     np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
     # cluster robust errors
-    py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy().se
+    py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
     np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
 
