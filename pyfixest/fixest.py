@@ -211,10 +211,10 @@ class Fixest:
                     {
                         'fml': x,
                         'coefnames':fxst.coefnames,
-                        'coef': fxst.beta_hat,
-                        'se': fxst.se,
-                        'tstat': fxst.tstat,
-                        'pvalue': fxst.pvalue
+                        'Estimate': fxst.beta_hat,
+                        'Std. Error': fxst.se,
+                        't value': fxst.tstat,
+                        'Pr(>|t|)': fxst.pvalue
                     }
                 )
             )
@@ -224,3 +224,29 @@ class Fixest:
             return res.to_markdown(floatfmt=".3f")
         else:
             return res
+          
+    def summary(self): 
+      
+        
+        for x in list(self.model_res.keys()):
+            
+            split = x.split("|")
+            fe = split[1]
+            depvar = split[0].split("~")[0]
+            fxst = self.model_res[x]
+            df = pd.DataFrame(
+                  {
+                      '':fxst.coefnames,
+                      'Estimate': fxst.beta_hat,
+                      'Std. Error': fxst.se,
+                      't value': fxst.tstat,
+                      'Pr(>|t|)': fxst.pvalue
+                  }
+                )
+
+            print('')
+            print('### Fixed-effects:', fe)
+            print('Dep. var.:', depvar)
+            print('')
+            print(df.to_string(index=False))
+            print('---')
