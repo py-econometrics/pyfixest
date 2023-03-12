@@ -41,7 +41,8 @@ class FixestFormulaParser:
         else:
             fevars = "0"
 
-        # Parse the formula components into lists
+
+        # Parse all individual formula components into lists
         self.depvars = depvars.split("+")
         self.covars = _unpack_fml(covars)
         self.fevars = _unpack_fml(fevars)
@@ -49,6 +50,11 @@ class FixestFormulaParser:
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
+
+        if not isinstance(self.covars_fml, list):
+           self.covars_fml = [self.covars_fml]
+        if not isinstance(self.fevars_fml, list):
+            self.fevars_fml = [self.fevars_fml]
 
     def get_fml_dict(self):
 
@@ -83,30 +89,65 @@ class FixestFormulaParser:
         """
         self.var_dict = dict()
         for fevar in self.fevars_fml:
-              self.var_dict[fevar] = _flatten_list(self.depvars) + _flatten_list(self.covars)
+              self.var_dict[fevar] = _flatten_list(self.depvars) + _flatten_list(list(self.covars.values()))
 
 
 
 def _unpack_fml(x):
-    '''
-    Find all variables in a formula and unpack.
 
-    Args:
-        x (str): A formula string.
+
+def _unpack_fml(x):
+
+    '''
+    Given a formula string `x`, splits it into its constituent variables and their switches (if any),
+    and returns a dictionary containing the result.
+
+    Parameters:
+    -----------
+    x : str
+        The formula string to unpack.
 
     Returns:
-        list: A list of strings and/or lists of strings representing the unpacked formula.
+    --------
+    res_s : dict
+        A dictionary containing the unpacked formula. The dictionary has the following keys:
+            - 'constant' : list of str
+                The list of constant (i.e., non-switched) variables in the formula.
+            - 'sw' : list of str
+                The list of variables that have a regular switch (i.e., 'sw(var)' notation) in the formula.
+            - 'sw0' : list of str
+                The list of variables that have a 'sw0(var)' switch in the formula.
+            - 'csw' : list of str or list of lists of str
+                The list of variables that have a 'csw(var1,var2,...)' switch in the formula.
+                Each element in the list can be either a single variable string, or a list of variable strings
+                if multiple variables are listed in the switch.
+            - 'csw0' : list of str or list of lists of str
+                The list of variables that have a 'csw0(var1,var2,...)' switch in the formula.
+                Each element in the list can be either a single variable string, or a list of variable strings
+                if multiple variables are listed in the switch.
 
-    Examples:
-        var: "a + sw(b, c)" -> ['a', ['b', 'c']]
-        var = "a + csw(b, c)" -> ['a', ['b', 'b + c']]
-        var = "a + csw0(b,c) + d" -> ['a', ['b', 'b + c'], 'd']
+    Raises:
+    -------
+    ValueError:
+        If the switch type is not one of 'sw', 'sw0', 'csw', or 'csw0'.
+
+    Example:
+    --------
+    >>> _unpack_fml('a+sw(b)+csw(x1,x2)+sw0(d)+csw0(y1,y2,y3)')
+    {'constant': ['a'],
+     'sw': ['b'],
+     'csw': [['x1', 'x2']],
+     'sw0': ['d'],
+     'csw0': [['y1', 'y2', 'y3']]}
     '''
+
 
     # Split the formula into its constituent variables
     var_split = x.split("+")
 
-    res_s = []
+    res_s = dict()
+    res_s['constant'] = []
+
     for var in var_split:
 
         # Check if this variable contains a switch
@@ -114,25 +155,24 @@ def _unpack_fml(x):
 
         # If there's no switch, just add the variable to the list
         if sw_type is None:
-            res_s.append(var)
+            res_s['constant'].append(var)
 
         # If there's a switch, unpack it and add it to the list
         else:
             if sw_type == "sw":
-                res_s.append(varlist)
+                res_s[sw_type] = varlist
             elif sw_type == "sw0":
-                res_s.append(['0'] + varlist)
+                res_s[sw_type] = varlist
             elif sw_type in ["csw", "csw0"]:
-                varlist = ["+".join(varlist[:i+1]) for i in range(len(varlist))]
                 if sw_type == 'csw0':
-                    res_s.append(['0'] + varlist)
+                    res_s[sw_type] = varlist
                 else:
-                    res_s.append(varlist)
+                    res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
 
     # Sort the list by type (strings first, then lists)
-    res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
+    #res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
 
     return res_s
 
@@ -154,6 +194,66 @@ def _pack_to_fml(unpacked):
         _pack_to_fml([['0', 'x4', ' x5', ' x6'], 'x1 ', ' x2 ', ' x3']) ->
         ['x1 + x2 + x3+0', 'x1 + x2 + x3+x4', 'x1 + x2 + x3+ x5', 'x1 + x2 + x3+ x6']
     """
+
+    res = dict()
+
+    # add up all constant variables
+    if 'constant' in unpacked:
+         res['constant'] = unpacked['constant']
+    else:
+        res['constant'] = []
+
+    # add up all variable constants (only required for csw)
+    if "csw" in unpacked:
+        res['variable'] = unpacked['csw']
+        variable_type = "csw"
+    elif "csw0" in unpacked:
+        res['variable'] = unpacked['csw0']
+        variable_type = "csw0"
+    elif "sw" in unpacked:
+        res['variable'] = unpacked['sw']
+        variable_type = "sw"
+    elif "sw0" in unpacked:
+        res['variable'] = unpacked['sw0']
+        variable_type = "sw0"
+    else:
+        res['variable'] = []
+        variable_type = None
+
+    if res['constant']:
+        const_fml = "+".join(res['constant'])
+    else:
+        const_fml = []
+
+    variable_fml = []
+    if res['variable']:
+        if variable_type in ['csw', 'csw0']:
+            variable_fml = [ "+".join(res['variable'][:i+1]) for i in range(len(res['variable']))]
+        else:
+            variable_fml = [res['variable'][i] for i in range(len(res['variable']))]
+        if variable_type in ['sw0', 'csw0']:
+            variable_fml = ['0'] + variable_fml
+
+    fml_list = []
+    if variable_fml:
+        if const_fml:
+            fml_list = [ const_fml + "+" + variable_fml[i] for i in range(len(variable_fml))]
+        else:
+            fml_list = variable_fml
+    else:
+        if const_fml:
+            fml_list = const_fml
+        else:
+            raise Exception("Not a valid formula provided.")
+
+
+
+    return fml_list
+
+
+
+
+
 
     # Separate the fixed variables from the switch variables
     constant_list = [x for x in unpacked if not isinstance(x, list)]
@@ -246,3 +346,19 @@ def _flatten_list(lst):
 
 
 
+def _check_unique_key(dict, x):
+
+    '''
+    check that sw, csw, sw0, csw0 are only used once in dict
+    '''
+
+    unique = True
+    for key in dict:
+        if key == x:
+            continue
+        if key == x:
+            unique = False
+            break
+
+    if not unique:
+        raise Exception(f"The key '{key_to_check}' is unique")
