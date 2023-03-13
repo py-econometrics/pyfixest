@@ -28,6 +28,8 @@ class FixestFormulaParser:
         Args:
         fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
         """
+        
+        #fml =' Y + Y2 ~ csw0(X3, X4)'
 
         # Clean up the formula string
         fml = "".join(fml.split())
@@ -40,8 +42,7 @@ class FixestFormulaParser:
             fevars = fml_split[1]
         else:
             fevars = "0"
-
-
+        
         # Parse all individual formula components into lists
         self.depvars = depvars.split("+")
         self.covars = _unpack_fml(covars)
@@ -50,11 +51,6 @@ class FixestFormulaParser:
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
-
-        if not isinstance(self.covars_fml, list):
-           self.covars_fml = [self.covars_fml]
-        if not isinstance(self.fevars_fml, list):
-            self.fevars_fml = [self.fevars_fml]
 
     def get_fml_dict(self):
 
@@ -95,11 +91,8 @@ class FixestFormulaParser:
 
 def _unpack_fml(x):
 
-
-def _unpack_fml(x):
-
     '''
-    Given a formula string `x`, splits it into its constituent variables and their switches (if any),
+    Given a formula string `x` - e.g. 'X1 + csw(X2, X3)' - , splits it into its constituent variables and their types (if any),
     and returns a dictionary containing the result.
 
     Parameters:
@@ -114,11 +107,11 @@ def _unpack_fml(x):
             - 'constant' : list of str
                 The list of constant (i.e., non-switched) variables in the formula.
             - 'sw' : list of str
-                The list of variables that have a regular switch (i.e., 'sw(var)' notation) in the formula.
+                The list of variables that have a regular switch (i.e., 'sw(var1, var2, ...)' notation) in the formula.
             - 'sw0' : list of str
-                The list of variables that have a 'sw0(var)' switch in the formula.
+                The list of variables that have a 'sw0(var1, var2, ..)' switch in the formula.
             - 'csw' : list of str or list of lists of str
-                The list of variables that have a 'csw(var1,var2,...)' switch in the formula.
+                The list of variables that have a 'csw(var1, var2, ..)' switch in the formula.
                 Each element in the list can be either a single variable string, or a list of variable strings
                 if multiple variables are listed in the switch.
             - 'csw0' : list of str or list of lists of str
@@ -181,18 +174,6 @@ def _unpack_fml(x):
 
 def _pack_to_fml(unpacked):
     """
-    Given a list of strings and/or lists of strings, generates a list of formulas by concatenating
-    each element of the list with the elements of the other lists.
-
-    Args:
-        unpacked (list): contains strings or lists of strings
-
-    Returns:
-        A list of formulas.
-
-    Example:
-        _pack_to_fml([['0', 'x4', ' x5', ' x6'], 'x1 ', ' x2 ', ' x3']) ->
-        ['x1 + x2 + x3+0', 'x1 + x2 + x3+x4', 'x1 + x2 + x3+ x5', 'x1 + x2 + x3+ x6']
     """
 
     res = dict()
@@ -231,13 +212,16 @@ def _pack_to_fml(unpacked):
             variable_fml = [ "+".join(res['variable'][:i+1]) for i in range(len(res['variable']))]
         else:
             variable_fml = [res['variable'][i] for i in range(len(res['variable']))]
-        if variable_type in ['sw0', 'csw0']:
+        if variable_type in ['sw0', 'csw0']: 
             variable_fml = ['0'] + variable_fml
+
 
     fml_list = []
     if variable_fml:
         if const_fml:
-            fml_list = [ const_fml + "+" + variable_fml[i] for i in range(len(variable_fml))]
+            fml_list = [ const_fml + "+" + variable_fml[i] for i in range(len(variable_fml)) if variable_fml[i] != "0"]
+            if variable_type in ['sw0', 'csw0']: 
+                fml_list = [const_fml] + fml_list
         else:
             fml_list = variable_fml
     else:
@@ -246,7 +230,8 @@ def _pack_to_fml(unpacked):
         else:
             raise Exception("Not a valid formula provided.")
 
-
+    if not isinstance(fml_list, list): 
+        fml_list = [fml_list]
 
     return fml_list
 
