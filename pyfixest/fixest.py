@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.stats import norm
 from formulaic import model_matrix
 
-
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
@@ -151,13 +150,13 @@ class Fixest:
             - p-values
         '''
 
-        fml = FixestFormulaParser(fml)
+        fxst_fml = FixestFormulaParser(fml)
 
-        fml.get_fml_dict()
-        fml.get_var_dict()
+        fxst_fml.get_fml_dict()
+        fxst_fml.get_var_dict()
 
-        self.fml_dict = fml.fml_dict
-        self.var_dict = fml.var_dict
+        self.fml_dict = fxst_fml.fml_dict
+        self.var_dict = fxst_fml.var_dict
 
         self._demean()
 

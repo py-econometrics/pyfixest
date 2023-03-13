@@ -57,6 +57,7 @@ def data():
     ("Y~X2|X3+X4"),
 ])
 
+
 def test_py_vs_r(data, fml):
 
     '''
@@ -87,6 +88,86 @@ def test_py_vs_r(data, fml):
     py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
     np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+
+
+@pytest.mark.parametrize("fml_multi", [
+
+    ("Y + Y2 ~X1"),
+    ("Y + Y2 ~X1+X2"),
+    ("Y + Y2 ~X1|X2"),
+    ("Y + Y2 ~X1|X2+X3"),
+    ("Y + Y2 ~X2|X3+X4"),
+
+    ("Y + Y2 ~ sw(X3, X4)"),
+    ("Y + Y2 ~ sw(X3, X4) | X2"),
+
+    ("Y + Y2 ~ csw(X3, X4)"),
+    ("Y + Y2 ~ csw(X3, X4) | X2"),
+
+    ("Y + Y2 ~ sw(X3, X4)"),
+    ("Y + Y2 ~ sw(X3, X4) | X2"),
+
+    ("Y + Y2 ~ csw(X3, X4)"),
+    ("Y + Y2 ~ csw(X3, X4) | X2"),
+
+    ("Y + Y2 ~ X1 + csw(X3, X4)"),
+    ("Y + Y2 ~ X1 + csw(X3, X4) | X2"),
+
+    ("Y + Y2 ~ X1 + csw0(X3, X4)"),
+    ("Y + Y2 ~ X1 + csw0(X3, X4) | X2"),
+
+    ("Y + Y2 ~ X1 | csw0(X3, X4)"),
+    ("Y + Y2 ~ sw(X1, X2) | csw0(X3, X4)"),
+
+
+
+
+
+])
+
+
+def test_py_vs_r2(data, fml_multi):
+
+    '''
+    test pyfixest against fixest_multi objects
+    '''
+
+    r_fml = _py_fml_to_r_fml(fml_multi)
+
+    pyfixest = Fixest(data = data).feols(fml_multi, vcov = 'iid')
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+
+    for x, val in enumerate(r_fixest):
+
+        i = pyfixest.tidy().index.unique()[x]
+        ix = pyfixest.tidy().xs(i)
+        py_coef = ix['Estimate']
+        py_se = ix['Std. Error']
+
+        fixest_object = r_fixest.rx2(x+1)
+        fixest_coef = fixest_object.rx2("coefficients")
+        fixest_se = fixest_object.rx2("se")
+
+        np.array_equal((np.array(py_coef)), fixest_coef)
+        np.allclose((np.array(py_se)),fixest_se, atol = 1e-20)
+
+
+def _py_fml_to_r_fml(py_fml):
+
+    '''
+    pyfixest multiple estimation fml syntax to fixest multiple depvar
+    syntax converter,
+    i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
+    '''
+
+    fml_split = py_fml.split("~")
+    depvars = fml_split[0]
+    covars = fml_split[1]
+    depvars = "c(" +  ",".join(depvars.split("+")) + ")"
+    return depvars + "~" + covars
+
 
 
 

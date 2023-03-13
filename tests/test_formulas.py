@@ -3,18 +3,24 @@ from pyfixest.FormulaParser import _unpack_fml, _pack_to_fml, _find_sw, _flatten
 
 def test_unpack_fml():
 
-    assert _unpack_fml('a+b+c') == ['a', 'b', 'c']
+    assert _unpack_fml('a+b+c') == {
+        'constant': ['a', 'b', 'c']
+    }
 
-    assert _unpack_fml('a+sw(b,c)+d') == ['a', 'd', ['b', 'c']]
+    assert _unpack_fml('sw(x,y)') == {'constant': [], 'sw': ['x', 'y']}
 
-    assert _unpack_fml('a+sw0(b,c)+d') == ['a', 'd',['0','b', 'c']]
+    assert _unpack_fml('a+sw0(x,y)+d') == {
+        'constant': ['a', 'd'],
+        'sw0': ['x', 'y']
+    }
 
-    assert _unpack_fml('a+csw(b,c)+d') == ['a', 'd', ['b', 'b+c']]
+    assert _unpack_fml('csw(x,y)') == {'constant': [], 'csw': ['x', 'y']}
 
-    assert _unpack_fml('a+csw0(b,c)+d') == ['a', 'd', ['0','b', 'b+c']]
+    assert _unpack_fml('csw0(x,y,z)') == {'constant': [], 'csw0': ['x', 'y', 'z']}
 
-    #with pytest.raises(ValueError):
-    #    _unpack_fml('a + dsw(b, c) + e')
+    assert _unpack_fml('a+b+csw0(x,y,z)') == {'constant': ['a', 'b'], 'csw0': ['x', 'y', 'z']}
+
+
 
 
 
@@ -22,11 +28,21 @@ def test_pack_to_fml():
 
     #assert _pack_to_fml([]) == []
 
-    assert _pack_to_fml(['a', 'b', 'c']) == ['a+b+c']
+    assert _pack_to_fml({'constant':['x', 'y'], 'sw0':['a','b']})  == ['x+y', 'x+y+a', 'x+y+b']
+    assert _pack_to_fml({'constant':[], 'sw0':['a','b']})  == ['0', 'a', 'b']
+    assert _pack_to_fml({'constant':['x','y'], 'sw0':[]})  == ['x+y']
 
-    #assert _pack_to_fml([['a+b', 'a+c'], 'd']) == ['a+b+d', 'a+c+d']
+    assert _pack_to_fml({'constant':['x', 'y'], 'sw':['a','b']})  == ['x+y+a', 'x+y+b']
+    assert _pack_to_fml({'constant':[], 'sw':['a','b']})  == ['a', 'b']
+    assert _pack_to_fml({'constant':['x','y'], 'sw':[]})  == ['x+y']
 
-    #assert _pack_to_fml([['a', 'b', 'c'], 'd', 'e']) == ['a+d+e', 'b+d+e', 'c+d+e']
+    assert _pack_to_fml({'constant':['x', 'y'], 'csw0':['a','b']})  == ['x+y', 'x+y+a', 'x+y+a+b']
+    assert _pack_to_fml({'constant':[], 'csw0':['a','b']})  == ['0', 'a', 'a+b']
+    assert _pack_to_fml({'constant':['x','y'], 'csw0':[]})  ==['x+y']
+
+    assert _pack_to_fml({'constant':['x', 'y'], 'csw':['a','b']})  == ['x+y+a', 'x+y+a+b']
+    assert _pack_to_fml({'constant':[], 'csw':['a','b']})  == ['a', 'a+b']
+    assert _pack_to_fml({'constant':['x','y'], 'csw':[]})  == ['x+y']
 
 
 def test_find_sw_no_match():
