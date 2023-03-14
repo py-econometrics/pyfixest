@@ -21,7 +21,7 @@ class Fixest:
 
         self.data = data
         self.model_res = dict()
-
+        
 
     def _demean(self):
 
@@ -36,26 +36,38 @@ class Fixest:
             YX_dict = dict()
             na_dict = dict()
             
-            for fml in self.fml_dict[fval]: 
-                
-                Y, X = model_matrix(fml, self.data, na_action = 'ignore')
-                depvar = Y.columns 
-                covars = X.columns
-                
-                Y = np.array(Y)
-                X = np.array(X)
-                
-                Y_na = np.isnan(Y).flatten()
-                X_na = np.sum(np.isnan(X), axis = 1) > 0
-                
-                na_index = (Y_na + X_na) > 0
+            if fval != "0": 
+              
+              
+                fval_list = fval.split("+")
 
-                if fval != "0": 
+                # find interacted fixed effects via "^"
+                interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
+                regular_fes = [x for x in fval_list if len(x.split('^')) == 1]
+                        
+                for x in interacted_fes: 
+                    vars = x.split("^")
+                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna()) if x.notna().all() else np.nan, axis=1)
+                
+                fe = self.data[fval_list] 
+                # all fes to ints
+                fe = fe.apply(lambda x: pd.factorize(x)[0])                
+                
+                fe_na = np.sum(pd.isna(fe), axis = 1) > 0
+
+                for fml in self.fml_dict[fval]: 
+                
+                    Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+                    depvar = Y.columns 
+                    covars = X.columns
                     
-                    fval_list = fval.split("+")
-                    fe = self.data[fval_list]
-                    fe_na = np.sum(pd.isna(fe), axis = 1) > 0
+                    Y = np.array(Y)
+                    X = np.array(X)
                     
+                    Y_na = np.isnan(Y).flatten()
+                    X_na = np.sum(np.isnan(X), axis = 1) > 0
+                    
+                    na_index = (Y_na + X_na) > 0
                     na_index = na_index + fe_na
 
                     Y = Y[~na_index]
@@ -72,18 +84,35 @@ class Fixest:
                     YX_demeaned = pd.DataFrame(YX_demeaned)
                     YX_demeaned.columns = list(depvar) + list(covars[1:])
                     
-                else: 
-                  
+                    YX_dict[fml] = YX_demeaned
+                    na_dict[fml] = na_index
+                    
+            else: 
+                
+                for fml in self.fml_dict[fval]: 
+                    
+                    Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+                    depvar = Y.columns 
+                    covars = X.columns
+                    
+                    Y = np.array(Y)
+                    X = np.array(X)
+                    
+                    Y_na = np.isnan(Y).flatten()
+                    X_na = np.sum(np.isnan(X), axis = 1) > 0
+                    
+                    na_index = (Y_na + X_na) > 0
+
                     YX = np.concatenate([Y, X], axis = 1)
                     YX = YX[~na_index]
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(depvar) + list(covars)
                     
-                YX_dict[fml] = YX_demeaned
-                na_dict[fml] = na_index
+                    YX_dict[fml] = YX_demeaned
+                    na_dict[fml] = na_index
                 
-                self.demeaned_data_dict[fval] = YX_dict
-                self.dropped_data_dict[fval] = na_dict
+            self.demeaned_data_dict[fval] = YX_dict
+            self.dropped_data_dict[fval] = na_dict
 
     def feols(self, fml, vcov):
 
