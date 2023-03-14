@@ -29,7 +29,7 @@ class FixestFormulaParser:
         fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
         """
         
-        #fml =' Y + Y2 ~ csw0(X3, X4)'
+        #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
 
         # Clean up the formula string
         fml = "".join(fml.split())
@@ -152,15 +152,8 @@ def _unpack_fml(x):
 
         # If there's a switch, unpack it and add it to the list
         else:
-            if sw_type == "sw":
+            if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']: 
                 res_s[sw_type] = varlist
-            elif sw_type == "sw0":
-                res_s[sw_type] = varlist
-            elif sw_type in ["csw", "csw0"]:
-                if sw_type == 'csw0':
-                    res_s[sw_type] = varlist
-                else:
-                    res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
 
@@ -183,7 +176,13 @@ def _pack_to_fml(unpacked):
          res['constant'] = unpacked['constant']
     else:
         res['constant'] = []
-
+        
+    # if 'i' in unpacked: 
+    #     if res['constant']: 
+    #         res['constant'] =  res['constant'] + ":".join(unpacked['i'])
+    #     else: 
+    #         res['constant'] = ":".join(unpacked['i'])
+        
     # add up all variable constants (only required for csw)
     if "csw" in unpacked:
         res['variable'] = unpacked['csw']
@@ -283,6 +282,8 @@ def _find_sw(x):
     csw_match = re.findall(r"csw\((.*?)\)", x)
     sw0_match = re.findall(r"sw0\((.*?)\)", x)
     csw0_match = re.findall(r"csw0\((.*?)\)", x)
+    i_match = re.findall(r"i\((.*?)\)", x)
+
 
     # Check for sw matches
     if sw_match:
@@ -297,6 +298,9 @@ def _find_sw(x):
             return csw0_match[0].split(","), "csw0"
         else:
             return sw0_match[0].split(","), "sw0"
+          
+    elif i_match: 
+        return i_match[0].split(","), "i"
 
     # No matches found
     else:
