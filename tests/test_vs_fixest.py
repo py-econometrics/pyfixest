@@ -19,7 +19,7 @@ def data():
 
     # create data
     np.random.seed(1234)
-    N = 1000
+    N = 10000
     k = 4
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
@@ -55,6 +55,12 @@ def data():
     ("Y~X1|X2"),
     ("Y~X1|X2+X3"),
     ("Y~X2|X3+X4"),
+
+    ("Y~X1|X2^X3"),
+    ("Y~X1|X2^X3 + X4"),
+    ("Y~X1|X2^X3^X4"),
+
+
 
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
