@@ -29,7 +29,7 @@ For this object, we can now estimate a fixed effects regression via the `.feols(
 ```py
 fixest.feols("Y~X1 | X2", vcov = "HC1")
 ```
-The first part of the formula contains dependent variable and "regular" covariate, while the second part contains fixed effects.
+The first part of the formula contains the dependent variable and "regular" covariates, while the second part contains fixed effects.
 
 Estimation results can be accessed via a `.summary()` or `.tidy()` method:
 
@@ -59,7 +59,7 @@ fixest.vcov({'CRV1':'group_id'}).summary()
 # ---
 ```
 
-`PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables.
+`PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. Note that every new call of `.feols()` attaches new regression results the `Fixest` object.
 
 ```py
 fixest.feols("Y~X1 | csw0(X3, X4)", vcov = "HC1").summary()

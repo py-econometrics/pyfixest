@@ -253,7 +253,7 @@ data.head()
 <p>For this object, we can now estimate a fixed effects regression via the <code>.feols()</code> method. <code>.feols()</code> has two arguments: a two-sided model formula, and the type of inference.</p>
 <pre><code class="language-py">fixest.feols(&quot;Y~X1 | X2&quot;, vcov = &quot;HC1&quot;)
 </code></pre>
-<p>The first part of the formula contains dependent variable and "regular" covariate, while the second part contains fixed effects.</p>
+<p>The first part of the formula contains the dependent variable and "regular" covariates, while the second part contains fixed effects.</p>
 <p>Estimation results can be accessed via a <code>.summary()</code> or <code>.tidy()</code> method:</p>
 <pre><code class="language-py">fixest.summary()
 # &gt;&gt;&gt; fixest.summary()
@@ -276,7 +276,7 @@ data.head()
 # X1 -0.103285    0.157756 -0.654713  0.512653
 # ---
 </code></pre>
-<p><code>PyFixest</code> supports a range of multiple estimation functionality: <code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, and multiple dependent variables.</p>
+<p><code>PyFixest</code> supports a range of multiple estimation functionality: <code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, and multiple dependent variables. Note that every new call of <code>.feols()</code> attaches new regression results the <code>Fixest</code> object.</p>
 <pre><code class="language-py">fixest.feols(&quot;Y~X1 | csw0(X3, X4)&quot;, vcov = &quot;HC1&quot;).summary()
 
 # &gt;&gt;&gt; fixest.feols(&quot;Y~X1 | csw0(X3, X4)&quot;, vcov = &quot;HC1&quot;).summary()
