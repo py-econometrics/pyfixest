@@ -40,11 +40,14 @@ def data():
 
     data = pd.concat([Y, X], axis = 1)
     data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4'}, inplace = True)
-    data['X4'] = data['X4'].astype(str)
-    data['X3'] = data['X3'].astype(str)
-    data['X2'] = data['X2'].astype(str)
-    data['group_id'] = cluster.astype(str)
+
+    data['group_id'] = cluster
     data['Y2'] = data.Y + np.random.normal(0, 1, N)
+
+    data['Y'][0] = np.nan
+    #data['X2'][0] = np.nan
+
+
 
     return data
 

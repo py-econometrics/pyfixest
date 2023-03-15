@@ -47,13 +47,14 @@ class Fixest:
                         
                 for x in interacted_fes: 
                     vars = x.split("^")
-                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna()) if x.notna().all() else np.nan, axis=1)
+                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
                 
                 fe = self.data[fval_list] 
                 # all fes to ints
                 fe = fe.apply(lambda x: pd.factorize(x)[0])                
                 
                 fe_na = np.sum(pd.isna(fe), axis = 1) > 0
+                fe = np.array(fe)
 
                 for fml in self.fml_dict[fval]: 
                 
@@ -68,18 +69,18 @@ class Fixest:
                     X_na = np.sum(np.isnan(X), axis = 1) > 0
                     
                     na_index = (Y_na + X_na) > 0
-                    na_index = na_index + fe_na
+                    na_index = np.array(na_index + fe_na)
+                    na_index = na_index.flatten()
 
                     Y = Y[~na_index]
                     X = X[~na_index]
-                    fe = fe[~na_index] #  .astype(int)
-                    fe = fe.astype(int)
+                    fe2 = fe[~na_index] 
                     # drop intercept
                     X = X[:,1:]
                     
                     YX = np.concatenate([Y, X], axis = 1)
                     
-                    algorithm = pyhdfe.create(ids=fe, residualize_method='map')
+                    algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
                     YX_demeaned = algorithm.residualize(YX)
                     YX_demeaned = pd.DataFrame(YX_demeaned)
                     YX_demeaned.columns = list(depvar) + list(covars[1:])
@@ -159,7 +160,8 @@ class Fixest:
                 X = np.array(X)
                 FEOLS = Feols(Y, X)
                 FEOLS.get_fit()
-                FEOLS.data = self.data
+                FEOLS.na_index = self.dropped_data_dict[fval][fml]
+                FEOLS.data = self.data[~FEOLS.na_index]
                 FEOLS.get_vcov(vcov = vcov)
                 FEOLS.get_inference()
                 FEOLS.coefnames = colnames
