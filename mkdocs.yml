@@ -1,0 +1,12 @@
+site_name: PyFixest
+
+theme:
+  name: "material"
+
+plugins:
+  - mkdocstrings
+
+nav:
+  - index.md
+  - tutorial.md
+  - reference.md
