@@ -46,6 +46,8 @@ def data():
 
     data['Y'][0] = np.nan
     data['X1'][1] = np.nan
+    #data['X2'][2] = np.nan
+
 
 
 
@@ -84,6 +86,8 @@ def test_py_vs_r(data, fml):
         - tba: t-statistics, covariance matrices, other metrics
     '''
 
+    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
     py_coef = pyfixest.tidy()['Estimate']
@@ -91,18 +95,19 @@ def test_py_vs_r(data, fml):
     r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
     np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
-    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
     # heteroskedastic errors
     py_se = pyfixest.vcov("HC1").tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
-    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
     # cluster robust errors
     py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy()['Std. Error']
     r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
-    np.allclose((np.array(py_se)), (fixest.se(r_fixest)), atol = 1e-20)
+
+    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
 
 @pytest.mark.parametrize("fml_multi", [
@@ -147,6 +152,8 @@ def test_py_vs_r2(data, fml_multi):
     test pyfixest against fixest_multi objects
     '''
 
+    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+
     r_fml = _py_fml_to_r_fml(fml_multi)
 
     pyfixest = Fixest(data = data).feols(fml_multi, vcov = 'iid')
@@ -166,7 +173,7 @@ def test_py_vs_r2(data, fml_multi):
         fixest_se = fixest_object.rx2("se")
 
         np.array_equal((np.array(py_coef)), fixest_coef)
-        np.allclose((np.array(py_se)),fixest_se, atol = 1e-20)
+        np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
 
 def _py_fml_to_r_fml(py_fml):
@@ -183,25 +190,6 @@ def _py_fml_to_r_fml(py_fml):
     depvars = "c(" +  ",".join(depvars.split("+")) + ")"
     return depvars + "~" + covars
 
-
-
-
-# simple formulas (no multiple estimations)
-#    fmls = [
-#        'Y + Y2 ~ X1',
-#        'Y + Y2 ~ sw(X1, X3)',
-#        'Y + Y2 ~ sw0(X1, X3)',
-#        'Y + Y2 ~ cw0(X1, X3)',
-#        'Y + Y2 ~ csw0(X1, X3)',
-#        'Y + Y2 ~ X4 + sw(X1, X3)',
-#        'Y + Y2 ~ X4 + sw0(X1, X3)',
-#        'Y + Y2 ~ X4 + csw(X1, X3)',
-#        'Y + Y2 ~ X4 + csw0(X1, X3)',
-#        'Y + Y2 ~ X4 + sw(X1, X3) + X2',
-#        'Y + Y2 ~ X4 + sw0(X1, X3) + X2',
-#        'Y + Y2 ~ X4 + csw(X1, X3) + X2',
-#        'Y + Y2 ~ X4 + csw0(X1, X3) + X2',
-#    ]
 
 
 
