@@ -45,7 +45,7 @@ def data():
     data['Y2'] = data.Y + np.random.normal(0, 1, N)
 
     data['Y'][0] = np.nan
-    #data['X2'][0] = np.nan
+    data['X1'][1] = np.nan
 
 
 
