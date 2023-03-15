@@ -49,6 +49,9 @@ class Fixest:
                     vars = x.split("^")
                     self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
                 
+                for x in regular_fes: 
+                    self.data[x] = self.data[x].astype(str)
+                
                 fe = self.data[fval_list] 
                 # all fes to ints
                 fe = fe.apply(lambda x: pd.factorize(x)[0])                
