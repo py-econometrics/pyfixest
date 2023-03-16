@@ -204,14 +204,14 @@ class Fixest:
                 or {"CRV3":"clustervar"} for CRV3 inference.
         '''
 
-      for model in list(self.model_res.keys()):
+        for model in list(self.model_res.keys()):
 
-            fxst = self.model_res[model]
+                fxst = self.model_res[model]
 
-            fxst.get_vcov(vcov = vcov)
-            fxst.get_inference()
+                fxst.get_vcov(vcov = vcov)
+                fxst.get_inference()
 
-      return self
+        return self
 
 
     def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
