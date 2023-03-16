@@ -1,0 +1,3 @@
+# Fixest
+
+:::pyfixest.Fixest
