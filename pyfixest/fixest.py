@@ -3,6 +3,8 @@ import pyhdfe
 
 import numpy as np
 import pandas as pd
+
+from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
 
@@ -12,16 +14,22 @@ from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
 class Fixest:
 
-    def __init__(self, data):
+    def __init__(self, data: pd.DataFrame) -> None:
 
         '''
         Initiate the fixest object.
         Deparse fml into formula dict, variable dict.
+
+        Args:
+            - data: The input pd.DataFrame for the object.
+
+        Returns:
+            - None
         '''
 
         self.data = data
         self.model_res = dict()
-        
+
 
     def _demean(self):
 
@@ -32,114 +40,123 @@ class Fixest:
         self.dropped_data_dict = dict()
 
         for f, fval in enumerate(fixef_keys):
-            
+
             YX_dict = dict()
             na_dict = dict()
-            
-            if fval != "0": 
-              
-              
+
+            if fval != "0":
+
+
                 fval_list = fval.split("+")
 
                 # find interacted fixed effects via "^"
                 interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
                 regular_fes = [x for x in fval_list if len(x.split('^')) == 1]
-                        
-                for x in interacted_fes: 
+
+                for x in interacted_fes:
                     vars = x.split("^")
                     self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
-                
-                for x in regular_fes: 
+
+                for x in regular_fes:
                     self.data[x] = self.data[x].astype(str)
-                
-                fe = self.data[fval_list] 
+
+                fe = self.data[fval_list]
                 # all fes to ints
-                fe = fe.apply(lambda x: pd.factorize(x)[0])                
-                
+                fe = fe.apply(lambda x: pd.factorize(x)[0])
+
                 fe_na = np.sum(pd.isna(fe), axis = 1) > 0
                 fe = np.array(fe)
 
-                for fml in self.fml_dict[fval]: 
-                
+                for fml in self.fml_dict[fval]:
+
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
-                    depvar = Y.columns 
+                    depvar = Y.columns
                     covars = X.columns
-                    
+
                     Y = np.array(Y)
                     X = np.array(X)
-                    
+
                     Y_na = np.isnan(Y).flatten()
                     X_na = np.sum(np.isnan(X), axis = 1) > 0
-                    
+
                     na_index = (Y_na + X_na) > 0
                     na_index = np.array(na_index + fe_na)
                     na_index = na_index.flatten()
 
                     Y = Y[~na_index]
                     X = X[~na_index]
-                    fe2 = fe[~na_index] 
+                    fe2 = fe[~na_index]
                     # drop intercept
                     X = X[:,1:]
-                    
+
                     YX = np.concatenate([Y, X], axis = 1)
-                    
+
                     algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
                     YX_demeaned = algorithm.residualize(YX)
                     YX_demeaned = pd.DataFrame(YX_demeaned)
                     YX_demeaned.columns = list(depvar) + list(covars[1:])
-                    
+
                     YX_dict[fml] = YX_demeaned
                     na_dict[fml] = na_index
-                    
-            else: 
-                
-                for fml in self.fml_dict[fval]: 
-                    
+
+            else:
+
+                for fml in self.fml_dict[fval]:
+
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
-                    depvar = Y.columns 
+                    depvar = Y.columns
                     covars = X.columns
-                    
+
                     Y = np.array(Y)
                     X = np.array(X)
-                    
+
                     Y_na = np.isnan(Y).flatten()
                     X_na = np.sum(np.isnan(X), axis = 1) > 0
-                    
+
                     na_index = (Y_na + X_na) > 0
 
                     YX = np.concatenate([Y, X], axis = 1)
                     YX = YX[~na_index]
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(depvar) + list(covars)
-                    
+
                     YX_dict[fml] = YX_demeaned
                     na_dict[fml] = na_index
-                
+
             self.demeaned_data_dict[fval] = YX_dict
             self.dropped_data_dict[fval] = na_dict
 
-    def feols(self, fml, vcov):
-
+    def feols(self, fml: str, vcov: Union[str, Dict[str, str]]) -> None:
         '''
-        fixest function for regression modeling
-        fixed effects are projected out via the PyHDFE package
+        Method for fixed effects regression modeling using PyHDFE package for projecting out fixed effects.
 
         Args:
+            fml (str): A two-sided formula string using fixest formula syntax. Supported syntax includes:
+                - Stepwise regressions (sw, sw0)
+                - Cumulative stepwise regression (csw, csw0)
+                - Multiple dependent variables (Y1 + Y2 ~ X)
+                - Interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
+                All other parts of the formula must be compatible with formula parsing via the formulaic module.
+            vcov (str or dict): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+                If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference or {"CRV3":"clustervar"} for CRV3 inference.
 
-          fml (string, patsy Compatible): of the form Y ~ X1 + X2 | fe1 + fe2
-          vcov (string or dict): either 'iid', 'hetero', 'HC1', 'HC2', 'HC3'. For
-                                 cluster robust inference, a dict {'CRV1':'clustervar'}
-                                 for CRV1 inference or {'CRV3':'clustervar'} for CRV3
-                                 inference.
-
-        Returns:
-
-          A dictionariy with
-            - estimated regression coefficients
-            - standard errors
-            - variance-covariance matrix
-            - t-statistics
-            - p-values
+        Examples:
+            - Standard formula:
+                fml = 'Y ~ X1 + X2'
+                fixest_model = Fixest(data=data).feols(fml, vcov='iid')
+            - With fixed effects:
+                fml = 'Y ~ X1 + X2 | fe1 + fe2'
+            - With interacted fixed effects:
+                fml = 'Y ~ X1 + X2 | fe1^fe2'
+            - Multiple dependent variables:
+                fml = 'Y1 + Y2 ~ X1 + X2'
+            - Stepwise regressions (sw and sw0):
+                fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
+            - Cumulative stepwise regressions (csw and csw0):
+                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
+            - Combinations:
+                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
         '''
 
         fxst_fml = FixestFormulaParser(fml)
@@ -174,11 +191,18 @@ class Fixest:
         return self
 
 
-    def vcov(self, vcov):
+    def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
 
-      '''
-      update inference on the fly
-      '''
+        '''
+        Update inference on the fly. By calling vcov() on a "Fixest" object, all inference procedures applied
+        to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
+
+        Args:
+            - vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
+                or {"CRV3":"clustervar"} for CRV3 inference.
+        '''
 
       for model in list(self.model_res.keys()):
 
@@ -190,7 +214,32 @@ class Fixest:
       return self
 
 
-    def tidy(self, type = None):
+    def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
+
+        '''
+        Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
+
+        Parameters
+        ----------
+        type : str, optional
+            The type of output format to use. If set to "markdown", the resulting DataFrame
+            will be returned in a markdown format with three decimal places. Default is None.
+
+        Returns
+        -------
+        pd.DataFrame or str
+            A tidy DataFrame with the following columns:
+            - fml: the formula used to generate the results
+            - coefnames: the names of the coefficients
+            - Estimate: the estimated coefficients
+            - Std. Error: the standard errors of the estimated coefficients
+            - t value: the t-values of the estimated coefficients
+            - Pr(>|t|): the p-values of the estimated coefficients
+
+            If `type` is set to "markdown", the resulting DataFrame will be returned as a
+            markdown-formatted string with three decimal places.
+
+        '''
 
         res = []
         for x in list(self.model_res.keys()):
@@ -216,8 +265,18 @@ class Fixest:
         else:
             return res
 
-    def summary(self):
+    def summary(self) -> None:
+        '''
+        Prints a summary of the feols() estimation results for each estimated model.
 
+        For each model, the method prints a header indicating the fixed-effects and the
+        dependent variable, followed by a table of coefficient estimates with standard
+        errors, t-values, and p-values.
+
+        Returns:
+            - None
+
+        '''
 
         for x in list(self.model_res.keys()):
 

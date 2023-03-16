@@ -1,6 +1,8 @@
 import warnings
 import pyhdfe
 
+from typing import Union, List, Dict
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -11,24 +13,61 @@ from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
 class Feols:
 
-    def __init__(self, Y, X):
+    """
+    A class for estimating regression models with high-dimensional fixed effects via
+    ordinary least squares.
 
+    Parameters
+    ----------
+    Y : Union[np.ndarray, pd.DataFrame]
+        Dependent variable of the regression.
+    X : Union[np.ndarray, pd.DataFrame]
+        Independent variable of the regression.
 
-        #coefnames = X.columns
-        #depvars = Y.columns
+    Attributes
+    ----------
+    Y : np.ndarray
+        The dependent variable of the regression.
+    X : np.ndarray
+        The independent variable of the regression.
+    N : int
+        The number of observations.
+    k : int
+        The number of columns in X.
 
-        self.Y = np.array(Y, dtype = "float64")
-        self.X = np.array(X, dtype = "float64")
+    Methods
+    -------
+    get_fit()
+        Regression estimation for a single model, via ordinary least squares (OLS).
+    get_vcov(vcov)
+        Compute covariance matrices for an estimated model.
+
+    Raises
+    ------
+    AssertionError
+        If the vcov argument is not a dict, a string, or a list.
+
+    """
+
+    def __init__(self, Y: Union[np.ndarray, pd.DataFrame], X: Union[np.ndarray, pd.DataFrame]) -> None:
+
+        if not isinstance(Y, (np.ndarray, pd.DataFrame)):
+            raise TypeError("Y must be a numpy array or pandas dataframe")
+        if not isinstance(X, (np.ndarray, pd.DataFrame)):
+            raise TypeError("X must be a numpy array or pandas dataframe")
+
+        self.Y = np.array(Y, dtype="float64")
+        self.X = np.array(X, dtype="float64")
+
+        if self.X.ndim != 2:
+            raise ValueError("X must be a 2D array")
+
         self.N, self.k = X.shape
 
-        # drop intercept when fixed effects
-        # are present
-        #X = X[:, coefnames != 'Intercept']
-        #self.coefnames = coefnames[coefnames != 'Intercept']
 
-    def get_fit(self):
+    def get_fit(self) -> None:
         '''
-        regression estimation for a single model
+        Regression estimation for a single model, via ordinary least squares (OLS).
         '''
 
         self.tXX = np.transpose(self.X) @ self.X
@@ -40,11 +79,27 @@ class Feols:
         self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y - self.Y_hat)
 
-    def get_vcov(self, vcov = "hetero"):
+    def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
 
         '''
-        compute covariance matrices
+        Compute covariance matrices for an estimated regression model.
+
+        Parameters
+        ----------
+        vcov : Union[str, Dict[str, str], List[str]]
+            A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+            If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
+            or {"CRV3":"clustervar"} for CRV3 inference.
+
+        Raises
+        ------
+        AssertionError
+            If vcov is not a dict, string, or list.
+
         '''
+
+        assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
 
         if isinstance(vcov, dict):
             vcov_type_detail = list(vcov.keys())[0]
@@ -147,6 +202,10 @@ class Feols:
 
     def get_inference(self):
 
+        '''
+        Compute standard errors, t-statistics and p-values for the regression model.
+        '''
+
         self.se = (
             np.sqrt(np.diagonal(self.vcov))
         )
@@ -158,6 +217,10 @@ class Feols:
         )
 
     def get_performance(self):
+
+        '''
+        Compute multiple additional measures commonly reported with linear regression output.
+        '''
 
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)

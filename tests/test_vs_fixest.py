@@ -18,7 +18,7 @@ stats = importr('stats')
 def data():
 
     # create data
-    np.random.seed(1234)
+    np.random.seed(1123487)
     N = 10000
     k = 4
     G = 25
