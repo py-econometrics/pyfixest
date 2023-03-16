@@ -169,15 +169,21 @@ class Fixest:
 
         self._demean()
 
-        for f, fval in enumerate(self.fml_dict.keys()):
+        for _, fval in enumerate(self.fml_dict.keys()):
             model_frames = self.demeaned_data_dict[fval]
-            for x, fml in enumerate(model_frames):
+            for _, fml in enumerate(model_frames):
 
                 model_frame = model_frames[fml]
+                full_fml = fml + "|" + fval
+
                 Y = np.array(model_frame.iloc[:,0])
                 X = model_frame.iloc[:,1:]
                 colnames = X.columns
                 X = np.array(X)
+
+                if np.linalg.matrix_rank(X) < min(X.shape):
+                    raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped.")
+
                 FEOLS = Feols(Y, X)
                 FEOLS.get_fit()
                 FEOLS.na_index = self.dropped_data_dict[fval][fml]
@@ -185,7 +191,6 @@ class Fixest:
                 FEOLS.get_vcov(vcov = vcov)
                 FEOLS.get_inference()
                 FEOLS.coefnames = colnames
-                full_fml = fml + "|" + fval
                 self.model_res[full_fml] = FEOLS
 
         return self
