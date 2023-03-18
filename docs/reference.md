@@ -1,3 +1,3 @@
-# Fixest
+# Reference
 
 :::pyfixest.Fixest
