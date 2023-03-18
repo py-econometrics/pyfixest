@@ -42,9 +42,13 @@ class Fixest:
         fixef_keys = list(self.var_dict.keys())
 
         if self.ivars is not None:
-            ref = list(self.ivars.keys())[0]
-            ivars = self.ivars[ref]
-            drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+            if list(self.ivars.keys())[0] is not None:
+                ref = list(self.ivars.keys())[0]
+                ivars = self.ivars[ref]
+                drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+            else: 
+                ivars = self.ivars[None]
+                drop_ref = None
             #if ref not in self.data[ivars[0]].unique():
 
         self.demeaned_data_dict = dict()
@@ -83,13 +87,14 @@ class Fixest:
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
 
                     if self.ivars is not None:
-                        X = X.drop(drop_ref, axis = 1)
+                        if drop_ref is not None: 
+                            X = X.drop(drop_ref, axis = 1)
 
                     depvar = Y.columns
                     covars = X.columns
 
                     if self.ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(self.ivars[0]) and s.endswith(self.ivars[1])]
+                        self.icovars = [s for s in covars if s.startswith(ivars[0]) and s.endswith(ivars[1])]
                     else:
                         self.icovars = None
 
@@ -215,7 +220,7 @@ class Fixest:
                 X = X.to_numpy()
 
                 if np.linalg.matrix_rank(X) < min(X.shape):
-                    raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped.")
+                    raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. If you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
 
                 FEOLS = Feols(Y, X)
                 FEOLS.get_fit()

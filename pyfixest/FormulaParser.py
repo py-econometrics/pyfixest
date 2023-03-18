@@ -56,10 +56,17 @@ class FixestFormulaParser:
 
         if self.covars.get("i") is not None:
             self.ivars = dict()
-            ref = self.covars.get("i")[-1].split("=")[1]
-            ivar_list = self.covars.get("i")[:-1]
+            i_split = self.covars.get("i")[-1].split("=")
+            if len(i_split) > 1: 
+                ref = self.covars.get("i")[-1].split("=")[1]
+                ivar_list = self.covars.get("i")[:-1]
+                self.covars["i"] = self.covars.get("i")[:-1]
+            else: 
+                ref = None
+                ivar_list = self.covars.get("i")
+
             self.ivars[ref] = ivar_list
-            self.covars["i"] = self.covars.get("i")[:-1]
+        
         else:
             self.ivars = None
 
