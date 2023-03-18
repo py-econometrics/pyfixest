@@ -3,6 +3,7 @@ import pyhdfe
 
 from typing import Union, List, Dict
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -49,21 +50,20 @@ class Feols:
 
     """
 
-    def __init__(self, Y: Union[np.ndarray, pd.DataFrame], X: Union[np.ndarray, pd.DataFrame]) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray) -> None:
 
-        if not isinstance(Y, (np.ndarray, pd.DataFrame)):
-            raise TypeError("Y must be a numpy array or pandas dataframe")
-        if not isinstance(X, (np.ndarray, pd.DataFrame)):
-            raise TypeError("X must be a numpy array or pandas dataframe")
+        if not isinstance(Y, (np.ndarray)):
+            raise TypeError("Y must be a numpy array.")
+        if not isinstance(X, (np.ndarray)):
+            raise TypeError("X must be a numpy array.")
 
-        self.Y = np.array(Y, dtype="float64")
-        self.X = np.array(X, dtype="float64")
+        self.Y = Y
+        self.X = X
 
         if self.X.ndim != 2:
             raise ValueError("X must be a 2D array")
 
         self.N, self.k = X.shape
-
 
     def get_fit(self) -> None:
         '''
@@ -80,7 +80,6 @@ class Feols:
         self.u_hat = (self.Y - self.Y_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
-
         '''
         Compute covariance matrices for an estimated regression model.
 
@@ -99,7 +98,8 @@ class Feols:
 
         '''
 
-        assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+        assert isinstance(vcov, (dict, str, list)
+                          ), "vcov must be a dict, string or list"
 
         if isinstance(vcov, dict):
             vcov_type_detail = list(vcov.keys())[0]
@@ -118,7 +118,6 @@ class Feols:
         elif vcov_type_detail in ["CRV1", "CRV3"]:
             vcov_type = "CRV"
 
-
         # compute vcov
         if vcov_type == 'iid':
 
@@ -133,7 +132,7 @@ class Feols:
                 self.ssc = 1
                 leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
-                     u = (1 - leverage) * self.u_hat
+                    u = (1 - leverage) * self.u_hat
                 else:
                     u = np.sqrt(1 - leverage) * self.u_hat
 
@@ -143,9 +142,9 @@ class Feols:
         elif vcov_type == "CRV":
 
             # if there are missings - delete them!
-            cluster_df = np.array(self.data[self.clustervar])
+            cluster_df = self.data[self.clustervar].to_numpy()
             # drop NAs
-            #if len(self.na_index) != 0:
+            # if len(self.na_index) != 0:
             #    cluster_df = np.delete(cluster_df, 0, self.na_index)
 
             clustid = np.unique(cluster_df)
@@ -177,7 +176,6 @@ class Feols:
 
                 for ixg, g in enumerate(clustid):
 
-
                     Xg = self.X[np.where(cluster_df == g)]
                     Yg = self.Y[:, x][np.where(cluster_df == g)]
 
@@ -200,8 +198,7 @@ class Feols:
 
                 self.vcov = self.ssc * vcov
 
-    def get_inference(self):
-
+    def get_inference(self, alpha = 0.95):
         '''
         Compute standard errors, t-statistics and p-values for the regression model.
         '''
@@ -216,8 +213,12 @@ class Feols:
             2*(1-norm.cdf(np.abs(self.tstat)))
         )
 
-    def get_performance(self):
+        z = norm.ppf((1-alpha) / 2)
+        self.conf_int = (
+            np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
+        )
 
+    def get_performance(self):
         '''
         Compute multiple additional measures commonly reported with linear regression output.
         '''

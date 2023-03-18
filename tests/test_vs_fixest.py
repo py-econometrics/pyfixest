@@ -20,13 +20,14 @@ def data():
     # create data
     np.random.seed(1123487)
     N = 10000
-    k = 4
+    k = 5
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
     X = pd.DataFrame(X)
     X[1] = np.random.choice(list(range(0, 5)), N, True)
     X[2] = np.random.choice(list(range(0, 10)), N, True)
     X[3] = np.random.choice(list(range(0, 10)), N, True)
+    X[4] = np.random.normal(0, 1, N)
 
     beta = np.random.normal(0,1,k)
     beta[0] = 0.005
@@ -39,7 +40,7 @@ def data():
     X = pd.DataFrame(X)
 
     data = pd.concat([Y, X], axis = 1)
-    data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4'}, inplace = True)
+    data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4', 4:'X5'}, inplace = True)
 
     data['group_id'] = cluster
     data['Y2'] = data.Y + np.random.normal(0, 1, N)
@@ -65,11 +66,22 @@ def data():
     ("Y~X1|X2^X3 + X4"),
     ("Y~X1|X2^X3^X4"),
 
-
-
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
     ("Y ~ X1:X2 | X3 + X4"),
+
+    #("Y ~ C(X2)"),
+    #("Y ~ X1 + C(X2)"),
+
+    #("Y ~ X1:C(X2) | X3"),
+    #("Y ~ C(X2):C(X3) | X4"),
+
+
+
+
+    #("Y ~ i(X1,X2)"),
+    #("Y ~ i(X1,X2) | X3"),
+    #("Y ~ i(X1,X2) | X3 + X4"),
 
 
 ])
