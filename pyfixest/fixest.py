@@ -41,9 +41,8 @@ class Fixest:
         # deparse fxst.fml_dict:
         fixef_keys = list(self.var_dict.keys())
 
-        ref = list(self.ivars.keys())[0]
-
         if self.ivars is not None:
+            ref = list(self.ivars.keys())[0]
             ivars = self.ivars[ref]
             drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
             #if ref not in self.data[ivars[0]].unique():
@@ -83,14 +82,14 @@ class Fixest:
 
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
 
-                    if ivars is not None:
+                    if self.ivars is not None:
                         X = X.drop(drop_ref, axis = 1)
 
                     depvar = Y.columns
                     covars = X.columns
 
-                    if ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(ivars[0]) and s.endswith(ivars[1])]
+                    if self.ivars is not None:
+                        self.icovars = [s for s in covars if s.startswith(self.ivars[0]) and s.endswith(self.ivars[1])]
                     else:
                         self.icovars = None
 
@@ -126,15 +125,14 @@ class Fixest:
 
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
 
-                    if ivars is not None:
-                        print('dropping', drop_ref)
+                    if self.ivars is not None:
                         X = X.drop(drop_ref, axis = 1)
 
                     depvar = Y.columns
                     covars = X.columns
 
-                    if ivars is not None:
-                        self.icovars = covars
+                    if self.ivars is not None:
+                        self.icovars = [s for s in covars if s.startswith(self.ivars[0]) and s.endswith(self.ivars[1])]
                     else:
                         self.icovars = None
 
