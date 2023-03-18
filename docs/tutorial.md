@@ -97,3 +97,25 @@ fixest.feols("Y~X1 | csw0(X3, X4)", vcov = "HC1").summary()
 
 ```
 
+# TWFE Event Study
+
+Here, we follow an example from the LOST library of statistical techniques.
+
+```py
+import pandas as pd
+import numpy as np
+from pyfixest import Fixest
+
+# Read in data
+df = pd.read_csv("https://raw.githubusercontent.com/LOST-STATS/LOST-STATS.github.io/master/Model_Estimation/Data/Event_Study_DiD/bacon_example.csv")
+
+df['time_to_treat'] = df['_nfd'].sub(df['year']).fillna(0).astype(int).astype('category')
+df['treat'] = np.where(pd.isna(df['_nfd']), 0, 1)
+
+fixest = Fixest(df)
+fml = 'asmrs ~ i(time_to_treat, treat, ref = -1) + csw(pcinc, asmrh, cases) | stfips + year'
+fixest.feols(fml, vcov = {'CRV1':'stfips'})
+fixest.iplot()
+```
+
+![image](figures/event_study.png)

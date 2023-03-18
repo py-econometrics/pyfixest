@@ -28,7 +28,7 @@ class FixestFormulaParser:
         Args:
         fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
         """
-        
+
         #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
 
         # Clean up the formula string
@@ -42,15 +42,31 @@ class FixestFormulaParser:
             fevars = fml_split[1]
         else:
             fevars = "0"
-        
+
         # Parse all individual formula components into lists
         self.depvars = depvars.split("+")
         self.covars = _unpack_fml(covars)
         self.fevars = _unpack_fml(fevars)
 
+        if self.covars.get("^") is not None:
+            raise ValueError("Please use 'i()' or ':' syntax to interact covariates.")
+
+        if self.fevars.get("i") is not None:
+            raise ValueError("Please use '^' to interact fixed effects.")
+
+        self.ivars = dict()
+        ref = self.covars.get("i")[-1].split("=")[1]
+        ivar_list = self.covars.get("i")[:-1]
+        self.ivars[ref] = ivar_list
+        
+        # drop the ref part from covars
+        if self.ivars is not None: 
+            self.covars["i"] = self.covars.get("i")[:-1]
+        
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
+
 
     def get_fml_dict(self):
 
@@ -152,7 +168,7 @@ def _unpack_fml(x):
 
         # If there's a switch, unpack it and add it to the list
         else:
-            if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']: 
+            if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
                 res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
@@ -176,13 +192,13 @@ def _pack_to_fml(unpacked):
          res['constant'] = unpacked['constant']
     else:
         res['constant'] = []
-        
-    # if 'i' in unpacked: 
-    #     if res['constant']: 
-    #         res['constant'] =  res['constant'] + ":".join(unpacked['i'])
-    #     else: 
-    #         res['constant'] = ":".join(unpacked['i'])
-        
+
+    if 'i' in unpacked:
+       if res['constant']:
+           res['constant'] =  res['constant'] + [":".join(unpacked['i'])]
+       else:
+           res['constant'] = [":".join(unpacked['i'])]
+
     # add up all variable constants (only required for csw)
     if "csw" in unpacked:
         res['variable'] = unpacked['csw']
@@ -211,7 +227,7 @@ def _pack_to_fml(unpacked):
             variable_fml = [ "+".join(res['variable'][:i+1]) for i in range(len(res['variable']))]
         else:
             variable_fml = [res['variable'][i] for i in range(len(res['variable']))]
-        if variable_type in ['sw0', 'csw0']: 
+        if variable_type in ['sw0', 'csw0']:
             variable_fml = ['0'] + variable_fml
 
 
@@ -219,7 +235,7 @@ def _pack_to_fml(unpacked):
     if variable_fml:
         if const_fml:
             fml_list = [ const_fml + "+" + variable_fml[i] for i in range(len(variable_fml)) if variable_fml[i] != "0"]
-            if variable_type in ['sw0', 'csw0']: 
+            if variable_type in ['sw0', 'csw0']:
                 fml_list = [const_fml] + fml_list
         else:
             fml_list = variable_fml
@@ -229,7 +245,7 @@ def _pack_to_fml(unpacked):
         else:
             raise Exception("Not a valid formula provided.")
 
-    if not isinstance(fml_list, list): 
+    if not isinstance(fml_list, list):
         fml_list = [fml_list]
 
     return fml_list
@@ -298,8 +314,8 @@ def _find_sw(x):
             return csw0_match[0].split(","), "csw0"
         else:
             return sw0_match[0].split(","), "sw0"
-          
-    elif i_match: 
+
+    elif i_match:
         return i_match[0].split(","), "i"
 
     # No matches found

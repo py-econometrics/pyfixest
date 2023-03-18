@@ -1,15 +1,20 @@
 import warnings
 import pyhdfe
+import re
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
 
+from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, scale_x_discrete, geom_hline, facet_wrap
+
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
+
 
 
 class Fixest:
@@ -35,6 +40,13 @@ class Fixest:
 
         # deparse fxst.fml_dict:
         fixef_keys = list(self.var_dict.keys())
+
+        ref = list(self.ivars.keys())[0]
+
+        if self.ivars is not None:
+            ivars = self.ivars[ref]
+            drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+            #if ref not in self.data[ivars[0]].unique():
 
         self.demeaned_data_dict = dict()
         self.dropped_data_dict = dict()
@@ -65,23 +77,32 @@ class Fixest:
                 fe = fe.apply(lambda x: pd.factorize(x)[0])
 
                 fe_na = np.sum(pd.isna(fe), axis = 1) > 0
-                fe = np.array(fe)
+                fe = fe.to_numpy()
 
                 for fml in self.fml_dict[fval]:
 
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+
+                    if ivars is not None:
+                        X = X.drop(drop_ref, axis = 1)
+
                     depvar = Y.columns
                     covars = X.columns
 
-                    Y = np.array(Y)
-                    X = np.array(X)
+                    if ivars is not None:
+                        self.icovars = [s for s in covars if s.startswith(ivars[0]) and s.endswith(ivars[1])]
+                    else:
+                        self.icovars = None
+
+                    Y = Y.to_numpy()
+                    X = X.to_numpy()
 
                     Y_na = np.isnan(Y).flatten()
                     X_na = np.sum(np.isnan(X), axis = 1) > 0
 
                     na_index = (Y_na + X_na) > 0
-                    na_index = np.array(na_index + fe_na)
-                    na_index = na_index.flatten()
+                    na_index = (na_index + fe_na)
+                    na_index = na_index
 
                     Y = Y[~na_index]
                     X = X[~na_index]
@@ -104,11 +125,24 @@ class Fixest:
                 for fml in self.fml_dict[fval]:
 
                     Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+
+                    if ivars is not None:
+                        print('dropping', drop_ref)
+                        X = X.drop(drop_ref, axis = 1)
+
                     depvar = Y.columns
                     covars = X.columns
 
-                    Y = np.array(Y)
-                    X = np.array(X)
+                    if ivars is not None:
+                        self.icovars = covars
+                    else:
+                        self.icovars = None
+
+                    depvar = Y.columns
+                    covars = X.columns
+
+                    Y = Y.to_numpy()
+                    X = X.to_numpy()
 
                     Y_na = np.isnan(Y).flatten()
                     X_na = np.sum(np.isnan(X), axis = 1) > 0
@@ -166,6 +200,7 @@ class Fixest:
 
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
+        self.ivars = fxst_fml.ivars
 
         self._demean()
 
@@ -176,10 +211,10 @@ class Fixest:
                 model_frame = model_frames[fml]
                 full_fml = fml + "|" + fval
 
-                Y = np.array(model_frame.iloc[:,0])
+                Y = model_frame.iloc[:,0].to_numpy()
                 X = model_frame.iloc[:,1:]
                 colnames = X.columns
-                X = np.array(X)
+                X = X.to_numpy()
 
                 if np.linalg.matrix_rank(X) < min(X.shape):
                     raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped.")
@@ -191,6 +226,8 @@ class Fixest:
                 FEOLS.get_vcov(vcov = vcov)
                 FEOLS.get_inference()
                 FEOLS.coefnames = colnames
+                if self.icovars is not None:
+                    FEOLS.icovars = self.icovars
                 self.model_res[full_fml] = FEOLS
 
         return self
@@ -305,3 +342,97 @@ class Fixest:
             print('')
             print(df.to_string(index=False))
             print('---')
+
+
+    def iplot(self):
+
+        '''
+        plots i-coefficients
+        '''
+
+        ivars = self.icovars
+        ref = int(list(self.ivars.keys())[0])
+
+        if ivars is None:
+            raise ValueError("The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
+
+        if "Intercept" in ivars:
+            ivars.remove("Intercept")
+
+        df = self.tidy()
+
+        df = df[df.coefnames.isin(ivars)]
+        models = df.index.unique()
+
+        df_list = []
+
+        for model in models:
+
+            df_model = df.xs(model)
+            coef = df_model["Estimate"].values
+            conf_l = coef - df_model["Std. Error"].values * 1.96
+            conf_u = coef + df_model["Std. Error"].values * 1.96
+            coefnames = df_model["coefnames"].values.tolist()
+
+            coefnames = [int(i) for string in coefnames for i in re.findall(r'\[T\.([\d\.\-]+)\]', string)]
+
+            coef = np.append(coef, 0)
+            conf_l = np.append(conf_l, 0)
+            conf_u = np.append(conf_u, 0)
+            coefnames = np.append(coefnames, ref)
+
+            df_dict = {
+              'coef':coef,
+              'conf_l':conf_l,
+              'conf_u':conf_u,
+              'coefnames':coefnames,
+              'model' : model
+            }
+
+            df_list.append(pd.DataFrame(df_dict))
+
+        df_all = pd.concat(df_list, axis = 0)
+
+        plot = (
+        ggplot(df_all, aes(x = 'coefnames', y = 'coef', color = 'model')) +
+          geom_point() +
+          geom_errorbar(aes(x = 'coefnames', ymin = 'conf_l', ymax = 'conf_u')) +
+          theme_bw() +
+          ylab('Estimate') +
+          geom_hline(yintercept = 0, color = "blue", linetype = "dotted")
+        )
+
+        return plot
+
+
+    def coefplot(self, figsize = (5,2), yintercept = 0, figtitle = None, figtext = None):
+
+        '''
+        Plot estimation results.
+        '''
+
+        n_models = len(self.tidy().index.unique())
+
+        if n_models > 1:
+            raise ValueError("The plot() method is only defined for single regressions.")
+
+        df = self.tidy()
+        coef = df["Estimate"].values
+        se = df["Std. Error"].values * 1.96
+        coefnames = df["coefnames"].values.tolist()
+
+        plt.figure(figsize= figsize)
+        plt.errorbar(coefnames, coef, yerr= se, fmt='.', capsize=5)
+        plt.ylabel("Estimate")
+
+        if figtitle is not None:
+            plt.title(figtitle)
+
+        if figtext is not None:
+            plt.figtext(0.5, -0.1, figtext, ha='center', fontsize=10)
+
+        if yintercept is not None:
+            plt.axhline(y=yintercept, color='red', linestyle='--')
+
+        plt.show()
+        plt.close()
