@@ -54,15 +54,16 @@ class FixestFormulaParser:
         if self.fevars.get("i") is not None:
             raise ValueError("Please use '^' to interact fixed effects.")
 
-        self.ivars = dict()
-        ref = self.covars.get("i")[-1].split("=")[1]
-        ivar_list = self.covars.get("i")[:-1]
-        self.ivars[ref] = ivar_list
-        
-        # drop the ref part from covars
-        if self.ivars is not None: 
+        if self.covars.get("i") is not None:
+            self.ivars = dict()
+            ref = self.covars.get("i")[-1].split("=")[1]
+            ivar_list = self.covars.get("i")[:-1]
+            self.ivars[ref] = ivar_list
             self.covars["i"] = self.covars.get("i")[:-1]
-        
+        else:
+            self.ivars = None
+
+
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
