@@ -9,8 +9,6 @@ import pandas as pd
 from scipy.stats import norm
 from formulaic import model_matrix
 
-from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
-
 
 class Feols:
 

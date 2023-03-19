@@ -42,6 +42,14 @@ class Fixest:
                 ref = list(self.ivars.keys())[0]
                 ivars = self.ivars[ref]
                 drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+                # type checking
+                i0_type = self.data[ivars[0]].dtype
+                i1_type = self.data[ivars[1]].dtype
+                if not i0_type in ['category', "O"]: 
+                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ".")
+                if not i1_type: 
+                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ".")
+
             else:
                 ivars = self.ivars[None]
                 drop_ref = None
@@ -130,14 +138,15 @@ class Fixest:
                     Y, X = model_matrix(fml, self.data, na_action='ignore')
 
                     if self.ivars is not None:
-                        X = X.drop(drop_ref, axis=1)
+                        if drop_ref is not None:
+                            X = X.drop(drop_ref, axis=1)
 
                     depvar = Y.columns
                     covars = X.columns
 
                     if self.ivars is not None:
                         self.icovars = [s for s in covars if s.startswith(
-                            self.ivars[0]) and s.endswith(self.ivars[1])]
+                            ivars[0]) and s.endswith(ivars[1])]
                     else:
                         self.icovars = None
 
@@ -204,7 +213,7 @@ class Fixest:
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.ivars = fxst_fml.ivars
-
+        
         self._demean()
 
         for _, fval in enumerate(self.fml_dict.keys()):
@@ -348,6 +357,7 @@ class Fixest:
         '''
 
         ivars = self.icovars
+        
         ref = int(list(self.ivars.keys())[0])
 
         if ivars is None:
