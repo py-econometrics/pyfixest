@@ -1,4 +1,3 @@
-import warnings
 import pyhdfe
 import re
 
@@ -10,31 +9,28 @@ from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
 
-from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, scale_x_discrete, geom_hline, facet_wrap
+from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, scale_x_discrete, geom_hline, position_dodge
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
 
-
 class Fixest:
 
     def __init__(self, data: pd.DataFrame) -> None:
-
         '''
         Initiate the fixest object.
         Deparse fml into formula dict, variable dict.
 
         Args:
-            - data: The input pd.DataFrame for the object.
+            data: The input pd.DataFrame for the object.
 
         Returns:
-            - None
+            None
         '''
 
         self.data = data
         self.model_res = dict()
-
 
     def _demean(self):
 
@@ -46,31 +42,32 @@ class Fixest:
                 ref = list(self.ivars.keys())[0]
                 ivars = self.ivars[ref]
                 drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
-            else: 
+            else:
                 ivars = self.ivars[None]
                 drop_ref = None
-            #if ref not in self.data[ivars[0]].unique():
+            # if ref not in self.data[ivars[0]].unique():
 
         self.demeaned_data_dict = dict()
         self.dropped_data_dict = dict()
 
-        for f, fval in enumerate(fixef_keys):
+        for _, fval in enumerate(fixef_keys):
 
             YX_dict = dict()
             na_dict = dict()
 
             if fval != "0":
 
-
                 fval_list = fval.split("+")
 
                 # find interacted fixed effects via "^"
-                interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
+                interacted_fes = [
+                    x for x in fval_list if len(x.split('^')) > 1]
                 regular_fes = [x for x in fval_list if len(x.split('^')) == 1]
 
                 for x in interacted_fes:
                     vars = x.split("^")
-                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
+                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(
+                        x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
 
                 for x in regular_fes:
                     self.data[x] = self.data[x].astype(str)
@@ -79,22 +76,23 @@ class Fixest:
                 # all fes to ints
                 fe = fe.apply(lambda x: pd.factorize(x)[0])
 
-                fe_na = np.sum(pd.isna(fe), axis = 1) > 0
+                fe_na = np.sum(pd.isna(fe), axis=1) > 0
                 fe = fe.to_numpy()
 
                 for fml in self.fml_dict[fval]:
 
-                    Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+                    Y, X = model_matrix(fml, self.data, na_action='ignore')
 
                     if self.ivars is not None:
-                        if drop_ref is not None: 
-                            X = X.drop(drop_ref, axis = 1)
+                        if drop_ref is not None:
+                            X = X.drop(drop_ref, axis=1)
 
                     depvar = Y.columns
                     covars = X.columns
 
                     if self.ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(ivars[0]) and s.endswith(ivars[1])]
+                        self.icovars = [s for s in covars if s.startswith(
+                            ivars[0]) and s.endswith(ivars[1])]
                     else:
                         self.icovars = None
 
@@ -102,7 +100,7 @@ class Fixest:
                     X = X.to_numpy()
 
                     Y_na = np.isnan(Y).flatten()
-                    X_na = np.sum(np.isnan(X), axis = 1) > 0
+                    X_na = np.sum(np.isnan(X), axis=1) > 0
 
                     na_index = (Y_na + X_na) > 0
                     na_index = (na_index + fe_na)
@@ -112,11 +110,12 @@ class Fixest:
                     X = X[~na_index]
                     fe2 = fe[~na_index]
                     # drop intercept
-                    X = X[:,1:]
+                    X = X[:, 1:]
 
-                    YX = np.concatenate([Y, X], axis = 1)
+                    YX = np.concatenate([Y, X], axis=1)
 
-                    algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
+                    algorithm = pyhdfe.create(
+                        ids=fe2, residualize_method='map')
                     YX_demeaned = algorithm.residualize(YX)
                     YX_demeaned = pd.DataFrame(YX_demeaned)
                     YX_demeaned.columns = list(depvar) + list(covars[1:])
@@ -128,16 +127,17 @@ class Fixest:
 
                 for fml in self.fml_dict[fval]:
 
-                    Y, X = model_matrix(fml, self.data, na_action = 'ignore')
+                    Y, X = model_matrix(fml, self.data, na_action='ignore')
 
                     if self.ivars is not None:
-                        X = X.drop(drop_ref, axis = 1)
+                        X = X.drop(drop_ref, axis=1)
 
                     depvar = Y.columns
                     covars = X.columns
 
                     if self.ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(self.ivars[0]) and s.endswith(self.ivars[1])]
+                        self.icovars = [s for s in covars if s.startswith(
+                            self.ivars[0]) and s.endswith(self.ivars[1])]
                     else:
                         self.icovars = None
 
@@ -148,11 +148,11 @@ class Fixest:
                     X = X.to_numpy()
 
                     Y_na = np.isnan(Y).flatten()
-                    X_na = np.sum(np.isnan(X), axis = 1) > 0
+                    X_na = np.sum(np.isnan(X), axis=1) > 0
 
                     na_index = (Y_na + X_na) > 0
 
-                    YX = np.concatenate([Y, X], axis = 1)
+                    YX = np.concatenate([Y, X], axis=1)
                     YX = YX[~na_index]
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(depvar) + list(covars)
@@ -179,20 +179,20 @@ class Fixest:
                 If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference or {"CRV3":"clustervar"} for CRV3 inference.
 
         Examples:
-            - Standard formula:
+            Standard formula:
                 fml = 'Y ~ X1 + X2'
                 fixest_model = Fixest(data=data).feols(fml, vcov='iid')
-            - With fixed effects:
+            With fixed effects:
                 fml = 'Y ~ X1 + X2 | fe1 + fe2'
-            - With interacted fixed effects:
+            With interacted fixed effects:
                 fml = 'Y ~ X1 + X2 | fe1^fe2'
-            - Multiple dependent variables:
+            Multiple dependent variables:
                 fml = 'Y1 + Y2 ~ X1 + X2'
-            - Stepwise regressions (sw and sw0):
+            Stepwise regressions (sw and sw0):
                 fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
-            - Cumulative stepwise regressions (csw and csw0):
+            Cumulative stepwise regressions (csw and csw0):
                 fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
-            - Combinations:
+            Combinations:
                 fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
         '''
 
@@ -214,8 +214,8 @@ class Fixest:
                 model_frame = model_frames[fml]
                 full_fml = fml + "|" + fval
 
-                Y = model_frame.iloc[:,0].to_numpy()
-                X = model_frame.iloc[:,1:]
+                Y = model_frame.iloc[:, 0].to_numpy()
+                X = model_frame.iloc[:, 1:]
                 colnames = X.columns
                 X = X.to_numpy()
 
@@ -226,7 +226,7 @@ class Fixest:
                 FEOLS.get_fit()
                 FEOLS.na_index = self.dropped_data_dict[fval][fml]
                 FEOLS.data = self.data[~FEOLS.na_index]
-                FEOLS.get_vcov(vcov = vcov)
+                FEOLS.get_vcov(vcov=vcov)
                 FEOLS.get_inference()
                 FEOLS.coefnames = colnames
                 if self.icovars is not None:
@@ -235,15 +235,13 @@ class Fixest:
 
         return self
 
-
     def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
-
         '''
         Update inference on the fly. By calling vcov() on a "Fixest" object, all inference procedures applied
         to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
 
         Args:
-            - vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
                 or {"CRV3":"clustervar"} for CRV3 inference.
@@ -251,16 +249,14 @@ class Fixest:
 
         for model in list(self.model_res.keys()):
 
-                fxst = self.model_res[model]
+            fxst = self.model_res[model]
 
-                fxst.get_vcov(vcov = vcov)
-                fxst.get_inference()
+            fxst.get_vcov(vcov=vcov)
+            fxst.get_inference()
 
         return self
 
-
     def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
-
         '''
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
 
@@ -295,7 +291,7 @@ class Fixest:
                 pd.DataFrame(
                     {
                         'fml': x,
-                        'coefnames':fxst.coefnames,
+                        'coefnames': fxst.coefnames,
                         'Estimate': fxst.beta_hat,
                         'Std. Error': fxst.se,
                         't value': fxst.tstat,
@@ -304,7 +300,7 @@ class Fixest:
                 )
             )
 
-        res = pd.concat(res, axis = 0).set_index('fml')
+        res = pd.concat(res, axis=0).set_index('fml')
         if type == "markdown":
             return res.to_markdown(floatfmt=".3f")
         else:
@@ -319,7 +315,7 @@ class Fixest:
         errors, t-values, and p-values.
 
         Returns:
-            - None
+            None
 
         '''
 
@@ -330,14 +326,14 @@ class Fixest:
             depvar = split[0].split("~")[0]
             fxst = self.model_res[x]
             df = pd.DataFrame(
-                  {
-                      '':fxst.coefnames,
-                      'Estimate': fxst.beta_hat,
-                      'Std. Error': fxst.se,
-                      't value': fxst.tstat,
-                      'Pr(>|t|)': fxst.pvalue
-                  }
-                )
+                {
+                    '': fxst.coefnames,
+                    'Estimate': fxst.beta_hat,
+                    'Std. Error': fxst.se,
+                    't value': fxst.tstat,
+                    'Pr(>|t|)': fxst.pvalue
+                }
+            )
 
             print('')
             print('### Fixed-effects:', fe)
@@ -346,9 +342,7 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
 
-
     def iplot(self):
-
         '''
         plots i-coefficients
         '''
@@ -357,7 +351,8 @@ class Fixest:
         ref = int(list(self.ivars.keys())[0])
 
         if ivars is None:
-            raise ValueError("The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
+            raise ValueError(
+                "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
 
         if "Intercept" in ivars:
             ivars.remove("Intercept")
@@ -377,7 +372,8 @@ class Fixest:
             conf_u = coef + df_model["Std. Error"].values * 1.96
             coefnames = df_model["coefnames"].values.tolist()
 
-            coefnames = [int(i) for string in coefnames for i in re.findall(r'\[T\.([\d\.\-]+)\]', string)]
+            coefnames = [int(i) for string in coefnames for i in re.findall(
+                r'\[T\.([\d\.\-]+)\]', string)]
 
             coef = np.append(coef, 0)
             conf_l = np.append(conf_l, 0)
@@ -385,31 +381,29 @@ class Fixest:
             coefnames = np.append(coefnames, ref)
 
             df_dict = {
-              'coef':coef,
-              'conf_l':conf_l,
-              'conf_u':conf_u,
-              'coefnames':coefnames,
-              'model' : model
+                'coef': coef,
+                'conf_l': conf_l,
+                'conf_u': conf_u,
+                'coefnames': coefnames,
+                'model': model
             }
 
             df_list.append(pd.DataFrame(df_dict))
 
-        df_all = pd.concat(df_list, axis = 0)
+        df_all = pd.concat(df_list, axis=0)
 
         plot = (
-        ggplot(df_all, aes(x = 'coefnames', y = 'coef', color = 'model')) +
-          geom_point() +
-          geom_errorbar(aes(x = 'coefnames', ymin = 'conf_l', ymax = 'conf_u')) +
-          theme_bw() +
-          ylab('Estimate') +
-          geom_hline(yintercept = 0, color = "blue", linetype = "dotted")
+            ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
+            geom_point(position = position_dodge(0.5)) +
+            geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
+            theme_bw() +
+            ylab('Estimate') +
+            geom_hline(yintercept=0, color="blue", linetype="dotted")
         )
 
         return plot
 
-
-    def coefplot(self, figsize = (5,2), yintercept = 0, figtitle = None, figtext = None):
-
+    def coefplot(self, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
         '''
         Plot estimation results.
         '''
@@ -417,15 +411,16 @@ class Fixest:
         n_models = len(self.tidy().index.unique())
 
         if n_models > 1:
-            raise ValueError("The plot() method is only defined for single regressions.")
+            raise ValueError(
+                "The plot() method is only defined for single regressions.")
 
         df = self.tidy()
         coef = df["Estimate"].values
         se = df["Std. Error"].values * 1.96
         coefnames = df["coefnames"].values.tolist()
 
-        plt.figure(figsize= figsize)
-        plt.errorbar(coefnames, coef, yerr= se, fmt='.', capsize=5)
+        plt.figure(figsize=figsize)
+        plt.errorbar(coefnames, coef, yerr=se, fmt='.', capsize=5)
         plt.ylabel("Estimate")
 
         if figtitle is not None:

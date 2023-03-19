@@ -109,7 +109,7 @@ from pyfixest import Fixest
 # Read in data
 df = pd.read_csv("https://raw.githubusercontent.com/LOST-STATS/LOST-STATS.github.io/master/Model_Estimation/Data/Event_Study_DiD/bacon_example.csv")
 
-df['time_to_treat'] = df['_nfd'].sub(df['year']).fillna(0).astype(int).astype('category')
+df['time_to_treat'] = (df['year'] - df['_nfd'] ).fillna(0).astype(int).astype('category')
 df['treat'] = np.where(pd.isna(df['_nfd']), 0, 1)
 
 fixest = Fixest(df)

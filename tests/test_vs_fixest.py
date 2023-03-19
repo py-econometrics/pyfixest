@@ -80,8 +80,8 @@ def data():
 
 
     #("Y ~ i(X1,X2)"),
-    #("Y ~ i(X1,X2) | X3"),
-    #("Y ~ i(X1,X2) | X3 + X4"),
+    ("Y ~ i(X1,X2) | X3"),
+    ("Y ~ i(X1,X2) | X3 + X4"),
 
 
 ])
@@ -186,6 +186,16 @@ def test_py_vs_r2(data, fml_multi):
 
         np.array_equal((np.array(py_coef)), fixest_coef)
         np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+
+
+
+
+
+
+
+
+
+
 
 
 def _py_fml_to_r_fml(py_fml):

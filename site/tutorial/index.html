@@ -191,7 +191,7 @@
   
     <li class="md-nav__item">
       <a href="../reference/" class="md-nav__link">
-        Fixest
+        Reference
       </a>
     </li>
   
@@ -320,7 +320,7 @@ from pyfixest import Fixest
 # Read in data
 df = pd.read_csv(&quot;https://raw.githubusercontent.com/LOST-STATS/LOST-STATS.github.io/master/Model_Estimation/Data/Event_Study_DiD/bacon_example.csv&quot;)
 
-df['time_to_treat'] = df['_nfd'].sub(df['year']).fillna(0).astype(int).astype('category')
+df['time_to_treat'] = (df['year'] - df['_nfd'] ).fillna(0).astype(int).astype('category')
 df['treat'] = np.where(pd.isna(df['_nfd']), 0, 1)
 
 fixest = Fixest(df)
@@ -365,13 +365,13 @@ fixest.iplot()
       
       
         
-        <a href="../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Fixest" rel="next">
+        <a href="../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Fixest
+              Reference
             </div>
           </div>
           <div class="md-footer__button md-icon">
