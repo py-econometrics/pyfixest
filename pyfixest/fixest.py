@@ -45,9 +45,9 @@ class Fixest:
                 # type checking
                 i0_type = self.data[ivars[0]].dtype
                 i1_type = self.data[ivars[1]].dtype
-                if not i0_type in ['category', "O"]: 
+                if not i0_type in ['category', "O"]:
                     raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ".")
-                if not i1_type: 
+                if not i1_type:
                     raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ".")
 
             else:
@@ -178,14 +178,17 @@ class Fixest:
 
         Args:
             fml (str): A two-sided formula string using fixest formula syntax. Supported syntax includes:
-                - Stepwise regressions (sw, sw0)
-                - Cumulative stepwise regression (csw, csw0)
-                - Multiple dependent variables (Y1 + Y2 ~ X)
-                - Interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
+                Stepwise regressions (sw, sw0)
+                Cumulative stepwise regression (csw, csw0)
+                Multiple dependent variables (Y1 + Y2 ~ X)
+                Interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
                 All other parts of the formula must be compatible with formula parsing via the formulaic module.
-            vcov (str or dict): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+            vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference or {"CRV3":"clustervar"} for CRV3 inference.
+                If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+
+        Returns:
+            None
 
         Examples:
             Standard formula:
@@ -213,7 +216,7 @@ class Fixest:
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.ivars = fxst_fml.ivars
-        
+
         self._demean()
 
         for _, fval in enumerate(self.fml_dict.keys()):
@@ -254,6 +257,9 @@ class Fixest:
                 If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
                 or {"CRV3":"clustervar"} for CRV3 inference.
+
+        Returns:
+            None
         '''
 
         for model in list(self.model_res.keys()):
@@ -269,25 +275,23 @@ class Fixest:
         '''
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
 
-        Parameters
-        ----------
-        type : str, optional
-            The type of output format to use. If set to "markdown", the resulting DataFrame
-            will be returned in a markdown format with three decimal places. Default is None.
+        Args:
+            type : str, optional
+                The type of output format to use. If set to "markdown", the resulting DataFrame
+                will be returned in a markdown format with three decimal places. Default is None.
 
-        Returns
-        -------
-        pd.DataFrame or str
-            A tidy DataFrame with the following columns:
-            - fml: the formula used to generate the results
-            - coefnames: the names of the coefficients
-            - Estimate: the estimated coefficients
-            - Std. Error: the standard errors of the estimated coefficients
-            - t value: the t-values of the estimated coefficients
-            - Pr(>|t|): the p-values of the estimated coefficients
+        Returns:
+            pd.DataFrame or str
+                A tidy DataFrame with the following columns:
+                - fml: the formula used to generate the results
+                - coefnames: the names of the coefficients
+                - Estimate: the estimated coefficients
+                - Std. Error: the standard errors of the estimated coefficients
+                - t value: the t-values of the estimated coefficients
+                - Pr(>|t|): the p-values of the estimated coefficients
 
-            If `type` is set to "markdown", the resulting DataFrame will be returned as a
-            markdown-formatted string with three decimal places.
+                If `type` is set to "markdown", the resulting DataFrame will be returned as a
+                markdown-formatted string with three decimal places.
 
         '''
 
@@ -357,7 +361,7 @@ class Fixest:
         '''
 
         ivars = self.icovars
-        
+
         ref = int(list(self.ivars.keys())[0])
 
         if ivars is None:
