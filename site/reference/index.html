@@ -13,7 +13,7 @@
     
     
       
-        <title>Fixest - PyFixest</title>
+        <title>Reference - PyFixest</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#fixest" class="md-skip">
+        <a href="#reference" class="md-skip">
           Skip to content
         </a>
       
@@ -97,7 +97,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Fixest
+              Reference
             
           </span>
         </div>
@@ -190,12 +190,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Fixest
+          Reference
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Fixest
+        Reference
       </a>
       
         
@@ -414,7 +414,7 @@
                   
 
 
-<h1 id="fixest">Fixest</h1>
+<h1 id="reference">Reference</h1>
 
 
 <div class="doc doc-object doc-class">
@@ -427,7 +427,9 @@
 
         <details class="quote">
           <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 20</span>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 18</span>
+<span class="normal"> 19</span>
+<span class="normal"> 20</span>
 <span class="normal"> 21</span>
 <span class="normal"> 22</span>
 <span class="normal"> 23</span>
@@ -846,21 +848,19 @@
 <span class="normal">436</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Fixest</span><span class="p">:</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Initiate the fixest object.</span>
 <span class="sd">        Deparse fml into formula dict, variable dict.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            - data: The input pd.DataFrame for the object.</span>
+<span class="sd">            data: The input pd.DataFrame for the object.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            - None</span>
+<span class="sd">            None</span>
 <span class="sd">        &#39;&#39;&#39;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-
 
     <span class="k">def</span> <span class="nf">_demean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
@@ -868,31 +868,36 @@
         <span class="n">fixef_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">ref</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">ivars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="n">ref</span><span class="p">]</span>
-            <span class="n">drop_ref</span> <span class="o">=</span> <span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;[T.&quot;</span> <span class="o">+</span> <span class="n">ref</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="c1">#if ref not in self.data[ivars[0]].unique():</span>
+            <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ref</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">ivars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="n">ref</span><span class="p">]</span>
+                <span class="n">drop_ref</span> <span class="o">=</span> <span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;[T.&quot;</span> <span class="o">+</span> <span class="n">ref</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ivars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+                <span class="n">drop_ref</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="c1"># if ref not in self.data[ivars[0]].unique():</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">demeaned_data_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dropped_data_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
-        <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">fval</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fixef_keys</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">fval</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fixef_keys</span><span class="p">):</span>
 
             <span class="n">YX_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
             <span class="n">na_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
             <span class="k">if</span> <span class="n">fval</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
 
-
                 <span class="n">fval_list</span> <span class="o">=</span> <span class="n">fval</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
 
                 <span class="c1"># find interacted fixed effects via &quot;^&quot;</span>
-                <span class="n">interacted_fes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fval_list</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;^&#39;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">interacted_fes</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fval_list</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;^&#39;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
                 <span class="n">regular_fes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fval_list</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;^&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
 
                 <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">interacted_fes</span><span class="p">:</span>
                     <span class="nb">vars</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;^&quot;</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">vars</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;^&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">vars</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;^&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="n">x</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
                 <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">regular_fes</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
@@ -901,21 +906,23 @@
                 <span class="c1"># all fes to ints</span>
                 <span class="n">fe</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">factorize</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
 
-                <span class="n">fe_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">fe</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                <span class="n">fe_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">fe</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
                 <span class="n">fe</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
                 <span class="k">for</span> <span class="n">fml</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fml_dict</span><span class="p">[</span><span class="n">fval</span><span class="p">]:</span>
 
-                    <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">model_matrix</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">na_action</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+                    <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">model_matrix</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">na_action</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">drop_ref</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">drop_ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">drop_ref</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
                     <span class="n">depvar</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">columns</span>
                     <span class="n">covars</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
 
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">covars</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">covars</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                            <span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -923,7 +930,7 @@
                     <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
                     <span class="n">Y_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-                    <span class="n">X_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                    <span class="n">X_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
 
                     <span class="n">na_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">Y_na</span> <span class="o">+</span> <span class="n">X_na</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
                     <span class="n">na_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">na_index</span> <span class="o">+</span> <span class="n">fe_na</span><span class="p">)</span>
@@ -933,11 +940,12 @@
                     <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="o">~</span><span class="n">na_index</span><span class="p">]</span>
                     <span class="n">fe2</span> <span class="o">=</span> <span class="n">fe</span><span class="p">[</span><span class="o">~</span><span class="n">na_index</span><span class="p">]</span>
                     <span class="c1"># drop intercept</span>
-                    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
 
-                    <span class="n">YX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">YX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-                    <span class="n">algorithm</span> <span class="o">=</span> <span class="n">pyhdfe</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">fe2</span><span class="p">,</span> <span class="n">residualize_method</span><span class="o">=</span><span class="s1">&#39;map&#39;</span><span class="p">)</span>
+                    <span class="n">algorithm</span> <span class="o">=</span> <span class="n">pyhdfe</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                        <span class="n">ids</span><span class="o">=</span><span class="n">fe2</span><span class="p">,</span> <span class="n">residualize_method</span><span class="o">=</span><span class="s1">&#39;map&#39;</span><span class="p">)</span>
                     <span class="n">YX_demeaned</span> <span class="o">=</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">residualize</span><span class="p">(</span><span class="n">YX</span><span class="p">)</span>
                     <span class="n">YX_demeaned</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">YX_demeaned</span><span class="p">)</span>
                     <span class="n">YX_demeaned</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">depvar</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">covars</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
@@ -949,16 +957,17 @@
 
                 <span class="k">for</span> <span class="n">fml</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fml_dict</span><span class="p">[</span><span class="n">fval</span><span class="p">]:</span>
 
-                    <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">model_matrix</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">na_action</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+                    <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">model_matrix</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">na_action</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">drop_ref</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">drop_ref</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
                     <span class="n">depvar</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">columns</span>
                     <span class="n">covars</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
 
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">covars</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">covars</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">s</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -969,11 +978,11 @@
                     <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
                     <span class="n">Y_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-                    <span class="n">X_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                    <span class="n">X_na</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
 
                     <span class="n">na_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">Y_na</span> <span class="o">+</span> <span class="n">X_na</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
 
-                    <span class="n">YX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">YX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
                     <span class="n">YX</span> <span class="o">=</span> <span class="n">YX</span><span class="p">[</span><span class="o">~</span><span class="n">na_index</span><span class="p">]</span>
                     <span class="n">YX_demeaned</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">YX</span><span class="p">)</span>
                     <span class="n">YX_demeaned</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">depvar</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">covars</span><span class="p">)</span>
@@ -1000,20 +1009,20 @@
 <span class="sd">                If a dictionary, it should have the format {&quot;CRV1&quot;:&quot;clustervar&quot;} for CRV1 inference or {&quot;CRV3&quot;:&quot;clustervar&quot;} for CRV3 inference.</span>
 
 <span class="sd">        Examples:</span>
-<span class="sd">            - Standard formula:</span>
+<span class="sd">            Standard formula:</span>
 <span class="sd">                fml = &#39;Y ~ X1 + X2&#39;</span>
 <span class="sd">                fixest_model = Fixest(data=data).feols(fml, vcov=&#39;iid&#39;)</span>
-<span class="sd">            - With fixed effects:</span>
+<span class="sd">            With fixed effects:</span>
 <span class="sd">                fml = &#39;Y ~ X1 + X2 | fe1 + fe2&#39;</span>
-<span class="sd">            - With interacted fixed effects:</span>
+<span class="sd">            With interacted fixed effects:</span>
 <span class="sd">                fml = &#39;Y ~ X1 + X2 | fe1^fe2&#39;</span>
-<span class="sd">            - Multiple dependent variables:</span>
+<span class="sd">            Multiple dependent variables:</span>
 <span class="sd">                fml = &#39;Y1 + Y2 ~ X1 + X2&#39;</span>
-<span class="sd">            - Stepwise regressions (sw and sw0):</span>
+<span class="sd">            Stepwise regressions (sw and sw0):</span>
 <span class="sd">                fml = &#39;Y1 + Y2 ~ sw(X1, X2, X3)&#39;</span>
-<span class="sd">            - Cumulative stepwise regressions (csw and csw0):</span>
+<span class="sd">            Cumulative stepwise regressions (csw and csw0):</span>
 <span class="sd">                fml = &#39;Y1 + Y2 ~ csw(X1, X2, X3) &#39;</span>
-<span class="sd">            - Combinations:</span>
+<span class="sd">            Combinations:</span>
 <span class="sd">                fml = &#39;Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6&#39;</span>
 <span class="sd">        &#39;&#39;&#39;</span>
 
@@ -1035,19 +1044,19 @@
                 <span class="n">model_frame</span> <span class="o">=</span> <span class="n">model_frames</span><span class="p">[</span><span class="n">fml</span><span class="p">]</span>
                 <span class="n">full_fml</span> <span class="o">=</span> <span class="n">fml</span> <span class="o">+</span> <span class="s2">&quot;|&quot;</span> <span class="o">+</span> <span class="n">fval</span>
 
-                <span class="n">Y</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-                <span class="n">X</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="n">Y</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
                 <span class="n">colnames</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
                 <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
                 <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The design Matrix X does not have full rank for the regression with fml&quot;</span> <span class="o">+</span> <span class="n">full_fml</span> <span class="o">+</span> <span class="s2">&quot;. The model is skipped.&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The design Matrix X does not have full rank for the regression with fml&quot;</span> <span class="o">+</span> <span class="n">full_fml</span> <span class="o">+</span> <span class="s2">&quot;. The model is skipped. If you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?&quot;</span><span class="p">)</span>
 
                 <span class="n">FEOLS</span> <span class="o">=</span> <span class="n">Feols</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
                 <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_fit</span><span class="p">()</span>
                 <span class="n">FEOLS</span><span class="o">.</span><span class="n">na_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropped_data_dict</span><span class="p">[</span><span class="n">fval</span><span class="p">][</span><span class="n">fml</span><span class="p">]</span>
                 <span class="n">FEOLS</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">FEOLS</span><span class="o">.</span><span class="n">na_index</span><span class="p">]</span>
-                <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span> <span class="o">=</span> <span class="n">vcov</span><span class="p">)</span>
+                <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span><span class="o">=</span><span class="n">vcov</span><span class="p">)</span>
                 <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
                 <span class="n">FEOLS</span><span class="o">.</span><span class="n">coefnames</span> <span class="o">=</span> <span class="n">colnames</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1056,15 +1065,13 @@
 
         <span class="k">return</span> <span class="bp">self</span>
 
-
     <span class="k">def</span> <span class="nf">vcov</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcov</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Update inference on the fly. By calling vcov() on a &quot;Fixest&quot; object, all inference procedures applied</span>
 <span class="sd">        to the &quot;Fixest&quot; object are replaced with the variance covariance matrix specified via the method.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            - vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.</span>
+<span class="sd">            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.</span>
 <span class="sd">                If a string, can be one of &quot;iid&quot;, &quot;hetero&quot;, &quot;HC1&quot;, &quot;HC2&quot;, &quot;HC3&quot;.</span>
 <span class="sd">                If a dictionary, it should have the format {&quot;CRV1&quot;:&quot;clustervar&quot;} for CRV1 inference</span>
 <span class="sd">                or {&quot;CRV3&quot;:&quot;clustervar&quot;} for CRV3 inference.</span>
@@ -1072,16 +1079,14 @@
 
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
 
-                <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">model</span><span class="p">]</span>
+            <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">model</span><span class="p">]</span>
 
-                <span class="n">fxst</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span> <span class="o">=</span> <span class="n">vcov</span><span class="p">)</span>
-                <span class="n">fxst</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
+            <span class="n">fxst</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span><span class="o">=</span><span class="n">vcov</span><span class="p">)</span>
+            <span class="n">fxst</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="bp">self</span>
 
-
     <span class="k">def</span> <span class="nf">tidy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.</span>
 
@@ -1116,7 +1121,7 @@
                 <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                     <span class="p">{</span>
                         <span class="s1">&#39;fml&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
-                        <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span><span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
+                        <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
                         <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
                         <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
                         <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
@@ -1125,7 +1130,7 @@
                 <span class="p">)</span>
             <span class="p">)</span>
 
-        <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;fml&#39;</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;fml&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;markdown&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">to_markdown</span><span class="p">(</span><span class="n">floatfmt</span><span class="o">=</span><span class="s2">&quot;.3f&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1140,7 +1145,7 @@
 <span class="sd">        errors, t-values, and p-values.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            - None</span>
+<span class="sd">            None</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
 
@@ -1151,14 +1156,14 @@
             <span class="n">depvar</span> <span class="o">=</span> <span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                  <span class="p">{</span>
-                      <span class="s1">&#39;&#39;</span><span class="p">:</span><span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
-                      <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
-                      <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
-                      <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
-                      <span class="s1">&#39;Pr(&gt;|t|)&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">pvalue</span>
-                  <span class="p">}</span>
-                <span class="p">)</span>
+                <span class="p">{</span>
+                    <span class="s1">&#39;&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
+                    <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
+                    <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
+                    <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
+                    <span class="s1">&#39;Pr(&gt;|t|)&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">pvalue</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
 
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;### Fixed-effects:&#39;</span><span class="p">,</span> <span class="n">fe</span><span class="p">)</span>
@@ -1167,9 +1172,7 @@
             <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;---&#39;</span><span class="p">)</span>
 
-
     <span class="k">def</span> <span class="nf">iplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        plots i-coefficients</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -1178,7 +1181,8 @@
         <span class="n">ref</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">ivars</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The estimated models did not have ivars / &#39;i()&#39; model syntax. In consequence, the &#39;.iplot()&#39; method is not supported.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The estimated models did not have ivars / &#39;i()&#39; model syntax. In consequence, the &#39;.iplot()&#39; method is not supported.&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="s2">&quot;Intercept&quot;</span> <span class="ow">in</span> <span class="n">ivars</span><span class="p">:</span>
             <span class="n">ivars</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;Intercept&quot;</span><span class="p">)</span>
@@ -1198,7 +1202,8 @@
             <span class="n">conf_u</span> <span class="o">=</span> <span class="n">coef</span> <span class="o">+</span> <span class="n">df_model</span><span class="p">[</span><span class="s2">&quot;Std. Error&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mf">1.96</span>
             <span class="n">coefnames</span> <span class="o">=</span> <span class="n">df_model</span><span class="p">[</span><span class="s2">&quot;coefnames&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
-            <span class="n">coefnames</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">coefnames</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[T\.([\d\.\-]+)\]&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)]</span>
+            <span class="n">coefnames</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">coefnames</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span>
+                <span class="sa">r</span><span class="s1">&#39;\[T\.([\d\.\-]+)\]&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)]</span>
 
             <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">conf_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">conf_l</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
@@ -1206,31 +1211,29 @@
             <span class="n">coefnames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
 
             <span class="n">df_dict</span> <span class="o">=</span> <span class="p">{</span>
-              <span class="s1">&#39;coef&#39;</span><span class="p">:</span><span class="n">coef</span><span class="p">,</span>
-              <span class="s1">&#39;conf_l&#39;</span><span class="p">:</span><span class="n">conf_l</span><span class="p">,</span>
-              <span class="s1">&#39;conf_u&#39;</span><span class="p">:</span><span class="n">conf_u</span><span class="p">,</span>
-              <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span><span class="n">coefnames</span><span class="p">,</span>
-              <span class="s1">&#39;model&#39;</span> <span class="p">:</span> <span class="n">model</span>
+                <span class="s1">&#39;coef&#39;</span><span class="p">:</span> <span class="n">coef</span><span class="p">,</span>
+                <span class="s1">&#39;conf_l&#39;</span><span class="p">:</span> <span class="n">conf_l</span><span class="p">,</span>
+                <span class="s1">&#39;conf_u&#39;</span><span class="p">:</span> <span class="n">conf_u</span><span class="p">,</span>
+                <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span> <span class="n">coefnames</span><span class="p">,</span>
+                <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span>
             <span class="p">}</span>
 
             <span class="n">df_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df_dict</span><span class="p">))</span>
 
-        <span class="n">df_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">df_list</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">df_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">df_list</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
         <span class="n">plot</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">ggplot</span><span class="p">(</span><span class="n">df_all</span><span class="p">,</span> <span class="n">aes</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="s1">&#39;coef&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span> <span class="o">+</span>
-          <span class="n">geom_point</span><span class="p">()</span> <span class="o">+</span>
-          <span class="n">geom_errorbar</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">=</span> <span class="s1">&#39;conf_l&#39;</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="s1">&#39;conf_u&#39;</span><span class="p">))</span> <span class="o">+</span>
-          <span class="n">theme_bw</span><span class="p">()</span> <span class="o">+</span>
-          <span class="n">ylab</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span> <span class="o">+</span>
-          <span class="n">geom_hline</span><span class="p">(</span><span class="n">yintercept</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linetype</span> <span class="o">=</span> <span class="s2">&quot;dotted&quot;</span><span class="p">)</span>
+            <span class="n">ggplot</span><span class="p">(</span><span class="n">df_all</span><span class="p">,</span> <span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;coef&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">group</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span> <span class="o">+</span>
+            <span class="n">geom_point</span><span class="p">(</span><span class="n">position</span> <span class="o">=</span> <span class="n">position_dodge</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span> <span class="o">+</span>
+            <span class="n">geom_errorbar</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="s1">&#39;conf_l&#39;</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="s1">&#39;conf_u&#39;</span><span class="p">),</span> <span class="n">position</span> <span class="o">=</span> <span class="n">position_dodge</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span> <span class="o">+</span>
+            <span class="n">theme_bw</span><span class="p">()</span> <span class="o">+</span>
+            <span class="n">ylab</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span> <span class="o">+</span>
+            <span class="n">geom_hline</span><span class="p">(</span><span class="n">yintercept</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linetype</span><span class="o">=</span><span class="s2">&quot;dotted&quot;</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">plot</span>
 
-
-    <span class="k">def</span> <span class="nf">coefplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">yintercept</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">figtitle</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">figtext</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-
+    <span class="k">def</span> <span class="nf">coefplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">yintercept</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">figtitle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figtext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Plot estimation results.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -1238,15 +1241,16 @@
         <span class="n">n_models</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tidy</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="n">n_models</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The plot() method is only defined for single regressions.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The plot() method is only defined for single regressions.&quot;</span><span class="p">)</span>
 
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tidy</span><span class="p">()</span>
         <span class="n">coef</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Estimate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
         <span class="n">se</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Std. Error&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mf">1.96</span>
         <span class="n">coefnames</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;coefnames&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
-        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span> <span class="n">figsize</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">yerr</span><span class="o">=</span> <span class="n">se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">yerr</span><span class="o">=</span><span class="n">se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Estimate&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">figtitle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1302,9 +1306,9 @@ Deparse fml into formula dict, variable dict.</p>
     </thead>
     <tbody>
         <tr>
-          <td><code>-</code></td>
+          <td><code>data</code></td>
           <td>
-                <code><span title="pyfixest.fixest.Fixest.data">data</span></code>
+                <code><span title="pandas">pd</span>.<span title="pandas.DataFrame">DataFrame</span></code>
           </td>
           <td><p>The input pd.DataFrame for the object.</p></td>
           <td>
@@ -1327,16 +1331,16 @@ Deparse fml into formula dict, variable dict.</p>
           <td>
                 <code>None</code>
           </td>
-          <td><ul>
-<li>None</li>
-</ul></td>
+          <td><p>None</p></td>
         </tr>
     </tbody>
   </table>
 
       <details class="quote">
         <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
 <span class="normal">23</span>
 <span class="normal">24</span>
 <span class="normal">25</span>
@@ -1347,20 +1351,16 @@ Deparse fml into formula dict, variable dict.</p>
 <span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Initiate the fixest object.</span>
 <span class="sd">    Deparse fml into formula dict, variable dict.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        - data: The input pd.DataFrame for the object.</span>
+<span class="sd">        data: The input pd.DataFrame for the object.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        - None</span>
+<span class="sd">        None</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
@@ -1417,8 +1417,7 @@ Deparse fml into formula dict, variable dict.</p>
 <span class="normal">433</span>
 <span class="normal">434</span>
 <span class="normal">435</span>
-<span class="normal">436</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">coefplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">yintercept</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">figtitle</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">figtext</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-
+<span class="normal">436</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">coefplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">yintercept</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">figtitle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figtext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Plot estimation results.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -1426,15 +1425,16 @@ Deparse fml into formula dict, variable dict.</p>
     <span class="n">n_models</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tidy</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 
     <span class="k">if</span> <span class="n">n_models</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The plot() method is only defined for single regressions.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;The plot() method is only defined for single regressions.&quot;</span><span class="p">)</span>
 
     <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tidy</span><span class="p">()</span>
     <span class="n">coef</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Estimate&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
     <span class="n">se</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Std. Error&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mf">1.96</span>
     <span class="n">coefnames</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;coefnames&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span> <span class="n">figsize</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">yerr</span><span class="o">=</span> <span class="n">se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">yerr</span><span class="o">=</span><span class="n">se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">capsize</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Estimate&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">figtitle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1510,32 +1510,25 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
   </table>
 
 <p><strong>Examples:</strong></p>
-    <ul>
-<li>Standard formula:
+    <p>Standard formula:
     fml = 'Y ~ X1 + X2'
-    fixest_model = Fixest(data=data).feols(fml, vcov='iid')</li>
-<li>With fixed effects:
-    fml = 'Y ~ X1 + X2 | fe1 + fe2'</li>
-<li>With interacted fixed effects:
-    fml = 'Y ~ X1 + X2 | fe1^fe2'</li>
-<li>Multiple dependent variables:
-    fml = 'Y1 + Y2 ~ X1 + X2'</li>
-<li>Stepwise regressions (sw and sw0):
-    fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'</li>
-<li>Cumulative stepwise regressions (csw and csw0):
-    fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '</li>
-<li>Combinations:
-    fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'</li>
-</ul>
+    fixest_model = Fixest(data=data).feols(fml, vcov='iid')
+With fixed effects:
+    fml = 'Y ~ X1 + X2 | fe1 + fe2'
+With interacted fixed effects:
+    fml = 'Y ~ X1 + X2 | fe1^fe2'
+Multiple dependent variables:
+    fml = 'Y1 + Y2 ~ X1 + X2'
+Stepwise regressions (sw and sw0):
+    fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
+Cumulative stepwise regressions (csw and csw0):
+    fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
+Combinations:
+    fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'</p>
 
       <details class="quote">
         <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">166</span>
 <span class="normal">167</span>
 <span class="normal">168</span>
 <span class="normal">169</span>
@@ -1600,7 +1593,12 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
 <span class="normal">228</span>
 <span class="normal">229</span>
 <span class="normal">230</span>
-<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">feols</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fml</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">vcov</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">feols</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fml</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">vcov</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Method for fixed effects regression modeling using PyHDFE package for projecting out fixed effects.</span>
 
@@ -1616,20 +1614,20 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
 <span class="sd">            If a dictionary, it should have the format {&quot;CRV1&quot;:&quot;clustervar&quot;} for CRV1 inference or {&quot;CRV3&quot;:&quot;clustervar&quot;} for CRV3 inference.</span>
 
 <span class="sd">    Examples:</span>
-<span class="sd">        - Standard formula:</span>
+<span class="sd">        Standard formula:</span>
 <span class="sd">            fml = &#39;Y ~ X1 + X2&#39;</span>
 <span class="sd">            fixest_model = Fixest(data=data).feols(fml, vcov=&#39;iid&#39;)</span>
-<span class="sd">        - With fixed effects:</span>
+<span class="sd">        With fixed effects:</span>
 <span class="sd">            fml = &#39;Y ~ X1 + X2 | fe1 + fe2&#39;</span>
-<span class="sd">        - With interacted fixed effects:</span>
+<span class="sd">        With interacted fixed effects:</span>
 <span class="sd">            fml = &#39;Y ~ X1 + X2 | fe1^fe2&#39;</span>
-<span class="sd">        - Multiple dependent variables:</span>
+<span class="sd">        Multiple dependent variables:</span>
 <span class="sd">            fml = &#39;Y1 + Y2 ~ X1 + X2&#39;</span>
-<span class="sd">        - Stepwise regressions (sw and sw0):</span>
+<span class="sd">        Stepwise regressions (sw and sw0):</span>
 <span class="sd">            fml = &#39;Y1 + Y2 ~ sw(X1, X2, X3)&#39;</span>
-<span class="sd">        - Cumulative stepwise regressions (csw and csw0):</span>
+<span class="sd">        Cumulative stepwise regressions (csw and csw0):</span>
 <span class="sd">            fml = &#39;Y1 + Y2 ~ csw(X1, X2, X3) &#39;</span>
-<span class="sd">        - Combinations:</span>
+<span class="sd">        Combinations:</span>
 <span class="sd">            fml = &#39;Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6&#39;</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -1651,19 +1649,19 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
             <span class="n">model_frame</span> <span class="o">=</span> <span class="n">model_frames</span><span class="p">[</span><span class="n">fml</span><span class="p">]</span>
             <span class="n">full_fml</span> <span class="o">=</span> <span class="n">fml</span> <span class="o">+</span> <span class="s2">&quot;|&quot;</span> <span class="o">+</span> <span class="n">fval</span>
 
-            <span class="n">Y</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-            <span class="n">X</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">model_frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
             <span class="n">colnames</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">columns</span>
             <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
 
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">min</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The design Matrix X does not have full rank for the regression with fml&quot;</span> <span class="o">+</span> <span class="n">full_fml</span> <span class="o">+</span> <span class="s2">&quot;. The model is skipped.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The design Matrix X does not have full rank for the regression with fml&quot;</span> <span class="o">+</span> <span class="n">full_fml</span> <span class="o">+</span> <span class="s2">&quot;. The model is skipped. If you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?&quot;</span><span class="p">)</span>
 
             <span class="n">FEOLS</span> <span class="o">=</span> <span class="n">Feols</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
             <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_fit</span><span class="p">()</span>
             <span class="n">FEOLS</span><span class="o">.</span><span class="n">na_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropped_data_dict</span><span class="p">[</span><span class="n">fval</span><span class="p">][</span><span class="n">fml</span><span class="p">]</span>
             <span class="n">FEOLS</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">FEOLS</span><span class="o">.</span><span class="n">na_index</span><span class="p">]</span>
-            <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span> <span class="o">=</span> <span class="n">vcov</span><span class="p">)</span>
+            <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span><span class="o">=</span><span class="n">vcov</span><span class="p">)</span>
             <span class="n">FEOLS</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
             <span class="n">FEOLS</span><span class="o">.</span><span class="n">coefnames</span> <span class="o">=</span> <span class="n">colnames</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">icovars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1751,8 +1749,8 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
 <span class="normal">400</span>
 <span class="normal">401</span>
 <span class="normal">402</span>
-<span class="normal">403</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">iplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-
+<span class="normal">403</span>
+<span class="normal">404</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">iplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    plots i-coefficients</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -1761,7 +1759,8 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
     <span class="n">ref</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ivars</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span>
 
     <span class="k">if</span> <span class="n">ivars</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The estimated models did not have ivars / &#39;i()&#39; model syntax. In consequence, the &#39;.iplot()&#39; method is not supported.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;The estimated models did not have ivars / &#39;i()&#39; model syntax. In consequence, the &#39;.iplot()&#39; method is not supported.&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="s2">&quot;Intercept&quot;</span> <span class="ow">in</span> <span class="n">ivars</span><span class="p">:</span>
         <span class="n">ivars</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;Intercept&quot;</span><span class="p">)</span>
@@ -1781,7 +1780,8 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
         <span class="n">conf_u</span> <span class="o">=</span> <span class="n">coef</span> <span class="o">+</span> <span class="n">df_model</span><span class="p">[</span><span class="s2">&quot;Std. Error&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mf">1.96</span>
         <span class="n">coefnames</span> <span class="o">=</span> <span class="n">df_model</span><span class="p">[</span><span class="s2">&quot;coefnames&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
-        <span class="n">coefnames</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">coefnames</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[T\.([\d\.\-]+)\]&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)]</span>
+        <span class="n">coefnames</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">coefnames</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span>
+            <span class="sa">r</span><span class="s1">&#39;\[T\.([\d\.\-]+)\]&#39;</span><span class="p">,</span> <span class="n">string</span><span class="p">)]</span>
 
         <span class="n">coef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coef</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">conf_l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">conf_l</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
@@ -1789,24 +1789,24 @@ If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 infere
         <span class="n">coefnames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coefnames</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
 
         <span class="n">df_dict</span> <span class="o">=</span> <span class="p">{</span>
-          <span class="s1">&#39;coef&#39;</span><span class="p">:</span><span class="n">coef</span><span class="p">,</span>
-          <span class="s1">&#39;conf_l&#39;</span><span class="p">:</span><span class="n">conf_l</span><span class="p">,</span>
-          <span class="s1">&#39;conf_u&#39;</span><span class="p">:</span><span class="n">conf_u</span><span class="p">,</span>
-          <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span><span class="n">coefnames</span><span class="p">,</span>
-          <span class="s1">&#39;model&#39;</span> <span class="p">:</span> <span class="n">model</span>
+            <span class="s1">&#39;coef&#39;</span><span class="p">:</span> <span class="n">coef</span><span class="p">,</span>
+            <span class="s1">&#39;conf_l&#39;</span><span class="p">:</span> <span class="n">conf_l</span><span class="p">,</span>
+            <span class="s1">&#39;conf_u&#39;</span><span class="p">:</span> <span class="n">conf_u</span><span class="p">,</span>
+            <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span> <span class="n">coefnames</span><span class="p">,</span>
+            <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span>
         <span class="p">}</span>
 
         <span class="n">df_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df_dict</span><span class="p">))</span>
 
-    <span class="n">df_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">df_list</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">df_all</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">df_list</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="n">plot</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">ggplot</span><span class="p">(</span><span class="n">df_all</span><span class="p">,</span> <span class="n">aes</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="s1">&#39;coef&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span> <span class="o">+</span>
-      <span class="n">geom_point</span><span class="p">()</span> <span class="o">+</span>
-      <span class="n">geom_errorbar</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">=</span> <span class="s1">&#39;conf_l&#39;</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="s1">&#39;conf_u&#39;</span><span class="p">))</span> <span class="o">+</span>
-      <span class="n">theme_bw</span><span class="p">()</span> <span class="o">+</span>
-      <span class="n">ylab</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span> <span class="o">+</span>
-      <span class="n">geom_hline</span><span class="p">(</span><span class="n">yintercept</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linetype</span> <span class="o">=</span> <span class="s2">&quot;dotted&quot;</span><span class="p">)</span>
+        <span class="n">ggplot</span><span class="p">(</span><span class="n">df_all</span><span class="p">,</span> <span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;coef&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">group</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span> <span class="o">+</span>
+        <span class="n">geom_point</span><span class="p">(</span><span class="n">position</span> <span class="o">=</span> <span class="n">position_dodge</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span> <span class="o">+</span>
+        <span class="n">geom_errorbar</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;coefnames&#39;</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="s1">&#39;conf_l&#39;</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="s1">&#39;conf_u&#39;</span><span class="p">),</span> <span class="n">position</span> <span class="o">=</span> <span class="n">position_dodge</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span> <span class="o">+</span>
+        <span class="n">theme_bw</span><span class="p">()</span> <span class="o">+</span>
+        <span class="n">ylab</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span> <span class="o">+</span>
+        <span class="n">geom_hline</span><span class="p">(</span><span class="n">yintercept</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">linetype</span><span class="o">=</span><span class="s2">&quot;dotted&quot;</span><span class="p">)</span>
     <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">plot</span>
@@ -1846,17 +1846,14 @@ errors, t-values, and p-values.</p>
           <td>
                 <code>None</code>
           </td>
-          <td><ul>
-<li>None</li>
-</ul></td>
+          <td><p>None</p></td>
         </tr>
     </tbody>
   </table>
 
       <details class="quote">
         <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">308</span>
-<span class="normal">309</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">309</span>
 <span class="normal">310</span>
 <span class="normal">311</span>
 <span class="normal">312</span>
@@ -1889,7 +1886,8 @@ errors, t-values, and p-values.</p>
 <span class="normal">339</span>
 <span class="normal">340</span>
 <span class="normal">341</span>
-<span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">342</span>
+<span class="normal">343</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Prints a summary of the feols() estimation results for each estimated model.</span>
 
@@ -1898,7 +1896,7 @@ errors, t-values, and p-values.</p>
 <span class="sd">    errors, t-values, and p-values.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        - None</span>
+<span class="sd">        None</span>
 
 <span class="sd">    &#39;&#39;&#39;</span>
 
@@ -1909,14 +1907,14 @@ errors, t-values, and p-values.</p>
         <span class="n">depvar</span> <span class="o">=</span> <span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-              <span class="p">{</span>
-                  <span class="s1">&#39;&#39;</span><span class="p">:</span><span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
-                  <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
-                  <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
-                  <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
-                  <span class="s1">&#39;Pr(&gt;|t|)&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">pvalue</span>
-              <span class="p">}</span>
-            <span class="p">)</span>
+            <span class="p">{</span>
+                <span class="s1">&#39;&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
+                <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
+                <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
+                <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
+                <span class="s1">&#39;Pr(&gt;|t|)&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">pvalue</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;### Fixed-effects:&#39;</span><span class="p">,</span> <span class="n">fe</span><span class="p">)</span>
@@ -1964,9 +1962,7 @@ markdown-formatted string with three decimal places.
 
       <details class="quote">
         <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
@@ -2013,8 +2009,8 @@ markdown-formatted string with three decimal places.
 <span class="normal">303</span>
 <span class="normal">304</span>
 <span class="normal">305</span>
-<span class="normal">306</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tidy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-
+<span class="normal">306</span>
+<span class="normal">307</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tidy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.</span>
 
@@ -2049,7 +2045,7 @@ markdown-formatted string with three decimal places.
             <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                 <span class="p">{</span>
                     <span class="s1">&#39;fml&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
-                    <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span><span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
+                    <span class="s1">&#39;coefnames&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">coefnames</span><span class="p">,</span>
                     <span class="s1">&#39;Estimate&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">beta_hat</span><span class="p">,</span>
                     <span class="s1">&#39;Std. Error&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">se</span><span class="p">,</span>
                     <span class="s1">&#39;t value&#39;</span><span class="p">:</span> <span class="n">fxst</span><span class="o">.</span><span class="n">tstat</span><span class="p">,</span>
@@ -2058,7 +2054,7 @@ markdown-formatted string with three decimal places.
             <span class="p">)</span>
         <span class="p">)</span>
 
-    <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;fml&#39;</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;fml&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;markdown&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">to_markdown</span><span class="p">(</span><span class="n">floatfmt</span><span class="o">=</span><span class="s2">&quot;.3f&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
@@ -2096,9 +2092,9 @@ to the "Fixest" object are replaced with the variance covariance matrix specifie
     </thead>
     <tbody>
         <tr>
-          <td><code>-</code></td>
+          <td><code>vcov</code></td>
           <td>
-                <code><a class="autorefs autorefs-internal" title="pyfixest.fixest.Fixest.vcov" href="#pyfixest.fixest.Fixest.vcov">vcov</a></code>
+                <code><span title="typing.Union">Union</span>[str, <span title="typing.Dict">Dict</span>[str, str]]</code>
           </td>
           <td><p>A string or dictionary specifying the type of variance-covariance matrix to use for inference.
 If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
@@ -2113,11 +2109,7 @@ or {"CRV3":"clustervar"} for CRV3 inference.</p></td>
 
       <details class="quote">
         <summary>Source code in <code>pyfixest\fixest.py</code></summary>
-        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">238</span>
 <span class="normal">239</span>
 <span class="normal">240</span>
 <span class="normal">241</span>
@@ -2133,14 +2125,16 @@ or {"CRV3":"clustervar"} for CRV3 inference.</p></td>
 <span class="normal">251</span>
 <span class="normal">252</span>
 <span class="normal">253</span>
-<span class="normal">254</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">vcov</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcov</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">vcov</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcov</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Update inference on the fly. By calling vcov() on a &quot;Fixest&quot; object, all inference procedures applied</span>
 <span class="sd">    to the &quot;Fixest&quot; object are replaced with the variance covariance matrix specified via the method.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        - vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.</span>
+<span class="sd">        vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.</span>
 <span class="sd">            If a string, can be one of &quot;iid&quot;, &quot;hetero&quot;, &quot;HC1&quot;, &quot;HC2&quot;, &quot;HC3&quot;.</span>
 <span class="sd">            If a dictionary, it should have the format {&quot;CRV1&quot;:&quot;clustervar&quot;} for CRV1 inference</span>
 <span class="sd">            or {&quot;CRV3&quot;:&quot;clustervar&quot;} for CRV3 inference.</span>
@@ -2148,10 +2142,10 @@ or {"CRV3":"clustervar"} for CRV3 inference.</p></td>
 
     <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
 
-            <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">model</span><span class="p">]</span>
+        <span class="n">fxst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_res</span><span class="p">[</span><span class="n">model</span><span class="p">]</span>
 
-            <span class="n">fxst</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span> <span class="o">=</span> <span class="n">vcov</span><span class="p">)</span>
-            <span class="n">fxst</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
+        <span class="n">fxst</span><span class="o">.</span><span class="n">get_vcov</span><span class="p">(</span><span class="n">vcov</span><span class="o">=</span><span class="n">vcov</span><span class="p">)</span>
+        <span class="n">fxst</span><span class="o">.</span><span class="n">get_inference</span><span class="p">()</span>
 
     <span class="k">return</span> <span class="bp">self</span>
 </code></pre></div></td></tr></table></div>
