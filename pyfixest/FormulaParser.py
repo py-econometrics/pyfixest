@@ -1,5 +1,15 @@
 import re
 
+class FixedEffectInteractionError(Exception):
+    pass
+
+class CovariateInteractionError(Exception):
+    pass
+
+class DuplicateKeyError(Exception):
+    pass
+
+
 class FixestFormulaParser:
 
 
@@ -48,25 +58,19 @@ class FixestFormulaParser:
         self.covars = _unpack_fml(covars)
         self.fevars = _unpack_fml(fevars)
 
-        if self.covars.get("^") is not None:
-            raise ValueError("Please use 'i()' or ':' syntax to interact covariates.")
-
-        if self.fevars.get("i") is not None:
-            raise ValueError("Please use '^' to interact fixed effects.")
-
         if self.covars.get("i") is not None:
             self.ivars = dict()
             i_split = self.covars.get("i")[-1].split("=")
-            if len(i_split) > 1: 
+            if len(i_split) > 1:
                 ref = self.covars.get("i")[-1].split("=")[1]
                 ivar_list = self.covars.get("i")[:-1]
                 self.covars["i"] = self.covars.get("i")[:-1]
-            else: 
+            else:
                 ref = None
                 ivar_list = self.covars.get("i")
 
             self.ivars[ref] = ivar_list
-        
+
         else:
             self.ivars = None
 
@@ -75,11 +79,22 @@ class FixestFormulaParser:
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
 
+        #if "^" in self.covars:
+        #    raise CovariateInteractionError("Please use 'i()' or ':' syntax to interact covariates.")
+
+        #for  x in ["i", ":"]:
+        #    if x in self.fevars:
+        #        raise FixedEffectInteractionError("Interacting fixed effects via", x, " is not allowed. Please use '^' to interact fixed effects.")
+
+
+
+
 
     def get_fml_dict(self):
 
         """
-        Returns a dictionary of all fevars & formula without fevars.
+        Returns a dictionary of all fevars & formula without fevars. The keys are the fixed effect variable combinations.
+        The values are lists of formula strings that do not include the fixed effect variables.
 
         Returns:
             dict: A dictionary of the form {"fe1+fe2": ['Y1 ~ X', 'Y2~X'], "fe1+fe3": ['Y1 ~ X', 'Y2~X']} where
@@ -100,6 +115,8 @@ class FixestFormulaParser:
 
         """
         Create a dictionary of all fevars and list of covars and depvars used in regression with those fevars.
+        The keys are the fixed effect variable combinations. The values are lists of variables (dependent variables and covariates) of
+        the resespective regressions.
 
         Returns:
             dict: A dictionary of the form {"fe1+fe2": ['Y1', 'X1', 'X2'], "fe1+fe3": ['Y1', 'X1', 'X2']} where
@@ -117,7 +134,8 @@ def _unpack_fml(x):
 
     '''
     Given a formula string `x` - e.g. 'X1 + csw(X2, X3)' - , splits it into its constituent variables and their types (if any),
-    and returns a dictionary containing the result.
+    and returns a dictionary containing the result. The dictionary has the following keys: 'constant', 'sw', 'sw0', 'csw'.
+    The values are lists of variables of the respective type.
 
     Parameters:
     -----------
@@ -177,6 +195,7 @@ def _unpack_fml(x):
         # If there's a switch, unpack it and add it to the list
         else:
             if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
+                _check_duplicate_key(res_s, sw_type)
                 res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
@@ -191,6 +210,24 @@ def _unpack_fml(x):
 
 def _pack_to_fml(unpacked):
     """
+    Given a dictionary of "unpacked" formula variables, returns a string containing formulas. An "unpacked" formula is a
+    deparsed formula that allows for multiple estimations.
+
+    Parameters
+    ----------
+    unpacked : dict
+        A dictionary of unpacked formula variables. The dictionary has the following keys:
+            - 'constant' : list of str
+                The list of constant (i.e., non-switched) variables in the formula.
+            - 'sw' : list of str
+                The list of variables that have a regular switch (i.e., 'sw(var1, var2, ...)' notation) in the formula.
+            - 'sw0' : list of str
+                The list of variables that have a 'sw0(var1, var2, ..)' switch in the formula.
+            - 'csw' : list of str or list of lists of str
+                The list of variables that have a 'csw(var1, var2, ..)' switch in the formula.
+                Each element in the list can be either a single variable string, or a list of variable strings
+                if multiple variables are listed in the switch.
+            - 'csw0' : list of str or list of lists of str
     """
 
     res = dict()
@@ -260,34 +297,10 @@ def _pack_to_fml(unpacked):
 
 
 
-
-
-
-    # Separate the fixed variables from the switch variables
-    constant_list = [x for x in unpacked if not isinstance(x, list)]
-    sw_list = [x for x in unpacked if isinstance(x, list)]
-
-    # Generate the formulas by concatenating the constant list with each element of the switch list
-    res = []
-    if sw_list and constant_list:
-        constant_list =  "+".join(constant_list)
-        for x in sw_list:
-            res.append(constant_list + "+" + x)
-    elif sw_list:
-        res = sw_list[0]
-    else:
-        res = "+".join(constant_list)
-
-    # Return the result as a list, even if it's a single formula
-    if isinstance(res, str):
-        res = [res]
-
-    return res
-
-
 def _find_sw(x):
     """
-    Search for matches in a string.
+    Search for matches in a string. Matches are either 'sw', 'sw0', 'csw', 'csw0', or 'i'. If a match is found, returns a
+    tuple containing a list of the elements found and the type of match. Otherwise, returns the original string and None.
 
     Args:
         x (str): The string to search for matches in.
@@ -358,20 +371,24 @@ def _flatten_list(lst):
     return flattened_list
 
 
-
-def _check_unique_key(dict, x):
+def _check_duplicate_key(my_dict, key):
 
     '''
-    check that sw, csw, sw0, csw0 are only used once in dict
+    Checks if a key already exists in a dictionary. If it does, raises a DuplicateKeyError. Otherwise, does nothing.
+
+    Args:
+        my_dict (dict): The dictionary to check for duplicate keys.
+        key (str): The key to check for in the dictionary.
+
+    Returns:
+        None
     '''
 
-    unique = True
-    for key in dict:
-        if key == x:
-            continue
-        if key == x:
-            unique = False
-            break
-
-    if not unique:
-        raise Exception(f"The key '{key_to_check}' is unique")
+    if key == 'i' and 'i' in my_dict:
+        raise DuplicateKeyError("Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula.")
+    else:
+        for key in ['sw', 'csw', 'sw0', 'csw0']:
+            if key in my_dict:
+                raise DuplicateKeyError("Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula.")
+            else:
+                None
