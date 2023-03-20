@@ -1,4 +1,6 @@
 import pytest
+from pyfixest import Fixest
+from pyfixest.utils import get_data
 
 from pyfixest.FormulaParser import FixestFormulaParser, DuplicateKeyError, FixedEffectInteractionError, CovariateInteractionError
 
@@ -25,6 +27,14 @@ def test_formula_parser3():
 #def test_formula_parser3():
 #    with pytest.raises(CovariateInteractionError):
 #        FixestFormulaParser('y ~ X1 + X2^X3')
+
+def test_i_ref():
+
+    data = get_data()
+    fixest = Fixest(data)
+
+    with pytest.raises(ValueError):
+        fixest.feols('y ~ i(X1, X2, ref = -1)', vcov = 'iid')
 
 
 

@@ -46,9 +46,9 @@ class Fixest:
                 i0_type = self.data[ivars[0]].dtype
                 i1_type = self.data[ivars[1]].dtype
                 if not i0_type in ['category', "O"]:
-                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ".")
-                if not i1_type:
-                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ".")
+                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
+                if not i1_type in ['int64', 'float64', 'int32', 'float32']:
+                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
 
             else:
                 ivars = self.ivars[None]
@@ -448,3 +448,7 @@ class Fixest:
 
         plt.show()
         plt.close()
+
+
+
+
