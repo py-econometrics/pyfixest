@@ -354,9 +354,15 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
 
-    def iplot(self):
+    def iplot(self, alpha = 0.05):
         '''
-        plots i-coefficients
+        Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
+
+        Args:
+            alpha: float, optional. The significance level for the confidence intervals. Default is 0.05.
+
+        Returns:
+            None
         '''
 
         ivars = self.icovars
@@ -385,8 +391,8 @@ class Fixest:
 
             df_model = df.xs(model)
             coef = df_model["Estimate"].values
-            conf_l = coef - df_model["Std. Error"].values * 1.96
-            conf_u = coef + df_model["Std. Error"].values * 1.96
+            conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+            conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
             coefnames = df_model["coefnames"].values.tolist()
 
             coefnames = [(i) for string in coefnames for i in re.findall(
@@ -410,7 +416,7 @@ class Fixest:
 
         df_all = pd.concat(df_list, axis=0)
 
-        plot = (
+        iplot = (
             ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
             geom_point(position = position_dodge(0.5)) +
             geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
@@ -420,11 +426,23 @@ class Fixest:
             geom_hline(yintercept=0, color="blue", linetype="dotted")
         )
 
-        return plot
 
-    def coefplot(self, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
+        return iplot
+
+    def coefplot(self, alpha = 0.05, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
         '''
-        Plot estimation results.
+        Plot estimation results. The plot() method is only defined for single regressions.
+
+        Args:
+            alpha (float): the significance level for the confidence intervals. Default is 0.05.
+            figsize (tuple): the size of the figure. Default is (5, 2).
+            yintercept (float): the value of the y-intercept. Default is 0.
+            figtitle (str): the title of the figure. Default is None.
+            figtext (str): the text at the bottom of the figure. Default is None.
+
+        Returns:
+            None
+
         '''
 
         n_models = len(self.tidy().index.unique())
@@ -435,7 +453,7 @@ class Fixest:
 
         df = self.tidy()
         coef = df["Estimate"].values
-        se = df["Std. Error"].values * 1.96
+        se = df["Std. Error"].values  * norm.ppf(1 - alpha / 2)
         coefnames = df["coefnames"].values.tolist()
 
         plt.figure(figsize=figsize)
@@ -451,7 +469,7 @@ class Fixest:
         if yintercept is not None:
             plt.axhline(y=yintercept, color='red', linestyle='--')
 
-        plt.show(block = False)
+        return plt
 
 
 
