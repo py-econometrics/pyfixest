@@ -9,7 +9,7 @@ from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
 
-from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, scale_x_discrete, geom_hline, position_dodge
+from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
@@ -112,7 +112,6 @@ class Fixest:
 
                     na_index = (Y_na + X_na) > 0
                     na_index = (na_index + fe_na)
-                    na_index = na_index
 
                     Y = Y[~na_index]
                     X = X[~na_index]
@@ -362,11 +361,15 @@ class Fixest:
 
         ivars = self.icovars
 
-        ref = int(list(self.ivars.keys())[0])
-
         if ivars is None:
             raise ValueError(
                 "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
+
+        ivars_keys = self.ivars.keys()
+        if ivars_keys is not None:
+            ref = list(ivars_keys)[0]
+        else:
+            ref = None
 
         if "Intercept" in ivars:
             ivars.remove("Intercept")
@@ -386,13 +389,14 @@ class Fixest:
             conf_u = coef + df_model["Std. Error"].values * 1.96
             coefnames = df_model["coefnames"].values.tolist()
 
-            coefnames = [int(i) for string in coefnames for i in re.findall(
+            coefnames = [(i) for string in coefnames for i in re.findall(
                 r'\[T\.([\d\.\-]+)\]', string)]
 
-            coef = np.append(coef, 0)
-            conf_l = np.append(conf_l, 0)
-            conf_u = np.append(conf_u, 0)
-            coefnames = np.append(coefnames, ref)
+            if ref is not None:
+                coef = np.append(coef, 0)
+                conf_l = np.append(conf_l, 0)
+                conf_u = np.append(conf_u, 0)
+                coefnames = np.append(coefnames, ref)
 
             df_dict = {
                 'coef': coef,
@@ -412,6 +416,7 @@ class Fixest:
             geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
             theme_bw() +
             ylab('Estimate') +
+            xlab(list(self.ivars.values())[0][0]) +
             geom_hline(yintercept=0, color="blue", linetype="dotted")
         )
 
@@ -446,8 +451,7 @@ class Fixest:
         if yintercept is not None:
             plt.axhline(y=yintercept, color='red', linestyle='--')
 
-        plt.show()
-        plt.close()
+        plt.show(block = False)
 
 
 
