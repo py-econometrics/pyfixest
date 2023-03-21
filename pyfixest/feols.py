@@ -169,9 +169,9 @@ class Feols:
 
             # if there are missings - delete them!
             cluster_df = self.data[self.clustervar].to_numpy()
-            # drop NAs
-            # if len(self.na_index) != 0:
-            #    cluster_df = np.delete(cluster_df, 0, self.na_index)
+
+            if np.any(np.isnan(cluster_df)):
+                raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
 
             clustid = np.unique(cluster_df)
             self.G = len(clustid)
@@ -255,6 +255,18 @@ class Feols:
         self.conf_int = (
             np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
         )
+
+    def get_nobs(self):
+
+        '''
+        Fetch the number of observations used in fitting the regression model.
+
+        Returns
+        -------
+        None
+        '''
+        self.N = len(self.Y)
+
 
     def get_performance(self):
         '''
