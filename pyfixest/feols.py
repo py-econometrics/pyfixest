@@ -93,11 +93,39 @@ class Feols:
         ------
         AssertionError
             If vcov is not a dict, string, or list.
+        AssertionError
+            If vcov is a dict and the key is not "CRV1" or "CRV3".
+        AssertionError
+            If vcov is a dict and the value is not a string.
+        AssertionError
+            If vcov is a dict and the value is not a column in the data.
+        AssertionError
+            CRV3 currently not supported with arbitrary fixed effects
+        AssertionError
+            If vcov is a list and it does not contain strings.
+        AssertionError
+            If vcov is a list and it does not contain columns in the data.
+        AssertionError
+            If vcov is a string and it is not one of "iid", "hetero", "HC1", "HC2", or "HC3".
+
+
+        Returns
+        -------
+        None
 
         '''
 
-        assert isinstance(vcov, (dict, str, list)
-                          ), "vcov must be a dict, string or list"
+        assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+        if isinstance(vcov, dict):
+            assert list(vcov.keys())[0] in ["CRV1", "CRV3"], "vcov dict key must be CRV1 or CRV3"
+            assert isinstance(list(vcov.values())[0], str), "vcov dict value must be a string"
+            assert list(vcov.values())[0] in self.data.columns, "vcov dict value must be a column in the data"
+            assert list(vcov.keys())[0] != "CRV3", "CRV3 currently not supported with arbitrary fixed effects"
+        if isinstance(vcov, list):
+            assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
+            assert all(v in self.data.columns for v in vcov), "vcov list must contain columns in the data"
+        if isinstance(vcov, str):
+            assert vcov in ["iid", "hetero", "HC1", "HC2", "HC3"], "vcov string must be iid, hetero, HC1, HC2, or HC3"
 
         if isinstance(vcov, dict):
             vcov_type_detail = list(vcov.keys())[0]
@@ -199,19 +227,31 @@ class Feols:
     def get_inference(self, alpha = 0.95):
         '''
         Compute standard errors, t-statistics and p-values for the regression model.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for confidence intervals, by default 0.95
+
+        Returns
+        -------
+        None
+
         '''
 
         self.se = (
             np.sqrt(np.diagonal(self.vcov))
         )
+
         self.tstat = (
             self.beta_hat / self.se
         )
+
         self.pvalue = (
             2*(1-norm.cdf(np.abs(self.tstat)))
         )
 
-        z = norm.ppf((1-alpha) / 2)
+        z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
             np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
         )
