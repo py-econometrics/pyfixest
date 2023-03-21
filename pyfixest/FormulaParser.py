@@ -37,6 +37,9 @@ class FixestFormulaParser:
 
         Args:
         fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
+
+        Returns:
+            None
         """
 
         #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'

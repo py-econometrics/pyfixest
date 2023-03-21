@@ -19,8 +19,8 @@ class Fixest:
 
     def __init__(self, data: pd.DataFrame) -> None:
         '''
-        Initiate the fixest object.
-        Deparse fml into formula dict, variable dict.
+
+        A class for fixed effects regression modeling.
 
         Args:
             data: The input pd.DataFrame for the object.
@@ -33,6 +33,10 @@ class Fixest:
         self.model_res = dict()
 
     def _demean(self):
+
+        '''
+        Demeans dependent variables and covariates for all of the potentially multiple regression models specified.
+        '''
 
         # deparse fxst.fml_dict:
         fixef_keys = list(self.var_dict.keys())
@@ -173,7 +177,7 @@ class Fixest:
 
     def feols(self, fml: str, vcov: Union[str, Dict[str, str]]) -> None:
         '''
-        Method for fixed effects regression modeling using PyHDFE package for projecting out fixed effects.
+        Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
 
         Args:
             fml (str): A two-sided formula string using fixest formula syntax. Supported syntax includes:
@@ -249,7 +253,8 @@ class Fixest:
 
     def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
         '''
-        Update inference on the fly. By calling vcov() on a "Fixest" object, all inference procedures applied
+        Update regression inference "on the fly".
+        By calling vcov() on a "Fixest" object, all inference procedures applied
         to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
 
         Args:
