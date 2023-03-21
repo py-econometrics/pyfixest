@@ -237,6 +237,7 @@ class Fixest:
                 FEOLS.get_fit()
                 FEOLS.na_index = self.dropped_data_dict[fval][fml]
                 FEOLS.data = self.data[~FEOLS.na_index]
+                FEOLS.get_nobs()
                 FEOLS.get_vcov(vcov=vcov)
                 FEOLS.get_inference()
                 FEOLS.coefnames = colnames
