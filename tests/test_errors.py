@@ -45,9 +45,9 @@ def test_cluster_na():
     '''
 
     data = get_data()
-    data = data.dropna()
+    #data = data.dropna()
     data['X3'] = data['X3'].astype('int64')
-    data['X3'][0] = np.nan
+    data['X3'][5] = np.nan
 
     fixest = Fixest(data)
     with pytest.raises(ValueError):
@@ -59,7 +59,7 @@ def test_error_crv3_fe():
     test if CRV3 inference with fixed effects regressions raises an error (currently not supported)
     '''
     data = get_data()
-    data = data.dropna()
+    data["group_id"][9] = np.nan
 
     fixest = Fixest(data)
     with pytest.raises(AssertionError):

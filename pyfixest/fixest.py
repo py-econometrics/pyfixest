@@ -313,7 +313,6 @@ class Fixest:
             model_frames = self.demeaned_data_dict[fval]
             for _, fml in enumerate(model_frames):
 
-                print("fml", fml)
                 model_frame = model_frames[fml]
                 full_fml = fml + "|" + fval
 
