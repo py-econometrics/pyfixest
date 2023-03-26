@@ -114,6 +114,25 @@ class FixestFormulaParser:
             self.fml_dict[fevar] = res
 
 
+    def _transform_fml_dict(self):
+
+        fml_dict2 = dict()
+
+        for fe in self.fml_dict.keys():
+
+            fml_dict2[fe] = dict()
+
+            for fml in self.fml_dict.get(fe):
+                depvars, covars = fml.split("~")
+                if fml_dict2[fe].get(depvars) is None:
+                    fml_dict2[fe][depvars] = [covars]
+                else:
+                    fml_dict2[fe][depvars].append(covars)
+
+        self.fml_dict2 = fml_dict2
+
+
+
     def get_var_dict(self):
 
         """

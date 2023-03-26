@@ -32,148 +32,200 @@ class Fixest:
         self.data = data
         self.model_res = dict()
 
-    def _demean(self):
+
+    def _get_na_index(self):
 
         '''
-        Demeans dependent variables and covariates for all of the potentially multiple regression models specified.
+        Get indices of missings for all regression models.
         '''
 
-        # deparse fxst.fml_dict:
-        fixef_keys = list(self.var_dict.keys())
+        na_index_dict = dict()
 
-        if self.ivars is not None:
-            if list(self.ivars.keys())[0] is not None:
-                ref = list(self.ivars.keys())[0]
-                ivars = self.ivars[ref]
-                drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
-                # type checking
-                i0_type = self.data[ivars[0]].dtype
-                i1_type = self.data[ivars[1]].dtype
-                if not i0_type in ['category', "O"]:
-                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
-                if not i1_type in ['int64', 'float64', 'int32', 'float32']:
-                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+        for fe in self.fml_dict2.keys():
 
-            else:
-                ivars = self.ivars[None]
-                drop_ref = None
-            # if ref not in self.data[ivars[0]].unique():
+            na_index_dict[fe] = dict()
 
-        self.demeaned_data_dict = dict()
-        self.dropped_data_dict = dict()
+            for depvars in self.fml_dict2.get(fe).keys():
 
-        for _, fval in enumerate(fixef_keys):
+                na_index_dict[fe][depvars] = []
 
-            YX_dict = dict()
-            na_dict = dict()
+                for covars in self.fml_dict2.get(fe).get(depvars):
 
-            if fval != "0":
-
-                fval_list = fval.split("+")
-
-                # find interacted fixed effects via "^"
-                interacted_fes = [
-                    x for x in fval_list if len(x.split('^')) > 1]
-                regular_fes = [x for x in fval_list if len(x.split('^')) == 1]
-
-                for x in interacted_fes:
-                    vars = x.split("^")
-                    self.data[x] = self.data[vars].apply(lambda x: '^'.join(
-                        x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
-
-                for x in regular_fes:
-                    self.data[x] = self.data[x].astype(str)
-
-                fe = self.data[fval_list]
-                # all fes to ints
-                fe = fe.apply(lambda x: pd.factorize(x)[0])
-
-                fe_na = np.sum(pd.isna(fe), axis=1) > 0
-                fe = fe.to_numpy()
-
-                for fml in self.fml_dict[fval]:
-
-                    Y, X = model_matrix(fml, self.data, na_action='ignore')
-
-                    if self.ivars is not None:
-                        if drop_ref is not None:
-                            X = X.drop(drop_ref, axis=1)
-
-                    depvar = Y.columns
-                    covars = X.columns
-
-                    if self.ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(
-                            ivars[0]) and s.endswith(ivars[1])]
+                    if isinstance(covars, list):
+                        covars2 = covars[0].split("+")
                     else:
-                        self.icovars = None
+                        covars2 = covars.split("+")
 
-                    Y = Y.to_numpy()
-                    X = X.to_numpy()
+                    if not isinstance(depvars, list):
+                        depvars2 = [depvars]
+                    else:
+                        depvars2 = depvars
 
-                    Y_na = np.isnan(Y).flatten()
-                    X_na = np.sum(np.isnan(X), axis=1) > 0
+                    vars = depvars2 + covars2
+                    na_index = self.data[vars].isna().any(axis=1)
+                    na_index = na_index[na_index == True].index
+                    na_index_dict[fe][depvars].append(na_index)
 
-                    na_index = (Y_na + X_na) > 0
+        self.na_index_dict = na_index_dict
+
+
+    def _clean_fe(self, fval):
+
+        fval_list = fval.split("+")
+
+        # find interacted fixed effects via "^"
+        interacted_fes = [
+            x for x in fval_list if len(x.split('^')) > 1]
+        regular_fes = [x for x in fval_list if len(x.split('^')) == 1]
+
+        for x in interacted_fes:
+            vars = x.split("^")
+            self.data[x] = self.data[vars].apply(lambda x: '^'.join(
+                x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
+
+        #for x in regular_fes:
+        #    self.data[x] = self.data[x].astype(str)
+
+        fe = self.data[fval_list]
+        # all fes to ints
+        fe = fe.apply(lambda x: pd.factorize(x)[0])
+
+        fe_na = fe.isna().any(axis=1)
+        fe = fe.to_numpy()
+
+        return fe, fe_na
+
+
+    def demean(self, fval, ivars, drop_ref):
+
+        '''
+        demean all regressions for a specification of fixed effects
+
+        Args:
+            fval: A specification of fixed effects. String. E.g. X4 or
+                "X3 + X2"
+        '''
+
+        YX_dict = dict()
+        na_dict = dict()
+
+        if fval != "0":
+            fe, fe_na = self._clean_fe(fval)
+            fe_na = list(fe_na[fe_na == True])
+        else:
+            fe = None
+            fe_na = None
+
+        dict2fe = self.fml_dict2.get(fval)
+        #na_index_dict_fe = self.na_index_dict.get(fval)
+
+        # create lookup table with NA index key
+        # for each regression, check if lookup table already
+        # populated with "demeaned" data for some (or all)
+        # variables of the model. if demeaned variable for
+        # NA key already exists -> use it. else rerun demeaning
+        # algorithm
+
+        lookup_demeaned_data = dict()
+
+
+        for depvar in dict2fe.keys():
+
+            # [(0, 'X1+X2'), (1, ['X1+X3'])]
+            for c, covar in enumerate(dict2fe.get(depvar)):
+
+                if isinstance(covar, list):
+                    covar2 = covar[0]
+                else:
+                    covar2 = covar
+
+                if isinstance(depvar, list):
+                    depvar2 = depvar[0]
+                else:
+                    depvar2 = depvar
+
+                fml = depvar2 + " ~ " + covar2
+
+                Y, X = model_matrix(fml, self.data)
+                na_index = list(set(range(0, self.data.shape[0])) - set(Y.index))
+
+                dep_varnames = list(Y.columns)
+                co_varnames = list(X.columns)
+                var_names = list(dep_varnames) + list(co_varnames)
+
+                if self.ivars is not None:
+                    if drop_ref is not None:
+                        X = X.drop(drop_ref, axis=1)
+
+                if self.ivars is not None:
+                    self.icovars = [s for s in co_varnames if s.startswith(ivars[0]) and s.endswith(ivars[1])]
+                else:
+                    self.icovars = None
+
+
+                Y = Y.to_numpy()
+                X = X.to_numpy()
+
+                # variant 1: if there are fixed effects to be projected out
+                if fe is not None:
                     na_index = (na_index + fe_na)
-
-                    Y = Y[~na_index]
-                    X = X[~na_index]
-                    fe2 = fe[~na_index]
+                    fe2 = np.delete(fe, na_index, axis = 0)
                     # drop intercept
                     X = X[:, 1:]
+                    co_varnames.remove("Intercept")
+                    var_names.remove("Intercept")
 
-                    YX = np.concatenate([Y, X], axis=1)
+                    print("var_names", var_names)
 
-                    algorithm = pyhdfe.create(
-                        ids=fe2, residualize_method='map')
-                    YX_demeaned = algorithm.residualize(YX)
-                    YX_demeaned = pd.DataFrame(YX_demeaned)
-                    YX_demeaned.columns = list(depvar) + list(covars[1:])
+                    # check if variables have already been demeaned
+                    Y = np.delete(Y, fe_na, axis = 0)
+                    X = np.delete(X, fe_na, axis = 0)
+                    YX = np.concatenate([Y,X], axis = 1)
 
-                    YX_dict[fml] = YX_demeaned
-                    na_dict[fml] = na_index
+                    na_index_str = ','.join(str(x) for x in na_index)
 
-            else:
+                    # check if looked dict has data for na_index
+                    if lookup_demeaned_data.get(na_index_str) is not None:
+                        # get data out of lookup table: list of [algo, data]
+                        algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
 
-                for fml in self.fml_dict[fval]:
+                        # get not yet demeaned covariates
+                        var_diff_names = list(set(var_names) - set(YX_demeaned_old.columns))[0]
+                        print("var_diff_names", var_diff_names)
+                        var_diff_index = list(var_names).index(var_diff_names)
+                        var_diff = YX[:,var_diff_index]
+                        if var_diff.ndim == 1:
+                            var_diff = var_diff.reshape(len(var_diff), 1)
 
-                    Y, X = model_matrix(fml, self.data, na_action='ignore')
 
-                    if self.ivars is not None:
-                        if drop_ref is not None:
-                            X = X.drop(drop_ref, axis=1)
+                        YX_demean_new = algorithm.residualize(var_diff)
+                        YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis = 1)
+                        YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                    depvar = Y.columns
-                    covars = X.columns
+                        YX_demeaned.columns = list(YX_demeaned_old.columns) + [var_diff_names]
 
-                    if self.ivars is not None:
-                        self.icovars = [s for s in covars if s.startswith(
-                            ivars[0]) and s.endswith(ivars[1])]
+
                     else:
-                        self.icovars = None
+                        # not data demeaned yet for NA combination
+                        #YX = np.concatenate([Y, X], axis=1)
+                        algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
+                        YX_demeaned = algorithm.residualize(YX)
+                        YX_demeaned = pd.DataFrame(YX_demeaned)
+                        YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
 
-                    depvar = Y.columns
-                    covars = X.columns
+                    lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
 
-                    Y = Y.to_numpy()
-                    X = X.to_numpy()
-
-                    Y_na = np.isnan(Y).flatten()
-                    X_na = np.sum(np.isnan(X), axis=1) > 0
-
-                    na_index = (Y_na + X_na) > 0
-
+                else:
+                    # if no fixed effects
                     YX = np.concatenate([Y, X], axis=1)
-                    YX = YX[~na_index]
                     YX_demeaned = pd.DataFrame(YX)
-                    YX_demeaned.columns = list(depvar) + list(covars)
+                    YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
 
-                    YX_dict[fml] = YX_demeaned
-                    na_dict[fml] = na_index
+                YX_dict[fml] = YX_demeaned
+                na_dict[fml] = na_index
 
-            self.demeaned_data_dict[fval] = YX_dict
-            self.dropped_data_dict[fval] = na_dict
+        return YX_dict, na_dict
+
 
     def feols(self, fml: str, vcov: Union[str, Dict[str, str]]) -> None:
         '''
@@ -215,17 +267,53 @@ class Fixest:
 
         fxst_fml.get_fml_dict()
         fxst_fml.get_var_dict()
+        fxst_fml._transform_fml_dict()
 
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
+        self.fml_dict2 = fxst_fml.fml_dict2
         self.ivars = fxst_fml.ivars
 
-        self._demean()
+        #self._get_na_index()
 
+        # get all fixed effects combinations
+        fixef_keys = list(self.var_dict.keys())
+
+        if self.ivars is not None:
+            if list(self.ivars.keys())[0] is not None:
+                ref = list(self.ivars.keys())[0]
+                ivars = self.ivars[ref]
+                drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+                # type checking
+                i0_type = self.data[ivars[0]].dtype
+                i1_type = self.data[ivars[1]].dtype
+                if not i0_type in ['category', "O"]:
+                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
+                if not i1_type in ['int64', 'float64', 'int32', 'float32']:
+                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+
+            else:
+                ivars = self.ivars[None]
+                drop_ref = None
+        else:
+            ivars = None
+            drop_ref = None
+
+
+        self.dropped_data_dict = dict()
+        self.demeaned_data_dict = dict()
+
+        for _, fval in enumerate(fixef_keys):
+            self.demeaned_data_dict[fval], self.dropped_data_dict[fval] = self.demean(fval, ivars, drop_ref)
+
+
+
+        # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
             model_frames = self.demeaned_data_dict[fval]
             for _, fml in enumerate(model_frames):
 
+                print("fml", fml)
                 model_frame = model_frames[fml]
                 full_fml = fml + "|" + fval
 
@@ -240,7 +328,7 @@ class Fixest:
                 FEOLS = Feols(Y, X)
                 FEOLS.get_fit()
                 FEOLS.na_index = self.dropped_data_dict[fval][fml]
-                FEOLS.data = self.data[~FEOLS.na_index]
+                FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
                 FEOLS.get_nobs()
                 FEOLS.get_vcov(vcov=vcov)
                 FEOLS.get_inference()
