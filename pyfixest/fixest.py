@@ -32,43 +32,6 @@ class Fixest:
         self.data = data
         self.model_res = dict()
 
-
-    def _get_na_index(self):
-
-        '''
-        Get indices of missings for all regression models.
-        '''
-
-        na_index_dict = dict()
-
-        for fe in self.fml_dict2.keys():
-
-            na_index_dict[fe] = dict()
-
-            for depvars in self.fml_dict2.get(fe).keys():
-
-                na_index_dict[fe][depvars] = []
-
-                for covars in self.fml_dict2.get(fe).get(depvars):
-
-                    if isinstance(covars, list):
-                        covars2 = covars[0].split("+")
-                    else:
-                        covars2 = covars.split("+")
-
-                    if not isinstance(depvars, list):
-                        depvars2 = [depvars]
-                    else:
-                        depvars2 = depvars
-
-                    vars = depvars2 + covars2
-                    na_index = self.data[vars].isna().any(axis=1)
-                    na_index = na_index[na_index == True].index
-                    na_index_dict[fe][depvars].append(na_index)
-
-        self.na_index_dict = na_index_dict
-
-
     def _clean_fe(self, fval):
 
         fval_list = fval.split("+")
