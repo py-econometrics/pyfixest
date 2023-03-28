@@ -112,20 +112,20 @@ class Fixest:
                 Y, X = model_matrix(fml, self.data)
                 na_index = list(set(range(0, self.data.shape[0])) - set(Y.index))
 
+                if self.ivars is not None:
+                    if drop_ref is not None:
+                        X = X.drop(drop_ref, axis=1)
+                        
                 dep_varnames = list(Y.columns)
                 co_varnames = list(X.columns)
                 var_names = list(dep_varnames) + list(co_varnames)
 
                 if self.ivars is not None:
-                    if drop_ref is not None:
-                        X = X.drop(drop_ref, axis=1)
-
-                if self.ivars is not None:
-                    self.icovars = [s for s in co_varnames if s.startswith(ivars[0]) and s.endswith(ivars[1])]
+                    self.icovars = [s for s in co_varnames if s.startswith(
+                        ivars[0]) and s.endswith(ivars[1])]
                 else:
-                    self.icovars = None
-
-
+                    self.icovars = None                
+              
                 Y = Y.to_numpy()
                 X = X.to_numpy()
 
@@ -241,26 +241,29 @@ class Fixest:
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
-
+        
         if self.ivars is not None:
+
             if list(self.ivars.keys())[0] is not None:
                 ref = list(self.ivars.keys())[0]
                 ivars = self.ivars[ref]
                 drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
-                # type checking
-                i0_type = self.data[ivars[0]].dtype
-                i1_type = self.data[ivars[1]].dtype
-                if not i0_type in ['category', "O"]:
-                    raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
-                if not i1_type in ['int64', 'float64', 'int32', 'float32']:
-                    raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
-
             else:
                 ivars = self.ivars[None]
                 drop_ref = None
+                
+            # type checking
+            i0_type = self.data[ivars[0]].dtype
+            i1_type = self.data[ivars[1]].dtype
+            if not i0_type in ['category', "O"]:
+                raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
+            if not i1_type in ['int64', 'float64', 'int32', 'float32']:
+                raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+
         else:
             ivars = None
             drop_ref = None
+            
 
 
         self.dropped_data_dict = dict()
