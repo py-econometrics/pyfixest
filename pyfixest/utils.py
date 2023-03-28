@@ -1,21 +1,25 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 def get_data():
 
     '''
     create a random example data set
     '''
+
     # create data
-    np.random.seed(1234)
-    N = 10_000
-    k = 4
+
+    np.random.seed(1231)
+
+    N = 6000
+    k = 5
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
     X = pd.DataFrame(X)
-    X[1] = np.random.choice(list(range(0, 50)), N, True)
-    X[2] = np.random.choice(list(range(0, 100)), N, True)
-    X[3] = np.random.choice(list(range(0, 1000)), N, True)
+    X[1] = np.random.choice(list(range(0, 5)), N, True)
+    X[2] = np.random.choice(list(range(0, 10)), N, True)
+    X[3] = np.random.choice(list(range(0, 10)), N, True)
+    X[4] = np.random.normal(0, 1, N)
 
     beta = np.random.normal(0,1,k)
     beta[0] = 0.005
@@ -28,11 +32,14 @@ def get_data():
     X = pd.DataFrame(X)
 
     data = pd.concat([Y, X], axis = 1)
-    data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4'}, inplace = True)
-    data['X4'] = data['X4'].astype('category').astype(str)
-    data['X3'] = data['X3'].astype('category').astype(str)
-    data['X2'] = data['X2'].astype('category').astype(str)
-    data['group_id'] = cluster.astype(str)
+    data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4', 4:'X5'}, inplace = True)
+
+    data['group_id'] = cluster
     data['Y2'] = data.Y + np.random.normal(0, 1, N)
+
+    data['Y'][0] = np.nan
+    data['X1'][1] = np.nan
+    #data['X2'][2] = np.nan
+
 
     return data

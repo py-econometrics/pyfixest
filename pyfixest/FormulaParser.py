@@ -37,6 +37,9 @@ class FixestFormulaParser:
 
         Args:
         fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
+
+        Returns:
+            None
         """
 
         #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
@@ -109,6 +112,25 @@ class FixestFormulaParser:
                for covar in self.covars_fml:
                    res.append(depvar + '~' + covar)
             self.fml_dict[fevar] = res
+
+
+    def _transform_fml_dict(self):
+
+        fml_dict2 = dict()
+
+        for fe in self.fml_dict.keys():
+
+            fml_dict2[fe] = dict()
+
+            for fml in self.fml_dict.get(fe):
+                depvars, covars = fml.split("~")
+                if fml_dict2[fe].get(depvars) is None:
+                    fml_dict2[fe][depvars] = [covars]
+                else:
+                    fml_dict2[fe][depvars].append(covars)
+
+        self.fml_dict2 = fml_dict2
+
 
 
     def get_var_dict(self):

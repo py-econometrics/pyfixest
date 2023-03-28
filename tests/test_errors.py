@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from pyfixest import Fixest
 from pyfixest.utils import get_data
 
@@ -36,7 +37,31 @@ def test_i_ref():
     with pytest.raises(ValueError):
         fixest.feols('y ~ i(X1, X2, ref = -1)', vcov = 'iid')
 
+def test_cluster_na():
 
+    '''
+    test if a nan value in a cluster variable raises
+    an error
+    '''
 
+    data = get_data()
+    #data = data.dropna()
+    data['X3'] = data['X3'].astype('int64')
+    data['X3'][5] = np.nan
 
+    fixest = Fixest(data)
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1', vcov = {'CRV1': 'X3'})
+
+def test_error_crv3_fe():
+
+    '''
+    test if CRV3 inference with fixed effects regressions raises an error (currently not supported)
+    '''
+    data = get_data()
+    data["group_id"][9] = np.nan
+
+    fixest = Fixest(data)
+    with pytest.raises(AssertionError):
+        fixest.feols('Y ~ X1 | X2', vcov = {'CRV3': 'group_id'})
 

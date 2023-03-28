@@ -1,10 +1,13 @@
 import pytest
+import pandas as pd
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data
 
 @pytest.fixture
 def data():
-    return get_data()
+    data = get_data()
+    data["X2"] = pd.Categorical(data["X2"])
+    return data
 
 def test_iplot(data):
     fixest = Fixest(data)
