@@ -115,7 +115,7 @@ class Fixest:
                 if self.ivars is not None:
                     if drop_ref is not None:
                         X = X.drop(drop_ref, axis=1)
-                        
+
                 dep_varnames = list(Y.columns)
                 co_varnames = list(X.columns)
                 var_names = list(dep_varnames) + list(co_varnames)
@@ -124,8 +124,8 @@ class Fixest:
                     self.icovars = [s for s in co_varnames if s.startswith(
                         ivars[0]) and s.endswith(ivars[1])]
                 else:
-                    self.icovars = None                
-              
+                    self.icovars = None
+
                 Y = Y.to_numpy()
                 X = X.to_numpy()
 
@@ -137,8 +137,6 @@ class Fixest:
                     X = X[:, 1:]
                     co_varnames.remove("Intercept")
                     var_names.remove("Intercept")
-
-                    print("var_names", var_names)
 
                     # check if variables have already been demeaned
                     Y = np.delete(Y, fe_na, axis = 0)
@@ -154,7 +152,6 @@ class Fixest:
 
                         # get not yet demeaned covariates
                         var_diff_names = list(set(var_names) - set(YX_demeaned_old.columns))[0]
-                        print("var_diff_names", var_diff_names)
                         var_diff_index = list(var_names).index(var_diff_names)
                         var_diff = YX[:,var_diff_index]
                         if var_diff.ndim == 1:
@@ -241,7 +238,7 @@ class Fixest:
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
-        
+
         if self.ivars is not None:
 
             if list(self.ivars.keys())[0] is not None:
@@ -251,7 +248,7 @@ class Fixest:
             else:
                 ivars = self.ivars[None]
                 drop_ref = None
-                
+
             # type checking
             i0_type = self.data[ivars[0]].dtype
             i1_type = self.data[ivars[1]].dtype
@@ -263,7 +260,7 @@ class Fixest:
         else:
             ivars = None
             drop_ref = None
-            
+
 
 
         self.dropped_data_dict = dict()
