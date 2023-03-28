@@ -1,13 +1,12 @@
 import pytest
 import numpy as np
-import pandas as pd
 from pyfixest.fixest import Fixest
+from pyfixest.utils import get_data
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
-from rpy2.robjects.vectors import StrVector, FloatVector
 pandas2ri.activate()
 
 fixest = importr("fixest")
@@ -16,46 +15,12 @@ stats = importr('stats')
 
 @pytest.fixture
 def data():
-
-    # create data
-    np.random.seed(1123487)
-    N = 10000
-    k = 5
-    G = 25
-    X = np.random.normal(0, 1, N * k).reshape((N,k))
-    X = pd.DataFrame(X)
-    X[1] = np.random.choice(list(range(0, 5)), N, True)
-    X[2] = np.random.choice(list(range(0, 10)), N, True)
-    X[3] = np.random.choice(list(range(0, 10)), N, True)
-    X[4] = np.random.normal(0, 1, N)
-
-    beta = np.random.normal(0,1,k)
-    beta[0] = 0.005
-    u = np.random.normal(0,1,N)
-    Y = 1 + X @ beta + u
-    cluster = np.random.choice(list(range(0,G)), N)
-
-    Y = pd.DataFrame(Y)
-    Y.rename(columns = {0:'Y'}, inplace = True)
-    X = pd.DataFrame(X)
-
-    data = pd.concat([Y, X], axis = 1)
-    data.rename(columns = {0:'X1', 1:'X2', 2:'X3', 3:'X4', 4:'X5'}, inplace = True)
-
-    data['group_id'] = cluster
-    data['Y2'] = data.Y + np.random.normal(0, 1, N)
-
-    data['Y'][0] = np.nan
-    data['X1'][1] = np.nan
-    #data['X2'][2] = np.nan
-
-
-
-
-    return data
+    return get_data()
 
 
 @pytest.mark.parametrize("fml", [
+
+
     ("Y~X1"),
     ("Y~X1+X2"),
     ("Y~X1|X2"),
@@ -77,11 +42,6 @@ def data():
     #("Y ~ C(X2):C(X3) | X4"),
 
 
-
-
-    #("Y ~ i(X1,X2)"),
-    #("Y ~ i(X1,X2) | X3"),
-    #("Y ~ i(X1,X2) | X3 + X4"),
 
 
 ])
@@ -136,12 +96,6 @@ def test_py_vs_r(data, fml):
     ("Y + Y2 ~ csw(X3, X4)"),
     ("Y + Y2 ~ csw(X3, X4) | X2"),
 
-    ("Y + Y2 ~ sw(X3, X4)"),
-    ("Y + Y2 ~ sw(X3, X4) | X2"),
-
-    ("Y + Y2 ~ csw(X3, X4)"),
-    ("Y + Y2 ~ csw(X3, X4) | X2"),
-
     ("Y + Y2 ~ X1 + csw(X3, X4)"),
     ("Y + Y2 ~ X1 + csw(X3, X4) | X2"),
 
@@ -189,11 +143,66 @@ def test_py_vs_r2(data, fml_multi):
 
 
 
+@pytest.mark.parametrize("fml_i", [
+    #("Y ~ i(X1,X2)"),
+    #("Y ~ i(X1,X2) | X3"),
+    #("Y ~ i(X1,X2) | X3 + X4"),
+    #("Y ~ i(X1,X2) | sw(X3, X4)"),
+    #("Y ~ i(X1,X2) | csw(X3, X4)"),
+])
+
+@pytest.mark.skip("interactions via i() produce pytest to get stuck")
+def test_py_vs_r_i(data, fml_i):
+
+    '''
+    test pyfixest against fixest_multi objects
+    '''
+
+    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+
+    r_fml = _py_fml_to_r_fml(fml_i)
+
+    pyfixest = Fixest(data = data).feols(fml_i, vcov = 'iid')
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+
+    for x, val in enumerate(r_fixest):
+
+        i = pyfixest.tidy().index.unique()[x]
+        ix = pyfixest.tidy().xs(i)
+        py_coef = ix['Estimate']
+        py_se = ix['Std. Error']
+
+        fixest_object = r_fixest.rx2(x+1)
+        fixest_coef = fixest_object.rx2("coefficients")
+        fixest_se = fixest_object.rx2("se")
+
+        np.array_equal((np.array(py_coef)), fixest_coef)
+        np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
 
+@pytest.mark.parametrize("fml_C", [
+        ("Y ~ C(X1)", "Y ~ as.factor(X1)"),
+        #("Y ~ C(X1) + X2", "Y ~ as.factor(X1) + X2"),
+        #("Y ~ C(X1):X2", "Y ~ as.factor(X1):X2"),
+        #("Y ~ C(X1):C(X2)", "Y ~ as.factor(X1):as.factor(X2)"),
+        #("Y ~ C(X1) | X2", "Y ~ as.factor(X1) | X2"),
+])
+
+def test_py_vs_r_C(data, fml_C):
 
 
+    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
 
+    py_fml, r_fml = fml_C
+    pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+
+    np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
+    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
 
 
