@@ -9,7 +9,7 @@ from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
 
-from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge
+from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge, scale_x_discrete
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
@@ -421,24 +421,25 @@ class Fixest:
             None
         '''
 
-        ivars = self.icovars
+        icovars = self.icovars
 
-        if ivars is None:
+
+        if icovars is None:
             raise ValueError(
                 "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
 
-        ivars_keys = self.ivars.keys()
-        if ivars_keys is not None:
-            ref = list(ivars_keys)[0]
-        else:
-            ref = None
-
-        if "Intercept" in ivars:
-            ivars.remove("Intercept")
+        # ivars_keys = self.ivars.keys()
+        # if ivars_keys is not None:
+        #     ref = list(ivars_keys)[0]
+        # else:
+        #     ref = None
+        # 
+        # if "Intercept" in icovars:
+        #     icovars.remove("Intercept")
 
         df = self.tidy()
 
-        df = df[df.coefnames.isin(ivars)]
+        df = df[df.coefnames.isin(icovars)]
         models = df.index.unique()
 
         df_list = []
@@ -454,11 +455,11 @@ class Fixest:
             coefnames = [(i) for string in coefnames for i in re.findall(
                 r'\[T\.([\d\.\-]+)\]', string)]
 
-            if ref is not None:
-                coef = np.append(coef, 0)
-                conf_l = np.append(conf_l, 0)
-                conf_u = np.append(conf_u, 0)
-                coefnames = np.append(coefnames, ref)
+            #if ref is not None:
+            #    coef = np.append(coef, 0)
+            #    conf_l = np.append(conf_l, 0)
+            #    conf_u = np.append(conf_u, 0)
+            #    coefnames = np.append(coefnames, ref)
 
             df_dict = {
                 'coef': coef,
@@ -471,18 +472,20 @@ class Fixest:
             df_list.append(pd.DataFrame(df_dict))
 
         df_all = pd.concat(df_list, axis=0)
+        print(df_all)
+        df_all["coefnames"] = pd.Categorical(df_all.coefnames)
 
         iplot = (
             ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
             geom_point(position = position_dodge(0.5)) +
             geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
             theme_bw() +
+            scale_x_discrete() +
             ylab('Estimate') +
-            xlab(list(self.ivars.values())[0][0]) +
+            xlab(list(self.ivars.values())) +
             geom_hline(yintercept=0, color="blue", linetype="dotted")
         )
-
-
+        
         return iplot
 
     def coefplot(self, alpha = 0.05, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
