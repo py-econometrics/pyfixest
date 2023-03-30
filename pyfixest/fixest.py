@@ -3,13 +3,12 @@ import re
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+from matplotlib.pyplot import cm
 
 from typing import Any, Union, Dict, Optional
 from scipy.stats import norm
 from formulaic import model_matrix
-
-from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
@@ -115,7 +114,7 @@ class Fixest:
                 if self.ivars is not None:
                     if drop_ref is not None:
                         X = X.drop(drop_ref, axis=1)
-                        
+
                 dep_varnames = list(Y.columns)
                 co_varnames = list(X.columns)
                 var_names = list(dep_varnames) + list(co_varnames)
@@ -124,8 +123,8 @@ class Fixest:
                     self.icovars = [s for s in co_varnames if s.startswith(
                         ivars[0]) and s.endswith(ivars[1])]
                 else:
-                    self.icovars = None                
-              
+                    self.icovars = None
+
                 Y = Y.to_numpy()
                 X = X.to_numpy()
 
@@ -241,7 +240,7 @@ class Fixest:
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
-        
+
         if self.ivars is not None:
 
             if list(self.ivars.keys())[0] is not None:
@@ -251,7 +250,7 @@ class Fixest:
             else:
                 ivars = self.ivars[None]
                 drop_ref = None
-                
+
             # type checking
             i0_type = self.data[ivars[0]].dtype
             i1_type = self.data[ivars[1]].dtype
@@ -263,7 +262,7 @@ class Fixest:
         else:
             ivars = None
             drop_ref = None
-            
+
 
 
         self.dropped_data_dict = dict()
@@ -413,12 +412,13 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
 
-    def iplot(self, alpha = 0.05):
+    def iplot(self, alpha = 0.05, figsize = (10, 10), hline = None, vline = None):
         '''
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
 
         Args:
             alpha: float, optional. The significance level for the confidence intervals. Default is 0.05.
+            figsize: tuple, optional. The size of the figure. Default is (10, 10).
 
         Returns:
             None
@@ -444,9 +444,49 @@ class Fixest:
         df = df[df.coefnames.isin(ivars)]
         models = df.index.unique()
 
-        df_list = []
 
-        for model in models:
+        #some example data
+        if len(models) > 1:
+
+            fig, ax = plt.subplots(len(models), gridspec_kw={'hspace': 0.5}, figsize=figsize)
+            fig.suptitle("iplot")
+
+            for x, model in enumerate(models):
+
+                df_model = df.xs(model)
+                coef = df_model["Estimate"].values
+                conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+                conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
+                coefnames = df_model["coefnames"].values.tolist()
+
+                coefnames = [(i) for string in coefnames for i in re.findall(
+                    r'\[T\.([\d\.\-]+)\]', string)]
+
+                #if ref is not None:
+                #    coef = np.append(coef, 0)
+                #    conf_l = np.append(conf_l, 0)
+                #    conf_u = np.append(conf_u, 0)
+                #    coefnames = np.append(coefnames, ref)
+
+                #c = next(color)
+
+                ax[x].scatter(coefnames,coef, color= "b", alpha = 0.8)
+                ax[x].scatter(coefnames,conf_u, color = "b", alpha = 0.8, marker = "_", s = 100)
+                ax[x].scatter(coefnames,conf_l, color = "b", alpha = 0.8, marker = "_", s = 100)
+                ax[x].vlines(coefnames, ymin=conf_l, ymax=conf_u, color= "b", alpha = 0.8)
+                if hline is not None:
+                    ax[x].axhline(hline, color='red', linestyle='--', alpha = 0.5)
+                if vline is not None:
+                    ax[x].axvline(vline, color='red', linestyle='--', alpha = 0.5)
+                ax[x].set_ylabel('Coefficients')
+                ax[x].set_title(model)
+
+        else:
+
+            fig, ax = plt.subplots(figsize=figsize)
+            fig.suptitle("iplot")
+
+            model = models[0]
 
             df_model = df.xs(model)
             coef = df_model["Estimate"].values
@@ -457,36 +497,26 @@ class Fixest:
             coefnames = [(i) for string in coefnames for i in re.findall(
                 r'\[T\.([\d\.\-]+)\]', string)]
 
-            if ref is not None:
-                coef = np.append(coef, 0)
-                conf_l = np.append(conf_l, 0)
-                conf_u = np.append(conf_u, 0)
-                coefnames = np.append(coefnames, ref)
+            #if ref is not None:
+            #    coef = np.append(coef, 0)
+            #    conf_l = np.append(conf_l, 0)
+            #    conf_u = np.append(conf_u, 0)
+            #    coefnames = np.append(coefnames, ref)
 
-            df_dict = {
-                'coef': coef,
-                'conf_l': conf_l,
-                'conf_u': conf_u,
-                'coefnames': coefnames,
-                'model': model
-            }
+                #c = next(color)
 
-            df_list.append(pd.DataFrame(df_dict))
+            ax.scatter(coefnames,coef, color= "b", alpha = 0.8)
+            ax.scatter(coefnames,conf_u, color = "b", alpha = 0.8, marker = "_", s = 100)
+            ax.scatter(coefnames,conf_l, color = "b", alpha = 0.8, marker = "_", s = 100)
+            ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color= "b", alpha = 0.8)
+            if hline is not None:
+                ax.axhline(hline, color='red', linestyle='--', alpha = 0.5)
+            if vline is not None:
+                ax.axvline(vline, color='red', linestyle='--', alpha = 0.5)
+            ax.set_ylabel('Coefficients')
+            ax.set_title(model)
 
-        df_all = pd.concat(df_list, axis=0)
-
-        iplot = (
-            ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
-            geom_point(position = position_dodge(0.5)) +
-            geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
-            theme_bw() +
-            ylab('Estimate') +
-            xlab(list(self.ivars.values())[0][0]) +
-            geom_hline(yintercept=0, color="blue", linetype="dotted")
-        )
-
-
-        return iplot
+        return plt.gcf()
 
     def coefplot(self, alpha = 0.05, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
         '''
