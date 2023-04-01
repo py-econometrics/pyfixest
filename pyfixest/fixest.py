@@ -10,6 +10,8 @@ from typing import Any, Union, Dict, Optional, List, Tuple
 from scipy.stats import norm
 from formulaic import model_matrix
 
+from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge
+
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
@@ -418,37 +420,72 @@ class Fixest:
             None
         '''
 
-        ivars = self.icovars
+        icovars = self.icovars
 
-        if ivars is None:
+
+        if icovars is None:
             raise ValueError(
                 "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
 
-        ivars_keys = self.ivars.keys()
-        if ivars_keys is not None:
-            ref = list(ivars_keys)[0]
-        else:
-            ref = None
-
-        if "Intercept" in ivars:
-            ivars.remove("Intercept")
+        # ivars_keys = self.ivars.keys()
+        # if ivars_keys is not None:
+        #     ref = list(ivars_keys)[0]
+        # else:
+        #     ref = None
+        #
+        # if "Intercept" in icovars:
+        #     icovars.remove("Intercept")
 
         df = self.tidy()
 
-        df = df[df.coefnames.isin(ivars)]
+        df = df[df.coefnames.isin(icovars)]
         models = df.index.unique()
 
-        _coefplot(
-            models = models,
-            figsize = figsize,
-            alpha = alpha,
-            yintercept = yintercept,
-            xintercept = xintercept,
-            df = df,
-            is_iplot = True
+        df_list = []
+
+        for model in models:
+
+            df_model = df.xs(model)
+            coef = df_model["Estimate"].values
+            conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+            conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
+            coefnames = df_model["coefnames"].values.tolist()
+
+            coefnames = [(i) for string in coefnames for i in re.findall(
+                r'\[T\.([\d\.\-]+)\]', string)]
+
+            if ref is not None:
+                coef = np.append(coef, 0)
+                conf_l = np.append(conf_l, 0)
+                conf_u = np.append(conf_u, 0)
+                coefnames = np.append(coefnames, ref)
+
+            df_dict = {
+                'coef': coef,
+                'conf_l': conf_l,
+                'conf_u': conf_u,
+                'coefnames': coefnames,
+                'model': model
+            }
+
+            df_list.append(pd.DataFrame(df_dict))
+
+        df_all = pd.concat(df_list, axis=0)
+
+        iplot = (
+            ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
+            geom_point(position = position_dodge(0.5)) +
+            geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
+            theme_bw() +
+            ylab('Estimate') +
+            xlab(list(self.ivars.values())[0][0]) +
+            geom_hline(yintercept=0, color="blue", linetype="dotted")
         )
 
-    def coefplot(self, alpha: float = 0.05, figsize: tuple = (5, 2), yintercept: int = 0, figtitle: str = None, figtext: str = None, rotate_xticks: int = 0) -> None:
+
+        return iplot
+
+    def coefplot(self, alpha = 0.05, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
         '''
         Plot estimation results. The plot() method is only defined for single regressions.
 
