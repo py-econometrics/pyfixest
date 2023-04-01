@@ -58,8 +58,9 @@ class Fixest:
         Args:
             fval: A specification of fixed effects. A string indicating the fixed effects to be demeaned,
                 such as "X4" or "X3 + X2".
-            ivars: A list of strings indicating the interacted variables to be demeaned.
-            drop_ref: A string indicating the reference category for the interacted variables.
+            ivars: A list of strings indicating the interacted variables via i().
+            drop_ref: A string indicating the reference category for the interacted variables. The reference
+                      category is dropped from the regression.
 
         Returns:
             None
