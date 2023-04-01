@@ -10,8 +10,6 @@ from typing import Any, Union, Dict, Optional, List, Tuple
 from scipy.stats import norm
 from formulaic import model_matrix
 
-from plotnine import ggplot, aes, geom_errorbar, geom_point, theme_bw, ylab, xlab, geom_hline, position_dodge
-
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 
