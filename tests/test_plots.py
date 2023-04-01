@@ -2,6 +2,8 @@ import pytest
 import pandas as pd
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data
+import matplotlib
+matplotlib.use('Agg')
 
 @pytest.fixture
 def data():
