@@ -18,12 +18,9 @@ class Fixest:
 
     def __init__(self, data: pd.DataFrame) -> None:
         '''
-
         A class for fixed effects regression modeling.
-
         Args:
             data: The input pd.DataFrame for the object.
-
         Returns:
             None
         '''
@@ -58,7 +55,6 @@ class Fixest:
 
         '''
         demean all regressions for a specification of fixed effects
-
         Args:
             fval: A specification of fixed effects. String. E.g. X4 or
                 "X3 + X2"
@@ -185,7 +181,6 @@ class Fixest:
     def feols(self, fml: str, vcov: Union[str, Dict[str, str]]) -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
-
         Args:
             fml (str): A two-sided formula string using fixest formula syntax. Supported syntax includes:
                 Stepwise regressions (sw, sw0)
@@ -196,10 +191,8 @@ class Fixest:
             vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-
         Returns:
             None
-
         Examples:
             Standard formula:
                 fml = 'Y ~ X1 + X2'
@@ -299,13 +292,11 @@ class Fixest:
         Update regression inference "on the fly".
         By calling vcov() on a "Fixest" object, all inference procedures applied
         to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
-
         Args:
             vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
                 or {"CRV3":"clustervar"} for CRV3 inference.
-
         Returns:
             None
         '''
@@ -322,12 +313,10 @@ class Fixest:
     def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
         '''
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
-
         Args:
             type : str, optional
                 The type of output format to use. If set to "markdown", the resulting DataFrame
                 will be returned in a markdown format with three decimal places. Default is None.
-
         Returns:
             pd.DataFrame or str
                 A tidy DataFrame with the following columns:
@@ -337,10 +326,8 @@ class Fixest:
                 - Std. Error: the standard errors of the estimated coefficients
                 - t value: the t-values of the estimated coefficients
                 - Pr(>|t|): the p-values of the estimated coefficients
-
                 If `type` is set to "markdown", the resulting DataFrame will be returned as a
                 markdown-formatted string with three decimal places.
-
         '''
 
         res = []
@@ -370,14 +357,11 @@ class Fixest:
     def summary(self) -> None:
         '''
         Prints a summary of the feols() estimation results for each estimated model.
-
         For each model, the method prints a header indicating the fixed-effects and the
         dependent variable, followed by a table of coefficient estimates with standard
         errors, t-values, and p-values.
-
         Returns:
             None
-
         '''
 
         for x in list(self.model_res.keys()):
@@ -407,96 +391,56 @@ class Fixest:
 
         '''
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
-
         Args:
             alpha: float, optional. The significance level for the confidence intervals. Default is 0.05.
             figsize: tuple, optional. The size of the figure. Default is (10, 10).
             yintercept: int or str (for a categorical x axis). The value at which to draw a horizontal line.
             xintercept: int or str (for a categorical y axis). The value at which to draw a vertical line.
-
         Returns:
             None
         '''
 
-        icovars = self.icovars
+        ivars = self.icovars
 
-
-        if icovars is None:
+        if ivars is None:
             raise ValueError(
                 "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
 
-        # ivars_keys = self.ivars.keys()
-        # if ivars_keys is not None:
-        #     ref = list(ivars_keys)[0]
-        # else:
-        #     ref = None
-        #
-        # if "Intercept" in icovars:
-        #     icovars.remove("Intercept")
+        ivars_keys = self.ivars.keys()
+        if ivars_keys is not None:
+            ref = list(ivars_keys)[0]
+        else:
+            ref = None
+
+        if "Intercept" in ivars:
+            ivars.remove("Intercept")
 
         df = self.tidy()
 
-        df = df[df.coefnames.isin(icovars)]
+        df = df[df.coefnames.isin(ivars)]
         models = df.index.unique()
 
-        df_list = []
-
-        for model in models:
-
-            df_model = df.xs(model)
-            coef = df_model["Estimate"].values
-            conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-            conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
-            coefnames = df_model["coefnames"].values.tolist()
-
-            coefnames = [(i) for string in coefnames for i in re.findall(
-                r'\[T\.([\d\.\-]+)\]', string)]
-
-            if ref is not None:
-                coef = np.append(coef, 0)
-                conf_l = np.append(conf_l, 0)
-                conf_u = np.append(conf_u, 0)
-                coefnames = np.append(coefnames, ref)
-
-            df_dict = {
-                'coef': coef,
-                'conf_l': conf_l,
-                'conf_u': conf_u,
-                'coefnames': coefnames,
-                'model': model
-            }
-
-            df_list.append(pd.DataFrame(df_dict))
-
-        df_all = pd.concat(df_list, axis=0)
-
-        iplot = (
-            ggplot(df_all, aes(x='coefnames', y='coef', color='model', group = 'model')) +
-            geom_point(position = position_dodge(0.5)) +
-            geom_errorbar(aes(x='coefnames', ymin='conf_l', ymax='conf_u'), position = position_dodge(0.5)) +
-            theme_bw() +
-            ylab('Estimate') +
-            xlab(list(self.ivars.values())[0][0]) +
-            geom_hline(yintercept=0, color="blue", linetype="dotted")
+        _coefplot(
+            models = models,
+            figsize = figsize,
+            alpha = alpha,
+            yintercept = yintercept,
+            xintercept = xintercept,
+            df = df,
+            is_iplot = True
         )
 
-
-        return iplot
-
-    def coefplot(self, alpha = 0.05, figsize=(5, 2), yintercept=0, figtitle=None, figtext=None):
+    def coefplot(self, alpha: float = 0.05, figsize: tuple = (5, 2), yintercept: int = 0, figtitle: str = None, figtext: str = None, rotate_xticks: int = 0) -> None:
         '''
         Plot estimation results. The plot() method is only defined for single regressions.
-
         Args:
             alpha (float): the significance level for the confidence intervals. Default is 0.05.
             figsize (tuple): the size of the figure. Default is (5, 2).
             yintercept (float): the value of the y-intercept. Default is 0.
             figtitle (str): the title of the figure. Default is None.
             figtext (str): the text at the bottom of the figure. Default is None.
-
         Returns:
             None
-
         '''
 
         df = self.tidy()
@@ -521,7 +465,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
               rotate_xticks: float = 0) -> None:
     """
         Plot model coefficients with confidence intervals.
-
         Args:
             models (list): A list of fitted models.
             figsize (tuple): The size of the figure.
@@ -531,7 +474,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
             df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
             is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
             rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-
         Returns:
         None
     """
@@ -539,7 +481,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
     if len(models) > 1:
 
         fig, ax = plt.subplots(len(models), gridspec_kw={'hspace': 0.5}, figsize=figsize)
-        fig.suptitle("iplot")
 
         for x, model in enumerate(models):
 
@@ -553,6 +494,7 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
             # models.
 
             if is_iplot == True:
+                fig.suptitle("iplot")
                 coefnames = [(i) for string in coefnames for i in re.findall(
                     r'\[T\.([\d\.\-]+)\]', string)]
 
@@ -578,7 +520,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
     else:
 
         fig, ax = plt.subplots(figsize=figsize)
-        fig.suptitle("iplot")
 
         model = models[0]
 
@@ -589,6 +530,7 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
         coefnames = df_model["coefnames"].values.tolist()
 
         if is_iplot == True:
+            fig.suptitle("iplot")
             coefnames = [(i) for string in coefnames for i in re.findall(
                 r'\[T\.([\d\.\-]+)\]', string)]
 
