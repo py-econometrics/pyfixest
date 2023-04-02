@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from numpy import log, exp
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data
 
@@ -34,6 +35,12 @@ def data():
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
     ("Y ~ X1:X2 | X3 + X4"),
+
+    ("log(Y) ~ X1:X2 | X3 + X4"),
+    ("log(Y) ~ log(X1):X2 | X3 + X4"),
+    ("exp(Y) ~ log(X1):X2 | X3 + X4"),
+
+
 
     #("Y ~ C(X2)"),
     #("Y ~ X1 + C(X2)"),
