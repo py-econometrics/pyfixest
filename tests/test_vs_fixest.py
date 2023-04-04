@@ -212,6 +212,35 @@ def test_py_vs_r_C(data, fml_C):
     np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
 
 
+@pytest.mark.parametrize("fml_split", [
+    ("Y ~ X1"),
+    ("Y ~ X1 | X2 + X3"),
+])
+
+def test_py_vs_r_split(data, fml_split):
+
+    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+
+    fml = "Y ~ X1 | X2 + X3"
+    pyfixest = Fixest(data = data).feols(fml_split, vcov = 'iid', split = "group_id")
+    py_coef = pyfixest.tidy()['Estimate']
+    py_se = pyfixest.tidy()['Std. Error']
+    r_fixest = fixest.feols(ro.Formula(fml_split), se = 'iid', data=data, split = ro.Formula("~group_id"))
+
+    for x, _ in enumerate(r_fixest):
+
+        i = pyfixest.tidy().index.unique()[x]
+        ix = pyfixest.tidy().xs(i)
+        py_coef = ix['Estimate']
+        py_se = ix['Std. Error']
+
+        fixest_object = r_fixest.rx2(x+1)
+        fixest_coef = fixest_object.rx2("coefficients")
+
+        np.array_equal((np.array(py_coef)), fixest_coef)
+        np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+
+
 
 
 def _py_fml_to_r_fml(py_fml):
