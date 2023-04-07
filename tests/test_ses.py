@@ -17,7 +17,6 @@ def test_HC1_vs_CRV1(data):
     fixest = pf.Fixest(data = data)
     fixest.feols('Y ~ X1', vcov = "HC1")
     res_hc1 = fixest.tidy()
-    #fixest.tidy()["t value"]
 
     fixest.feols('Y ~ X1', vcov = {'CRV1':'id'}, ssc = ssc(cluster_adj = False))
     res_crv1 = fixest.tidy()
