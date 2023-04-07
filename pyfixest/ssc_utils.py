@@ -56,12 +56,11 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, is_clustered):
     cluster_adj = ssc_dict['cluster_adj']
     cluster_df = ssc_dict['cluster_df']
 
+    if adj:
+        adj = (N - 1) / (N - k)
+    else:
+        adj = 1
     if is_clustered:
-
-        if adj:
-            adj = (N - 1) / (N - k)
-        else:
-            adj = 1
 
         if cluster_adj:
             if cluster_df == 'conventional':
@@ -75,10 +74,7 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, is_clustered):
         return adj * cluster_adj * vcov_sign
 
     else:
-        if adj:
-            adj = (N - 1) / (N - k)
-        else:
-            adj = 1
 
         return adj
+
 
