@@ -1,13 +1,13 @@
 import warnings
 import pyhdfe
 
-from typing import Union, List, Dict
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from typing import Union, List, Dict
 from scipy.stats import norm
-from formulaic import model_matrix
+from pyfixest.ssc_utils import get_ssc
 
 
 class Feols:
@@ -147,15 +147,31 @@ class Feols:
         # compute vcov
         if vcov_type == 'iid':
 
-            self.vcov = (self.tXXinv * np.mean(self.u_hat ** 2))
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = 1,
+                vcov_sign = 1,
+                is_clustered=False
+            )
+
+            self.vcov =  self.ssc * (self.tXXinv * np.mean(self.u_hat ** 2))
 
         elif vcov_type == 'hetero':
 
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = 1,
+                vcov_sign = 1,
+                is_clustered=False
+            )
+
             if vcov_type_detail in ["hetero", "HC1"]:
-                self.ssc = (self.N - 1) / (self.N - self.k)
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                self.ssc = 1
                 leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
                     u = (1 - leverage) * self.u_hat
@@ -176,6 +192,15 @@ class Feols:
             clustid = np.unique(cluster_df)
             self.G = len(clustid)
 
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = self.G,
+                vcov_sign = 1,
+                is_clustered=True
+            )
+
             if vcov_type_detail == "CRV1":
 
                 meat = np.zeros((self.k, self.k))
@@ -187,7 +212,6 @@ class Feols:
                     score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k)
                 self.vcov = self.ssc * self.tXXinv @ meat @ self.tXXinv
 
             elif vcov_type_detail == "CRV3":
@@ -219,8 +243,6 @@ class Feols:
                 for ixg, g in enumerate(clustid):
                     beta_centered = beta_jack[ixg, :] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
-
-                self.ssc = self.G / (self.G - 1)
 
                 self.vcov = self.ssc * vcov
 
@@ -276,3 +298,6 @@ class Feols:
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+
+
+

@@ -12,6 +12,7 @@ from formulaic import model_matrix
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
+from pyfixest.ssc_utils import ssc
 
 
 class Fixest:
@@ -183,7 +184,7 @@ class Fixest:
         return YX_dict, na_dict
 
 
-    def feols(self, fml: str, vcov: Union[str, Dict[str, str]], split: Union[str, None]= None) -> None:
+    def feols(self, fml: str, vcov: Union[str, Dict[str, str]], ssc = ssc(), split: Union[str, None]= None) -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -228,6 +229,8 @@ class Fixest:
         self.fml_dict2 = fxst_fml.fml_dict2
         self.ivars = fxst_fml.ivars
 
+        self.ssc_dict = ssc
+
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
 
@@ -271,7 +274,7 @@ class Fixest:
         estimate_split_model = False
         # currently no fsplit allowed
         fsplit = None
-        
+
         if split is not None:
             if fsplit is not None:
                 raise ValueError("Cannot specify both split and fsplit. Please specify only one of the two.")
@@ -305,7 +308,7 @@ class Fixest:
                 self.demeaned_data_dict[fval].append(demeaned_data)
                 self.dropped_data_dict[fval].append(dropped_data)
 
-        # here: 
+        # here:
         if estimate_split_model:
             for _, fval in enumerate(fixef_keys):
                 self.demeaned_data_dict[fval] = []
@@ -322,26 +325,27 @@ class Fixest:
             for x, split in enumerate(model_splits):
                 model_frames = model_splits[x]
                 for _, fml in enumerate(model_frames):
-    
+
                     model_frame = model_frames[fml]
                     full_fml = fml + "|" + fval + "; split = " + str(x)
-    
+
                     Y = model_frame.iloc[:, 0].to_numpy()
                     X = model_frame.iloc[:, 1:]
                     colnames = X.columns
                     X = X.to_numpy()
-    
+
                     if np.linalg.matrix_rank(X) < min(X.shape):
                         if self.ivars is not None:
                             raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
                         else:
                             raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. ")
-                    
+
                     FEOLS = Feols(Y, X)
+                    FEOLS.ssc_dict = self.ssc_dict
                     FEOLS.get_fit()
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
-                    FEOLS.get_nobs()
+                    #FEOLS.get_nobs()
                     FEOLS.get_vcov(vcov=vcov)
                     FEOLS.get_inference()
                     FEOLS.coefnames = colnames
