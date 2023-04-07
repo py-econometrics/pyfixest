@@ -144,8 +144,6 @@ class Feols:
             vcov_type = "CRV"
             self.is_clustered = True
 
-        print("after vcov_type_detail")
-
         # compute vcov
         if vcov_type == 'iid':
 
@@ -189,13 +187,16 @@ class Feols:
 
         elif vcov_type == "CRV":
 
+            cluster_df = self.data[self.clustervar]
             # if there are missings - delete them!
-            cluster_df = self.data[self.clustervar].to_numpy()
+            # cluster_df = pd.Categorical(cluster_df)
 
-            if np.any(np.isnan(cluster_df)):
+            if np.any(pd.isna(cluster_df)):
                 raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
 
-            clustid = np.unique(cluster_df)
+            cluster_mat = cluster_df.to_numpy()
+
+            clustid = np.unique(cluster_mat)
             self.G = len(clustid)
 
             self.ssc = get_ssc(
@@ -206,8 +207,6 @@ class Feols:
                 vcov_sign = 1,
                 is_clustered=True
             )
-
-            print("ssc: ", self.ssc)
 
             if vcov_type_detail == "CRV1":
 
@@ -268,8 +267,6 @@ class Feols:
         None
 
         '''
-
-        print("error in get inference")
 
         self.se = (
             np.sqrt(np.diagonal(self.vcov))
