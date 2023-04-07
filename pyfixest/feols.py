@@ -1,12 +1,9 @@
-import warnings
-import pyhdfe
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from typing import Union, List, Dict
-from scipy.stats import norm
+from scipy.stats import norm, t
 from pyfixest.ssc_utils import get_ssc
 
 
@@ -139,10 +136,15 @@ class Feols:
 
         if vcov_type_detail == "iid":
             vcov_type = "iid"
+            self.is_clustered = False
         elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
             vcov_type = "hetero"
+            self.is_clustered = False
         elif vcov_type_detail in ["CRV1", "CRV3"]:
             vcov_type = "CRV"
+            self.is_clustered = True
+
+        print("after vcov_type_detail")
 
         # compute vcov
         if vcov_type == 'iid':
@@ -156,6 +158,8 @@ class Feols:
                 is_clustered=False
             )
 
+            print("ssc: ", self.ssc)
+
             self.vcov =  self.ssc * (self.tXXinv * np.mean(self.u_hat ** 2))
 
         elif vcov_type == 'hetero':
@@ -168,6 +172,8 @@ class Feols:
                 vcov_sign = 1,
                 is_clustered=False
             )
+
+            print("ssc: ", self.ssc)
 
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
@@ -200,6 +206,8 @@ class Feols:
                 vcov_sign = 1,
                 is_clustered=True
             )
+
+            print("ssc: ", self.ssc)
 
             if vcov_type_detail == "CRV1":
 
@@ -261,6 +269,8 @@ class Feols:
 
         '''
 
+        print("error in get inference")
+
         self.se = (
             np.sqrt(np.diagonal(self.vcov))
         )
@@ -268,6 +278,17 @@ class Feols:
         self.tstat = (
             self.beta_hat / self.se
         )
+
+        if self.is_clustered:
+            # t(G-1) distribution for clustered errors
+            self.pvalue = (
+                2*(1-t.cdf(np.abs(self.tstat), self.G - 1))
+            )
+        else:
+            # normal distribution for non-clustered errors
+            self.pvalue = (
+                    2*(1-norm.cdf(np.abs(self.tstat)))
+            )
 
         self.pvalue = (
             2*(1-norm.cdf(np.abs(self.tstat)))
