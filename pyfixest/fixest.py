@@ -166,6 +166,8 @@ class Fixest:
                     else:
                         # not data demeaned yet for NA combination
                         algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
+                        if algorithm.singletons is not None:
+                            print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
                         YX_demeaned = algorithm.residualize(YX)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
                         YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
