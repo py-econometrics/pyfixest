@@ -472,7 +472,7 @@ class Fixest:
         '''
 
         df = self.tidy()
-        return df['coefnames']
+        return df[['coefnames', 'Estimate']]
 
     def se(self):
 
@@ -483,7 +483,7 @@ class Fixest:
         '''
 
         df = self.tidy()
-        return df['Std. Error']
+        return df[['coefnames','Std. Error']]
 
     def tstat(self):
 
@@ -494,7 +494,7 @@ class Fixest:
         '''
 
         df = self.tidy()
-        return df['t value']
+        return df[['coefnames','t value']]
 
     def pvalue(self):
 
@@ -505,7 +505,7 @@ class Fixest:
         '''
 
         df = self.tidy()
-        return df['Pr(>|t|)']
+        return df[['coefnames', 'Pr(>|t|)']]
 
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
