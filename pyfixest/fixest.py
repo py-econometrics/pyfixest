@@ -108,7 +108,7 @@ class Fixest:
                 fml = depvar2 + " ~ " + covar2
 
                 Y, X = model_matrix(fml, data)
-                na_index = list(set(range(data.shape[0])) - set(range(len(Y))))
+                na_index = list(set(range(data.shape[0])) - set(Y.index))
 
                 if self.ivars is not None:
                     if drop_ref is not None:
@@ -166,8 +166,14 @@ class Fixest:
                     else:
                         # not data demeaned yet for NA combination
                         algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
-                        if algorithm.singletons is not None:
+                        #n_singletons = algorithm.singletons
+                        #if n_singletons is not None:
+                        #    print(f'{n_singletons} columns are dropped due to singleton fixed effects.')
+                        if algorithm.singletons != 0 and algorithm.singletons is not None:
                             print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
+                            dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
+
+                        na_index += dropped_singleton_indices
                         YX_demeaned = algorithm.residualize(YX)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
                         YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
