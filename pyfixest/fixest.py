@@ -172,8 +172,8 @@ class Fixest:
                         if algorithm.singletons != 0 and algorithm.singletons is not None:
                             print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
                             dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
+                            na_index += dropped_singleton_indices
 
-                        na_index += dropped_singleton_indices
                         YX_demeaned = algorithm.residualize(YX)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
                         YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
