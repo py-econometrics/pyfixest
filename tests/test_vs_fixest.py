@@ -67,9 +67,10 @@ def test_py_vs_r(data, fml):
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
-    py_pval = pyfixest.tidy()['Pr(>|t|)']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
@@ -79,11 +80,14 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_se != r_se for iid errors")
     if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for iid errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for iid errors")
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
-    py_se = pyfixest.tidy()['Std. Error']
-    py_pval = pyfixest.tidy()['Pr(>|t|)']
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
 
@@ -91,11 +95,14 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_se != r_se for HC1 errors")
     if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for HC1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for HC1 errors")
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
-    py_se = pyfixest.tidy()['Std. Error']
-    py_pval = pyfixest.tidy()['Pr(>|t|)']
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
 
@@ -103,6 +110,8 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_se != r_se for CRV1 errors")
     if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for CRV1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for CRV1 errors")
 
 
 @pytest.mark.parametrize("fml_multi", [
@@ -144,8 +153,8 @@ def test_py_vs_r2(data, fml_multi):
     r_fml = _py_fml_to_r_fml(fml_multi)
 
     pyfixest = Fixest(data = data).feols(fml_multi, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
 
     for x, val in enumerate(r_fixest):
@@ -182,8 +191,8 @@ def test_py_vs_r_i(data, fml_i):
     r_fml = _py_fml_to_r_fml(fml_i)
 
     pyfixest = Fixest(data = data).feols(fml_i, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
 
     for x, val in enumerate(r_fixest):
@@ -217,8 +226,8 @@ def test_py_vs_r_C(data, fml_C):
 
     py_fml, r_fml = fml_C
     pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
 
     if not np.allclose((np.array(py_coef)), (stats.coef(r_fixest)), rtol = 1e-12):
@@ -237,8 +246,8 @@ def test_py_vs_r_split(data, fml_split):
 
     fml = "Y ~ X1 | X2 + X3"
     pyfixest = Fixest(data = data).feols(fml_split, vcov = 'iid', split = "group_id")
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(ro.Formula(fml_split), se = 'iid', data=data, split = ro.Formula("~group_id"))
 
     for x, _ in enumerate(r_fixest):
