@@ -135,17 +135,17 @@ class Feols:
             assert False, "arg vcov needs to be a dict, string or list"
 
         if vcov_type_detail == "iid":
-            vcov_type = "iid"
+            self.vcov_type = "iid"
             self.is_clustered = False
         elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-            vcov_type = "hetero"
+            self.vcov_type = "hetero"
             self.is_clustered = False
         elif vcov_type_detail in ["CRV1", "CRV3"]:
-            vcov_type = "CRV"
+            self.vcov_type = "CRV"
             self.is_clustered = True
 
         # compute vcov
-        if vcov_type == 'iid':
+        if self.vcov_type == 'iid':
 
             self.ssc = get_ssc(
                 ssc_dict = self.ssc_dict,
@@ -153,14 +153,13 @@ class Feols:
                 k = self.k,
                 G = 1,
                 vcov_sign = 1,
-                is_clustered=False
+                vcov_type='iid'
             )
 
-            print("ssc: ", self.ssc)
+            # only relevant factor for iid in ssc: fixef.K
+            self.vcov =  self.ssc * self.tXXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
 
-            self.vcov =  self.ssc * (self.tXXinv * np.mean(self.u_hat ** 2))
-
-        elif vcov_type == 'hetero':
+        elif self.vcov_type == 'hetero':
 
             self.ssc = get_ssc(
                 ssc_dict = self.ssc_dict,
@@ -168,10 +167,8 @@ class Feols:
                 k = self.k,
                 G = 1,
                 vcov_sign = 1,
-                is_clustered=False
+                vcov_type = "hetero"
             )
-
-            print("ssc: ", self.ssc)
 
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
@@ -183,9 +180,9 @@ class Feols:
                     u = np.sqrt(1 - leverage) * self.u_hat
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
-            self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv
+            self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
 
-        elif vcov_type == "CRV":
+        elif self.vcov_type == "CRV":
 
             cluster_df = self.data[self.clustervar]
             # if there are missings - delete them!
@@ -205,7 +202,7 @@ class Feols:
                 k = self.k,
                 G = self.G,
                 vcov_sign = 1,
-                is_clustered=True
+                vcov_type = "CRV"
             )
 
             if vcov_type_detail == "CRV1":
@@ -276,20 +273,20 @@ class Feols:
             self.beta_hat / self.se
         )
 
-        if self.is_clustered:
+        #if self.vcov_type in ['iid', 'CRV']:
             # t(G-1) distribution for clustered errors
-            self.pvalue = (
-                2*(1-t.cdf(np.abs(self.tstat), self.G - 1))
-            )
+        if self.vcov_type in ["iid", "hetero"]:
+            df = self.N - self.k
         else:
-            # normal distribution for non-clustered errors
-            self.pvalue = (
-                    2*(1-norm.cdf(np.abs(self.tstat)))
-            )
-
+            df = self.G - 1
         self.pvalue = (
-            2*(1-norm.cdf(np.abs(self.tstat)))
+            2*(1-t.cdf(np.abs(self.tstat), df))
         )
+        #else:
+        #    # normal distribution for non-clustered errors
+        #    self.pvalue = (
+        #            2*(1-norm.cdf(np.abs(self.tstat)))
+        #    )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
