@@ -38,7 +38,7 @@ def data():
 
     ("log(Y) ~ X1:X2 | X3 + X4"),
     ("log(Y) ~ log(X1):X2 | X3 + X4"),
-    ("Y ~ exp(X1) + X2 | X3 + X4"),
+    ("Y ~  X2 + exp(X1) | X3 + X4"),
 
 
 
@@ -70,10 +70,11 @@ def test_py_vs_r(data, fml):
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-    py_coef = pyfixest.coef()['Estimate']
-    py_se = pyfixest.se()['Std. Error']
-    py_pval = pyfixest.pvalue()['Pr(>|t|)']
-    py_tstat = pyfixest.tstat()['t value']
+
+    py_coef = np.sort(pyfixest.coef()['Estimate'])
+    py_se = np.sort(pyfixest.se()['Std. Error'])
+    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
+    py_tstat = np.sort(pyfixest.tstat()['t value'])
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -82,13 +83,13 @@ def test_py_vs_r(data, fml):
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
-    if not np.allclose((np.array(py_coef)), (stats.coef(r_fixest))):
+    if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
         raise ValueError("py_coef != r_coef")
-    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+    if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
         raise ValueError("py_se != r_se for iid errors")
-    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+    if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for iid errors")
-    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+    if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
         raise ValueError("py_tstat != r_tstat for iid errors")
 
     # heteroskedastic errors

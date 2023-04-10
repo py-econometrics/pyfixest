@@ -165,7 +165,11 @@ class Fixest:
 
                     else:
                         # not data demeaned yet for NA combination
-                        algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
+                        algorithm = pyhdfe.create(
+                            ids=fe2,
+                            residualize_method='map',
+                            drop_singletons=self.drop_singletons,
+                        )
                         #n_singletons = algorithm.singletons
                         #if n_singletons is not None:
                         #    print(f'{n_singletons} columns are dropped due to singleton fixed effects.')
@@ -192,7 +196,7 @@ class Fixest:
         return YX_dict, na_dict
 
 
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), split: Union[str, None]= None) -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), split: Union[str, None]= None, fixef_rm: str = "none") -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -206,6 +210,7 @@ class Fixest:
                 If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
             split (Union(str, None)): A string specifying the name of a variable to use for splitting the data into subgroups for split sample estimation.
+            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
         Returns:
             None
         Examples:
@@ -238,7 +243,10 @@ class Fixest:
         self.ivars = fxst_fml.ivars
 
         self.ssc_dict = ssc
-
+        if fixef_rm == "singleton":
+            self.drop_singletons = True
+        else:
+            self.drop_singletons = False
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
 

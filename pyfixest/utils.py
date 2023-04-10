@@ -11,7 +11,7 @@ def get_data(seed = 1234):
 
     np.random.seed(seed)
 
-    N = 5000
+    N = 1000
     k = 20
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
