@@ -1,3 +1,5 @@
+import numpy as np
+
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
     '''
     Set the small sample correction factor applied in `get_ssc()`
@@ -28,14 +30,13 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
     if cluster_df not in ["conventional", "min"]:
         raise ValueError("cluster_df must be 'conventional' or 'min'.")
 
-    res = {'adj': adj, 'fixef_k': fixef_k, 'cluster_adj': cluster_adj, 'cluster_df': cluster_df}
+    res = {'adj': adj, 'fixef_k': fixef_k,
+           'cluster_adj': cluster_adj, 'cluster_df': cluster_df}
 
     return res
 
 
-
-def get_ssc(ssc_dict, N, k, G, vcov_sign, is_clustered):
-
+def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
     """
     Compute small sample adjustment factors
 
@@ -45,7 +46,7 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, is_clustered):
     - k: The number of estimated parameters
     - G: The number of clusters
     - vcov_sign: A vector that helps create the covariance matrix
-    - is_clustered: If False, cluster adjustments via G and vcov_sign will be ignored
+    - vcov_type: Either "iid", "hetero" or "CRV"
 
     Returns:
     - A small sample adjustment factor
@@ -56,25 +57,33 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, is_clustered):
     cluster_adj = ssc_dict['cluster_adj']
     cluster_df = ssc_dict['cluster_df']
 
-    if adj:
-        adj = (N - 1) / (N - k)
-    else:
-        adj = 1
-    if is_clustered:
+    print("adj", adj)
+
+    cluster_adj_value = 1
+    adj_value = 1
+
+    if vcov_type == "hetero":
+        if adj:
+            adj_value = N / (N-k)
+        else:
+            adj_value = N / (N-1)
+    elif vcov_type in ["iid", "CRV"]:
+        if adj:
+            adj_value = (N - 1) / (N - k)
+        else:
+            adj_value = 1
+
+    if vcov_type == "CRV":
 
         if cluster_adj:
             if cluster_df == 'conventional':
-                cluster_adj = G / (G - 1)
-            elif cluster_df == 'min':
-                G = min(G)
-                cluster_adj = G / (G - 1)
-        else:
-            cluster_adj = 1
+                cluster_adj_value = G / (G - 1)
+            elif cluster_df == "min":
+                G = np.min(G)
+                cluster_adj_value = G / (G - 1)
+            else:
+                raise ValueError("cluster_df is neither conventional nor min.")
 
-        return adj * cluster_adj * vcov_sign
+    print("ssc", adj_value * cluster_adj_value * vcov_sign)
 
-    else:
-
-        return adj
-
-
+    return adj_value * cluster_adj_value * vcov_sign

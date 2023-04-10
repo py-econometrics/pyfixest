@@ -1,0 +1,95 @@
+---
+title: "Small Sample Corrections"
+author: "Alexander Fischer"
+date: "2023-04-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{python, warning = FALSE, message=FALSE}
+from causaldata import restaurant_inspections
+import pandas as pd
+import pyfixest as pf
+from pyfixest.ssc_utils import ssc
+
+res = restaurant_inspections.load_pandas().data
+res["id"] = list(range(res.shape[0]))
+
+N,k = res.shape
+
+self = pf.Fixest(data = res)
+fml = 'inspection_score ~ Weekend '
+vcov = dict({'CRV1':'Year'})
+split = None
+#ssc = ssc()
+
+fixest = pf.Fixest(data = res)
+fixest.feols('inspection_score ~ Weekend  ', vcov = {'CRV1':'id'}, ssc = ssc(adj = True))
+fixest.se()
+
+fixest.feols('inspection_score ~ Weekend  ', vcov = 'hetero', ssc = ssc(adj = False))
+fixest.se()
+
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+library(fixest)
+library(causaldata)
+
+#setFixest_ssc(ssc(adj = TRUE, cluster.adj = TRUE))
+
+data(restaurant_inspections)
+N <- nrow(restaurant_inspections)
+
+fit <- feols(inspection_score ~ Weekend , data = restaurant_inspections, vcov = ~Year)
+fit$nparams
+
+pval1 = feols(inspection_score~Weekend, data =  restaurant_inspections, se = "hetero", ssc = ssc(adj = TRUE)) |> se()  
+
+pval2 = feols(inspection_score~Weekend, data =  restaurant_inspections, se = "hetero", ssc = ssc(adj = FALSE)) |> se()
+
+round(pval1,6)
+round(pval2,6)
+ 
+
+```
+
+
+```{python}
+import pandas as pd
+import pyfixest as pf
+from pyfixest.ssc_utils import ssc
+from pyfixest.utils import get_data
+
+df = get_data()
+```
+
+```{python}
+
+fixest = pf.Fixest(df)
+fixest.feols("Y~X1 + X2 | X3^X4")
+fixest.summary()
+```
+
+
+```{r}
+library(reticulate)
+library(fixest)
+df <- py$df
+
+fit <- (feols(Y~X1 + X2, data = df, se = "hetero", ssc = ssc(adj = FALSE)))
+N <- nobs(fit)
+fit
+```
+
+```{r}
+summary(feols(Y~X1, data = df, se = "iid", ssc = ssc(adj = FALSE)))
+
+```
+
+

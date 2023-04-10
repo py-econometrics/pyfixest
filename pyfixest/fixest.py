@@ -192,7 +192,7 @@ class Fixest:
         return YX_dict, na_dict
 
 
-    def feols(self, fml: str, vcov: Union[str, Dict[str, str]], ssc = ssc(), split: Union[str, None]= None) -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), split: Union[str, None]= None) -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -335,7 +335,7 @@ class Fixest:
                 for _, fml in enumerate(model_frames):
 
                     model_frame = model_frames[fml]
-                    full_fml = fml + "|" + fval + "; split = " + str(x)
+                    full_fml = fml + "|" + fval
 
                     Y = model_frame.iloc[:, 0].to_numpy()
                     X = model_frame.iloc[:, 1:]
@@ -354,6 +354,16 @@ class Fixest:
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
                     #FEOLS.get_nobs()
+                    if vcov is None:
+                        # iid if no fixed effects
+                        if fval == "0":
+                            vcov = "iid"
+                        else:
+                            # CRV1 inference, clustered by first fixed effect
+                            first_fe = fval.split("+")[0]
+                            vcov = {"CRV1": first_fe}
+                    FEOLS.vcov_log = vcov
+                    FEOLS.split_log = str(x)
                     FEOLS.get_vcov(vcov=vcov)
                     FEOLS.get_inference()
                     FEOLS.coefnames = colnames
@@ -459,6 +469,7 @@ class Fixest:
             print('')
             print('### Fixed-effects:', fe)
             print('Dep. var.:', depvar)
+            print('Inference:', fxst.vcov_log)
             print('')
             print(df.to_string(index=False))
             print('---')
