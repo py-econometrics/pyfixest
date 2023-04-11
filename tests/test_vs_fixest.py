@@ -16,7 +16,7 @@ stats = importr('stats')
 
 @pytest.fixture
 def data():
-    return get_data()
+    return get_data(seed = 6574)
 
 
 @pytest.mark.parametrize("fml", [
