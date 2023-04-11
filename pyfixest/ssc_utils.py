@@ -57,8 +57,6 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
     cluster_adj = ssc_dict['cluster_adj']
     cluster_df = ssc_dict['cluster_df']
 
-    print("adj", adj)
-
     cluster_adj_value = 1
     adj_value = 1
 
@@ -83,7 +81,5 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
                 cluster_adj_value = G / (G - 1)
             else:
                 raise ValueError("cluster_df is neither conventional nor min.")
-
-    print("ssc", adj_value * cluster_adj_value * vcov_sign)
 
     return adj_value * cluster_adj_value * vcov_sign

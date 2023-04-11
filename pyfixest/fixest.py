@@ -189,7 +189,7 @@ class Fixest:
                     YX = np.concatenate([Y, X], axis=1)
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
-                
+
                 cols = list(dep_varnames) + list(co_varnames)
                 YX_dict[fml] = YX_demeaned[cols]
                 na_dict[fml] = na_index
@@ -363,17 +363,21 @@ class Fixest:
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
                     #FEOLS.get_nobs()
+
                     if vcov is None:
                         # iid if no fixed effects
                         if fval == "0":
-                            vcov = "iid"
+                            vcov_type = "iid"
                         else:
                             # CRV1 inference, clustered by first fixed effect
                             first_fe = fval.split("+")[0]
-                            vcov = {"CRV1": first_fe}
-                    FEOLS.vcov_log = vcov
+                            vcov_type = {"CRV1": first_fe}
+                    else:
+                        vcov_type = vcov
+
+                    FEOLS.vcov_log = vcov_type
                     FEOLS.split_log = str(x)
-                    FEOLS.get_vcov(vcov=vcov)
+                    FEOLS.get_vcov(vcov=vcov_type)
                     FEOLS.get_inference()
                     FEOLS.coefnames = colnames
                     if self.icovars is not None:
