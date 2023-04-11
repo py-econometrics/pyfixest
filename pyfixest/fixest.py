@@ -95,15 +95,15 @@ class Fixest:
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
             for c, covar in enumerate(dict2fe.get(depvar)):
 
-                if isinstance(covar, list):
-                    covar2 = covar[0]
-                else:
-                    covar2 = covar
+                #if isinstance(covar, list):
+                #    covar2 = covar[0]
+                #else:
+                covar2 = covar
 
-                if isinstance(depvar, list):
-                    depvar2 = depvar[0]
-                else:
-                    depvar2 = depvar
+                #if isinstance(depvar, list):
+                #    depvar2 = depvar[0]
+                #else:
+                depvar2 = depvar
 
                 fml = depvar2 + " ~ " + covar2
 
@@ -189,8 +189,9 @@ class Fixest:
                     YX = np.concatenate([Y, X], axis=1)
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
-
-                YX_dict[fml] = YX_demeaned
+                
+                cols = list(dep_varnames) + list(co_varnames)
+                YX_dict[fml] = YX_demeaned[cols]
                 na_dict[fml] = na_index
 
         return YX_dict, na_dict
