@@ -108,7 +108,7 @@ class Fixest:
                 fml = depvar2 + " ~ " + covar2
 
                 Y, X = model_matrix(fml, data)
-                na_index = list(set(range(data.shape[0])) - set(Y.index))
+                na_index = list(set(data.index) - set(Y.index))
 
                 if self.ivars is not None:
                     if drop_ref is not None:
@@ -173,7 +173,7 @@ class Fixest:
                         #n_singletons = algorithm.singletons
                         #if n_singletons is not None:
                         #    print(f'{n_singletons} columns are dropped due to singleton fixed effects.')
-                        if algorithm.singletons != 0 and algorithm.singletons is not None:
+                        if self.drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
                             print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
                             dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
                             na_index += dropped_singleton_indices
@@ -197,7 +197,7 @@ class Fixest:
         return YX_dict, na_dict
 
 
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), split: Union[str, None]= None, fixef_rm: str = "none") -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), fixef_rm: str = "none") -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -210,7 +210,6 @@ class Fixest:
             vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            split (Union(str, None)): A string specifying the name of a variable to use for splitting the data into subgroups for split sample estimation.
             fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
         Returns:
             None
@@ -238,6 +237,9 @@ class Fixest:
         fxst_fml.get_var_dict()
         fxst_fml._transform_fml_dict()
 
+        self.fml = fml
+        self.split = None
+
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.fml_dict2 = fxst_fml.fml_dict2
@@ -245,9 +247,10 @@ class Fixest:
 
         self.ssc_dict = ssc
         if fixef_rm == "singleton":
-            self.drop_singletons = True
+          self.drop_singletons = True
         else:
-            self.drop_singletons = False
+          self.drop_singletons = False
+
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
 
@@ -292,29 +295,29 @@ class Fixest:
         # currently no fsplit allowed
         fsplit = None
 
-        if split is not None:
+        if self.split is not None:
             if fsplit is not None:
                 raise ValueError("Cannot specify both split and fsplit. Please specify only one of the two.")
             else:
-                splitvar = self.data[split]
+                self.splitvar = self.data[self.split]
                 estimate_full_model = False
                 estimate_split_model = True
-                splitvar_name = split
+                splitvar_name = self.split
         elif fsplit is not None:
-            splitvar = self.data[fsplit]
+            self.splitvar = self.data[fsplit]
             splitvar_name = fsplit
             estimate_split_model = True
         else:
-            splitvar = None
+            self.splitvar = None
 
-        if splitvar is not None:
-            split_categories = np.unique(splitvar)
+        if self.splitvar is not None:
+            self.split_categories = np.unique(self.splitvar)
             if splitvar_name not in self.data.columns:
-                raise ValueError("Split variable " + splitvar + " not found in data.")
+                raise ValueError("Split variable " + self.splitvar + " not found in data.")
             if splitvar_name in self.var_dict.keys():
-                raise ValueError("Split variable " + splitvar + " cannot be a fixed effect variable.")
-            if splitvar.dtype.name != "category":
-                splitvar = pd.Categorical(splitvar)
+                raise ValueError("Split variable " + self.splitvar + " cannot be a fixed effect variable.")
+            if self.splitvar.dtype.name != "category":
+                self.splitvar = pd.Categorical(self.splitvar)
 
         if estimate_full_model:
             for _, fval in enumerate(fixef_keys):
@@ -330,8 +333,8 @@ class Fixest:
             for _, fval in enumerate(fixef_keys):
                 self.demeaned_data_dict[fval] = []
                 self.dropped_data_dict[fval] = []
-                for x in split_categories:
-                    sub_data = self.data[x == splitvar]
+                for x in self.split_categories:
+                    sub_data = self.data[x == self.splitvar]
                     demeaned_data, dropped_data = self._demean(sub_data, fval, ivars, drop_ref)
                     self.demeaned_data_dict[fval].append(demeaned_data)
                     self.dropped_data_dict[fval].append(dropped_data)
@@ -343,8 +346,15 @@ class Fixest:
                 model_frames = model_splits[x]
                 for _, fml in enumerate(model_frames):
 
+
+
                     model_frame = model_frames[fml]
                     full_fml = fml + "|" + fval
+                    if self.splitvar is not None:
+                        split_log = str(self.split_categories[x])
+                        full_fml += "| split =" + split_log
+                    else:
+                        split_log = None
 
                     Y = model_frame.iloc[:, 0].to_numpy()
                     X = model_frame.iloc[:, 1:]
@@ -376,7 +386,7 @@ class Fixest:
                         vcov_type = vcov
 
                     FEOLS.vcov_log = vcov_type
-                    FEOLS.split_log = str(x)
+                    FEOLS.split_log = x
                     FEOLS.get_vcov(vcov=vcov_type)
                     FEOLS.get_inference()
                     FEOLS.coefnames = colnames
@@ -463,6 +473,13 @@ class Fixest:
             None
         '''
 
+        print('###')
+        print('')
+        print("model: feols()")
+        print("fml:", self.fml)
+        print('---')
+
+
         for x in list(self.model_res.keys()):
 
             split = x.split("|")
@@ -479,10 +496,13 @@ class Fixest:
                 }
             )
 
+            print('###')
             print('')
-            print('### Fixed-effects:', fe)
-            print('Dep. var.:', depvar)
-            print('Inference:', fxst.vcov_log)
+            print('Fixed effects: ', fe)
+            if fxst.split_log is not None:
+                print('Split. var: ', self.split + ":" + fxst.split_log)
+            print('Dep. var.: ', depvar)
+            print('Inference: ', fxst.vcov_log)
             print('')
             print(df.to_string(index=False))
             print('---')

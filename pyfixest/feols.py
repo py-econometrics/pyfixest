@@ -186,14 +186,17 @@ class Feols:
 
             cluster_df = self.data[self.clustervar]
             # if there are missings - delete them!
-            # cluster_df = pd.Categorical(cluster_df)
 
-            if np.any(pd.isna(cluster_df)):
+            if cluster_df.dtype != "category":
+                cluster_df = pd.Categorical(cluster_df)
+
+            if cluster_df.isna().any():
                 raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
 
-            cluster_mat = cluster_df.to_numpy()
+            cluster_mat, clustid = pd.factorize(cluster_df)
+            #cluster_mat = cluster_df.to_numpy()
 
-            clustid = np.unique(cluster_mat)
+            #clustid = np.unique(cluster_mat)
             self.G = len(clustid)
 
             self.ssc = get_ssc(
