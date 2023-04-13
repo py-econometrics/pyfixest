@@ -99,7 +99,7 @@ fixest.feols("Y~X1 | csw0(X3, X4)", vcov = "HC1").summary()
 
 # TWFE Event Study
 
-Here, we follow an example from the LOST library of statistical techniques.
+Here, we follow an example from the [LOST](https://lost-stats.github.io/Model_Estimation/Research_Design/event_study.html) library of statistical techniques.
 
 ```py
 import pandas as pd

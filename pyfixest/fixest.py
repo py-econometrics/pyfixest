@@ -12,6 +12,7 @@ from formulaic import model_matrix
 
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
+from pyfixest.ssc_utils import ssc
 
 
 class Fixest:
@@ -28,7 +29,7 @@ class Fixest:
         self.data = data
         self.model_res = dict()
 
-    def _clean_fe(self, fval):
+    def _clean_fe(self, data, fval):
 
         fval_list = fval.split("+")
 
@@ -38,10 +39,10 @@ class Fixest:
 
         for x in interacted_fes:
             vars = x.split("^")
-            self.data[x] = self.data[vars].apply(lambda x: '^'.join(
+            data[x] = data[vars].apply(lambda x: '^'.join(
                 x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
 
-        fe = self.data[fval_list]
+        fe = data[fval_list]
         # all fes to factors / categories
         fe = fe.apply(lambda x: pd.factorize(x)[0])
 
@@ -51,11 +52,12 @@ class Fixest:
         return fe, fe_na
 
 
-    def demean(self, fval: str, ivars: List[str], drop_ref: str) -> None:
+    def _demean(self, data: pd.DataFrame, fval: str, ivars: List[str], drop_ref: str) -> None:
         '''
         Demean all regressions for a specification of fixed effects.
 
         Args:
+            data: The input pd.DataFrame for the object. Either self.data or a subset thereof (for split sample estimation).
             fval: A specification of fixed effects. A string indicating the fixed effects to be demeaned,
                 such as "X4" or "X3 + X2".
             ivars: A list of strings indicating the interacted variables via i().
@@ -64,13 +66,13 @@ class Fixest:
 
         Returns:
             None
-    '''
+        '''
 
         YX_dict = dict()
         na_dict = dict()
 
         if fval != "0":
-            fe, fe_na = self._clean_fe(fval)
+            fe, fe_na = self._clean_fe(data, fval)
             fe_na = list(fe_na[fe_na == True])
         else:
             fe = None
@@ -93,20 +95,20 @@ class Fixest:
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
             for c, covar in enumerate(dict2fe.get(depvar)):
 
-                if isinstance(covar, list):
-                    covar2 = covar[0]
-                else:
-                    covar2 = covar
+                #if isinstance(covar, list):
+                #    covar2 = covar[0]
+                #else:
+                covar2 = covar
 
-                if isinstance(depvar, list):
-                    depvar2 = depvar[0]
-                else:
-                    depvar2 = depvar
+                #if isinstance(depvar, list):
+                #    depvar2 = depvar[0]
+                #else:
+                depvar2 = depvar
 
                 fml = depvar2 + " ~ " + covar2
 
-                Y, X = model_matrix(fml, self.data)
-                na_index = list(set(range(0, self.data.shape[0])) - set(Y.index))
+                Y, X = model_matrix(fml, data)
+                na_index = list(set(data.index) - set(Y.index))
 
                 if self.ivars is not None:
                     if drop_ref is not None:
@@ -163,7 +165,19 @@ class Fixest:
 
                     else:
                         # not data demeaned yet for NA combination
-                        algorithm = pyhdfe.create(ids=fe2, residualize_method='map')
+                        algorithm = pyhdfe.create(
+                            ids=fe2,
+                            residualize_method='map',
+                            drop_singletons=self.drop_singletons,
+                        )
+                        #n_singletons = algorithm.singletons
+                        #if n_singletons is not None:
+                        #    print(f'{n_singletons} columns are dropped due to singleton fixed effects.')
+                        if self.drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
+                            print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
+                            dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
+                            na_index += dropped_singleton_indices
+
                         YX_demeaned = algorithm.residualize(YX)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
                         YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
@@ -176,13 +190,14 @@ class Fixest:
                     YX_demeaned = pd.DataFrame(YX)
                     YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
 
-                YX_dict[fml] = YX_demeaned
+                cols = list(dep_varnames) + list(co_varnames)
+                YX_dict[fml] = YX_demeaned[cols]
                 na_dict[fml] = na_index
 
         return YX_dict, na_dict
 
 
-    def feols(self, fml: str, vcov: Union[str, Dict[str, str]]) -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), fixef_rm: str = "none") -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -195,6 +210,7 @@ class Fixest:
             vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
                 If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
         Returns:
             None
         Examples:
@@ -221,10 +237,19 @@ class Fixest:
         fxst_fml.get_var_dict()
         fxst_fml._transform_fml_dict()
 
+        self.fml = fml
+        self.split = None
+
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.fml_dict2 = fxst_fml.fml_dict2
         self.ivars = fxst_fml.ivars
+
+        self.ssc_dict = ssc
+        if fixef_rm == "singleton":
+          self.drop_singletons = True
+        else:
+          self.drop_singletons = False
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
@@ -252,42 +277,122 @@ class Fixest:
             drop_ref = None
 
 
+        # dropped_data_dict and demeaned_data_dict are
+        # dictionaries with keys for each fixed effects combination and
+        # has values of lists of demeaned dataframes
+        # the list is a singelton list unless split sample estimation is used
+        # e.g it looks like this (without split estimation):
+        # {'fe1': [demeaned_data_df], 'fe1+fe2': [demeaned_data_df]}
+        # and like this (with split estimation):
+        # {'fe1': [demeaned_data_df1, demeaned_data_df2], 'fe1+fe2': [demeaned_data_df1, demeaned_data_df2]}
+        # the lists are sorted in the order of the split variable
 
         self.dropped_data_dict = dict()
         self.demeaned_data_dict = dict()
 
-        for _, fval in enumerate(fixef_keys):
-            self.demeaned_data_dict[fval], self.dropped_data_dict[fval] = self.demean(fval, ivars, drop_ref)
+        estimate_full_model = True
+        estimate_split_model = False
+        # currently no fsplit allowed
+        fsplit = None
 
+        if self.split is not None:
+            if fsplit is not None:
+                raise ValueError("Cannot specify both split and fsplit. Please specify only one of the two.")
+            else:
+                self.splitvar = self.data[self.split]
+                estimate_full_model = False
+                estimate_split_model = True
+                splitvar_name = self.split
+        elif fsplit is not None:
+            self.splitvar = self.data[fsplit]
+            splitvar_name = fsplit
+            estimate_split_model = True
+        else:
+            self.splitvar = None
 
+        if self.splitvar is not None:
+            self.split_categories = np.unique(self.splitvar)
+            if splitvar_name not in self.data.columns:
+                raise ValueError("Split variable " + self.splitvar + " not found in data.")
+            if splitvar_name in self.var_dict.keys():
+                raise ValueError("Split variable " + self.splitvar + " cannot be a fixed effect variable.")
+            if self.splitvar.dtype.name != "category":
+                self.splitvar = pd.Categorical(self.splitvar)
+
+        if estimate_full_model:
+            for _, fval in enumerate(fixef_keys):
+                self.demeaned_data_dict[fval] = []
+                self.dropped_data_dict[fval] = []
+                data = self.data
+                demeaned_data, dropped_data = self._demean(data, fval, ivars, drop_ref)
+                self.demeaned_data_dict[fval].append(demeaned_data)
+                self.dropped_data_dict[fval].append(dropped_data)
+
+        # here:
+        if estimate_split_model:
+            for _, fval in enumerate(fixef_keys):
+                self.demeaned_data_dict[fval] = []
+                self.dropped_data_dict[fval] = []
+                for x in self.split_categories:
+                    sub_data = self.data[x == self.splitvar]
+                    demeaned_data, dropped_data = self._demean(sub_data, fval, ivars, drop_ref)
+                    self.demeaned_data_dict[fval].append(demeaned_data)
+                    self.dropped_data_dict[fval].append(dropped_data)
 
         # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
-            model_frames = self.demeaned_data_dict[fval]
-            for _, fml in enumerate(model_frames):
+            model_splits = self.demeaned_data_dict[fval]
+            for x, split in enumerate(model_splits):
+                model_frames = model_splits[x]
+                for _, fml in enumerate(model_frames):
 
-                model_frame = model_frames[fml]
-                full_fml = fml + "|" + fval
 
-                Y = model_frame.iloc[:, 0].to_numpy()
-                X = model_frame.iloc[:, 1:]
-                colnames = X.columns
-                X = X.to_numpy()
 
-                if np.linalg.matrix_rank(X) < min(X.shape):
-                    raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. If you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+                    model_frame = model_frames[fml]
+                    full_fml = fml + "|" + fval
+                    if self.splitvar is not None:
+                        split_log = str(self.split_categories[x])
+                        full_fml += "| split =" + split_log
+                    else:
+                        split_log = None
 
-                FEOLS = Feols(Y, X)
-                FEOLS.get_fit()
-                FEOLS.na_index = self.dropped_data_dict[fval][fml]
-                FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
-                FEOLS.get_nobs()
-                FEOLS.get_vcov(vcov=vcov)
-                FEOLS.get_inference()
-                FEOLS.coefnames = colnames
-                if self.icovars is not None:
-                    FEOLS.icovars = self.icovars
-                self.model_res[full_fml] = FEOLS
+                    Y = model_frame.iloc[:, 0].to_numpy()
+                    X = model_frame.iloc[:, 1:]
+                    colnames = X.columns
+                    X = X.to_numpy()
+
+                    if np.linalg.matrix_rank(X) < min(X.shape):
+                        if self.ivars is not None:
+                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+                        else:
+                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. ")
+
+                    FEOLS = Feols(Y, X)
+                    FEOLS.ssc_dict = self.ssc_dict
+                    FEOLS.get_fit()
+                    FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
+                    FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
+                    #FEOLS.get_nobs()
+
+                    if vcov is None:
+                        # iid if no fixed effects
+                        if fval == "0":
+                            vcov_type = "iid"
+                        else:
+                            # CRV1 inference, clustered by first fixed effect
+                            first_fe = fval.split("+")[0]
+                            vcov_type = {"CRV1": first_fe}
+                    else:
+                        vcov_type = vcov
+
+                    FEOLS.vcov_log = vcov_type
+                    FEOLS.split_log = x
+                    FEOLS.get_vcov(vcov=vcov_type)
+                    FEOLS.get_inference()
+                    FEOLS.coefnames = colnames
+                    if self.icovars is not None:
+                        FEOLS.icovars = self.icovars
+                    self.model_res[full_fml] = FEOLS
 
         return self
 
@@ -368,6 +473,13 @@ class Fixest:
             None
         '''
 
+        print('###')
+        print('')
+        print("model: feols()")
+        print("fml:", self.fml)
+        print('---')
+
+
         for x in list(self.model_res.keys()):
 
             split = x.split("|")
@@ -384,12 +496,61 @@ class Fixest:
                 }
             )
 
+            print('###')
             print('')
-            print('### Fixed-effects:', fe)
-            print('Dep. var.:', depvar)
+            print('Fixed effects: ', fe)
+            if fxst.split_log is not None:
+                print('Split. var: ', self.split + ":" + fxst.split_log)
+            print('Dep. var.: ', depvar)
+            print('Inference: ', fxst.vcov_log)
             print('')
             print(df.to_string(index=False))
             print('---')
+
+    def coef(self):
+
+        '''
+        Obtain the coefficients of the fitted models.
+
+        Returns: pd.Series
+        '''
+
+        df = self.tidy()
+        return df[['coefnames', 'Estimate']]
+
+    def se(self):
+
+        '''
+        Obtain the standard errors of the fitted models.
+
+        Returns: pd.Series
+        '''
+
+        df = self.tidy()
+        return df[['coefnames','Std. Error']]
+
+    def tstat(self):
+
+        '''
+        Obtain the t-statistics of the fitted models.
+
+        Returns: pd.Series
+        '''
+
+        df = self.tidy()
+        return df[['coefnames','t value']]
+
+    def pvalue(self):
+
+        '''
+        Obtain the p-values of the fitted models.
+
+        Returns: pd.Series
+        '''
+
+        df = self.tidy()
+        return df[['coefnames', 'Pr(>|t|)']]
+
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
 
