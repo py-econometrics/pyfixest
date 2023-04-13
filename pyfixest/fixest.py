@@ -499,8 +499,8 @@ class Fixest:
             print('###')
             print('')
             print('Fixed effects: ', fe)
-            if fxst.split_log is not None:
-                print('Split. var: ', self.split + ":" + fxst.split_log)
+            #if fxst.split_log is not None:
+            #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
             print('')
