@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-def get_data():
+def get_data(seed = 1234):
 
     '''
     create a random example data set
@@ -9,10 +9,10 @@ def get_data():
 
     # create data
 
-    np.random.seed(1231)
+    np.random.seed(seed)
 
-    N = 6000
-    k = 5
+    N = 1000
+    k = 20
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
     X = pd.DataFrame(X)

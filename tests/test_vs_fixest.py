@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from numpy import log, exp
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data
 
@@ -15,7 +16,7 @@ stats = importr('stats')
 
 @pytest.fixture
 def data():
-    return get_data()
+    return get_data(seed = 6574)
 
 
 @pytest.mark.parametrize("fml", [
@@ -34,6 +35,12 @@ def data():
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
     ("Y ~ X1:X2 | X3 + X4"),
+
+    ("log(Y) ~ X1:X2 | X3 + X4"),
+    ("log(Y) ~ log(X1):X2 | X3 + X4"),
+    ("Y ~  X2 + exp(X1) | X3 + X4"),
+
+
 
     #("Y ~ C(X2)"),
     #("Y ~ X1 + C(X2)"),
@@ -58,28 +65,72 @@ def test_py_vs_r(data, fml):
         - tba: t-statistics, covariance matrices, other metrics
     '''
 
-    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+    # suppress correction for fixed effects
+    #fixest.setFixest_ssc(fixest.ssc(True, "nested", True, "min", "min", False))
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(fml), se = 'iid', data=data)
 
-    np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
-    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+    py_coef = np.sort(pyfixest.coef()['Estimate'])
+    py_se = np.sort(pyfixest.se()['Std. Error'])
+    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
+    py_tstat = np.sort(pyfixest.tstat()['t value'])
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
+        raise ValueError("py_coef != r_coef")
+    if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for iid errors")
+    if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for iid errors")
+    if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
+        raise ValueError("py_tstat != r_tstat for iid errors")
 
     # heteroskedastic errors
-    py_se = pyfixest.vcov("HC1").tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(fml), se = 'hetero',data=data)
+    pyfixest.vcov("HC1")
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
 
-    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        se = 'hetero',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for HC1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for HC1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for HC1 errors")
 
     # cluster robust errors
-    py_se = pyfixest.vcov({'CRV1':'group_id'}).tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(fml), cluster = ro.Formula('~group_id'), data=data)
+    pyfixest.vcov({'CRV1':'group_id'})
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
 
-    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        cluster = ro.Formula('~group_id'),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for CRV1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for CRV1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for CRV1 errors")
 
 
 @pytest.mark.parametrize("fml_multi", [
@@ -118,14 +169,19 @@ def test_py_vs_r2(data, fml_multi):
     test pyfixest against fixest_multi objects
     '''
 
-    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+    # suppress correction for fixed effects
+    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
 
     r_fml = _py_fml_to_r_fml(fml_multi)
 
-    pyfixest = Fixest(data = data).feols(fml_multi, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+    pyfixest = Fixest(data = data).feols(fml_multi)
+    py_coef = pyfixest.coef()['Estimate']
+    py_se = pyfixest.se()['Std. Error']
+    r_fixest = fixest.feols(
+        ro.Formula(r_fml),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
 
     for x, val in enumerate(r_fixest):
 
@@ -136,11 +192,11 @@ def test_py_vs_r2(data, fml_multi):
 
         fixest_object = r_fixest.rx2(x+1)
         fixest_coef = fixest_object.rx2("coefficients")
-        fixest_se = fixest_object.rx2("se")
 
-        np.array_equal((np.array(py_coef)), fixest_coef)
-        np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
-
+        if not np.allclose((np.array(py_coef)), (fixest_coef)):
+            raise ValueError("py_coef != r_coef")
+        if not np.allclose((np.array(py_se)), (fixest.se(fixest_object))):
+            raise ValueError("py_se != r_se for iid errors")
 
 
 @pytest.mark.parametrize("fml_i", [
@@ -158,14 +214,20 @@ def test_py_vs_r_i(data, fml_i):
     test pyfixest against fixest_multi objects
     '''
 
-    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+    # suppress correction for fixed effects
+    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
 
     r_fml = _py_fml_to_r_fml(fml_i)
 
     pyfixest = Fixest(data = data).feols(fml_i, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+    py_coef = pyfixest.coef()['Estimate']
+    py_se = pyfixest.se()['Std. Error']
+    r_fixest = fixest.feols(
+        ro.Formula(r_fml),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
 
     for x, val in enumerate(r_fixest):
 
@@ -178,12 +240,15 @@ def test_py_vs_r_i(data, fml_i):
         fixest_coef = fixest_object.rx2("coefficients")
         fixest_se = fixest_object.rx2("se")
 
-        np.array_equal((np.array(py_coef)), fixest_coef)
-        np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+        if not np.allclose((np.array(py_coef)), (fixest_coef)):
+            raise ValueError("py_coef != r_coef")
+        #if not np.allclose((np.array(py_se)), (fixest_se)):
+        #    raise ValueError("py_se != r_se ")
+
 
 
 @pytest.mark.parametrize("fml_C", [
-        ("Y ~ C(X1)", "Y ~ as.factor(X1)"),
+        ("Y ~ C(X2)", "Y ~ as.factor(X2)"),
         #("Y ~ C(X1) + X2", "Y ~ as.factor(X1) + X2"),
         #("Y ~ C(X1):X2", "Y ~ as.factor(X1):X2"),
         #("Y ~ C(X1):C(X2)", "Y ~ as.factor(X1):as.factor(X2)"),
@@ -193,16 +258,64 @@ def test_py_vs_r_i(data, fml_i):
 def test_py_vs_r_C(data, fml_C):
 
 
-    fixest.setFixest_ssc(fixest.ssc(True, "None", True, "min", "min", False))
+    # suppress correction for fixed effects
+    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
 
     py_fml, r_fml = fml_C
     pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
-    py_coef = pyfixest.tidy()['Estimate']
-    py_se = pyfixest.tidy()['Std. Error']
-    r_fixest = fixest.feols(ro.Formula(r_fml), se = 'iid', data=data)
+    py_coef = pyfixest.coef()['Estimate']
+    py_se = pyfixest.se()['Std. Error']
+    r_fixest = fixest.feols(
+        ro.Formula(r_fml),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
 
-    np.array_equal((np.array(py_coef)), (stats.coef(r_fixest)))
-    np.array_equal((np.array(py_se)), (fixest.se(r_fixest)))
+    if not np.allclose((np.array(py_coef)), (stats.coef(r_fixest))):
+        raise ValueError("py_coef != r_coef")
+
+    #if not np.allcloseual((np.array(py_se)), (fixest.se(r_fixest))):
+    #    raise ValueError("py_se != r_se ")
+
+
+@pytest.mark.parametrize("fml_split", [
+    ("Y ~ X1"),
+    ("Y ~ X1 | X2 + X3"),
+])
+
+@pytest.mark.skip("split method not yet fully implemented")
+def test_py_vs_r_split(data, fml_split):
+
+    # suppress correction for fixed effects
+    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
+
+    fml = "Y ~ X1 | X2 + X3"
+    pyfixest = Fixest(data = data).feols(fml_split, vcov = 'iid', split = "group_id")
+    py_coef = pyfixest.coef()['Estimate']
+    py_se = pyfixest.se()['Std. Error']
+    r_fixest = fixest.feols(
+        ro.Formula(fml_split),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False),
+        split = ro.Formula("~group_id")
+    )
+
+    for x, _ in enumerate(r_fixest):
+
+        i = pyfixest.tidy().index.unique()[x]
+        ix = pyfixest.tidy().xs(i)
+        py_coef = ix['Estimate']
+        py_se = ix['Std. Error']
+
+        fixest_object = r_fixest.rx2(x+1)
+        fixest_coef = fixest_object.rx2("coefficients")
+
+        if not np.allclose((np.array(py_coef)), (fixest_coef)):
+            raise ValueError("py_coef != r_coef")
+        if not np.allclose((np.array(py_se)), (fixest.se(fixest_object))):
+            raise ValueError("py_se != r_se ")
 
 
 

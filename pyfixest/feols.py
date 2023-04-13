@@ -1,13 +1,10 @@
-import warnings
-import pyhdfe
-
-from typing import Union, List, Dict
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
-from formulaic import model_matrix
+
+from typing import Union, List, Dict
+from scipy.stats import norm, t
+from pyfixest.ssc_utils import get_ssc
 
 
 class Feols:
@@ -138,24 +135,44 @@ class Feols:
             assert False, "arg vcov needs to be a dict, string or list"
 
         if vcov_type_detail == "iid":
-            vcov_type = "iid"
+            self.vcov_type = "iid"
+            self.is_clustered = False
         elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-            vcov_type = "hetero"
+            self.vcov_type = "hetero"
+            self.is_clustered = False
         elif vcov_type_detail in ["CRV1", "CRV3"]:
-            vcov_type = "CRV"
+            self.vcov_type = "CRV"
+            self.is_clustered = True
 
         # compute vcov
-        if vcov_type == 'iid':
+        if self.vcov_type == 'iid':
 
-            self.vcov = (self.tXXinv * np.mean(self.u_hat ** 2))
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = 1,
+                vcov_sign = 1,
+                vcov_type='iid'
+            )
 
-        elif vcov_type == 'hetero':
+            # only relevant factor for iid in ssc: fixef.K
+            self.vcov =  self.ssc * self.tXXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+
+        elif self.vcov_type == 'hetero':
+
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = 1,
+                vcov_sign = 1,
+                vcov_type = "hetero"
+            )
 
             if vcov_type_detail in ["hetero", "HC1"]:
-                self.ssc = (self.N - 1) / (self.N - self.k)
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                self.ssc = 1
                 leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
                     u = (1 - leverage) * self.u_hat
@@ -163,18 +180,33 @@ class Feols:
                     u = np.sqrt(1 - leverage) * self.u_hat
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
-            self.vcov = self.ssc * self.tXXinv @ meat @  self.tXXinv
+            self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
 
-        elif vcov_type == "CRV":
+        elif self.vcov_type == "CRV":
 
+            cluster_df = self.data[self.clustervar]
             # if there are missings - delete them!
-            cluster_df = self.data[self.clustervar].to_numpy()
 
-            if np.any(np.isnan(cluster_df)):
+            if cluster_df.dtype != "category":
+                cluster_df = pd.Categorical(cluster_df)
+
+            if cluster_df.isna().any():
                 raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
 
-            clustid = np.unique(cluster_df)
+            cluster_mat, clustid = pd.factorize(cluster_df)
+            #cluster_mat = cluster_df.to_numpy()
+
+            #clustid = np.unique(cluster_mat)
             self.G = len(clustid)
+
+            self.ssc = get_ssc(
+                ssc_dict = self.ssc_dict,
+                N = self.N,
+                k = self.k,
+                G = self.G,
+                vcov_sign = 1,
+                vcov_type = "CRV"
+            )
 
             if vcov_type_detail == "CRV1":
 
@@ -187,7 +219,6 @@ class Feols:
                     score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.ssc = self.G / (self.G - 1) * (self.N-1) / (self.N-self.k)
                 self.vcov = self.ssc * self.tXXinv @ meat @ self.tXXinv
 
             elif vcov_type_detail == "CRV3":
@@ -220,8 +251,6 @@ class Feols:
                     beta_centered = beta_jack[ixg, :] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
 
-                self.ssc = self.G / (self.G - 1)
-
                 self.vcov = self.ssc * vcov
 
     def get_inference(self, alpha = 0.95):
@@ -247,9 +276,20 @@ class Feols:
             self.beta_hat / self.se
         )
 
+        #if self.vcov_type in ['iid', 'CRV']:
+            # t(G-1) distribution for clustered errors
+        if self.vcov_type in ["iid", "hetero"]:
+            df = self.N - self.k
+        else:
+            df = self.G - 1
         self.pvalue = (
-            2*(1-norm.cdf(np.abs(self.tstat)))
+            2*(1-t.cdf(np.abs(self.tstat), df))
         )
+        #else:
+        #    # normal distribution for non-clustered errors
+        #    self.pvalue = (
+        #            2*(1-norm.cdf(np.abs(self.tstat)))
+        #    )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
@@ -276,3 +316,6 @@ class Feols:
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+
+
+
