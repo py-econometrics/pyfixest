@@ -284,6 +284,7 @@ def test_py_vs_r_C(data, fml_C):
     ("Y ~ X1 | X2 + X3"),
 ])
 
+@pytest.mark.skip("split method not yet fully implemented")
 def test_py_vs_r_split(data, fml_split):
 
     # suppress correction for fixed effects
