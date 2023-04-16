@@ -59,11 +59,10 @@ def test_error_crv3_fe():
     '''
     test if CRV3 inference with fixed effects regressions raises an error (currently not supported)
     '''
-    data = get_data()
-    data["group_id"][9] = np.nan
+    data = get_data().dropna()
 
     fixest = Fixest(data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         fixest.feols('Y ~ X1 | X2', vcov = {'CRV3': 'group_id'})
 
 
