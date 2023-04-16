@@ -357,6 +357,9 @@ class Fixest:
                     X = model_frame.iloc[:, 1:]
                     colnames = X.columns
                     X = X.to_numpy()
+                    N = X.shape[0]
+                    k = X.shape[1]
+
 
                     if np.linalg.matrix_rank(X) < min(X.shape):
                         if self.ivars is not None:
@@ -369,6 +372,8 @@ class Fixest:
                     FEOLS.get_fit()
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
+                    FEOLS.N = N
+                    FEOLS.k = k
                     #FEOLS.get_nobs()
 
                     if vcov is None:
@@ -500,6 +505,7 @@ class Fixest:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
+            print('Observations: ', fxst.N)
             print('')
             print(df.to_string(index=False))
             print('---')
