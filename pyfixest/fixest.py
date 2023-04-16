@@ -95,15 +95,13 @@ class Fixest:
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
             for c, covar in enumerate(dict2fe.get(depvar)):
 
-                #if isinstance(covar, list):
-                #    covar2 = covar[0]
-                #else:
                 covar2 = covar
-
-                #if isinstance(depvar, list):
-                #    depvar2 = depvar[0]
-                #else:
                 depvar2 = depvar
+
+                #print("depvar", depvar2)
+                #if data[depvar2].dtypes not in ["float", "int"]:
+                #    raise TypeError("Variable " + depvar2 + " is not numeric. Please convert to numeric type (int or float).")
+
 
                 fml = depvar2 + " ~ " + covar2
 
@@ -126,6 +124,10 @@ class Fixest:
 
                 Y = Y.to_numpy()
                 X = X.to_numpy()
+
+                if Y.shape[1] > 1:
+                    raise ValueError(
+                        "Dependent variable must be a single column. Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float).")
 
                 # variant 1: if there are fixed effects to be projected out
                 if fe is not None:
