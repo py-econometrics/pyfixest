@@ -266,7 +266,7 @@ class Feols:
                     beta_centered = beta_jack[ixg,:] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
 
-                self.vcov = self.G / (self.G - 1) * vcov
+                self.vcov = self.ssc * vcov
 
     def get_inference(self, alpha = 0.95):
         '''
