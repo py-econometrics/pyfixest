@@ -95,14 +95,7 @@ class Fixest:
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
             for c, covar in enumerate(dict2fe.get(depvar)):
 
-                #if isinstance(covar, list):
-                #    covar2 = covar[0]
-                #else:
                 covar2 = covar
-
-                #if isinstance(depvar, list):
-                #    depvar2 = depvar[0]
-                #else:
                 depvar2 = depvar
 
                 fml = depvar2 + " ~ " + covar2
@@ -126,6 +119,10 @@ class Fixest:
 
                 Y = Y.to_numpy()
                 X = X.to_numpy()
+
+                if Y.shape[1] > 1:
+                    raise ValueError(
+                        "Dependent variable must be a single column. Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float).")
 
                 # variant 1: if there are fixed effects to be projected out
                 if fe is not None:
@@ -360,6 +357,9 @@ class Fixest:
                     X = model_frame.iloc[:, 1:]
                     colnames = X.columns
                     X = X.to_numpy()
+                    N = X.shape[0]
+                    k = X.shape[1]
+
 
                     if np.linalg.matrix_rank(X) < min(X.shape):
                         if self.ivars is not None:
@@ -372,6 +372,8 @@ class Fixest:
                     FEOLS.get_fit()
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
+                    FEOLS.N = N
+                    FEOLS.k = k
                     #FEOLS.get_nobs()
 
                     if vcov is None:
@@ -503,6 +505,7 @@ class Fixest:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
+            print('Observations: ', fxst.N)
             print('')
             print(df.to_string(index=False))
             print('---')
