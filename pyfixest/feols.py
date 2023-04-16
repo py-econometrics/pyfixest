@@ -117,7 +117,6 @@ class Feols:
             assert list(vcov.keys())[0] in ["CRV1", "CRV3"], "vcov dict key must be CRV1 or CRV3"
             assert isinstance(list(vcov.values())[0], str), "vcov dict value must be a string"
             assert list(vcov.values())[0] in self.data.columns, "vcov dict value must be a column in the data"
-            assert list(vcov.keys())[0] != "CRV3", "CRV3 currently not supported with arbitrary fixed effects"
         if isinstance(vcov, list):
             assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
             assert all(v in self.data.columns for v in vcov), "vcov list must contain columns in the data"
@@ -226,32 +225,48 @@ class Feols:
                 # check: is fixed effect cluster fixed effect?
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
-                assert self.has_fixef == False, "CRV3 currently not supported with arbitrary fixed effects"
 
-                beta_jack = np.zeros((self.G, self.k))
+                if self.has_fixef:
+                    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
+
+                k_params = self.k
+
+                # inverse hessian precomputed?
                 tXX = np.transpose(self.X) @ self.X
+                tXy = np.transpose(self.X) @ self.Y
+                beta_hat = self.beta_hat
 
-                for ixg, g in enumerate(clustid):
+                clusters = clustid
+                n_groups = self.G
+                group = cluster_df
 
-                    Xg = self.X[np.where(cluster_df == g)]
-                    Yg = self.Y[:, x][np.where(cluster_df == g)]
+                beta_jack = np.zeros((n_groups, k_params))
 
+                # compute leave-one-out regression coefficients (aka clusterjacks')
+                for ixg, g in enumerate(clusters):
+
+                    Xg = self.X[np.equal(ixg, group)]
+                    Yg = self.Y[np.equal(ixg, group)]
                     tXgXg = np.transpose(Xg) @ Xg
-
                     # jackknife regression coefficient
-                    beta_jack[ixg, :] = (
-                        np.linalg.pinv(
-                            tXX - tXgXg) @ (self.tXy - np.transpose(Xg) @ Yg)
+                    beta_jack[ixg,:] = (
+                        np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
                     ).flatten()
 
-                beta_center = self.beta_hat
 
-                vcov = np.zeros((self.k, self.k))
-                for ixg, g in enumerate(clustid):
-                    beta_centered = beta_jack[ixg, :] - beta_center
+                # optional: beta_bar in MNW (2022)
+                center = "estimate"
+                if center == 'estimate':
+                    beta_center = beta_hat
+                else:
+                    beta_center = np.mean(beta_jack, axis = 0)
+
+                vcov = np.zeros((k_params, k_params))
+                for ixg, g in enumerate(clusters):
+                    beta_centered = beta_jack[ixg,:] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
 
-                self.vcov = self.ssc * vcov
+                self.vcov = self.G / (self.G - 1) * vcov
 
     def get_inference(self, alpha = 0.95):
         '''
@@ -316,6 +331,73 @@ class Feols:
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+
+
+
+
+def _cluster_jackknife(results, group, center):
+
+    '''
+    Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife.
+    For reference, see "Fast and Reliable Jackknife and Bootstrap
+    Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens
+    University Working Paper No. 1485
+    Parameters
+    ----------
+    results : result instance
+        need to contain regression results, uses ...
+    group : pd.Series
+        pd.Series containing the clustering variable
+    center: str
+        character specifying how to center the coefficients from all jacknife samples
+        (each dropping one observational unit/cluster). By default the coefficients are
+        centered by the original full-sample "estimate", or alternatively by their
+        "mean" across the sample.
+    Returns
+    -------
+    H : ndarray (k_vars, k_vars)
+        cluster jackknife estimate of a robust covariance matrix for the parameter estimates
+    '''
+
+    X = results.model.wexog
+    Y = results.model.wendog
+
+    k_params = X.shape[1]
+
+    # inverse hessian precomputed?
+    tXX = np.transpose(X) @ X
+    tXy = np.transpose(X) @ Y
+    beta_hat = results.params
+
+    clusters = np.unique(group)
+    n_groups = len(clusters)
+
+    beta_jack = np.zeros((n_groups, k_params))
+
+    # compute leave-one-out regression coefficients (aka clusterjacks')
+    for ixg, g in enumerate(clusters):
+
+        Xg = X[np.equal(ixg, group)]
+        Yg = Y[np.equal(ixg, group)]
+        tXgXg = np.transpose(Xg) @ Xg
+        # jackknife regression coefficient
+        beta_jack[ixg,:] = (
+            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+        ).flatten()
+
+
+    # optional: beta_bar in MNW (2022)
+    if center == 'estimate':
+        beta_center = beta_hat
+    else:
+        beta_center = np.mean(beta_jack, axis = 0)
+
+    H = np.zeros((k_params, k_params))
+    for ixg, g in enumerate(clusters):
+        beta_centered = beta_jack[ixg,:] - beta_center
+        H += np.outer(beta_centered, beta_centered)
+
+    return H
 
 
 
