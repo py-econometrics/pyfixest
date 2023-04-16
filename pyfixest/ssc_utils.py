@@ -70,6 +70,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
             adj_value = (N - 1) / (N - k)
         else:
             adj_value = 1
+    else:
+        raise ValueError("vcov_type must be either iid, hetero or CRV.")
 
     if vcov_type == "CRV":
 
