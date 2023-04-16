@@ -98,11 +98,6 @@ class Fixest:
                 covar2 = covar
                 depvar2 = depvar
 
-                #print("depvar", depvar2)
-                #if data[depvar2].dtypes not in ["float", "int"]:
-                #    raise TypeError("Variable " + depvar2 + " is not numeric. Please convert to numeric type (int or float).")
-
-
                 fml = depvar2 + " ~ " + covar2
 
                 Y, X = model_matrix(fml, data)
