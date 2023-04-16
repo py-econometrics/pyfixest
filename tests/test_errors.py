@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import pandas as pd
 from pyfixest import Fixest
 from pyfixest.utils import get_data
 
@@ -64,4 +65,19 @@ def test_error_crv3_fe():
     fixest = Fixest(data)
     with pytest.raises(AssertionError):
         fixest.feols('Y ~ X1 | X2', vcov = {'CRV3': 'group_id'})
+
+
+def test_depvar_numeric():
+
+    '''
+    test if feols() throws an error when the dependent variable is not numeric
+    '''
+
+    data = get_data()
+    data['Y'] = data['Y'].astype('str')
+    data['Y'] = pd.Categorical(data['Y'])
+
+    fixest = Fixest(data)
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1')
 
