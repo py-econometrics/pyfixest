@@ -374,6 +374,12 @@ class Fixest:
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
                     FEOLS.N = N
                     FEOLS.k = k
+                    if fval != "0":
+                        FEOLS.has_fixef = True
+                        FEOLS.fixef = fval
+                    else:
+                        FEOLS.has_fixef = False
+
                     #FEOLS.get_nobs()
 
                     if vcov is None:
