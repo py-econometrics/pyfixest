@@ -1,3 +1,4 @@
+from importlib import import_module
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -169,14 +170,16 @@ class Feols:
                 vcov_type = "hetero"
             )
 
+            print("ssc", self.ssc)
+
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
+                leverage = np.sum(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
-                    u = (1 - leverage) * self.u_hat
+                    u = self.u_hat / (1 - leverage)
                 else:
-                    u = np.sqrt(1 - leverage) * self.u_hat
+                    u = self.u_hat / np.sqrt(1 - leverage)
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
             self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
@@ -207,6 +210,8 @@ class Feols:
                 vcov_type = "CRV"
             )
 
+            print("ssc", self.ssc)
+
             if vcov_type_detail == "CRV1":
 
                 meat = np.zeros((self.k, self.k))
@@ -226,14 +231,11 @@ class Feols:
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
 
-                if self.has_fixef:
-                    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
+                #if self.has_fixef:
+                #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
                 k_params = self.k
 
-                # inverse hessian precomputed?
-                tXX = np.transpose(self.X) @ self.X
-                tXy = np.transpose(self.X) @ self.Y
                 beta_hat = self.beta_hat
 
                 clusters = clustid
@@ -242,20 +244,41 @@ class Feols:
 
                 beta_jack = np.zeros((n_groups, k_params))
 
-                # compute leave-one-out regression coefficients (aka clusterjacks')
-                for ixg, g in enumerate(clusters):
 
-                    Xg = self.X[np.equal(ixg, group)]
-                    Yg = self.Y[np.equal(ixg, group)]
-                    tXgXg = np.transpose(Xg) @ Xg
-                    # jackknife regression coefficient
-                    beta_jack[ixg,:] = (
-                        np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
-                    ).flatten()
+                if self.has_fixef == False:
+                    # inverse hessian precomputed?
+                    tXX = np.transpose(self.X) @ self.X
+                    tXy = np.transpose(self.X) @ self.Y
+
+                    # compute leave-one-out regression coefficients (aka clusterjacks')
+                    for ixg, g in enumerate(clusters):
+
+                        Xg = self.X[np.equal(ixg, group)]
+                        Yg = self.Y[np.equal(ixg, group)]
+                        tXgXg = np.transpose(Xg) @ Xg
+                        # jackknife regression coefficient
+                        beta_jack[ixg,:] = (
+                            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+                        ).flatten()
+
+                else:
+
+                    # lazy loading to avoid circular import
+                    fixest_module = import_module('pyfixest.fixest')
+                    Fixest_ = getattr(fixest_module, 'Fixest')
+
+                    for ixg, g in enumerate(clusters):
+                        # direct leave one cluster out implementation
+                        data = self.data[~np.equal(ixg, group)]
+                        model = Fixest_(data)
+                        #print("fml", self.fml)
+                        model.feols(self.fml, vcov = "iid")
+                        #print("beta_hat", model.beta_hat)
+                        beta_jack[ixg,:] = model.coef()["Estimate"].to_numpy()
 
 
                 # optional: beta_bar in MNW (2022)
-                center = "estimate"
+                center = "beta_center"
                 if center == 'estimate':
                     beta_center = beta_hat
                 else:
