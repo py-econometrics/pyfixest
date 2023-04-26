@@ -140,9 +140,14 @@ class Feols:
         elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
             self.vcov_type = "hetero"
             self.is_clustered = False
+            if vcov_type_detail in ["HC2", "HC3"]:
+                if self.has_fixef:
+                    raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
         elif vcov_type_detail in ["CRV1", "CRV3"]:
             self.vcov_type = "CRV"
             self.is_clustered = True
+
+
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -177,11 +182,19 @@ class Feols:
             elif vcov_type_detail in ["HC2", "HC3"]:
                 leverage = np.sum(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
-                    u = self.u_hat / (1 - leverage)
-                else:
                     u = self.u_hat / np.sqrt(1 - leverage)
+                else:
+                    print("compute HC3 errors")
+                    u = self.u_hat / (1-leverage)
 
+            #u = u.reshape(self.N, 1)
+            #print("shape u", u.shape)
+            #print("shape of X", self.X.shape)
+            #Xu = u * self.X
+            #print("shape of Xu", Xu.shape)
             meat = np.transpose(self.X) * (u ** 2) @ self.X
+            # set off diagonal elements to zero
+            #meat = np.transpose(Xu) @ Xu
             self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
 
         elif self.vcov_type == "CRV":
@@ -278,11 +291,12 @@ class Feols:
 
 
                 # optional: beta_bar in MNW (2022)
-                center = "beta_center"
-                if center == 'estimate':
-                    beta_center = beta_hat
-                else:
-                    beta_center = np.mean(beta_jack, axis = 0)
+                #center = "estimate"
+                #if center == 'estimate':
+                #    beta_center = beta_hat
+                #else:
+                #    beta_center = np.mean(beta_jack, axis = 0)
+                beta_center = beta_hat
 
                 vcov = np.zeros((k_params, k_params))
                 for ixg, g in enumerate(clusters):
