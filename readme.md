@@ -26,7 +26,7 @@ fixest.summary()
 # ###
 #
 # Dep. var.:  Y
-# Inference:  {'CRV1': 'id'}
+# Inference:  {'CRV1': 'group_id'}
 # Observations:  998
 #
 #            Estimate  Std. Error   t value  Pr(>|t|)
@@ -37,7 +37,7 @@ fixest.summary()
 #
 # Fixed effects:  X2
 # Dep. var.:  Y
-# Inference:  {'CRV1': 'id'}
+# Inference:  {'CRV1': 'group_id'}
 # Observations:  998
 #
 #     Estimate  Std. Error   t value  Pr(>|t|)
@@ -47,7 +47,7 @@ fixest.summary()
 #
 # Fixed effects:  X2+X3
 # Dep. var.:  Y
-# Inference:  {'CRV1': 'id'}
+# Inference:  {'CRV1': 'group_id'}
 # Observations:  998
 #
 #     Estimate  Std. Error   t value  Pr(>|t|)
