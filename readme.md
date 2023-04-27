@@ -12,27 +12,43 @@ For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest
 
 ```python
 import pyfixest as pf
+import numpy as np
 from pyfixest.utils import get_data
 
-data = get_data()
-
 fixest = pf.Fixest(data = data)
-fixest.feols("Y~X1 | X2", vcov = "HC1")
+fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'id'})
 fixest.summary()
-
 # ###
 #
-# model: feols()
-# fml: Y~X1 | X2
+# ---
+# ###
+#
+# Dep. var.:  Y
+# Inference:  {'CRV1': 'id'}
+# Observations:  998
+#
+#            Estimate  Std. Error   t value  Pr(>|t|)
+# Intercept  6.648203    0.220649 30.130262   0.00000
+#        X1 -0.141200    0.211081 -0.668937   0.50369
 # ---
 # ###
 #
 # Fixed effects:  X2
 # Dep. var.:  Y
-# Inference:  HC1
+# Inference:  {'CRV1': 'id'}
 # Observations:  998
 #
 #     Estimate  Std. Error   t value  Pr(>|t|)
 # X1 -0.142274    0.210556 -0.675707  0.499383
+# ---
+# ###
+#
+# Fixed effects:  X2+X3
+# Dep. var.:  Y
+# Inference:  {'CRV1': 'id'}
+# Observations:  998
+#
+#     Estimate  Std. Error   t value  Pr(>|t|)
+# X1 -0.096317    0.204801 -0.470296  0.638247
 ```
 
