@@ -1,3 +1,4 @@
+from importlib import import_module
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -117,7 +118,6 @@ class Feols:
             assert list(vcov.keys())[0] in ["CRV1", "CRV3"], "vcov dict key must be CRV1 or CRV3"
             assert isinstance(list(vcov.values())[0], str), "vcov dict value must be a string"
             assert list(vcov.values())[0] in self.data.columns, "vcov dict value must be a column in the data"
-            assert list(vcov.keys())[0] != "CRV3", "CRV3 currently not supported with arbitrary fixed effects"
         if isinstance(vcov, list):
             assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
             assert all(v in self.data.columns for v in vcov), "vcov list must contain columns in the data"
@@ -140,9 +140,14 @@ class Feols:
         elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
             self.vcov_type = "hetero"
             self.is_clustered = False
+            if vcov_type_detail in ["HC2", "HC3"]:
+                if self.has_fixef:
+                    raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
         elif vcov_type_detail in ["CRV1", "CRV3"]:
             self.vcov_type = "CRV"
             self.is_clustered = True
+
+
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -173,13 +178,14 @@ class Feols:
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                leverage = np.mean(self.X * (self.X @ self.tXXinv), axis=1)
+                leverage = np.sum(self.X * (self.X @ self.tXXinv), axis=1)
                 if vcov_type_detail == "HC2":
-                    u = (1 - leverage) * self.u_hat
+                    u = self.u_hat / np.sqrt(1 - leverage)
                 else:
-                    u = np.sqrt(1 - leverage) * self.u_hat
+                    u = self.u_hat / (1-leverage)
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
+            # set off diagonal elements to zero
             self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
 
         elif self.vcov_type == "CRV":
@@ -226,29 +232,62 @@ class Feols:
                 # check: is fixed effect cluster fixed effect?
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
-                assert self.has_fixef == False, "CRV3 currently not supported with arbitrary fixed effects"
 
-                beta_jack = np.zeros((self.G, self.k))
-                tXX = np.transpose(self.X) @ self.X
+                #if self.has_fixef:
+                #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
-                for ixg, g in enumerate(clustid):
+                k_params = self.k
 
-                    Xg = self.X[np.where(cluster_df == g)]
-                    Yg = self.Y[:, x][np.where(cluster_df == g)]
+                beta_hat = self.beta_hat
 
-                    tXgXg = np.transpose(Xg) @ Xg
+                clusters = clustid
+                n_groups = self.G
+                group = cluster_df
 
-                    # jackknife regression coefficient
-                    beta_jack[ixg, :] = (
-                        np.linalg.pinv(
-                            tXX - tXgXg) @ (self.tXy - np.transpose(Xg) @ Yg)
-                    ).flatten()
+                beta_jack = np.zeros((n_groups, k_params))
 
-                beta_center = self.beta_hat
 
-                vcov = np.zeros((self.k, self.k))
-                for ixg, g in enumerate(clustid):
-                    beta_centered = beta_jack[ixg, :] - beta_center
+                if self.has_fixef == False:
+                    # inverse hessian precomputed?
+                    tXX = np.transpose(self.X) @ self.X
+                    tXy = np.transpose(self.X) @ self.Y
+
+                    # compute leave-one-out regression coefficients (aka clusterjacks')
+                    for ixg, g in enumerate(clusters):
+
+                        Xg = self.X[np.equal(ixg, group)]
+                        Yg = self.Y[np.equal(ixg, group)]
+                        tXgXg = np.transpose(Xg) @ Xg
+                        # jackknife regression coefficient
+                        beta_jack[ixg,:] = (
+                            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+                        ).flatten()
+
+                else:
+
+                    # lazy loading to avoid circular import
+                    fixest_module = import_module('pyfixest.fixest')
+                    Fixest_ = getattr(fixest_module, 'Fixest')
+
+                    for ixg, g in enumerate(clusters):
+                        # direct leave one cluster out implementation
+                        data = self.data[~np.equal(ixg, group)]
+                        model = Fixest_(data)
+                        model.feols(self.fml, vcov = "iid")
+                        beta_jack[ixg,:] = model.coef()["Estimate"].to_numpy()
+
+
+                # optional: beta_bar in MNW (2022)
+                #center = "estimate"
+                #if center == 'estimate':
+                #    beta_center = beta_hat
+                #else:
+                #    beta_center = np.mean(beta_jack, axis = 0)
+                beta_center = beta_hat
+
+                vcov = np.zeros((k_params, k_params))
+                for ixg, g in enumerate(clusters):
+                    beta_centered = beta_jack[ixg,:] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
 
                 self.vcov = self.ssc * vcov
@@ -316,6 +355,3 @@ class Feols:
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
-
-
-

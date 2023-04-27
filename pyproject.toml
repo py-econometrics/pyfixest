@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.3.7"
+version = "0.3.9"
 description = "Draft package for high dimensional fixed effect OLS estimation"
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
 license = "MIT"
@@ -13,7 +13,7 @@ numpy = "^1.2"
 matplotlib = "^3.7"
 PyHDFE = "^0.1.1"
 scipy = "^1.9.0"
-formulaic = "^0.3.0"
+formulaic = "^0.6.0"
 pytest="^7.2.0"
 
 
