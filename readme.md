@@ -1,5 +1,8 @@
 ## PyFixest
 
+[![PyPI - Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
+![PyPI - Status](https://img.shields.io/pypi/status/pyfixest.svg)
 
 This is a draft package (highly experimental!) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package.
 
