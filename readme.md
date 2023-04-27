@@ -15,6 +15,8 @@ import pyfixest as pf
 import numpy as np
 from pyfixest.utils import get_data
 
+data = get_data()
+
 fixest = pf.Fixest(data = data)
 fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'id'})
 fixest.summary()
@@ -51,4 +53,6 @@ fixest.summary()
 #     Estimate  Std. Error   t value  Pr(>|t|)
 # X1 -0.096317    0.204801 -0.470296  0.638247
 ```
+
+
 
