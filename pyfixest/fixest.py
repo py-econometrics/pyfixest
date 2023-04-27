@@ -499,7 +499,10 @@ class Fixest:
         for x in list(self.model_res.keys()):
 
             split = x.split("|")
-            fe = split[1]
+            if len(split) > 1:
+                fe = split[1]
+            else:
+                fe = None
             depvar = split[0].split("~")[0]
             fxst = self.model_res[x]
             df = pd.DataFrame(
@@ -514,7 +517,8 @@ class Fixest:
 
             print('###')
             print('')
-            print('Fixed effects: ', fe)
+            if fe is not None:
+              print('Fixed effects: ', fe)
             #if fxst.split_log is not None:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)
