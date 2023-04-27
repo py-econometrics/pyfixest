@@ -489,12 +489,7 @@ class Fixest:
             None
         '''
 
-        print('###')
-        print('')
-        print("model: feols()")
-        print("fml:", self.fml)
         print('---')
-
 
         for x in list(self.model_res.keys()):
 
