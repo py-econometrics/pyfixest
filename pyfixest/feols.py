@@ -175,8 +175,6 @@ class Feols:
                 vcov_type = "hetero"
             )
 
-            print("ssc", self.ssc)
-
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
@@ -184,17 +182,10 @@ class Feols:
                 if vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
                 else:
-                    print("compute HC3 errors")
                     u = self.u_hat / (1-leverage)
 
-            #u = u.reshape(self.N, 1)
-            #print("shape u", u.shape)
-            #print("shape of X", self.X.shape)
-            #Xu = u * self.X
-            #print("shape of Xu", Xu.shape)
             meat = np.transpose(self.X) * (u ** 2) @ self.X
             # set off diagonal elements to zero
-            #meat = np.transpose(Xu) @ Xu
             self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
 
         elif self.vcov_type == "CRV":
@@ -222,8 +213,6 @@ class Feols:
                 vcov_sign = 1,
                 vcov_type = "CRV"
             )
-
-            print("ssc", self.ssc)
 
             if vcov_type_detail == "CRV1":
 
@@ -284,9 +273,7 @@ class Feols:
                         # direct leave one cluster out implementation
                         data = self.data[~np.equal(ixg, group)]
                         model = Fixest_(data)
-                        #print("fml", self.fml)
                         model.feols(self.fml, vcov = "iid")
-                        #print("beta_hat", model.beta_hat)
                         beta_jack[ixg,:] = model.coef()["Estimate"].to_numpy()
 
 
