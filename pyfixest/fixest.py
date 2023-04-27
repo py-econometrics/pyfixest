@@ -343,15 +343,22 @@ class Fixest:
                 model_frames = model_splits[x]
                 for _, fml in enumerate(model_frames):
 
-
-
+                    # get the (demeaned) model frame. key is fml without fixed effects
                     model_frame = model_frames[fml]
-                    full_fml = fml + "|" + fval
+
+                    # update formula with fixed effect. fval is "0" for no fixed effect
+                    if fval == "0":
+                        fml2 = fml
+                    else:
+                        fml2 = fml + "|" + fval
+
+                    # formula log: add information on sample split
                     if self.splitvar is not None:
                         split_log = str(self.split_categories[x])
-                        full_fml += "| split =" + split_log
+                        full_fml = fml2 + "| split =" + split_log
                     else:
                         split_log = None
+                        full_fml = fml2
 
                     Y = model_frame.iloc[:, 0].to_numpy()
                     X = model_frame.iloc[:, 1:]
@@ -360,20 +367,27 @@ class Fixest:
                     N = X.shape[0]
                     k = X.shape[1]
 
-
+                    # check for multicollinearity
                     if np.linalg.matrix_rank(X) < min(X.shape):
                         if self.ivars is not None:
-                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
                         else:
-                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + full_fml + ". The model is skipped. ")
+                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
                     FEOLS = Feols(Y, X)
+                    FEOLS.fml = fml2
                     FEOLS.ssc_dict = self.ssc_dict
                     FEOLS.get_fit()
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
                     FEOLS.N = N
                     FEOLS.k = k
+                    if fval != "0":
+                        FEOLS.has_fixef = True
+                        FEOLS.fixef = fval
+                    else:
+                        FEOLS.has_fixef = False
+
                     #FEOLS.get_nobs()
 
                     if vcov is None:
@@ -475,17 +489,15 @@ class Fixest:
             None
         '''
 
-        print('###')
-        print('')
-        print("model: feols()")
-        print("fml:", self.fml)
         print('---')
-
 
         for x in list(self.model_res.keys()):
 
             split = x.split("|")
-            fe = split[1]
+            if len(split) > 1:
+                fe = split[1]
+            else:
+                fe = None
             depvar = split[0].split("~")[0]
             fxst = self.model_res[x]
             df = pd.DataFrame(
@@ -500,7 +512,8 @@ class Fixest:
 
             print('###')
             print('')
-            print('Fixed effects: ', fe)
+            if fe is not None:
+              print('Fixed effects: ', fe)
             #if fxst.split_log is not None:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)

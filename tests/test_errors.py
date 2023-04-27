@@ -54,17 +54,20 @@ def test_cluster_na():
     with pytest.raises(ValueError):
         fixest.feols('Y ~ X1', vcov = {'CRV1': 'X3'})
 
-def test_error_crv3_fe():
+def test_error_hc23_fe():
 
     '''
-    test if CRV3 inference with fixed effects regressions raises an error (currently not supported)
+    test if HC2&HC3 inference with fixed effects regressions raises an error (currently not supported)
     '''
-    data = get_data()
-    data["group_id"][9] = np.nan
+    data = get_data().dropna()
 
     fixest = Fixest(data)
-    with pytest.raises(AssertionError):
-        fixest.feols('Y ~ X1 | X2', vcov = {'CRV3': 'group_id'})
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | X2', vcov = "HC2")
+
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | X2', vcov = "HC3")
+
 
 
 def test_depvar_numeric():

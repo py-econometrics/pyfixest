@@ -17,8 +17,8 @@
     <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
         <text x="31.5" y="15" fill="#010101" fill-opacity=".3">coverage</text>
         <text x="31.5" y="14">coverage</text>
-        <text x="80" y="15" fill="#010101" fill-opacity=".3">88%</text>
-        <text x="80" y="14">88%</text>
+        <text x="80" y="15" fill="#010101" fill-opacity=".3">79%</text>
+        <text x="80" y="14">79%</text>
     </g>
 </svg>
 
@@ -29,20 +29,28 @@ Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmake
 For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ```python
-from pyfixest import Fixest
+import pyfixest as pf
 from pyfixest.utils import get_data
 
 data = get_data()
 
-fixest = Fixest(data = data)
+fixest = pf.Fixest(data = data)
 fixest.feols("Y~X1 | X2", vcov = "HC1")
 fixest.summary()
-# ### Fixed-effects: X2
-# Dep. var.: Y
-#
-#     Estimate  Std. Error   t value  Pr(>|t|)
-# X1 -0.103285    0.172956 -0.597172  0.550393
-```
 
-Support for more [fixest formula-sugar](https://cran.r-project.org/web/packages/fixest/vignettes/multiple_estimations.html) is work in progress.
+# ###
+# 
+# model: feols()
+# fml: Y~X1 | X2
+# ---
+# ###
+# 
+# Fixed effects:  X2
+# Dep. var.:  Y 
+# Inference:  HC1
+# Observations:  998
+# 
+#     Estimate  Std. Error   t value  Pr(>|t|)
+# X1 -0.142274    0.210556 -0.675707  0.499383
+```
 
