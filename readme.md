@@ -18,7 +18,7 @@ from pyfixest.utils import get_data
 data = get_data()
 
 fixest = pf.Fixest(data = data)
-fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'id'})
+fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'group_id'})
 fixest.summary()
 # ###
 #
