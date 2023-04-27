@@ -45,3 +45,10 @@ jobs:
           pip install -r requirements_test.txt
       - name: Run tests
         run: pytest
+
+      - name: Generate Report
+        run: |
+          pip install coverage
+          coverage run -m pytest
+        - name: Upload coverage reports to Codecov
+          uses: codecov/codecov-action@v3
