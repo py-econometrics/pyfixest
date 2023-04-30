@@ -462,8 +462,8 @@ tabulate = "^0.9.0"
 [package.source]
 type = "git"
 url = "https://github.com/s3alfisc/wildboottest.git"
-reference = "dev"
-resolved_reference = "9e84521a6f80b47ea95cf10a0331067f015a7e36"
+reference = "main"
+resolved_reference = "8fbdd91d0decafc03e632b302f67d044e15146c9"
 
 [[package]]
 name = "wrapt"
@@ -488,7 +488,7 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "a2985ebce7c41f83157c5512f80e6805b251fde1bb5daff22befee3b55ce2e75"
+content-hash = "fb1b8d2f4866d0ae7d1b0eca28475c59b549564bdb4f1b94d39ca6e30aabbf92"
 
 [metadata.files]
 astor = [

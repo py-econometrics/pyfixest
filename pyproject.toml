@@ -17,7 +17,7 @@ PyHDFE = "^0.1.1"
 scipy = "^1.0.0"
 formulaic = "^0.6.0"
 pytest="^7.0.0"
-wildboottest = { git = "https://github.com/s3alfisc/wildboottest.git", branch = "dev" }
+wildboottest = { git = "https://github.com/s3alfisc/wildboottest.git", branch = "main" }
 
 [build-system]
 requires = ["poetry-core"]
