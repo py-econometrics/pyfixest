@@ -537,41 +537,47 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
 
-    def coef(self):
+    def coef(self) -> pd.DataFrame:
         '''
         Obtain the coefficients of the fitted models.
-
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
         '''
 
         df = self.tidy()
         return df[['coefnames', 'Estimate']]
 
-    def se(self):
+    def se(self)-> pd.DataFrame:
         '''
         Obtain the standard errors of the fitted models.
 
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
         return df[['coefnames', 'Std. Error']]
 
-    def tstat(self):
+    def tstat(self)-> pd.DataFrame:
         '''
         Obtain the t-statistics of the fitted models.
 
-        Returns: pd.Series
+         Returns:
+            A pd.DataFrame with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
         return df[['coefnames', 't value']]
 
-    def pvalue(self):
+    def pvalue(self) -> pd.DataFrame:
         '''
         Obtain the p-values of the fitted models.
 
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
@@ -653,17 +659,18 @@ class Fixest:
 
         Args:
 
-        B (int): The number of bootstrap iterations to run
-        param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
-        weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
-                            'rademacher' by default. Defaults to 'rademacher'.
-        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
-                            Defaults to True.
-        bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
-                            to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
-        seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
+            B (int): The number of bootstrap iterations to run
+            param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
+            weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
+                                'rademacher' by default. Defaults to 'rademacher'.
+            impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
+                                Defaults to True.
+            bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
+                                to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
+            seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
 
-        Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
+        Returns:
+            A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated statistic derives from.
         '''
 
 
