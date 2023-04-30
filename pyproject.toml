@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.3.14.0"
-description = "Draft package for high dimensional fixed effect OLS estimation"
+version = "0.4"
+description = "Experimental draft package for high dimensional fixed effect estimation"
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
 license = "MIT"
 readme = "readme.md"
