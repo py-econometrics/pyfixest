@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-#from wildboottest.wildboottest import WildboottestCL
+from wildboottest.wildboottest import WildboottestCL, WildboottestHC
 from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
@@ -372,48 +372,43 @@ class Feols:
         R[xnames.index(param)] = 1
         r = 0
 
-        #if cluster is None:
+        if cluster is None:
 
-        #    boot = WildboottestHC(X = X, Y = Y, R = R, r = r, B = B, seed = seed)
-        #    boot.get_adjustments(bootstrap_type = bootstrap_type)
-        #    boot.get_uhat(impose_null = impose_null)
-        #    boot.get_tboot(weights_type = weights_type)
-        #    boot.get_tstat()
-        #    boot.get_pvalue(pval_type = "two-tailed")
-        #    full_enumeration_warn = False
+            boot = WildboottestHC(X = X, Y = Y, R = R, r = r, B = B, seed = seed)
+            boot.get_adjustments(bootstrap_type = bootstrap_type)
+            boot.get_uhat(impose_null = impose_null)
+            boot.get_tboot(weights_type = weights_type)
+            boot.get_tstat()
+            boot.get_pvalue(pval_type = "two-tailed")
+            full_enumeration_warn = False
 
-        #else:
+        else:
 
-        if self.clustervar is None:
-            raise ValueError("Wild cluster bootstrap requires a clustering variable, but you have specified none in the .feols() call.")
-            # fetch the clustering variable
+            cluster = self.data[self.clustervar]
 
-        cluster = self.data[self.clustervar]
+            boot = WildboottestCL(X = X, Y = Y, cluster = cluster,
+                                R = R, B = B, seed = seed)
+            boot.get_scores(bootstrap_type = bootstrap_type, impose_null = impose_null, adj=adj, cluster_adj=cluster_adj)
+            _, _, full_enumeration_warn = boot.get_weights(weights_type = weights_type)
+            boot.get_numer()
+            boot.get_denom()
+            boot.get_tboot()
+            boot.get_vcov()
+            boot.get_tstat()
+            boot.get_pvalue(pval_type = "two-tailed")
 
-        boot = WildboottestCL(X = X, Y = Y, cluster = cluster,
-                             R = R, B = B, seed = seed)
-        boot.get_scores(bootstrap_type = bootstrap_type, impose_null = impose_null, adj=adj, cluster_adj=cluster_adj)
-        _, _, full_enumeration_warn = boot.get_weights(weights_type = weights_type)
-        boot.get_numer()
-        boot.get_denom()
-        boot.get_tboot()
-        boot.get_vcov()
-        boot.get_tstat()
-        boot.get_pvalue(pval_type = "two-tailed")
-
-        if full_enumeration_warn:
-            warnings.warn("2^G < the number of boot iterations, setting full_enumeration to True.")
+            if full_enumeration_warn:
+                warnings.warn("2^G < the number of boot iterations, setting full_enumeration to True.")
 
         res = {
-            'param': param,
-            'statistic': tstats,
-            'p-value': pvalues
+            'param':param,
+            'statistic': boot.t_stat,
+            'pvalue': boot.pvalue,
+            'bootstrap_type': bootstrap_type,
+            'impose_null' : impose_null
         }
 
-        res_df = pd.DataFrame(res).set_index('param')
-
-        if show:
-            print(res_df.to_markdown(floatfmt=".3f"))
+        res_df = pd.Series(res)
 
         return res_df
 
