@@ -59,6 +59,22 @@ fixest.vcov({'CRV1':'group_id'}).summary()
 # ---
 ```
 
+It is also possible to run a wild (cluster) bootstrap after estimation (via the [wildboottest module](https://github.com/s3alfisc/wildboottest)):
+
+```py
+fixest = Fixest(data = data)
+fixest.feols("Y~ csw(X1, X2, X3)", vcov = {"CRV1":"group_id"})
+fixest.wildboottest(param = "X1", B = 999)
+
+#	            param	     t value	Pr(>|t|)
+# fml
+# Y ~ X1	      X1	-0.710781	0.489489
+# Y ~ X1+X2	      X1	-0.726028	0.493493
+# Y ~ X1+X2+X3	  X1	-0.548795	0.596597
+```
+
+Note that the wild bootstrap currently does not support fixed effects in the regression model. Supporting fixed effects is work in progress.
+
 `PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. Note that every new call of `.feols()` attaches new regression results the `Fixest` object.
 
 ```py

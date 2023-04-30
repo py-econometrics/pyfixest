@@ -1,8 +1,10 @@
-from importlib import import_module
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import warnings
 
+from wildboottest.wildboottest import WildboottestCL, WildboottestHC
+from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
 from pyfixest.ssc_utils import get_ssc
@@ -334,6 +336,84 @@ class Feols:
         self.conf_int = (
             np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
         )
+
+
+    def get_wildboottest(self, B:int, cluster : Union[np.ndarray, pd.Series, pd.DataFrame, None], param : Union[str, None], weights_type: str, impose_null: bool , bootstrap_type: str, seed: Union[str, None] , adj: bool , cluster_adj: bool):
+
+        '''
+        Run a wild cluster bootstrap based on an object of type "Feols"
+
+        Args:
+
+        B (int): The number of bootstrap iterations to run
+        cluster (Union[None, np.ndarray, pd.Series, pd.DataFrame], optional): If None (default), a 'heteroskedastic' wild boostrap
+            is run. For a wild cluster bootstrap, requires a numpy array of dimension one,a  pandas Series or DataFrame, containing the clustering variable.
+        param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
+        weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
+                            'rademacher' by default. Defaults to 'rademacher'.
+        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
+                            Defaults to True.
+        bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
+                            to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
+        seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
+
+        Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
+        '''
+
+        if self.has_fixef:
+            raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
+
+        xnames = self.coefnames.to_list()
+        Y = self.Y
+        X = self.X
+
+        # later: allow r <> 0 and custom R
+        R = np.zeros(len(xnames))
+        R[xnames.index(param)] = 1
+        r = 0
+
+        if cluster is None:
+
+            boot = WildboottestHC(X = X, Y = Y, R = R, r = r, B = B, seed = seed)
+            boot.get_adjustments(bootstrap_type = bootstrap_type)
+            boot.get_uhat(impose_null = impose_null)
+            boot.get_tboot(weights_type = weights_type)
+            boot.get_tstat()
+            boot.get_pvalue(pval_type = "two-tailed")
+            full_enumeration_warn = False
+
+        else:
+
+            cluster = self.data[self.clustervar]
+
+            boot = WildboottestCL(X = X, Y = Y, cluster = cluster,
+                                R = R, B = B, seed = seed)
+            boot.get_scores(bootstrap_type = bootstrap_type, impose_null = impose_null, adj=adj, cluster_adj=cluster_adj)
+            _, _, full_enumeration_warn = boot.get_weights(weights_type = weights_type)
+            boot.get_numer()
+            boot.get_denom()
+            boot.get_tboot()
+            boot.get_vcov()
+            boot.get_tstat()
+            boot.get_pvalue(pval_type = "two-tailed")
+
+            if full_enumeration_warn:
+                warnings.warn("2^G < the number of boot iterations, setting full_enumeration to True.")
+
+        res = {
+            'param':param,
+            'statistic': boot.t_stat,
+            'pvalue': boot.pvalue,
+            'bootstrap_type': bootstrap_type,
+            'impose_null' : impose_null
+        }
+
+        res_df = pd.Series(res)
+
+        return res_df
+
+
+
 
     def get_nobs(self):
 
