@@ -667,17 +667,36 @@ class Fixest:
         '''
 
 
-        bootstrap_res = []
-        for model in list(self.model_res.keys()):
+        res = []
+        for x in list(self.model_res.keys()):
 
-            fxst = self.model_res[model]
-            cluster = fxst.clustervar
-            bootstrap_res.append(
-                fxst.get_wildboottest(B, cluster, param,  weights_type,
-                                      impose_null, bootstrap_type, seed, adj, cluster_adj)
+            fxst = self.model_res[x]
+
+            if hasattr(fxst, 'clustervar'):
+                cluster = fxst.clustervar
+            else:
+                cluster = None
+
+            boot_res = fxst.get_wildboottest(B, cluster, param,  weights_type, impose_null, bootstrap_type, seed, adj, cluster_adj)
+
+            pvalue = boot_res["pvalue"]
+            tstat = boot_res["statistic"]
+
+
+            res.append(
+                pd.Series(
+                    {
+                        'fml': x,
+                        'param':param,
+                        't value': tstat,
+                        'Pr(>|t|)': pvalue
+                    }
+                )
             )
 
-        return bootstrap_res
+        res = pd.concat(res, axis=1).T.set_index('fml')
+
+        return res
 
 
 def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: float, yintercept: Optional[int] = None,

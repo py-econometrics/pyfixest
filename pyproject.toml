@@ -11,12 +11,13 @@ repository = "https://github.com/s3alfisc/pyfixest"
 [tool.poetry.dependencies]
 python=">=3.8,<3.11"
 pandas="^1.4"
-numpy="^1.21"
+numpy=">=1.18"
 matplotlib = "^3.7"
 PyHDFE = "^0.1.1"
 scipy = "^1.0.0"
 formulaic = "^0.6.0"
-pytest="^3.0.0"
+pytest="^7.0.0"
+wildboottest = { git = "https://github.com/s3alfisc/wildboottest.git", branch = "dev" }
 
 [build-system]
 requires = ["poetry-core"]
