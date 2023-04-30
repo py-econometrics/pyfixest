@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.3.11.0"
+version = "0.3.14.0"
 description = "Draft package for high dimensional fixed effect OLS estimation"
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
 license = "MIT"
@@ -10,14 +10,14 @@ repository = "https://github.com/s3alfisc/pyfixest"
 
 [tool.poetry.dependencies]
 python=">=3.8,<3.11"
-pandas = "^1.5.1"
-numpy = "^1.2"
+pandas="^1.4"
+numpy=">=1.18"
 matplotlib = "^3.7"
 PyHDFE = "^0.1.1"
-scipy = "^1.9.0"
+scipy = "^1.0.0"
 formulaic = "^0.6.0"
-pytest="^7.2.0"
-
+pytest="^7.0.0"
+wildboottest = { git = "https://github.com/s3alfisc/wildboottest.git", branch = "dev" }
 
 [build-system]
 requires = ["poetry-core"]

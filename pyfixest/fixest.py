@@ -4,7 +4,6 @@ import re
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib.pyplot import cm
 
 from typing import Any, Union, Dict, Optional, List, Tuple
 from scipy.stats import norm
@@ -51,7 +50,6 @@ class Fixest:
 
         return fe, fe_na
 
-
     def _demean(self, data: pd.DataFrame, fval: str, ivars: List[str], drop_ref: str) -> None:
         '''
         Demean all regressions for a specification of fixed effects.
@@ -88,7 +86,6 @@ class Fixest:
         # algorithm
 
         lookup_demeaned_data = dict()
-
 
         for depvar in dict2fe.keys():
 
@@ -127,38 +124,40 @@ class Fixest:
                 # variant 1: if there are fixed effects to be projected out
                 if fe is not None:
                     na_index = (na_index + fe_na)
-                    fe2 = np.delete(fe, na_index, axis = 0)
+                    fe2 = np.delete(fe, na_index, axis=0)
                     # drop intercept
                     X = X[:, 1:]
                     co_varnames.remove("Intercept")
                     var_names.remove("Intercept")
 
                     # check if variables have already been demeaned
-                    Y = np.delete(Y, fe_na, axis = 0)
-                    X = np.delete(X, fe_na, axis = 0)
-                    YX = np.concatenate([Y,X], axis = 1)
+                    Y = np.delete(Y, fe_na, axis=0)
+                    X = np.delete(X, fe_na, axis=0)
+                    YX = np.concatenate([Y, X], axis=1)
 
                     na_index_str = ','.join(str(x) for x in na_index)
 
                     # check if looked dict has data for na_index
                     if lookup_demeaned_data.get(na_index_str) is not None:
                         # get data out of lookup table: list of [algo, data]
-                        algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
+                        algorithm, YX_demeaned_old = lookup_demeaned_data.get(
+                            na_index_str)
 
                         # get not yet demeaned covariates
-                        var_diff_names = list(set(var_names) - set(YX_demeaned_old.columns))[0]
+                        var_diff_names = list(
+                            set(var_names) - set(YX_demeaned_old.columns))[0]
                         var_diff_index = list(var_names).index(var_diff_names)
-                        var_diff = YX[:,var_diff_index]
+                        var_diff = YX[:, var_diff_index]
                         if var_diff.ndim == 1:
                             var_diff = var_diff.reshape(len(var_diff), 1)
 
-
                         YX_demean_new = algorithm.residualize(var_diff)
-                        YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis = 1)
+                        YX_demeaned = np.concatenate(
+                            [YX_demeaned_old, YX_demean_new], axis=1)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                        YX_demeaned.columns = list(YX_demeaned_old.columns) + [var_diff_names]
-
+                        YX_demeaned.columns = list(
+                            YX_demeaned_old.columns) + [var_diff_names]
 
                     else:
                         # not data demeaned yet for NA combination
@@ -167,25 +166,30 @@ class Fixest:
                             residualize_method='map',
                             drop_singletons=self.drop_singletons,
                         )
-                        #n_singletons = algorithm.singletons
-                        #if n_singletons is not None:
+                        # n_singletons = algorithm.singletons
+                        # if n_singletons is not None:
                         #    print(f'{n_singletons} columns are dropped due to singleton fixed effects.')
                         if self.drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
-                            print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
-                            dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
+                            print(
+                                algorithm.singletons, "columns are dropped due to singleton fixed effects.")
+                            dropped_singleton_indices = (
+                                np.where(algorithm._singleton_indices))[0].tolist()
                             na_index += dropped_singleton_indices
 
                         YX_demeaned = algorithm.residualize(YX)
                         YX_demeaned = pd.DataFrame(YX_demeaned)
-                        YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
+                        YX_demeaned.columns = list(
+                            dep_varnames) + list(co_varnames)
 
-                    lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
+                    lookup_demeaned_data[na_index_str] = [
+                        algorithm, YX_demeaned]
 
                 else:
                     # if no fixed effects
                     YX = np.concatenate([Y, X], axis=1)
                     YX_demeaned = pd.DataFrame(YX)
-                    YX_demeaned.columns = list(dep_varnames) + list(co_varnames)
+                    YX_demeaned.columns = list(
+                        dep_varnames) + list(co_varnames)
 
                 cols = list(dep_varnames) + list(co_varnames)
                 YX_dict[fml] = YX_demeaned[cols]
@@ -193,8 +197,7 @@ class Fixest:
 
         return YX_dict, na_dict
 
-
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc = ssc(), fixef_rm: str = "none") -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -228,6 +231,8 @@ class Fixest:
                 fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
         '''
 
+        # no whitespace in formula
+        fml = re.sub(r'\s+', ' ', fml)
         fxst_fml = FixestFormulaParser(fml)
 
         fxst_fml.get_fml_dict()
@@ -244,9 +249,9 @@ class Fixest:
 
         self.ssc_dict = ssc
         if fixef_rm == "singleton":
-          self.drop_singletons = True
+            self.drop_singletons = True
         else:
-          self.drop_singletons = False
+            self.drop_singletons = False
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
@@ -265,14 +270,15 @@ class Fixest:
             i0_type = self.data[ivars[0]].dtype
             i1_type = self.data[ivars[1]].dtype
             if not i0_type in ['category', "O"]:
-                raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " + i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
+                raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " +
+                                 i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
             if not i1_type in ['int64', 'float64', 'int32', 'float32']:
-                raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " + i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+                raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " +
+                                 i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
 
         else:
             ivars = None
             drop_ref = None
-
 
         # dropped_data_dict and demeaned_data_dict are
         # dictionaries with keys for each fixed effects combination and
@@ -294,7 +300,8 @@ class Fixest:
 
         if self.split is not None:
             if fsplit is not None:
-                raise ValueError("Cannot specify both split and fsplit. Please specify only one of the two.")
+                raise ValueError(
+                    "Cannot specify both split and fsplit. Please specify only one of the two.")
             else:
                 self.splitvar = self.data[self.split]
                 estimate_full_model = False
@@ -310,9 +317,11 @@ class Fixest:
         if self.splitvar is not None:
             self.split_categories = np.unique(self.splitvar)
             if splitvar_name not in self.data.columns:
-                raise ValueError("Split variable " + self.splitvar + " not found in data.")
+                raise ValueError("Split variable " +
+                                 self.splitvar + " not found in data.")
             if splitvar_name in self.var_dict.keys():
-                raise ValueError("Split variable " + self.splitvar + " cannot be a fixed effect variable.")
+                raise ValueError("Split variable " + self.splitvar +
+                                 " cannot be a fixed effect variable.")
             if self.splitvar.dtype.name != "category":
                 self.splitvar = pd.Categorical(self.splitvar)
 
@@ -321,7 +330,8 @@ class Fixest:
                 self.demeaned_data_dict[fval] = []
                 self.dropped_data_dict[fval] = []
                 data = self.data
-                demeaned_data, dropped_data = self._demean(data, fval, ivars, drop_ref)
+                demeaned_data, dropped_data = self._demean(
+                    data, fval, ivars, drop_ref)
                 self.demeaned_data_dict[fval].append(demeaned_data)
                 self.dropped_data_dict[fval].append(dropped_data)
 
@@ -332,7 +342,8 @@ class Fixest:
                 self.dropped_data_dict[fval] = []
                 for x in self.split_categories:
                     sub_data = self.data[x == self.splitvar]
-                    demeaned_data, dropped_data = self._demean(sub_data, fval, ivars, drop_ref)
+                    demeaned_data, dropped_data = self._demean(
+                        sub_data, fval, ivars, drop_ref)
                     self.demeaned_data_dict[fval].append(demeaned_data)
                     self.dropped_data_dict[fval].append(dropped_data)
 
@@ -370,16 +381,19 @@ class Fixest:
                     # check for multicollinearity
                     if np.linalg.matrix_rank(X) < min(X.shape):
                         if self.ivars is not None:
-                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
+                                             ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
                         else:
-                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                            raise ValueError(
+                                "The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
                     FEOLS = Feols(Y, X)
                     FEOLS.fml = fml2
                     FEOLS.ssc_dict = self.ssc_dict
                     FEOLS.get_fit()
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
-                    FEOLS.data = self.data.iloc[~self.data.index.isin(FEOLS.na_index), :]
+                    FEOLS.data = self.data.iloc[~self.data.index.isin(
+                        FEOLS.na_index), :]
                     FEOLS.N = N
                     FEOLS.k = k
                     if fval != "0":
@@ -388,7 +402,7 @@ class Fixest:
                     else:
                         FEOLS.has_fixef = False
 
-                    #FEOLS.get_nobs()
+                    # FEOLS.get_nobs()
 
                     if vcov is None:
                         # iid if no fixed effects
@@ -513,8 +527,8 @@ class Fixest:
             print('###')
             print('')
             if fe is not None:
-              print('Fixed effects: ', fe)
-            #if fxst.split_log is not None:
+                print('Fixed effects: ', fe)
+            # if fxst.split_log is not None:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
             print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
@@ -523,53 +537,53 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
 
-    def coef(self):
-
+    def coef(self) -> pd.DataFrame:
         '''
         Obtain the coefficients of the fitted models.
-
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
         '''
 
         df = self.tidy()
         return df[['coefnames', 'Estimate']]
 
-    def se(self):
-
+    def se(self)-> pd.DataFrame:
         '''
         Obtain the standard errors of the fitted models.
 
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
-        return df[['coefnames','Std. Error']]
+        return df[['coefnames', 'Std. Error']]
 
-    def tstat(self):
-
+    def tstat(self)-> pd.DataFrame:
         '''
         Obtain the t-statistics of the fitted models.
 
-        Returns: pd.Series
+         Returns:
+            A pd.DataFrame with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
-        return df[['coefnames','t value']]
+        return df[['coefnames', 't value']]
 
-    def pvalue(self):
-
+    def pvalue(self) -> pd.DataFrame:
         '''
         Obtain the p-values of the fitted models.
 
-        Returns: pd.Series
+        Returns:
+            A pd.DataFrame with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
+
         '''
 
         df = self.tidy()
         return df[['coefnames', 'Pr(>|t|)']]
 
-
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
-
         '''
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
         Args:
@@ -602,13 +616,13 @@ class Fixest:
         models = df.index.unique()
 
         _coefplot(
-            models = models,
-            figsize = figsize,
-            alpha = alpha,
-            yintercept = yintercept,
-            xintercept = xintercept,
-            df = df,
-            is_iplot = True
+            models=models,
+            figsize=figsize,
+            alpha=alpha,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            df=df,
+            is_iplot=True
         )
 
     def coefplot(self, alpha: float = 0.05, figsize: tuple = (5, 2), yintercept: int = 0, figtitle: str = None, figtext: str = None, rotate_xticks: int = 0) -> None:
@@ -628,17 +642,68 @@ class Fixest:
         models = df.index.unique()
 
         _coefplot(
-            models = models,
-            figsize = figsize,
-            alpha = alpha,
-            yintercept = yintercept,
-            xintercept = None,
-            df = df,
-            is_iplot = False,
+            models=models,
+            figsize=figsize,
+            alpha=alpha,
+            yintercept=yintercept,
+            xintercept=None,
+            df=df,
+            is_iplot=False,
             rotate_xticks=rotate_xticks
         )
 
+    def wildboottest(self, B, param: Union[str, None] = None, weights_type: str = 'rademacher', impose_null: bool = True, bootstrap_type: str = '11', seed: Union[str, None] = None, adj: bool = True, cluster_adj: bool = True) -> pd.DataFrame:
 
+        '''
+        Run a wild cluster bootstrap for all regressions in the Fixest object.
+
+        Args:
+
+            B (int): The number of bootstrap iterations to run
+            param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
+            weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
+                                'rademacher' by default. Defaults to 'rademacher'.
+            impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
+                                Defaults to True.
+            bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
+                                to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
+            seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
+
+        Returns:
+            A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated statistic derives from.
+        '''
+
+
+        res = []
+        for x in list(self.model_res.keys()):
+
+            fxst = self.model_res[x]
+
+            if hasattr(fxst, 'clustervar'):
+                cluster = fxst.clustervar
+            else:
+                cluster = None
+
+            boot_res = fxst.get_wildboottest(B, cluster, param,  weights_type, impose_null, bootstrap_type, seed, adj, cluster_adj)
+
+            pvalue = boot_res["pvalue"]
+            tstat = boot_res["statistic"]
+
+
+            res.append(
+                pd.Series(
+                    {
+                        'fml': x,
+                        'param':param,
+                        't value': tstat,
+                        'Pr(>|t|)': pvalue
+                    }
+                )
+            )
+
+        res = pd.concat(res, axis=1).T.set_index('fml')
+
+        return res
 
 
 def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: float, yintercept: Optional[int] = None,
@@ -661,14 +726,17 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
     if len(models) > 1:
 
-        fig, ax = plt.subplots(len(models), gridspec_kw={'hspace': 0.5}, figsize=figsize)
+        fig, ax = plt.subplots(len(models), gridspec_kw={
+                               'hspace': 0.5}, figsize=figsize)
 
         for x, model in enumerate(models):
 
             df_model = df.xs(model)
             coef = df_model["Estimate"].values
-            conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-            conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
+            conf_l = coef - \
+                df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+            conf_u = coef + \
+                df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
             coefnames = df_model["coefnames"].values.tolist()
 
             # could be moved out of the for loop, as the same ivars for all
@@ -680,20 +748,25 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
                     r'\[T\.([\d\.\-]+)\]', string)]
 
             # in the future: add reference category
-            #if ref is not None:
+            # if ref is not None:
             #    coef = np.append(coef, 0)
             #    conf_l = np.append(conf_l, 0)
             #    conf_u = np.append(conf_u, 0)
             #    coefnames = np.append(coefnames, ref)
 
-            ax[x].scatter(coefnames,coef, color= "b", alpha = 0.8)
-            ax[x].scatter(coefnames,conf_u, color = "b", alpha = 0.8, marker = "_", s = 100)
-            ax[x].scatter(coefnames,conf_l, color = "b", alpha = 0.8, marker = "_", s = 100)
-            ax[x].vlines(coefnames, ymin=conf_l, ymax=conf_u, color= "b", alpha = 0.8)
+            ax[x].scatter(coefnames, coef, color="b", alpha=0.8)
+            ax[x].scatter(coefnames, conf_u, color="b",
+                          alpha=0.8, marker="_", s=100)
+            ax[x].scatter(coefnames, conf_l, color="b",
+                          alpha=0.8, marker="_", s=100)
+            ax[x].vlines(coefnames, ymin=conf_l,
+                         ymax=conf_u, color="b", alpha=0.8)
             if yintercept is not None:
-                ax[x].axhline(yintercept, color='red', linestyle='--', alpha = 0.5)
+                ax[x].axhline(yintercept, color='red',
+                              linestyle='--', alpha=0.5)
             if xintercept is not None:
-                ax[x].axvline(xintercept, color='red', linestyle='--', alpha = 0.5)
+                ax[x].axvline(xintercept, color='red',
+                              linestyle='--', alpha=0.5)
             ax[x].set_ylabel('Coefficients')
             ax[x].set_title(model)
             ax[x].tick_params(axis='x', rotation=rotate_xticks)
@@ -707,7 +780,7 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
         df_model = df.xs(model)
         coef = df_model["Estimate"].values
         conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        conf_u = coef + df_model["Std. Error"].values  * norm.ppf(1 - alpha / 2)
+        conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
         coefnames = df_model["coefnames"].values.tolist()
 
         if is_iplot == True:
@@ -716,26 +789,25 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
                 r'\[T\.([\d\.\-]+)\]', string)]
 
         # in the future: add reference category
-        #if ref is not None:
+        # if ref is not None:
         #    coef = np.append(coef, 0)
         #    conf_l = np.append(conf_l, 0)
         #    conf_u = np.append(conf_u, 0)
         #    coefnames = np.append(coefnames, ref)
 
-                #c = next(color)
+            # c = next(color)
 
-        ax.scatter(coefnames,coef, color= "b", alpha = 0.8)
-        ax.scatter(coefnames,conf_u, color = "b", alpha = 0.8, marker = "_", s = 100)
-        ax.scatter(coefnames,conf_l, color = "b", alpha = 0.8, marker = "_", s = 100)
-        ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color= "b", alpha = 0.8)
+        ax.scatter(coefnames, coef, color="b", alpha=0.8)
+        ax.scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
+        ax.scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
+        ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
         if yintercept is not None:
-            ax.axhline(yintercept, color='red', linestyle='--', alpha = 0.5)
+            ax.axhline(yintercept, color='red', linestyle='--', alpha=0.5)
         if xintercept is not None:
-            ax.axvline(xintercept, color='red', linestyle='--', alpha = 0.5)
+            ax.axvline(xintercept, color='red', linestyle='--', alpha=0.5)
         ax.set_ylabel('Coefficients')
         ax.set_title(model)
         ax.tick_params(axis='x', rotation=rotate_xticks)
-
 
         plt.show()
         plt.close()
