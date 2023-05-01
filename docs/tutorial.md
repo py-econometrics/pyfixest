@@ -68,9 +68,9 @@ fixest.wildboottest(param = "X1", B = 999)
 
 #	            param	     t value	Pr(>|t|)
 # fml
-# Y ~ X1	      X1	-0.710781	0.489489
-# Y ~ X1+X2	      X1	-0.726028	0.493493
-# Y ~ X1+X2+X3	  X1	-0.548795	0.596597
+# Y ~ X1	          X1	-0.710781	0.489489
+# Y ~ X1+X2	          X1	-0.726028	0.493493
+# Y ~ X1+X2+X3	      X1	-0.548795	0.596597
 ```
 
 Note that the wild bootstrap currently does not support fixed effects in the regression model. Supporting fixed effects is work in progress.
