@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.4.1.5"
+version = "0.4.1.6"
 description = "Experimental draft package for high dimensional fixed effect estimation"
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
 license = "MIT"
@@ -22,3 +22,9 @@ wildboottest = { git = "https://github.com/s3alfisc/wildboottest.git", branch = 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+mkdocs-material = "^8.5.10"
+mkdocstrings = "^0.19.0"
+
+[tool.poetry.group.dev.dependencies]
+mkdocstrings-python-legacy = "^0.2.3"
+mkdocstrings = {version = "^0.19.0", extras = ["python"], optional = true }
