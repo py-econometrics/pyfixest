@@ -126,7 +126,8 @@ class Fixest:
                     na_index = (na_index + fe_na)
                     fe2 = np.delete(fe, na_index, axis=0)
                     # drop intercept
-                    X = X[:, 1:]
+                    intercept_index = co_varnames.index("Intercept")
+                    X = np.delete(X, intercept_index, axis = 1)
                     co_varnames.remove("Intercept")
                     var_names.remove("Intercept")
 
