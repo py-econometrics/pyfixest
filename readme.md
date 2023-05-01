@@ -4,7 +4,7 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
 ![PyPI - Status](https://img.shields.io/pypi/status/pyfixest.svg)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
-[![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/main/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
+[![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
 This is a draft package (highly experimental!) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package.
 
