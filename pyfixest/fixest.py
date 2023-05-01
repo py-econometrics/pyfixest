@@ -441,9 +441,12 @@ class Fixest:
             None
         '''
 
+        self.vcov_log = vcov
+
         for model in list(self.model_res.keys()):
 
             fxst = self.model_res[model]
+            fxst.vcov_log = vcov
 
             fxst.get_vcov(vcov=vcov)
             fxst.get_inference()
