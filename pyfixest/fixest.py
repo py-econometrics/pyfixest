@@ -77,6 +77,8 @@ class Fixest:
             fe_na = None
 
         dict2fe = self.fml_dict2.get(fval)
+        if self.is_iv:
+            dict2fe_iv = self.fml_dict2_iv.get(fval)
 
         # create lookup table with NA index key
         # for each regression, check if lookup table already
@@ -87,6 +89,7 @@ class Fixest:
 
         lookup_demeaned_data = dict()
 
+        # loop over both dict2fe and dict2fe_iv (if the latter is not None)
         for depvar in dict2fe.keys():
 
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
@@ -232,21 +235,40 @@ class Fixest:
                 fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
         '''
 
-        # no whitespace in formula
-        fml = re.sub(r'\s+', ' ', fml)
+        self.fml = fml
+        self.split = None
+
+        # deparse formula, at least partially
         fxst_fml = FixestFormulaParser(fml)
 
+        if fxst_fml.is_iv:
+            self.is_iv = True
+        else:
+            self.is_iv = False
+
+        # add function argument to these methods for IV
         fxst_fml.get_fml_dict()
         fxst_fml.get_var_dict()
         fxst_fml._transform_fml_dict()
 
-        self.fml = fml
-        self.split = None
+        if self.is_iv:
+            # create required dicts for first stage IV regressions
+            fxst_fml.get_fml_dict(iv = True)
+            fxst_fml.get_var_dict(iv = True)
+            fxst_fml._transform_fml_dict(iv = True)
+
 
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.fml_dict2 = fxst_fml.fml_dict2
+
+        if self.is_iv:
+            self.fml_dict_iv = fxst_fml.fml_dict_iv
+            self.var_dict_iv = fxst_fml.var_dict_iv
+            self.fml_dict2 = fxst_fml.fml_dict2
+            
         self.ivars = fxst_fml.ivars
+
 
         self.ssc_dict = ssc
         if fixef_rm == "singleton":
