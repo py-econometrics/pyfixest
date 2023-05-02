@@ -48,6 +48,7 @@ Supported covariance types are "iid", "HC1-3", CRV1 and CRV3 (one-way clustering
 `.vcov()` method:
 
 ```py
+
 fixest.vcov({'CRV1':'group_id'}).summary()
 # >>> fixest.vcov({'CRV1':'group_id'}).summary()
 #
