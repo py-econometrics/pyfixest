@@ -83,8 +83,8 @@ class FixestFormulaParser:
             # all rhs variables for the first stage (endog variable replaced with instrument)
             first_stage_covars_list = covars.split("+")
             first_stage_covars_list[first_stage_covars_list.index(endogvars)] = instruments
-            first_stage_covars_list = "+".join(first_stage_covars_list)
-            self.covars_first_stage = _unpack_fml(first_stage_covars_list)
+            self.first_stage_covars_list = "+".join(first_stage_covars_list)
+            self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
             self.depvars_first_stage = endogvars
         else:
             self.is_iv = False
@@ -160,17 +160,31 @@ class FixestFormulaParser:
     def _transform_fml_dict(self, iv = False):
 
         fml_dict2 = dict()
+        
+        if iv: 
+        
+            for fe in self.fml_dict_iv.keys():
+  
+                fml_dict2[fe] = dict()
+  
+                for fml in self.fml_dict_iv.get(fe):
+                    depvars, covars = fml.split("~")
+                    if fml_dict2[fe].get(depvars) is None:
+                        fml_dict2[fe][depvars] = [covars]
+                    else:
+                        fml_dict2[fe][depvars].append(covars)
+        else: 
 
-        for fe in self.fml_dict.keys():
-
-            fml_dict2[fe] = dict()
-
-            for fml in self.fml_dict.get(fe):
-                depvars, covars = fml.split("~")
-                if fml_dict2[fe].get(depvars) is None:
-                    fml_dict2[fe][depvars] = [covars]
-                else:
-                    fml_dict2[fe][depvars].append(covars)
+          for fe in self.fml_dict.keys():
+  
+              fml_dict2[fe] = dict()
+  
+              for fml in self.fml_dict.get(fe):
+                  depvars, covars = fml.split("~")
+                  if fml_dict2[fe].get(depvars) is None:
+                      fml_dict2[fe][depvars] = [covars]
+                  else:
+                      fml_dict2[fe][depvars].append(covars)
 
         if iv:
             self.fml_dict2_iv = fml_dict2
