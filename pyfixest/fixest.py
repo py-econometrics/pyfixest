@@ -97,10 +97,22 @@ class Fixest:
 
                 covar2 = covar
                 depvar2 = depvar
-
+                
                 fml = depvar2 + " ~ " + covar2
 
-                Y, X = model_matrix(fml, data)
+                if self.is_iv: 
+                    instruments2 = dict2fe_iv.get(depvar)[0] 
+                    endogvar = list(set(covar2.split("+")) - set(instruments2.split("+")))[0]
+                    instrument = list(set(instruments2.split("+")) - set(covar2.split("+")))[0]
+                    fml2 = instrument + "+" + fml
+                    rhs, lhs = model_matrix(fml2, data)
+                 
+                    Y = rhs[[depvar]]
+                    I = rhs[[instrument]]
+                    X = lhs
+                else: 
+                    Y, X = model_matrix(fml, data)
+
                 na_index = list(set(data.index) - set(Y.index))
 
                 if self.ivars is not None:
@@ -109,16 +121,19 @@ class Fixest:
 
                 dep_varnames = list(Y.columns)
                 co_varnames = list(X.columns)
+                iv_varnames = list(I.columns)
                 var_names = list(dep_varnames) + list(co_varnames)
-
+                
                 if self.ivars is not None:
                     self.icovars = [s for s in co_varnames if s.startswith(
                         ivars[0]) and s.endswith(ivars[1])]
                 else:
                     self.icovars = None
 
-                Y = Y.to_numpy()
+                Y = Y.to_numpy().reshape(len(Y), 1)
                 X = X.to_numpy()
+                if self.is_iv:
+                  I = I.to_numpy().reshape(len(I), 1)
 
                 if Y.shape[1] > 1:
                     raise ValueError(
@@ -131,14 +146,23 @@ class Fixest:
                     # drop intercept
                     intercept_index = co_varnames.index("Intercept")
                     X = np.delete(X, intercept_index, axis = 1)
+                    #if self.is_iv: 
+                    #    I = np.delete(I, intercept_index, axis = 1)
                     co_varnames.remove("Intercept")
                     var_names.remove("Intercept")
+                    #iv_varnames.remove("Intercept")
 
                     # check if variables have already been demeaned
                     Y = np.delete(Y, fe_na, axis=0)
                     X = np.delete(X, fe_na, axis=0)
-                    YX = np.concatenate([Y, X], axis=1)
+                    if self.is_iv: 
+                        I = np.delete(I, fe_na, axis=0)
 
+                    if self.is_iv: 
+                        YXZ = np.concatenate([Y, X, I], axis = 1)
+                    else: 
+                        YXZ = np.concatenate([Y, X], axis=1)
+                        
                     na_index_str = ','.join(str(x) for x in na_index)
 
                     # check if looked dict has data for na_index
@@ -180,23 +204,33 @@ class Fixest:
                                 np.where(algorithm._singleton_indices))[0].tolist()
                             na_index += dropped_singleton_indices
 
-                        YX_demeaned = algorithm.residualize(YX)
-                        YX_demeaned = pd.DataFrame(YX_demeaned)
-                        YX_demeaned.columns = list(
-                            dep_varnames) + list(co_varnames)
+                        YXZ_demeaned = algorithm.residualize(YXZ)
+                        YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                        
+                        cols =  list(dep_varnames) + list(co_varnames)
+                        if self.is_iv: 
+                            cols += iv_varnames
+                            
+                        YXZ_demeaned.columns = cols
 
                     lookup_demeaned_data[na_index_str] = [
-                        algorithm, YX_demeaned]
+                        algorithm, YXZ_demeaned]
 
                 else:
                     # if no fixed effects
-                    YX = np.concatenate([Y, X], axis=1)
-                    YX_demeaned = pd.DataFrame(YX)
-                    YX_demeaned.columns = list(
-                        dep_varnames) + list(co_varnames)
+                    if self.is_iv: 
+                        YXZ = np.concatenate([Y, X, I], axis=1)
+                    else: 
+                        YXZ = np.concatenate([Y, X], axis=1)
+                    
+                    YXZ_demeaned = pd.DataFrame(YXZ)
+                    
+                    cols = list(dep_varnames) + list(co_varnames)
+                    if self.is_iv: 
+                        cols += list(iv_varnames)
+                    YXZ_demeaned.columns = list(dep_varnames) + list(co_varnames) + list(iv_varnames)
 
-                cols = list(dep_varnames) + list(co_varnames)
-                YX_dict[fml] = YX_demeaned[cols]
+                YX_dict[fml] = YXZ_demeaned[cols]
                 na_dict[fml] = na_index
 
         return YX_dict, na_dict
@@ -265,8 +299,8 @@ class Fixest:
         if self.is_iv:
             self.fml_dict_iv = fxst_fml.fml_dict_iv
             self.var_dict_iv = fxst_fml.var_dict_iv
-            self.fml_dict2 = fxst_fml.fml_dict2
-            
+            self.fml_dict2_iv = fxst_fml.fml_dict2_iv
+
         self.ivars = fxst_fml.ivars
 
 
@@ -528,8 +562,6 @@ class Fixest:
         Returns:
             None
         '''
-
-        print('---')
 
         for x in list(self.model_res.keys()):
 
