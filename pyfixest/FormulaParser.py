@@ -59,16 +59,21 @@ class FixestFormulaParser:
             if "~" in fml_split[1]:
                 fevars = "0"
                 endogvars, instruments = fml_split[1].split("~")
+            else:
+                fevars = fml_split[1]
+                endogvars = None
+                instruments = None
         elif len(fml_split) == 3:
             fevars = fml_split[1]
             endogvars, instruments = fml_split[2].split("~")
 
-        if len(endogvars) > len(instruments):
-            raise ValueError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
-        elif len(endogvars) < len(instruments):
-            raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
-        else:
-            pass
+        if endogvars is not None:
+            if len(endogvars) > len(instruments):
+                raise ValueError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+            elif len(endogvars) < len(instruments):
+                raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+            else:
+                pass
 
         # Parse all individual formula components into lists
         self.depvars = depvars.split("+")
@@ -111,7 +116,10 @@ class FixestFormulaParser:
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
-        self.covars_first_stage_fml = _pack_to_fml(self.covars_first_stage)
+        if instruments is not None: 
+            self.covars_first_stage_fml = _pack_to_fml(self.covars_first_stage)
+        else: 
+            self.covars_first_stage_fml = None
         #if "^" in self.covars:
         #    raise CovariateInteractionError("Please use 'i()' or ':' syntax to interact covariates.")
 
@@ -160,25 +168,25 @@ class FixestFormulaParser:
     def _transform_fml_dict(self, iv = False):
 
         fml_dict2 = dict()
-        
-        if iv: 
-        
+
+        if iv:
+
             for fe in self.fml_dict_iv.keys():
-  
+
                 fml_dict2[fe] = dict()
-  
+
                 for fml in self.fml_dict_iv.get(fe):
                     depvars, covars = fml.split("~")
                     if fml_dict2[fe].get(depvars) is None:
                         fml_dict2[fe][depvars] = [covars]
                     else:
                         fml_dict2[fe][depvars].append(covars)
-        else: 
+        else:
 
           for fe in self.fml_dict.keys():
-  
+
               fml_dict2[fe] = dict()
-  
+
               for fml in self.fml_dict.get(fe):
                   depvars, covars = fml.split("~")
                   if fml_dict2[fe].get(depvars) is None:
