@@ -22,6 +22,8 @@ class Feols:
         Dependent variable of the regression.
     X : Union[np.ndarray, pd.DataFrame]
         Independent variable of the regression.
+    Z: Union[np.ndarray, pd.DataFrame]
+        Instruments of the regression.
 
     Attributes
     ----------
@@ -29,6 +31,8 @@ class Feols:
         The dependent variable of the regression.
     X : np.ndarray
         The independent variable of the regression.
+    Z : np.ndarray
+        The instruments of the regression.
     N : int
         The number of observations.
     k : int
@@ -48,7 +52,7 @@ class Feols:
 
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
 
         if not isinstance(Y, (np.ndarray)):
             raise TypeError("Y must be a numpy array.")
@@ -57,9 +61,12 @@ class Feols:
 
         self.Y = Y
         self.X = X
+        self.Z = Z
 
         if self.X.ndim != 2:
             raise ValueError("X must be a 2D array")
+        if self.Z.ndim != 2:
+            raise ValueError("Z must be a 2D array")
 
         self.N, self.k = X.shape
 
@@ -68,11 +75,11 @@ class Feols:
         Regression estimation for a single model, via ordinary least squares (OLS).
         '''
 
-        self.tXX = np.transpose(self.X) @ self.X
-        self.tXXinv = np.linalg.inv(self.tXX)
+        self.tXZ = np.transpose(self.X) @ self.Z
+        self.tXZinv = np.linalg.inv(self.tXZ)
 
-        self.tXy = (np.transpose(self.X) @ self.Y)
-        beta_hat = self.tXXinv @ self.tXy
+        self.tZy = (np.transpose(self.Z) @ self.Y)
+        beta_hat = self.tXZinv @ self.tZy
         self.beta_hat = beta_hat.flatten()
         self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y - self.Y_hat)
@@ -150,6 +157,9 @@ class Feols:
             self.is_clustered = True
 
 
+        if self.is_iv:
+            if self.vcov_type in ["CRV3"]:
+                raise ValueError("CRV3 inference is not supported for IV regressions.")
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -164,7 +174,7 @@ class Feols:
             )
 
             # only relevant factor for iid in ssc: fixef.K
-            self.vcov =  self.ssc * self.tXXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+            self.vcov =  self.ssc * self.tXZinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
 
         elif self.vcov_type == 'hetero':
 
@@ -180,7 +190,7 @@ class Feols:
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                leverage = np.sum(self.X * (self.X @ self.tXXinv), axis=1)
+                leverage = np.sum(self.X * (self.X @ self.tXZinv), axis=1)
                 if vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
                 else:
@@ -188,7 +198,7 @@ class Feols:
 
             meat = np.transpose(self.X) * (u ** 2) @ self.X
             # set off diagonal elements to zero
-            self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
+            self.vcov =  self.ssc * self.tXZinv @ meat @  self.tXZinv
 
         elif self.vcov_type == "CRV":
 
@@ -227,7 +237,7 @@ class Feols:
                     score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.vcov = self.ssc * self.tXXinv @ meat @ self.tXXinv
+                self.vcov = self.ssc * self.tXZinv @ meat @ self.tXZinv
 
             elif vcov_type_detail == "CRV3":
 
