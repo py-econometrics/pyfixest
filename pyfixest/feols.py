@@ -75,14 +75,14 @@ class Feols:
         Regression estimation for a single model, via ordinary least squares (OLS).
         '''
 
-        self.tXZ = np.transpose(self.X) @ self.Z
-        self.tXZinv = np.linalg.inv(self.tXZ)
+        self.tZX = np.transpose(self.Z) @ self.X
+        self.tZXinv = np.linalg.inv(self.tZX)
 
         self.tZy = (np.transpose(self.Z) @ self.Y)
-        beta_hat = self.tXZinv @ self.tZy
+        beta_hat = self.tZXinv @ self.tZy
         self.beta_hat = beta_hat.flatten()
         self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y - self.Y_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -174,8 +174,11 @@ class Feols:
             )
 
             # only relevant factor for iid in ssc: fixef.K
-            self.vcov =  self.ssc * self.tXZinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
-
+            if self.is_iv == False:
+                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+            else:
+                meat = self.Z.transpose() @ np.diag(np.sum(self.u_hat ** 2) / (self.N - 1)) @ self.Z
+                self.vcov =  self.ssc * self.tZXinv @ meat @ self.tZXinv
         elif self.vcov_type == 'hetero':
 
             self.ssc = get_ssc(
@@ -190,15 +193,15 @@ class Feols:
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                leverage = np.sum(self.X * (self.X @ self.tXZinv), axis=1)
+                leverage = np.sum(self.X * (self.X @ self.tZXinv), axis=1)
                 if vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
                 else:
                     u = self.u_hat / (1-leverage)
 
-            meat = np.transpose(self.X) * (u ** 2) @ self.X
+            meat = np.transpose(self.Z) * (u ** 2) @ self.Z
             # set off diagonal elements to zero
-            self.vcov =  self.ssc * self.tXZinv @ meat @  self.tXZinv
+            self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
 
         elif self.vcov_type == "CRV":
 
@@ -230,14 +233,14 @@ class Feols:
 
                 meat = np.zeros((self.k, self.k))
 
-                for igx, g, in enumerate(clustid):
+                for _, g, in enumerate(clustid):
 
-                    Xg = self.X[np.where(cluster_df == g)]
+                    Zg = self.Z[np.where(cluster_df == g)]
                     ug = self.u_hat[np.where(cluster_df == g)]
-                    score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
+                    score_g = (np.transpose(Zg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.vcov = self.ssc * self.tXZinv @ meat @ self.tXZinv
+                self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
 
             elif vcov_type_detail == "CRV3":
 
@@ -374,7 +377,7 @@ class Feols:
             raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
 
         xnames = self.coefnames.to_list()
-        Y = self.Y
+        Y = self.Y.flatten()
         X = self.X
 
         # later: allow r <> 0 and custom R

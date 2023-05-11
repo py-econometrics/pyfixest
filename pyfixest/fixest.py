@@ -66,7 +66,7 @@ class Fixest:
             None
         '''
 
-        YX_dict = dict()
+        YXZ_dict = dict()
         na_dict = dict()
         var_dict = dict()
 
@@ -94,7 +94,7 @@ class Fixest:
         for depvar in dict2fe.keys():
 
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
-            for c, covar in enumerate(dict2fe.get(depvar)):
+            for _, covar in enumerate(dict2fe.get(depvar)):
 
                 covar2 = covar
                 depvar2 = depvar
@@ -120,27 +120,38 @@ class Fixest:
                     if drop_ref is not None:
                         X = X.drop(drop_ref, axis=1)
 
-                dep_varnames = list(Y.columns)
-                co_varnames = list(X.columns)
-                var_names = list(dep_varnames) + list(co_varnames)
+                y_names = list(Y.columns)
+                x_names = list(X.columns)
+                yxz_names = list(y_names) + list(x_names)
                 if self.is_iv:
-                    iv_varnames = list(I.columns)
-                    z_varnames = list(set(co_varnames) - set([endogvar]))
-                    z_varnames.append(instrument)
+                    iv_names = list(I.columns)
+                    #z_varnames = list(set(x_names) - set([endogvar]))
+                    #z_varnames.append(instrument)
+                    x_names_copy = x_names.copy()
+                    x_names_copy.remove(endogvar)
+                    z_names = x_names_copy + [instrument]
+                    cols = yxz_names + iv_names
                 else:
-                    iv_varnames = None
-                    z_varnames = None
+                    iv_names = None
+                    z_names = None
+                    cols = yxz_names
 
                 if self.ivars is not None:
-                    self.icovars = [s for s in co_varnames if s.startswith(
+                    self.icovars = [s for s in x_names if s.startswith(
                         ivars[0]) and s.endswith(ivars[1])]
                 else:
                     self.icovars = None
 
-                Y = Y.to_numpy().reshape(len(Y), 1)
+
+                Y = Y.to_numpy()
+                #if Y.ndim != 1:
+                #    Y = Y.reshape((len(Y), 1))
+                #.reshape((len(Y), 1))
                 X = X.to_numpy()
                 if self.is_iv:
-                  I = I.to_numpy().reshape(len(I), 1)
+                    I = I.to_numpy()
+                    if I.ndim != 1:
+                        I = I.reshape((len(I), 1))
 
                 if Y.shape[1] > 1:
                     raise ValueError(
@@ -151,14 +162,14 @@ class Fixest:
                     na_index = (na_index + fe_na)
                     fe2 = np.delete(fe, na_index, axis=0)
                     # drop intercept
-                    intercept_index = co_varnames.index("Intercept")
+                    intercept_index = x_names.index("Intercept")
                     X = np.delete(X, intercept_index, axis = 1)
                     #if self.is_iv:
                     #    I = np.delete(I, intercept_index, axis = 1)
-                    co_varnames.remove("Intercept")
-                    var_names.remove("Intercept")
-                    if self.is_iv: 
-                        z_varnames.remove("Intercept")
+                    x_names.remove("Intercept")
+                    yxz_names.remove("Intercept")
+                    if self.is_iv:
+                        z_names.remove("Intercept")
 
                     # check if variables have already been demeaned
                     Y = np.delete(Y, fe_na, axis=0)
@@ -181,8 +192,8 @@ class Fixest:
 
                         # get not yet demeaned covariates
                         var_diff_names = list(
-                            set(var_names) - set(YXZ_demeaned_old.columns))[0]
-                        var_diff_index = list(var_names).index(var_diff_names)
+                            set(yxz_names) - set(YXZ_demeaned_old.columns))[0]
+                        var_diff_index = list(yxz_names).index(var_diff_names)
                         var_diff = YXZ[:, var_diff_index]
                         if var_diff.ndim == 1:
                             var_diff = var_diff.reshape(len(var_diff), 1)
@@ -215,9 +226,8 @@ class Fixest:
                         YXZ_demeaned = algorithm.residualize(YXZ)
                         YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
 
-                        cols =  list(dep_varnames) + list(co_varnames)
-                        if self.is_iv:
-                            cols += iv_varnames
+                        #if self.is_iv:
+                        #    cols += iv_names
 
                         YXZ_demeaned.columns = cols
 
@@ -233,24 +243,22 @@ class Fixest:
 
                     YXZ_demeaned = pd.DataFrame(YXZ)
 
-                    cols = list(dep_varnames) + list(co_varnames)
-
-                    if self.is_iv:
-                        cols += list(iv_varnames)
+                    #if self.is_iv:
+                    #    cols += list(iv_names)
 
                     YXZ_demeaned.columns = cols
 
-                YX_dict[fml] = YXZ_demeaned[cols]
+                YXZ_dict[fml] = YXZ_demeaned#[cols]
                 na_dict[fml] = na_index
                 var_dict[fml] = dict({
-                    'dep_varnames': dep_varnames,
-                    'co_varnames': co_varnames,
-                    'iv_varnames': iv_varnames,
-                    'z_varnames': z_varnames
+                    'y_names': y_names,
+                    'x_names': x_names,
+                    'iv_names': iv_names,
+                    'z_names': z_names
                 })
 
 
-        return YX_dict, na_dict, var_dict
+        return YXZ_dict, na_dict, var_dict
 
     def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
         '''
@@ -415,7 +423,7 @@ class Fixest:
                     data, fval, ivars, drop_ref)
                 self.demeaned_data_dict[fval].append(demeaned_data)
                 self.dropped_data_dict[fval].append(dropped_data)
-                self.yxz_name_dict[fval].append(yxz_name_dict) 
+                self.yxz_name_dict[fval].append(yxz_name_dict)
         # here:
         if estimate_split_model:
             for _, fval in enumerate(fixef_keys):
@@ -424,11 +432,11 @@ class Fixest:
                 self.yxz_name_dict[fval] = []
                 for x in self.split_categories:
                     sub_data = self.data[x == self.splitvar]
-                    demeaned_data, dropped_data = self._demean(
+                    demeaned_data, dropped_data, yxz_name_dict = self._demean(
                         sub_data, fval, ivars, drop_ref)
                     self.demeaned_data_dict[fval].append(demeaned_data)
                     self.dropped_data_dict[fval].append(dropped_data)
-                    self.yxz_name_dict[fval].append(yxz_name_dict) 
+                    self.yxz_name_dict[fval].append(yxz_name_dict)
 
         # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
@@ -453,14 +461,14 @@ class Fixest:
                     else:
                         split_log = None
                         full_fml = fml2
-                    
+
                     name_dict = self.yxz_name_dict[fval][0][fml]
-                    depvar_name = name_dict["dep_varnames"]
-                    xvar_names = name_dict["co_varnames"]
-                    if name_dict["z_varnames"] is None: 
-                        zvar_names = name_dict["co_varnames"]
-                    else: 
-                        zvar_names = name_dict["z_varnames"]
+                    depvar_name = name_dict["y_names"]
+                    xvar_names = name_dict["x_names"]
+                    if name_dict["z_names"] is None:
+                        zvar_names = name_dict["x_names"]
+                    else:
+                        zvar_names = name_dict["z_names"]
 
                     Y = model_frame[depvar_name]
                     X = model_frame[xvar_names]
@@ -483,7 +491,7 @@ class Fixest:
                                              ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
                         else:
                             raise ValueError(
-                                "The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                                "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
                     FEOLS = Feols(Y, X, Z)
                     FEOLS.is_iv = self.is_iv
