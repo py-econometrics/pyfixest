@@ -105,6 +105,10 @@ class Fixest:
                     instruments2 = dict2fe_iv.get(depvar)[0]
                     endogvar = list(set(covar2.split("+")) - set(instruments2.split("+")))[0]
                     instrument = list(set(instruments2.split("+")) - set(covar2.split("+")))[0]
+
+                    if len([instrument]) > 1 or len([endogvar]) > 1:
+                        raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
+
                     fml2 = instrument + "+" + fml
                     rhs, lhs = model_matrix(fml2, data)
 
