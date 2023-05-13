@@ -172,7 +172,7 @@ def test_py_vs_r2(data, fml_multi):
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
 
-    r_fml = _py_fml_to_r_fml(fml_multi)
+    r_fml = _py_fml_to_r_fml(fml_multi, False)
 
     pyfixest = Fixest(data = data).feols(fml_multi)
     py_coef = pyfixest.coef()['Estimate']
@@ -217,7 +217,7 @@ def test_py_vs_r_i(data, fml_i):
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
 
-    r_fml = _py_fml_to_r_fml(fml_i)
+    r_fml = _py_fml_to_r_fml(fml_i, False)
 
     pyfixest = Fixest(data = data).feols(fml_i, vcov = 'iid')
     py_coef = pyfixest.coef()['Estimate']
@@ -319,8 +319,98 @@ def test_py_vs_r_split(data, fml_split):
 
 
 
+@pytest.mark.parametrize("fml_iv", [
 
-def _py_fml_to_r_fml(py_fml):
+    "Y ~ X1 | X1 ~ Z1",
+    #"Y ~ X1 + X2 | X1 ~ Z1",
+
+    "Y ~ X1 | X2 | X1 ~ Z1",
+    "Y ~ X1 | X2 + X3 | X1 ~ Z1",
+    #"Y ~ X1 + X2| X3 | X1 ~ Z1",
+
+])
+
+
+def test_py_vs_r_iv(data, fml_iv):
+
+    '''
+    tests for instrumental variables regressions
+    '''
+
+    np.random.seed(123)
+
+    data["Z1"] = data["X1"] * np.random.normal(data.shape[0])
+
+    # iid errors
+    pyfixest = Fixest(data = data).feols(fml_iv, vcov = 'iid')
+
+    py_coef = np.sort(pyfixest.coef()['Estimate'])
+    py_se = np.sort(pyfixest.se()['Std. Error'])
+    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
+    py_tstat = np.sort(pyfixest.tstat()['t value'])
+
+    fml_r = _py_fml_to_r_fml(fml_iv, True)
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_r),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
+        raise ValueError("py_coef != r_coef")
+    #if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
+    #    raise ValueError("py_se != r_se for iid errors")
+    #if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
+    #    raise ValueError("py_pval != r_pval for iid errors")
+    #if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
+    #    raise ValueError("py_tstat != r_tstat for iid errors")
+
+    # heteroskedastic errors
+    pyfixest.vcov("HC1")
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_r),
+        se = 'hetero',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for HC1 errors")
+    #if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+    #    raise ValueError("py_pval != r_pval for HC1 errors")
+    #if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+    #    raise ValueError("py_tstat != r_tstat for HC1 errors")
+
+    # cluster robust errors
+    pyfixest.vcov({'CRV1':'group_id'})
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_r),
+        cluster = ro.Formula('~group_id'),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for CRV1 errors")
+    #if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+    #    raise ValueError("py_pval != r_pval for CRV1 errors")
+    #if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+    #    raise ValueError("py_tstat != r_tstat for CRV1 errors")
+
+
+
+
+def _py_fml_to_r_fml(py_fml, is_iv = False):
 
     '''
     pyfixest multiple estimation fml syntax to fixest multiple depvar
@@ -328,11 +418,40 @@ def _py_fml_to_r_fml(py_fml):
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     '''
 
-    fml_split = py_fml.split("~")
-    depvars = fml_split[0]
-    covars = fml_split[1]
-    depvars = "c(" +  ",".join(depvars.split("+")) + ")"
-    return depvars + "~" + covars
+    if is_iv == False:
+
+        fml_split = py_fml.split("~")
+        depvars = fml_split[0]
+        covars = fml_split[1]
+        depvars = "c(" +  ",".join(depvars.split("+")) + ")"
+
+        return depvars + "~" + covars
+
+    else:
+
+        fml2 = py_fml.split("|")
+
+        if len(fml2) == 2:
+
+            covars = fml2[0].split("~")[1]
+            depvar =  fml2[0].split("~")[0]
+            endogvars = fml2[1].split("~")[0]
+            exogvars = list(set(covars) - set(endogvars))
+            if exogvars == []:
+                exogvars = "1"
+
+            return depvar + "~" + exogvars + "|" + fml2[1]
+
+        elif len(fml2) == 3:
+
+            covars = fml2[0].split("~")[1]
+            depvar =  fml2[0].split("~")[0]
+            endogvars = fml2[2].split("~")[0]
+            exogvars = list(set(covars) - set(endogvars))
+            if exogvars == []:
+                exogvars = "1"
+
+            return depvar + "~" + exogvars + "|" + fml2[1] + "|" +  fml2[2]
 
 
 

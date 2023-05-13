@@ -170,6 +170,7 @@ class Fixest:
                     yxz_names.remove("Intercept")
                     if self.is_iv:
                         z_names.remove("Intercept")
+                        cols.remove("Intercept")
 
                     # check if variables have already been demeaned
                     Y = np.delete(Y, fe_na, axis=0)
@@ -632,13 +633,20 @@ class Fixest:
                 }
             )
 
+            if fxst.is_iv:
+                estimation_method = "IV"
+            else:
+                estimation_method = "OLS"
+
+
             print('###')
             print('')
+            print('Model: ', estimation_method)
+            print('Dep. var.: ', depvar)
             if fe is not None:
                 print('Fixed effects: ', fe)
             # if fxst.split_log is not None:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
-            print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
             print('Observations: ', fxst.N)
             print('')
