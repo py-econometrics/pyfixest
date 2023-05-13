@@ -337,7 +337,7 @@ def test_py_vs_r_iv(data, fml_iv):
     tests for instrumental variables regressions
     '''
 
-    np.random.seed(123)
+    np.random.seed(1235)
 
     data["Z1"] = data["X1"] * np.random.normal(data.shape[0])
 
@@ -360,12 +360,12 @@ def test_py_vs_r_iv(data, fml_iv):
 
     if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
         raise ValueError("py_coef != r_coef")
-    #if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
-    #    raise ValueError("py_se != r_se for iid errors")
-    #if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
-    #    raise ValueError("py_pval != r_pval for iid errors")
-    #if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
-    #    raise ValueError("py_tstat != r_tstat for iid errors")
+    if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for iid errors")
+    if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for iid errors")
+    if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
+        raise ValueError("py_tstat != r_tstat for iid errors")
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
@@ -402,10 +402,10 @@ def test_py_vs_r_iv(data, fml_iv):
 
     if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
         raise ValueError("py_se != r_se for CRV1 errors")
-    #if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
-    #    raise ValueError("py_pval != r_pval for CRV1 errors")
-    #if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
-    #    raise ValueError("py_tstat != r_tstat for CRV1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for CRV1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for CRV1 errors")
 
 
 
