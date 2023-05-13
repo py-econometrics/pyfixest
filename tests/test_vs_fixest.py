@@ -328,7 +328,7 @@ def test_py_vs_r_split(data, fml_split):
     "Y ~ X1 | X2 + X3 | X1 ~ Z1",
 
     #"Y ~ X1 + C(X4) | X2 + X3 | X1 ~ Z1",
-    #"Y ~ X1 + X2| X3 | X1 ~ Z1",
+    "Y ~ X1 + X2| X3 | X1 ~ Z1",
 
 ])
 
@@ -384,10 +384,10 @@ def test_py_vs_r_iv(data, fml_iv):
 
     if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
         raise ValueError("py_se != r_se for HC1 errors")
-    #if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
-    #    raise ValueError("py_pval != r_pval for HC1 errors")
-    #if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
-    #    raise ValueError("py_tstat != r_tstat for HC1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for HC1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for HC1 errors")
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
@@ -440,10 +440,10 @@ def _py_fml_to_r_fml(py_fml, is_iv = False):
             depvar =  fml2[0].split("~")[0]
             endogvars = fml2[1].split("~")[0]
             exogvars = list(set(covars) - set([endogvars]))
-            exogvars = "1" + "+".join(exogvars)
-
             if exogvars == []:
                 exogvars = "1"
+            else:
+                exogvars = "+".join(exogvars)
 
             return depvar + "~" + exogvars + "|" + fml2[1]
 
@@ -454,9 +454,10 @@ def _py_fml_to_r_fml(py_fml, is_iv = False):
             depvar =  fml2[0].split("~")[0]
             endogvars = fml2[2].split("~")[0]
             exogvars = list(set(covars) - set([endogvars]))
-            exogvars = "1" + "+".join(exogvars)
             if exogvars == []:
                 exogvars = "1"
+            else:
+                exogvars = "+".join(exogvars)
 
             return depvar + "~" + exogvars + "|" + fml2[1] + "|" +  fml2[2]
 
