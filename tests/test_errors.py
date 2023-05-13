@@ -84,3 +84,25 @@ def test_depvar_numeric():
     with pytest.raises(ValueError):
         fixest.feols('Y ~ X1')
 
+
+def test_iv_errors():
+
+    data = get_data()
+    data["Z1"] = data["X1"] + np.random.normal(0, 1, data.shape[0])
+    data["Z2"] = data["X2"] + np.random.normal(0, 1, data.shape[0])
+
+
+    fixest = Fixest(data)
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | Z1 + Z2 ~ X1 ')
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | Z1  ~ X1 + X2')
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | Z1 + Z2 ~ X1 + X2')
+    with pytest.raises(ValueError):
+        fixest.feols('Y ~ X1 | Z1 ~ X1 ', vcov = {"CRV3":"group_id"})
+
+
+
+
+

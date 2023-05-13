@@ -22,6 +22,8 @@ class Feols:
         Dependent variable of the regression.
     X : Union[np.ndarray, pd.DataFrame]
         Independent variable of the regression.
+    Z: Union[np.ndarray, pd.DataFrame]
+        Instruments of the regression.
 
     Attributes
     ----------
@@ -29,6 +31,8 @@ class Feols:
         The dependent variable of the regression.
     X : np.ndarray
         The independent variable of the regression.
+    Z : np.ndarray
+        The instruments of the regression.
     N : int
         The number of observations.
     k : int
@@ -48,7 +52,7 @@ class Feols:
 
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
 
         if not isinstance(Y, (np.ndarray)):
             raise TypeError("Y must be a numpy array.")
@@ -57,9 +61,12 @@ class Feols:
 
         self.Y = Y
         self.X = X
+        self.Z = Z
 
         if self.X.ndim != 2:
             raise ValueError("X must be a 2D array")
+        if self.Z.ndim != 2:
+            raise ValueError("Z must be a 2D array")
 
         self.N, self.k = X.shape
 
@@ -68,14 +75,14 @@ class Feols:
         Regression estimation for a single model, via ordinary least squares (OLS).
         '''
 
-        self.tXX = np.transpose(self.X) @ self.X
-        self.tXXinv = np.linalg.inv(self.tXX)
+        self.tZX = np.transpose(self.Z) @ self.X
+        self.tZXinv = np.linalg.inv(self.tZX)
 
-        self.tXy = (np.transpose(self.X) @ self.Y)
-        beta_hat = self.tXXinv @ self.tXy
+        self.tZy = (np.transpose(self.Z) @ self.Y)
+        beta_hat = self.tZXinv @ self.tZy
         self.beta_hat = beta_hat.flatten()
         self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y - self.Y_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -150,6 +157,9 @@ class Feols:
             self.is_clustered = True
 
 
+        if self.is_iv:
+            if self.vcov_type in ["CRV3"]:
+                raise ValueError("CRV3 inference is not supported for IV regressions.")
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -164,7 +174,13 @@ class Feols:
             )
 
             # only relevant factor for iid in ssc: fixef.K
-            self.vcov =  self.ssc * self.tXXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+            if self.is_iv == False:
+                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+            else:
+                sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
+                tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z) # k x k
+                tXZ = np.transpose(self.X) @ self.Z
+                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ self.tZX ) * sigma2 #
 
         elif self.vcov_type == 'hetero':
 
@@ -180,15 +196,27 @@ class Feols:
             if vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
             elif vcov_type_detail in ["HC2", "HC3"]:
-                leverage = np.sum(self.X * (self.X @ self.tXXinv), axis=1)
+                leverage = np.sum(self.X * (self.X @ self.tZXinv), axis=1)
                 if vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
                 else:
                     u = self.u_hat / (1-leverage)
 
-            meat = np.transpose(self.X) * (u ** 2) @ self.X
-            # set off diagonal elements to zero
-            self.vcov =  self.ssc * self.tXXinv @ meat @  self.tXXinv
+            if self.is_iv == False:
+                meat = np.transpose(self.Z) * (u ** 2) @ self.Z
+                # set off diagonal elements to zero
+                self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
+            else:
+                tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
+                tXZ = np.transpose(self.X) @ self.Z # k x k
+                if u.ndim == 1:
+                    u = u.reshape((self.N,1))
+                Omega = np.transpose(self.Z) @ (self.Z * (u ** 2))  # k x k
+                meat = tXZ @ tZZinv  @ Omega  @ tZZinv @ self.tZX # k x k
+                bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                self.vcov = self.ssc * bread @ meat @ bread
+
+
 
         elif self.vcov_type == "CRV":
 
@@ -218,16 +246,24 @@ class Feols:
 
             if vcov_type_detail == "CRV1":
 
+
                 meat = np.zeros((self.k, self.k))
 
-                for igx, g, in enumerate(clustid):
+                for _, g, in enumerate(clustid):
 
-                    Xg = self.X[np.where(cluster_df == g)]
+                    Zg = self.Z[np.where(cluster_df == g)]
                     ug = self.u_hat[np.where(cluster_df == g)]
-                    score_g = (np.transpose(Xg) @ ug).reshape((self.k, 1))
+                    score_g = (np.transpose(Zg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.vcov = self.ssc * self.tXXinv @ meat @ self.tXXinv
+                if self.is_iv == False:
+                    self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                else:
+                    tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
+                    tXZ = np.transpose(self.X) @ self.Z # k x k
+                    meat = tXZ @ tZZinv @ meat @ tZZinv @ self.tZX
+                    bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                    self.vcov = self.ssc * bread @ meat @ bread
 
             elif vcov_type_detail == "CRV3":
 
@@ -237,6 +273,9 @@ class Feols:
 
                 #if self.has_fixef:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
+
+                if self.is_iv:
+                    raise ValueError("CRV3 inference is not supported with IV estimation.")
 
                 k_params = self.k
 
@@ -360,11 +399,13 @@ class Feols:
         Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
         '''
 
+        if self.is_iv:
+            raise ValueError("Wild cluster bootstrap is not supported with IV estimation.")
         if self.has_fixef:
             raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
 
         xnames = self.coefnames.to_list()
-        Y = self.Y
+        Y = self.Y.flatten()
         X = self.X
 
         # later: allow r <> 0 and custom R
