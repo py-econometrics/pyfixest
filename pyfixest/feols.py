@@ -246,6 +246,7 @@ class Feols:
 
             if vcov_type_detail == "CRV1":
 
+
                 meat = np.zeros((self.k, self.k))
 
                 for _, g, in enumerate(clustid):
@@ -255,7 +256,14 @@ class Feols:
                     score_g = (np.transpose(Zg) @ ug).reshape((self.k, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                if self.is_iv == False:
+                    self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                else:
+                    tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
+                    tXZ = np.transpose(self.X) @ self.Z # k x k
+                    meat = tXZ @ tZZinv @ meat @ tZZinv @ self.tZX
+                    bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                    self.vcov = self.ssc * bread @ meat @ bread
 
             elif vcov_type_detail == "CRV3":
 
