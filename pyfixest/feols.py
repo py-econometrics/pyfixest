@@ -202,9 +202,21 @@ class Feols:
                 else:
                     u = self.u_hat / (1-leverage)
 
-            meat = np.transpose(self.Z) * (u ** 2) @ self.Z
-            # set off diagonal elements to zero
-            self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
+            if self.is_iv == False:
+                meat = np.transpose(self.Z) * (u ** 2) @ self.Z
+                # set off diagonal elements to zero
+                self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
+            else:
+                tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
+                tXZ = np.transpose(self.X) @ self.Z # k x k
+                if u.ndim == 1:
+                    u = u.reshape((self.N,1))
+                Omega = np.transpose(self.Z) @ (self.Z * (u ** 2))  # k x k
+                meat = tXZ @ tZZinv  @ Omega  @ tZZinv @ self.tZX # k x k
+                bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                self.vcov = self.ssc * bread @ meat @ bread
+
+
 
         elif self.vcov_type == "CRV":
 
