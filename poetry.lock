@@ -95,6 +95,7 @@ redis = ["redis (>=2.10.5)"]
 [[package]]
 name = "certifi"
 version = "2023.5.7"
+
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
