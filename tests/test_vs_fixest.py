@@ -326,6 +326,8 @@ def test_py_vs_r_split(data, fml_split):
 
     "Y ~ X1 | X2 | X1 ~ Z1",
     "Y ~ X1 | X2 + X3 | X1 ~ Z1",
+
+    #"Y ~ X1 + C(X4) | X2 + X3 | X1 ~ Z1",
     #"Y ~ X1 + X2| X3 | X1 ~ Z1",
 
 ])
@@ -434,9 +436,12 @@ def _py_fml_to_r_fml(py_fml, is_iv = False):
         if len(fml2) == 2:
 
             covars = fml2[0].split("~")[1]
+            covars = covars.split("+")
             depvar =  fml2[0].split("~")[0]
             endogvars = fml2[1].split("~")[0]
-            exogvars = list(set(covars) - set(endogvars))
+            exogvars = list(set(covars) - set([endogvars]))
+            exogvars = "1" + "+".join(exogvars)
+
             if exogvars == []:
                 exogvars = "1"
 
@@ -445,9 +450,11 @@ def _py_fml_to_r_fml(py_fml, is_iv = False):
         elif len(fml2) == 3:
 
             covars = fml2[0].split("~")[1]
+            covars = covars.split("+")
             depvar =  fml2[0].split("~")[0]
             endogvars = fml2[2].split("~")[0]
-            exogvars = list(set(covars) - set(endogvars))
+            exogvars = list(set(covars) - set([endogvars]))
+            exogvars = "1" + "+".join(exogvars)
             if exogvars == []:
                 exogvars = "1"
 
