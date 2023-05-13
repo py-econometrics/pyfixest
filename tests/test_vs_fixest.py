@@ -330,6 +330,9 @@ def test_py_vs_r_split(data, fml_split):
     #"Y ~ X1 + C(X4) | X2 + X3 | X1 ~ Z1",
     "Y ~ X1 + X2| X3 | X1 ~ Z1",
 
+    #"Y ~ X1 + X2 | X1 + X2 ~ Z1 + Z2",
+
+
 ])
 
 

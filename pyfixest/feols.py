@@ -274,6 +274,9 @@ class Feols:
                 #if self.has_fixef:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
+                if self.is_iv:
+                    raise ValueError("CRV3 inference is not supported with IV estimation.")
+
                 k_params = self.k
 
                 beta_hat = self.beta_hat
@@ -396,6 +399,8 @@ class Feols:
         Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
         '''
 
+        if self.is_iv:
+            raise ValueError("Wild cluster bootstrap is not supported with IV estimation.")
         if self.has_fixef:
             raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
 
