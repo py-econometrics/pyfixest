@@ -66,8 +66,9 @@ class Fixest:
             None
         '''
 
-        YX_dict = dict()
+        YXZ_dict = dict()
         na_dict = dict()
+        var_dict = dict()
 
         if fval != "0":
             fe, fe_na = self._clean_fe(data, fval)
@@ -77,6 +78,8 @@ class Fixest:
             fe_na = None
 
         dict2fe = self.fml_dict2.get(fval)
+        if self.is_iv:
+            dict2fe_iv = self.fml_dict2_iv.get(fval)
 
         # create lookup table with NA index key
         # for each regression, check if lookup table already
@@ -87,35 +90,72 @@ class Fixest:
 
         lookup_demeaned_data = dict()
 
+        # loop over both dict2fe and dict2fe_iv (if the latter is not None)
         for depvar in dict2fe.keys():
 
             # [(0, 'X1+X2'), (1, ['X1+X3'])]
-            for c, covar in enumerate(dict2fe.get(depvar)):
+            for _, covar in enumerate(dict2fe.get(depvar)):
 
                 covar2 = covar
                 depvar2 = depvar
 
                 fml = depvar2 + " ~ " + covar2
 
-                Y, X = model_matrix(fml, data)
+                if self.is_iv:
+                    instruments2 = dict2fe_iv.get(depvar)[0]
+                    endogvar = list(set(covar2.split("+")) - set(instruments2.split("+")))[0]
+                    instrument = list(set(instruments2.split("+")) - set(covar2.split("+")))[0]
+
+                    if len([instrument]) > 1 or len([endogvar]) > 1:
+                        raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
+
+                    fml2 = instrument + "+" + fml
+                    rhs, lhs = model_matrix(fml2, data)
+
+                    Y = rhs[[depvar]]
+                    I = rhs[[instrument]]
+                    X = lhs
+                else:
+                    Y, X = model_matrix(fml, data)
+
                 na_index = list(set(data.index) - set(Y.index))
 
                 if self.ivars is not None:
                     if drop_ref is not None:
                         X = X.drop(drop_ref, axis=1)
 
-                dep_varnames = list(Y.columns)
-                co_varnames = list(X.columns)
-                var_names = list(dep_varnames) + list(co_varnames)
+                y_names = list(Y.columns)
+                x_names = list(X.columns)
+                yxz_names = list(y_names) + list(x_names)
+                if self.is_iv:
+                    iv_names = list(I.columns)
+                    #z_varnames = list(set(x_names) - set([endogvar]))
+                    #z_varnames.append(instrument)
+                    x_names_copy = x_names.copy()
+                    x_names_copy.remove(endogvar)
+                    z_names = x_names_copy + [instrument]
+                    cols = yxz_names + iv_names
+                else:
+                    iv_names = None
+                    z_names = None
+                    cols = yxz_names
 
                 if self.ivars is not None:
-                    self.icovars = [s for s in co_varnames if s.startswith(
+                    self.icovars = [s for s in x_names if s.startswith(
                         ivars[0]) and s.endswith(ivars[1])]
                 else:
                     self.icovars = None
 
+
                 Y = Y.to_numpy()
+                #if Y.ndim != 1:
+                #    Y = Y.reshape((len(Y), 1))
+                #.reshape((len(Y), 1))
                 X = X.to_numpy()
+                if self.is_iv:
+                    I = I.to_numpy()
+                    if I.ndim != 1:
+                        I = I.reshape((len(I), 1))
 
                 if Y.shape[1] > 1:
                     raise ValueError(
@@ -126,39 +166,50 @@ class Fixest:
                     na_index = (na_index + fe_na)
                     fe2 = np.delete(fe, na_index, axis=0)
                     # drop intercept
-                    intercept_index = co_varnames.index("Intercept")
+                    intercept_index = x_names.index("Intercept")
                     X = np.delete(X, intercept_index, axis = 1)
-                    co_varnames.remove("Intercept")
-                    var_names.remove("Intercept")
+                    #if self.is_iv:
+                    #    I = np.delete(I, intercept_index, axis = 1)
+                    x_names.remove("Intercept")
+                    yxz_names.remove("Intercept")
+                    if self.is_iv:
+                        z_names.remove("Intercept")
+                        cols.remove("Intercept")
 
                     # check if variables have already been demeaned
                     Y = np.delete(Y, fe_na, axis=0)
                     X = np.delete(X, fe_na, axis=0)
-                    YX = np.concatenate([Y, X], axis=1)
+                    if self.is_iv:
+                        I = np.delete(I, fe_na, axis=0)
+
+                    if self.is_iv:
+                        YXZ = np.concatenate([Y, X, I], axis = 1)
+                    else:
+                        YXZ = np.concatenate([Y, X], axis=1)
 
                     na_index_str = ','.join(str(x) for x in na_index)
 
                     # check if looked dict has data for na_index
                     if lookup_demeaned_data.get(na_index_str) is not None:
                         # get data out of lookup table: list of [algo, data]
-                        algorithm, YX_demeaned_old = lookup_demeaned_data.get(
+                        algorithm, YXZ_demeaned_old = lookup_demeaned_data.get(
                             na_index_str)
 
                         # get not yet demeaned covariates
                         var_diff_names = list(
-                            set(var_names) - set(YX_demeaned_old.columns))[0]
-                        var_diff_index = list(var_names).index(var_diff_names)
-                        var_diff = YX[:, var_diff_index]
+                            set(yxz_names) - set(YXZ_demeaned_old.columns))[0]
+                        var_diff_index = list(yxz_names).index(var_diff_names)
+                        var_diff = YXZ[:, var_diff_index]
                         if var_diff.ndim == 1:
                             var_diff = var_diff.reshape(len(var_diff), 1)
 
-                        YX_demean_new = algorithm.residualize(var_diff)
-                        YX_demeaned = np.concatenate(
-                            [YX_demeaned_old, YX_demean_new], axis=1)
-                        YX_demeaned = pd.DataFrame(YX_demeaned)
+                        YXZ_demean_new = algorithm.residualize(var_diff)
+                        YXZ_demeaned = np.concatenate(
+                            [YXZ_demeaned_old, YXZ_demean_new], axis=1)
+                        YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
 
-                        YX_demeaned.columns = list(
-                            YX_demeaned_old.columns) + [var_diff_names]
+                        YXZ_demeaned.columns = list(
+                            YXZ_demeaned_old.columns) + [var_diff_names]
 
                     else:
                         # not data demeaned yet for NA combination
@@ -177,26 +228,42 @@ class Fixest:
                                 np.where(algorithm._singleton_indices))[0].tolist()
                             na_index += dropped_singleton_indices
 
-                        YX_demeaned = algorithm.residualize(YX)
-                        YX_demeaned = pd.DataFrame(YX_demeaned)
-                        YX_demeaned.columns = list(
-                            dep_varnames) + list(co_varnames)
+                        YXZ_demeaned = algorithm.residualize(YXZ)
+                        YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+
+                        #if self.is_iv:
+                        #    cols += iv_names
+
+                        YXZ_demeaned.columns = cols
 
                     lookup_demeaned_data[na_index_str] = [
-                        algorithm, YX_demeaned]
+                        algorithm, YXZ_demeaned]
 
                 else:
                     # if no fixed effects
-                    YX = np.concatenate([Y, X], axis=1)
-                    YX_demeaned = pd.DataFrame(YX)
-                    YX_demeaned.columns = list(
-                        dep_varnames) + list(co_varnames)
+                    if self.is_iv:
+                        YXZ = np.concatenate([Y, X, I], axis=1)
+                    else:
+                        YXZ = np.concatenate([Y, X], axis=1)
 
-                cols = list(dep_varnames) + list(co_varnames)
-                YX_dict[fml] = YX_demeaned[cols]
+                    YXZ_demeaned = pd.DataFrame(YXZ)
+
+                    #if self.is_iv:
+                    #    cols += list(iv_names)
+
+                    YXZ_demeaned.columns = cols
+
+                YXZ_dict[fml] = YXZ_demeaned#[cols]
                 na_dict[fml] = na_index
+                var_dict[fml] = dict({
+                    'y_names': y_names,
+                    'x_names': x_names,
+                    'iv_names': iv_names,
+                    'z_names': z_names
+                })
 
-        return YX_dict, na_dict
+
+        return YXZ_dict, na_dict, var_dict
 
     def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
         '''
@@ -232,21 +299,44 @@ class Fixest:
                 fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
         '''
 
-        # no whitespace in formula
-        fml = re.sub(r'\s+', ' ', fml)
+        self.fml = fml.replace(" ", "")
+        self.split = None
+
+        # deparse formula, at least partially
         fxst_fml = FixestFormulaParser(fml)
 
+        if fxst_fml.is_iv:
+            self.is_iv = True
+        else:
+            self.is_iv = False
+
+        # add function argument to these methods for IV
         fxst_fml.get_fml_dict()
         fxst_fml.get_var_dict()
         fxst_fml._transform_fml_dict()
 
-        self.fml = fml
-        self.split = None
+        if self.is_iv:
+            # create required dicts for first stage IV regressions
+            fxst_fml.get_fml_dict(iv = True)
+            fxst_fml.get_var_dict(iv = True)
+            fxst_fml._transform_fml_dict(iv = True)
+
 
         self.fml_dict = fxst_fml.fml_dict
         self.var_dict = fxst_fml.var_dict
         self.fml_dict2 = fxst_fml.fml_dict2
+
+        if self.is_iv:
+            self.fml_dict_iv = fxst_fml.fml_dict_iv
+            self.var_dict_iv = fxst_fml.var_dict_iv
+            self.fml_dict2_iv = fxst_fml.fml_dict2_iv
+        else:
+            self.fml_dict_iv = self.fml_dict
+            self.var_dict_iv = self.var_dict
+            self.fml_dict2_iv = self.fml_dict2
+
         self.ivars = fxst_fml.ivars
+
 
         self.ssc_dict = ssc
         if fixef_rm == "singleton":
@@ -293,6 +383,8 @@ class Fixest:
 
         self.dropped_data_dict = dict()
         self.demeaned_data_dict = dict()
+        # names of depvar, X, Z matrices
+        self.yxz_name_dict = dict()
 
         estimate_full_model = True
         estimate_split_model = False
@@ -330,23 +422,26 @@ class Fixest:
             for _, fval in enumerate(fixef_keys):
                 self.demeaned_data_dict[fval] = []
                 self.dropped_data_dict[fval] = []
+                self.yxz_name_dict[fval] = []
                 data = self.data
-                demeaned_data, dropped_data = self._demean(
+                demeaned_data, dropped_data, yxz_name_dict= self._demean(
                     data, fval, ivars, drop_ref)
                 self.demeaned_data_dict[fval].append(demeaned_data)
                 self.dropped_data_dict[fval].append(dropped_data)
-
+                self.yxz_name_dict[fval].append(yxz_name_dict)
         # here:
         if estimate_split_model:
             for _, fval in enumerate(fixef_keys):
                 self.demeaned_data_dict[fval] = []
                 self.dropped_data_dict[fval] = []
+                self.yxz_name_dict[fval] = []
                 for x in self.split_categories:
                     sub_data = self.data[x == self.splitvar]
-                    demeaned_data, dropped_data = self._demean(
+                    demeaned_data, dropped_data, yxz_name_dict = self._demean(
                         sub_data, fval, ivars, drop_ref)
                     self.demeaned_data_dict[fval].append(demeaned_data)
                     self.dropped_data_dict[fval].append(dropped_data)
+                    self.yxz_name_dict[fval].append(yxz_name_dict)
 
         # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
@@ -372,10 +467,25 @@ class Fixest:
                         split_log = None
                         full_fml = fml2
 
-                    Y = model_frame.iloc[:, 0].to_numpy()
-                    X = model_frame.iloc[:, 1:]
+                    name_dict = self.yxz_name_dict[fval][0][fml]
+                    depvar_name = name_dict["y_names"]
+                    xvar_names = name_dict["x_names"]
+                    if name_dict["z_names"] is None:
+                        zvar_names = name_dict["x_names"]
+                    else:
+                        zvar_names = name_dict["z_names"]
+
+                    Y = model_frame[depvar_name]
+                    X = model_frame[xvar_names]
+                    Z = model_frame[zvar_names]
+
                     colnames = X.columns
+                    zcolnames = Z.columns
+
+                    Y = Y.to_numpy()
                     X = X.to_numpy()
+                    Z = Z.to_numpy()
+
                     N = X.shape[0]
                     k = X.shape[1]
 
@@ -386,9 +496,10 @@ class Fixest:
                                              ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
                         else:
                             raise ValueError(
-                                "The design Matrix X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                                "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
-                    FEOLS = Feols(Y, X)
+                    FEOLS = Feols(Y, X, Z)
+                    FEOLS.is_iv = self.is_iv
                     FEOLS.fml = fml2
                     FEOLS.ssc_dict = self.ssc_dict
                     FEOLS.get_fit()
@@ -507,8 +618,6 @@ class Fixest:
             None
         '''
 
-        print('---')
-
         for x in list(self.model_res.keys()):
 
             split = x.split("|")
@@ -528,13 +637,20 @@ class Fixest:
                 }
             )
 
+            if fxst.is_iv:
+                estimation_method = "IV"
+            else:
+                estimation_method = "OLS"
+
+
             print('###')
             print('')
+            print('Model: ', estimation_method)
+            print('Dep. var.: ', depvar)
             if fe is not None:
                 print('Fixed effects: ', fe)
             # if fxst.split_log is not None:
             #    print('Split. var: ', self.split + ":" + fxst.split_log)
-            print('Dep. var.: ', depvar)
             print('Inference: ', fxst.vcov_log)
             print('Observations: ', fxst.N)
             print('')
