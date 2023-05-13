@@ -177,8 +177,8 @@ class Feols:
             if self.is_iv == False:
                 self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
             else:
-                meat = self.Z.transpose() @ np.diag(np.sum(self.u_hat ** 2) / (self.N - 1)) @ self.Z
-                self.vcov =  self.ssc * self.tZXinv @ meat @ self.tZXinv
+                meat = np.transpose(self.Z) * (self.u_hat ** 2) @ self.Z
+                self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
         elif self.vcov_type == 'hetero':
 
             self.ssc = get_ssc(
