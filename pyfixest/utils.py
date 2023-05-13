@@ -39,6 +39,8 @@ def get_data(seed = 1234):
 
     data['Y'][0] = np.nan
     data['X1'][1] = np.nan
+
+    data["Z1"] = data["X1"] + np.random.normal(0, 1, data.shape[0])
     #data['X2'][2] = np.nan
 
 
