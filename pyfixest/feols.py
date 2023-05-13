@@ -180,7 +180,7 @@ class Feols:
                 sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
                 tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z) # k x k
                 tXZ = np.transpose(self.X) @ self.Z
-                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ tXZ ) * sigma2 #
+                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ self.tZX ) * sigma2 #
 
         elif self.vcov_type == 'hetero':
 
