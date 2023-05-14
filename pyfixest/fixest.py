@@ -472,7 +472,10 @@ class Fixest:
                     FEOLS.is_iv = self.is_iv
                     FEOLS.fml = fml2
                     FEOLS.ssc_dict = self.ssc_dict
-                    FEOLS.get_fit()
+                    if self.is_iv:
+                        FEOLS.get_fit(estimator = "2sls")
+                    else:
+                        FEOLS.get_fit(estimator = "ols")
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(
                         FEOLS.na_index), :]
