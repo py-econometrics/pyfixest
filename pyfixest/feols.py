@@ -54,19 +54,12 @@ class Feols:
 
     def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
 
-        if not isinstance(Y, (np.ndarray)):
-            raise TypeError("Y must be a numpy array.")
-        if not isinstance(X, (np.ndarray)):
-            raise TypeError("X must be a numpy array.")
+
+        _feols_input_checks(Y, X, Z)
 
         self.Y = Y
         self.X = X
         self.Z = Z
-
-        if self.X.ndim != 2:
-            raise ValueError("X must be a 2D array")
-        if self.Z.ndim != 2:
-            raise ValueError("Z must be a 2D array")
 
         self.N, self.k = X.shape
 
@@ -123,40 +116,9 @@ class Feols:
 
         '''
 
-        assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
-        if isinstance(vcov, dict):
-            assert list(vcov.keys())[0] in ["CRV1", "CRV3"], "vcov dict key must be CRV1 or CRV3"
-            assert isinstance(list(vcov.values())[0], str), "vcov dict value must be a string"
-            assert list(vcov.values())[0] in self.data.columns, "vcov dict value must be a column in the data"
-        if isinstance(vcov, list):
-            assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-            assert all(v in self.data.columns for v in vcov), "vcov list must contain columns in the data"
-        if isinstance(vcov, str):
-            assert vcov in ["iid", "hetero", "HC1", "HC2", "HC3"], "vcov string must be iid, hetero, HC1, HC2, or HC3"
+        _check_vcov_input(vcov, self.data)
 
-        if isinstance(vcov, dict):
-            vcov_type_detail = list(vcov.keys())[0]
-            self.clustervar = list(vcov.values())[0]
-        elif isinstance(vcov, list):
-            vcov_type_detail = vcov
-        elif isinstance(vcov, str):
-            vcov_type_detail = vcov
-        else:
-            assert False, "arg vcov needs to be a dict, string or list"
-
-        if vcov_type_detail == "iid":
-            self.vcov_type = "iid"
-            self.is_clustered = False
-        elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-            self.vcov_type = "hetero"
-            self.is_clustered = False
-            if vcov_type_detail in ["HC2", "HC3"]:
-                if self.has_fixef:
-                    raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
-        elif vcov_type_detail in ["CRV1", "CRV3"]:
-            self.vcov_type = "CRV"
-            self.is_clustered = True
-
+        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef)
 
         if self.is_iv:
             if self.vcov_type in ["CRV3"]:
@@ -181,7 +143,7 @@ class Feols:
                 sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
                 tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z) # k x k
                 tXZ = np.transpose(self.X) @ self.Z
-                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ self.tZX ) * sigma2 #
+                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ self.tZX ) * sigma2
 
         elif self.vcov_type == 'hetero':
 
@@ -194,18 +156,17 @@ class Feols:
                 vcov_type = "hetero"
             )
 
-            if vcov_type_detail in ["hetero", "HC1"]:
+            if self.vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
-            elif vcov_type_detail in ["HC2", "HC3"]:
+            elif self.vcov_type_detail in ["HC2", "HC3"]:
                 leverage = np.sum(self.X * (self.X @ self.tZXinv), axis=1)
-                if vcov_type_detail == "HC2":
+                if self.vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
                 else:
                     u = self.u_hat / (1-leverage)
 
             if self.is_iv == False:
                 meat = np.transpose(self.Z) * (u ** 2) @ self.Z
-                # set off diagonal elements to zero
                 self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
             else:
                 tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
@@ -230,10 +191,8 @@ class Feols:
             if cluster_df.isna().any():
                 raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
 
-            cluster_mat, clustid = pd.factorize(cluster_df)
-            #cluster_mat = cluster_df.to_numpy()
+            _, clustid = pd.factorize(cluster_df)
 
-            #clustid = np.unique(cluster_mat)
             self.G = len(clustid)
 
             self.ssc = get_ssc(
@@ -245,7 +204,7 @@ class Feols:
                 vcov_type = "CRV"
             )
 
-            if vcov_type_detail == "CRV1":
+            if self.vcov_type_detail == "CRV1":
 
 
                 meat = np.zeros((self.k, self.k))
@@ -266,7 +225,7 @@ class Feols:
                     bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
                     self.vcov = self.ssc * bread @ meat @ bread
 
-            elif vcov_type_detail == "CRV3":
+            elif self.vcov_type_detail == "CRV3":
 
                 # check: is fixed effect cluster fixed effect?
                 # if not, either error or turn fixefs into dummies
@@ -357,8 +316,6 @@ class Feols:
             self.beta_hat / self.se
         )
 
-        #if self.vcov_type in ['iid', 'CRV']:
-            # t(G-1) distribution for clustered errors
         if self.vcov_type in ["iid", "hetero"]:
             df = self.N - self.k
         else:
@@ -366,11 +323,6 @@ class Feols:
         self.pvalue = (
             2*(1-t.cdf(np.abs(self.tstat), df))
         )
-        #else:
-        #    # normal distribution for non-clustered errors
-        #    self.pvalue = (
-        #            2*(1-norm.cdf(np.abs(self.tstat)))
-        #    )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
@@ -477,3 +429,100 @@ class Feols:
         self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
             np.sum((self.Y - np.mean(self.Y))**2)
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+
+
+
+def _check_vcov_input(vcov, data):
+
+    '''
+    Check the input for the vcov argument in the Feols class.
+    Args:
+        vcov (dict, str, list): The vcov argument passed to the Feols class.
+        data (pd.DataFrame): The data passed to the Feols class.
+    Returns:
+        None
+    '''
+
+    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+    if isinstance(vcov, dict):
+        assert list(vcov.keys())[0] in ["CRV1", "CRV3"], "vcov dict key must be CRV1 or CRV3"
+        assert isinstance(list(vcov.values())[0], str), "vcov dict value must be a string"
+        assert list(vcov.values())[0] in data.columns, "vcov dict value must be a column in the data"
+    if isinstance(vcov, list):
+        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
+        assert all(v in data.columns for v in vcov), "vcov list must contain columns in the data"
+    if isinstance(vcov, str):
+        assert vcov in ["iid", "hetero", "HC1", "HC2", "HC3"], "vcov string must be iid, hetero, HC1, HC2, or HC3"
+
+
+def _deparse_vcov_input(vcov, has_fixef):
+
+    '''
+    Deparse the vcov argument passed to the Feols class.
+
+    Args:
+        vcov (dict, str, list): The vcov argument passed to the Feols class.
+        has_fixef (bool): Whether the regression has fixed effects.
+    Returns:
+        vcov_type (str): The type of vcov to be used. Either "iid", "hetero", or "CRV"
+        vcov_type_detail (str, list): The type of vcov to be used, with more detail. Either "iid", "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3"
+        is_clustered (bool): Whether the vcov is clustered.
+        clustervar (str): The name of the cluster variable.
+    '''
+
+    if isinstance(vcov, dict):
+        vcov_type_detail = list(vcov.keys())[0]
+        clustervar = list(vcov.values())[0]
+    elif isinstance(vcov, list):
+        vcov_type_detail = vcov
+    elif isinstance(vcov, str):
+        vcov_type_detail = vcov
+    else:
+        assert False, "arg vcov needs to be a dict, string or list"
+
+    if vcov_type_detail == "iid":
+        vcov_type = "iid"
+        is_clustered = False
+    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
+        vcov_type = "hetero"
+        is_clustered = False
+        if vcov_type_detail in ["HC2", "HC3"]:
+            if has_fixef:
+                raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
+    elif vcov_type_detail in ["CRV1", "CRV3"]:
+        vcov_type = "CRV"
+        is_clustered = True
+
+    if is_clustered:
+        clustervar = list(vcov.values())[0]
+    else:
+        clustervar = None
+
+    return vcov_type, vcov_type_detail, is_clustered, clustervar
+
+
+def _feols_input_checks(Y, X, Z):
+
+    '''
+    Some basic checks on the input matrices Y, X, and Z.
+    Args:
+        Y (np.ndarray): FEOLS input matrix Y
+        X (np.ndarray): FEOLS input matrix X
+        Z (np.ndarray): FEOLS input matrix Z
+    Returns:
+        None
+    '''
+
+    if not isinstance(Y, (np.ndarray)):
+        raise TypeError("Y must be a numpy array.")
+    if not isinstance(X, (np.ndarray)):
+        raise TypeError("X must be a numpy array.")
+    if not isinstance(Z, (np.ndarray)):
+        raise TypeError("Z must be a numpy array.")
+
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array")
+    if Z.ndim != 2:
+        raise ValueError("Z must be a 2D array")
+
+
