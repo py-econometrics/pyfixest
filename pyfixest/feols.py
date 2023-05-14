@@ -83,6 +83,11 @@ class Feols:
             self.tZXinv = np.linalg.inv(self.tZX)
             self.beta_hat = (self.tZXinv @ self.tZy).flatten()
 
+            if estimator == "iv":
+
+                self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
+
+
         else:
 
             self.tXZ = np.transpose(self.X) @ self.Z
@@ -156,9 +161,7 @@ class Feols:
                 self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
             else:
                 sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
-                tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z) # k x k
-                tXZ = np.transpose(self.X) @ self.Z
-                self.vcov = self.ssc * np.linalg.inv(tXZ @ tZZinv @ self.tZX ) * sigma2
+                self.vcov = self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX ) * sigma2
 
         elif self.vcov_type == 'hetero':
 
@@ -184,13 +187,11 @@ class Feols:
                 meat = np.transpose(self.Z) * (u ** 2) @ self.Z
                 self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
             else:
-                tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
-                tXZ = np.transpose(self.X) @ self.Z # k x k
                 if u.ndim == 1:
                     u = u.reshape((self.N,1))
                 Omega = np.transpose(self.Z) @ (self.Z * (u ** 2))  # k x k
-                meat = tXZ @ tZZinv  @ Omega  @ tZZinv @ self.tZX # k x k
-                bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                meat = self.tXZ @ self.tZZinv  @ Omega  @ self.tZZinv @ self.tZX # k x k
+                bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                 self.vcov = self.ssc * bread @ meat @ bread
 
 
@@ -234,10 +235,8 @@ class Feols:
                 if self.is_iv == False:
                     self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
                 else:
-                    tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)  # k x k
-                    tXZ = np.transpose(self.X) @ self.Z # k x k
-                    meat = tXZ @ tZZinv @ meat @ tZZinv @ self.tZX
-                    bread = np.linalg.inv(tXZ @ tZZinv @ self.tZX)
+                    meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
+                    bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                     self.vcov = self.ssc * bread @ meat @ bread
 
             elif self.vcov_type_detail == "CRV3":
