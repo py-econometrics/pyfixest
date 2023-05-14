@@ -92,7 +92,7 @@ It is also possible to estimate instrumental variable models with *one* endogeno
 
 ```python
 fixest = Fixest(data = data)
-fixest.feols("Y~ X1 | X2 | X1 ~ Z2")
+fixest.feols("Y~ X1 | X2 | X1 ~ Z1")
 fixest.summary()
 # ###
 #
