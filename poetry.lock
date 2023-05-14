@@ -95,7 +95,6 @@ redis = ["redis (>=2.10.5)"]
 [[package]]
 name = "certifi"
 version = "2023.5.7"
-
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -2515,28 +2514,24 @@ test = ["pytest (>=6.0.0)"]
 
 [[package]]
 name = "wildboottest"
-version = "0.1.13"
+version = "0.1.10"
 description = "Wild Cluster Bootstrap Inference for Linear Models in Python"
 category = "main"
 optional = false
 python-versions = ">=3.7,<3.11"
-files = []
-develop = false
+files = [
+    {file = "wildboottest-0.1.10-py3-none-any.whl", hash = "sha256:b7aad4fe357af49bd130491ce9332bceac9c0e47b0d467a93b0e125d1c659853"},
+    {file = "wildboottest-0.1.10.tar.gz", hash = "sha256:c2f2653ecf588768b4946f1127d22bb39d8cf68b4f288cf92b8b0e46ec34f7ed"},
+]
 
 [package.dependencies]
-numba = "^0.55"
-numpy = "^1.18"
-pandas = "^1.4"
-poetry = "^1.4.2"
-pytest = "^7.2.0"
-statsmodels = "^0.13"
-tabulate = "^0.9.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/s3alfisc/wildboottest.git"
-reference = "main"
-resolved_reference = "5e7723d611102da6bb892a9370d6c5ef7e99822f"
+numba = ">=0.55,<0.56"
+numpy = ">=1.18,<2.0"
+pandas = ">=1.4,<2.0"
+poetry = ">=1.4.2,<2.0.0"
+pytest = ">=7.2.0,<8.0.0"
+statsmodels = ">=0.13,<0.14"
+tabulate = ">=0.9.0,<0.10.0"
 
 [[package]]
 name = "wrapt"
@@ -2727,4 +2722,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.11"
-content-hash = "d814efcfb5cbc47db937d7bc7b943fa761d624aec7b242156da157d519f2a0f3"
+content-hash = "5aa6a6f0ca4277279991a4def7acb72f109ea65178c60fdfb6676f93526b499e"
