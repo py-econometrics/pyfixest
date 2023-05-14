@@ -69,29 +69,28 @@ class Feols:
         Args: estimator (str): Estimator to use. Can be one of "ols", "iv", or "2sls".
               If "ols", then the estimator is (X'X)^{-1}X'Y.
               If "iv", then the estimator is (Z'X)^{-1}Z'Y.
-              If "2sls", then the esrtimator is
+              If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
 
         '''
 
         assert estimator in ["ols", "iv", "2sls"], "estimator must be one of 'ols', 'iv', or '2sls'."
 
-        if estimator in ["ols", "iv"]:
-            self.tZX = np.transpose(self.Z) @ self.X
-            self.tZXinv = np.linalg.inv(self.tZX)
+        self.tZX = np.transpose(self.Z) @ self.X
+        self.tZy = (np.transpose(self.Z) @ self.Y)
 
-            self.tZy = (np.transpose(self.Z) @ self.Y)
-            beta_hat = self.tZXinv @ self.tZy
-            self.beta_hat = beta_hat.flatten()
-            self.Y_hat = (self.X @ self.beta_hat)
-            self.u_hat = (self.Y.flatten() - self.Y_hat)
+        if estimator in ["ols", "iv"]:
+
+            self.tZXinv = np.linalg.inv(self.tZX)
+            self.beta_hat = (self.tZXinv @ self.tZy).flatten()
+
         else:
-            self.tZX = np.transpose(self.Z) @ self.X
+
             self.tXZ = np.transpose(self.X) @ self.Z
             self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
-            self.tZy = (np.transpose(self.Z) @ self.Y)
             self.beta_hat = (np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) @ self.tXZ @ self.tZZinv @ self.tZy).flatten()
-            self.Y_hat = (self.X @ self.beta_hat)
-            self.u_hat = (self.Y.flatten() - self.Y_hat)
+
+        self.Y_hat = (self.X @ self.beta_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
