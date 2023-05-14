@@ -322,16 +322,13 @@ def test_py_vs_r_split(data, fml_split):
 @pytest.mark.parametrize("fml_iv", [
 
     "Y ~ X1 | X1 ~ Z1",
-    #"Y ~ X1 + X2 | X1 ~ Z1",
+    "Y ~ X1 + X2 | X1 ~ Z1",
 
     "Y ~ X1 | X2 | X1 ~ Z1",
     "Y ~ X1 | X2 + X3 | X1 ~ Z1",
 
-    #"Y ~ X1 + C(X4) | X2 + X3 | X1 ~ Z1",
     "Y ~ X1 + X2| X3 | X1 ~ Z1",
-
     #"Y ~ X1 + X2 | X1 + X2 ~ Z1 + Z2",
-
 
 ])
 
@@ -341,10 +338,6 @@ def test_py_vs_r_iv(data, fml_iv):
     '''
     tests for instrumental variables regressions
     '''
-
-    np.random.seed(1235)
-
-    data["Z1"] = data["X1"] * np.random.normal(data.shape[0])
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml_iv, vcov = 'iid')
@@ -414,6 +407,88 @@ def test_py_vs_r_iv(data, fml_iv):
 
 
 
+def test_py_vs_r_overidentified(data):
+
+    py_fml_list = [
+        "Y ~ X1  | X2 | X1 ~ Z1 + Z2",
+        "Y ~ X1 + X2  | X1 ~ Z1 + Z2",
+    ]
+
+    r_fml_list = [
+        "Y ~ 1 | X2 | X1 ~ Z1 + Z2",
+        "Y ~ X2  | X1 ~ Z1 + Z2"
+    ]
+
+    for x, py_fml in enumerate(py_fml_list):
+
+        r_fml = r_fml_list[x]
+
+        # iid errors
+        pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
+
+        py_coef = np.sort(pyfixest.coef()['Estimate'])
+        py_se = np.sort(pyfixest.se()['Std. Error'])
+        py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
+        py_tstat = np.sort(pyfixest.tstat()['t value'])
+
+
+        r_fixest = fixest.feols(
+            ro.Formula(r_fml),
+            se = 'iid',
+            data=data,
+            ssc = fixest.ssc(True, "none", True, "min", "min", False)
+        )
+
+        if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
+            raise ValueError("py_coef != r_coef")
+        if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
+            raise ValueError("py_se != r_se for iid errors")
+        if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
+            raise ValueError("py_pval != r_pval for iid errors")
+        if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
+            raise ValueError("py_tstat != r_tstat for iid errors")
+
+        # heteroskedastic errors
+        pyfixest.vcov("HC1")
+        py_se = pyfixest.se()['Std. Error']
+        py_pval = pyfixest.pvalue()['Pr(>|t|)']
+        py_tstat = pyfixest.tstat()['t value']
+
+        r_fixest = fixest.feols(
+            ro.Formula(r_fml),
+            se = 'hetero',
+            data=data,
+            ssc = fixest.ssc(True, "none", True, "min", "min", False)
+        )
+
+        if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+            raise ValueError("py_se != r_se for HC1 errors")
+        if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+            raise ValueError("py_pval != r_pval for HC1 errors")
+        if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+            raise ValueError("py_tstat != r_tstat for HC1 errors")
+
+        # cluster robust errors
+        pyfixest.vcov({'CRV1':'group_id'})
+        py_se = pyfixest.se()['Std. Error']
+        py_pval = pyfixest.pvalue()['Pr(>|t|)']
+        py_tstat = pyfixest.tstat()['t value']
+
+        r_fixest = fixest.feols(
+            ro.Formula(r_fml),
+            cluster = ro.Formula('~group_id'),
+            data=data,
+            ssc = fixest.ssc(True, "none", True, "min", "min", False)
+        )
+
+        if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+            raise ValueError("py_se != r_se for CRV1 errors")
+        if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+            raise ValueError("py_pval != r_pval for CRV1 errors")
+        if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+            raise ValueError("py_tstat != r_tstat for CRV1 errors")
+
+
 
 def _py_fml_to_r_fml(py_fml, is_iv = False):
 
@@ -463,6 +538,9 @@ def _py_fml_to_r_fml(py_fml, is_iv = False):
                 exogvars = "+".join(exogvars)
 
             return depvar + "~" + exogvars + "|" + fml2[1] + "|" +  fml2[2]
+
+
+
 
 
 

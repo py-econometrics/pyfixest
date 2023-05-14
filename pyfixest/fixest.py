@@ -103,17 +103,17 @@ class Fixest:
 
                 if self.is_iv:
                     instruments2 = dict2fe_iv.get(depvar)[0]
-                    endogvar = list(set(covar2.split("+")) - set(instruments2.split("+")))[0]
-                    instrument = list(set(instruments2.split("+")) - set(covar2.split("+")))[0]
+                    endogvar_list = list(set(covar2.split("+")) - set(instruments2.split("+")))#[0]
+                    instrument_list = list(set(instruments2.split("+")) - set(covar2.split("+")))#[0]
 
-                    if len([instrument]) > 1 or len([endogvar]) > 1:
-                        raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
+                    #if len(instrument_list) > 1 or len(endogvar_list) > 1:
+                    #    raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
 
-                    fml2 = instrument + "+" + fml
+                    fml2 = "+".join(instrument_list) + "+" + fml
                     rhs, lhs = model_matrix(fml2, data)
 
                     Y = rhs[[depvar]]
-                    I = rhs[[instrument]]
+                    I = rhs[instrument_list]
                     X = lhs
                 else:
                     Y, X = model_matrix(fml, data)
@@ -132,8 +132,8 @@ class Fixest:
                     #z_varnames = list(set(x_names) - set([endogvar]))
                     #z_varnames.append(instrument)
                     x_names_copy = x_names.copy()
-                    x_names_copy.remove(endogvar)
-                    z_names = x_names_copy + [instrument]
+                    x_names_copy = [x for x in x_names_copy if x not in endogvar_list]
+                    z_names = x_names_copy + instrument_list
                     cols = yxz_names + iv_names
                 else:
                     iv_names = None
@@ -154,8 +154,8 @@ class Fixest:
                 X = X.to_numpy()
                 if self.is_iv:
                     I = I.to_numpy()
-                    if I.ndim != 1:
-                        I = I.reshape((len(I), 1))
+                    #if I.ndim != 1:
+                    #    I = I.reshape((len(I), 1))
 
                 if Y.shape[1] > 1:
                     raise ValueError(

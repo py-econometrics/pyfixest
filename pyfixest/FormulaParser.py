@@ -70,8 +70,8 @@ class FixestFormulaParser:
         if endogvars is not None:
             if len(endogvars) > len(instruments):
                 raise ValueError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
-            elif len(endogvars) < len(instruments):
-                raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+            #elif len(endogvars) < len(instruments):
+            #    raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
             else:
                 pass
 

@@ -67,9 +67,11 @@ class Feols:
         '''
         Regression estimation for a single model, via ordinary least squares (OLS).
         Args: estimator (str): Estimator to use. Can be one of "ols", "iv", or "2sls".
-              If "ols", then the estimator is (X'X)^{-1}X'Y.
-              If "iv", then the estimator is (Z'X)^{-1}Z'Y.
-              If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
+                If "ols", then the estimator is (X'X)^{-1}X'Y.
+                If "iv", then the estimator is (Z'X)^{-1}Z'Y.
+                If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
+        Returns:
+            None
 
         '''
 
@@ -222,14 +224,15 @@ class Feols:
 
             if self.vcov_type_detail == "CRV1":
 
-
-                meat = np.zeros((self.k, self.k))
+                
+                k_instruments = self.Z.shape[1]
+                meat = np.zeros((k_instruments, k_instruments))
 
                 for _, g, in enumerate(clustid):
 
                     Zg = self.Z[np.where(cluster_df == g)]
                     ug = self.u_hat[np.where(cluster_df == g)]
-                    score_g = (np.transpose(Zg) @ ug).reshape((self.k, 1))
+                    score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
                 if self.is_iv == False:
