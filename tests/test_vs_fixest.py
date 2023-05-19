@@ -321,13 +321,13 @@ def test_py_vs_r_split(data, fml_split):
 
 @pytest.mark.parametrize("fml_iv", [
 
-    "Y ~ X1 | X1 ~ Z1",
-    "Y ~ X1 + X2 | X1 ~ Z1",
+    "Y ~ 1 | X1 ~ Z1",
+    "Y ~ 1 + X2 | X1 ~ Z1",
 
-    "Y ~ X1 | X2 | X1 ~ Z1",
-    "Y ~ X1 | X2 + X3 | X1 ~ Z1",
+    "Y ~ 1 | X2 | X1 ~ Z1",
+    "Y ~ 1 | X2 + X3 | X1 ~ Z1",
 
-    "Y ~ X1 + X2| X3 | X1 ~ Z1",
+    "Y ~  X2| X3 | X1 ~ Z1",
     #"Y ~ X1 + X2 | X1 + X2 ~ Z1 + Z2",
 
 ])
@@ -410,8 +410,8 @@ def test_py_vs_r_iv(data, fml_iv):
 def test_py_vs_r_overidentified(data):
 
     py_fml_list = [
-        "Y ~ X1  | X2 | X1 ~ Z1 + Z2",
-        "Y ~ X1 + X2  | X1 ~ Z1 + Z2",
+        "Y ~  1 | X2 | X1 ~ Z1 + Z2",
+        "Y ~  X2  | X1 ~ Z1 + Z2",
     ]
 
     r_fml_list = [
