@@ -224,7 +224,7 @@ class Feols:
 
             if self.vcov_type_detail == "CRV1":
 
-                
+
                 k_instruments = self.Z.shape[1]
                 meat = np.zeros((k_instruments, k_instruments))
 
@@ -345,6 +345,32 @@ class Feols:
         self.conf_int = (
             np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
         )
+
+
+    def get_Ftest(self, vcov, is_iv = False):
+
+        '''
+        compute an F-test statistic of the form H0: R*beta = q
+        Args: is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
+        Returns: None
+        '''
+
+        R = np.ones(self.k).reshape((1, self.k))
+        q = 0
+        beta = self.beta_hat
+        Rbetaq = R @ beta - q
+        #Rbetaq = self.beta_hat
+
+        if self.is_iv:
+            first_stage = Feols(self.Y, self.Z, self.Z)
+            first_stage.get_fit()
+            first_stage.get_vcov(vcov = vcov)
+            vcov = first_stage.vcov
+        else:
+            vcov = self.vcov
+
+
+        self.F_stat = Rbetaq @ np.linalg.inv(R @ self.vcov @ np.transpose(R)) @ Rbetaq
 
 
     def get_wildboottest(self, B:int, cluster : Union[np.ndarray, pd.Series, pd.DataFrame, None], param : Union[str, None], weights_type: str, impose_null: bool , bootstrap_type: str, seed: Union[str, None] , adj: bool , cluster_adj: bool):
