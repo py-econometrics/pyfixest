@@ -50,7 +50,7 @@ class FixestFormulaParser:
         # Split the formula string into its components
         fml_split = fml.split('|')
         depvars, covars = fml_split[0].split("~")
-
+          
         if len(fml_split) == 1:
             fevars = "0"
             endogvars = None
@@ -59,6 +59,21 @@ class FixestFormulaParser:
             if "~" in fml_split[1]:
                 fevars = "0"
                 endogvars, instruments = fml_split[1].split("~")
+                # add endogeneous variable to "covars" - yes, bad naming
+                
+                
+                # check if any of the instruments or endogeneous variables are also specified 
+                # as covariates
+                if any(element in covars.split("+") for element in endogvars.split("+")):
+                    raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                
+                if any(element in covars.split("+") for element in instruments.split("+")):
+                    raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                
+                if covars == "1": 
+                    covars = endogvars
+                else: 
+                    covars = endogvars + "+" +  covars
             else:
                 fevars = fml_split[1]
                 endogvars = None
@@ -66,6 +81,20 @@ class FixestFormulaParser:
         elif len(fml_split) == 3:
             fevars = fml_split[1]
             endogvars, instruments = fml_split[2].split("~")
+
+            # check if any of the instruments or endogeneous variables are also specified 
+            # as covariates
+            if any(element in covars.split("+") for element in endogvars.split("+")):
+                raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                
+            if any(element in covars.split("+") for element in instruments.split("+")):
+                raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+
+            # add endogeneous variable to "covars" - yes, bad naming
+            if covars == "1": 
+                covars = endogvars
+            else: 
+                covars = endogvars + "+" +  covars
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
