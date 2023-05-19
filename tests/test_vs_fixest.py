@@ -323,6 +323,8 @@ def test_py_vs_r_split(data, fml_split):
 
     "Y ~ 1 | X1 ~ Z1",
     "Y ~ 1 + X2 | X1 ~ Z1",
+    "Y ~ 1 + X2 + X3 | X1 ~ Z1",
+
 
     "Y ~ 1 | X2 | X1 ~ Z1",
     "Y ~ 1 | X2 + X3 | X1 ~ Z1",
@@ -347,10 +349,8 @@ def test_py_vs_r_iv(data, fml_iv):
     py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
     py_tstat = np.sort(pyfixest.tstat()['t value'])
 
-    fml_r = _py_fml_to_r_fml(fml_iv, True)
-
     r_fixest = fixest.feols(
-        ro.Formula(fml_r),
+        ro.Formula(fml_iv),
         se = 'iid',
         data=data,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
@@ -372,7 +372,7 @@ def test_py_vs_r_iv(data, fml_iv):
     py_tstat = pyfixest.tstat()['t value']
 
     r_fixest = fixest.feols(
-        ro.Formula(fml_r),
+        ro.Formula(fml_iv),
         se = 'hetero',
         data=data,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
@@ -392,7 +392,7 @@ def test_py_vs_r_iv(data, fml_iv):
     py_tstat = pyfixest.tstat()['t value']
 
     r_fixest = fixest.feols(
-        ro.Formula(fml_r),
+        ro.Formula(fml_iv),
         cluster = ro.Formula('~group_id'),
         data=data,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
@@ -406,87 +406,84 @@ def test_py_vs_r_iv(data, fml_iv):
         raise ValueError("py_tstat != r_tstat for CRV1 errors")
 
 
+@pytest.mark.parametrize("fml_iv_overidentified", [
 
-def test_py_vs_r_overidentified(data):
+    "Y ~  1 | X2 | X1 ~ Z1 + Z2",
+    "Y ~  X2  | X1 ~ Z1 + Z2",
 
-    py_fml_list = [
-        "Y ~  1 | X2 | X1 ~ Z1 + Z2",
-        "Y ~  X2  | X1 ~ Z1 + Z2",
-    ]
-
-    r_fml_list = [
-        "Y ~ 1 | X2 | X1 ~ Z1 + Z2",
-        "Y ~ X2  | X1 ~ Z1 + Z2"
-    ]
-
-    for x, py_fml in enumerate(py_fml_list):
-
-        r_fml = r_fml_list[x]
-
-        # iid errors
-        pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
-
-        py_coef = np.sort(pyfixest.coef()['Estimate'])
-        py_se = np.sort(pyfixest.se()['Std. Error'])
-        py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
-        py_tstat = np.sort(pyfixest.tstat()['t value'])
+])
 
 
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            se = 'iid',
-            data=data,
-            ssc = fixest.ssc(True, "none", True, "min", "min", False)
-        )
 
-        if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
-            raise ValueError("py_coef != r_coef")
-        if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
-            raise ValueError("py_se != r_se for iid errors")
-        if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
-            raise ValueError("py_pval != r_pval for iid errors")
-        if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
-            raise ValueError("py_tstat != r_tstat for iid errors")
+def test_py_vs_r_overidentified(data, fml_iv_overidentified):
 
-        # heteroskedastic errors
-        pyfixest.vcov("HC1")
-        py_se = pyfixest.se()['Std. Error']
-        py_pval = pyfixest.pvalue()['Pr(>|t|)']
-        py_tstat = pyfixest.tstat()['t value']
 
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            se = 'hetero',
-            data=data,
-            ssc = fixest.ssc(True, "none", True, "min", "min", False)
-        )
 
-        if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
-            raise ValueError("py_se != r_se for HC1 errors")
-        if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
-            raise ValueError("py_pval != r_pval for HC1 errors")
-        if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
-            raise ValueError("py_tstat != r_tstat for HC1 errors")
 
-        # cluster robust errors
-        pyfixest.vcov({'CRV1':'group_id'})
-        py_se = pyfixest.se()['Std. Error']
-        py_pval = pyfixest.pvalue()['Pr(>|t|)']
-        py_tstat = pyfixest.tstat()['t value']
+    # iid errors
+    pyfixest = Fixest(data = data).feols(fml_iv_overidentified, vcov = 'iid')
 
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            cluster = ro.Formula('~group_id'),
-            data=data,
-            ssc = fixest.ssc(True, "none", True, "min", "min", False)
-        )
+    py_coef = np.sort(pyfixest.coef()['Estimate'])
+    py_se = np.sort(pyfixest.se()['Std. Error'])
+    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
+    py_tstat = np.sort(pyfixest.tstat()['t value'])
 
-        if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
-            raise ValueError("py_se != r_se for CRV1 errors")
-        if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
-            raise ValueError("py_pval != r_pval for CRV1 errors")
-        if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
-            raise ValueError("py_tstat != r_tstat for CRV1 errors")
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_iv_overidentified),
+        se = 'iid',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_coef)), np.sort(stats.coef(r_fixest))):
+        raise ValueError("py_coef != r_coef")
+    if not np.allclose((np.array(py_se)), np.sort(fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for iid errors")
+    if not np.allclose((np.array(py_pval)), np.sort(fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for iid errors")
+    if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
+        raise ValueError("py_tstat != r_tstat for iid errors")
+
+    # heteroskedastic errors
+    pyfixest.vcov("HC1")
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_iv_overidentified),
+        se = 'hetero',
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for HC1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for HC1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for HC1 errors")
+
+    # cluster robust errors
+    pyfixest.vcov({'CRV1':'group_id'})
+    py_se = pyfixest.se()['Std. Error']
+    py_pval = pyfixest.pvalue()['Pr(>|t|)']
+    py_tstat = pyfixest.tstat()['t value']
+
+    r_fixest = fixest.feols(
+        ro.Formula(fml_iv_overidentified),
+        cluster = ro.Formula('~group_id'),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
+        raise ValueError("py_se != r_se for CRV1 errors")
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
+        raise ValueError("py_pval != r_pval for CRV1 errors")
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
+        raise ValueError("py_tstat != r_tstat for CRV1 errors")
 
 
 
