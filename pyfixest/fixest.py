@@ -419,6 +419,17 @@ class Fixest:
                     self.dropped_data_dict[fval].append(dropped_data)
                     self.yxz_name_dict[fval].append(yxz_name_dict)
 
+        self.is_fixef_multi = False
+        if len(self.fml_dict.keys()) > 1:
+            self.is_fixef_multi = True
+        elif len(self.fml_dict.keys()) == 1:
+            first_key = next(iter(self.fml_dict))
+            if len(self.fml_dict[first_key]) > 1:
+                self.is_fixef_multi = True
+
+        if self.is_fixef_multi and self.is_iv:
+            raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
+
         # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
             model_splits = self.demeaned_data_dict[fval]

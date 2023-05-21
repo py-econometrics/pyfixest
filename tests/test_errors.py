@@ -111,6 +111,12 @@ def test_iv_errors():
     # wild bootstrap
     with pytest.raises(ValueError):
         fixest.feols('Y ~ 1 | Z1 ~ X1 ').wildboottest(param = "Z1", B = 999)
+    with pytest.raises(ValueError):
+        fixest.feols('Y + Y2 ~ 1 | Z1 ~ X1 ')
+    with pytest.raises(ValueError):
+        fixest.feols('Y  ~ 1 | sw(X2, X3) | Z1 ~ X1 ')
+    with pytest.raises(ValueError):
+        fixest.feols('Y  ~ csw(X2, X3) | Z1 ~ X1 ')
 
 
 
