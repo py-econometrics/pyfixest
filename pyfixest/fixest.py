@@ -103,17 +103,17 @@ class Fixest:
 
                 if self.is_iv:
                     instruments2 = dict2fe_iv.get(depvar)[0]
-                    endogvar = list(set(covar2.split("+")) - set(instruments2.split("+")))[0]
-                    instrument = list(set(instruments2.split("+")) - set(covar2.split("+")))[0]
+                    endogvar_list = list(set(covar2.split("+")) - set(instruments2.split("+")))#[0]
+                    instrument_list = list(set(instruments2.split("+")) - set(covar2.split("+")))#[0]
 
-                    if len([instrument]) > 1 or len([endogvar]) > 1:
-                        raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
+                    #if len(instrument_list) > 1 or len(endogvar_list) > 1:
+                    #    raise ValueError("Currently, IV estimation is only supported with one endogeneous variable and one instrument.")
 
-                    fml2 = instrument + "+" + fml
+                    fml2 = "+".join(instrument_list) + "+" + fml
                     rhs, lhs = model_matrix(fml2, data)
 
                     Y = rhs[[depvar]]
-                    I = rhs[[instrument]]
+                    I = rhs[instrument_list]
                     X = lhs
                 else:
                     Y, X = model_matrix(fml, data)
@@ -132,8 +132,8 @@ class Fixest:
                     #z_varnames = list(set(x_names) - set([endogvar]))
                     #z_varnames.append(instrument)
                     x_names_copy = x_names.copy()
-                    x_names_copy.remove(endogvar)
-                    z_names = x_names_copy + [instrument]
+                    x_names_copy = [x for x in x_names_copy if x not in endogvar_list]
+                    z_names = x_names_copy + instrument_list
                     cols = yxz_names + iv_names
                 else:
                     iv_names = None
@@ -154,8 +154,8 @@ class Fixest:
                 X = X.to_numpy()
                 if self.is_iv:
                     I = I.to_numpy()
-                    if I.ndim != 1:
-                        I = I.reshape((len(I), 1))
+                    #if I.ndim != 1:
+                    #    I = I.reshape((len(I), 1))
 
                 if Y.shape[1] > 1:
                     raise ValueError(
@@ -360,37 +360,12 @@ class Fixest:
 
 
         self.ssc_dict = ssc
-        if fixef_rm == "singleton":
-            self.drop_singletons = True
-        else:
-            self.drop_singletons = False
+        self.drop_singletons = _drop_singletons(fixef_rm)
 
         # get all fixed effects combinations
         fixef_keys = list(self.var_dict.keys())
 
-        if self.ivars is not None:
-
-            if list(self.ivars.keys())[0] is not None:
-                ref = list(self.ivars.keys())[0]
-                ivars = self.ivars[ref]
-                drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
-            else:
-                ivars = self.ivars[None]
-                drop_ref = None
-
-            # type checking
-            i0_type = self.data[ivars[0]].dtype
-            i1_type = self.data[ivars[1]].dtype
-            if not i0_type in ['category', "O"]:
-                raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " +
-                                 i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
-            if not i1_type in ['int64', 'float64', 'int32', 'float32']:
-                raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " +
-                                 i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
-
-        else:
-            ivars = None
-            drop_ref = None
+        ivars, drop_ref = _clean_ivars(self.ivars, self.data)
 
         # dropped_data_dict and demeaned_data_dict are
         # dictionaries with keys for each fixed effects combination and
@@ -412,32 +387,12 @@ class Fixest:
         # currently no fsplit allowed
         fsplit = None
 
-        if self.split is not None:
-            if fsplit is not None:
-                raise ValueError(
-                    "Cannot specify both split and fsplit. Please specify only one of the two.")
-            else:
-                self.splitvar = self.data[self.split]
-                estimate_full_model = False
-                estimate_split_model = True
-                splitvar_name = self.split
-        elif fsplit is not None:
-            self.splitvar = self.data[fsplit]
-            splitvar_name = fsplit
-            estimate_split_model = True
-        else:
-            self.splitvar = None
-
-        if self.splitvar is not None:
-            self.split_categories = np.unique(self.splitvar)
-            if splitvar_name not in self.data.columns:
-                raise ValueError("Split variable " +
-                                 self.splitvar + " not found in data.")
-            if splitvar_name in self.var_dict.keys():
-                raise ValueError("Split variable " + self.splitvar +
-                                 " cannot be a fixed effect variable.")
-            if self.splitvar.dtype.name != "category":
-                self.splitvar = pd.Categorical(self.splitvar)
+        self.splitvar, _, estimate_split_model, estimate_full_model = _prepare_split_estimation(
+            self.split,
+            fsplit,
+            self.data,
+            self.var_dict
+        )
 
         if estimate_full_model:
             for _, fval in enumerate(fixef_keys):
@@ -464,10 +419,21 @@ class Fixest:
                     self.dropped_data_dict[fval].append(dropped_data)
                     self.yxz_name_dict[fval].append(yxz_name_dict)
 
+        self.is_fixef_multi = False
+        if len(self.fml_dict.keys()) > 1:
+            self.is_fixef_multi = True
+        elif len(self.fml_dict.keys()) == 1:
+            first_key = next(iter(self.fml_dict))
+            if len(self.fml_dict[first_key]) > 1:
+                self.is_fixef_multi = True
+
+        if self.is_fixef_multi and self.is_iv:
+            raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
+
         # estimate models based on demeaned model matrix and dependent variables
         for _, fval in enumerate(self.fml_dict.keys()):
             model_splits = self.demeaned_data_dict[fval]
-            for x, split in enumerate(model_splits):
+            for x, _ in enumerate(model_splits):
                 model_frames = model_splits[x]
                 for _, fml in enumerate(model_frames):
 
@@ -511,19 +477,16 @@ class Fixest:
                     k = X.shape[1]
 
                     # check for multicollinearity
-                    if np.linalg.matrix_rank(X) < min(X.shape):
-                        if self.ivars is not None:
-                            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
-                                             ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
-                        else:
-                            raise ValueError(
-                                "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                    _multicollinearity_checks(X, Z, ivars, fml2)
 
                     FEOLS = Feols(Y, X, Z)
                     FEOLS.is_iv = self.is_iv
                     FEOLS.fml = fml2
                     FEOLS.ssc_dict = self.ssc_dict
-                    FEOLS.get_fit()
+                    if self.is_iv:
+                        FEOLS.get_fit(estimator = "2sls")
+                    else:
+                        FEOLS.get_fit(estimator = "ols")
                     FEOLS.na_index = self.dropped_data_dict[fval][x][fml]
                     FEOLS.data = self.data.iloc[~self.data.index.isin(
                         FEOLS.na_index), :]
@@ -535,18 +498,7 @@ class Fixest:
                     else:
                         FEOLS.has_fixef = False
 
-                    # FEOLS.get_nobs()
-
-                    if vcov is None:
-                        # iid if no fixed effects
-                        if fval == "0":
-                            vcov_type = "iid"
-                        else:
-                            # CRV1 inference, clustered by first fixed effect
-                            first_fe = fval.split("+")[0]
-                            vcov_type = {"CRV1": first_fe}
-                    else:
-                        vcov_type = vcov
+                    vcov_type = _get_vcov_type(vcov, fval)
 
                     FEOLS.vcov_log = vcov_type
                     FEOLS.split_log = x
@@ -952,3 +904,178 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
         plt.show()
         plt.close()
+
+def _check_ivars(data, ivars):
+
+    '''
+    Checks if the variables in the i() syntax are of the correct type.
+    Args:
+        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
+        ivars (list): The list of variables specified in the i() syntax.
+    Returns:
+        None
+    '''
+
+    i0_type = data[ivars[0]].dtype
+    i1_type = data[ivars[1]].dtype
+    if not i0_type in ['category', "O"]:
+        raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " +
+                        i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
+        if not i1_type in ['int64', 'float64', 'int32', 'float32']:
+            raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " +
+                            i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+
+
+def _prepare_split_estimation(split, fsplit, data, var_dict):
+
+    '''
+    Cleans the input for the split estimation.
+    Checks if the split variables are of the correct type.
+
+    Args:
+        split (str): The name of the variable used for the split estimation.
+        fsplit (str): The name of the variable used for the fixed split estimation.
+        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
+        var_dict (dict): The dictionary containing the variables used in the model.
+    Returns:
+        splitvar (pandas.Series): The series containing the split variable.
+        splitvar_name (str): The name of the split variable. Either equal to split or fsplit.
+        estimate_split_model (bool): Whether to estimate the split model.
+        estimate_full_model (bool): Whether to estimate the full model.
+    '''
+
+    if split is not None:
+        if fsplit is not None:
+            raise ValueError(
+                "Cannot specify both split and fsplit. Please specify only one of the two.")
+        else:
+            splitvar = data[split]
+            estimate_full_model = False
+            estimate_split_model = True
+            splitvar_name = split
+    elif fsplit is not None:
+        splitvar = data[fsplit]
+        splitvar_name = fsplit
+        estimate_full_model = False
+        estimate_split_model = True
+    else:
+        splitvar = None
+        splitvar_name = None
+        estimate_split_model = False
+        estimate_full_model = True
+
+
+    if splitvar is not None:
+        split_categories = np.unique(splitvar)
+        if splitvar_name not in data.columns:
+            raise ValueError("Split variable " +
+                            splitvar + " not found in data.")
+        if splitvar_name in var_dict.keys():
+            raise ValueError("Split variable " + splitvar +
+                            " cannot be a fixed effect variable.")
+        if splitvar.dtype.name != "category":
+            splitvar = pd.Categorical(splitvar)
+
+    return splitvar, splitvar_name, estimate_split_model, estimate_full_model
+
+def _multicollinearity_checks(X, Z, ivars, fml2):
+
+    '''
+    Checks for multicollinearity in the design matrices X and Z.
+    Args:
+        X (numpy.ndarray): The design matrix X.
+        Z (numpy.ndarray): The design matrix (with instruments) Z.
+        ivars (list): The list of variables specified in the i() syntax.
+        fml2 (str): The formula string.
+
+    '''
+
+    if np.linalg.matrix_rank(X) < min(X.shape):
+        if ivars is not None:
+            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
+                            ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+        else:
+            raise ValueError(
+                    "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+
+    if np.linalg.matrix_rank(Z) < min(Z.shape):
+        if ivars is not None:
+            raise ValueError("The design Matrix Z does not have full rank for the regression with fml" + fml2 +
+                            ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+        else:
+            raise ValueError(
+                    "The design Matrix Z does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+
+def _get_vcov_type(vcov, fval):
+
+
+    '''
+    Passes the specified vcov type. If no vcov type specified, sets the default vcov type as iid if no fixed effect
+    is included in the model, and CRV1 clustered by the first fixed effect if a fixed effect is included in the model.
+    Args:
+        vcov (str): The specified vcov type.
+        fval (str): The specified fixed effects. (i.e. "X1+X2")
+    Returns:
+        vcov_type (str): The specified vcov type.
+    '''
+
+    if vcov is None:
+        # iid if no fixed effects
+        if fval == "0":
+            vcov_type = "iid"
+        else:
+            # CRV1 inference, clustered by first fixed effect
+            first_fe = fval.split("+")[0]
+            vcov_type = {"CRV1": first_fe}
+    else:
+        vcov_type = vcov
+
+    return vcov_type
+
+
+def _clean_ivars(ivars, data):
+
+    '''
+    Clean variables interacted via i(X1, X2, ref = a) syntax.
+
+    Args:
+        ivars (list): The list of variables specified in the i() syntax.
+        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
+    Returns:
+        ivars (list): The list of variables specified in the i() syntax minus the reference level
+        drop_ref (str): The dropped reference level specified in the i() syntax. None if no level is dropped
+    '''
+
+    if ivars is not None:
+
+        if list(ivars.keys())[0] is not None:
+            ref = list(ivars.keys())[0]
+            ivars = ivars[ref]
+            drop_ref = ivars[0] + "[T." + ref + "]" + ":" + ivars[1]
+        else:
+            ivars = ivars[None]
+            drop_ref = None
+
+        # type checking for ivars variable
+        _check_ivars(data, ivars)
+
+    else:
+        ivars = None
+        drop_ref = None
+
+    return ivars, drop_ref
+
+def _drop_singletons(fixef_rm):
+
+    '''
+    Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
+    Args:
+        fixef_rm (str): The fixef_rm argument.
+    Returns:
+        drop_singletons (bool): Whether to drop singletons.
+    '''
+
+    if fixef_rm == "singleton":
+        return True
+    else:
+        return False
