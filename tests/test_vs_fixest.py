@@ -333,6 +333,41 @@ def test_py_vs_r_split(data, fml_split):
     #"Y ~ X1 + X2 | X1 + X2 ~ Z1 + Z2",
 
     # tests of overidentified models
+    "Y ~ 1 | X1 ~ Z1 + Z2",
+    "Y ~ X2 | X1 ~ Z1 + Z2",
+    "Y ~ X2 + X3 | X1 ~ Z1 + Z2",
+
+
+    "Y ~ 1 | X2 | X1 ~ Z1 + Z2",
+    "Y ~ 1 | X2 + X3 | X1 ~ Z1 + Z2",
+
+    "Y ~  X2| X3 | X1 ~ Z1 + Z2",
+
+
+
+    # tests for multiple estimation
+    #("Y + Y2 ~ 1 | X1 ~ Z1"),
+    #("Y + Y2 ~ X2 | X1 ~ Z1 + Z2 "),
+    #("Y + Y2 ~ 1 | X2 | X1 ~ Z1"),
+    #("Y + Y2 ~ 1| X2+X3 | X1 ~ Z1 + Z2"),
+    #("Y + Y2 ~ X2 | X3+X4 | X1 ~ Z1"),
+
+    #("Y + Y2 ~ sw(X3, X4)"),
+    #("Y + Y2 ~ sw(X3, X4) | X2"),
+
+   # ("Y + Y2 ~ csw(X3, X4)"),
+    #("Y + Y2 ~ csw(X3, X4) | X2"),
+
+    #("Y + Y2 ~ X1 + csw(X3, X4)"),
+    #("Y + Y2 ~ X1 + csw(X3, X4) | X2"),
+
+    #("Y + Y2 ~ X1 + csw0(X3, X4)"),
+    #("Y + Y2 ~ X1 + csw0(X3, X4) | X2"),
+
+    #("Y + Y2 ~ 1 | csw0(X3, X4) | X1 ~ Z1 + Z2"),
+    #("Y + Y2 ~ X2 | csw0(X3, X4) | X1 ~ Z1"),
+
+
 
 ])
 
