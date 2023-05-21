@@ -88,11 +88,11 @@ fixest.wildboottest(param = "X1", B = 999)
 
 Note that the wild bootstrap currently does not support fixed effects in the regression model. Supporting fixed effects is work in progress.
 
-It is also possible to estimate instrumental variable models with *one* endogenous and *one* exogeneous variable via three-part syntax:
+It is also possible to estimate instrumental variable models with *one* endogenous variable and (potentially multiple) instruments:
 
 ```python
 fixest = Fixest(data = data)
-fixest.feols("Y~ X1 | X2 | X1 ~ Z1")
+fixest.feols("Y~ 1 | X2 | X1 ~ Z1 + Z2")
 fixest.summary()
 # ###
 #
@@ -106,6 +106,14 @@ fixest.summary()
 # X1 -0.259964     0.19729 -1.317671  0.258015
 # ---
 ```
+
+If the model does not contain any fixed effects, just drop the second part of the formula above:
+
+```py
+fixest.feols("Y~ 1 | X1 ~ Z1 + Z2")
+```
+
+IV estimation with multiple endogenous variables and multiple estimation syntax is currently not supported. The syntax is "depvar ~ exog.vars | fixef effects | endog.vars ~ instruments".
 
 `PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. Note that every new call of `.feols()` attaches new regression results the `Fixest` object.
 
