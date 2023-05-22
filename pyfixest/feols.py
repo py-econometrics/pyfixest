@@ -140,7 +140,7 @@ class Feols:
 
         _check_vcov_input(vcov, self.data)
 
-        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef)
+        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef, self.is_iv)
 
         if self.is_iv:
             if self.vcov_type in ["CRV3"]:
@@ -498,7 +498,7 @@ def _check_vcov_input(vcov, data):
         assert vcov in ["iid", "hetero", "HC1", "HC2", "HC3"], "vcov string must be iid, hetero, HC1, HC2, or HC3"
 
 
-def _deparse_vcov_input(vcov, has_fixef):
+def _deparse_vcov_input(vcov, has_fixef, is_iv):
 
     '''
     Deparse the vcov argument passed to the Feols class.
@@ -506,6 +506,7 @@ def _deparse_vcov_input(vcov, has_fixef):
     Args:
         vcov (dict, str, list): The vcov argument passed to the Feols class.
         has_fixef (bool): Whether the regression has fixed effects.
+        is_iv (bool): Whether the regression is an IV regression.
     Returns:
         vcov_type (str): The type of vcov to be used. Either "iid", "hetero", or "CRV"
         vcov_type_detail (str, list): The type of vcov to be used, with more detail. Either "iid", "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3"
@@ -532,6 +533,8 @@ def _deparse_vcov_input(vcov, has_fixef):
         if vcov_type_detail in ["HC2", "HC3"]:
             if has_fixef:
                 raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
+            if is_iv:
+                raise ValueError("HC2 and HC3 inference types are not supported for IV regressions.")
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True

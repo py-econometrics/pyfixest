@@ -117,6 +117,9 @@ def test_iv_errors():
         fixest.feols('Y  ~ 1 | sw(X2, X3) | Z1 ~ X1 ')
     with pytest.raises(ValueError):
         fixest.feols('Y  ~ csw(X2, X3) | Z1 ~ X1 ')
+    with pytest.raises(ValueError):
+        fixest.feols('Y  ~ 1 | Z1 ~ X1', vcov = "HC2")
+
 
 
 
