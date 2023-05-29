@@ -1,13 +1,8 @@
 import numpy as np
 from numba import njit, prange
 
-#N = 200
-#x = np.random.normal(0, 1, 2*N).reshape((N,2))
-#flist = np.random.choice([0,1,2,3,4,5], N*2).reshape((N,2))
-#weights = np.random.uniform(0,1, N).reshape((N,1))
 
-
-#@njit
+@njit(parallel = False)
 def demean(x, flist, weights, tol = 1e-06):
 
     # Check dimensions
@@ -19,18 +14,19 @@ def demean(x, flist, weights, tol = 1e-06):
     #    raise ValueError("weights needs to be a two dimension array with only one column.")
 
     cx = x
+    res = cx.copy()
 
     N = cx.shape[0]
     fixef_vars = flist.shape[1]
     K = x.shape[1]
 
-    for k in range(K):
+    for k in prange(K):
 
         cxk = cx[:,k]
         oldxk = cxk - 1
 
 
-        while np.sqrt(np.sum((cxk - oldxk) ** 2)) >= tol:
+        while np.sum(np.abs(cxk - oldxk)) >= tol:
 
             #if np.sqrt(np.sum((cxk - oldxk) ** 2)) >= 1e-10:
             #    break
@@ -43,13 +39,12 @@ def demean(x, flist, weights, tol = 1e-06):
                     selector = fmat == j
                     cxkj = cxk[selector]
                     wj = weights[selector]
-                    #weighted_ave[selector] = np.average(cxkj, weights=wj)
                     w = np.zeros(1)
                     wx = np.zeros(1)
                     for l in range(len(wj)):
                         w += wj[l]
                         wx += wj[l] * cxkj[l]
-                    weighted_ave[selector] = np.repeat(wx / w, len(wj))
+                    weighted_ave[selector] = wx / w
                 cxk = cxk - weighted_ave
 
         cx[:,k] = cxk
@@ -78,7 +73,7 @@ def select_elements(v, selector):
             j += 1
     return selected_elements
 
-#@njit
+@njit
 def fill_matrix_columns(A, v, k):
 
     '''
@@ -93,6 +88,6 @@ def fill_matrix_columns(A, v, k):
 
     N = A.shape[0]
     for i in range(N):
-        A[i,k] = v[i,0]
+        A[i,k] = v[i]
 
     return A

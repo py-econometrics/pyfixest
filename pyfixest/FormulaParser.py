@@ -545,6 +545,6 @@ def _transform_varying_slopes(x):
     parts = x.split('[')
     a = parts[0]
     b = parts[1].replace(']', '')
-    transformed_string = f"{a} + {a}^{b}"
+    transformed_string = f"{a}/{b}"
     return transformed_string, "varying_slopes"
 
