@@ -1,8 +1,14 @@
 import numpy as np
 from numba import njit, prange
 
-@njit(parallel = True)
-def demean(x, flist, weights, tol = 1e-08, maxiter = 2000):
+#N = 200
+#x = np.random.normal(0, 1, 2*N).reshape((N,2))
+#flist = np.random.choice([0,1,2,3,4,5], N*2).reshape((N,2))
+#weights = np.random.uniform(0,1, N).reshape((N,1))
+
+
+#@njit
+def demean(x, flist, weights, tol = 1e-06):
 
     # Check dimensions
     #if x.ndim != 2:
@@ -12,72 +18,67 @@ def demean(x, flist, weights, tol = 1e-08, maxiter = 2000):
     #if weights.ndim != 2 and weights.shape[1] != 1:
     #    raise ValueError("weights needs to be a two dimension array with only one column.")
 
-    #x = x.transpose()
-    #flist = flist.transpose()
     cx = x
 
     N = cx.shape[0]
     fixef_vars = flist.shape[1]
     K = x.shape[1]
-    weights = weights.flatten()
 
-    #res = np.zeros((N, K))
+    for k in range(K):
 
-    for k in prange(K):
-
-        cxk = cx[:,k]#subset_matrix(cx, k)
+        cxk = cx[:,k]
         oldxk = cxk - 1
 
 
-        for _ in range(maxiter):
+        while np.sqrt(np.sum((cxk - oldxk) ** 2)) >= tol:
 
-            #if np.sqrt(np.sum((cxk - oldxk) ** 2)) < tol:
-            if np.sum(np.abs(cxk - oldxk)) < tol:
-                break
+            #if np.sqrt(np.sum((cxk - oldxk) ** 2)) >= 1e-10:
+            #    break
 
             oldxk = cxk
             for i in range(fixef_vars):
-
                 weighted_ave = np.zeros(N)
                 fmat = flist[:,i]
-
                 for j in np.unique(fmat):
                     selector = fmat == j
-                    cxkj = cxk[selector]#select_elements(cxk, selector)
+                    cxkj = cxk[selector]
                     wj = weights[selector]
-                    w = np.sum(wj)
-                    wx = np.sum(wj * cxkj)
-                    weighted_ave[selector] = wx / w # np.repeat(wx / w, len(wj))
+                    #weighted_ave[selector] = np.average(cxkj, weights=wj)
+                    w = np.zeros(1)
+                    wx = np.zeros(1)
+                    for l in range(len(wj)):
+                        w += wj[l]
+                        wx += wj[l] * cxkj[l]
+                    weighted_ave[selector] = np.repeat(wx / w, len(wj))
+                cxk = cxk - weighted_ave
 
-                cxk -= weighted_ave
-
-            cx[:,k] = cxk#fill_matrix_columns(cx, cxk, k)
+        cx[:,k] = cxk
 
     return cx
 
 
-@njit
+#@njit
 def subset_matrix(A, k):
 
     N = A.shape[0]
-    column_vector = np.zeros(N)
+    column_vector = np.zeros((N, 1), dtype=A.dtype)
     for i in range(N):
-        column_vector[i] = A[i,k]
+        column_vector[i, 0] = A[i, k]
     return column_vector
 
-@njit
+#@njit
 def select_elements(v, selector):
     N = v.shape[0]
     k = np.sum(selector)
-    selected_elements = np.zeros(k)
+    selected_elements = np.empty((k,1), dtype=v.dtype)
     j = 0
     for i in range(N):
-        if selector[i]:
-            selected_elements[j] = v[i]
+        if selector[i,0]:
+            selected_elements[j,0] = v[i,0]
             j += 1
     return selected_elements
 
-@njit
+#@njit
 def fill_matrix_columns(A, v, k):
 
     '''
@@ -92,6 +93,6 @@ def fill_matrix_columns(A, v, k):
 
     N = A.shape[0]
     for i in range(N):
-        A[i,k] = v[i]
+        A[i,k] = v[i,0]
 
     return A
