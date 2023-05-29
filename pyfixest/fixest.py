@@ -37,19 +37,27 @@ class Fixest:
         fval_list = fval.split("+")
 
         # find interacted fixed effects via "^"
-        interacted_fes = [
-            x for x in fval_list if len(x.split('^')) > 1]
+        interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
+            
+        varying_slopes = [x for x in fval_list if len(x.split('/')) > 1]
 
         for x in interacted_fes:
             vars = x.split("^")
             data[x] = data[vars].apply(lambda x: '^'.join(
                 x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
-
+        
         fe = data[fval_list]
         # all fes to factors / categories
-        fe = fe.apply(lambda x: pd.factorize(x)[0])
 
+        if varying_slopes != []: 
+          
+            for x in varying_slopes: 
+                mm_vs = model_matrix("-1 + " + x, data)
+            
+            fe = pd.concat([fe, mm_vs], axis = 1)
+        
         fe_na = fe.isna().any(axis=1)
+        fe = fe.apply(lambda x: pd.factorize(x)[0])
         fe = fe.to_numpy()
 
         return fe, fe_na
@@ -118,14 +126,6 @@ class Fixest:
                 lhs, rhs = model_matrix(fml2, data)
 
                 untransformed_depvar = _find_untransformed_depvar(depvar2)
-
-                if not data[[untransformed_depvar]].dtypes.isin(["float64", "int64", "float32", "int32"]).values:
-                    raise DepvarIsNotNumericError("The dependent variable" + untransformed_depvar + "is not of a numeric type (int or float).")
-
-
-                #data.columns
-                #if not lhs.dtypes.isin(["float64", "int64", "float32", "int32"]).values.any():
-                #    raise DepvarIsNotNumericError("The dependent variable is not of a numeric type (int or float).")
 
                 Y = lhs[[depvar]]
                 X = rhs
