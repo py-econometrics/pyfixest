@@ -3,7 +3,7 @@ from numba import njit, prange
 
 
 @njit(parallel = False)
-def demean(x, flist, weights, tol = 1e-06):
+def demean(cx, flist, weights, tol = 1e-08):
 
     # Check dimensions
     #if x.ndim != 2:
@@ -13,18 +13,18 @@ def demean(x, flist, weights, tol = 1e-06):
     #if weights.ndim != 2 and weights.shape[1] != 1:
     #    raise ValueError("weights needs to be a two dimension array with only one column.")
 
-    cx = x
-    res = cx.copy()
+    #cx = x
 
     N = cx.shape[0]
     fixef_vars = flist.shape[1]
-    K = x.shape[1]
+    K = cx.shape[1]
+
+    res = np.zeros((N,K))
 
     for k in prange(K):
 
         cxk = cx[:,k]
         oldxk = cxk - 1
-
 
         while np.sum(np.abs(cxk - oldxk)) >= tol:
 
@@ -45,49 +45,9 @@ def demean(x, flist, weights, tol = 1e-06):
                         w += wj[l]
                         wx += wj[l] * cxkj[l]
                     weighted_ave[selector] = wx / w
+
                 cxk = cxk - weighted_ave
 
-        cx[:,k] = cxk
+        res[:,k] = cxk
 
-    return cx
-
-
-#@njit
-def subset_matrix(A, k):
-
-    N = A.shape[0]
-    column_vector = np.zeros((N, 1), dtype=A.dtype)
-    for i in range(N):
-        column_vector[i, 0] = A[i, k]
-    return column_vector
-
-#@njit
-def select_elements(v, selector):
-    N = v.shape[0]
-    k = np.sum(selector)
-    selected_elements = np.empty((k,1), dtype=v.dtype)
-    j = 0
-    for i in range(N):
-        if selector[i,0]:
-            selected_elements[j,0] = v[i,0]
-            j += 1
-    return selected_elements
-
-@njit
-def fill_matrix_columns(A, v, k):
-
-    '''
-    Fill a matrix column with a vector
-    Args:
-        A: matrix
-        v: vector
-        k: column index
-    Example:
-        fill_matrix_columns(cx, cxk, k)
-    '''
-
-    N = A.shape[0]
-    for i in range(N):
-        A[i,k] = v[i]
-
-    return A
+    return res
