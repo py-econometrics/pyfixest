@@ -11,8 +11,8 @@ def test_demean():
     flist = np.random.choice(list(range(100)), N*3).reshape((N,3))
     weights = np.repeat(1, N)
 
-    res_pyfixest = demean(x, flist, weights)
     YX = pyhdfe.create(flist).residualize(x)
+    res_pyfixest = demean(x, flist, weights)
 
     if not np.allclose(res_pyfixest, YX):
         raise ValueError("demean() does not match pyhdfe.create().residualize()")
