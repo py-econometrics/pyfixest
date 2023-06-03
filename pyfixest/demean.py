@@ -38,25 +38,32 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
             #while np.sum(np.abs(cxk - oldxk)) >= tol:
             for _ in range(maxiter):
 
-                if converged:
-                    break
+                #if converged:
+                #    break
 
-                oldxk = cxk.copy()
+                oldxk = cxk
 
                 for i in range(fixef_vars):
-                    weighted_ave = np.zeros(N)
+                    #weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    uvals = unique2(fmat) # unique2(fmat)
-                    for j in uvals:
-                        selector = fmat == j
-                        cxkj = cxk[selector]
-                        wj = weights[selector]
-                        w = np.zeros(1)
-                        wx = np.zeros(1)
-                        for l in range(len(cxkj)):
-                            w += wj[l]
-                            wx += wj[l] * cxkj[l]
-                        weighted_ave[selector] = wx / w
+                    for i in range(fixef_vars):
+                        weighted_ave = np.zeros(N)
+                        fmat = flist[:,i]
+                        weighted_ave = ave(cxk, fmat, weights)
+
+                    #uvals = unique2(fmat) # unique2(fmat)
+                    #for j in uvals:
+                        #selector = fmat == j
+                        #cxkj = cxk[selector]
+                        #wj = weights[selector]
+                        #w = np.sum(wj)
+                        #wx = np.sum(wj * cxkj)
+                        #w = np.zeros(1)
+                        #wx = np.zeros(1)
+                        #for l in range(len(cxkj)):
+                        #    w += wj[l]
+                        #    wx += wj[l] * cxkj[l]
+                        #weighted_ave[selector] = wx / w
 
                     cxk = cxk - weighted_ave
 
@@ -77,23 +84,24 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
             #while np.sum(np.abs(cxk - oldxk)) >= tol:
             for _ in range(maxiter):
 
-                if converged:
-                    break
+                #if converged:
+                #    break
 
                 oldxk = cxk.copy()
                 for i in range(fixef_vars):
                     weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    uvals = unique2(fmat) # unique2(fmat)
-                    for j in uvals:
-                        selector = fmat == j
-                        cxkj = cxk[selector]
-                        w = 1.0 # np.zeros(1)
-                        wx = np.zeros(1)
-                        for l in range(len(cxkj)):
-                            w += 1.0
-                            wx += cxkj[l]
-                        weighted_ave[selector] = wx / w
+                    weighted_ave = ave(cxk, fmat, weights)
+                    #uvals = unique2(fmat) # unique2(fmat)
+                    #for j in uvals:
+                        #selector = fmat == j
+                        #cxkj = cxk[selector]
+                        #w = 1.0 # np.zeros(1)
+                        #wx = np.zeros(1)
+                        #for l in range(len(cxkj)):
+                        #    w += 1.0
+                        #    wx += cxkj[l]
+                        #weighted_ave[selector] = #np.sum(cxkj) / len(cxkj)
 
                     cxk -= weighted_ave
 
