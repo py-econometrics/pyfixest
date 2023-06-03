@@ -29,7 +29,7 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
         for k in prange(K):
 
-            cxk = cx[:,k]
+            cxk = cx[:,k].copy()
             oldxk = cxk - 1
 
             converged = False
@@ -42,20 +42,9 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
                 oldxk = cxk.copy()
 
                 for i in range(fixef_vars):
-                    weighted_ave = np.zeros(N)
+                    #weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    uvals = unique2(fmat) # unique2(fmat)
-                    for j in uvals:
-                        selector = fmat == j
-                        cxkj = cxk[selector]
-                        wj = weights[selector]
-                        w = np.zeros(1)
-                        wx = np.zeros(1)
-                        for l in range(len(cxkj)):
-                            w += wj[l]
-                            wx += wj[l] * cxkj[l]
-                        weighted_ave[selector] = wx / w
-
+                    weighted_ave = ave(cxk, fmat, weights)
                     cxk = cxk - weighted_ave
 
                 if np.sum(np.abs(cxk - oldxk)) < tol:
@@ -68,7 +57,7 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
         for k in prange(K):
 
-            cxk = cx[:,k]#.copy()
+            cxk = cx[:,k].copy()
             oldxk = cx[:,k] - 1
 
             converged = False
@@ -80,18 +69,11 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
                 oldxk = cxk.copy()
                 for i in range(fixef_vars):
-                    weighted_ave = np.zeros(N)
+                    #weighted_ave = np.zeros(N)
+                    #weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    uvals = unique2(fmat) # unique2(fmat)
-                    for j in uvals:
-                        selector = fmat == j
-                        cxkj = cxk[selector]
-                        w = 1.0 # np.zeros(1)
-                        wx = np.zeros(1)
-                        for l in range(len(cxkj)):
-                            w += 1.0
-                            wx += cxkj[l]
-                        weighted_ave[selector] = wx / w
+                    weighted_ave = ave(cxk, fmat, weights)
+                    cxk = cxk - weighted_ave
 
                     cxk -= weighted_ave
 
@@ -122,3 +104,43 @@ def unique2(x):
             res.append(x[i])
 
     return res
+
+@njit
+def ave(x, f, w):
+
+
+    N = len(x)
+    wx = np.bincount(f, w * x )
+    w = np.bincount(f, w)
+
+    # drop zeros
+    #wx = wxw[wxw != 0]
+    #w = w[w != 0]
+
+    wxw = wx / w
+    wxw_long = np.zeros(N)
+    for j in range(len(wxw)):
+        selector = f == j
+        wxw_long[selector] = wxw[j]
+
+    return wxw_long
+
+@njit
+def ave2(x, f, w):
+
+    N =  len(x)
+    weighted_ave = np.zeros(N)
+    uvals = unique2(f)
+
+    for j in uvals:
+        selector = f == j
+        cxkj = x[selector]
+        wj = w[selector]
+        wsum = np.zeros(1)
+        wx = np.zeros(1)
+        for l in range(len(cxkj)):
+            wsum += wj[l]
+            wx += wj[l] * cxkj[l]
+        weighted_ave[selector] = wx / wsum
+
+    return weighted_ave
