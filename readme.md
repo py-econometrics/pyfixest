@@ -2,7 +2,6 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
-![PyPI - Status](https://img.shields.io/pypi/status/pyfixest.svg)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 

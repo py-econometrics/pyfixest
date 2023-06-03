@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from pyfixest import Fixest
 from pyfixest.utils import get_data
+from pyfixest.fixest import DepvarIsNotNumericError
 
-from pyfixest.FormulaParser import FixestFormulaParser, DuplicateKeyError, FixedEffectInteractionError, CovariateInteractionError
+from pyfixest.FormulaParser import FixestFormulaParser, DuplicateKeyError
 
 def test_formula_parser():
     with pytest.raises(DuplicateKeyError):
@@ -81,7 +82,7 @@ def test_depvar_numeric():
     data['Y'] = pd.Categorical(data['Y'])
 
     fixest = Fixest(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         fixest.feols('Y ~ X1')
 
 

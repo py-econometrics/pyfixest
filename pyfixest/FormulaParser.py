@@ -318,15 +318,22 @@ def _unpack_fml(x):
 
         # Check if this variable contains a switch
         varlist, sw_type = _find_sw(var)
-
+        
         # If there's no switch, just add the variable to the list
         if sw_type is None:
-            res_s['constant'].append(var)
+            if _is_varying_slopes(var):
+                varlist, sw_type = _transform_varying_slopes(var)
+                for x in varlist.split("+"): 
+                    res_s['constant'].append(x)
+            else: 
+                res_s['constant'].append(varlist)
 
-        # If there's a switch, unpack it and add it to the list
+        # If there'_ a switch, unpack it and add it to the list
         else:
             if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
                 _check_duplicate_key(res_s, sw_type)
+                res_s[sw_type] = varlist
+            elif sw_type == "varying_slopes": 
                 res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
@@ -523,3 +530,21 @@ def _check_duplicate_key(my_dict, key):
                 raise DuplicateKeyError("Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula.")
             else:
                 None
+                
+                
+def _is_varying_slopes(x): 
+          
+    pattern = r'\[.*\]'
+    match = re.search(pattern, x)
+    if match:
+        return True
+    else:
+        return False
+            
+def _transform_varying_slopes(x):
+    parts = x.split('[')
+    a = parts[0]
+    b = parts[1].replace(']', '')
+    transformed_string = f"{a}/{b}"
+    return transformed_string, "varying_slopes"
+
