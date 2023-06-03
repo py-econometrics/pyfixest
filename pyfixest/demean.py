@@ -26,97 +26,34 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
     res = np.zeros((N,K))
 
-    if np.sum(weights) != N:
-        # save some computations when weights are all 1
 
-        for k in prange(K):
+    for k in prange(K):
 
-            cxk = cx[:,k].copy()
-            oldxk = cxk - 1
+        cxk = cx[:,k].copy()
+        oldxk = cxk - 1
 
-            converged = False
-            #while np.sum(np.abs(cxk - oldxk)) >= tol:
-            for _ in range(maxiter):
+        converged = False
+        for _ in range(maxiter):
 
-                #if converged:
-                #    break
+            oldxk = cxk.copy()
 
-                oldxk = cxk
+            for i in range(fixef_vars):
+                fmat = flist[:,i]
+                weighted_ave = _ave3(cxk, fmat, weights)
+                cxk = cxk - weighted_ave
 
-                for i in range(fixef_vars):
-                    #weighted_ave = np.zeros(N)
-                    fmat = flist[:,i]
-                    for i in range(fixef_vars):
-                        weighted_ave = np.zeros(N)
-                        fmat = flist[:,i]
-                        weighted_ave = ave(cxk, fmat, weights)
+            if np.sum(np.abs(cxk - oldxk)) < tol:
+                converged = True
+                break
 
-                    #uvals = unique2(fmat) # unique2(fmat)
-                    #for j in uvals:
-                        #selector = fmat == j
-                        #cxkj = cxk[selector]
-                        #wj = weights[selector]
-                        #w = np.sum(wj)
-                        #wx = np.sum(wj * cxkj)
-                        #w = np.zeros(1)
-                        #wx = np.zeros(1)
-                        #for l in range(len(cxkj)):
-                        #    w += wj[l]
-                        #    wx += wj[l] * cxkj[l]
-                        #weighted_ave[selector] = wx / w
-
-                    cxk = cxk - weighted_ave
-
-                if np.sum(np.abs(cxk - oldxk)) < tol:
-                    converged = True
-                    break
-
-            res[:,k] = cxk
-
-    else:
-
-        for k in prange(K):
-
-            cxk = cx[:,k].copy()
-            oldxk = cx[:,k] - 1
-
-            converged = False
-            #while np.sum(np.abs(cxk - oldxk)) >= tol:
-            for _ in range(maxiter):
-
-                #if converged:
-                #    break
-
-                oldxk = cxk.copy()
-                for i in range(fixef_vars):
-                    weighted_ave = np.zeros(N)
-                    fmat = flist[:,i]
-                    weighted_ave = ave(cxk, fmat, weights)
-                    #uvals = unique2(fmat) # unique2(fmat)
-                    #for j in uvals:
-                        #selector = fmat == j
-                        #cxkj = cxk[selector]
-                        #w = 1.0 # np.zeros(1)
-                        #wx = np.zeros(1)
-                        #for l in range(len(cxkj)):
-                        #    w += 1.0
-                        #    wx += cxkj[l]
-                        #weighted_ave[selector] = #np.sum(cxkj) / len(cxkj)
-
-                    cxk -= weighted_ave
-
-                if np.sum(np.abs(cxk - oldxk)) < tol:
-                    converged = True
-                    break
-
-            res[:,k] = cxk
+        res[:,k] = cxk
 
     return res
 
 
 
 @njit
-def unique2(x):
+def _unique2(x):
     '''
     Returns the unique values of a numpy array as a list
     Args:
@@ -134,7 +71,7 @@ def unique2(x):
     return res
 
 @njit
-def ave(x, f, w = None):
+def _ave(x, f, w):
 
 
     N = len(x)
@@ -153,12 +90,51 @@ def ave(x, f, w = None):
 
     return wxw_long
 
+
+from numba import njit, prange
+from numba.typed import Dict
+
 @njit
-def ave2(x, f, w):
+def _ave3(x, f, w):
+
+    N = len(x)
+
+    wx_dict = {}
+    w_dict = {}
+
+    # Compute weighted sums using a dictionary
+    for i in range(N):
+        j = f[i]
+        if j in wx_dict:
+            wx_dict[j] += w[i] * x[i]
+        else:
+            wx_dict[j] = w[i] * x[i]
+
+        if j in w_dict:
+            w_dict[j] += w[i]
+        else:
+            w_dict[j] = w[i]
+
+    # Convert the dictionaries to arrays
+    wx = np.zeros_like(f, dtype=x.dtype)
+    w = np.zeros_like(f, dtype=w.dtype)
+
+    for i in range(N):
+        j = f[i]
+        wx[i] = wx_dict[j]
+        w[i] = w_dict[j]
+
+    # Compute the average
+    wxw_long = wx / w
+
+    return wxw_long
+
+@njit
+def _ave2(x, f, w):
 
     N =  len(x)
     weighted_ave = np.zeros(N)
-    uvals = unique2(f)
+    uvals = _unique2(f)
 
     for j in uvals:
         selector = f == j
