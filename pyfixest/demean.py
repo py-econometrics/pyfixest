@@ -1,5 +1,7 @@
 import numpy as np
+import scipy.sparse as sp
 from numba import njit, prange
+from formulaic import model_matrix
 
 
 
@@ -42,9 +44,20 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
                 oldxk = cxk.copy()
 
                 for i in range(fixef_vars):
-                    #weighted_ave = np.zeros(N)
+                    weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    weighted_ave = ave(cxk, fmat, weights)
+                    uvals = unique2(fmat) # unique2(fmat)
+                    for j in uvals:
+                        selector = fmat == j
+                        cxkj = cxk[selector]
+                        wj = weights[selector]
+                        w = np.zeros(1)
+                        wx = np.zeros(1)
+                        for l in range(len(cxkj)):
+                            w += wj[l]
+                            wx += wj[l] * cxkj[l]
+                        weighted_ave[selector] = wx / w
+
                     cxk = cxk - weighted_ave
 
                 if np.sum(np.abs(cxk - oldxk)) < tol:
@@ -69,11 +82,18 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
                 oldxk = cxk.copy()
                 for i in range(fixef_vars):
-                    #weighted_ave = np.zeros(N)
-                    #weighted_ave = np.zeros(N)
+                    weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    weighted_ave = ave(cxk, fmat, weights)
-                    cxk = cxk - weighted_ave
+                    uvals = unique2(fmat) # unique2(fmat)
+                    for j in uvals:
+                        selector = fmat == j
+                        cxkj = cxk[selector]
+                        w = 1.0 # np.zeros(1)
+                        wx = np.zeros(1)
+                        for l in range(len(cxkj)):
+                            w += 1.0
+                            wx += cxkj[l]
+                        weighted_ave[selector] = wx / w
 
                     cxk -= weighted_ave
 
@@ -106,7 +126,7 @@ def unique2(x):
     return res
 
 @njit
-def ave(x, f, w):
+def ave(x, f, w = None):
 
 
     N = len(x)
@@ -144,3 +164,37 @@ def ave2(x, f, w):
         weighted_ave[selector] = wx / wsum
 
     return weighted_ave
+
+
+def getfe(uhat, fe_fml, data):
+
+  '''
+  Get fixed effects estimates after running a regression on demeaned data.
+    Args:
+        uhat: Residuals from a regression on demeaned data.
+        fe_fml: A one sided formula with the fixed effects.
+        data: A pandas dataframe with the fixed effects
+    Returns:
+        alpha: A numpy array with the fixed effects estimates.
+    Example:
+        get_fe(uhat, "~ firm + year", data)
+  '''
+
+  # check if uhat is a numpy array
+  if not isinstance(uhat, np.ndarray):
+    raise ValueError("uhat must be a numpy array")
+  if not isinstance(fe_fml, str):
+    raise ValueError("fe_fml must be a string")
+  if not isinstance(data, pd.DataFrame):
+    raise ValueError("data must be a pandas dataframe")
+
+  if not fe_fml.startswith("~") or len(fe_fml.split("~")) > 1:
+      raise ValueError("fe_fml must be a one sided formula")
+
+
+  D = model_matrix(fe_fml, data = data, output = "sparse")
+  DD = D.transpose().dot(D)
+  Du = D.transpose().dot(uhat)
+  alpha = sp.linalg.spsolve(DD, Du)
+
+  return alpha
