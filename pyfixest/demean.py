@@ -29,16 +29,23 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
         for k in prange(K):
 
-            cxk = cx[:,k].copy()
+            cxk = cx[:,k]
             oldxk = cxk - 1
 
-            while np.sum(np.abs(cxk - oldxk)) >= tol:
+            converged = False
+            #while np.sum(np.abs(cxk - oldxk)) >= tol:
+            for _ in range(maxiter):
 
-                oldxk = cxk
+                if converged:
+                    break
+
+                oldxk = cxk.copy()
+
                 for i in range(fixef_vars):
                     weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    for j in unique2(fmat):
+                    uvals = unique2(fmat) # unique2(fmat)
+                    for j in uvals:
                         selector = fmat == j
                         cxkj = cxk[selector]
                         wj = weights[selector]
@@ -51,13 +58,17 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
                     cxk = cxk - weighted_ave
 
+                if np.sum(np.abs(cxk - oldxk)) < tol:
+                    converged = True
+                    break
+
             res[:,k] = cxk
 
     else:
 
         for k in prange(K):
 
-            cxk = cx[:,k].copy()
+            cxk = cx[:,k]#.copy()
             oldxk = cx[:,k] - 1
 
             converged = False
@@ -71,7 +82,8 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
                 for i in range(fixef_vars):
                     weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    for j in unique2(fmat):
+                    uvals = unique2(fmat) # unique2(fmat)
+                    for j in uvals:
                         selector = fmat == j
                         cxkj = cxk[selector]
                         w = 1.0 # np.zeros(1)
