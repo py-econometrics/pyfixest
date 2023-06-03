@@ -2,8 +2,9 @@ import numpy as np
 from numba import njit, prange
 
 
-@njit(parallel = True)
-def demean(cx, flist, weights, tol = 1e-08):
+
+@njit(parallel = True, cache = False, fastmath = False)
+def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
 
     '''
     Demean a Matrix cx by fixed effects in flist.
@@ -28,19 +29,16 @@ def demean(cx, flist, weights, tol = 1e-08):
 
         for k in prange(K):
 
-            cxk = cx[:,k]
+            cxk = cx[:,k].copy()
             oldxk = cxk - 1
 
             while np.sum(np.abs(cxk - oldxk)) >= tol:
-
-                #if np.sqrt(np.sum((cxk - oldxk) ** 2)) >= 1e-10:
-                #    break
 
                 oldxk = cxk
                 for i in range(fixef_vars):
                     weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    for j in np.unique(fmat):
+                    for j in unique2(fmat):
                         selector = fmat == j
                         cxkj = cxk[selector]
                         wj = weights[selector]
@@ -59,31 +57,56 @@ def demean(cx, flist, weights, tol = 1e-08):
 
         for k in prange(K):
 
-            cxk = cx[:,k]
-            oldxk = cxk - 1
+            cxk = cx[:,k].copy()
+            oldxk = cx[:,k] - 1
 
-            while np.sum(np.abs(cxk - oldxk)) >= tol:
+            converged = False
+            #while np.sum(np.abs(cxk - oldxk)) >= tol:
+            for _ in range(maxiter):
 
-                #if np.sqrt(np.sum((cxk - oldxk) ** 2)) >= 1e-10:
-                #    break
+                if converged:
+                    break
 
-                oldxk = cxk
+                oldxk = cxk.copy()
                 for i in range(fixef_vars):
                     weighted_ave = np.zeros(N)
                     fmat = flist[:,i]
-                    for j in np.unique(fmat):
+                    for j in unique2(fmat):
                         selector = fmat == j
                         cxkj = cxk[selector]
-                        #wj = weights[selector]
-                        w = np.zeros(1)
+                        w = 1.0 # np.zeros(1)
                         wx = np.zeros(1)
                         for l in range(len(cxkj)):
                             w += 1.0
                             wx += cxkj[l]
                         weighted_ave[selector] = wx / w
 
-                    cxk = cxk - weighted_ave
+                    cxk -= weighted_ave
+
+                if np.sum(np.abs(cxk - oldxk)) < tol:
+                    converged = True
+                    break
 
             res[:,k] = cxk
+
+    return res
+
+
+
+@njit
+def unique2(x):
+    '''
+    Returns the unique values of a numpy array as a list
+    Args:
+        A numpy array.
+    Returns:
+        A list with the unique values of the numpy array.
+    '''
+    unique_values = set()
+    res = []
+    for i in range(len(x)):
+        if x[i] not in unique_values:
+            unique_values.add(x[i])
+            res.append(x[i])
 
     return res
