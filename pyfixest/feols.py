@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from wildboottest.wildboottest import WildboottestCL, WildboottestHC
 from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
@@ -394,6 +393,11 @@ class Feols:
 
         Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
         '''
+
+        try:
+            from wildboottest.wildboottest import WildboottestCL, WildboottestHC
+        except ImportError:
+            print("Module 'wildboottest' not found. Please install 'wildboottest'. Note that it 'wildboottest 'requires Python < 3.11 due to its dependency on 'numba'.")
 
         if self.is_iv:
             raise ValueError("Wild cluster bootstrap is not supported with IV estimation.")
