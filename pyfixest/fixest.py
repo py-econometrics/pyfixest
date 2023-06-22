@@ -517,16 +517,16 @@ class Fixest:
         self.splitvar, _, estimate_split_model, estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.var_dict)
 
         # demean all models: based on fixed effects x split x missing value combinations
-        self._demean_all_models(fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model)
+        #self._demean_all_models(fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model)
 
         # create self.is_fixef_multi flag
-        self._is_multiple_estimation()
+        #self._is_multiple_estimation()
 
         if self.is_fixef_multi and self.is_iv:
             raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
 
         # estimate all regression models based on demeaned data
-        self._estimate_all_models(vcov = vcov)
+        #self._estimate_all_models(vcov = vcov)
 
         return self
 

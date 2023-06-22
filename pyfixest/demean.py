@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
-from numba import njit, prange
+from numba import njit, prange, jit
+#from numba.typed import Dict
 from formulaic import model_matrix
 
 
@@ -20,35 +21,36 @@ def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
     Returns
         res: Demeaned matrix of dimension cx.shape
     '''
-    N = cx.shape[0]
+
+    #N = cx.shape[0]
     fixef_vars = flist.shape[1]
     K = cx.shape[1]
+    weights = weights.flatten()
+    #flist = flist.transpose()
 
-    res = np.zeros((N,K))
+    res = np.zeros_like(cx)
 
 
-    for k in prange(K):
+    #for k in prange(K):
 
-        cxk = cx[:,k].copy()
-        oldxk = cxk - 1
+    cxk = cx#[:,k]
+    oldxk = cxk
 
-        converged = False
-        for _ in range(maxiter):
+    for _ in range(maxiter):
 
-            oldxk = cxk.copy()
+        for i in range(fixef_vars):
+            fmat = flist[:,i]
+            weighted_ave = _ave3(cxk, fmat, weights)
+            cxk = cxk - weighted_ave
 
-            for i in range(fixef_vars):
-                fmat = flist[:,i]
-                weighted_ave = _ave3(cxk, fmat, weights)
-                cxk = cxk - weighted_ave
+        if np.sum(np.abs(cxk - oldxk)) < tol:
+            break
 
-            if np.sum(np.abs(cxk - oldxk)) < tol:
-                converged = True
-                break
+        oldxk = cxk.copy()
 
-        res[:,k] = cxk
+    #res = cxk
 
-    return res
+    return cxk
 
 
 
@@ -91,10 +93,7 @@ def _ave(x, f, w):
     return wxw_long
 
 
-from numba import njit, prange
-from numba.typed import Dict
-
-@njit
+@njit(parallel = True)
 def _ave3(x, f, w):
 
     N = len(x)
@@ -106,9 +105,9 @@ def _ave3(x, f, w):
     for i in range(N):
         j = f[i]
         if j in wx_dict:
-            wx_dict[j] += w[i] * x[i]
+            wx_dict[j] += w[i] * x[i,:]
         else:
-            wx_dict[j] = w[i] * x[i]
+            wx_dict[j] = w[i] * x[i,:]
 
         if j in w_dict:
             w_dict[j] += w[i]
@@ -116,16 +115,16 @@ def _ave3(x, f, w):
             w_dict[j] = w[i]
 
     # Convert the dictionaries to arrays
-    wx = np.zeros_like(f, dtype=x.dtype)
+    wx = np.zeros_like(x, dtype=x.dtype)
     w = np.zeros_like(f, dtype=w.dtype)
 
-    for i in range(N):
+    for i in prange(N):
         j = f[i]
-        wx[i] = wx_dict[j]
+        wx[i,:] = wx_dict[j]
         w[i] = w_dict[j]
 
     # Compute the average
-    wxw_long = wx / w
+    wxw_long = wx / w.reshape((N,1))
 
     return wxw_long
 

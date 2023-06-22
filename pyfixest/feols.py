@@ -9,7 +9,6 @@ from typing import Union, List, Dict
 from scipy.stats import norm, t
 from pyfixest.ssc_utils import get_ssc
 
-
 class Feols:
 
     """
@@ -52,16 +51,193 @@ class Feols:
 
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
+    def __init__(self, fml:str, data, fval:str, vcov, weights, demeaned_data_cache = None) -> None:
 
 
-        _feols_input_checks(Y, X, Z)
+        self.data = data
+        self.fml = fml
+        self.fval = fval
+        self.vcov = vcov
+        self.weights = weights
+        self.demeaned_data_cache = demeaned_data_cache
 
-        self.Y = Y
-        self.X = X
-        self.Z = Z
+    def model_matrix(self):
 
-        self.N, self.k = X.shape
+        '''
+        Create a model matrix: preprocess data based on the fml and return Y and X and whenever required, Z, weights, and fe.
+        Also, return string_na_index, which is a string of the indices of missing values in the data.
+        '''
+
+        if self.fval != "0":
+            fe, fe_na = self._clean_fe(self.data, self.fval)
+            fe_na = list(fe_na[fe_na == True])
+        else:
+            fe = None
+            fe_na = None
+
+        dict2fe = self.fml_dict2.get(self.fval)
+        if self.is_iv:
+            dict2fe_iv = self.fml_dict2_iv.get(self.fval)
+
+        covar2 = covar
+        depvar2 = depvar
+
+        fml = depvar2 + " ~ " + covar2
+
+        lhs_names = [depvar2]
+
+        # store depvar, instruments, weights on lhs to handle missing
+        # values in each each via model_matrix
+        if self.is_iv:
+            instruments2 = dict2fe_iv.get(depvar)[0]
+            endogvar_list = list(set(covar2.split("+")) - set(instruments2.split("+")))#[0]
+            instrument_list = list(set(instruments2.split("+")) - set(covar2.split("+")))#[0]
+
+            fml2 = "+".join(instrument_list) + "+" + fml
+            lhs_names += instrument_list
+
+        else:
+            fml2 = fml
+
+        if self.is_wls:
+            fm2 = "+".join(self.weights) + "+" + fml
+            lhs_names += self.weights
+
+        if self.fval is not None:
+            fm2 = "+".join(self.fval) + "+" + fml
+            lhs_names += self.fval
+
+        lhs, rhs = model_matrix(fml2, data)
+
+        untransformed_depvar = _find_untransformed_depvar(depvar2)
+
+        # assign lhs to data objects
+        Y = lhs[[depvar]]
+        if self.is_iv:
+            I = lhs[instrument_list]
+        if self.is_wls:
+            weights = lhs[[self.weights]]
+        else:
+            weights = np.ones(X.shape[0])
+        if self.fval is not None:
+            fe = lhs[[self.fval]]
+
+        # assign rhs to data objects
+        X = rhs
+
+        # get NA index before converting Y to numpy array
+        na_index = list(set(data.index) - set(Y.index))
+
+        # drop variables before collecting variable names
+        if self.ivars is not None:
+            if drop_ref is not None:
+                X = X.drop(drop_ref, axis=1)
+
+        y_names = list(Y.columns)
+        x_names = list(X.columns)
+        yxz_names = list(y_names) + list(x_names)
+        if self.is_iv:
+            iv_names = list(I.columns)
+            x_names_copy = x_names.copy()
+            x_names_copy = [x for x in x_names_copy if x not in endogvar_list]
+            z_names = x_names_copy + instrument_list
+            cols = yxz_names + iv_names
+        else:
+            iv_names = None
+            z_names = None
+            cols = yxz_names
+
+        if self.ivars is not None:
+            self.icovars = [s for s in x_names if s.startswith(
+                ivars[0]) and s.endswith(ivars[1])]
+        else:
+            self.icovars = None
+
+
+        Y = np.sqrt(weights) * Y.to_numpy()
+        X = np.sqrt(weights) * X.to_numpy()
+
+        if self.is_iv:
+            I = I.to_numpy()
+
+        if Y.shape[1] > 1:
+            raise ValueError(
+                "Dependent variable must be a single column. Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float).")
+
+
+        # variant 1: if there are fixed effects to be projected out
+        if fe is not None:
+            # drop intercept
+            intercept_index = x_names.index("Intercept")
+            X = np.delete(X, intercept_index, axis = 1)
+            x_names.remove("Intercept")
+            yxz_names.remove("Intercept")
+            if self.is_iv:
+                z_names.remove("Intercept")
+                cols.remove("Intercept")
+            na_index_str = ','.join(str(x) for x in na_index)
+
+        return Y, X, Z, fe, na_index_str
+
+
+    def demean(self):
+
+        '''
+        demean data by fixed effects
+        '''
+
+        if self.is_iv:
+            YXZ = np.concatenate([Y, X, I], axis = 1)
+        else:
+            YXZ = np.concatenate([Y, X], axis=1)
+
+        if self.demeaned_data_cache.get(self.na_index_str) is not None:
+                # get data out of lookup table: list of [algo, data]
+                algorithm, YXZ_demeaned_old = self.demeaned_data_cache.get(self.na_index_str)
+
+                # get not yet demeaned covariates
+                var_diff_names = list(set(yxz_names) - set(YXZ_demeaned_old.columns))[0]
+                var_diff_index = list(yxz_names).index(var_diff_names)
+                var_diff = YXZ[:, var_diff_index]
+                if var_diff.ndim == 1:
+                    var_diff = var_diff.reshape(len(var_diff), 1)
+
+                YXZ_demean_new = algorithm.residualize(var_diff)
+                YXZ_demeaned = np.concatenate([YXZ_demeaned_old, YXZ_demean_new], axis=1)
+                YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+
+                YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [var_diff_names]
+
+        else:
+
+                algorithm = pyhdfe.create(
+                            ids=fe2,
+                            residualize_method='map',
+                            drop_singletons=self.drop_singletons,
+                        )
+
+                if self.drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
+                    print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
+                    dropped_singleton_indices = (np.where(algorithm._singleton_indices))[0].tolist()
+                    na_index += dropped_singleton_indices
+
+                YXZ_demeaned = algorithm.residualize(YXZ)
+                YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+
+                YXZ_demeaned.columns = cols
+
+        self.demeaned_data_cache[na_index_str] = [algorithm, YXZ_demeaned]
+
+        return Y, X, Z
+
+
+
+
+
+
+
+
+
 
     def get_fit(self, estimator = "ols") -> None:
         '''
@@ -394,6 +570,11 @@ class Feols:
 
         Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
         '''
+
+        try:
+            from wildboottest.wildboottest import WildboottestCL, WildboottestHC
+        except ImportError:
+            print("Module 'wildboottest' not found. Please install 'wildboottest'. Note that it only supports Python < 3.11 due to its dependency on numba.")
 
         if self.is_iv:
             raise ValueError("Wild cluster bootstrap is not supported with IV estimation.")
