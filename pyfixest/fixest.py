@@ -10,6 +10,7 @@ from scipy.stats import norm
 from formulaic import model_matrix
 
 from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
 
@@ -32,30 +33,276 @@ class Fixest:
         self.data = data
         self.model_res = dict()
 
+    def _processing(self, fml, fixef_rm):
+
+        '''
+        Preprocess an object of type Fixest based on argument provided via its `feols()` or `fepois()` methods.
+        Args:
+            fml: A three-sided formula string using fixest formula syntax.
+            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+        Returns:
+            None
+        Creates the following instances, which are used in the `feols()` and `fepois()` methods:
+            self.fml: The formula string provided via the `feols()` or `fepois()` methods.
+            self.split: The split variable provided via the `feols()` or `fepois()` methods.
+            self.is_iv: A boolean indicating whether the model is an IV model.
+            self.fml_dict: A dictionary of formulas for each dependent variable.
+            self.var_dict: A dictionary of variables for each dependent variable.
+            self.fml_dict2: A dictionary of formulas for each dependent variable, excluding fixed effects.
+            self.var_dict2: A dictionary of variables for each dependent variable, excluding fixed effects.
+            self.fml_dict_iv: A dictionary of formulas for each dependent variable, excluding fixed effects, for IV models.
+            self.var_dict_iv: A dictionary of variables for each dependent variable, excluding fixed effects, for IV models.
+            self.fml_dict2_iv: A dictionary of formulas for each dependent variable, excluding fixed effects, for IV models.
+            self.var_dict2_iv: A dictionary of variables for each dependent variable, excluding fixed effects, for IV models.
+            self.ivars: A list of strings indicating the interacted variables via i().
+            self.ssc_dict: A dictionary of sample split categories.
+            self.drop_singletons: A boolean indicating whether singleton fixed effects should be dropped.
+            self.dropped_data_dict: A dictionary of lists of demeaned dataframes for each fixed effects combination.
+            self.demeaned_data_dict: A dictionary of lists of demeaned dataframes for each fixed effects combination.
+            self.yxz_name_dict: A dictionary of lists of names of depvar, X, Z matrices for each fixed effects combination.
+            self.splitvar: The split variable provided via the `feols()` or `fepois()` methods.
+            self.split_categories: A list of categories of the split variable.
+            self.is_fixef_multi: A boolean indicating whether multiple regression models will be estimated.
+            self.icovars: A list of strings indicating the interacted variables via i().
+
+            I know this is a mess, and I am currently trying to clean it up.
+
+        '''
+
+        self.fml = fml.replace(" ", "")
+        self.split = None
+
+        # deparse formula, at least partially
+        fxst_fml = FixestFormulaParser(fml)
+
+        if fxst_fml.is_iv:
+            self.is_iv = True
+        else:
+            self.is_iv = False
+
+        # add function argument to these methods for IV
+        fxst_fml.get_fml_dict()
+        fxst_fml.get_var_dict()
+        fxst_fml._transform_fml_dict()
+
+        if self.is_iv:
+            # create required dicts for first stage IV regressions
+            fxst_fml.get_fml_dict(iv = True)
+            fxst_fml.get_var_dict(iv = True)
+            fxst_fml._transform_fml_dict(iv = True)
+
+
+        self.fml_dict = fxst_fml.fml_dict
+        self.var_dict = fxst_fml.var_dict
+        self.fml_dict2 = fxst_fml.fml_dict2
+
+        if self.is_iv:
+            self.fml_dict_iv = fxst_fml.fml_dict_iv
+            self.var_dict_iv = fxst_fml.var_dict_iv
+            self.fml_dict2_iv = fxst_fml.fml_dict2_iv
+        else:
+            self.fml_dict_iv = self.fml_dict
+            self.var_dict_iv = self.var_dict
+            self.fml_dict2_iv = self.fml_dict2
+
+        self.ivars = fxst_fml.ivars
+
+
+        self.ssc_dict = ssc
+        self.drop_singletons = _drop_singletons(fixef_rm)
+
+        # get all fixed effects combinations
+        fixef_keys = list(self.var_dict.keys())
+
+        ivars, drop_ref = _clean_ivars(self.ivars, self.data)
+
+        # dropped_data_dict and demeaned_data_dict are
+        # dictionaries with keys for each fixed effects combination and
+        # has values of lists of demeaned dataframes
+        # the list is a singelton list unless split sample estimation is used
+        # e.g it looks like this (without split estimation):
+        # {'fe1': [demeaned_data_df], 'fe1+fe2': [demeaned_data_df]}
+        # and like this (with split estimation):
+        # {'fe1': [demeaned_data_df1, demeaned_data_df2], 'fe1+fe2': [demeaned_data_df1, demeaned_data_df2]}
+        # the lists are sorted in the order of the split variable
+
+        self.dropped_data_dict = dict()
+        self.demeaned_data_dict = dict()
+        # names of depvar, X, Z matrices
+        self.yxz_name_dict = dict()
+
+        estimate_full_model = True
+        estimate_split_model = False
+        # currently no fsplit allowed
+        fsplit = None
+
+        self.splitvar, _, estimate_split_model, estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.var_dict)
+
+        return fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model
+
+
+
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
+        '''
+        Method for fixed effects regression modeling for Linear Regression using the PyHDFE package for projecting out fixed effects.
+        Args:
+            fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes:
+                The syntax is as follows: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1" where:
+
+                Y: Dependent variable
+                X1, X2: Independent variables
+                FE1, FE2: Fixed effects
+                Z1, Z2: Instruments
+                |: Separates left-hand side, fixed effects, and instruments
+
+                If no fixed effects and instruments are specified, the formula can be simplified to "Y ~ X1 + X2".
+                If no instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | FE1 + FE2".
+                If no fixed effects are specified but instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | X1 ~ Z1".
+
+                Supported multiple estimation syntax includes:
+
+                Stepwise regressions (sw, sw0)
+                Cumulative stepwise regression (csw, csw0)
+                Multiple dependent variables (Y1 + Y2 ~ X)
+
+                Other special syntax includes:
+                i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
+                Using i() is required to use with some custom methods, e.g. iplot().
+                ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
+
+                All other parts of the formula must be compatible with formula parsing via the formulaic module.
+                You can use formulaic functionaloty such as "C", "I", ":",, "*", "np.log", "np.power", etc.
+
+            vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+                If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+        Returns:
+            None
+        Examples:
+            Standard formula:
+                fml = 'Y ~ X1 + X2'
+                fixest_model = Fixest(data=data).feols(fml, vcov='iid')
+            With fixed effects:
+                fml = 'Y ~ X1 + X2 | fe1 + fe2'
+            With interacted fixed effects:
+                fml = 'Y ~ X1 + X2 | fe1^fe2'
+            Multiple dependent variables:
+                fml = 'Y1 + Y2 ~ X1 + X2'
+            Stepwise regressions (sw and sw0):
+                fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
+            Cumulative stepwise regressions (csw and csw0):
+                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
+            Combinations:
+                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
+
+        Details:
+            The method proceeds in the following steps:
+            1. Parse the formula using the FixestFormulaParser class.
+            2. Create a dictionary of formulas for each dependent variable.
+            3. demean all models and store the data
+            4. fit all models
+        '''
+
+        fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model = self._processing(fml, fixef_rm)
+
+        # demean all models: based on fixed effects x split x missing value combinations
+        self._demean_all_models(fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model)
+
+        # create self.is_fixef_multi flag
+        self._is_multiple_estimation()
+
+        if self.is_fixef_multi and self.is_iv:
+            raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
+
+        # estimate all regression models based on demeaned data
+        self._estimate_all_models(vcov = vcov)
+
+        return self
+
+
+    def fepois(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
+
+        '''
+        Method for fixed effects regression modeling for Poisson Regression using the PyHDFE package for projecting out fixed effects.
+        Args: see feols()
+        Returns:
+            None
+        '''
+
+        fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model = self._processing(fml, fixef_rm)
+
+        # create self.is_fixef_multi flag
+        self._is_multiple_estimation()
+
+        if self.is_iv:
+            raise ValueError("IV Estimations is not supported with `fepois()`.")
+
+        if self.is_fixef_multi:
+            raise ValueError("Multiple Estimation is currently not supported with `fepois()`.")
+
+        # copied from demean_model
+        YXZ_dict = dict()
+        na_dict = dict()
+        var_dict = dict()
+
+        if fval != "0":
+            fe, fe_na = self._clean_fe(data, fval)
+            fe_na = list(fe_na[fe_na == True])
+        else:
+            fe = None
+            fe_na = None
+
+        dict2fe = self.fml_dict2.get(fval)
+        if self.is_iv:
+            dict2fe_iv = self.fml_dict2_iv.get(fval)
+
+
+        fml2 = fml
+        lhs, rhs = model_matrix(fml2, self.data)
+
+        FEPOIS = Fepois(Y, X)
+
+
+
+
+
     def _clean_fe(self, data, fval):
+
+        '''
+        Function to clean up fixed effects, e.g.
+        - convert all fixed effects to factors
+        - fetch interacted fixed effects
+        - check for varying slopes
+
+        Args:
+            self: The Fixest object.
+            data: The input pd.DataFrame for the object. Either self.data or a subset thereof (for split sample estimation).
+            fval: A specification of fixed effects. A string indicating the fixed effects to be demeaned, such as "X4" or "X3 + X2".
+        '''
 
         fval_list = fval.split("+")
 
         # find interacted fixed effects via "^"
         interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
-            
+
         varying_slopes = [x for x in fval_list if len(x.split('/')) > 1]
 
         for x in interacted_fes:
             vars = x.split("^")
             data[x] = data[vars].apply(lambda x: '^'.join(
                 x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
-        
+
         fe = data[fval_list]
         # all fes to factors / categories
 
-        if varying_slopes != []: 
-          
-            for x in varying_slopes: 
+        if varying_slopes != []:
+
+            for x in varying_slopes:
                 mm_vs = model_matrix("-1 + " + x, data)
-            
+
             fe = pd.concat([fe, mm_vs], axis = 1)
-        
+
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
         fe = fe.to_numpy()
@@ -64,7 +311,16 @@ class Fixest:
 
     def _demean_model(self, data: pd.DataFrame, fval: str, ivars: List[str], drop_ref: str) -> None:
         '''
-        Demean all regressions for a specification of fixed effects.
+        Demean all regressions for a specification of fixed effects. For a given set of fixed effects, the function loops over all dependent variables and
+        all fixed effects combinations and demeans the specified dependend variables and covariates.
+
+        Example: assume that we call an object of type fixest as `fixest.feols(Y1 + Y2 ~ X1 | F1 + F2 + F3)`.
+        Then the function will demean the following models:
+        - model 1: `Y1 ~ X1 | F1 + F2 + F3`
+        - model 2: `Y2 ~ X1 | F1 + F2 + F3`
+        For the model 2, the function will check if X1 needs to be demeaned again - this might not be the case if model 1 and
+        model 2 drop the same combination of missing values. So we save some computations if this is the case.
+
 
         Args:
             data: The input pd.DataFrame for the object. Either self.data or a subset thereof (for split sample estimation).
@@ -105,7 +361,7 @@ class Fixest:
         # loop over both dict2fe and dict2fe_iv (if the latter is not None)
         for depvar in dict2fe.keys():
 
-            # [(0, 'X1+X2'), (1, ['X1+X3'])]
+            # list([(0, 'X1+X2'), (1, ['X1+X3'])]
             for _, covar in enumerate(dict2fe.get(depvar)):
 
                 covar2 = covar
@@ -383,152 +639,6 @@ class Fixest:
                         FEOLS.icovars = self.icovars
                     self.model_res[full_fml] = FEOLS
 
-
-
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
-        '''
-        Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
-        Args:
-            fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes:
-                The syntax is as follows: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1" where:
-
-                Y: Dependent variable
-                X1, X2: Independent variables
-                FE1, FE2: Fixed effects
-                Z1, Z2: Instruments
-                |: Separates left-hand side, fixed effects, and instruments
-
-                If no fixed effects and instruments are specified, the formula can be simplified to "Y ~ X1 + X2".
-                If no instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | FE1 + FE2".
-                If no fixed effects are specified but instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | X1 ~ Z1".
-
-                Supported multiple estimation syntax includes:
-
-                Stepwise regressions (sw, sw0)
-                Cumulative stepwise regression (csw, csw0)
-                Multiple dependent variables (Y1 + Y2 ~ X)
-
-                Other special syntax includes:
-                i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-                Using i() is required to use with some custom methods, e.g. iplot().
-                ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
-
-                All other parts of the formula must be compatible with formula parsing via the formulaic module.
-                You can use formulaic functionaloty such as "C", "I", ":",, "*", "np.log", "np.power", etc.
-
-            vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-                If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
-        Returns:
-            None
-        Examples:
-            Standard formula:
-                fml = 'Y ~ X1 + X2'
-                fixest_model = Fixest(data=data).feols(fml, vcov='iid')
-            With fixed effects:
-                fml = 'Y ~ X1 + X2 | fe1 + fe2'
-            With interacted fixed effects:
-                fml = 'Y ~ X1 + X2 | fe1^fe2'
-            Multiple dependent variables:
-                fml = 'Y1 + Y2 ~ X1 + X2'
-            Stepwise regressions (sw and sw0):
-                fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
-            Cumulative stepwise regressions (csw and csw0):
-                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
-            Combinations:
-                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
-
-        Details:
-            The method proceeds in the following steps:
-            1. Parse the formula using the FixestFormulaParser class.
-            2. Create a dictionary of formulas for each dependent variable.
-            3. demean all models and store the data
-            4. fit all models
-        '''
-
-        self.fml = fml.replace(" ", "")
-        self.split = None
-
-        # deparse formula, at least partially
-        fxst_fml = FixestFormulaParser(fml)
-
-        if fxst_fml.is_iv:
-            self.is_iv = True
-        else:
-            self.is_iv = False
-
-        # add function argument to these methods for IV
-        fxst_fml.get_fml_dict()
-        fxst_fml.get_var_dict()
-        fxst_fml._transform_fml_dict()
-
-        if self.is_iv:
-            # create required dicts for first stage IV regressions
-            fxst_fml.get_fml_dict(iv = True)
-            fxst_fml.get_var_dict(iv = True)
-            fxst_fml._transform_fml_dict(iv = True)
-
-
-        self.fml_dict = fxst_fml.fml_dict
-        self.var_dict = fxst_fml.var_dict
-        self.fml_dict2 = fxst_fml.fml_dict2
-
-        if self.is_iv:
-            self.fml_dict_iv = fxst_fml.fml_dict_iv
-            self.var_dict_iv = fxst_fml.var_dict_iv
-            self.fml_dict2_iv = fxst_fml.fml_dict2_iv
-        else:
-            self.fml_dict_iv = self.fml_dict
-            self.var_dict_iv = self.var_dict
-            self.fml_dict2_iv = self.fml_dict2
-
-        self.ivars = fxst_fml.ivars
-
-
-        self.ssc_dict = ssc
-        self.drop_singletons = _drop_singletons(fixef_rm)
-
-        # get all fixed effects combinations
-        fixef_keys = list(self.var_dict.keys())
-
-        ivars, drop_ref = _clean_ivars(self.ivars, self.data)
-
-        # dropped_data_dict and demeaned_data_dict are
-        # dictionaries with keys for each fixed effects combination and
-        # has values of lists of demeaned dataframes
-        # the list is a singelton list unless split sample estimation is used
-        # e.g it looks like this (without split estimation):
-        # {'fe1': [demeaned_data_df], 'fe1+fe2': [demeaned_data_df]}
-        # and like this (with split estimation):
-        # {'fe1': [demeaned_data_df1, demeaned_data_df2], 'fe1+fe2': [demeaned_data_df1, demeaned_data_df2]}
-        # the lists are sorted in the order of the split variable
-
-        self.dropped_data_dict = dict()
-        self.demeaned_data_dict = dict()
-        # names of depvar, X, Z matrices
-        self.yxz_name_dict = dict()
-
-        estimate_full_model = True
-        estimate_split_model = False
-        # currently no fsplit allowed
-        fsplit = None
-
-        self.splitvar, _, estimate_split_model, estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.var_dict)
-
-        # demean all models: based on fixed effects x split x missing value combinations
-        self._demean_all_models(fixef_keys, ivars, drop_ref, estimate_full_model, estimate_split_model)
-
-        # create self.is_fixef_multi flag
-        self._is_multiple_estimation()
-
-        if self.is_fixef_multi and self.is_iv:
-            raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
-
-        # estimate all regression models based on demeaned data
-        self._estimate_all_models(vcov = vcov)
-
-        return self
 
 
     def _is_multiple_estimation(self):
