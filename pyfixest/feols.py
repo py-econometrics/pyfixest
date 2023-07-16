@@ -400,7 +400,7 @@ class Feols:
         if self.has_fixef:
             raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
 
-        xnames = self.coefnames.to_list()
+        xnames = self.coefnames
         Y = self.Y.flatten()
         X = self.X
 
