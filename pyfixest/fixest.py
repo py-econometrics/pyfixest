@@ -600,21 +600,12 @@ class Fixest:
         for x in list(self.all_fitted_models.keys()):
 
             fxst = self.all_fitted_models[x]
+            df = fxst.tidy().reset_index()
+            df["fml"] = fxst.fml
+            res.append(df)
 
-            res.append(
-                pd.DataFrame(
-                    {
-                        'fml': x,
-                        'coefnames': fxst.coefnames,
-                        'Estimate': fxst.beta_hat,
-                        'Std. Error': fxst.se,
-                        't value': fxst.tstat,
-                        'Pr(>|t|)': fxst.pvalue
-                    }
-                )
-            )
 
-        res = pd.concat(res, axis=0).set_index('fml')
+        res = pd.concat(res, axis=0).set_index(['fml', 'coefnames'])
         if type == "markdown":
             return res.to_markdown(floatfmt=".3f")
         else:
@@ -639,21 +630,13 @@ class Fixest:
                 fe = None
             depvar = split[0].split("~")[0]
             fxst = self.all_fitted_models[x]
-            df = pd.DataFrame(
-                {
-                    '': fxst.coefnames,
-                    'Estimate': fxst.beta_hat,
-                    'Std. Error': fxst.se,
-                    't value': fxst.tstat,
-                    'Pr(>|t|)': fxst.pvalue
-                }
-            )
+
+            df = fxst.tidy()
 
             if fxst.is_iv:
                 estimation_method = "IV"
             else:
                 estimation_method = "OLS"
-
 
             print('###')
             print('')
@@ -675,9 +658,7 @@ class Fixest:
         Returns:
             A pd.DataFrame with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
         '''
-
-        df = self.tidy()
-        return df[['coefnames', 'Estimate']]
+        return self.tidy()["Estimate"]
 
     def se(self)-> pd.DataFrame:
         '''
@@ -687,9 +668,8 @@ class Fixest:
             A pd.DataFrame with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
 
         '''
+        return self.tidy()["Std. Error"]
 
-        df = self.tidy()
-        return df[['coefnames', 'Std. Error']]
 
     def tstat(self)-> pd.DataFrame:
         '''
@@ -699,9 +679,7 @@ class Fixest:
             A pd.DataFrame with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
 
         '''
-
-        df = self.tidy()
-        return df[['coefnames', 't value']]
+        return self.tidy()["t value"]
 
     def pvalue(self) -> pd.DataFrame:
         '''
@@ -711,9 +689,7 @@ class Fixest:
             A pd.DataFrame with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
 
         '''
-
-        df = self.tidy()
-        return df[['coefnames', 'Pr(>|t|)']]
+        return self.tidy()["Pr(>|t|)"]
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
         '''
@@ -736,10 +712,10 @@ class Fixest:
         if "Intercept" in ivars:
             ivars.remove("Intercept")
 
-        df = self.tidy()
+        df = self.tidy().reset_index()
 
         df = df[df.coefnames.isin(ivars)]
-        models = df.index.unique()
+        models = df.fml.unique()
 
         _coefplot(
             models=models,
@@ -764,8 +740,8 @@ class Fixest:
             None
         '''
 
-        df = self.tidy()
-        models = df.index.unique()
+        df = self.tidy().reset_index()
+        models = df.fml.unique()
 
         _coefplot(
             models=models,
@@ -832,13 +808,34 @@ class Fixest:
         return res
 
 
+    def fetch_model(self, i: Union[int, str]):
+
+        '''
+        Utility method to fetch a model of class Feols from the Fixest class.
+        Args:
+            i (int or str): The index of the model to fetch.
+        Returns:
+            A Feols object.
+        '''
+
+        if isinstance(i, str):
+            i = int(i)
+
+        keys = list(self.all_fitted_models.keys())
+        if i >= len(keys):
+            raise IndexError(f"Index {i} is larger than the number of fitted models.")
+        key = keys[i]
+        print("Model: ", key)
+        model = self.all_fitted_models[key]
+        return model
+
 def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: float, yintercept: Optional[int] = None,
               xintercept: Optional[int] = None, is_iplot: bool = False,
               rotate_xticks: float = 0) -> None:
     """
         Plot model coefficients with confidence intervals.
         Args:
-            models (list): A list of fitted models.
+            models (list): A list of fitted models indices.
             figsize (tuple): The size of the figure.
             alpha (float): The significance level for the confidence intervals.
             yintercept (int or None): The value at which to draw a horizontal line on the plot.
@@ -857,12 +854,12 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
         for x, model in enumerate(models):
 
-            df_model = df.xs(model)
-            coef = df_model["Estimate"].values
+            df_model = df.reset_index().set_index("fml").xs(model)
+            coef = df_model["Estimate"]
             conf_l = coef - \
-                df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+                df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
             conf_u = coef + \
-                df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
+                df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
             coefnames = df_model["coefnames"].values.tolist()
 
             # could be moved out of the for loop, as the same ivars for all
@@ -872,13 +869,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
                 fig.suptitle("iplot")
                 coefnames = [(i) for string in coefnames for i in re.findall(
                     r'\[T\.([\d\.\-]+)\]', string)]
-
-            # in the future: add reference category
-            # if ref is not None:
-            #    coef = np.append(coef, 0)
-            #    conf_l = np.append(conf_l, 0)
-            #    conf_u = np.append(conf_u, 0)
-            #    coefnames = np.append(coefnames, ref)
 
             ax[x].scatter(coefnames, coef, color="b", alpha=0.8)
             ax[x].scatter(coefnames, conf_u, color="b",
@@ -903,7 +893,8 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
         model = models[0]
 
-        df_model = df.xs(model)
+        df_model = df.reset_index().set_index("fml").xs(model)
+
         coef = df_model["Estimate"].values
         conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
         conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
@@ -913,15 +904,6 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
             fig.suptitle("iplot")
             coefnames = [(i) for string in coefnames for i in re.findall(
                 r'\[T\.([\d\.\-]+)\]', string)]
-
-        # in the future: add reference category
-        # if ref is not None:
-        #    coef = np.append(coef, 0)
-        #    conf_l = np.append(conf_l, 0)
-        #    conf_u = np.append(conf_u, 0)
-        #    coefnames = np.append(coefnames, ref)
-
-            # c = next(color)
 
         ax.scatter(coefnames, coef, color="b", alpha=0.8)
         ax.scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
