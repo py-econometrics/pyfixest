@@ -108,38 +108,23 @@ class Fixest:
             self.is_iv = False
 
         # add function argument to these methods for IV
-        fxst_fml.get_fml_dict()
-        fxst_fml.get_var_dict()
-        fxst_fml._transform_fml_dict()
+        fxst_fml.get_new_fml_dict() # fxst_fml.fml_dict_new
+
+        self.fml_dict = fxst_fml.fml_dict_new
 
         if self.is_iv:
-            # create required dicts for first stage IV regressions
-            fxst_fml.get_fml_dict(iv = True)
-            fxst_fml.get_var_dict(iv = True)
-            fxst_fml._transform_fml_dict(iv = True)
-
-
-        self.fml_dict = fxst_fml.fml_dict
-        self.var_dict = fxst_fml.var_dict
-        self.fml_dict2 = fxst_fml.fml_dict2
-
-        if self.is_iv:
-            self.fml_dict_iv = fxst_fml.fml_dict_iv
-            self.var_dict_iv = fxst_fml.var_dict_iv
-            self.fml_dict2_iv = fxst_fml.fml_dict2_iv
+            fxst_fml.get_new_fml_dict(iv = True) # fxst_fml.fml_dict_new
+            self.fml_dict_iv = fxst_fml.fml_dict_new_iv
         else:
-            self.fml_dict_iv = self.fml_dict
-            self.var_dict_iv = self.var_dict
-            self.fml_dict2_iv = self.fml_dict2
+            self.fml_dict_iv = None
 
         self.ivars = fxst_fml.ivars
-
 
         self.ssc_dict = ssc
         self.drop_singletons = _drop_singletons(fixef_rm)
 
         # get all fixed effects combinations
-        fixef_keys = list(self.var_dict.keys())
+        fixef_keys = list(self.fml_dict.keys())
 
         self.ivars, self.drop_ref = _clean_ivars(self.ivars, self.data)
 
@@ -149,7 +134,7 @@ class Fixest:
         # currently no fsplit allowed
         fsplit = None
 
-        self.splitvar, _, self.estimate_split_model, self.estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.var_dict)
+        self.splitvar, _, self.estimate_split_model, self.estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.fml_dict)
 
         # demean all models: based on fixed effects x split x missing value combinations
         self._estimate_all_models2(vcov, fixef_keys)
@@ -231,7 +216,7 @@ class Fixest:
         #dict2fe = self.fml_dict2.get(fval)
 
         if self.is_iv:
-            dict2fe_iv = self.fml_dict2_iv.get(fval)
+            dict2fe_iv = self.fml_dict_iv.get(fval)
 
         covar2 = covar
         depvar2 = depvar
@@ -239,7 +224,7 @@ class Fixest:
         fml = depvar2 + " ~ " + covar2
 
         if self.is_iv:
-            instruments2 = dict2fe_iv.get(depvar)[0]
+            instruments2 = dict2fe_iv.get("Y")[0].split("~")[1]
             endogvar_list = list(set(covar2.split("+")) - set(instruments2.split("+")))#[0]
             instrument_list = list(set(instruments2.split("+")) - set(covar2.split("+")))#[0]
 
@@ -425,7 +410,7 @@ class Fixest:
 
 
                 data = self.data
-                dict2fe = self.fml_dict2.get(fval)
+                dict2fe = self.fml_dict.get(fval)
 
                 # dictionary to cache demeaned data
                 # index: na_index_str
@@ -434,10 +419,14 @@ class Fixest:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 for depvar in dict2fe.keys():
 
-                    for _, covar in enumerate(dict2fe.get(depvar)):
+                    for _, fml_linear in enumerate(dict2fe.get(depvar)):
 
                         if self.method == "feols":
 
+                            if isinstance(fml_linear, list):
+                                fml_linear = fml_linear[0]
+
+                            covar = fml_linear.split("~")[1]
 
                             # get Y, X, Z, fe, NA indices for model
                             Y, X, I, fe, na_index, fe_na, na_index_str, z_names = self._model_matrix_fixest(depvar, covar, fval)
@@ -922,7 +911,7 @@ def _check_ivars(data, ivars):
                             i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
 
 
-def _prepare_split_estimation(split, fsplit, data, var_dict):
+def _prepare_split_estimation(split, fsplit, data, fml_dict):
 
     '''
     Cleans the input for the split estimation.
@@ -966,7 +955,7 @@ def _prepare_split_estimation(split, fsplit, data, var_dict):
         if splitvar_name not in data.columns:
             raise ValueError("Split variable " +
                             splitvar + " not found in data.")
-        if splitvar_name in var_dict.keys():
+        if splitvar_name in fml_dict.keys():
             raise ValueError("Split variable " + splitvar +
                             " cannot be a fixed effect variable.")
         if splitvar.dtype.name != "category":
