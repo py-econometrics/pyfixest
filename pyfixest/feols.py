@@ -292,7 +292,7 @@ class Feols:
                         data = self.data[~np.equal(ixg, group)]
                         model = Fixest_(data)
                         model.feols(self.fml, vcov = "iid")
-                        beta_jack[ixg,:] = model.coef()["Estimate"].to_numpy()
+                        beta_jack[ixg,:] = model.coef().to_numpy()
 
 
                 # optional: beta_bar in MNW (2022)
@@ -325,25 +325,25 @@ class Feols:
 
         '''
 
-        self.se = (
+        self._se = (
             np.sqrt(np.diagonal(self.vcov))
         )
 
-        self.tstat = (
-            self.beta_hat / self.se
+        self._tstat = (
+            self.beta_hat / self._se
         )
 
         if self.vcov_type in ["iid", "hetero"]:
             df = self.N - self.k
         else:
             df = self.G - 1
-        self.pvalue = (
-            2*(1-t.cdf(np.abs(self.tstat), df))
+        self._pvalue = (
+            2*(1-t.cdf(np.abs(self._tstat), df))
         )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
-            np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
+            np.array([z * self._se - self.beta_hat, z * self._se + self.beta_hat])
         )
 
 
@@ -474,6 +474,68 @@ class Feols:
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
 
 
+    def tidy(self) -> pd.DataFrame:
+
+        '''
+        Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics and p-values.
+        Returns:
+            tidy_df (pd.DataFrame): A tidy pd.DataFrame with the regression results.
+        '''
+
+        tidy_df = pd.DataFrame(
+                    {
+                        'coefnames': self.coefnames,
+                        'Estimate': self.beta_hat,
+                        'Std. Error': self._se,
+                        't value': self._tstat,
+                        'Pr(>|t|)': self._pvalue,
+                        'confint_lower': self.conf_int[0],
+                        'confint_upper': self.conf_int[1]
+                    }
+                )
+
+        return tidy_df.set_index("coefnames")
+
+    def coef(self) -> pd.Series:
+
+        '''
+        Return a pd.Series with estimated regression coefficients.
+        '''
+        return self.tidy()['Estimate']
+
+    def se(self) -> pd.Series:
+        '''
+        Return a pd.Series with standard errors of the estimated regression model.
+        '''
+        return self.tidy()['Std. Error']
+
+    def tstat(self) -> pd.Series:
+        '''
+        Return a pd.Series with t-statistics of the estimated regression model.
+        '''
+        return self.tidy()['t value']
+
+    def pvalue(self) -> pd.Series:
+        '''
+        Return a pd.Series with p-values of the estimated regression model.
+        '''
+        return self.tidy()['Pr(>|t|)']
+
+    def confint(self) -> pd.DataFrame:
+
+        '''
+        Return a pd.DataFrame with confidence intervals for the estimated regression model.
+        '''
+        return self.tidy()[['confint_lower', 'confint_upper']]
+
+
+    def resid(self) -> np.ndarray:
+        '''
+        Returns a one dimensional np.array with the residuals of the estimated regression model.
+        '''
+        return self.u_hat
+
+
 
 def _check_vcov_input(vcov, data):
 
@@ -570,5 +632,8 @@ def _feols_input_checks(Y, X, Z):
         raise ValueError("X must be a 2D array")
     if Z.ndim != 2:
         raise ValueError("Z must be a 2D array")
+
+
+
 
 

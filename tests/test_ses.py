@@ -89,9 +89,7 @@ def test_CRV3_fixef(data):
 
     fixest = pf.Fixest(data = data)
     fixest.feols('Y~X1 + C(X2)', vcov = {'CRV3':'id'}, ssc = ssc(adj = False, cluster_adj = False))
-    res_crv3a = fixest.tidy()
-    # drop X2, intercept
-    res_crv3a = res_crv3a[res_crv3a.coefnames == "X1"]
+    res_crv3a = fixest.tidy().reset_index().set_index("coefnames").xs("X1")
 
     fixest2 = pf.Fixest(data = data)
     fixest2.feols('Y~X1 | X2', vcov = {'CRV3':'id'}, ssc = ssc(adj = False, cluster_adj = False))

@@ -72,7 +72,8 @@ fixest.vcov({'CRV1':'group_id'}).summary()
 # ---
 ```
 
-It is also possible to run a wild (cluster) bootstrap after estimation (via the [wildboottest module](https://github.com/s3alfisc/wildboottest)):
+It is also possible to run a wild (cluster) bootstrap after estimation (via the [wildboottest module](https://github.com/s3alfisc/wildboottest), only for Python
+versions smaller than `3.11`):
 
 ```py
 fixest = Fixest(data = data)
@@ -168,6 +169,21 @@ fixest.feols("Y~X1 | csw0(X3, X4)", vcov = "HC1").summary()
 # ---
 
 ```
+
+You can access an individual model by its name - i.e. a formula - via the `all_fitted_models` attribure.
+
+```py
+fixest.all_fitted_models["Y~X1"]
+```
+
+or equivalently via the `fetch_model` method:
+
+```py
+fixest.fetch_method(0)
+```
+
+Here, `0` simply fetches the first model stored in the `all_fitted_models` dictionary, `1` the second etc.
+
 
 # TWFE Event Study
 
