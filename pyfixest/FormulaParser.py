@@ -50,7 +50,7 @@ class FixestFormulaParser:
         # Split the formula string into its components
         fml_split = fml.split('|')
         depvars, covars = fml_split[0].split("~")
-          
+
         if len(fml_split) == 1:
             fevars = "0"
             endogvars = None
@@ -60,19 +60,19 @@ class FixestFormulaParser:
                 fevars = "0"
                 endogvars, instruments = fml_split[1].split("~")
                 # add endogeneous variable to "covars" - yes, bad naming
-                
-                
-                # check if any of the instruments or endogeneous variables are also specified 
+
+
+                # check if any of the instruments or endogeneous variables are also specified
                 # as covariates
                 if any(element in covars.split("+") for element in endogvars.split("+")):
                     raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
+
                 if any(element in covars.split("+") for element in instruments.split("+")):
                     raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
-                if covars == "1": 
+
+                if covars == "1":
                     covars = endogvars
-                else: 
+                else:
                     covars = endogvars + "+" +  covars
             else:
                 fevars = fml_split[1]
@@ -82,18 +82,18 @@ class FixestFormulaParser:
             fevars = fml_split[1]
             endogvars, instruments = fml_split[2].split("~")
 
-            # check if any of the instruments or endogeneous variables are also specified 
+            # check if any of the instruments or endogeneous variables are also specified
             # as covariates
             if any(element in covars.split("+") for element in endogvars.split("+")):
                 raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
+
             if any(element in covars.split("+") for element in instruments.split("+")):
                 raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
 
             # add endogeneous variable to "covars" - yes, bad naming
-            if covars == "1": 
+            if covars == "1":
                 covars = endogvars
-            else: 
+            else:
                 covars = endogvars + "+" +  covars
 
         if endogvars is not None:
@@ -112,6 +112,7 @@ class FixestFormulaParser:
         self.endogvars = endogvars
         self.instruments = instruments
 
+        # clean instruments
         if instruments is not None:
             self.is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
@@ -124,7 +125,8 @@ class FixestFormulaParser:
             self.is_iv = False
             self.covars_first_stage = None
             self.depvars_first_stage = None
-
+        
+        # parse i() syntax
         if self.covars.get("i") is not None:
             self.ivars = dict()
             i_split = self.covars.get("i")[-1].split("=")
@@ -145,16 +147,34 @@ class FixestFormulaParser:
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
-        if instruments is not None: 
+        if instruments is not None:
             self.covars_first_stage_fml = _pack_to_fml(self.covars_first_stage)
-        else: 
+        else:
             self.covars_first_stage_fml = None
-        #if "^" in self.covars:
-        #    raise CovariateInteractionError("Please use 'i()' or ':' syntax to interact covariates.")
+            
+    def get_new_fml_dict(self, iv = False):
+      
+        fml_dict = dict()
+        
+        for fevar in self.fevars_fml: 
+            res = dict()
+            for depvar in self.depvars: 
+                res[depvar] = []
+                if iv:
+                    for covar in self.covars_first_stage_fml: 
+                        res[depvar].append(depvar + '~' + covar)
+                else: 
+                    for covar in self.covars_fml:
+                        res[depvar].append(depvar + '~' + covar)
+            fml_dict[fevar] = res            
+                    
+        if iv:
+            self.fml_dict_new_iv = fml_dict
+        else:
+            self.fml_dict_new = fml_dict
 
-        #for  x in ["i", ":"]:
-        #    if x in self.fevars:
-        #        raise FixedEffectInteractionError("Interacting fixed effects via", x, " is not allowed. Please use '^' to interact fixed effects.")
+
+                  
 
 
 
@@ -318,14 +338,14 @@ def _unpack_fml(x):
 
         # Check if this variable contains a switch
         varlist, sw_type = _find_sw(var)
-        
+
         # If there's no switch, just add the variable to the list
         if sw_type is None:
             if _is_varying_slopes(var):
                 varlist, sw_type = _transform_varying_slopes(var)
-                for x in varlist.split("+"): 
+                for x in varlist.split("+"):
                     res_s['constant'].append(x)
-            else: 
+            else:
                 res_s['constant'].append(varlist)
 
         # If there'_ a switch, unpack it and add it to the list
@@ -333,7 +353,7 @@ def _unpack_fml(x):
             if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
                 _check_duplicate_key(res_s, sw_type)
                 res_s[sw_type] = varlist
-            elif sw_type == "varying_slopes": 
+            elif sw_type == "varying_slopes":
                 res_s[sw_type] = varlist
             else:
                 raise ValueError("Unsupported switch type")
@@ -530,17 +550,17 @@ def _check_duplicate_key(my_dict, key):
                 raise DuplicateKeyError("Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula.")
             else:
                 None
-                
-                
-def _is_varying_slopes(x): 
-          
+
+
+def _is_varying_slopes(x):
+
     pattern = r'\[.*\]'
     match = re.search(pattern, x)
     if match:
         return True
     else:
         return False
-            
+
 def _transform_varying_slopes(x):
     parts = x.split('[')
     a = parts[0]
