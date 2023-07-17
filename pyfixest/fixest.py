@@ -143,23 +143,9 @@ class Fixest:
 
         self.ivars, self.drop_ref = _clean_ivars(self.ivars, self.data)
 
-        # dropped_data_dict and demeaned_data_dict are
-        # dictionaries with keys for each fixed effects combination and
-        # has values of lists of demeaned dataframes
-        # the list is a singelton list unless split sample estimation is used
-        # e.g it looks like this (without split estimation):
-        # {'fe1': [demeaned_data_df], 'fe1+fe2': [demeaned_data_df]}
-        # and like this (with split estimation):
-        # {'fe1': [demeaned_data_df1, demeaned_data_df2], 'fe1+fe2': [demeaned_data_df1, demeaned_data_df2]}
-        # the lists are sorted in the order of the split variable
-
-        self.dropped_data_dict = dict()
-        self.demeaned_data_dict = dict()
         # names of depvar, X, Z matrices
         self.yxz_name_dict = dict()
 
-        estimate_full_model = True
-        estimate_split_model = False
         # currently no fsplit allowed
         fsplit = None
 
@@ -233,10 +219,6 @@ class Fixest:
             z_names: names of all covariates, minus the endogeneous variables, plus the instruments. None if no IV.
         '''
 
-        depvar_list = depvar.split("+")
-        covar_list = covar.split("+")
-        fval_list = fval.split("+")
-
         if fval != "0":
             fe, fe_na = self._clean_fe(self.data, fval)
             fe_na = list(fe_na[fe_na == True])
@@ -287,6 +269,7 @@ class Fixest:
         y_names = list(Y.columns)
         x_names = list(X.columns)
         yxz_names = list(y_names) + list(x_names)
+
         if self.is_iv:
             iv_names = list(I.columns)
             x_names_copy = x_names.copy()
@@ -313,7 +296,6 @@ class Fixest:
             na_index = (na_index + fe_na)
             fe = fe.drop(na_index, axis=0)
             # drop intercept
-            intercept_index = x_names.index("Intercept")
             X = X.drop('Intercept', axis = 1)
             x_names.remove("Intercept")
             yxz_names.remove("Intercept")
@@ -449,13 +431,12 @@ class Fixest:
                 # index: na_index_str
                 lookup_demeaned_data = dict()
 
-                # loop over both dict2fe and dict2fe_iv (if the latter is not None)
+                # loop over both dictfe and dictfe_iv (if the latter is not None)
                 for depvar in dict2fe.keys():
-                    # [(0, 'X1+X2'), (1, ['X1+X3'])]
+
                     for _, covar in enumerate(dict2fe.get(depvar)):
 
                         if self.method == "feols":
-
 
 
                             # get Y, X, Z, fe, NA indices for model
