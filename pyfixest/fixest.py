@@ -140,7 +140,10 @@ class Fixest:
         self._is_multiple_estimation()
 
         if self.is_fixef_multi and self.is_iv:
-            raise MultiEstNotSupportedError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
+            raise MultiEstNotSupportedError(
+                "Multiple Estimations is currently not supported with IV."
+                "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
+            )
 
         return self
 
@@ -209,9 +212,6 @@ class Fixest:
             fe = None
             fe_na = None
 
-
-        #dict2fe = self.fml_dict2.get(fval)
-
         if self.is_iv:
             dict2fe_iv = self.fml_dict_iv.get(fval)
 
@@ -271,7 +271,8 @@ class Fixest:
 
         if Y.shape[1] > 1:
             raise ValueError(
-                "Dependent variable must be a single column. Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float)."
+                "Dependent variable must be a single column."
+                "Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float)."
            )
 
         if fe is not None:
@@ -405,12 +406,9 @@ class Fixest:
 
             for _, fval in enumerate(fixef_keys):
 
-
-                data = self.data
                 dict2fe = self.fml_dict.get(fval)
 
-                # dictionary to cache demeaned data
-                # index: na_index_str
+                # dictionary to cache demeaned data with index: na_index_str
                 lookup_demeaned_data = dict()
 
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -426,7 +424,7 @@ class Fixest:
                             covar = fml_linear.split("~")[1]
 
                             # get Y, X, Z, fe, NA indices for model
-                            Y, X, I, fe, na_index, fe_na, na_index_str, z_names = self._model_matrix_fixest(depvar, covar, fval)
+                            Y, X, I, fe, na_index, _, na_index_str, z_names = self._model_matrix_fixest(depvar, covar, fval)
 
                             y_names = Y.columns.tolist()
                             x_names = X.columns.tolist()
@@ -486,8 +484,6 @@ class Fixest:
                             else:
                                 FEOLS.icovars = None
 
-
-                            #self.all_fitted_models[full_fml] = FEOLS
                             self.all_fitted_models[fml] = FEOLS
 
                         elif self.method == "fepois":
@@ -497,7 +493,9 @@ class Fixest:
 
                         else:
 
-                            raise ValueError("Estimation method not supported. Please use 'feols' or 'fepois'.")
+                            raise ValueError(
+                                "Estimation method not supported. Please use 'feols' or 'fepois'."
+                            )
 
 
 
@@ -674,7 +672,9 @@ class Fixest:
 
         if ivars is None:
             raise ValueError(
-                "The estimated models did not have ivars / 'i()' model syntax. In consequence, the '.iplot()' method is not supported.")
+                "The estimated models did not have ivars / 'i()' model syntax."
+                "In consequence, the '.iplot()' method is not supported."
+            )
 
         if "Intercept" in ivars:
             ivars.remove("Intercept")
@@ -929,7 +929,8 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
     if split is not None:
         if fsplit is not None:
             raise ValueError(
-                "Cannot specify both split and fsplit. Please specify only one of the two.")
+                "Cannot specify both split and fsplit. Please specify only one of the two."
+            )
         else:
             splitvar = data[split]
             estimate_full_model = False
@@ -950,11 +951,15 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
     if splitvar is not None:
         split_categories = np.unique(splitvar)
         if splitvar_name not in data.columns:
-            raise ValueError("Split variable " +
-                            splitvar + " not found in data.")
+            raise ValueError(
+                "Split variable " +
+                splitvar + " not found in data."
+                )
         if splitvar_name in fml_dict.keys():
-            raise ValueError("Split variable " + splitvar +
-                            " cannot be a fixed effect variable.")
+            raise ValueError(
+                "Split variable " + splitvar +
+                " cannot be a fixed effect variable."
+            )
         if splitvar.dtype.name != "category":
             splitvar = pd.Categorical(splitvar)
 
@@ -985,19 +990,29 @@ def _multicollinearity_checks(X, Z, ivars, fml2):
 
     if np.linalg.matrix_rank(X) < min(X.shape):
         if ivars is not None:
-            raise MatrixNotFullRankError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
-                            ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+            raise MatrixNotFullRankError(
+                'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
+                'The model is skipped.'
+                'As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?'
+                )
         else:
             raise MatrixNotFullRankError(
-                    "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                    'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
+                    'The model is skipped. '
+                )
 
     if np.linalg.matrix_rank(Z) < min(Z.shape):
         if ivars is not None:
-            raise MatrixNotFullRankError("The design Matrix Z does not have full rank for the regression with fml" + fml2 +
-                            ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
+            raise MatrixNotFullRankError(
+                'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
+                'The model is skipped.'
+                'As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?"'
+                )
         else:
             raise MatrixNotFullRankError(
-                    "The design Matrix Z does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
+                    'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
+                    'The model is skipped.'
+                )
 
 def _get_vcov_type(vcov, fval):
 

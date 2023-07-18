@@ -145,7 +145,9 @@ class Feols:
 
         if self.is_iv:
             if self.vcov_type in ["CRV3"]:
-                raise VcovTypeNotSupportedError("CRV3 inference is not supported for IV regressions.")
+                raise VcovTypeNotSupportedError(
+                    "CRV3 inference is not supported for IV regressions."
+                )
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -208,7 +210,10 @@ class Feols:
                 cluster_df = pd.Categorical(cluster_df)
 
             if cluster_df.isna().any():
-                raise NanInClusterVarError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
+                raise NanInClusterVarError(
+                    "CRV inference not supported with missing values in the cluster variable."
+                    "Please drop missing values before running the regression."
+                )
 
             _, clustid = pd.factorize(cluster_df)
 
@@ -253,7 +258,9 @@ class Feols:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
                 if self.is_iv:
-                    raise VcovTypeNotSupportedError("CRV3 inference is not supported with IV estimation.")
+                    raise VcovTypeNotSupportedError(
+                        "CRV3 inference is not supported with IV estimation."
+                    )
 
                 k_params = self.k
 
@@ -397,9 +404,13 @@ class Feols:
         '''
 
         if self.is_iv:
-            raise VcovTypeNotSupportedError("Wild cluster bootstrap is not supported with IV estimation.")
+            raise VcovTypeNotSupportedError(
+                "Wild cluster bootstrap is not supported with IV estimation."
+            )
         if self.has_fixef:
-            raise VcovTypeNotSupportedError("Wild cluster bootstrap is not supported with fixed effects.")
+            raise VcovTypeNotSupportedError(
+                "Wild cluster bootstrap is not supported with fixed effects."
+            )
 
         xnames = self.coefnames
         Y = self.Y.flatten()
@@ -595,9 +606,13 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         is_clustered = False
         if vcov_type_detail in ["HC2", "HC3"]:
             if has_fixef:
-                raise VcovTypeNotSupportedError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
             if is_iv:
-                raise VcovTypeNotSupportedError("HC2 and HC3 inference types are not supported for IV regressions.")
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
