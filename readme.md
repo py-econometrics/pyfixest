@@ -52,7 +52,7 @@ Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
 # change SEs from CRV1 to HC1
-fixest.vcov(vcov = "hc1").tidy()
+fixest.vcov(vcov = "HC1").tidy()
 #                       Estimate  Std. Error  ...  confint_lower  confint_upper
 # fml        coefnames                        ...
 # Y~X1|X2+X3 X1         0.041142    0.167284  ...      -0.030652       0.051631
