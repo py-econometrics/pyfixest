@@ -1,55 +1,112 @@
 import numpy as np
 import scipy.sparse as sp
-from numba import njit, prange
+from numba import njit, prange, types, typed, float64, int64
 from formulaic import model_matrix
 
+#@njit(float64[:](float64[:], int64[:], float64[:]))
+@njit
+def _ave3(x, f, w):
+
+    N = len(x)
+
+    #wx_dict = {}
+    #w_dict = {}
+
+    wx_dict = typed.Dict.empty(key_type=types.int64, value_type=types.float64)
+    w_dict = typed.Dict.empty(key_type=types.int64, value_type=types.float64)
+
+    # Compute weighted sums using a dictionary
+    for i in range(N):
+        j = f[i]
+        if j in wx_dict:
+            wx_dict[j] += w[i] * x[i]
+        else:
+            wx_dict[j] = w[i] * x[i]
+
+        if j in w_dict:
+            w_dict[j] += w[i]
+        else:
+            w_dict[j] = w[i]
+
+    wxw_vec = np.zeros_like(f, dtype=x.dtype)
+
+    for i in range(N):
+        j = f[i]
+        wxw_vec[i] = wx_dict[j] / w_dict[j]
+
+    return wxw_vec
 
 
-@njit(parallel = True, cache = False, fastmath = False)
-def demean(cx, flist, weights, tol = 1e-08, maxiter = 2000):
+#@njit(float64[:,:](float64[:,:], int64[:,:], float64[:,:], float64, int64))
+@njit(parallel = True)
+def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
 
     '''
-    Demean a Matrix cx by fixed effects in flist.
+    Demean a Matrix cx by fixed effects in fmat.
     The fixed effects are weighted by weights. Convervence tolerance
     is set to 1e-08 for the sum of absolute differences.
     Args:
-        cx: Matrix to be demeaned
-        flist: Matrix of fixed effects
+        x: Matrix to be demeaned
+        fmat: Matrix of fixed effects
         weights: Weights for fixed effects
         tol: Convergence tolerance. 1e-08 by default.
     Returns
         res: Demeaned matrix of dimension cx.shape
     '''
-    N = cx.shape[0]
-    fixef_vars = flist.shape[1]
+
+    #cx = x.copy()
+
+    fixef_vars = fmat.shape[1]
     K = cx.shape[1]
 
-    res = np.zeros((N,K))
-
+    res = np.zeros_like(cx)
 
     for k in prange(K):
 
         cxk = cx[:,k].copy()
         oldxk = cxk - 1
 
-        converged = False
+        # initiate
+        weighted_ave = np.empty_like(cxk)
+        fvec = np.empty_like(cxk)
+
         for _ in range(maxiter):
+
+            for i in range(fixef_vars):
+                fvec = fmat[:,i]
+                weighted_ave[:] = _ave3(cxk, fvec, weights)
+                cxk -= weighted_ave
+
+            if (np.abs(cxk - oldxk)).max() < tol:
+                break
 
             oldxk = cxk.copy()
 
-            for i in range(fixef_vars):
-                fmat = flist[:,i]
-                weighted_ave = _ave3(cxk, fmat, weights)
-                cxk = cxk - weighted_ave
-
-            if np.sum(np.abs(cxk - oldxk)) < tol:
-                converged = True
-                break
 
         res[:,k] = cxk
 
     return res
 
+
+@njit
+def _ave2(x, f, w):
+
+    N =  len(x)
+    weighted_ave = np.zeros(N)
+    uvals = _unique2(f)
+
+    for j in uvals:
+        selector = f == j
+        cxkj = x[selector]
+        wj = w[selector]
+        wsum = np.zeros(1)
+        wx = np.zeros(1)
+        for l in range(len(cxkj)):
+            wsum += wj[l]
+            wx += wj[l] * cxkj[l]
+        weighted_ave[selector] = wx / wsum
+
+    return weighted_ave
 
 
 @njit
@@ -89,65 +146,6 @@ def _ave(x, f, w):
         wxw_long[selector] = wxw[j]
 
     return wxw_long
-
-
-from numba import njit, prange
-from numba.typed import Dict
-
-@njit
-def _ave3(x, f, w):
-
-    N = len(x)
-
-    wx_dict = {}
-    w_dict = {}
-
-    # Compute weighted sums using a dictionary
-    for i in range(N):
-        j = f[i]
-        if j in wx_dict:
-            wx_dict[j] += w[i] * x[i]
-        else:
-            wx_dict[j] = w[i] * x[i]
-
-        if j in w_dict:
-            w_dict[j] += w[i]
-        else:
-            w_dict[j] = w[i]
-
-    # Convert the dictionaries to arrays
-    wx = np.zeros_like(f, dtype=x.dtype)
-    w = np.zeros_like(f, dtype=w.dtype)
-
-    for i in range(N):
-        j = f[i]
-        wx[i] = wx_dict[j]
-        w[i] = w_dict[j]
-
-    # Compute the average
-    wxw_long = wx / w
-
-    return wxw_long
-
-@njit
-def _ave2(x, f, w):
-
-    N =  len(x)
-    weighted_ave = np.zeros(N)
-    uvals = _unique2(f)
-
-    for j in uvals:
-        selector = f == j
-        cxkj = x[selector]
-        wj = w[selector]
-        wsum = np.zeros(1)
-        wx = np.zeros(1)
-        for l in range(len(cxkj)):
-            wsum += wj[l]
-            wx += wj[l] * cxkj[l]
-        weighted_ave[selector] = wx / wsum
-
-    return weighted_ave
 
 
 def getfe(uhat, fe_fml, data):

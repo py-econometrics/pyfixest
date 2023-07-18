@@ -5,7 +5,9 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-This is a draft package (highly experimental!) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package.
+This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package.
+
+The package aims to mimic `fixest` syntax and functionality as closely as possible.
 
 Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package.
 
@@ -21,80 +23,38 @@ data = get_data()
 fixest = pf.Fixest(data = data)
 # OLS Estimation
 fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'group_id'})
-fixest.summary()
-# ###
-#
-# Model:  OLS
-# Dep. var.:  Y
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#            Estimate  Std. Error    t value     Pr(>|t|)
-# Intercept -3.941395    0.221365 -17.804976 2.442491e-15
-#        X1 -0.273096    0.165154  -1.653580 1.112355e-01
-# ---
-# ###
-#
-# Model:  OLS
-# Dep. var.:  Y
-# Fixed effects:  X2
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#     Estimate  Std. Error   t value  Pr(>|t|)
-# X1 -0.260472    0.163874 -1.589472  0.125042
-# ---
-# ###
-#
-# Model:  OLS
-# Dep. var.:  Y
-# Fixed effects:  X2+X3
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#     Estimate  Std. Error  t value  Pr(>|t|)
-# X1   0.03975    0.107003 0.371481  0.713538
-# ---
+fixest.fetch_model(0).tidy()
 
+#           Estimate  Std. Error  ...  confint_lower  confint_upper
+#coefnames                        ...
+#Intercept -3.941395    0.221365  ...       3.955276      -3.927514
+#X1        -0.273096    0.165154  ...       0.283452      -0.262740
 
-# IV Estimation
-fixest = pf.Fixest(data = data)
-fixest.feols("Y~X1 | csw0(X2, X3) | X1 ~ Z1", vcov = {'CRV1':'group_id'})
-fixest.summary()
-# ###
-#
-# Model:  IV
-# Dep. var.:  Y
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#            Estimate  Std. Error    t value     Pr(>|t|)
-# Intercept -3.941293    0.221354 -17.805377 2.442491e-15
-#        X1 -0.265817    0.261940  -1.014803 3.203217e-01
-# ---
-# ###
-#
-# Model:  IV
-# Dep. var.:  Y
-# Fixed effects:  X2
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#     Estimate  Std. Error   t value  Pr(>|t|)
-# X1 -0.259964    0.264817 -0.981674  0.336054
-# ---
-# ###
-#
-# Model:  IV
-# Dep. var.:  Y
-# Fixed effects:  X2+X3
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
-#
-#     Estimate  Std. Error  t value  Pr(>|t|)
-# X1  0.041142    0.201983 0.203688  0.840315
-# ---
+fixest.fetch_model(1).tidy()
+#           Estimate  Std. Error  ...  confint_lower  confint_upper
+#coefnames                        ...
+#X1        -0.260472    0.163874  ...       0.270748      -0.250196
 ```
 
+`PyFixest` also supports IV (Instrumental Variable) Estimation:
 
+```python
+fixest = pf.Fixest(data = data)
+fixest.feols("Y~ 1 | X2 + X3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
+fixest.fetch_model(0).tidy()
+# Model:  Y~X1|X2+X3
+#           Estimate  Std. Error  ...  confint_lower  confint_upper
+# coefnames                        ...
+# X1         0.041142    0.201983  ...      -0.028476       0.053807
+```
 
+Standard Errors can be adjusted after estimation, "on-the-fly":
+
+```python
+# change SEs from CRV1 to HC1
+fixest.vcov(vcov = "HC1").tidy()
+#                       Estimate  Std. Error  ...  confint_lower  confint_upper
+# fml        coefnames                        ...
+# Y~X1|X2+X3 X1         0.041142    0.167284  ...      -0.030652       0.051631
+
+```

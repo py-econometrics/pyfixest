@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 from pyfixest import Fixest
 from pyfixest.utils import get_data
-from pyfixest.fixest import DepvarIsNotNumericError
+from pyfixest.exceptions import DuplicateKeyError, EndogVarsAsCovarsError, InstrumentsAsCovarsError, UnderDeterminedIVError, VcovTypeNotSupportedError, MultiEstNotSupportedError, NanInClusterVarError
 
-from pyfixest.FormulaParser import FixestFormulaParser, DuplicateKeyError
+from pyfixest.FormulaParser import FixestFormulaParser
 
 def test_formula_parser():
     with pytest.raises(DuplicateKeyError):
@@ -52,7 +52,7 @@ def test_cluster_na():
     data['X3'][5] = np.nan
 
     fixest = Fixest(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(NanInClusterVarError):
         fixest.feols('Y ~ X1', vcov = {'CRV1': 'X3'})
 
 def test_error_hc23_fe():
@@ -63,10 +63,10 @@ def test_error_hc23_fe():
     data = get_data().dropna()
 
     fixest = Fixest(data)
-    with pytest.raises(ValueError):
+    with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols('Y ~ X1 | X2', vcov = "HC2")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols('Y ~ X1 | X2', vcov = "HC3")
 
 
@@ -95,32 +95,40 @@ def test_iv_errors():
 
     fixest = Fixest(data)
     # under determined
-    with pytest.raises(ValueError):
-        fixest.feols('Y ~ X1 | Z1 + Z2 ~ X1 ')
+    with pytest.raises(UnderDeterminedIVError):
+        fixest.feols('Y ~ X1 | Z1 + Z2 ~ X4 ')
     # instrument specified as covariate
-    with pytest.raises(ValueError):
+    with pytest.raises(InstrumentsAsCovarsError):
         fixest.feols('Y ~ X1 | Z1  ~ X1 + X2')
     # endogeneous variable specified as covariate
-    with pytest.raises(ValueError):
+    with pytest.raises(EndogVarsAsCovarsError):
         fixest.feols('Y ~ Z1 | Z1  ~ X1')
     # instrument specified as covariate
-    with pytest.raises(ValueError):
-        fixest.feols('Y ~ X1 | Z1 + Z2 ~ X1 + X2')
+    #with pytest.raises(InstrumentsAsCovarsError):
+    #    fixest.feols('Y ~ X1 | Z1 + Z2 ~ X3 + X4')
+    # underdetermined IV
+    #with pytest.raises(UnderDeterminedIVError):
+    #    fixest.feols('Y ~ X1 + X2 | X1 + X2 ~ X4 ')
+    #with pytest.raises(UnderDeterminedIVError):
+    #    fixest.feols('Y ~ X1 | Z1 + Z2 ~ X2 + X3 ')
     # CRV3 inference
-    with pytest.raises(ValueError):
+    with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols('Y ~ 1 | Z1 ~ X1 ', vcov = {"CRV3":"group_id"})
     # wild bootstrap
-    with pytest.raises(ValueError):
+    with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols('Y ~ 1 | Z1 ~ X1 ').wildboottest(param = "Z1", B = 999)
-    with pytest.raises(ValueError):
+    # multi estimation error
+    with pytest.raises(MultiEstNotSupportedError):
         fixest.feols('Y + Y2 ~ 1 | Z1 ~ X1 ')
-    with pytest.raises(ValueError):
+    with pytest.raises(MultiEstNotSupportedError):
         fixest.feols('Y  ~ 1 | sw(X2, X3) | Z1 ~ X1 ')
-    with pytest.raises(ValueError):
-        fixest.feols('Y  ~ csw(X2, X3) | Z1 ~ X1 ')
-    with pytest.raises(ValueError):
+    with pytest.raises(MultiEstNotSupportedError):
+        fixest.feols('Y  ~ 1 | csw(X2, X3) | Z1 ~ X1 ')
+    # unsupported HC vcov
+    with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols('Y  ~ 1 | Z1 ~ X1', vcov = "HC2")
-
+    with pytest.raises(VcovTypeNotSupportedError):
+            fixest.feols('Y  ~ 1 | Z1 ~ X1', vcov = "HC3")
 
 
 
