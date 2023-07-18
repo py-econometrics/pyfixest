@@ -1,14 +1,11 @@
 import re
-
-class FixedEffectInteractionError(Exception):
-    pass
-
-class CovariateInteractionError(Exception):
-    pass
-
-class DuplicateKeyError(Exception):
-    pass
-
+from pyfixest.exceptions import (
+    DuplicateKeyError,
+    EndogVarsAsCovarsError,
+    InstrumentsAsCovarsError,
+    UnderDeterminedIVError,
+    UnsupportedMultipleEstimationSyntax
+)
 
 class FixestFormulaParser:
 
@@ -40,6 +37,7 @@ class FixestFormulaParser:
 
         Returns:
             None
+
         """
 
         #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
@@ -50,7 +48,7 @@ class FixestFormulaParser:
         # Split the formula string into its components
         fml_split = fml.split('|')
         depvars, covars = fml_split[0].split("~")
-          
+
         if len(fml_split) == 1:
             fevars = "0"
             endogvars = None
@@ -60,19 +58,23 @@ class FixestFormulaParser:
                 fevars = "0"
                 endogvars, instruments = fml_split[1].split("~")
                 # add endogeneous variable to "covars" - yes, bad naming
-                
-                
-                # check if any of the instruments or endogeneous variables are also specified 
+
+
+                # check if any of the instruments or endogeneous variables are also specified
                 # as covariates
                 if any(element in covars.split("+") for element in endogvars.split("+")):
-                    raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
+                    raise EndogVarsAsCovarsError(
+                        "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                        )
+
                 if any(element in covars.split("+") for element in instruments.split("+")):
-                    raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
-                if covars == "1": 
+                    raise InstrumentsAsCovarsError(
+                        "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
+                    )
+
+                if covars == "1":
                     covars = endogvars
-                else: 
+                else:
                     covars = endogvars + "+" +  covars
             else:
                 fevars = fml_split[1]
@@ -82,25 +84,29 @@ class FixestFormulaParser:
             fevars = fml_split[1]
             endogvars, instruments = fml_split[2].split("~")
 
-            # check if any of the instruments or endogeneous variables are also specified 
+            # check if any of the instruments or endogeneous variables are also specified
             # as covariates
             if any(element in covars.split("+") for element in endogvars.split("+")):
-                raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
-                
+                raise EndogVarsAsCovarsError(
+                    "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                )
+
             if any(element in covars.split("+") for element in instruments.split("+")):
-                raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                raise InstrumentsAsCovarsError(
+                    "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
+                )
 
             # add endogeneous variable to "covars" - yes, bad naming
-            if covars == "1": 
+            if covars == "1":
                 covars = endogvars
-            else: 
+            else:
                 covars = endogvars + "+" +  covars
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
-                raise ValueError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
-            #elif len(endogvars) < len(instruments):
-            #    raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+                raise UnderDeterminedIVError(
+                    "The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables."
+                )
             else:
                 pass
 
@@ -112,6 +118,7 @@ class FixestFormulaParser:
         self.endogvars = endogvars
         self.instruments = instruments
 
+        # clean instruments
         if instruments is not None:
             self.is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
@@ -125,6 +132,7 @@ class FixestFormulaParser:
             self.covars_first_stage = None
             self.depvars_first_stage = None
 
+        # parse i() syntax
         if self.covars.get("i") is not None:
             self.ivars = dict()
             i_split = self.covars.get("i")[-1].split("=")
@@ -145,120 +153,48 @@ class FixestFormulaParser:
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
-        if instruments is not None: 
+        if instruments is not None:
             self.covars_first_stage_fml = _pack_to_fml(self.covars_first_stage)
-        else: 
+        else:
             self.covars_first_stage_fml = None
-        #if "^" in self.covars:
-        #    raise CovariateInteractionError("Please use 'i()' or ':' syntax to interact covariates.")
-
-        #for  x in ["i", ":"]:
-        #    if x in self.fevars:
-        #        raise FixedEffectInteractionError("Interacting fixed effects via", x, " is not allowed. Please use '^' to interact fixed effects.")
 
 
+    def get_new_fml_dict(self, iv = False):
 
+        '''
+        Get a nested dictionary of all formulas.
 
-
-    def get_fml_dict(self, iv = False):
-
-        """
-        Returns a dictionary of all fevars & formula without fevars. The keys are the fixed effect variable combinations.
-        The values are lists of formula strings that do not include the fixed effect variables.
-
-        Args:
-            iv (bool): If True, the formula dictionary will be returned for the first stage of an IV regression.
-                       If False, the formula dictionary will be returned for the second stage of an IV regression / OLS regression.
+        Parameters:
+            iv: bool (default: False)
+                If True, the formulas for the first stage are returned. Otherwise, the formulas for the second stage are returned.
         Returns:
-            dict: A dictionary of the form {"fe1+fe2": ['Y1 ~ X', 'Y2~X'], "fe1+fe3": ['Y1 ~ X', 'Y2~X']} where
-            the keys are the fixed effect variable combinations and the values are lists of formula strings
-            that do not include the fixed effect variables.
-            If IV is True, creates an instance named fml_dict_iv. Otherwise, creates an instance named fml_dict.
-        """
+            fml_dict: dict
+                A nested dictionary of all formulas. The dictionary has the following structure: first, a dictionary with the
+                fixed effects combinations as keys. Then, for each fixed effect combination, a dictionary with the dependent variables
+                as keys. Finally, for each dependent variable, a list of formulas as values.
 
+                Here is an example:
+                    fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
+        '''
 
         fml_dict = dict()
+
         for fevar in self.fevars_fml:
-            res = []
+            res = dict()
             for depvar in self.depvars:
+                res[depvar] = []
                 if iv:
                     for covar in self.covars_first_stage_fml:
-                        res.append(depvar + '~' + covar)
+                        res[depvar].append(depvar + '~' + covar)
                 else:
                     for covar in self.covars_fml:
-                        res.append(depvar + '~' + covar)
+                        res[depvar].append(depvar + '~' + covar)
             fml_dict[fevar] = res
 
         if iv:
-            self.fml_dict_iv = fml_dict
+            self.fml_dict_new_iv = fml_dict
         else:
-            self.fml_dict = fml_dict
-
-    def _transform_fml_dict(self, iv = False):
-
-        fml_dict2 = dict()
-
-        if iv:
-
-            for fe in self.fml_dict_iv.keys():
-
-                fml_dict2[fe] = dict()
-
-                for fml in self.fml_dict_iv.get(fe):
-                    depvars, covars = fml.split("~")
-                    if fml_dict2[fe].get(depvars) is None:
-                        fml_dict2[fe][depvars] = [covars]
-                    else:
-                        fml_dict2[fe][depvars].append(covars)
-        else:
-
-          for fe in self.fml_dict.keys():
-
-              fml_dict2[fe] = dict()
-
-              for fml in self.fml_dict.get(fe):
-                  depvars, covars = fml.split("~")
-                  if fml_dict2[fe].get(depvars) is None:
-                      fml_dict2[fe][depvars] = [covars]
-                  else:
-                      fml_dict2[fe][depvars].append(covars)
-
-        if iv:
-            self.fml_dict2_iv = fml_dict2
-        else:
-            self.fml_dict2 = fml_dict2
-
-
-
-    def get_var_dict(self, iv = False):
-
-        """
-        Create a dictionary of all fevars and list of covars and depvars used in regression with those fevars.
-        The keys are the fixed effect variable combinations. The values are lists of variables (dependent variables and covariates) of
-        the resespective regressions.
-
-        Args:
-            iv (bool): If True, the formula dictionary will be returned for the first stage of an IV regression.
-
-        Returns:
-            dict: A dictionary of the form {"fe1+fe2": ['Y1', 'X1', 'X2'], "fe1+fe3": ['Y1', 'X1', 'X2']} where
-            the keys are the fixed effect variable combinations and the values are lists of variables
-            (dependent variables and covariates) used in the regression with those fixed effect variables.
-
-        """
-        var_dict = dict()
-        if iv:
-            for fevar in self.fevars_fml:
-                var_dict[fevar] = _flatten_list(self.depvars) + _flatten_list(list(self.covars_first_stage.values()))
-
-        else:
-            for fevar in self.fevars_fml:
-                var_dict[fevar] = _flatten_list(self.depvars) + _flatten_list(list(self.covars.values()))
-
-        if iv:
-            self.var_dict_iv = var_dict
-        else:
-            self.var_dict = var_dict
+            self.fml_dict_new = fml_dict
 
 
 def _unpack_fml(x):
@@ -318,14 +254,14 @@ def _unpack_fml(x):
 
         # Check if this variable contains a switch
         varlist, sw_type = _find_sw(var)
-        
+
         # If there's no switch, just add the variable to the list
         if sw_type is None:
             if _is_varying_slopes(var):
                 varlist, sw_type = _transform_varying_slopes(var)
-                for x in varlist.split("+"): 
+                for x in varlist.split("+"):
                     res_s['constant'].append(x)
-            else: 
+            else:
                 res_s['constant'].append(varlist)
 
         # If there'_ a switch, unpack it and add it to the list
@@ -333,10 +269,10 @@ def _unpack_fml(x):
             if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
                 _check_duplicate_key(res_s, sw_type)
                 res_s[sw_type] = varlist
-            elif sw_type == "varying_slopes": 
+            elif sw_type == "varying_slopes":
                 res_s[sw_type] = varlist
             else:
-                raise ValueError("Unsupported switch type")
+                raise UnsupportedMultipleEstimationSyntax("Unsupported switch type")
 
     # Sort the list by type (strings first, then lists)
     #res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
@@ -523,24 +459,28 @@ def _check_duplicate_key(my_dict, key):
     '''
 
     if key == 'i' and 'i' in my_dict:
-        raise DuplicateKeyError("Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula.")
+        raise DuplicateKeyError(
+            "Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula."
+            )
     else:
         for key in ['sw', 'csw', 'sw0', 'csw0']:
             if key in my_dict:
-                raise DuplicateKeyError("Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula.")
+                raise DuplicateKeyError(
+                    "Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
+                    )
             else:
                 None
-                
-                
-def _is_varying_slopes(x): 
-          
+
+
+def _is_varying_slopes(x):
+
     pattern = r'\[.*\]'
     match = re.search(pattern, x)
     if match:
         return True
     else:
         return False
-            
+
 def _transform_varying_slopes(x):
     parts = x.split('[')
     a = parts[0]
