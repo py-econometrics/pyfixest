@@ -10,7 +10,6 @@ from scipy.stats import norm
 from formulaic import model_matrix
 
 from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
