@@ -25,7 +25,7 @@ def test_HC1_vs_CRV1(data):
     fixest.feols('Y~X1', vcov = {'CRV1':'id'}, ssc = ssc(adj = False, cluster_adj = False))
     res_crv1 = fixest.tidy()
 
-    _, B = next(iter(fixest.model_res.items()))
+    _, B = next(iter(fixest.all_fitted_models.items()))
     N = B.N
 
     # adj: default adjustments are different for HC3 and CRV3
@@ -48,7 +48,7 @@ def test_HC3_vs_CRV3(data):
     fixest.vcov({'CRV3':'id'})
     res_crv3 = fixest.tidy()
 
-    _, B = next(iter(fixest.model_res.items()))
+    _, B = next(iter(fixest.all_fitted_models.items()))
     N = B.N
 
     # adj: default adjustments are different for HC3 and CRV3
@@ -74,7 +74,7 @@ def test_HC3_vs_CRV3_fixef(data):
     fixest.vcov({'CRV3':'id'})
     res_crv3 = fixest.tidy()
 
-    _, B = next(iter(fixest.model_res.items()))
+    _, B = next(iter(fixest.all_fitted_models.items()))
     N = B.N
 
     #if not np.allclose(res_hc3["Std. Error"] * adj_correction , res_crv3["Std. Error"]):
@@ -89,9 +89,7 @@ def test_CRV3_fixef(data):
 
     fixest = pf.Fixest(data = data)
     fixest.feols('Y~X1 + C(X2)', vcov = {'CRV3':'id'}, ssc = ssc(adj = False, cluster_adj = False))
-    res_crv3a = fixest.tidy()
-    # drop X2, intercept
-    res_crv3a = res_crv3a[res_crv3a.coefnames == "X1"]
+    res_crv3a = fixest.tidy().reset_index().set_index("coefnames").xs("X1")
 
     fixest2 = pf.Fixest(data = data)
     fixest2.feols('Y~X1 | X2', vcov = {'CRV3':'id'}, ssc = ssc(adj = False, cluster_adj = False))

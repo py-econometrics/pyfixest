@@ -71,10 +71,10 @@ def test_py_vs_r(data, fml):
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
 
-    py_coef = np.sort(pyfixest.coef()['Estimate'])
-    py_se = np.sort(pyfixest.se()['Std. Error'])
-    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
-    py_tstat = np.sort(pyfixest.tstat()['t value'])
+    py_coef = np.sort(pyfixest.coef())
+    py_se = np.sort(pyfixest.se())
+    py_pval = np.sort(pyfixest.pvalue())
+    py_tstat = np.sort(pyfixest.tstat())
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -94,9 +94,9 @@ def test_py_vs_r(data, fml):
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
-    py_se = pyfixest.se()['Std. Error']
-    py_pval = pyfixest.pvalue()['Pr(>|t|)']
-    py_tstat = pyfixest.tstat()['t value']
+    py_se = pyfixest.se().values
+    py_pval = pyfixest.pvalue().values
+    py_tstat = pyfixest.tstat().values
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -114,9 +114,9 @@ def test_py_vs_r(data, fml):
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
-    py_se = pyfixest.se()['Std. Error']
-    py_pval = pyfixest.pvalue()['Pr(>|t|)']
-    py_tstat = pyfixest.tstat()['t value']
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -175,18 +175,18 @@ def test_py_vs_r2(data, fml_multi):
     r_fml = _py_fml_to_r_fml(fml_multi)
 
     pyfixest = Fixest(data = data).feols(fml_multi)
-    py_coef = pyfixest.coef()['Estimate']
-    py_se = pyfixest.se()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         data=data,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
-    for x, val in enumerate(r_fixest):
+    for x, _ in enumerate(r_fixest):
 
-        i = pyfixest.tidy().index.unique()[x]
-        ix = pyfixest.tidy().xs(i)
+        fml = pyfixest.tidy().reset_index().fml.unique()[x]
+        ix = pyfixest.tidy().reset_index().set_index("fml").xs(fml)
         py_coef = ix['Estimate']
         py_se = ix['Std. Error']
 
@@ -220,8 +220,8 @@ def test_py_vs_r_i(data, fml_i):
     r_fml = _py_fml_to_r_fml(fml_i)
 
     pyfixest = Fixest(data = data).feols(fml_i, vcov = 'iid')
-    py_coef = pyfixest.coef()['Estimate']
-    py_se = pyfixest.se()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         se = 'iid',
@@ -229,10 +229,10 @@ def test_py_vs_r_i(data, fml_i):
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
-    for x, val in enumerate(r_fixest):
+    for x, _ in enumerate(r_fixest):
 
-        i = pyfixest.tidy().index.unique()[x]
-        ix = pyfixest.tidy().xs(i)
+        fml = pyfixest.tidy().reset_index().fml.unique()[x]
+        ix = pyfixest.tidy().xs(fml)
         py_coef = ix['Estimate']
         py_se = ix['Std. Error']
 
@@ -263,8 +263,8 @@ def test_py_vs_r_C(data, fml_C):
 
     py_fml, r_fml = fml_C
     pyfixest = Fixest(data = data).feols(py_fml, vcov = 'iid')
-    py_coef = pyfixest.coef()['Estimate']
-    py_se = pyfixest.se()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         se = 'iid',
@@ -292,8 +292,8 @@ def test_py_vs_r_split(data, fml_split):
 
     fml = "Y ~ X1 | X2 + X3"
     pyfixest = Fixest(data = data).feols(fml_split, vcov = 'iid', split = "group_id")
-    py_coef = pyfixest.coef()['Estimate']
-    py_se = pyfixest.se()['Std. Error']
+    py_coef = pyfixest.coef()
+    py_se = pyfixest.se()
     r_fixest = fixest.feols(
         ro.Formula(fml_split),
         se = 'iid',
@@ -304,8 +304,8 @@ def test_py_vs_r_split(data, fml_split):
 
     for x, _ in enumerate(r_fixest):
 
-        i = pyfixest.tidy().index.unique()[x]
-        ix = pyfixest.tidy().xs(i)
+        fml = pyfixest.tidy().reset_index().fml.unique()[x]
+        ix = pyfixest.tidy().xs(fml)
         py_coef = ix['Estimate']
         py_se = ix['Std. Error']
 
@@ -381,10 +381,10 @@ def test_py_vs_r_iv(data, fml_iv):
     # iid errors
     pyfixest = Fixest(data = data).feols(fml_iv, vcov = 'iid')
 
-    py_coef = np.sort(pyfixest.coef()['Estimate'])
-    py_se = np.sort(pyfixest.se()['Std. Error'])
-    py_pval = np.sort(pyfixest.pvalue()['Pr(>|t|)'])
-    py_tstat = np.sort(pyfixest.tstat()['t value'])
+    py_coef = np.sort(pyfixest.coef())
+    py_se = np.sort(pyfixest.se())
+    py_pval = np.sort(pyfixest.pvalue())
+    py_tstat = np.sort(pyfixest.tstat())
 
     r_fixest = fixest.feols(
         ro.Formula(fml_iv),
@@ -404,9 +404,9 @@ def test_py_vs_r_iv(data, fml_iv):
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
-    py_se = pyfixest.se()['Std. Error']
-    py_pval = pyfixest.pvalue()['Pr(>|t|)']
-    py_tstat = pyfixest.tstat()['t value']
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(
         ro.Formula(fml_iv),
@@ -424,9 +424,9 @@ def test_py_vs_r_iv(data, fml_iv):
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
-    py_se = pyfixest.se()['Std. Error']
-    py_pval = pyfixest.pvalue()['Pr(>|t|)']
-    py_tstat = pyfixest.tstat()['t value']
+    py_se = pyfixest.se()
+    py_pval = pyfixest.pvalue()
+    py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.feols(
         ro.Formula(fml_iv),

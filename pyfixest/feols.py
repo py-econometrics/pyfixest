@@ -7,6 +7,7 @@ from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
 from pyfixest.ssc_utils import get_ssc
+from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
 
 class Feols:
@@ -143,7 +144,9 @@ class Feols:
 
         if self.is_iv:
             if self.vcov_type in ["CRV3"]:
-                raise ValueError("CRV3 inference is not supported for IV regressions.")
+                raise VcovTypeNotSupportedError(
+                    "CRV3 inference is not supported for IV regressions."
+                )
 
         # compute vcov
         if self.vcov_type == 'iid':
@@ -206,7 +209,10 @@ class Feols:
                 cluster_df = pd.Categorical(cluster_df)
 
             if cluster_df.isna().any():
-                raise ValueError("CRV inference not supported with missing values in the cluster variable. Please drop missing values before running the regression.")
+                raise NanInClusterVarError(
+                    "CRV inference not supported with missing values in the cluster variable."
+                    "Please drop missing values before running the regression."
+                )
 
             _, clustid = pd.factorize(cluster_df)
 
@@ -251,7 +257,9 @@ class Feols:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
                 if self.is_iv:
-                    raise ValueError("CRV3 inference is not supported with IV estimation.")
+                    raise VcovTypeNotSupportedError(
+                        "CRV3 inference is not supported with IV estimation."
+                    )
 
                 k_params = self.k
 
@@ -291,7 +299,7 @@ class Feols:
                         data = self.data[~np.equal(ixg, group)]
                         model = Fixest_(data)
                         model.feols(self.fml, vcov = "iid")
-                        beta_jack[ixg,:] = model.coef()["Estimate"].to_numpy()
+                        beta_jack[ixg,:] = model.coef().to_numpy()
 
 
                 # optional: beta_bar in MNW (2022)
@@ -324,25 +332,25 @@ class Feols:
 
         '''
 
-        self.se = (
+        self._se = (
             np.sqrt(np.diagonal(self.vcov))
         )
 
-        self.tstat = (
-            self.beta_hat / self.se
+        self._tstat = (
+            self.beta_hat / self._se
         )
 
         if self.vcov_type in ["iid", "hetero"]:
             df = self.N - self.k
         else:
             df = self.G - 1
-        self.pvalue = (
-            2*(1-t.cdf(np.abs(self.tstat), df))
+        self._pvalue = (
+            2*(1-t.cdf(np.abs(self._tstat), df))
         )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
-            np.array([z * self.se - self.beta_hat, z * self.se + self.beta_hat])
+            np.array([z * self._se - self.beta_hat, z * self._se + self.beta_hat])
         )
 
 
@@ -400,11 +408,15 @@ class Feols:
             print("Module 'wildboottest' not found. Please install 'wildboottest'. Note that it 'wildboottest 'requires Python < 3.11 due to its dependency on 'numba'.")
 
         if self.is_iv:
-            raise ValueError("Wild cluster bootstrap is not supported with IV estimation.")
+            raise VcovTypeNotSupportedError(
+                "Wild cluster bootstrap is not supported with IV estimation."
+            )
         if self.has_fixef:
-            raise ValueError("Wild cluster bootstrap is not supported with fixed effects.")
+            raise VcovTypeNotSupportedError(
+                "Wild cluster bootstrap is not supported with fixed effects."
+            )
 
-        xnames = self.coefnames.to_list()
+        xnames = self.coefnames
         Y = self.Y.flatten()
         X = self.X
 
@@ -478,6 +490,68 @@ class Feols:
         self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
 
 
+    def tidy(self) -> pd.DataFrame:
+
+        '''
+        Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics and p-values.
+        Returns:
+            tidy_df (pd.DataFrame): A tidy pd.DataFrame with the regression results.
+        '''
+
+        tidy_df = pd.DataFrame(
+                    {
+                        'coefnames': self.coefnames,
+                        'Estimate': self.beta_hat,
+                        'Std. Error': self._se,
+                        't value': self._tstat,
+                        'Pr(>|t|)': self._pvalue,
+                        'confint_lower': self.conf_int[0],
+                        'confint_upper': self.conf_int[1]
+                    }
+                )
+
+        return tidy_df.set_index("coefnames")
+
+    def coef(self) -> pd.Series:
+
+        '''
+        Return a pd.Series with estimated regression coefficients.
+        '''
+        return self.tidy()['Estimate']
+
+    def se(self) -> pd.Series:
+        '''
+        Return a pd.Series with standard errors of the estimated regression model.
+        '''
+        return self.tidy()['Std. Error']
+
+    def tstat(self) -> pd.Series:
+        '''
+        Return a pd.Series with t-statistics of the estimated regression model.
+        '''
+        return self.tidy()['t value']
+
+    def pvalue(self) -> pd.Series:
+        '''
+        Return a pd.Series with p-values of the estimated regression model.
+        '''
+        return self.tidy()['Pr(>|t|)']
+
+    def confint(self) -> pd.DataFrame:
+
+        '''
+        Return a pd.DataFrame with confidence intervals for the estimated regression model.
+        '''
+        return self.tidy()[['confint_lower', 'confint_upper']]
+
+
+    def resid(self) -> np.ndarray:
+        '''
+        Returns a one dimensional np.array with the residuals of the estimated regression model.
+        '''
+        return self.u_hat
+
+
 
 def _check_vcov_input(vcov, data):
 
@@ -536,9 +610,13 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         is_clustered = False
         if vcov_type_detail in ["HC2", "HC3"]:
             if has_fixef:
-                raise ValueError("HC2 and HC3 inference types are not supported for regressions with fixed effects.")
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
             if is_iv:
-                raise ValueError("HC2 and HC3 inference types are not supported for IV regressions.")
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
@@ -574,5 +652,8 @@ def _feols_input_checks(Y, X, Z):
         raise ValueError("X must be a 2D array")
     if Z.ndim != 2:
         raise ValueError("Z must be a 2D array")
+
+
+
 
 
