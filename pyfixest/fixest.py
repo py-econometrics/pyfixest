@@ -12,10 +12,7 @@ from formulaic import model_matrix
 from pyfixest.feols import Feols
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
-
-
-class DepvarIsNotNumericError(Exception):
-    pass
+from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 
 
 class Fixest:
@@ -143,7 +140,7 @@ class Fixest:
         self._is_multiple_estimation()
 
         if self.is_fixef_multi and self.is_iv:
-            raise ValueError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
+            raise MultiEstNotSupportedError("Multiple Estimations is currently not supported with IV. This is mostly due to insufficient testing and will be possible with the next release of PyFixest.")
 
         return self
 
@@ -988,18 +985,18 @@ def _multicollinearity_checks(X, Z, ivars, fml2):
 
     if np.linalg.matrix_rank(X) < min(X.shape):
         if ivars is not None:
-            raise ValueError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
+            raise MatrixNotFullRankError("The design Matrix X does not have full rank for the regression with fml" + fml2 +
                             ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
         else:
-            raise ValueError(
+            raise MatrixNotFullRankError(
                     "The design Matrizx X does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
     if np.linalg.matrix_rank(Z) < min(Z.shape):
         if ivars is not None:
-            raise ValueError("The design Matrix Z does not have full rank for the regression with fml" + fml2 +
+            raise MatrixNotFullRankError("The design Matrix Z does not have full rank for the regression with fml" + fml2 +
                             ". The model is skipped. As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?")
         else:
-            raise ValueError(
+            raise MatrixNotFullRankError(
                     "The design Matrix Z does not have full rank for the regression with fml" + fml2 + ". The model is skipped. ")
 
 def _get_vcov_type(vcov, fval):
