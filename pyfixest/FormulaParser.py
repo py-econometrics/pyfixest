@@ -1,5 +1,11 @@
 import re
-from pyfixest.exceptions import DuplicateKeyError, EndogVarsAsCovarsError, InstrumentsAsCovarsError, UnderDeterminedIVError, UnsupportedMultipleEstimationSyntax
+from pyfixest.exceptions import (
+    DuplicateKeyError,
+    EndogVarsAsCovarsError,
+    InstrumentsAsCovarsError,
+    UnderDeterminedIVError,
+    UnsupportedMultipleEstimationSyntax
+)
 
 class FixestFormulaParser:
 
@@ -57,10 +63,14 @@ class FixestFormulaParser:
                 # check if any of the instruments or endogeneous variables are also specified
                 # as covariates
                 if any(element in covars.split("+") for element in endogvars.split("+")):
-                    raise EndogVarsAsCovarsError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                    raise EndogVarsAsCovarsError(
+                        "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                        )
 
                 if any(element in covars.split("+") for element in instruments.split("+")):
-                    raise InstrumentsAsCovarsError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                    raise InstrumentsAsCovarsError(
+                        "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
+                    )
 
                 if covars == "1":
                     covars = endogvars
@@ -77,10 +87,14 @@ class FixestFormulaParser:
             # check if any of the instruments or endogeneous variables are also specified
             # as covariates
             if any(element in covars.split("+") for element in endogvars.split("+")):
-                raise EndogVarsAsCovarsError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                raise EndogVarsAsCovarsError(
+                    "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                )
 
             if any(element in covars.split("+") for element in instruments.split("+")):
-                raise InstrumentsAsCovarsError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                raise InstrumentsAsCovarsError(
+                    "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
+                )
 
             # add endogeneous variable to "covars" - yes, bad naming
             if covars == "1":
@@ -90,7 +104,9 @@ class FixestFormulaParser:
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
-                raise UnderDeterminedIVError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+                raise UnderDeterminedIVError(
+                    "The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables."
+                )
             else:
                 pass
 
@@ -443,11 +459,15 @@ def _check_duplicate_key(my_dict, key):
     '''
 
     if key == 'i' and 'i' in my_dict:
-        raise DuplicateKeyError("Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula.")
+        raise DuplicateKeyError(
+            "Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula."
+            )
     else:
         for key in ['sw', 'csw', 'sw0', 'csw0']:
             if key in my_dict:
-                raise DuplicateKeyError("Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula.")
+                raise DuplicateKeyError(
+                    "Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
+                    )
             else:
                 None
 
