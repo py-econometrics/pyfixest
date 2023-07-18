@@ -1,14 +1,5 @@
 import re
-
-class FixedEffectInteractionError(Exception):
-    pass
-
-class CovariateInteractionError(Exception):
-    pass
-
-class DuplicateKeyError(Exception):
-    pass
-
+from pyfixest.exceptions import DuplicateKeyError, EndogVarsAsCovarsError, InstrumentsAsCovarsError, UnderDeterminedIVError, UnsupportedMultipleEstimationSyntax
 
 class FixestFormulaParser:
 
@@ -40,6 +31,7 @@ class FixestFormulaParser:
 
         Returns:
             None
+
         """
 
         #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
@@ -65,10 +57,10 @@ class FixestFormulaParser:
                 # check if any of the instruments or endogeneous variables are also specified
                 # as covariates
                 if any(element in covars.split("+") for element in endogvars.split("+")):
-                    raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                    raise EndogVarsAsCovarsError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
 
                 if any(element in covars.split("+") for element in instruments.split("+")):
-                    raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                    raise InstrumentsAsCovarsError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
 
                 if covars == "1":
                     covars = endogvars
@@ -85,10 +77,10 @@ class FixestFormulaParser:
             # check if any of the instruments or endogeneous variables are also specified
             # as covariates
             if any(element in covars.split("+") for element in endogvars.split("+")):
-                raise ValueError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                raise EndogVarsAsCovarsError("Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed.")
 
             if any(element in covars.split("+") for element in instruments.split("+")):
-                raise ValueError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
+                raise InstrumentsAsCovarsError("Instruments are specified as covariates in the first part of the three-part formula. This is not allowed.")
 
             # add endogeneous variable to "covars" - yes, bad naming
             if covars == "1":
@@ -98,9 +90,7 @@ class FixestFormulaParser:
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
-                raise ValueError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
-            #elif len(endogvars) < len(instruments):
-            #    raise ValueError("The IV system is overdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
+                raise UnderDeterminedIVError("The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables.")
             else:
                 pass
 
@@ -169,9 +159,6 @@ class FixestFormulaParser:
 
                 Here is an example:
                     fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
-
-
-
         '''
 
         fml_dict = dict()
@@ -269,7 +256,7 @@ def _unpack_fml(x):
             elif sw_type == "varying_slopes":
                 res_s[sw_type] = varlist
             else:
-                raise ValueError("Unsupported switch type")
+                raise UnsupportedMultipleEstimationSyntax("Unsupported switch type")
 
     # Sort the list by type (strings first, then lists)
     #res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
