@@ -78,7 +78,7 @@ class Fepois(Feols):
             XdWZd = X_d.transpose() @ W @ Z_d
 
             delta_new = np.linalg.solve(XdWXd, XdWZd)
-            e_new = Z_d - X_d.transpose().reshape((self.N, 1)) @ delta_new
+            e_new = Z_d - X_d.transpose().reshape((self.N, self.k)) @ delta_new
 
             Xbeta_new = Z - e_new
             W_u = _update_W(Xbeta_new)
