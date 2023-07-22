@@ -6,8 +6,13 @@ import warnings
 from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import csr_matrix, hstack
+from formulaic import model_matrix
+
 from pyfixest.ssc_utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
+
 
 
 class Feols:
@@ -22,6 +27,8 @@ class Feols:
         Dependent variable of the regression.
     X : Union[np.ndarray, pd.DataFrame]
         Independent variable of the regression.
+    weights: np.ndarray
+        Weights for the regression.
     Z: Union[np.ndarray, pd.DataFrame]
         Instruments of the regression.
 
@@ -32,7 +39,7 @@ class Feols:
     X : np.ndarray
         The independent variable of the regression.
     Z : np.ndarray
-        The instruments of the regression.
+        The instruments of the regression. If None, equal to `X`.
     N : int
         The number of observations.
     k : int
@@ -52,14 +59,18 @@ class Feols:
 
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, weights : np.ndarray, Z: np.ndarray = None) -> None:
 
 
         _feols_input_checks(Y, X, Z)
 
         self.Y = Y
         self.X = X
-        self.Z = Z
+        if Z is not None:
+          self.Z = Z
+        else:
+          self.Z = X
+        self.weights = weights
 
         self.N, self.k = X.shape
 
@@ -72,6 +83,11 @@ class Feols:
                 If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
         Returns:
             None
+        Attributes:
+            beta_hat (np.ndarray): The estimated regression coefficients.
+            Y_hat (np.ndarray): The predicted values of the regression model.
+            u_hat (np.ndarray): The residuals of the regression model.
+
 
         '''
 
@@ -90,14 +106,14 @@ class Feols:
                 self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
 
 
-        else:
+        #else:
 
-            self.tXZ = np.transpose(self.X) @ self.Z
-            self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
-            self.beta_hat = (np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) @ self.tXZ @ self.tZZinv @ self.tZy).flatten()
+        #    self.tXZ = np.transpose(self.X) @ self.Z
+        #    self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
+        #    self.beta_hat = np.linalg.solve(self.tXZ @ self.tZZinv @ self.tZX, self.tXZ @ self.tZZinv @ self.tZy).flatten()
 
-        self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y.flatten() - self.Y_hat)
+        #self.Y_hat = (self.X @ self.beta_hat)
+        self.u_hat = (self.Y.flatten() - self.X @ self.beta_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -162,9 +178,9 @@ class Feols:
 
             # only relevant factor for iid in ssc: fixef.K
             if self.is_iv == False:
-                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1))
             else:
-                sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
+                sigma2 = (np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1))
                 self.vcov = self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX ) * sigma2
 
         elif self.vcov_type == 'hetero':
@@ -467,6 +483,92 @@ class Feols:
 
 
 
+    def fixef(self) -> np.array:
+
+        '''
+        Return a np.array with estimated fixed effects of a fixed effects regression model.
+        If the model does not have a fixed effect, raises an error.
+        '''
+
+        if not self.has_fixef:
+            raise ValueError("The model does not have fixed effects.")
+
+        uhat = self.u_hat
+        uhat = uhat.reshape((len(uhat)), 1)
+        uhat = csr_matrix(uhat)
+        fe_ml = self._fixef
+        fixef_vars = self._fixef.split("+")
+
+        D_list = []
+        var_dict = dict()
+        var_dict_full = dict()
+
+        for i, val in enumerate(fixef_vars):
+
+            D2 = model_matrix("-1+" + val, self.data)
+            cols = D2.columns
+
+            var_dict_full[val] = cols
+
+            if i != 0:
+
+                D2 = D2.drop(cols[0], axis = 1)
+                cols = D2.columns
+
+            var_dict[val] = cols
+            D2 = csr_matrix(D2.values)
+            D_list.append(D2)
+
+        D = hstack(D_list)
+        D = D.toarray()
+        uhat = uhat.toarray()
+
+        alpha = spsolve(D.transpose() @ D, D.transpose() @ uhat)
+
+        #alpha = np.linalg.inv(D.transpose() @ D) @ (D.transpose() @ uhat)
+
+        fixef_dict = dict()
+        idx = 0
+
+        for i, val in enumerate(fixef_vars):
+
+
+            coef_names = var_dict[val]
+            length_coefs = len(coef_names)
+            coefs = alpha[range(idx, idx + length_coefs)]
+            coefs = pd.Series(coefs.flatten(), index = coef_names)
+            fixef_dict[val] = coefs
+            idx = length_coefs
+
+
+
+
+        return fixef_dict, alpha
+
+
+    def predict(self, data : Union[None, pd.DataFrame] = None) -> np.array:
+
+        '''
+        Return a np.array with predicted values of the regression model.
+        '''
+
+        if data is None:
+            return self.data.Y - self.u_hat
+        else:
+            beta_hat = self.beta_hat
+            _, alpha = self.fixef()
+            coefs = np.concatenate((beta_hat, alpha))
+            k = len(coefs)                                # could also use self.k
+            coefs = coefs.reshape((k, 1))
+            coefs = csr_matrix(coefs)
+            fml =  "-1+" + "+".join(self.coefnames) + "+" + self._fixef
+            X = model_matrix(fml, data)
+            #X = X.drop("Intercept", axis = 1)
+            X = csr_matrix(X.values)
+            yhat = X @ coefs
+            return yhat.toarray().flatten()
+
+
 
     def get_nobs(self):
 
@@ -480,15 +582,37 @@ class Feols:
         self.N = len(self.Y)
 
 
-    def get_performance(self):
+    def get_performance(self) -> None:
         '''
-        Compute multiple additional measures commonly reported with linear regression output.
+        Compute multiple additional measures commonly reported with linear regression output,
+        including R-squared and adjusted R-squared. Not that variables with suffix _within
+        use demeand dependent variables Y, while variables without do not or are invariat to
+        demeaning.
+
+        Returns:
+            None
+
+        Creates the following instances:
+            r2 (float): R-squared of the regression model.
+            adj_r2 (float): Adjusted R-squared of the regression model.
+            r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.
+            adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         '''
 
-        self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
-            np.sum((self.Y - np.mean(self.Y))**2)
-        self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+        Y_no_demean = self.data.Y
 
+        ssu = np.sum(self.u_hat ** 2)
+        ssy_within = np.sum((self.Y - np.mean(self.Y)) ** 2)
+        ssy = np.sum((Y_no_demean - np.mean(Y_no_demean)) ** 2)
+
+
+        self.rmse = np.sqrt(ssu / self.N)
+
+        self.r2_within = 1 - ( ssu / ssy_within)
+        self.r2 = 1 - (ssu / ssy)
+
+        self.adj_r2_within = 1 - (1 - self.r2_within)  * (self.N - 1) / (self.N - self.k - 1)
+        self.adj_r2 = 1 - (1 - self.r2)  * (self.N - 1) / (self.N - self.k - 1)
 
     def tidy(self) -> pd.DataFrame:
 
@@ -646,12 +770,19 @@ def _feols_input_checks(Y, X, Z):
     if not isinstance(X, (np.ndarray)):
         raise TypeError("X must be a numpy array.")
     if not isinstance(Z, (np.ndarray)):
-        raise TypeError("Z must be a numpy array.")
+        if Z is not None:
+            raise TypeError("Z must be a numpy array or None.")
 
     if X.ndim != 2:
         raise ValueError("X must be a 2D array")
-    if Z.ndim != 2:
-        raise ValueError("Z must be a 2D array")
+    if Z is not None:
+        if Z.ndim != 2:
+            raise ValueError("Z must be a 2D array")
+
+
+
+
+
 
 
 
