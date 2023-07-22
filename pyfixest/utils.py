@@ -48,3 +48,34 @@ def get_data(seed = 1234):
 
 
     return data
+
+
+
+def get_poisson_data(N = 1000, seed = 4320):
+
+    '''
+    Generate data following a Poisson regression dgp.
+    Args:
+        N: number of observations
+        seed: seed for the random number generator
+    Returns:
+        data: a pandas data frame
+    '''
+
+    # create data
+    np.random.seed(seed)
+    X1 = np.random.normal(0, 1, N)
+    X2 = np.random.normal(0, 1, N)
+    fe1 = np.random.choice([0, 1], N, True)
+    fe2 = np.random.choice([0, 1], N, True)
+    beta = np.array([1, 2, 3, 2])
+    u = np.random.normal(0,1,N)
+    mu = np.exp(1 + X1 * beta[0] + X2 * beta[1] + fe1 * beta[2] + fe2 * beta[3] + u)
+
+    Y = np.random.poisson(mu, N)
+
+    data = pd.DataFrame({'Y':Y, 'X1':X1, 'X2':X2, 'fe1':fe1, 'fe2':fe2})
+    data["fe1"] = pd.Categorical(data["fe1"])
+    data["fe2"] = pd.Categorical(data["fe2"])
+
+    return data

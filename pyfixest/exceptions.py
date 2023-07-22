@@ -33,3 +33,9 @@ class NanInClusterVarError(Exception):
 
 class DepvarIsNotNumericError(Exception):
     pass
+
+class NotImplementedError(Exception):
+    pass
+
+class NonConvergenceError(Exception):
+    pass
