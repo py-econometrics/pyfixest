@@ -35,6 +35,10 @@ class Fepois(Feols):
         self.tol = tol
         self.drop_singletons = drop_singletons
 
+        # check if Y is a weakly positive integer
+        if not np.issubdtype(self.Y.dtype, np.integer):
+            raise AssertionError("For Poisson regression, the dependent variable must be a count, i.e. it must be a weakly positive integer.")
+
 
     def get_fit(self) -> None:
 
