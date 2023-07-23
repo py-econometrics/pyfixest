@@ -132,5 +132,17 @@ def test_iv_errors():
 
 
 
+def test_poisson_devpar_count():
+
+    '''
+    check that the dependent variable is a count variable
+    '''
+
+    data = get_data()
+    fixest = Fixest(data)
+    # under determined
+    with pytest.raises(AssertionError):
+        fixest.fepois('Y ~ X1 | X4 ')
+
 
 
