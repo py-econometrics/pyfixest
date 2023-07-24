@@ -334,7 +334,7 @@ class Fixest:
         #if weights is None:
         has_weights = False
         N = X.shape[0]
-        weights = np.ones(N)
+        weights = np.ones(N).reshape((N, 1))
         #if weights is not None:
         #    has_weights = True
         #    weights = self.data[weights]
@@ -457,7 +457,8 @@ class Fixest:
 
                 dict2fe = self.fml_dict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str
+                # dictionary to cache demeaned data with index: na_index_str,
+                # only relevant for `.feols()`
                 lookup_demeaned_data = dict()
 
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -531,7 +532,7 @@ class Fixest:
                             _multicollinearity_checks(X, X, self.ivars, fml)
 
                             # initiate OLS class
-                            FIT = Fepois(Y = Y, X = X, fe = fe, weights = weights, maxiter = 25, tol = 1e-08, drop_singletons = self.drop_singletons)
+                            FIT = Fepois(Y = Y, X = X, fe = fe, weights = weights, drop_singletons = self.drop_singletons, maxiter = 25, tol = 1e-08)
                             FIT.is_iv = False
                             FIT.get_fit()
 

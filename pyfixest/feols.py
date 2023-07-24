@@ -62,7 +62,7 @@ class Feols:
     def __init__(self, Y: np.ndarray, X: np.ndarray, weights : np.ndarray, Z: np.ndarray = None) -> None:
 
 
-        _feols_input_checks(Y, X, Z)
+        _feols_input_checks(Y, X, Z, weights)
 
         self.Y = Y
         self.X = X
@@ -77,7 +77,7 @@ class Feols:
     def get_fit(self, estimator = "ols") -> None:
         '''
         Regression estimation for a single model, via ordinary least squares (OLS).
-        Args: estimator (str): Estimator to use. Can be one of "ols", "iv", or "2sls".
+        Args: estimator (str): Estimator to use. Can be one of "ols"", or "2sls".
                 If "ols", then the estimator is (X'X)^{-1}X'Y.
                 If "iv", then the estimator is (Z'X)^{-1}Z'Y.
                 If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
@@ -91,26 +91,26 @@ class Feols:
 
         '''
 
-        assert estimator in ["ols", "iv", "2sls"], "estimator must be one of 'ols', 'iv', or '2sls'."
-
         self.tZX = np.transpose(self.Z) @ self.X
         self.tZy = (np.transpose(self.Z) @ self.Y)
 
-        if estimator in ["ols", "iv"]:
+        if estimator == "ols":
 
             self.tZXinv = np.linalg.inv(self.tZX)
-            self.beta_hat = (self.tZXinv @ self.tZy).flatten()
+            self.beta_hat = np.linalg.solve(self.tZX, self.tZy).flatten()
+            #self.beta_hat = (self.tZXinv @ self.tZy).flatten()
 
-            if estimator == "iv":
+        elif estimator == "2sls":
 
-                self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
+            self.tXZ = np.transpose(self.X) @ self.Z
+            self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
+            self.beta_hat = np.linalg.solve(self.tXZ @ self.tZZinv @ self.tZX, self.tXZ @ self.tZZinv @ self.tZy).flatten()
+            #self.beta_hat = (np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) @ self.tXZ @ self.tZZinv @ self.tZy).flatten()
 
+        else:
 
-        #else:
+            raise ValueError("estimator must be one of 'ols' or '2sls'.")
 
-        #    self.tXZ = np.transpose(self.X) @ self.Z
-        #    self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
-        #    self.beta_hat = np.linalg.solve(self.tXZ @ self.tZZinv @ self.tZX, self.tXZ @ self.tZZinv @ self.tZy).flatten()
 
         #self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y.flatten() - self.X @ self.beta_hat)
@@ -176,11 +176,11 @@ class Feols:
                 vcov_type='iid'
             )
 
+            sigma2 = np.sum(self.u_hat ** 2) / (self.N - 1)
             # only relevant factor for iid in ssc: fixef.K
             if self.is_iv == False:
-                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1))
+                self.vcov =  self.ssc * self.tZXinv * sigma2
             else:
-                sigma2 = (np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1))
                 self.vcov = self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX ) * sigma2
 
         elif self.vcov_type == 'hetero':
@@ -753,7 +753,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
 
-def _feols_input_checks(Y, X, Z):
+def _feols_input_checks(Y, X, Z, weights):
 
     '''
     Some basic checks on the input matrices Y, X, and Z.
@@ -772,12 +772,18 @@ def _feols_input_checks(Y, X, Z):
     if not isinstance(Z, (np.ndarray)):
         if Z is not None:
             raise TypeError("Z must be a numpy array or None.")
+    if not isinstance(weights, (np.ndarray)):
+        raise TypeError("weights must be a numpy array.")
 
+    if Y.ndim != 2:
+        raise ValueError("Y must be a 2D array")
     if X.ndim != 2:
         raise ValueError("X must be a 2D array")
     if Z is not None:
         if Z.ndim != 2:
             raise ValueError("Z must be a 2D array")
+    if weights.ndim != 2:
+        raise ValueError("weights must be a 2D array")
 
 
 

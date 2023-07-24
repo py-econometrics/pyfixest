@@ -30,6 +30,9 @@ class Fepois(Feols):
 
         super().__init__(Y = Y, X = X, Z = X, weights = weights)
 
+        # input checks
+        _fepois_input_checks(fe, drop_singletons, tol, maxiter)
+
         self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
@@ -87,11 +90,11 @@ class Fepois(Feols):
         # starting values: http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/spm/spmhtmlnode27.html
         # reference:  McCullagh, P. & Nelder, J. A. ( 1989). Generalized Linear Models,
         #  Vol. 37 of Monographs on Statistics and Applied Probability, 2 edn, Chapman and Hall, London.
-        Xbeta = np.log(np.repeat(np.mean(Y), self.N).reshape((self.N, 1)))
+        Xbeta = np.log(np.repeat(np.mean(Y, axis = 0), self.N).reshape((self.N, 1)))
         w = _update_w(Xbeta)
         Z = _update_Z(Y = Y, Xbeta = Xbeta)
 
-        delta = np.ones((X.shape[1], 1))
+        delta = np.ones((X.shape[1]))
 
         X2 = X.copy()
         Z2 = Z
@@ -126,7 +129,7 @@ class Fepois(Feols):
             XdWZd = WX_d.transpose() @ WZ_d
 
             delta_new = np.linalg.solve(XdWXd, XdWZd)
-            e_new = Z_d - X_d.transpose().reshape((self.N, self.k)) @ delta_new
+            e_new = Z_d - X_d @ delta_new
 
             Xbeta_new = Z - e_new
             w_u = _update_w(Xbeta_new)
@@ -150,7 +153,8 @@ class Fepois(Feols):
 
         self.beta_hat = delta.flatten()
         self.Y_hat = np.exp(Xbeta)
-        self.u_hat = e_new #(Y - self.Y_hat)
+        self.u_hat = e_new
+        #(Y - self.Y_hat)
         # needed for the calculation of the vcov
 
         # updat for inference
@@ -213,8 +217,9 @@ class Fepois(Feols):
         self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef, self.is_iv)
 
         # compute vcov
-        W = np.diag(self.weights.flatten())
-        bread = np.linalg.inv(self.X.transpose() @ W @ self.X)
+        WX = self.weights * self.X
+        bread = np.linalg.inv(self.X.transpose() @ WX)
+
 
         if self.vcov_type == 'iid':
 
@@ -232,8 +237,13 @@ class Fepois(Feols):
             #self.vcov = self.ssc
 
             # only relevant factor for iid in ssc: fixef.K
-            WX = self.weights * self.X
-            self.vcov =  self.ssc * WX * np.sum( (self.weights * self.u_hat) ** 2) / (self.N - 1)
+            sigma2 = np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1)
+            self.vcov = self.ssc * bread * sigma2
+
+            #np.linalg.inv(self.X.transpose() @ W @ self.X) @ self.X.transpose() @ W @ Sigma @ W @ self.X @ np.linalg.inv(self.X.transpose() @ W @ self.X)
+
+            #WX = self.weights * self.X
+            #self.vcov =  self.ssc * WX * np.sum( (self.weights * self.u_hat) ** 2) / (self.N - 1)
 
 
         elif self.vcov_type == 'hetero':
@@ -252,7 +262,7 @@ class Fepois(Feols):
 
 
             Sigma = np.diag(self.u_hat.flatten() ** 2)
-            meat = self.X.transpose() @ W @ Sigma @ W @ self.X
+            meat = WX.transpose() @ Sigma @ WX
 
             self.vcov = self.ssc * bread @ meat @ bread
 
@@ -289,10 +299,11 @@ class Fepois(Feols):
                 meat = np.zeros((k, k))
 
                 for g in range(self.G):
-                    X_g = self.X[np.where(cluster_df == g)]
+                    WX_g = WX[np.where(cluster_df == g)]
+                    #X_g = self.X[np.where(cluster_df == g)]
                     u_g = self.u_hat[np.where(cluster_df == g)]
-                    W_g = np.diag(self.weights.flatten()[np.where(cluster_df == g)])
-                    meat_g = X_g.transpose() @ W_g @ u_g @ u_g.transpose() @ W_g @ X_g
+                    #W_g = np.diag(self.weights.flatten()[np.where(cluster_df == g)])
+                    meat_g = WX_g.transpose() @ u_g @ u_g.transpose() @ WX_g
                     meat += meat_g
 
                 self.vcov = self.ssc * bread @ meat @ bread
@@ -305,5 +316,25 @@ class Fepois(Feols):
 
 
 
+def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
 
+    # fe must be np.array of dimension 2 or None
+    if fe is not None:
+        if not isinstance(fe, np.ndarray):
+            raise AssertionError("fe must be a numpy array.")
+        if fe.ndim != 2:
+            raise AssertionError("fe must be a numpy array of dimension 2.")
+    # drop singletons must be logical
+    if not isinstance(drop_singletons, bool):
+        raise AssertionError("drop_singletons must be logical.")
+    # tol must be numeric and between 0 and 1
+    if not isinstance(tol, (int, float)):
+        raise AssertionError("tol must be numeric.")
+    if tol <= 0 or tol >= 1:
+        raise AssertionError("tol must be between 0 and 1.")
+    # maxiter must be integer and greater than 0
+    if not isinstance(maxiter, int):
+        raise AssertionError("maxiter must be integer.")
+    if maxiter <= 0:
+        raise AssertionError("maxiter must be greater than 0.")
 
