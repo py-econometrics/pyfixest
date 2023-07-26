@@ -492,53 +492,53 @@ class Feols:
 
         if not self.has_fixef:
             raise ValueError("The model does not have fixed effects.")
+          
+        
+        if self.is_iv:
+            raise ValueError("The fixef() method is currently not supported for IV models.")
 
-        uhat = self.u_hat
-        uhat = uhat.reshape((len(uhat)), 1)
-        uhat = csr_matrix(uhat)
+
         fe_ml = self._fixef
-        fixef_vars = self._fixef.split("+")
+        fixef_vars = self._fixef.split("+")[0]
+        
+        fml = self.fml
+        depvars, res = fml.split("~")
+        covars, fixef_vars = res.split("|")
+        
+        fml_linear = depvars + "~" + covars
+        Y, X = model_matrix(fml_linear, self.data)
+        X = X.drop("Intercept", axis = 1)
+        Y = Y.to_numpy().flatten()
+        X = X.to_numpy()
+        uhat = csr_matrix(Y - X @ self.beta_hat).transpose()
+  
+        D2 = model_matrix(fml, self.data).astype(np.float64)
+        cols = D2.columns
+                
+        D2 = csr_matrix(D2.values)
 
-        D_list = []
-        var_dict = dict()
-        var_dict_full = dict()
-
-        for i, val in enumerate(fixef_vars):
-
-            D2 = model_matrix("-1+" + val, self.data)
-            cols = D2.columns
-
-            var_dict_full[val] = cols
-
-            if i != 0:
-
-                D2 = D2.drop(cols[0], axis = 1)
-                cols = D2.columns
-
-            var_dict[val] = cols
-            D2 = csr_matrix(D2.values)
-            D_list.append(D2)
-
-        D = hstack(D_list)
-        D = D.toarray()
-        uhat = uhat.toarray()
-
-        alpha = spsolve(D.transpose() @ D, D.transpose() @ uhat)
-
+        alpha = {
+          fixef_vars : cols, 
+          'vals' : spsolve(D.transpose() @ D, D.transpose() @ uhat)
+        }
+        
+        alpha = pd.DataFrame(alpha)
+        
+        
         #alpha = np.linalg.inv(D.transpose() @ D) @ (D.transpose() @ uhat)
 
-        fixef_dict = dict()
-        idx = 0
+        #fixef_dict = dict()
+        #idx = 0
 
-        for i, val in enumerate(fixef_vars):
+        #for i, val in enumerate(fixef_vars):
 
 
-            coef_names = var_dict[val]
-            length_coefs = len(coef_names)
-            coefs = alpha[range(idx, idx + length_coefs)]
-            coefs = pd.Series(coefs.flatten(), index = coef_names)
-            fixef_dict[val] = coefs
-            idx = length_coefs
+        #    coef_names = var_dict[val]
+        #    length_coefs = len(coef_names)
+        #    coefs = alpha[range(idx, idx + length_coefs)]
+        #    coefs = pd.Series(coefs.flatten(), index = coef_names)
+        #    fixef_dict[val] = coefs
+        #    idx = length_coefs
 
 
 
