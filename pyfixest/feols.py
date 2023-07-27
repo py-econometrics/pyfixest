@@ -487,63 +487,56 @@ class Feols:
 
         '''
         Return a np.array with estimated fixed effects of a fixed effects regression model.
+        Additionally, computes the sum of fixed effects for each observation (this is required for the predict() method)
         If the model does not have a fixed effect, raises an error.
+        Args:
+            None
+        Returns:
+            alphaDF (pd.DataFrame): A pd.DataFrame with the estimated fixed effects. For only one fixed effects,
+                                    no level of the fixed effects is dropped. For multiple fixed effects, one
+                                    level of each fixed effect is dropped to avoid perfect multicollinearity.
+            sumDF (np.array): A np.array with the sum of fixed effects for each of the i = 1, ..., N observations.
+        Creates the following attributes:
+            alphaDF, sumDF
         '''
 
         if not self.has_fixef:
-            raise ValueError("The model does not have fixed effects.")
-          
-        
+            raise ValueError("The regression model does not have fixed effects.")
+
+
         if self.is_iv:
             raise ValueError("The fixef() method is currently not supported for IV models.")
 
-
-        fe_ml = self._fixef
         fixef_vars = self._fixef.split("+")[0]
-        
+
         fml = self.fml
         depvars, res = fml.split("~")
         covars, fixef_vars = res.split("|")
-        
+
         fml_linear = depvars + "~" + covars
         Y, X = model_matrix(fml_linear, self.data)
         X = X.drop("Intercept", axis = 1)
         Y = Y.to_numpy().flatten()
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self.beta_hat).transpose()
-  
-        D2 = model_matrix(fml, self.data).astype(np.float64)
+
+        D2 = model_matrix("-1+"+fixef_vars, self.data).astype(np.float64)
         cols = D2.columns
-                
+
         D2 = csr_matrix(D2.values)
 
-        alpha = {
-          fixef_vars : cols, 
-          'vals' : spsolve(D.transpose() @ D, D.transpose() @ uhat)
+        alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
+
+        alpha_dict = {
+          'columns' : cols,
+          'values' : alpha
         }
-        
-        alpha = pd.DataFrame(alpha)
-        
-        
-        #alpha = np.linalg.inv(D.transpose() @ D) @ (D.transpose() @ uhat)
 
-        #fixef_dict = dict()
-        #idx = 0
+        self.alphaDF = pd.DataFrame(alpha_dict).set_index("columns")
 
-        #for i, val in enumerate(fixef_vars):
+        self.sumFE = D2 @ alpha
 
-
-        #    coef_names = var_dict[val]
-        #    length_coefs = len(coef_names)
-        #    coefs = alpha[range(idx, idx + length_coefs)]
-        #    coefs = pd.Series(coefs.flatten(), index = coef_names)
-        #    fixef_dict[val] = coefs
-        #    idx = length_coefs
-
-
-
-
-        return fixef_dict, alpha
+        return self.alphaDF
 
 
     def predict(self, data : Union[None, pd.DataFrame] = None) -> np.array:
