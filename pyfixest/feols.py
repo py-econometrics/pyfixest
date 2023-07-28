@@ -522,21 +522,37 @@ class Feols:
 
         D2 = model_matrix("-1+"+fixef_vars, self.data).astype(np.float64)
         cols = D2.columns
-
+        
         D2 = csr_matrix(D2.values)
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
+        k_fe = len(alpha)
 
-        alpha_dict = {
-          'columns' : cols,
-          'values' : alpha
-        }
+        var, level = [], []
 
-        self.alphaDF = pd.DataFrame(alpha_dict).set_index("columns")
+        for idx, x in enumerate(cols): 
+            
+          res = x.replace("[", "").replace("]", "").split("T.")
+          var.append(res[0])
+          level.append(res[1])
+          
+        self.fixef_dict = dict()
+        ki_start = 0
+        for x in np.unique(var):
+          
+          ki = len(list(filter(lambda x: x == 'group', var)))
+          alphai = alpha[ki_start:(ki+ki_start)]
+          levi = level[ki_start:(ki+ki_start)]
+          fe_dict = pd.DataFrame({'level':levi, 'value':alphai}).set_index('level').T
+          
+          self.fixef_dict[x] = fe_dict
+          ki_start = ki 
+          
+        
+        for key, df in self.fixef_dict.items():
+            print(f"{key}:\n{df.to_string(index=True)}\n")  
 
         self.sumFE = D2 @ alpha
-
-        return self.alphaDF
 
 
     def predict(self, data : Union[None, pd.DataFrame] = None) -> np.array:
@@ -548,8 +564,39 @@ class Feols:
         if data is None:
             return self.data.Y - self.u_hat
         else:
+            
+            #fml = self.fml.replace("|", "+")
+            fml_linear, fixef = self.fml.split("|")
+            Y, X = model_matrix(fml_linear, data)
+            X = X.drop("Intercept", axis = 1)
+            
+            alpha = self.fixef()
+            
+            Yhat = X @ self.beta_hat
+            
+            # add fixef variables to Yhat
+            fe = data[fixef.split("+")]
+            
+            for col_name in fe.columns:
+              col = fe[col_name]
+              regex_pattern = re.compile(r'^group\[T\.\d+\]$')
+              group_elements = [element for element in index if regex_pattern.match(element)]
+              
+              
+
+            set(alpha.index).issubset(set(X.columns)) 
+            
+            
+
+            
+            if self.has_fixef:
+                # compute fixef estimates, sumFE
+                _, sumFE = self.fixef()
+
             beta_hat = self.beta_hat
-            _, alpha = self.fixef()
+            alpha = self.fixef()
+
+
             coefs = np.concatenate((beta_hat, alpha))
             k = len(coefs)                                # could also use self.k
             coefs = coefs.reshape((k, 1))
