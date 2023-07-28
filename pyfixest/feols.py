@@ -565,48 +565,36 @@ class Feols:
             return self.data.Y - self.u_hat
         else:
             
+            N0 = data.shape[0]
             #fml = self.fml.replace("|", "+")
             fml_linear, fixef = self.fml.split("|")
             Y, X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
             
-            alpha = self.fixef()
-            
             Yhat = X @ self.beta_hat
+
+            if self.fixef_dict is None: 
+              self.fixef()
             
-            # add fixef variables to Yhat
-            fe = data[fixef.split("+")]
+            fe_columns = fixef.split("+")
             
-            for col_name in fe.columns:
-              col = fe[col_name]
-              regex_pattern = re.compile(r'^group\[T\.\d+\]$')
-              group_elements = [element for element in index if regex_pattern.match(element)]
+            
+            sumFE = np.zeros(N0)
+            
+            for x in fe_columns:
               
-              
+              df = self.fixef_dict[x].T
+              levels = df.index
+              levels_u = np.unique(levels)
+              for i in levels_u: 
+                  idx = np.where(levels == i)
+                  if str(i) in df.index:
+                    val = df.xs(str(i)).values
+                    sumFE[idx] += val
 
-            set(alpha.index).issubset(set(X.columns)) 
-            
-            
+            Yhat += sumFE
 
-            
-            if self.has_fixef:
-                # compute fixef estimates, sumFE
-                _, sumFE = self.fixef()
-
-            beta_hat = self.beta_hat
-            alpha = self.fixef()
-
-
-            coefs = np.concatenate((beta_hat, alpha))
-            k = len(coefs)                                # could also use self.k
-            coefs = coefs.reshape((k, 1))
-            coefs = csr_matrix(coefs)
-            fml =  "-1+" + "+".join(self.coefnames) + "+" + self._fixef
-            X = model_matrix(fml, data)
-            #X = X.drop("Intercept", axis = 1)
-            X = csr_matrix(X.values)
-            yhat = X @ coefs
-            return yhat.toarray().flatten()
+        return Yhat
 
 
 
