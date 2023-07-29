@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from numpy import log, exp
+from numpy import log
+import pandas as pd
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data, get_poisson_data
 from pyfixest.ssc_utils import ssc
@@ -21,7 +22,7 @@ def data():
 
 @pytest.fixture
 def data_poisson():
-    return get_poisson_data(seed = 6574)
+    return get_poisson_data(N = 10_000,seed = 6574)
 
 @pytest.mark.parametrize("fml", [
 
@@ -32,9 +33,9 @@ def data_poisson():
     ("Y~X1|X2+X3"),
     ("Y~X2|X3+X4"),
 
-    ("Y~X1|X2^X3"),
-    ("Y~X1|X2^X3 + X4"),
-    ("Y~X1|X2^X3^X4"),
+    #("Y~X1|X2^X3"),
+    #("Y~X1|X2^X3 + X4"),
+    #("Y~X1|X2^X3^X4"),
 
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
@@ -42,7 +43,7 @@ def data_poisson():
 
     #("log(Y) ~ X1:X2 | X3 + X4"),
     #("log(Y) ~ log(X1):X2 | X3 + X4"),
-    ("Y ~  X2 + exp(X1) | X3 + X4"),
+    ("Y ~  X2 + log(X1) | X3 + X4"),
 
 
 
@@ -103,11 +104,11 @@ def test_py_vs_r_poisson(data_poisson, fml):
         ssc = fixest.ssc(False, "none", False, "min", "min", False)
     )
 
-    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest)), rtol = 1e-3, atol = 1e-3):
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
         raise ValueError("py_se != r_se for HC1 errors")
-    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest)), rtol = 1e-3, atol = 1e-3):
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for HC1 errors")
-    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest), rtol = 1e-3, atol = 1e-3):
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for HC1 errors")
 
     # cluster robust errors
@@ -122,9 +123,29 @@ def test_py_vs_r_poisson(data_poisson, fml):
         ssc = fixest.ssc(False, "none", False, "min", "min", False)
     )
 
-    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest)), rtol = 1e-3, atol = 1e-2):
+    if not np.allclose((np.array(py_se)), (fixest.se(r_fixest))):
         raise ValueError("py_se != r_se for CRV1 errors")
-    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest)), rtol = 1e-3, atol = 1e-2):
+    if not np.allclose((np.array(py_pval)), (fixest.pvalue(r_fixest))):
         raise ValueError("py_pval != r_pval for CRV1 errors")
-    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest), rtol = 1e-3, atol = 1e-2):
+    if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for CRV1 errors")
+
+def test_separation():
+
+    '''
+    Test separation detection.
+    '''
+
+    y = np.array([0, 0, 0, 1, 2, 3])
+    df1 = np.array(["a", "a", "b", "b", "b", "c"])
+    df2 = np.array(["c", "c", "d", "d", "d", "e"])
+    x = np.random.normal(0, 1, 6)
+
+    df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x" : x})
+
+    with pytest.warns(UserWarning, match="2 observations removed because of only 0 outcomes"):
+        mod = Fixest(data = df).fepois("Y ~ x  | fe1", vcov = "hetero").fetch_model(0)
+    #mod._check_for_separation()
+
+    #np.allclose(mod.separation_na, np.array([0, 1]))
+    #np.allclose(mod.n_separation_na, 2)

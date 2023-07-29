@@ -530,23 +530,23 @@ class Feols:
 
         var, level = [], []
 
-        for idx, x in enumerate(cols):
+        for _, x in enumerate(cols):
 
-          res = x.replace("[", "").replace("]", "").split("T.")
-          var.append(res[0])
-          level.append(res[1])
+            res = x.replace("[", "").replace("]", "").split("T.")
+            var.append(res[0])
+            level.append(res[1])
 
         self.fixef_dict = dict()
         ki_start = 0
         for x in np.unique(var):
 
-          ki = len(list(filter(lambda x: x == 'group', var)))
-          alphai = alpha[ki_start:(ki+ki_start)]
-          levi = level[ki_start:(ki+ki_start)]
-          fe_dict = pd.DataFrame({'level':levi, 'value':alphai}).set_index('level').T
+            ki = len(list(filter(lambda x: x == 'group', var)))
+            alphai = alpha[ki_start:(ki+ki_start)]
+            levi = level[ki_start:(ki+ki_start)]
+            fe_dict = pd.DataFrame({'level':levi, 'value':alphai}).set_index('level').T
 
-          self.fixef_dict[x] = fe_dict
-          ki_start = ki
+            self.fixef_dict[x] = fe_dict
+            ki_start = ki
 
 
         for key, df in self.fixef_dict.items():
@@ -562,10 +562,10 @@ class Feols:
         '''
 
         if data is None:
-          if self.method == "fepois":
-            return self.Y_hat.flatten()
-          else:
-            return self.data.Y - self.u_hat
+            if self.method == "fepois":
+                return self.Y_hat.flatten()
+            else:
+                return self.Y - self.u_hat
         else:
 
             N0 = data.shape[0]
@@ -576,7 +576,7 @@ class Feols:
             Yhat = X @ self.beta_hat
 
             if self.fixef_dict is None:
-              self.fixef()
+                self.fixef()
 
             fe_columns = fixef.split("+")
 
@@ -584,14 +584,14 @@ class Feols:
 
             for x in fe_columns:
 
-              df = self.fixef_dict[x].T
-              levels = df.index
-              levels_u = np.unique(levels)
-              for i in levels_u:
-                  idx = np.where(levels == i)
-                  if str(i) in df.index:
-                    val = df.xs(str(i)).values
-                    sumFE[idx] += val
+                df = self.fixef_dict[x].T
+                levels = df.index
+                levels_u = np.unique(levels)
+                for i in levels_u:
+                    idx = np.where(levels == i)
+                    if str(i) in df.index:
+                        val = df.xs(str(i)).values
+                        sumFE[idx] += val
 
             Yhat += sumFE
 
@@ -628,7 +628,7 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         '''
 
-        Y_no_demean = self.data.Y
+        Y_no_demean = self.Y
 
         ssu = np.sum(self.u_hat ** 2)
         ssy_within = np.sum((self.Y - np.mean(self.Y)) ** 2)
