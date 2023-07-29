@@ -18,16 +18,34 @@ from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedErro
 
 class Fixest:
 
-    def __init__(self, data: pd.DataFrame) -> None:
+    def __init__(self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter = 25) -> None:
         '''
         A class for fixed effects regression modeling.
         Args:
             data: The input pd.DataFrame for the object.
+            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-8. Only relevant for non-linear estimation strategies.
+            iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
         Returns:
             None
         '''
 
+        # assert that data is a pd.DataFrame
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be a pd.DataFrame")
+        # assert that iwls_tol is a float between 0 and 1
+        if not isinstance(iwls_tol, float):
+            raise TypeError("iwls_tol must be a float")
+        if iwls_tol < 0 or iwls_tol > 1:
+            raise ValueError("iwls_tol must be between 0 and 1")
+        # assert that iwls_maxiter is an integer and larger than 0
+        if not isinstance(iwls_maxiter, int):
+            raise TypeError("iwls_maxiter must be an integer")
+        if iwls_maxiter < 1:
+            raise ValueError("iwls_maxiter must be larger than 0")
+
         self.data = data.copy()
+        self.iwls_tol = iwls_tol
+        self.iwls_maxiter = iwls_maxiter
         self.all_fitted_models = dict()
 
 
@@ -540,7 +558,15 @@ class Fixest:
                             _multicollinearity_checks(X, X, self.ivars, fml)
 
                             # initiate OLS class
-                            FIT = Fepois(Y = Y, X = X, fe = fe, weights = weights, drop_singletons = self.drop_singletons, maxiter = 25, tol = 1e-08)
+                            FIT = Fepois(
+                                Y = Y,
+                                X = X,
+                                fe = fe,
+                                weights = weights,
+                                drop_singletons = self.drop_singletons,
+                                maxiter = self.iwls_maxiter,
+                                tol = self.iwls_tol
+                            )
 
                             FIT.is_iv = False
                             FIT.get_fit()

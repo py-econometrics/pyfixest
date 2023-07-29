@@ -68,7 +68,7 @@ def test_py_vs_r_poisson(data_poisson, fml):
     '''
 
     # iid errors
-    pyfixest = Fixest(data = data_poisson).fepois(fml, vcov = 'HC1', ssc = ssc(adj = False, cluster_adj = False))
+    pyfixest = Fixest(data = data_poisson, iwls_tol = 1e-18, iwls_maxiter = 1000).fepois(fml, vcov = 'HC1', ssc = ssc(adj = False, cluster_adj = False))
 
     py_coef = np.sort(pyfixest.coef())
     py_se = np.sort(pyfixest.se())
@@ -91,6 +91,12 @@ def test_py_vs_r_poisson(data_poisson, fml):
     #if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
     #    raise ValueError("py_tstat != r_tstat for iid errors")
 
+    # compare residuals
+    np.allclose(
+        pyfixest.fetch_model(0).resid(),
+        r_fixest.rx2("residuals")
+    )
+
     # heteroskedastic errors
     pyfixest.vcov("HC1")
     py_se = pyfixest.se().values
@@ -111,6 +117,9 @@ def test_py_vs_r_poisson(data_poisson, fml):
     if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for HC1 errors")
 
+    if not np.allclose(pyfixest.fetch_model(0).resid(), r_fixest.rx2("residuals")):
+        raise ValueError("py_resid != r_resid for HC1 errors")
+
     # cluster robust errors
     pyfixest.vcov({'CRV1':'X4'})
     py_se = pyfixest.se()
@@ -129,6 +138,13 @@ def test_py_vs_r_poisson(data_poisson, fml):
         raise ValueError("py_pval != r_pval for CRV1 errors")
     if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for CRV1 errors")
+
+    # compare residuals
+    if not np.allclose(
+        pyfixest.fetch_model(0).resid(),
+        r_fixest.rx2("residuals")
+    ):
+        raise ValueError("py_resid != r_resid for CRV1 errors")
 
 def test_separation():
 

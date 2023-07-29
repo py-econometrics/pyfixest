@@ -112,7 +112,7 @@ class Feols:
             raise ValueError("estimator must be one of 'ols' or '2sls'.")
 
 
-        #self.Y_hat = (self.X @ self.beta_hat)
+        self.Y_hat = (self.X @ self.beta_hat)
         self.u_hat = (self.Y.flatten() - self.X @ self.beta_hat)
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
@@ -503,24 +503,31 @@ class Feols:
         if not self.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-
         if self.is_iv:
-            raise ValueError("The fixef() method is currently not supported for IV models.")
+            raise NotImplementedError("The fixef() method is currently not supported for IV models.")
 
-        fixef_vars = self._fixef.split("+")[0]
+        if self.method == "fepois":
+            raise NotImplementedError("The fixef() method is currently not supported for Poisson models.")
+
+        #fixef_vars = self._fixef.split("+")[0]
 
         fml = self.fml
         depvars, res = fml.split("~")
         covars, fixef_vars = res.split("|")
 
+        df = self.data.copy()
+        # all fixef vars to pd.Categorical
+        for x in fixef_vars.split("+"):
+            df[x] = pd.Categorical(df[x])
+
         fml_linear = depvars + "~" + covars
-        Y, X = model_matrix(fml_linear, self.data)
+        Y, X = model_matrix(fml_linear, df)
         X = X.drop("Intercept", axis = 1)
-        Y = Y.to_numpy().flatten()
+        Y = Y.to_numpy().flatten().astype(np.float64)
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self.beta_hat).transpose()
 
-        D2 = model_matrix("-1+"+fixef_vars, self.data).astype(np.float64)
+        D2 = model_matrix("-1+"+fixef_vars, df).astype(np.float64)
         cols = D2.columns
 
         D2 = csr_matrix(D2.values)
@@ -562,10 +569,7 @@ class Feols:
         '''
 
         if data is None:
-            if self.method == "fepois":
-                return self.Y_hat.flatten()
-            else:
-                return self.Y - self.u_hat
+            return self.Y_hat
         else:
 
             N0 = data.shape[0]
