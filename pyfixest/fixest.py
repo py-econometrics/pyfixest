@@ -520,6 +520,8 @@ class Fixest:
 
                         elif self.method == "fepois":
 
+                            # check for separation and drop separated variables
+                            #Y, X, fe, na_index = self._separation()
 
                             Y = Y.to_numpy()
                             X = X.to_numpy()
@@ -577,6 +579,63 @@ class Fixest:
                         # store fitted model
                         self.all_fitted_models[fml] = FIT
 
+
+
+    def _separation(self, type, maxiter = 100):
+
+        '''
+        Check for separation of Poisson Regression.
+        Args:
+            type: type of separation check. Either "fe" or "separation".
+            maxiter: maximum number of iterations for separation check.
+        Returns:
+            None
+        '''
+
+        if type == "fe":
+            if self.fe is None:
+                pass
+            else:
+                Y_help = np.where(self.Y > 0, 1, 0)
+                ct = pd.crosstab(Y_help, self.fe)
+
+        elif type == "separation":
+
+            septol = 1e-05
+            u = np.where(self.Y == 0, 1, 0)
+            N0 = np.sum(u)
+            K = np.ceil(N0 / (septol ** 2))
+            w = np.where(self.Y == 1, K, 1)
+
+            u = u.reshape((self.N, 1))
+            w = w.reshape((self.N, 1))
+
+            for x in range(maxiter):
+
+                # demean via pyhdfe
+                algorithm = pyhdfe.create(
+                    ids=self.fe,
+                    residualize_method='map',
+                    drop_singletons=self.drop_singletons,
+                    weights = w
+                )
+
+                mat = np.concatenate([u, self.X], axis = 1)
+                mat_resid = algorithm.residualize(mat)
+                u_d = mat_resid[:, 0]
+                X_d = mat_resid[:, 1:]
+
+                FIT = Feols(Y = u_d, X = X_d, Z = X_d, weights = w)
+                FIT.get_fit(estimator = "ols")
+                gamma_hat = FIT.beta_hat
+                u_hat = X_d @ gamma_hat
+                u_hat = np.where(np.abs(u_hat) < septol, 0, u_hat)
+                if u_hat.all() > 0:
+                    break
+                else:
+                    u_hat = np.max(u_hat, 0)
+                if x == maxiter:
+                    raise ValueError("No convergence in separation check")
 
 
 

@@ -37,6 +37,7 @@ class Fepois(Feols):
         self.maxiter = maxiter
         self.tol = tol
         self.drop_singletons = drop_singletons
+        self.method = "fepois"
 
         # check if Y is a weakly positive integer
         if not np.issubdtype(self.Y.dtype, np.integer):
@@ -315,7 +316,6 @@ class Fepois(Feols):
                 )
 
 
-
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
 
     # fe must be np.array of dimension 2 or None
@@ -337,4 +337,7 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
         raise AssertionError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
+
+
+
 

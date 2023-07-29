@@ -61,7 +61,7 @@ class Feols:
 
     def __init__(self, Y: np.ndarray, X: np.ndarray, weights : np.ndarray, Z: np.ndarray = None) -> None:
 
-
+        self.method = "feols"
         _feols_input_checks(Y, X, Z, weights)
 
         self.Y = Y
@@ -522,7 +522,7 @@ class Feols:
 
         D2 = model_matrix("-1+"+fixef_vars, self.data).astype(np.float64)
         cols = D2.columns
-        
+
         D2 = csr_matrix(D2.values)
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
@@ -530,27 +530,27 @@ class Feols:
 
         var, level = [], []
 
-        for idx, x in enumerate(cols): 
-            
+        for idx, x in enumerate(cols):
+
           res = x.replace("[", "").replace("]", "").split("T.")
           var.append(res[0])
           level.append(res[1])
-          
+
         self.fixef_dict = dict()
         ki_start = 0
         for x in np.unique(var):
-          
+
           ki = len(list(filter(lambda x: x == 'group', var)))
           alphai = alpha[ki_start:(ki+ki_start)]
           levi = level[ki_start:(ki+ki_start)]
           fe_dict = pd.DataFrame({'level':levi, 'value':alphai}).set_index('level').T
-          
+
           self.fixef_dict[x] = fe_dict
-          ki_start = ki 
-          
-        
+          ki_start = ki
+
+
         for key, df in self.fixef_dict.items():
-            print(f"{key}:\n{df.to_string(index=True)}\n")  
+            print(f"{key}:\n{df.to_string(index=True)}\n")
 
         self.sumFE = D2 @ alpha
 
@@ -558,35 +558,36 @@ class Feols:
     def predict(self, data : Union[None, pd.DataFrame] = None) -> np.array:
 
         '''
-        Return a np.array with predicted values of the regression model.
+        Return a flat np.array with predicted values of the regression model.
         '''
 
         if data is None:
+          if self.method == "fepois":
+            return self.Y_hat.flatten()
+          else:
             return self.data.Y - self.u_hat
         else:
-            
+
             N0 = data.shape[0]
-            #fml = self.fml.replace("|", "+")
             fml_linear, fixef = self.fml.split("|")
-            Y, X = model_matrix(fml_linear, data)
+            _ , X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
-            
+
             Yhat = X @ self.beta_hat
 
-            if self.fixef_dict is None: 
+            if self.fixef_dict is None:
               self.fixef()
-            
+
             fe_columns = fixef.split("+")
-            
-            
+
             sumFE = np.zeros(N0)
-            
+
             for x in fe_columns:
-              
+
               df = self.fixef_dict[x].T
               levels = df.index
               levels_u = np.unique(levels)
-              for i in levels_u: 
+              for i in levels_u:
                   idx = np.where(levels == i)
                   if str(i) in df.index:
                     val = df.xs(str(i)).values
@@ -594,7 +595,7 @@ class Feols:
 
             Yhat += sumFE
 
-        return Yhat
+            return Yhat.to_numpy().flatten()
 
 
 
