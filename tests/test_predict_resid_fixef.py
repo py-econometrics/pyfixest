@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import pyfixest as pf
-from pyfixest.utils import get_data
+from pyfixest.utils import get_data, get_poisson_data
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -15,7 +15,7 @@ stats = importr('stats')
 
 @pytest.fixture
 def data():
-    data = get_data(seed = 6574)
+    data = get_poisson_data(seed = 6574)
     data = data.dropna()
     data["X3"] = pd.Categorical(data.X3.astype(str))
     data["X4"] = pd.Categorical(data.X4.astype(str))
@@ -57,32 +57,55 @@ def test_vs_fixest(data, fml):
     Test predict and resid methods against fixest.
     '''
 
-    pyfixest = pf.Fixest(data = data).feols(fml = fml, vcov = 'iid')
+    pyfixest = pf.Fixest(data = data).feols(fml = fml, vcov = 'HC1')
+    pyfixest2 = pf.Fixest(data = data).fepois(fml = fml, vcov = 'HC1')
 
-    mod = pyfixest.fetch_model("0")
-    mod.fixef()
+    feols_mod = pyfixest.fetch_model("0")
+    feols_mod.fixef()
+
+    fepois_mod = pyfixest2.fetch_model("0")
+    fepois_mod.fixef()
 
     # fixest estimation
-    r_fixest = fixest.feols(
+    r_fixest_ols = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc = fixest.ssc(True, "none", True, "min", "min", False)
+        ssc = fixest.ssc(True, "none", True, "min", "min", False),
+        se = "hetero"
+    )
+    r_fixest_pois = fixest.fepois(
+        ro.Formula(fml),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False),
+        se = "hetero"
     )
 
-    # only if has fixef
+    # test OLS fit
     np.allclose(
-        mod.sumFE,
-        r_fixest.rx2("sumFE")
+        feols_mod.sumFE,
+        r_fixest_ols.rx2("sumFE")
+    )
+    np.allclose(
+        fepois_mod.sumFE,
+        r_fixest_pois.rx2("sumFE")
     )
 
     np.allclose(
-        mod.predict().values,
-        r_fixest.rx2("fitted.values")
+        feols_mod.predict(),
+        r_fixest_ols.rx2("fitted.values")
+    )
+    np.allclose(
+        fepois_mod.predict(),
+        r_fixest_pois.rx2("fitted.values")
     )
 
     np.allclose(
-        mod.resid(),
-        r_fixest.rx2("residuals")
+        feols_mod.resid(),
+        r_fixest_ols.rx2("residuals")
+    )
+    np.allclose(
+        fepois_mod.resid(),
+        r_fixest_pois.rx2("residuals")
     )
 
 
