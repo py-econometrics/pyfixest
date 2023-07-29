@@ -26,7 +26,7 @@ class Fixest:
             None
         '''
 
-        self.data = data
+        self.data = data.copy()
         self.all_fitted_models = dict()
 
 

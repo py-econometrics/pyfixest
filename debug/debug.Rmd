@@ -1,0 +1,95 @@
+---
+title: "Tesdt"
+author: "Alexander Fischer"
+date: "2023-07-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{python}
+import pyfixest as pf
+from pyfixest.utils import get_data, get_poisson_data
+from pyfixest.ssc_utils import ssc
+import numpy as np
+import pandas as pd
+
+N = 10_000
+data =  get_poisson_data(N = N, seed = 98282)
+data = data.dropna()
+data.dtypes
+data["group"] = pd.Categorical(np.random.choice(len(range(10)), N, True))
+
+
+self = pf.Fixest(data = data)
+
+fml = "Y~ X1 + X2| X3"
+depvar = "Y"
+covar = "X1 "
+fval = "X2"
+
+vcov = "hetero"
+
+self.fepois(fml = fml, vcov = "hetero", ssc = ssc(adj = False))
+
+mod = self.fetch_model("0")
+self = mod
+
+coef = mod.beta_hat
+u_hat = mod.u_hat
+se = mod._se
+conf_int = mod.conf_int
+Y_hat = mod.Y_hat
+
+mod.u_hat[0:5]
+
+mod.tidy()
+mod.se()
+
+```
+
+```{r}
+library(reticulate)
+library(fixest)
+
+data = py$data
+fml <- py$fml
+fml <- as.formula(fml)
+
+fit = fepois(fml , data = data, ssc = ssc(adj = FALSE), se = "hetero")
+all.equal(c(py$coef), coef(fit), check.attributes = FALSE)
+#all.equal(c(py$u_hat), resid(fit), check.attributes = FALSE)
+all.equal(c(py$u_hat), fit$working_residuals, check.attributes = FALSE)
+all.equal(c(py$Y_hat), predict(fit), check.attributes = FALSE)
+all.equal(c(py$se), se(fit), check.attributes = FALSE)
+
+
+
+resid(fit) |> head()
+confint(fit) |> head()
+se(fit)
+
+coef(fit)
+
+fixef(fit) 
+predict(fit) |> head()
+resid(fit) |> head()
+(data$Y - resid(fit)) |> head()
+
+```
+```{r}
+data <- py$data
+fit = feols(
+        Y~ X1 | X3,
+        data=data
+    )
+
+fit$res
+
+```
+
+
+
