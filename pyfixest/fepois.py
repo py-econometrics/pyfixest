@@ -171,6 +171,7 @@ class Fepois(Feols):
 
         self.X = X_d
         self.Z = X_d
+        self.ZX = ZX
 
         self.tZX = np.transpose(self.Z) @ self.X
         self.tZXinv = np.linalg.inv(self.tZX)
