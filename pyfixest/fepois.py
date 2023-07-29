@@ -19,10 +19,10 @@ class Fepois(Feols):
 
         '''
         Args:
-            Y (np.array): dependent variable
-            Z (np.array): independent variables
-            fe (np.array): fixed effects
-            weights (np.array): weights
+            Y (np.array): dependent variable. two-dimensional np.array
+            Z (np.array): independent variables. two-dimensional np.array
+            fe (np.array): fixed effects. two dimensional np.array or None
+            weights (np.array): weights. one dimensional np.array or None
             drop_singletons (bool): whether to drop singleton fixed effects
             maxiter (int): maximum number of iterations for the IRLS algorithm
             tol (float): tolerance level for the convergence of the IRLS algorithm
@@ -38,6 +38,11 @@ class Fepois(Feols):
         self.tol = tol
         self.drop_singletons = drop_singletons
         self.method = "fepois"
+
+        if self.fe is not None:
+            self.has_fixef = True
+        else:
+            self.has_fixef = False
 
         # check if Y is a weakly positive integer
         if not np.issubdtype(self.Y.dtype, np.integer):
@@ -56,16 +61,16 @@ class Fepois(Feols):
             None
         Attributes:
             beta_hat (np.array): estimated coefficients
-            Y_hat (np.array): predicted values of the dependent variable
+            Y_hat (np.array): estimated dependent variable
             u_hat (np.array): estimated residuals
-            tZX (np.array): transpose of the product of the demeaned Z and X matrices (used for vcov calculation)
-            tZy (np.array): transpose of the product of the demeaned Z and Y matrices (used for vcov calculation)
-            tZXinv (np.array): inverse of tZX (used for vcov calculation)
-        Updates the following attributes:
-            X (np.array): demeaned X matrix from the last iteration of the IRLS algorithm (X_d) x weights
-            Z (np.array): demeaned X matrix from the last iteration of the IRLS algorithm (X_d) x weights
-            Y (np.array): demeaned Y matrix from the last iteration of the IRLS algorithm (Z_d) x weights
+            weights (np.array): weights (from the last iteration of the IRLS algorithm)
+            X (np.array): demeaned independent variables (from the last iteration of the IRLS algorithm)
+            Z (np.array): demeaned independent variables (from the last iteration of the IRLS algorithm)
+            Y (np.array): demeaned dependent variable (from the last iteration of the IRLS algorithm)
+
         '''
+
+        self._check_for_separation()
 
         Y = self.Y
         X = self.X
@@ -166,10 +171,8 @@ class Fepois(Feols):
 
         self.X = X_d
         self.Z = X_d
-        #self.Y = np.sqrt(weights) * Z_d
 
         self.tZX = np.transpose(self.Z) @ self.X
-        #self.tZy = (np.transpose(self.Z) @ self.Y)
         self.tZXinv = np.linalg.inv(self.tZX)
         self.Xbeta = Xbeta
 
@@ -262,8 +265,8 @@ class Fepois(Feols):
             )
 
 
-            Sigma = np.diag(self.u_hat.flatten() ** 2)
-            meat = WX.transpose() @ Sigma @ WX
+            Sigma = self.u_hat ** 2
+            meat = WX.transpose() @ (Sigma * WX)
 
             self.vcov = self.ssc * bread @ meat @ bread
 
@@ -315,6 +318,53 @@ class Fepois(Feols):
                     "CRV3 inference is not supported for non-linear models."
                 )
 
+    def _check_for_separation(self, check = "fe"):
+
+      '''
+      Check for separation of Poisson Regression.
+      Args:
+          type: type of separation check. Currently, only "fe" is supported.
+      Returns:
+          None
+      '''
+
+      if check == "fe":
+
+          if not self.has_fixef:
+
+              pass
+
+          else:
+
+              Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
+              fe = pd.DataFrame(self.fe)
+              fe_combined = fe.apply(lambda row: '-'.join(row.astype(str)), axis=1)
+
+              ctab = pd.crosstab(Y_help, fe_combined)
+              null_column = ctab.xs(0)
+              # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+              sep_candidate = (np.sum(ctab > 0, axis = 0).values == 1) & (null_column > 0).values.flatten()
+              droplist = ctab.xs(0)[sep_candidate].index.tolist()
+
+              if len(droplist) > 0:
+
+                  self.separation_na = np.where(fe_combined.isin(droplist))[0]
+                  n_separation_na = len(self.separation_na)
+                  self.Y = np.delete(self.Y, self.separation_na, axis = 0)
+                  self.X = np.delete(self.X, self.separation_na, axis = 0)
+                  self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                  self.fe = np.delete(self.fe, self.separation_na, axis = 0)
+                  warnings.warn(str(n_separation_na) + " observations removed because of only 0 outcomes.")
+
+              else:
+
+                  self.separation_na = None
+
+      else:
+
+          raise NotImplementedError("Separation check via " + check + " is not implemented yet.")
+
+
 
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
 
@@ -337,6 +387,48 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
         raise AssertionError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
+
+    # elif check == "separation":
+    #
+    #     raise NotImplementedError("Separation check via separation is not implemented yet.")
+    #
+    #     septol = 1e-05
+    #     u = np.where(self.Y == 0, 1, 0)
+    #     N0 = np.sum(u)
+    #     K = np.ceil(N0 / (septol ** 2))
+    #     w = np.where(self.Y == 1, K, 1)
+    #
+    #     u = u.reshape((self.N, 1))
+    #     w = w.reshape((self.N, 1))
+    #
+    #     for x in range(maxiter):
+    #
+    #            # demean via pyhdfe
+    #         algorithm = pyhdfe.create(
+    #             ids=self.fe,
+    #             residualize_method='map',
+    #             drop_singletons=self.drop_singletons,
+    #             weights = w
+    #         )
+    #
+    #         mat = np.concatenate([u, self.X], axis = 1)
+    #         mat_resid = algorithm.residualize(mat)
+    #         u_d = mat_resid[:, 0]
+    #         X_d = mat_resid[:, 1:]
+    #
+    #         FIT = Feols(Y = u_d, X = X_d, Z = X_d, weights = w)
+    #         FIT.get_fit(estimator = "ols")
+    #         gamma_hat = FIT.beta_hat
+    #         u_hat = X_d @ gamma_hat
+    #         u_hat = np.where(np.abs(u_hat) < septol, 0, u_hat)
+    #         if u_hat.all() > 0:
+    #             break
+    #         else:
+    #             u_hat = np.max(u_hat, 0)
+    #         if x == maxiter:
+    #             raise ValueError("No convergence in separation check")
+
+
 
 
 

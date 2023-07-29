@@ -542,14 +542,6 @@ class Fixest:
                             # initiate OLS class
                             FIT = Fepois(Y = Y, X = X, fe = fe, weights = weights, drop_singletons = self.drop_singletons, maxiter = 25, tol = 1e-08)
 
-                            if fe is not None:
-                                self.has_fixef = True
-                                self.fixef_vars = fval
-                            else:
-                                self.has_fixef = False
-                                self.fixef_vars = None
-
-                            FIT._check_for_separation()
                             FIT.is_iv = False
                             FIT.get_fit()
 

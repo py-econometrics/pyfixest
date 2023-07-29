@@ -11,27 +11,31 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{python}
+
 import pyfixest as pf
 from pyfixest.utils import get_data, get_poisson_data
 from pyfixest.ssc_utils import ssc
 import numpy as np
 import pandas as pd
 
-data =  get_poisson_data(N = 10_000, seed = 98282)
+data =  get_poisson_data(N = 100_000, seed = 98282)
 data = data.dropna()
 data.dtypes
+data["group"] = np.random.choice(list(range(100)), 100_000, True)
 
-
-self = pf.Fixest(data = data)
+fixest = pf.Fixest(data = data)
 
 fml = "Y~ X1 + X2| fe1 + fe2"
 depvar = "Y"
 covar = "X1 + X2"
-fval = "fe1"
+fval = "fe1 + fe2"
 
 vcov = 'iid'
 
-self.fepois(fml = "Y~ X1 + X2| fe1 + fe2 ", vcov = "iid")
+fixest.fepois(fml = "Y~ X1 + X2| group ", vcov = "hetero")
+fixest.fepois(fml = "Y~ X1 + X2| group ", vcov = {"CRV1":"group"})
+fixest.tidy()
+data
 
 mod = self.fetch_model("0")
 coef = mod.beta_hat
@@ -39,18 +43,18 @@ u_hat = mod.u_hat
 se = mod._se
 conf_int = mod.conf_int
 
-u_hat[0:5]
-mod._se
-mod.conf_int
-
-mod.conf_int
-
-mod.predict()
-
-mod.fixef()
-mod.predict()
-mod.predict(data = mod.data)
-mod.resid()
+# u_hat[0:5]
+# mod._se
+# mod.conf_int
+# 
+# mod.conf_int
+# 
+# mod.predict()
+# 
+# mod.fixef()
+# mod.predict()
+# mod.predict(data = mod.data)
+# mod.resid()
 
 
 
@@ -64,7 +68,7 @@ data = py$data
 
 
 
-fit = fepois(Y ~ X2 | fe1 + fe2 , data = data, se = "iid")
+fit = fepois(Y~ X1 + X2| X3^X4 , data = data, se = "iid")
 all.equal(c(py$coef), coef(fit), check.attributes = FALSE)
 all.equal(c(py$u_hat), resid(fit), check.attributes = FALSE)
 all.equal(c(py$se), se(fit), check.attributes = FALSE)
@@ -84,5 +88,31 @@ resid(fit) |> head()
 
 ```
 
+
+
+
+```{python}
+import pyfixest as pf
+from pyfixest.utils import get_data, get_poisson_data
+from pyfixest.ssc_utils import ssc
+import numpy as np
+import pandas as pd
+
+
+y = np.array([0, 0, 0, 1, 2, 3])
+df1 = np.array(["a", "a", "b", "b", "b", "c"])
+df2 = np.array(["c", "c", "d", "d", "d", "e"])
+x = np.random.normal(0, 1, 6)
+
+df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x" : x})
+df
+
+self = pf.Fixest(data = df)
+self.fepois("Y ~ x  | fe1", vcov = "hetero")
+self = self.fetch_model(0)
+self._check_for_separation()
+
+
+```
 
 
