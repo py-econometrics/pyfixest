@@ -29,7 +29,6 @@ class Fixest:
             None
         '''
 
-<<<<<<< HEAD
         # assert that data is a pd.DataFrame
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be a pd.DataFrame")
@@ -47,9 +46,6 @@ class Fixest:
         self.data = data.copy()
         self.iwls_tol = iwls_tol
         self.iwls_maxiter = iwls_maxiter
-=======
-        self.data = data.copy()
->>>>>>> 5a507b0c5a82c4fbd1acdec71b65b2c025cd064c
         self.all_fitted_models = dict()
 
 
@@ -774,24 +770,6 @@ class Fixest:
 
         '''
         return self.tidy()["Pr(>|t|)"]
-
-    def confint(self) -> pd.DataFrame:
-<<<<<<< HEAD
-
-=======
->>>>>>> 5a507b0c5a82c4fbd1acdec71b65b2c025cd064c
-        '''
-        Obtain the confidence intervals of the fitted models.
-        Returns:
-            A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
-        '''
-
-<<<<<<< HEAD
-        return self.tidy()[["ci_l", "ci_u"]]
-
-=======
-        return self.tidy()[["confint_lower", "confint_upper"]]
->>>>>>> 5a507b0c5a82c4fbd1acdec71b65b2c025cd064c
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
         '''
