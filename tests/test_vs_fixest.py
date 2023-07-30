@@ -75,7 +75,11 @@ def test_py_vs_r(data, fml):
     py_se = np.sort(pyfixest.se())
     py_pval = np.sort(pyfixest.pvalue())
     py_tstat = np.sort(pyfixest.tstat())
+<<<<<<< HEAD
     py_confint = np.sort(pyfixest.confint())
+=======
+    py_confint = pyfixest.confint().values
+>>>>>>> 5a507b0c5a82c4fbd1acdec71b65b2c025cd064c
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
