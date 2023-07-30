@@ -779,7 +779,7 @@ class Fixest:
             A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
         '''
 
-        return self.tidy()[["confint_lower", "confint_upper"]]
+        return self.tidy()[["ci_l", "ci_u"]]
 
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:

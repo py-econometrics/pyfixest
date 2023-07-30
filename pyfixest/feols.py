@@ -682,8 +682,8 @@ class Feols:
                         'Std. Error': self._se,
                         't value': self._tstat,
                         'Pr(>|t|)': self._pvalue,
-                        'confint_lower': self.conf_int[0],
-                        'confint_upper': self.conf_int[1]
+                        'ci_l': self.conf_int[0],
+                        'ci_u': self.conf_int[1]
                     }
                 )
 
@@ -719,7 +719,7 @@ class Feols:
         '''
         Return a pd.DataFrame with confidence intervals for the estimated regression model.
         '''
-        return self.tidy()[['confint_lower', 'confint_upper']]
+        return self.tidy()[['ci_l', 'ci_u']]
 
 
     def resid(self) -> np.ndarray:
