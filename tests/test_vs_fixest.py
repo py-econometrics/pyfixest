@@ -92,7 +92,10 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_pval != r_pval for iid errors")
     if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
         raise ValueError("py_tstat != r_tstat for iid errors")
-    if not np.allclose(np.array(py_confint), np.sort(stats.confint(r_fixest))):
+    if not np.allclose(
+        np.sort(np.array(py_confint).flatten()),
+        np.sort(np.array(stats.confint(r_fixest)).flatten())
+    ):
         raise ValueError("py_confint != r_confint for iid errors")
 
     # heteroskedastic errors
@@ -100,6 +103,7 @@ def test_py_vs_r(data, fml):
     py_se = pyfixest.se().values
     py_pval = pyfixest.pvalue().values
     py_tstat = pyfixest.tstat().values
+    py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -114,12 +118,18 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_pval != r_pval for HC1 errors")
     if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for HC1 errors")
+    if not np.allclose(
+        np.sort(np.array(py_confint).flatten()),
+        np.sort(np.array(stats.confint(r_fixest)).flatten())
+    ):
+        raise ValueError("py_confint != r_confint for HC1 errors")
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
     py_se = pyfixest.se()
     py_pval = pyfixest.pvalue()
     py_tstat = pyfixest.tstat()
+    py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -134,6 +144,11 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_pval != r_pval for CRV1 errors")
     if not np.allclose(np.array(py_tstat), fixest.tstat(r_fixest)):
         raise ValueError("py_tstat != r_tstat for CRV1 errors")
+    if not np.allclose(
+        np.sort(np.array(py_confint).flatten()),
+        np.sort(np.array(stats.confint(r_fixest)).flatten())
+    ):
+        raise ValueError("py_confint != r_confint for CRV1 errors")
 
 
 @pytest.mark.parametrize("fml_multi", [
