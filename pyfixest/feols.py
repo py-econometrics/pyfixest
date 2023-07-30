@@ -366,14 +366,17 @@ class Feols:
             self._pvalue = (
                 2*(1-t.cdf(np.abs(self._tstat), df))
             )
+            z = t.ppf(1 - (alpha / 2), df)
+
         else:
             self._pvalue = (
                 2*(1-norm.cdf(np.abs(self._tstat)))
             )
 
         z = norm.ppf(1 - (alpha / 2))
+
         self.conf_int = (
-            np.array([z * self._se - self.beta_hat, z * self._se + self.beta_hat])
+            np.array([self.beta_hat - z * self._se, self.beta_hat + z * self._se])
         )
 
 

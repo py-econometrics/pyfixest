@@ -75,6 +75,7 @@ def test_py_vs_r(data, fml):
     py_se = np.sort(pyfixest.se())
     py_pval = np.sort(pyfixest.pvalue())
     py_tstat = np.sort(pyfixest.tstat())
+    py_confint = np.sort(pyfixest.confint())
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -91,6 +92,8 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_pval != r_pval for iid errors")
     if not np.allclose(np.array(py_tstat), np.sort(fixest.tstat(r_fixest))):
         raise ValueError("py_tstat != r_tstat for iid errors")
+    if not np.allclose(np.array(py_confint), np.sort(stats.confint(r_fixest))):
+        raise ValueError("py_confint != r_confint for iid errors")
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
