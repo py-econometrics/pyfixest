@@ -113,7 +113,7 @@ class Feols:
 
 
         self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y.flatten() - self.X @ self.beta_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat.flatten())
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -360,9 +360,16 @@ class Feols:
             df = self.N - self.k
         else:
             df = self.G - 1
-        self._pvalue = (
-            2*(1-t.cdf(np.abs(self._tstat), df))
-        )
+
+        # use t-dist for linear models, but normal for non-linear models
+        if self.method == "feols":
+            self._pvalue = (
+                2*(1-t.cdf(np.abs(self._tstat), df))
+            )
+        else:
+            self._pvalue = (
+                2*(1-norm.cdf(np.abs(self._tstat)))
+            )
 
         z = norm.ppf(1 - (alpha / 2))
         self.conf_int = (
@@ -482,7 +489,6 @@ class Feols:
         return res_df
 
 
-
     def fixef(self) -> np.array:
 
         '''
@@ -568,8 +574,18 @@ class Feols:
         Return a flat np.array with predicted values of the regression model.
         '''
 
+
         if data is None:
-            return self.Y_hat
+
+            if self.has_fixef:
+
+                self.fixef()
+                return self.Y_hat + self.sumFE
+
+            else:
+
+                return self.Y_hat
+
         else:
 
             N0 = data.shape[0]
@@ -579,27 +595,28 @@ class Feols:
 
             Yhat = X @ self.beta_hat
 
-            if self.fixef_dict is None:
+            if self.has_fixef:
+
                 self.fixef()
 
-            fe_columns = fixef.split("+")
+                fe_columns = fixef.split("+")
 
-            sumFE = np.zeros(N0)
+                sumFE = np.zeros(N0)
 
-            for x in fe_columns:
+                for x in fe_columns:
 
-                df = self.fixef_dict[x].T
-                levels = df.index
-                levels_u = np.unique(levels)
-                for i in levels_u:
-                    idx = np.where(levels == i)
-                    if str(i) in df.index:
-                        val = df.xs(str(i)).values
-                        sumFE[idx] += val
+                    df = self.fixef_dict[x].T
+                    levels = df.index
+                    levels_u = np.unique(levels)
+                    for i in levels_u:
+                        idx = np.where(levels == i)
+                        if str(i) in df.index:
+                            val = df.xs(str(i)).values
+                            sumFE[idx] += val
 
-            Yhat += sumFE
+                Yhat += sumFE
 
-            return Yhat.to_numpy().flatten()
+            return Yhat
 
 
 

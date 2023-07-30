@@ -141,7 +141,8 @@ class Fepois(Feols):
             w_u = _update_w(Xbeta_new)
             Z_u = _update_Z(Y = Y, Xbeta = Xbeta_new)
 
-            stop_iterating = np.sqrt(np.sum((delta - delta_new) ** 2) / np.sum(delta ** 2)) < self.tol
+            stop_iterating = np.sqrt(np.sum( ( delta - delta_new) ** 2 ) ) < self.tol
+            #stop_iterating = np.sqrt(np.sum((delta - delta_new) ** 2) / np.sum(delta ** 2)) < self.tol
 
             # update
             delta = delta_new

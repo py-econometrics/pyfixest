@@ -36,6 +36,7 @@ fixest = pf.Fixest(data = data)
 fixest.feols(fml = "Y~ X1 + X2| group", vcov = "hetero")
 fixest.tidy()
 #data.head()
+fixest.tstat()
 
 mod = fixest.fetch_model("0")
 coef = mod.beta_hat
@@ -46,6 +47,8 @@ conf_int = mod.conf_int
 u_hat = mod.resid().flatten() # array([  -35.79395865,  -975.93621725, -1319.89258669, 
 y_hat = mod.predict().flatten() 
 coef = mod.coef().values # array([671.37477031,  29.59796266])
+mod.fixef()
+sumFE = mod.sumFE
 
 #mod.fixef()
 # value  631.25713  827.996321  693.886165  ...  611.827561  762.843813  558.500829
@@ -53,12 +56,12 @@ mod.fixef_dict
 
 mod
 mod.fixef()
+fixef_dict = mod.fixef_dict
 
 
 ```
 
 ```{r}
-1
 library(reticulate)
 library(fixest)
 
@@ -73,6 +76,12 @@ fit = feols(Y~ X1 + X2| group , data = data, se = "hetero")
 all.equal(c(py$coef), coef(fit), check.attributes = FALSE)
 all.equal(c(py$u_hat), resid(fit), check.attributes = FALSE)
 all.equal(c(py$y_hat), predict(fit), check.attributes = FALSE)
+all.equal(c(py$y_hat), fit$sumFE, check.attributes = FALSE)
+
+fixef(fit) |> head()
+py$fixef_dict
+
+fixest::tstat(fit)
 
 
 
@@ -118,5 +127,105 @@ self._check_for_separation()
 
 
 ```
+
+
+
+
+# Poisson: test R against fixest
+
+
+```{python}
+import numpy as np
+from numpy import log
+import pandas as pd
+from pyfixest.fixest import Fixest
+from pyfixest.utils import get_data, get_poisson_data
+from pyfixest.ssc_utils import ssc
+
+def data_poisson():
+    return get_poisson_data(N = 10_000,seed = 6574)
+  
+data = data_poisson()
+  
+fml = "Y~X1+X2"
+
+pyfixest = Fixest(data = data).fepois(fml, vcov = 'HC1', ssc = ssc(adj = False, cluster_adj = False))
+
+py_coef = (pyfixest.coef())
+py_se = (pyfixest.se())
+py_pval = (pyfixest.pvalue())
+py_tstat = (pyfixest.tstat())
+
+y = np.array([  0.000000e+00, 3.865329e-70, 1.082498e-01  ])
+x = py_pval.values
+
+def absolute_diff(x, y, tol = 1e-04):
+
+    absolute_diff = (np.abs(x - y) > tol).any()
+    if not any(y == 0):
+        relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
+        res = absolute_diff and relative_diff
+    else: 
+        res = absolute_diff
+
+    return res
+
+
+
+```
+
+
+
+```{r}
+library(reticulate)
+library(fixest)
+
+data = py$data
+py_coef = py$py_coef
+py_se = py$py_se
+py_pval = py$py_pval
+py_tstat = py$py_tstat
+
+fml = as.formula(py$fml)
+
+
+fit = fepois(fml, data = data, se = "hetero")
+
+cbind(coef(fit), py_coef)
+cbind(se(fit), py_se)
+cbind(pvalue(fit), py_pval)
+cbind(tstat(fit), py_tstat)
+
+any(abs(se(fit) -  py_se) > 1e-04)
+any(abs(pvalue(fit) -  py_pval) > 1e-04)
+
+relative_diff = any(abs(tstat(fit) -  py_tstat) > 1e-04)
+absolute_diff = any(abs(tstat(fit) -  py_tstat) / abs(py_tstat) > 1e-04)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
