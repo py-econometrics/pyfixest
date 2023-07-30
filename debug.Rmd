@@ -149,12 +149,13 @@ data = data_poisson()
   
 fml = "Y~X1+X2"
 
-pyfixest = Fixest(data = data).fepois(fml, vcov = 'HC1', ssc = ssc(adj = False, cluster_adj = False))
+pyfixest = Fixest(data = data).fepois(fml, vcov = {'CRV1':'X4'}, ssc = ssc(adj = False, cluster_adj = False))
 
 py_coef = (pyfixest.coef())
 py_se = (pyfixest.se())
 py_pval = (pyfixest.pvalue())
 py_tstat = (pyfixest.tstat())
+py_ci = pyfixest.confint()
 
 y = np.array([  0.000000e+00, 3.865329e-70, 1.082498e-01  ])
 x = py_pval.values
@@ -189,12 +190,14 @@ py_tstat = py$py_tstat
 fml = as.formula(py$fml)
 
 
-fit = fepois(fml, data = data, se = "hetero")
+fit = fepois(fml, data = data, cluster = ~X4, ssc = ssc(adj = FALSE, cluster.adj = FALSE))
 
 cbind(coef(fit), py_coef)
 cbind(se(fit), py_se)
 cbind(pvalue(fit), py_pval)
 cbind(tstat(fit), py_tstat)
+
+confint(fit)
 
 any(abs(se(fit) -  py_se) > 1e-04)
 any(abs(pvalue(fit) -  py_pval) > 1e-04)
