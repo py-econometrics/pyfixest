@@ -45,6 +45,7 @@ class Feols:
     k : int
         The number of columns in X.
 
+
     Methods
     -------
     get_fit()
@@ -73,6 +74,9 @@ class Feols:
         self.weights = weights
 
         self.N, self.k = X.shape
+        self.sumFE = None
+        self.y_hat_link = None
+        self.y_hat_response = None
 
     def get_fit(self, estimator = "ols") -> None:
         '''
@@ -112,8 +116,8 @@ class Feols:
             raise ValueError("estimator must be one of 'ols' or '2sls'.")
 
 
-        self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y.flatten() - self.Y_hat.flatten())
+        self.Y_hat_link = (self.X @ self.beta_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat_link.flatten())
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -571,55 +575,36 @@ class Feols:
         self.sumFE = D2 @ alpha
 
 
-    def predict(self, data : Union[None, pd.DataFrame] = None) -> np.array:
+    def predict(self, data : Union[None, pd.DataFrame] = None, type = "response") -> np.array:
 
         '''
         Return a flat np.array with predicted values of the regression model.
+        Args:
+            data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+                If None (default), uses the data used for fitting the model.
+            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
+                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
+                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
+
         '''
 
+        if type != "response":
+            raise NotImplementedError("The predict() method is currently only supported for type='response'.")
 
         if data is None:
 
-            if self.has_fixef:
-
-                self.fixef()
-                return self.Y_hat + self.sumFE
-
-            else:
-
-                return self.Y_hat
+            depvar = self.fml.split("~")[0]
+            y_hat = self.data[depvar].to_numpy() - self.u_hat
 
         else:
 
-            N0 = data.shape[0]
-            fml_linear, fixef = self.fml.split("|")
+            fml_linear, _ = self.fml.split("|")
             _ , X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
 
-            Yhat = X @ self.beta_hat
+            y_hat = X @ self.beta_hat
 
-            if self.has_fixef:
-
-                self.fixef()
-
-                fe_columns = fixef.split("+")
-
-                sumFE = np.zeros(N0)
-
-                for x in fe_columns:
-
-                    df = self.fixef_dict[x].T
-                    levels = df.index
-                    levels_u = np.unique(levels)
-                    for i in levels_u:
-                        idx = np.where(levels == i)
-                        if str(i) in df.index:
-                            val = df.xs(str(i)).values
-                            sumFE[idx] += val
-
-                Yhat += sumFE
-
-            return Yhat
+        return y_hat
 
 
 
