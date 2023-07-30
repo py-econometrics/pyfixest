@@ -342,16 +342,20 @@ class Feols:
 
         if self.vcov_type in ["iid", "hetero"]:
             df = self.N - self.k
+
         else:
             df = self.G - 1
         self._pvalue = (
             2*(1-t.cdf(np.abs(self._tstat), df))
         )
 
-        z = norm.ppf(1 - (alpha / 2))
+        z = np.abs(t.ppf((1 - alpha) / 2, df))
+        z_se = z * self._se
+
         self.conf_int = (
-            np.array([z * self._se - self.beta_hat, z * self._se + self.beta_hat])
+            np.array([self.beta_hat - z_se, self.beta_hat + z_se])
         )
+
 
 
     def get_Ftest(self, vcov, is_iv = False):
