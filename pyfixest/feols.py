@@ -366,7 +366,6 @@ class Feols:
         else:
             df = self.G - 1
 
-<<<<<<< HEAD
         # use t-dist for linear models, but normal for non-linear models
         if self.method == "feols":
             self._pvalue = (
@@ -381,11 +380,6 @@ class Feols:
             z = np.abs(norm.ppf((1 - alpha) / 2))
 
         z_se = z * self._se
-=======
-        z = np.abs(t.ppf((1 - alpha) / 2, df))
-        z_se = z * self._se
-
->>>>>>> 5a507b0c5a82c4fbd1acdec71b65b2c025cd064c
         self.conf_int = (
             np.array([self.beta_hat - z_se, self.beta_hat + z_se])
         )
