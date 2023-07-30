@@ -76,6 +76,7 @@ class Fepois(Feols):
         X = self.X
         fe = self.fe
 
+        #print(Y.shape, X.shape, fe.shape)
 
         def _update_w(Xbeta):
 
@@ -102,7 +103,7 @@ class Fepois(Feols):
 
         delta = np.ones((X.shape[1]))
 
-        X2 = X.copy()
+        X2 = X#.copy()
         Z2 = Z
 
         for x in range(self.maxiter):
@@ -149,7 +150,7 @@ class Fepois(Feols):
             Z2 = Z_d + Z_u - Z
             X2 = X_d
             Z = Z_u
-            w_old = w.copy()
+            w_old = w#.copy()
             w = w_u
             Xbeta = Xbeta_new
 
@@ -322,47 +323,60 @@ class Fepois(Feols):
 
     def _check_for_separation(self, check = "fe"):
 
-      '''
-      Check for separation of Poisson Regression.
-      Args:
-          type: type of separation check. Currently, only "fe" is supported.
-      Returns:
-          None
-      '''
+        '''
+        Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
+        separation checks. Currently, only the "fe" check is implemented.
 
-      if check == "fe":
+        Args:
+            type: type of separation check. Currently, only "fe" is supported.
+        Returns:
+            None
+        Updates the following attributes (if columns are dropped):
+            Y (np.array): dependent variable
+            X (np.array): independent variables
+            Z (np.array): independent variables
+            fe (np.array): fixed effects
+            N (int): number of observations
+        Creates the following attributes
+            separation_na (np.array): indices of dropped observations due to separation
+        '''
 
-          if not self.has_fixef:
+        if check == "fe":
 
-              pass
+            if not self.has_fixef:
 
-          else:
+                pass
 
-              Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
-              fe = pd.DataFrame(self.fe)
-              fe_combined = fe.apply(lambda row: '-'.join(row.astype(str)), axis=1)
+            else:
 
-              ctab = pd.crosstab(Y_help, fe_combined)
-              null_column = ctab.xs(0)
-              # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-              sep_candidate = (np.sum(ctab > 0, axis = 0).values == 1) & (null_column > 0).values.flatten()
-              droplist = ctab.xs(0)[sep_candidate].index.tolist()
+                Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
+                fe = pd.DataFrame(self.fe)
+                fe_combined = fe.apply(lambda row: '-'.join(row.astype(str)), axis=1)
 
-              if len(droplist) > 0:
+                ctab = pd.crosstab(Y_help, fe_combined)
+                null_column = ctab.xs(0)
+                # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+                sep_candidate = (np.sum(ctab > 0, axis = 0).values == 1) & (null_column > 0).values.flatten()
+                droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
-                  self.separation_na = np.where(fe_combined.isin(droplist))[0]
-                  n_separation_na = len(self.separation_na)
-                  self.Y = np.delete(self.Y, self.separation_na, axis = 0)
-                  self.X = np.delete(self.X, self.separation_na, axis = 0)
-                  self.Z = np.delete(self.Z, self.separation_na, axis = 0)
-                  self.fe = np.delete(self.fe, self.separation_na, axis = 0)
-                  warnings.warn(str(n_separation_na) + " observations removed because of only 0 outcomes.")
+                if len(droplist) > 0:
 
-              else:
+                    self.separation_na = np.where(fe_combined.isin(droplist))[0]
+                    n_separation_na = len(self.separation_na)
 
-                  self.separation_na = None
+                    self.Y = np.delete(self.Y, self.separation_na, axis = 0)
+                    self.X = np.delete(self.X, self.separation_na, axis = 0)
+                    #self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                    self.fe = np.delete(self.fe, self.separation_na, axis = 0)
 
-      else:
+                    self.N = self.Y.shape[0]
+                    warnings.warn(str(n_separation_na) + " observations removed because of only 0 outcomes.")
+
+                else:
+
+                    self.separation_na = None
+
+        else:
 
           raise NotImplementedError("Separation check via " + check + " is not implemented yet.")
 
