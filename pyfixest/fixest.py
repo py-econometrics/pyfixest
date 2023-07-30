@@ -656,6 +656,15 @@ class Fixest:
         '''
         return self.tidy()["Pr(>|t|)"]
 
+    def confint(self) -> pd.DataFrame:
+        '''
+        Obtain the confidence intervals of the fitted models.
+        Returns:
+            A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
+        '''
+
+        return self.tidy()[["confint_lower", "confint_upper"]]
+
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
         '''
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
