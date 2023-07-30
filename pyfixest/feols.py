@@ -593,6 +593,9 @@ class Feols:
         if type != "response":
             raise NotImplementedError("The predict() method is currently only supported for type='response'.")
 
+        if self.method == "fepois":
+            raise NotImplementedError("The predict() method is currently not supported for Poisson models.")
+
         if data is None:
 
             depvar = self.fml.split("~")[0]
