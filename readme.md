@@ -13,6 +13,10 @@ Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmake
 
 For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
+You can install the release version from `PyPi` by running `pip install pyfixest` (v0.7.3).
+
+Youn can download the alpha release of version `0.8` by running `pip install git+https://github.com/s3alfisc/pyfixest.git`.
+
 ```python
 import pyfixest as pf
 import numpy as np
