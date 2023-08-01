@@ -77,3 +77,15 @@ def get_poisson_data(N = 1000, seed = 4320):
     data = pd.DataFrame({'Y':Y, 'X1':X1, 'X2':X2, 'X3':X3, 'X4':X4})
 
     return data
+
+
+def absolute_diff(x, y, tol = 1e-03):
+
+    absolute_diff = (np.abs(x - y) > tol).any()
+    if not any(y == 0):
+        relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
+        res = absolute_diff and relative_diff
+    else:
+        res = absolute_diff
+
+    return res

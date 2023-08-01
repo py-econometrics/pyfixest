@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 
 from typing import Union, List, Dict
-
+from formulaic import model_matrix
 from pyfixest.feols import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.ssc_utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError, NonConvergenceError, NotImplementedError
@@ -160,7 +160,8 @@ class Fepois(Feols):
                 raise NonConvergenceError("The IRLS algorithm did not converge. Try to increase the maximum number of iterations.")
 
         self.beta_hat = delta.flatten()
-        self.Y_hat = np.exp(Xbeta)
+        self.Y_hat_response = np.exp(Xbeta)
+        self.Y_hat_link = Xbeta
         self.u_hat = e_new
         #(Y - self.Y_hat)
         # needed for the calculation of the vcov
@@ -320,6 +321,41 @@ class Fepois(Feols):
                 raise NotImplementedError(
                     "CRV3 inference is not supported for non-linear models."
                 )
+
+    def predict(self, data : Union[None, pd.DataFrame] = None, type = "link") -> np.array:
+
+        '''
+        Return a flat np.array with predicted values of the regression model.
+        Args:
+            data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+                If None (default), uses the data used for fitting the model.
+            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
+                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
+                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
+
+        '''
+
+        if type not in ["response", "link"]:
+            raise ValueError("type must be one of 'response' or 'link'.")
+
+        if data is None:
+
+                y_hat = self.Xbeta
+
+        else:
+
+            fml_linear, _ = self.fml.split("|")
+            _ , X = model_matrix(fml_linear, data)
+            X = X.drop("Intercept", axis = 1)
+
+            y_hat = X @ self.beta_hat
+
+        if type == "link":
+            if self.method == "fepois":
+                y_hat = np.exp(y_hat)
+
+        return y_hat.flatten()
+
 
     def _check_for_separation(self, check = "fe"):
 
