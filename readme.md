@@ -36,10 +36,10 @@ fixest.summary()
 # Fixed effects:  X2+X3+X4
 # Inference:  {'CRV1': 'X4'}
 # Observations:  1000
-
- # Estimate  Std. Error  t value  Pr(>|t|)     ci_l     ci_u
- # 0.873691     0.03674 23.78022       0.0 0.801682 0.945701
-
+#
+#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
+#      0.87        0.04    23.78       0.0   0.8  0.95
+# ---
 ```
 
 Note that `v0.8.0` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
@@ -57,17 +57,38 @@ data = get_data()
 fixest = pf.Fixest(data = data)
 # OLS Estimation
 fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'group_id'})
-fixest.fetch_model(0).tidy()
+fixest.summary()
 
-# 	Estimate	Std. Error	t value	Pr(>|t|)	ci_l	ci_u
-# coefnames
-# Intercept	-3.941395	0.221365	-17.804976	2.442491e-15	-4.398269	-3.484520
-# X1	-0.273096	0.165154	-1.653580	1.112355e-01	-0.613958	0.067766
-
-fixest.fetch_model(1).tidy()
-# 	Estimate	Std. Error	t value	Pr(>|t|)	ci_l	ci_u
-# coefnames
-# X1	-0.260472	0.163874	-1.589472	0.125042	-0.598691	0.077746
+# ###
+# #
+# Model:  OLS
+# Dep. var.:  Y
+# Inference:  {'CRV1': 'group_id'}
+# Observations:  1998
+#
+#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
+#     -3.94        0.22   -17.80      0.00 -4.40 -3.48
+#     -0.27        0.17    -1.65      0.11 -0.61  0.07
+# ---
+# RMSE: 8.26  Adj. R2: 0.0  Adj. R2 Within: 0.0
+# ###
+#
+# Model:  OLS
+# Dep. var.:  Y
+# Fixed effects:  X2
+# Inference:  {'CRV1': 'group_id'}
+# Observations:  1998
+#
+#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
+#     -0.26        0.16    -1.59      0.13  -0.6  0.08
+# ---
+# RMSE: 8.25  Adj. R2: 0.0  Adj. R2 Within: 0.0
+# ###
+# ...
+#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
+#      0.04        0.11     0.37      0.71 -0.18  0.26
+# ---
+# RMSE: 5.5  Adj. R2: -0.0  Adj. R2 Within: -0.0
 ```
 
 `PyFixest` also supports IV (Instrumental Variable) Estimation:
@@ -75,20 +96,24 @@ fixest.fetch_model(1).tidy()
 ```python
 fixest = pf.Fixest(data = data)
 fixest.feols("Y~ 1 | X2 + X3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
-fixest.fetch_model(0).tidy()
+fixest.summary()
 
-# Estimate	Std. Error	t value	Pr(>|t|)	ci_l	ci_u
-# coefnames
-# X1	0.041142	0.201983	0.203688	0.840315	-0.375731	0.458015
+# ###
+#
+# Model:  IV
+# Dep. var.:  Y
+# Fixed effects:  X2+X3
+# Inference:  {'CRV1': 'group_id'}
+# Observations:  1998
+#
+#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
+#      0.04         0.2      0.2      0.84 -0.38  0.46
 ```
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
-# change SEs from CRV1 to HC1
-fixest.vcov(vcov = "HC1").tidy()
-# 		Estimate	Std. Error	t value	Pr(>|t|)	ci_l	ci_u
+# 		            Estimate	Std. Error	t value	    Pr(>|t|)	   ci_l	     ci_u
 # fml	coefnames
 # Y~X1|X2+X3	X1	0.041142	0.167284	0.245939	0.805755	-0.286927	0.36921
-
 ```

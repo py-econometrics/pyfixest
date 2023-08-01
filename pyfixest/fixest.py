@@ -690,12 +690,14 @@ class Fixest:
         else:
             return res
 
-    def summary(self) -> None:
+    def summary(self, digits = 2) -> None:
         '''
         Prints a summary of the feols() estimation results for each estimated model.
         For each model, the method prints a header indicating the fixed-effects and the
         dependent variable, followed by a table of coefficient estimates with standard
         errors, t-values, and p-values.
+        Args:
+            digits: int, optional. The number of decimal places to round the summary statistics to. Default is 2.
         Returns:
             None
         '''
@@ -710,7 +712,7 @@ class Fixest:
             depvar = split[0].split("~")[0]
             fxst = self.all_fitted_models[x]
 
-            df = fxst.tidy()
+            df = fxst.tidy().round(digits)
 
             if fxst.method == "feols":
                 if fxst.is_iv:
@@ -735,7 +737,7 @@ class Fixest:
             print('---')
             if fxst.method == "feols":
                 if not fxst.is_iv:
-                    print(f"RMSE: {np.round(fxst.rmse, 4)}  Adj. R2: {np.round(fxst.adj_r2, 4)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, 4)}")
+                    print(f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}")
 
     def coef(self) -> pd.DataFrame:
         '''
