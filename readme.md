@@ -31,7 +31,7 @@ fixest.summary()
 
 # ###
 #
-# Model:  OLS
+# Model:  Poisson
 # Dep. var.:  Y
 # Fixed effects:  X2+X3+X4
 # Inference:  {'CRV1': 'X4'}
