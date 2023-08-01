@@ -712,10 +712,13 @@ class Fixest:
 
             df = fxst.tidy()
 
-            if fxst.is_iv:
-                estimation_method = "IV"
+            if fxst.method == "feols":
+                if fxst.is_iv:
+                    estimation_method = "IV"
+                else:
+                    estimation_method = "OLS"
             else:
-                estimation_method = "OLS"
+                estimation_method = "Poisson"
 
             print('###')
             print('')
