@@ -10,24 +10,99 @@ from scipy.stats import norm
 from formulaic import model_matrix
 
 from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
-from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
+from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError, NotImplementedError
 
 
 class Fixest:
 
-    def __init__(self, data: pd.DataFrame) -> None:
+    def __init__(self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter = 25) -> None:
         '''
         A class for fixed effects regression modeling.
         Args:
             data: The input pd.DataFrame for the object.
+            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-8. Only relevant for non-linear estimation strategies.
+            iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
         Returns:
             None
         '''
 
+        # assert that data is a pd.DataFrame
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("data must be a pd.DataFrame")
+        # assert that iwls_tol is a float between 0 and 1
+        if not isinstance(iwls_tol, float):
+            raise TypeError("iwls_tol must be a float")
+        if iwls_tol < 0 or iwls_tol > 1:
+            raise ValueError("iwls_tol must be between 0 and 1")
+        # assert that iwls_maxiter is an integer and larger than 0
+        if not isinstance(iwls_maxiter, int):
+            raise TypeError("iwls_maxiter must be an integer")
+        if iwls_maxiter < 1:
+            raise ValueError("iwls_maxiter must be larger than 0")
+
         self.data = data.copy()
+        self.iwls_tol = iwls_tol
+        self.iwls_maxiter = iwls_maxiter
         self.all_fitted_models = dict()
+
+
+    def _prepare_estimation(self, estimation:str, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
+
+        '''
+        Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
+        Args:
+            estimation: type of estimation. Either "feols" or "fepois".
+            fml: A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
+            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            ssc: A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
+            fixef_rm: A string specifiny whether singleton fixed effects should be dropped.
+            Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+        Returns:
+            None
+        '''
+
+        self.fml = fml.replace(" ", "")
+        self.split = None
+        self.method = estimation
+        # deparse formula, at least partially
+        fxst_fml = FixestFormulaParser(fml)
+
+        if fxst_fml.is_iv:
+            self.is_iv = True
+        else:
+            self.is_iv = False
+
+        # add function argument to these methods for IV
+        fxst_fml.get_new_fml_dict() # fxst_fml.fml_dict_new
+
+        self.fml_dict = fxst_fml.fml_dict_new
+
+        if self.is_iv:
+            fxst_fml.get_new_fml_dict(iv = True) # fxst_fml.fml_dict_new
+            self.fml_dict_iv = fxst_fml.fml_dict_new_iv
+        else:
+            self.fml_dict_iv = None
+
+        self.ivars = fxst_fml.ivars
+
+        self.ssc_dict = ssc
+        self.drop_singletons = _drop_singletons(fixef_rm)
+
+        # get all fixed effects combinations
+        self.fixef_keys = list(self.fml_dict.keys())
+
+        self.ivars, self.drop_ref = _clean_ivars(self.ivars, self.data)
+
+        # currently no fsplit allowed
+        fsplit = None
+
+        self.splitvar, _, self.estimate_split_model, self.estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.fml_dict)
+
+
+
 
 
     def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
@@ -92,49 +167,10 @@ class Fixest:
             4. fit all models
         '''
 
-        self.fml = fml.replace(" ", "")
-        self.split = None
-        self.method = "feols"
-
-        # deparse formula, at least partially
-        fxst_fml = FixestFormulaParser(fml)
-
-        if fxst_fml.is_iv:
-            self.is_iv = True
-        else:
-            self.is_iv = False
-
-        # add function argument to these methods for IV
-        fxst_fml.get_new_fml_dict() # fxst_fml.fml_dict_new
-
-        self.fml_dict = fxst_fml.fml_dict_new
-
-        if self.is_iv:
-            fxst_fml.get_new_fml_dict(iv = True) # fxst_fml.fml_dict_new
-            self.fml_dict_iv = fxst_fml.fml_dict_new_iv
-        else:
-            self.fml_dict_iv = None
-
-        self.ivars = fxst_fml.ivars
-
-        self.ssc_dict = ssc
-        self.drop_singletons = _drop_singletons(fixef_rm)
-
-        # get all fixed effects combinations
-        fixef_keys = list(self.fml_dict.keys())
-
-        self.ivars, self.drop_ref = _clean_ivars(self.ivars, self.data)
-
-        # names of depvar, X, Z matrices
-        self.yxz_name_dict = dict()
-
-        # currently no fsplit allowed
-        fsplit = None
-
-        self.splitvar, _, self.estimate_split_model, self.estimate_full_model = _prepare_split_estimation(self.split, fsplit, self.data, self.fml_dict)
+        self._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
         # demean all models: based on fixed effects x split x missing value combinations
-        self._estimate_all_models2(vcov, fixef_keys)
+        self._estimate_all_models2(vcov, self.fixef_keys)
 
         # create self.is_fixef_multi flag
         self._is_multiple_estimation()
@@ -146,6 +182,32 @@ class Fixest:
             )
 
         return self
+
+
+    def fepois(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
+
+        '''
+        Method for Estimation of Poisson Regression with high-dimensional fixed effects. See `feols()` for more details.
+        '''
+
+        self._prepare_estimation(
+          estimation = "fepois",
+          fml = fml,
+          vcov = vcov,
+          ssc = ssc,
+          fixef_rm = fixef_rm
+        )
+
+        if self.is_iv:
+            raise NotImplementedError("IV Estimation is not supported for Poisson Regression")
+
+        self._estimate_all_models2(vcov, self.fixef_keys)
+
+        # create self.is_fixef_multi flag
+        self._is_multiple_estimation()
+
+        return self
+
 
 
     def _clean_fe(self, data, fval):
@@ -183,7 +245,7 @@ class Fixest:
         return fe, fe_na
 
 
-    def _model_matrix_fixest(self, depvar, covar, fval):
+    def _model_matrix_fixest(self, depvar, covar, fval, weights = None):
 
         '''
         Create model matrices for fixed effects estimation. Preprocesses the data and then calls
@@ -193,16 +255,18 @@ class Fixest:
             depvar: dependent variable. string. E.g. "Y"
             covar: covariates. string. E.g. "X1 + X2"
             fval: fixed effects. string. E.g. "fe1 + fe2". "0" if no fixed effects.
+            weights: weights. None if no weights. string if weights. E.g. "weights"
         Returns:
             Y: a pd.DataFrame of the dependent variable.
-            X: a pd.DataFrame of the covariates
+            X: a pd.DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
             I: a pd.DataFrame of the Instruments. None if no IV.
-            fe: a pd.DataFrame of the fixed effects. None if no fixed effects specified.
+            fe: a pd.DataFrame of the fixed effects. None if no fixed effects specified. Only if `combine = False`
             na_index: a np.array with indices of dropped columns.
             fe_na: a np.array with indices of dropped columns due to fixed effect singletons / NaNs in the fixed effects
             na_index_str: na_index, but as a comma separated string. Used for caching of demeaned variables
             z_names: names of all covariates, minus the endogeneous variables, plus the instruments. None if no IV.
         '''
+
 
         if fval != "0":
             fe, fe_na = self._clean_fe(self.data, fval)
@@ -242,7 +306,6 @@ class Fixest:
 
         # get NA index before converting Y to numpy array
         na_index = list(set(self.data.index) - set(Y.index))
-
         # drop variables before collecting variable names
         if self.ivars is not None:
             if self.drop_ref is not None:
@@ -269,12 +332,6 @@ class Fixest:
         else:
             self.icovars = None
 
-        if Y.shape[1] > 1:
-            raise ValueError(
-                "Dependent variable must be a single column."
-                "Please make sure that the dependent variable" + depvar2 + "is of a numeric type (int or float)."
-           )
-
         if fe is not None:
             na_index = (na_index + fe_na)
             fe = fe.drop(na_index, axis=0)
@@ -292,9 +349,19 @@ class Fixest:
             if self.is_iv:
                 I = I.drop(fe_na, axis=0)
 
+        #if weights is None:
+        has_weights = False
+        N = X.shape[0]
+        weights = np.ones(N).reshape((N, 1))
+        #if weights is not None:
+        #    has_weights = True
+        #    weights = self.data[weights]
+        #    weights = self.weights.drop(na_index, axis=0)
+        #    weights = weights.values
+
         na_index_str = ','.join(str(x) for x in na_index)
 
-        return Y, X, I, fe, na_index, fe_na, na_index_str, z_names
+        return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
 
 
     def _demean_model2(self, Y, X, I, fe, lookup_demeaned_data, na_index_str):
@@ -408,7 +475,8 @@ class Fixest:
 
                 dict2fe = self.fml_dict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str
+                # dictionary to cache demeaned data with index: na_index_str,
+                # only relevant for `.feols()`
                 lookup_demeaned_data = dict()
 
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -416,23 +484,27 @@ class Fixest:
 
                     for _, fml_linear in enumerate(dict2fe.get(depvar)):
 
+
+                        if isinstance(fml_linear, list):
+                            fml_linear = fml_linear[0]
+
+
+                        covar = fml_linear.split("~")[1]
+
+                        # get Y, X, Z, fe, NA indices for model
+                        Y, X, I, fe, na_index, _, na_index_str, z_names, weights, has_weights = self._model_matrix_fixest(depvar, covar, fval)
+
+                        y_names = Y.columns.tolist()
+                        x_names = X.columns.tolist()
+
+                        fml = get_fml(depvar, covar, fval)
+
+
                         if self.method == "feols":
-
-                            if isinstance(fml_linear, list):
-                                fml_linear = fml_linear[0]
-
-                            covar = fml_linear.split("~")[1]
-
-                            # get Y, X, Z, fe, NA indices for model
-                            Y, X, I, fe, na_index, _, na_index_str, z_names = self._model_matrix_fixest(depvar, covar, fval)
-
-                            y_names = Y.columns.tolist()
-                            x_names = X.columns.tolist()
-
-                            fml = get_fml(y_names, x_names, fval)
 
                             # demean Y, X, Z, if not already done in previous estimation
                             Yd, Xd, Id = self._demean_model2(Y, X, I, fe, lookup_demeaned_data, na_index_str)
+
                             if self.is_iv:
                                 Zd = pd.concat([Xd, Id], axis = 1)[z_names]
                             else:
@@ -442,54 +514,62 @@ class Fixest:
                             Xd = Xd.to_numpy()
                             Zd = Zd.to_numpy()
 
+                            #self.has_weights = False
+                            #if self.has_weights:
+                            #    w = np.sqrt(self.weights.to_numpy())
+                            #    Yd = Yd * weights
+                            #    Zd = Zd * weights
+                            #    Xd = Xd * weights
+
                             # check for multicollinearity
                             _multicollinearity_checks(Xd, Zd, self.ivars, fml)
 
                             # initiate OLS class
-                            FEOLS = Feols(Y = Yd, X = Xd, Z = Zd)
+                            FIT = Feols(Y = Yd, X = Xd, Z = Zd, weights = weights)
+                            if fe is not None:
+                                self.has_fixef = True
+                                self.fixef_vars = fval
+                            else:
+                                self.has_fixef = False
+                                self.fixef_vars = None
 
                             # estimation
                             if self.is_iv:
-                                FEOLS.get_fit(estimator = "2sls")
-                                FEOLS.is_iv = True
+                                FIT.get_fit(estimator = "2sls")
+                                FIT.is_iv = True
                             else:
-                                FEOLS.get_fit(estimator = "ols")
-                                FEOLS.is_iv = False
+                                FIT.get_fit(estimator = "ols")
+                                FIT.is_iv = False
 
-                            # some bookkeeping
-                            FEOLS.fml = fml
-                            FEOLS.ssc_dict = self.ssc_dict
-                            FEOLS.na_index = na_index
-                            # data never makes it to Feols() class. needed for ex post
-                            # clustered vcov estimation when clustervar not in model params
-                            FEOLS.data = self.data.iloc[~self.data.index.isin(na_index)]
-                            if fval != "0":
-                                FEOLS.has_fixef = True
-                                FEOLS.fixef = fval
-                            else:
-                                FEOLS.has_fixef = False
-                                FEOLS.fixef = None
-                            #FEOLS.split_log = x
-
-
-                            # inference
-                            vcov_type = _get_vcov_type(vcov, fval)
-
-                            FEOLS.vcov_log = vcov_type
-                            FEOLS.get_vcov(vcov=vcov_type)
-                            FEOLS.get_inference()
-                            FEOLS.coefnames = x_names
-                            if self.icovars is not None:
-                                FEOLS.icovars = self.icovars
-                            else:
-                                FEOLS.icovars = None
-
-                            self.all_fitted_models[fml] = FEOLS
 
                         elif self.method == "fepois":
 
-                          # estimation via FEPOIS
-                          pass
+                            # check for separation and drop separated variables
+                            #Y, X, fe, na_index = self._separation()
+
+                            Y = Y.to_numpy()
+                            X = X.to_numpy()
+                            if fe is not None:
+                                fe = fe.to_numpy()
+                                if fe.ndim == 1:
+                                    fe = fe.reshape((self.N, 1))
+
+                            # check for multicollinearity
+                            _multicollinearity_checks(X, X, self.ivars, fml)
+
+                            # initiate OLS class
+                            FIT = Fepois(
+                                Y = Y,
+                                X = X,
+                                fe = fe,
+                                weights = weights,
+                                drop_singletons = self.drop_singletons,
+                                maxiter = self.iwls_maxiter,
+                                tol = self.iwls_tol
+                            )
+
+                            FIT.is_iv = False
+                            FIT.get_fit()
 
                         else:
 
@@ -497,6 +577,40 @@ class Fixest:
                                 "Estimation method not supported. Please use 'feols' or 'fepois'."
                             )
 
+
+                        # some bookkeeping
+                        FIT.fml = fml
+                        FIT.ssc_dict = self.ssc_dict
+                        FIT.na_index = na_index
+                        # data never makes it to Feols() class. needed for ex post
+                        # clustered vcov estimation when clustervar not in model params
+                        FIT.data = self.data.iloc[~self.data.index.isin(na_index)]
+                        if fval != "0":
+                            FIT.has_fixef = True
+                            FIT._fixef = fval
+                        else:
+                            FIT.has_fixef = False
+                            FIT._fixef = None
+                        #FEOLS.split_log = x
+
+
+                        # inference
+                        vcov_type = _get_vcov_type(vcov, fval)
+                        FIT.vcov_log = vcov_type
+                        FIT.get_vcov(vcov=vcov_type)
+                        FIT.get_inference()
+
+                        # other regression stats
+                        FIT.get_performance()
+
+                        FIT.coefnames = x_names
+                        if self.icovars is not None:
+                            FIT.icovars = self.icovars
+                        else:
+                            FIT.icovars = None
+
+                        # store fitted model
+                        self.all_fitted_models[fml] = FIT
 
 
 
@@ -598,10 +712,13 @@ class Fixest:
 
             df = fxst.tidy()
 
-            if fxst.is_iv:
-                estimation_method = "IV"
+            if fxst.method == "feols":
+                if fxst.is_iv:
+                    estimation_method = "IV"
+                else:
+                    estimation_method = "OLS"
             else:
-                estimation_method = "OLS"
+                estimation_method = "Poisson"
 
             print('###')
             print('')
@@ -616,6 +733,9 @@ class Fixest:
             print('')
             print(df.to_string(index=False))
             print('---')
+            if fxst.method == "feols":
+                if not fxst.is_iv:
+                    print(f"RMSE: {np.round(fxst.rmse, 4)}  Adj. R2: {np.round(fxst.adj_r2, 4)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, 4)}")
 
     def coef(self) -> pd.DataFrame:
         '''
@@ -657,13 +777,15 @@ class Fixest:
         return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.DataFrame:
-        '''
-        Obtain the confidence intervals of the fitted models.
+
+        ''''
+        Obtain confidence intervals for the fitted models.
+
         Returns:
             A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
         '''
 
-        return self.tidy()[["confint_lower", "confint_upper"]]
+        return self.tidy()[["ci_l", "ci_u"]]
 
     def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
         '''
@@ -975,12 +1097,12 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
     return splitvar, splitvar_name, estimate_split_model, estimate_full_model
 
 
-def get_fml(y_names, x_names, fval):
+def get_fml(depvar, covar, fval):
 
-    y_names = y_names[0]
-    fml = y_names + " ~ " + "+".join(x_names)
     if fval != "0":
-        fml += " | " + fval
+        fml = depvar + " ~ " + covar + " | " + fval
+    else:
+        fml = depvar + " ~ " + covar
 
     return fml.replace(" ", "")
 

@@ -75,7 +75,7 @@ def test_py_vs_r(data, fml):
     py_se = np.sort(pyfixest.se())
     py_pval = np.sort(pyfixest.pvalue())
     py_tstat = np.sort(pyfixest.tstat())
-    py_confint = pyfixest.confint().values
+    py_confint = np.sort(pyfixest.confint())
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
@@ -97,12 +97,18 @@ def test_py_vs_r(data, fml):
         np.sort(np.array(stats.confint(r_fixest)).flatten())
     ):
         raise ValueError("py_confint != r_confint for iid errors")
+    if not np.allclose(
+        np.sort(np.array(py_confint).flatten()),
+        np.sort(np.array(stats.confint(r_fixest)).flatten())
+    ):
+        raise ValueError("py_confint != r_confint for iid errors")
 
     # heteroskedastic errors
     pyfixest.vcov("HC1")
     py_se = pyfixest.se().values
     py_pval = pyfixest.pvalue().values
     py_tstat = pyfixest.tstat().values
+    py_confint = pyfixest.confint().values
     py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
@@ -123,12 +129,18 @@ def test_py_vs_r(data, fml):
         np.sort(np.array(stats.confint(r_fixest)).flatten())
     ):
         raise ValueError("py_confint != r_confint for HC1 errors")
+    if not np.allclose(
+        np.sort(np.array(py_confint).flatten()),
+        np.sort(np.array(stats.confint(r_fixest)).flatten())
+    ):
+        raise ValueError("py_confint != r_confint for HC1 errors")
 
     # cluster robust errors
     pyfixest.vcov({'CRV1':'group_id'})
     py_se = pyfixest.se()
     py_pval = pyfixest.pvalue()
     py_tstat = pyfixest.tstat()
+    py_confint = pyfixest.confint().values
     py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
