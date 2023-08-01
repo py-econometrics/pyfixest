@@ -6,8 +6,13 @@ import warnings
 from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import csr_matrix, hstack
+from formulaic import model_matrix
+
 from pyfixest.ssc_utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
+
 
 
 class Feols:
@@ -22,6 +27,8 @@ class Feols:
         Dependent variable of the regression.
     X : Union[np.ndarray, pd.DataFrame]
         Independent variable of the regression.
+    weights: np.ndarray
+        Weights for the regression.
     Z: Union[np.ndarray, pd.DataFrame]
         Instruments of the regression.
 
@@ -32,11 +39,12 @@ class Feols:
     X : np.ndarray
         The independent variable of the regression.
     Z : np.ndarray
-        The instruments of the regression.
+        The instruments of the regression. If None, equal to `X`.
     N : int
         The number of observations.
     k : int
         The number of columns in X.
+
 
     Methods
     -------
@@ -52,52 +60,64 @@ class Feols:
 
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, weights : np.ndarray, Z: np.ndarray = None) -> None:
 
-
-        _feols_input_checks(Y, X, Z)
+        self.method = "feols"
+        _feols_input_checks(Y, X, Z, weights)
 
         self.Y = Y
         self.X = X
-        self.Z = Z
+        if Z is not None:
+          self.Z = Z
+        else:
+          self.Z = X
+        self.weights = weights
 
         self.N, self.k = X.shape
+        self.sumFE = None
+        self.y_hat_link = None
+        self.y_hat_response = None
 
     def get_fit(self, estimator = "ols") -> None:
         '''
         Regression estimation for a single model, via ordinary least squares (OLS).
-        Args: estimator (str): Estimator to use. Can be one of "ols", "iv", or "2sls".
+        Args: estimator (str): Estimator to use. Can be one of "ols"", or "2sls".
                 If "ols", then the estimator is (X'X)^{-1}X'Y.
                 If "iv", then the estimator is (Z'X)^{-1}Z'Y.
                 If "2sls", then the estimator is (X'Z(Z'Z)^{-1}Z'X)^{-1}X'Z(Z'Z)^{-1}Z'Y.
         Returns:
             None
+        Attributes:
+            beta_hat (np.ndarray): The estimated regression coefficients.
+            Y_hat (np.ndarray): The predicted values of the regression model.
+            u_hat (np.ndarray): The residuals of the regression model.
+
 
         '''
-
-        assert estimator in ["ols", "iv", "2sls"], "estimator must be one of 'ols', 'iv', or '2sls'."
 
         self.tZX = np.transpose(self.Z) @ self.X
         self.tZy = (np.transpose(self.Z) @ self.Y)
 
-        if estimator in ["ols", "iv"]:
+        if estimator == "ols":
 
             self.tZXinv = np.linalg.inv(self.tZX)
-            self.beta_hat = (self.tZXinv @ self.tZy).flatten()
+            self.beta_hat = np.linalg.solve(self.tZX, self.tZy).flatten()
+            #self.beta_hat = (self.tZXinv @ self.tZy).flatten()
 
-            if estimator == "iv":
-
-                self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
-
-
-        else:
+        elif estimator == "2sls":
 
             self.tXZ = np.transpose(self.X) @ self.Z
             self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
-            self.beta_hat = (np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) @ self.tXZ @ self.tZZinv @ self.tZy).flatten()
+            self.beta_hat = np.linalg.solve(self.tXZ @ self.tZZinv @ self.tZX, self.tXZ @ self.tZZinv @ self.tZy).flatten()
+            #self.beta_hat = (np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) @ self.tXZ @ self.tZZinv @ self.tZy).flatten()
 
-        self.Y_hat = (self.X @ self.beta_hat)
-        self.u_hat = (self.Y.flatten() - self.Y_hat)
+        else:
+
+            raise ValueError("estimator must be one of 'ols' or '2sls'.")
+
+
+        self.Y_hat_link = (self.X @ self.beta_hat)
+        self.u_hat = (self.Y.flatten() - self.Y_hat_link.flatten())
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         '''
@@ -160,11 +180,11 @@ class Feols:
                 vcov_type='iid'
             )
 
+            sigma2 = np.sum(self.u_hat ** 2) / (self.N - 1)
             # only relevant factor for iid in ssc: fixef.K
             if self.is_iv == False:
-                self.vcov =  self.ssc * self.tZXinv * (np.sum(self.u_hat ** 2) / (self.N - 1))
+                self.vcov =  self.ssc * self.tZXinv * sigma2
             else:
-                sigma2 = (np.sum(self.u_hat ** 2) / (self.N - 1))
                 self.vcov = self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX ) * sigma2
 
         elif self.vcov_type == 'hetero':
@@ -345,13 +365,21 @@ class Feols:
 
         else:
             df = self.G - 1
-        self._pvalue = (
-            2*(1-t.cdf(np.abs(self._tstat), df))
-        )
 
-        z = np.abs(t.ppf((1 - alpha) / 2, df))
+        # use t-dist for linear models, but normal for non-linear models
+        if self.method == "feols":
+            self._pvalue = (
+                2*(1-t.cdf(np.abs(self._tstat), df))
+            )
+            z = np.abs(t.ppf((1 - alpha) / 2, df))
+
+        else:
+            self._pvalue = (
+                2*(1-norm.cdf(np.abs(self._tstat)))
+            )
+            z = np.abs(norm.ppf((1 - alpha) / 2))
+
         z_se = z * self._se
-
         self.conf_int = (
             np.array([self.beta_hat - z_se, self.beta_hat + z_se])
         )
@@ -470,6 +498,118 @@ class Feols:
         return res_df
 
 
+    def fixef(self) -> np.array:
+
+        '''
+        Return a np.array with estimated fixed effects of a fixed effects regression model.
+        Additionally, computes the sum of fixed effects for each observation (this is required for the predict() method)
+        If the model does not have a fixed effect, raises an error.
+        Args:
+            None
+        Returns:
+            alphaDF (pd.DataFrame): A pd.DataFrame with the estimated fixed effects. For only one fixed effects,
+                                    no level of the fixed effects is dropped. For multiple fixed effects, one
+                                    level of each fixed effect is dropped to avoid perfect multicollinearity.
+            sumDF (np.array): A np.array with the sum of fixed effects for each of the i = 1, ..., N observations.
+        Creates the following attributes:
+            alphaDF, sumDF
+        '''
+
+        if not self.has_fixef:
+            raise ValueError("The regression model does not have fixed effects.")
+
+        if self.is_iv:
+            raise NotImplementedError("The fixef() method is currently not supported for IV models.")
+
+        if self.method == "fepois":
+            raise NotImplementedError("The fixef() method is currently not supported for Poisson models.")
+
+        #fixef_vars = self._fixef.split("+")[0]
+
+        fml = self.fml
+        depvars, res = fml.split("~")
+        covars, fixef_vars = res.split("|")
+
+        df = self.data.copy()
+        # all fixef vars to pd.Categorical
+        for x in fixef_vars.split("+"):
+            df[x] = pd.Categorical(df[x])
+
+        fml_linear = depvars + "~" + covars
+        Y, X = model_matrix(fml_linear, df)
+        X = X.drop("Intercept", axis = 1)
+        Y = Y.to_numpy().flatten().astype(np.float64)
+        X = X.to_numpy()
+        uhat = csr_matrix(Y - X @ self.beta_hat).transpose()
+
+        D2 = model_matrix("-1+"+fixef_vars, df).astype(np.float64)
+        cols = D2.columns
+
+        D2 = csr_matrix(D2.values)
+
+        alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
+        k_fe = len(alpha)
+
+        var, level = [], []
+
+        for _, x in enumerate(cols):
+
+            res = x.replace("[", "").replace("]", "").split("T.")
+            var.append(res[0])
+            level.append(res[1])
+
+        self.fixef_dict = dict()
+        ki_start = 0
+        for x in np.unique(var):
+
+            ki = len(list(filter(lambda x: x == 'group', var)))
+            alphai = alpha[ki_start:(ki+ki_start)]
+            levi = level[ki_start:(ki+ki_start)]
+            fe_dict = pd.DataFrame({'level':levi, 'value':alphai}).set_index('level').T
+
+            self.fixef_dict[x] = fe_dict
+            ki_start = ki
+
+
+        for key, df in self.fixef_dict.items():
+            print(f"{key}:\n{df.to_string(index=True)}\n")
+
+        self.sumFE = D2 @ alpha
+
+
+    def predict(self, data : Union[None, pd.DataFrame] = None, type = "link") -> np.array:
+
+        '''
+        Return a flat np.array with predicted values of the regression model.
+        Args:
+            data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+                If None (default), uses the data used for fitting the model.
+            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
+                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
+                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
+
+        '''
+
+        if type not in ["response", "link"]:
+            raise ValueError("type must be one of 'response' or 'link'.")
+
+        if data is None:
+
+            depvar = self.fml.split("~")[0]
+            y_hat = self.data[depvar].to_numpy() - self.u_hat.flatten()
+
+
+        else:
+
+            fml_linear, _ = self.fml.split("|")
+            _ , X = model_matrix(fml_linear, data)
+            X = X.drop("Intercept", axis = 1)
+            X = X.to_numpy()
+            y_hat = X @ self.beta_hat
+
+
+        return y_hat.flatten()
+
 
 
     def get_nobs(self):
@@ -484,15 +624,37 @@ class Feols:
         self.N = len(self.Y)
 
 
-    def get_performance(self):
+    def get_performance(self) -> None:
         '''
-        Compute multiple additional measures commonly reported with linear regression output.
+        Compute multiple additional measures commonly reported with linear regression output,
+        including R-squared and adjusted R-squared. Not that variables with suffix _within
+        use demeand dependent variables Y, while variables without do not or are invariat to
+        demeaning.
+
+        Returns:
+            None
+
+        Creates the following instances:
+            r2 (float): R-squared of the regression model.
+            adj_r2 (float): Adjusted R-squared of the regression model.
+            r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.
+            adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         '''
 
-        self.r_squared = 1 - np.sum(self.u_hat ** 2) / \
-            np.sum((self.Y - np.mean(self.Y))**2)
-        self.adj_r_squared = (self.N - 1) / (self.N - self.k) * self.r_squared
+        Y_no_demean = self.Y
 
+        ssu = np.sum(self.u_hat ** 2)
+        ssy_within = np.sum((self.Y - np.mean(self.Y)) ** 2)
+        ssy = np.sum((Y_no_demean - np.mean(Y_no_demean)) ** 2)
+
+
+        self.rmse = np.sqrt(ssu / self.N)
+
+        self.r2_within = 1 - ( ssu / ssy_within)
+        self.r2 = 1 - (ssu / ssy)
+
+        self.adj_r2_within = 1 - (1 - self.r2_within)  * (self.N - 1) / (self.N - self.k - 1)
+        self.adj_r2 = 1 - (1 - self.r2)  * (self.N - 1) / (self.N - self.k - 1)
 
     def tidy(self) -> pd.DataFrame:
 
@@ -509,8 +671,8 @@ class Feols:
                         'Std. Error': self._se,
                         't value': self._tstat,
                         'Pr(>|t|)': self._pvalue,
-                        'confint_lower': self.conf_int[0],
-                        'confint_upper': self.conf_int[1]
+                        'ci_l': self.conf_int[0],
+                        'ci_u': self.conf_int[1]
                     }
                 )
 
@@ -546,7 +708,7 @@ class Feols:
         '''
         Return a pd.DataFrame with confidence intervals for the estimated regression model.
         '''
-        return self.tidy()[['confint_lower', 'confint_upper']]
+        return self.tidy()[['ci_l', 'ci_u']]
 
 
     def resid(self) -> np.ndarray:
@@ -554,7 +716,6 @@ class Feols:
         Returns a one dimensional np.array with the residuals of the estimated regression model.
         '''
         return self.u_hat
-
 
 
 def _check_vcov_input(vcov, data):
@@ -633,7 +794,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
 
-def _feols_input_checks(Y, X, Z):
+def _feols_input_checks(Y, X, Z, weights):
 
     '''
     Some basic checks on the input matrices Y, X, and Z.
@@ -650,12 +811,25 @@ def _feols_input_checks(Y, X, Z):
     if not isinstance(X, (np.ndarray)):
         raise TypeError("X must be a numpy array.")
     if not isinstance(Z, (np.ndarray)):
-        raise TypeError("Z must be a numpy array.")
+        if Z is not None:
+            raise TypeError("Z must be a numpy array or None.")
+    if not isinstance(weights, (np.ndarray)):
+        raise TypeError("weights must be a numpy array.")
 
+    if Y.ndim != 2:
+        raise ValueError("Y must be a 2D array")
     if X.ndim != 2:
         raise ValueError("X must be a 2D array")
-    if Z.ndim != 2:
-        raise ValueError("Z must be a 2D array")
+    if Z is not None:
+        if Z.ndim != 2:
+            raise ValueError("Z must be a 2D array")
+    if weights.ndim != 2:
+        raise ValueError("weights must be a 2D array")
+
+
+
+
+
 
 
 

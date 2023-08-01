@@ -48,3 +48,44 @@ def get_data(seed = 1234):
 
 
     return data
+
+
+
+def get_poisson_data(N = 1000, seed = 4320):
+
+    '''
+    Generate data following a Poisson regression dgp.
+    Args:
+        N: number of observations
+        seed: seed for the random number generator
+    Returns:
+        data: a pandas data frame
+    '''
+
+    # create data
+    np.random.seed(seed)
+    X1 = np.random.normal(0, 1, N)
+    X2 =  np.random.choice([0, 1], N, True)
+    X3 = np.random.choice([0, 1, 2, 3, 4, 5, 6], N, True)
+    X4 = np.random.choice([0, 1], N, True)
+    beta = np.array([1, 0, 1, 0])
+    u = np.random.normal(0,1,N)
+    mu = np.exp(1 + X1 * beta[0] + X2 * beta[1] + X3 * beta[2] + X4 * beta[3] + u)
+
+    Y = np.random.poisson(mu, N)
+
+    data = pd.DataFrame({'Y':Y, 'X1':X1, 'X2':X2, 'X3':X3, 'X4':X4})
+
+    return data
+
+
+def absolute_diff(x, y, tol = 1e-03):
+
+    absolute_diff = (np.abs(x - y) > tol).any()
+    if not any(y == 0):
+        relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
+        res = absolute_diff and relative_diff
+    else:
+        res = absolute_diff
+
+    return res

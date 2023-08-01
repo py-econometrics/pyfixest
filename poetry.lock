@@ -1795,10 +1795,8 @@ description = "High dimensional fixed effect absorption with Python 3"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-files = [
-    {file = "pyhdfe-0.1.2-py3-none-any.whl", hash = "sha256:569709e31320d899776bd00e3c9b2594baf602f30361e232ab034851855a20fe"},
-    {file = "pyhdfe-0.1.2.tar.gz", hash = "sha256:a906e5d0922a65503333028e944d993ce15f4ee44e2b3ace2f79049623888432"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 numpy = ">=1.12.0"
@@ -1807,6 +1805,12 @@ scipy = ">=1.0.0"
 [package.extras]
 docs = ["astunparse", "docutils (==0.17)", "ipython", "jinja2 (>=2.11,<3.0)", "nbsphinx (==0.5.0)", "sphinx (==2.0.0)", "sphinx-rtd-theme (==0.4.3)"]
 tests = ["pytest", "pytest-xdist"]
+
+[package.source]
+type = "git"
+url = "https://github.com/s3alfisc/pyhdfe.git"
+reference = "HEAD"
+resolved_reference = "aab38015d7d1eee90124d7e7b2ddbd1d01b9cf09"
 
 [[package]]
 name = "pymdown-extensions"
@@ -2863,4 +2867,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8"
-content-hash = "41f3b3c6298fa6bcfe6f5e568f7c4215647094b1cc4fa3aacb0e6471c4827438"
+content-hash = "79fe8ee1ede92e65961c7f87555b5803f61f1257801c3b164b3f392e1b0845f6"
