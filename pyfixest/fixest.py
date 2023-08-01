@@ -734,7 +734,8 @@ class Fixest:
             print(df.to_string(index=False))
             print('---')
             if fxst.method == "feols":
-                print(f"RMSE: {np.round(fxst.rmse, 4)}  Adj. R2: {np.round(fxst.adj_r2, 4)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, 4)}")
+                if not fxst.is_iv:
+                    print(f"RMSE: {np.round(fxst.rmse, 4)}  Adj. R2: {np.round(fxst.adj_r2, 4)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, 4)}")
 
     def coef(self) -> pd.DataFrame:
         '''
