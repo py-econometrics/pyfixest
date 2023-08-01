@@ -3,7 +3,7 @@ import numpy as np
 from numpy import log
 import pandas as pd
 from pyfixest.fixest import Fixest
-from pyfixest.utils import get_data, get_poisson_data
+from pyfixest.utils import get_data, get_poisson_data, absolute_diff
 from pyfixest.ssc_utils import ssc
 
 # rpy2 imports

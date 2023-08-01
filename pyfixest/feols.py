@@ -577,7 +577,7 @@ class Feols:
         self.sumFE = D2 @ alpha
 
 
-    def predict(self, data : Union[None, pd.DataFrame] = None, type = "response") -> np.array:
+    def predict(self, data : Union[None, pd.DataFrame] = None, type = "link") -> np.array:
 
         '''
         Return a flat np.array with predicted values of the regression model.
@@ -590,26 +590,25 @@ class Feols:
 
         '''
 
-        if type != "response":
-            raise NotImplementedError("The predict() method is currently only supported for type='response'.")
-
-        if self.method == "fepois":
-            raise NotImplementedError("The predict() method is currently not supported for Poisson models.")
+        if type not in ["response", "link"]:
+            raise ValueError("type must be one of 'response' or 'link'.")
 
         if data is None:
 
             depvar = self.fml.split("~")[0]
-            y_hat = self.data[depvar].to_numpy() - self.u_hat
+            y_hat = self.data[depvar].to_numpy() - self.u_hat.flatten()
+
 
         else:
 
             fml_linear, _ = self.fml.split("|")
             _ , X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
-
+            X = X.to_numpy()
             y_hat = X @ self.beta_hat
 
-        return y_hat
+
+        return y_hat.flatten()
 
 
 
@@ -717,7 +716,6 @@ class Feols:
         Returns a one dimensional np.array with the residuals of the estimated regression model.
         '''
         return self.u_hat
-
 
 
 def _check_vcov_input(vcov, data):

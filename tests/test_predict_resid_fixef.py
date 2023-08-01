@@ -58,12 +58,12 @@ def test_vs_fixest(data, fml):
     '''
 
     pyfixest = pf.Fixest(data = data).feols(fml = fml, vcov = 'HC1')
-    #pyfixest2 = pf.Fixest(data = data).fepois(fml = fml, vcov = 'HC1')
+    pyfixest2 = pf.Fixest(data = data).fepois(fml = fml, vcov = 'HC1')
 
     feols_mod = pyfixest.fetch_model("0")
     feols_mod.fixef()
 
-    #fepois_mod = pyfixest2.fetch_model("0")
+    fepois_mod = pyfixest2.fetch_model("0")
     #fepois_mod.fixef()
 
     # fixest estimation
@@ -73,12 +73,13 @@ def test_vs_fixest(data, fml):
         ssc = fixest.ssc(True, "none", True, "min", "min", False),
         se = "hetero"
     )
-    #r_fixest_pois = fixest.fepois(
-    #    ro.Formula(fml),
-    #    data=data,
-    #    ssc = fixest.ssc(True, "none", True, "min", "min", False),
-    #    se = "hetero"
-    #)
+
+    r_fixest_pois = fixest.fepois(
+        ro.Formula(fml),
+        data=data,
+        ssc = fixest.ssc(True, "none", True, "min", "min", False),
+        se = "hetero"
+    )
 
     # test OLS fit
     if not np.allclose(
@@ -88,11 +89,11 @@ def test_vs_fixest(data, fml):
         raise ValueError("Coefficients are not equal")
 
     # test Poisson fit
-    #if not np.allclose(
-    #    fepois_mod.coef(),
-    #    r_fixest_pois.rx2("coefficients")
-    #):
-    #    raise ValueError("Coefficients are not equal")
+    if not np.allclose(
+        fepois_mod.coef(),
+        r_fixest_pois.rx2("coefficients")
+    ):
+        raise ValueError("Coefficients are not equal")
 
     #test sumFE for OLS
     if not np.allclose(
@@ -116,11 +117,11 @@ def test_vs_fixest(data, fml):
         raise ValueError("Predictions for OLS are not equal")
 
     # test predict for Poisson
-    #if not np.allclose(
-    #    fepois_mod.predict(),
-    #    r_fixest_pois.rx2("fitted.values")
-    #):
-    #    raise ValueError("Predictions for Poisson are not equal")
+    if not np.allclose(
+        fepois_mod.predict(),
+        r_fixest_pois.rx2("fitted.values")
+    ):
+        raise ValueError("Predictions for Poisson are not equal")
 
     # test resid for OLS
     if not np.allclose(
@@ -135,7 +136,6 @@ def test_vs_fixest(data, fml):
     #    r_fixest_pois.rx2("residuals")
     #):
     #    raise ValueError("Residuals for Poisson are not equal")
-
 
 
 
