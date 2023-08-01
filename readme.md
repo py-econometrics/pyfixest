@@ -42,6 +42,9 @@ fixest.summary()
 
 ```
 
+Note that `v0.8.0` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
+is a requirement for Poisson regression via iterated weighted least squares. The github repo currently installs my PR fork of [PyHDFE](https://github.com/s3alfisc/pyhdfe).
+
 ## Quickstart
 
 ```python
