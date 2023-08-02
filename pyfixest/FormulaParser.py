@@ -120,7 +120,7 @@ class FixestFormulaParser:
 
         # clean instruments
         if instruments is not None:
-            self.is_iv = True
+            self._is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
             first_stage_covars_list = covars.split("+")
             first_stage_covars_list[first_stage_covars_list.index(endogvars)] = instruments
@@ -128,13 +128,13 @@ class FixestFormulaParser:
             self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
             self.depvars_first_stage = endogvars
         else:
-            self.is_iv = False
+            self._is_iv = False
             self.covars_first_stage = None
             self.depvars_first_stage = None
 
         # parse i() syntax
         if self.covars.get("i") is not None:
-            self.ivars = dict()
+            self._ivars = dict()
             i_split = self.covars.get("i")[-1].split("=")
             if len(i_split) > 1:
                 ref = self.covars.get("i")[-1].split("=")[1]
@@ -144,10 +144,10 @@ class FixestFormulaParser:
                 ref = None
                 ivar_list = self.covars.get("i")
 
-            self.ivars[ref] = ivar_list
+            self._ivars[ref] = ivar_list
 
         else:
-            self.ivars = None
+            self._ivars = None
 
 
         # Pack the formula components back into strings
@@ -192,9 +192,9 @@ class FixestFormulaParser:
             fml_dict[fevar] = res
 
         if iv:
-            self.fml_dict_new_iv = fml_dict
+            self._fml_dict_new_iv = fml_dict
         else:
-            self.fml_dict_new = fml_dict
+            self._fml_dict_new = fml_dict
 
 
 def _unpack_fml(x):
