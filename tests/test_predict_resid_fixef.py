@@ -35,7 +35,7 @@ def test_internally(data):
     mod = pyfixest.fetch_model("0")
     mod.fixef()
     original_prediction = mod.predict()
-    updated_prediction = mod.predict(data = mod.data)
+    updated_prediction = mod.predict(data = mod._data)
     np.allclose(original_prediction, updated_prediction)
 
     # now expect error with updated predicted being a subset of data
