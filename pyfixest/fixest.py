@@ -747,7 +747,7 @@ class Fixest:
         else:
             return res
 
-    def summary(self, digits = 2) -> None:
+    def summary(self, digits = 3) -> None:
         '''
         Prints a summary of the feols() estimation results for each estimated model.
         For each model, the method prints a header indicating the fixed-effects and the
