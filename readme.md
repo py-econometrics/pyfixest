@@ -5,17 +5,11 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package.
+This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as possible. Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
-The package aims to mimic `fixest` syntax and functionality as closely as possible.
+## Installation
 
-Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package.
-
-For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
-
-## News
-
-You can install the release version from `PyPi` by running `pip install pyfixest` (v0.8.3).
+You can install the release version (v0.8.3) from `PyPi` by running `pip install pyfixest` (v0.8.3) or the development version from github.
 
 ## News
 
