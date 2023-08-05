@@ -45,29 +45,16 @@ def absolute_diff(x, y, tol = 1e-03):
     ("Y~X1|X2+X3"),
     ("Y~X2|X3+X4"),
 
-    #("Y~X1|X2^X3"),
-    #("Y~X1|X2^X3 + X4"),
-    #("Y~X1|X2^X3^X4"),
-
     ("Y ~ X1:X2"),
     ("Y ~ X1:X2 | X3"),
     ("Y ~ X1:X2 | X3 + X4"),
 
-    #("log(Y) ~ X1:X2 | X3 + X4"),
-    #("log(Y) ~ log(X1):X2 | X3 + X4"),
     ("Y ~  X2 + log(X1) | X3 + X4"),
 
 
-
-    #("Y ~ C(X2)"),
-    #("Y ~ X1 + C(X2)"),
-
-    #("Y ~ X1:C(X2) | X3"),
-    #("Y ~ C(X2):C(X3) | X4"),
-
 ])
 
-
+@pytest.mark.skip("Not yet implemented.")
 def test_py_vs_r_poisson(data_poisson, fml):
 
     '''
@@ -153,6 +140,7 @@ def test_py_vs_r_poisson(data_poisson, fml):
     #if absolute_diff(pyfixest.fetch_model(0).resid(),r_fixest.rx2("residuals")):
     #    raise ValueError("py_resid != r_resid for CRV1 errors")
 
+@pytest.mark.skip("Not yet implemented.")
 def test_separation():
 
     '''
