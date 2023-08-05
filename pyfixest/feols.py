@@ -62,7 +62,7 @@ class Feols:
 
     def __init__(self, Y: np.ndarray, X: np.ndarray, weights : np.ndarray, Z: np.ndarray = None) -> None:
 
-        self.method = "feols"
+        self._method = "feols"
         _feols_input_checks(Y, X, Z, weights)
 
         self.Y = Y
@@ -158,11 +158,11 @@ class Feols:
 
         '''
 
-        _check_vcov_input(vcov, self.data)
+        _check_vcov_input(vcov, self._data)
 
-        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef, self.is_iv)
+        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
 
-        if self.is_iv:
+        if self._is_iv:
             if self.vcov_type in ["CRV3"]:
                 raise VcovTypeNotSupportedError(
                     "CRV3 inference is not supported for IV regressions."
@@ -172,7 +172,7 @@ class Feols:
         if self.vcov_type == 'iid':
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = 1,
@@ -182,7 +182,7 @@ class Feols:
 
             sigma2 = np.sum(self.u_hat ** 2) / (self.N - 1)
             # only relevant factor for iid in ssc: fixef.K
-            if self.is_iv == False:
+            if self._is_iv == False:
                 self.vcov =  self.ssc * self.tZXinv * sigma2
             else:
                 self.vcov = self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX ) * sigma2
@@ -190,7 +190,7 @@ class Feols:
         elif self.vcov_type == 'hetero':
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = 1,
@@ -207,7 +207,7 @@ class Feols:
                 else:
                     u = self.u_hat / (1-leverage)
 
-            if self.is_iv == False:
+            if self._is_iv == False:
                 meat = np.transpose(self.Z) * (u ** 2) @ self.Z
                 self.vcov =  self.ssc * self.tZXinv @ meat @  self.tZXinv
             else:
@@ -222,7 +222,7 @@ class Feols:
 
         elif self.vcov_type == "CRV":
 
-            cluster_df = self.data[self.clustervar]
+            cluster_df = self._data[self.clustervar]
             # if there are missings - delete them!
 
             if cluster_df.dtype != "category":
@@ -239,7 +239,7 @@ class Feols:
             self.G = len(clustid)
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = self.G,
@@ -260,7 +260,7 @@ class Feols:
                     score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
-                if self.is_iv == False:
+                if self._is_iv == False:
                     self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
                 else:
                     meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
@@ -273,10 +273,10 @@ class Feols:
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
 
-                #if self.has_fixef:
+                #if self._has_fixef:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
-                if self.is_iv:
+                if self._is_iv:
                     raise VcovTypeNotSupportedError(
                         "CRV3 inference is not supported with IV estimation."
                     )
@@ -292,7 +292,7 @@ class Feols:
                 beta_jack = np.zeros((n_groups, k_params))
 
 
-                if self.has_fixef == False:
+                if self._has_fixef == False:
                     # inverse hessian precomputed?
                     tXX = np.transpose(self.X) @ self.X
                     tXy = np.transpose(self.X) @ self.Y
@@ -316,9 +316,9 @@ class Feols:
 
                     for ixg, g in enumerate(clusters):
                         # direct leave one cluster out implementation
-                        data = self.data[~np.equal(ixg, group)]
+                        data = self._data[~np.equal(ixg, group)]
                         model = Fixest_(data)
-                        model.feols(self.fml, vcov = "iid")
+                        model.feols(self._fml, vcov = "iid")
                         beta_jack[ixg,:] = model.coef().to_numpy()
 
 
@@ -367,7 +367,7 @@ class Feols:
             df = self.G - 1
 
         # use t-dist for linear models, but normal for non-linear models
-        if self.method == "feols":
+        if self._method == "feols":
             self._pvalue = (
                 2*(1-t.cdf(np.abs(self._tstat), df))
             )
@@ -400,7 +400,7 @@ class Feols:
         Rbetaq = R @ beta - q
         #Rbetaq = self.beta_hat
 
-        if self.is_iv:
+        if self._is_iv:
             first_stage = Feols(self.Y, self.Z, self.Z)
             first_stage.get_fit()
             first_stage.get_vcov(vcov = vcov)
@@ -439,16 +439,16 @@ class Feols:
         except ImportError:
             print("Module 'wildboottest' not found. Please install 'wildboottest'. Note that it 'wildboottest 'requires Python < 3.11 due to its dependency on 'numba'.")
 
-        if self.is_iv:
+        if self._is_iv:
             raise VcovTypeNotSupportedError(
                 "Wild cluster bootstrap is not supported with IV estimation."
             )
-        if self.has_fixef:
+        if self._has_fixef:
             raise VcovTypeNotSupportedError(
                 "Wild cluster bootstrap is not supported with fixed effects."
             )
 
-        xnames = self.coefnames
+        xnames = self._coefnames
         Y = self.Y.flatten()
         X = self.X
 
@@ -469,7 +469,7 @@ class Feols:
 
         else:
 
-            cluster = self.data[self.clustervar]
+            cluster = self._data[self.clustervar]
 
             boot = WildboottestCL(X = X, Y = Y, cluster = cluster,
                                 R = R, B = B, seed = seed)
@@ -515,22 +515,22 @@ class Feols:
             alphaDF, sumDF
         '''
 
-        if not self.has_fixef:
+        if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self.is_iv:
+        if self._is_iv:
             raise NotImplementedError("The fixef() method is currently not supported for IV models.")
 
-        if self.method == "fepois":
+        if self._method == "fepois":
             raise NotImplementedError("The fixef() method is currently not supported for Poisson models.")
 
         #fixef_vars = self._fixef.split("+")[0]
 
-        fml = self.fml
+        fml = self._fml
         depvars, res = fml.split("~")
         covars, fixef_vars = res.split("|")
 
-        df = self.data.copy()
+        df = self._data.copy()
         # all fixef vars to pd.Categorical
         for x in fixef_vars.split("+"):
             df[x] = pd.Categorical(df[x])
@@ -595,13 +595,13 @@ class Feols:
 
         if data is None:
 
-            depvar = self.fml.split("~")[0]
-            y_hat = self.data[depvar].to_numpy() - self.u_hat.flatten()
+            depvar = self._fml.split("~")[0]
+            y_hat = self._data[depvar].to_numpy() - self.u_hat.flatten()
 
 
         else:
 
-            fml_linear, _ = self.fml.split("|")
+            fml_linear, _ = self._fml.split("|")
             _ , X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
             X = X.to_numpy()
@@ -666,7 +666,7 @@ class Feols:
 
         tidy_df = pd.DataFrame(
                     {
-                        'coefnames': self.coefnames,
+                        'coefnames': self._coefnames,
                         'Estimate': self.beta_hat,
                         'Std. Error': self._se,
                         't value': self._tstat,

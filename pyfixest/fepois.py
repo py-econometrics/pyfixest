@@ -36,13 +36,13 @@ class Fepois(Feols):
         self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
-        self.drop_singletons = drop_singletons
-        self.method = "fepois"
+        self._drop_singletons = drop_singletons
+        self._method = "fepois"
 
         if self.fe is not None:
-            self.has_fixef = True
+            self._has_fixef = True
         else:
-            self.has_fixef = False
+            self._has_fixef = False
 
         # check if Y is a weakly positive integer
         if not np.issubdtype(self.Y.dtype, np.integer):
@@ -115,10 +115,10 @@ class Fepois(Feols):
                 algorithm = pyhdfe.create(
                         ids=fe,
                         residualize_method='map',
-                        drop_singletons=self.drop_singletons,
+                        drop_singletons=self._drop_singletons,
                         weights = w
                 )
-                if self.drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
+                if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
                     print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
                     dropped_singleton_indices = np.where(algorithm._singleton_indices)[0].tolist()
                     na_index += dropped_singleton_indices
@@ -150,7 +150,7 @@ class Fepois(Feols):
             Z2 = Z_d + Z_u - Z
             X2 = X_d
             Z = Z_u
-            w_old = w#.copy()
+            w_old = w.copy()
             w = w_u
             Xbeta = Xbeta_new
 
@@ -220,9 +220,9 @@ class Fepois(Feols):
 
         '''
 
-        _check_vcov_input(vcov, self.data)
+        _check_vcov_input(vcov, self._data)
 
-        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self.has_fixef, self.is_iv)
+        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
 
         # compute vcov
         WX = self.weights * self.X
@@ -234,7 +234,7 @@ class Fepois(Feols):
             raise NotImplementedError("iid inference is not supported for non-linear models.")
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = 1,
@@ -242,16 +242,9 @@ class Fepois(Feols):
                 vcov_type='iid'
             )
 
-            #self.vcov = self.ssc
-
             # only relevant factor for iid in ssc: fixef.K
             sigma2 = np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1)
             self.vcov = self.ssc * bread * sigma2
-
-            #np.linalg.inv(self.X.transpose() @ W @ self.X) @ self.X.transpose() @ W @ Sigma @ W @ self.X @ np.linalg.inv(self.X.transpose() @ W @ self.X)
-
-            #WX = self.weights * self.X
-            #self.vcov =  self.ssc * WX * np.sum( (self.weights * self.u_hat) ** 2) / (self.N - 1)
 
 
         elif self.vcov_type == 'hetero':
@@ -260,7 +253,7 @@ class Fepois(Feols):
                 raise NotImplementedError("HC2 and HC3 are not implemented for non-linear models.")
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = 1,
@@ -276,7 +269,7 @@ class Fepois(Feols):
 
         elif self.vcov_type == "CRV":
 
-            cluster_df = self.data[self.clustervar]
+            cluster_df = self._data[self.clustervar]
             # if there are missings - delete them!
 
             if cluster_df.dtype != "category":
@@ -293,7 +286,7 @@ class Fepois(Feols):
             self.G = len(clustid)
 
             self.ssc = get_ssc(
-                ssc_dict = self.ssc_dict,
+                ssc_dict = self._ssc_dict,
                 N = self.N,
                 k = self.k,
                 G = self.G,
@@ -308,9 +301,7 @@ class Fepois(Feols):
 
                 for g in range(self.G):
                     WX_g = WX[np.where(cluster_df == g)]
-                    #X_g = self.X[np.where(cluster_df == g)]
                     u_g = self.u_hat[np.where(cluster_df == g)]
-                    #W_g = np.diag(self.weights.flatten()[np.where(cluster_df == g)])
                     meat_g = WX_g.transpose() @ u_g @ u_g.transpose() @ WX_g
                     meat += meat_g
 
@@ -344,14 +335,14 @@ class Fepois(Feols):
 
         else:
 
-            fml_linear, _ = self.fml.split("|")
+            fml_linear, _ = self._fml.split("|")
             _ , X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis = 1)
 
             y_hat = X @ self.beta_hat
 
         if type == "link":
-            if self.method == "fepois":
+            if self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
         return y_hat.flatten()
@@ -379,7 +370,7 @@ class Fepois(Feols):
 
         if check == "fe":
 
-            if not self.has_fixef:
+            if not self._has_fixef:
 
                 pass
 
@@ -459,7 +450,7 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
     #         algorithm = pyhdfe.create(
     #             ids=self.fe,
     #             residualize_method='map',
-    #             drop_singletons=self.drop_singletons,
+    #             drop_singletons=self._drop_singletons,
     #             weights = w
     #         )
     #

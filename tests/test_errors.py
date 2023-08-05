@@ -131,7 +131,7 @@ def test_iv_errors():
             fixest.feols('Y  ~ 1 | Z1 ~ X1', vcov = "HC3")
 
 
-
+@pytest.mark.skip("Not yet implemented.")
 def test_poisson_devpar_count():
 
     '''

@@ -355,6 +355,13 @@ def test_py_vs_r_split(data, fml_split):
     "Y ~ 1 + X2 | X1 ~ Z1",
     "Y ~ 1 + X2 + X3 | X1 ~ Z1",
 
+    "Y2 ~ 1 | X1 ~ Z1",
+    "Y2 ~ 1 + X2 | X1 ~ Z1",
+    "Y2 ~ 1 + X2 + X3 | X1 ~ Z1",
+
+    "log(Y) ~ 1 | X1 ~ Z1",
+    "log(Y) ~ 1 + X2 | X1 ~ Z1",
+    "log(Y) ~ 1 + X2 + X3 | X1 ~ Z1",
 
     "Y ~ 1 | X2 | X1 ~ Z1",
     "Y ~ 1 | X2 + X3 | X1 ~ Z1",
