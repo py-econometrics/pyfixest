@@ -13,11 +13,13 @@ Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmake
 
 For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
-You can install the release version from `PyPi` by running `pip install pyfixest` (v0.7.3).
+## News
+
+You can install the release version from `PyPi` by running `pip install pyfixest` (v0.8.3).
 
 ## News
 
-The dev version of `PyFixest` (v0.8.0) now supports Poisson regression!
+The dev version of `PyFixest` (v0.8.4) now supports Poisson regression!
 
 ```python
 import pyfixest as pf
@@ -42,8 +44,9 @@ fixest.summary()
 # ---
 ```
 
-Note that `v0.8.0` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
+Note that `v0.8.4` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
 is a requirement for Poisson regression via iterated weighted least squares. The github repo currently installs my PR fork of [PyHDFE](https://github.com/s3alfisc/pyhdfe).
+
 
 ## Quickstart
 
