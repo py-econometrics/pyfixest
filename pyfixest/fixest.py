@@ -595,7 +595,6 @@ class Fixest:
 
                         elif self._method == "fepois":
 
-                            raise NotImplementedError("Please download the dev version from github if you want to run Poisson regression.")
                             # check for separation and drop separated variables
                             #Y, X, fe, na_index = self._separation()
 

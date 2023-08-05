@@ -54,7 +54,6 @@ def absolute_diff(x, y, tol = 1e-03):
 
 ])
 
-@pytest.mark.skip("Not yet implemented.")
 def test_py_vs_r_poisson(data_poisson, fml):
 
     '''
@@ -140,7 +139,6 @@ def test_py_vs_r_poisson(data_poisson, fml):
     #if absolute_diff(pyfixest.fetch_model(0).resid(),r_fixest.rx2("residuals")):
     #    raise ValueError("py_resid != r_resid for CRV1 errors")
 
-@pytest.mark.skip("Not yet implemented.")
 def test_separation():
 
     '''
