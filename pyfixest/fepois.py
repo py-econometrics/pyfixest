@@ -150,7 +150,7 @@ class Fepois(Feols):
             Z2 = Z_d + Z_u - Z
             X2 = X_d
             Z = Z_u
-            w_old = w#.copy()
+            w_old = w.copy()
             w = w_u
             Xbeta = Xbeta_new
 
@@ -242,16 +242,9 @@ class Fepois(Feols):
                 vcov_type='iid'
             )
 
-            #self.vcov = self.ssc
-
             # only relevant factor for iid in ssc: fixef.K
             sigma2 = np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1)
             self.vcov = self.ssc * bread * sigma2
-
-            #np.linalg.inv(self.X.transpose() @ W @ self.X) @ self.X.transpose() @ W @ Sigma @ W @ self.X @ np.linalg.inv(self.X.transpose() @ W @ self.X)
-
-            #WX = self.weights * self.X
-            #self.vcov =  self.ssc * WX * np.sum( (self.weights * self.u_hat) ** 2) / (self.N - 1)
 
 
         elif self.vcov_type == 'hetero':
@@ -308,9 +301,7 @@ class Fepois(Feols):
 
                 for g in range(self.G):
                     WX_g = WX[np.where(cluster_df == g)]
-                    #X_g = self.X[np.where(cluster_df == g)]
                     u_g = self.u_hat[np.where(cluster_df == g)]
-                    #W_g = np.diag(self.weights.flatten()[np.where(cluster_df == g)])
                     meat_g = WX_g.transpose() @ u_g @ u_g.transpose() @ WX_g
                     meat += meat_g
 

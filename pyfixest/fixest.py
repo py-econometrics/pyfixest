@@ -332,15 +332,12 @@ class Fixest:
         if self._is_iv:
             dict2fe_iv = self._fml_dict_iv.get(fval)
 
-        covar2 = covar
-        depvar2 = depvar
-
-        fml = depvar2 + " ~ " + covar2
+        fml = depvar + " ~ " + covar
 
         if self._is_iv:
-            instruments2 = dict2fe_iv.get("Y")[0].split("~")[1]
-            endogvar_list = list(set(covar2.split("+")) - set(instruments2.split("+")))#[0]
-            instrument_list = list(set(instruments2.split("+")) - set(covar2.split("+")))#[0]
+            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
+            endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
+            instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
 
             fml2 = "+".join(instrument_list) + "+" + fml
 
@@ -774,7 +771,7 @@ class Fixest:
 
             df = fxst.tidy().round(digits)
 
-            if fxst.method == "feols":
+            if fxst._method == "feols":
                 if fxst._is_iv:
                     estimation_method = "IV"
                 else:
@@ -795,7 +792,7 @@ class Fixest:
             print('')
             print(df.to_string(index=False))
             print('---')
-            if fxst.method == "feols":
+            if fxst._method == "feols":
                 if not fxst._is_iv:
                     print(f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}")
 
