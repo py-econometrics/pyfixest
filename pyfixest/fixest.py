@@ -793,7 +793,7 @@ class Fixest:
             print('Inference: ', fxst._vcov_log)
             print('Observations: ', fxst.N)
             print('')
-            print(df.to_string(index=False))
+            print(df.to_string(index=True))
             print('---')
             if fxst._method == "feols":
                 if not fxst._is_iv:
