@@ -5,10 +5,12 @@ theme:
 
 plugins:
   - mkdocstrings
+  - mkdocs-jupyter:
+      execute: true
 
 nav:
   - index.md
-  - tutorial.md
+  - tutorial.ipynb
   - reference.md
 
 

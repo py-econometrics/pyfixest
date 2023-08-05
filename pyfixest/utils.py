@@ -12,7 +12,7 @@ def get_data(seed = 1234):
     np.random.seed(seed)
 
     N = 2000
-    k = 20
+    k = 5
     G = 25
     X = np.random.normal(0, 1, N * k).reshape((N,k))
     X = pd.DataFrame(X)

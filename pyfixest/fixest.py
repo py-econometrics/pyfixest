@@ -18,7 +18,7 @@ from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedErro
 
 class Fixest:
 
-    def __init__(self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter = 25) -> None:
+    def __init__(self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter:float = 25) -> None:
         '''
         A class for fixed effects regression modeling.
 
@@ -61,6 +61,7 @@ class Fixest:
 
         '''
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
+        Mostly deparses the fml string.
 
         Args:
             estimation: type of estimation. Either "feols" or "fepois".
@@ -132,7 +133,7 @@ class Fixest:
 
 
 
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
+    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none", weights = Optional) -> None:
         '''
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
@@ -399,22 +400,23 @@ class Fixest:
             if self._is_iv:
                 I = I.drop(fe_na, axis=0)
 
-        #if weights is None:
-        has_weights = False
         N = X.shape[0]
-        weights = np.ones(N).reshape((N, 1))
-        #if weights is not None:
-        #    has_weights = True
-        #    weights = self._data[weights]
-        #    weights = self.weights.drop(na_index, axis=0)
-        #    weights = weights.values
+
+        if weights is not None:
+            has_weights = True
+            weights = self._data[weights]
+            weights = self.weights.drop(na_index, axis=0)
+            weights = weights.values.reshape((N,1))
+        else:
+            weights = np.ones((N,1))
+            has_weights = False
 
         na_index_str = ','.join(str(x) for x in na_index)
 
         return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
 
 
-    def _demean_model2(self, Y, X, I, fe, lookup_demeaned_data, na_index_str):
+    def _demean_model2(self, Y, X, I, fe, weights, lookup_demeaned_data, na_index_str):
 
         '''
         Demeans a single regression model. If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
@@ -471,6 +473,7 @@ class Fixest:
                     ids=fe,
                     residualize_method='map',
                     drop_singletons=self._drop_singletons,
+                    weights=weights
                 )
 
                 if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
@@ -554,7 +557,7 @@ class Fixest:
                         if self._method == "feols":
 
                             # demean Y, X, Z, if not already done in previous estimation
-                            Yd, Xd, Id = self._demean_model2(Y, X, I, fe, lookup_demeaned_data, na_index_str)
+                            Yd, Xd, Id = self._demean_model2(Y, X, I, fe, weights, lookup_demeaned_data, na_index_str)
 
                             if self._is_iv:
                                 Zd = pd.concat([Xd, Id], axis = 1)[z_names]
@@ -565,12 +568,12 @@ class Fixest:
                             Xd = Xd.to_numpy()
                             Zd = Zd.to_numpy()
 
-                            #self.has_weights = False
-                            #if self.has_weights:
-                            #    w = np.sqrt(self.weights.to_numpy())
-                            #    Yd = Yd * weights
-                            #    Zd = Zd * weights
-                            #    Xd = Xd * weights
+
+                            if has_weights:
+                                w = np.sqrt(weights.to_numpy())
+                                Yd *= np.sqrt(w)
+                                Zd *= np.sqrt(w)
+                                Xd *= np.sqrt(w)
 
                             # check for multicollinearity
                             _multicollinearity_checks(Xd, Zd, self._ivars, fml)
@@ -747,7 +750,7 @@ class Fixest:
         else:
             return res
 
-    def summary(self, digits = 3) -> None:
+    def summary(self, digits: int = 3) -> None:
         '''
         Prints a summary of the feols() estimation results for each estimated model.
         For each model, the method prints a header indicating the fixed-effects and the
@@ -965,7 +968,7 @@ class Fixest:
         return res
 
 
-    def fetch_model(self, i: Union[int, str]):
+    def fetch_model(self, i: Union[int, str]) -> Union[Feols, Fepois]:
 
         '''
         Utility method to fetch a model of class Feols from the Fixest class.
