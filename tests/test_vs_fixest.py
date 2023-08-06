@@ -1,4 +1,5 @@
 import pytest
+import re
 import numpy as np
 from numpy import log, exp
 from pyfixest.fixest import Fixest
@@ -14,47 +15,51 @@ fixest = importr("fixest")
 stats = importr('stats')
 
 
-@pytest.fixture
-def data():
-    return get_data(seed = 6574)
-
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 
 @pytest.mark.parametrize("fml", [
 
-
     ("Y~X1"),
     ("Y~X1+X2"),
-    ("Y~X1|X2"),
-    ("Y~X1|X2+X3"),
-    ("Y~X2|X3+X4"),
+    ("Y~X1|f2"),
+    ("Y~X1|f2+f3"),
+    ("Y~X2|f2+f3"),
 
-    ("Y~X1|X2^X3"),
-    ("Y~X1|X2^X3 + X4"),
-    ("Y~X1|X2^X3^X4"),
+    ("log(Y) ~ X1"),
+    ("Y ~ exp(X1)"),
+    #("Y ~ X1 + I(X2, 2)"),
+
+    ("Y ~ C(f1)"),
+    ("Y ~ X1 + C(f1)"),
+    ("Y ~ X1 + C(f2)"),
+    ("Y ~ X1 + C(f1) + C(f2)"),
+
+    ("Y ~ X1 + C(f1) | f2"),
+    ("Y ~ X1 + C(f1) | f2 + f3"),
+    #("Y ~ X1 + C(f1):C(fe2)"),
+    #("Y ~ X1 + C(f1):C(fe2) | f3"),
+
+    ("Y~X1|f2^f3"),
+    ("Y~X1|f1 + f2^f3"), # this one fails
+    ("Y~X1|f2^f3^f1"), # this one fails
 
     ("Y ~ X1:X2"),
-    ("Y ~ X1:X2 | X3"),
-    ("Y ~ X1:X2 | X3 + X4"),
+    ("Y ~ X1:X2 | f3"),
+    ("Y ~ X1:X2 | f3 + f1"),
 
-    ("log(Y) ~ X1:X2 | X3 + X4"),
-    ("log(Y) ~ log(X1):X2 | X3 + X4"),
-    ("Y ~  X2 + exp(X1) | X3 + X4"),
-
-
-
-    #("Y ~ C(X2)"),
-    #("Y ~ X1 + C(X2)"),
+    ("log(Y) ~ X1:X2 | f3 + f1"),
+    ("log(Y) ~ log(X1):X2 | f3 + f1"),
+    ("Y ~  X2 + exp(X1) | f3 + f1"),
 
     #("Y ~ X1:C(X2) | X3"),
     #("Y ~ C(X2):C(X3) | X4"),
 
-
-
-
 ])
 
-
-def test_py_vs_r(data, fml):
+def test_py_vs_r(N, seed, beta_type, error_type, fml):
 
     '''
     test pyfixest against fixest via rpy2
@@ -65,8 +70,30 @@ def test_py_vs_r(data, fml):
         - tba: t-statistics, covariance matrices, other metrics
     '''
 
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
+
+    vars = fml.split("~")[1].split("|")[0].split("+")
+
+    # small intermezzo, as rpy2 does not drop NAs from factors automatically
+    # note that fixes does this correctly
+    # this currently does not yet work for C() interactions
+    factor_vars = []
+    for var in vars:
+        if "C(" in var:
+            var = var.replace(" ","")
+            var = var[2:-1]
+            factor_vars.append(var)
+
+    # if factor_vars is not empty
+    if factor_vars:
+        data_r = data[~data[factor_vars].isna().any(axis = 1)]
+    else:
+        data_r = data
+
     # suppress correction for fixed effects
     #fixest.setFixest_ssc(fixest.ssc(True, "nested", True, "min", "min", False))
+
+    r_fml = _c_to_as_factor(fml)
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml, vcov = 'iid')
@@ -77,10 +104,12 @@ def test_py_vs_r(data, fml):
     py_tstat = np.sort(pyfixest.tstat())
     py_confint = np.sort(pyfixest.confint())
 
+
+
     r_fixest = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         se = 'iid',
-        data=data,
+        data=data_r,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
@@ -112,9 +141,9 @@ def test_py_vs_r(data, fml):
     py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         se = 'hetero',
-        data=data,
+        data=data_r,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
@@ -144,9 +173,9 @@ def test_py_vs_r(data, fml):
     py_confint = pyfixest.confint().values
 
     r_fixest = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         cluster = ro.Formula('~group_id'),
-        data=data,
+        data=data_r,
         ssc = fixest.ssc(True, "none", True, "min", "min", False)
     )
 
@@ -163,28 +192,32 @@ def test_py_vs_r(data, fml):
         raise ValueError("py_confint != r_confint for CRV1 errors")
 
 
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("fml_multi", [
 
     ("Y + Y2 ~X1"),
     ("Y + Y2 ~X1+X2"),
-    ("Y + Y2 ~X1|X2"),
-    ("Y + Y2 ~X1|X2+X3"),
-    ("Y + Y2 ~X2|X3+X4"),
+    ("Y + Y2 ~X1|f1"),
+    ("Y + Y2 ~X1|f1+f2"),
+    ("Y + Y2 ~X2|f2+f3"),
 
-    ("Y + Y2 ~ sw(X3, X4)"),
-    ("Y + Y2 ~ sw(X3, X4) | X2"),
+    ("Y + Y2 ~ sw(X1, X2)"),
+    ("Y + Y2 ~ sw(X1, X2) |f1 "),
 
-    ("Y + Y2 ~ csw(X3, X4)"),
-    ("Y + Y2 ~ csw(X3, X4) | X2"),
+    ("Y + Y2 ~ csw(X1, X2)"),
+    ("Y + Y2 ~ csw(X1, X2) | f2"),
 
-    ("Y + Y2 ~ X1 + csw(X3, X4)"),
-    ("Y + Y2 ~ X1 + csw(X3, X4) | X2"),
+    ("Y + Y2 ~ X1 + csw(X1, X2)"),
+    ("Y + Y2 ~ X1 + csw(X1, X2) | f1"),
 
-    ("Y + Y2 ~ X1 + csw0(X3, X4)"),
-    ("Y + Y2 ~ X1 + csw0(X3, X4) | X2"),
+    ("Y + Y2 ~ X1 + csw0(X1, X2)"),
+    ("Y + Y2 ~ X1 + csw0(X1, X2) | f1"),
 
-    ("Y + Y2 ~ X1 | csw0(X3, X4)"),
-    ("Y + Y2 ~ sw(X1, X2) | csw0(X3, X4)"),
+    ("Y + Y2 ~ X1 | csw0(f1,f2)"),
+    ("Y + Y2 ~ sw(X1, X2) | csw0(f1,f2,f3)"),
 
 
 
@@ -193,11 +226,13 @@ def test_py_vs_r(data, fml):
 ])
 
 
-def test_py_vs_r2(data, fml_multi):
+def test_py_vs_r2(N, seed, beta_type, error_type, fml_multi):
 
     '''
     test pyfixest against fixest_multi objects
     '''
+
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
@@ -229,20 +264,29 @@ def test_py_vs_r2(data, fml_multi):
             raise ValueError("py_se != r_se for iid errors")
 
 
+
+
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("fml_i", [
     #("Y ~ i(X1,X2)"),
-    #("Y ~ i(X1,X2) | X3"),
-    #("Y ~ i(X1,X2) | X3 + X4"),
-    #("Y ~ i(X1,X2) | sw(X3, X4)"),
-    #("Y ~ i(X1,X2) | csw(X3, X4)"),
+    #("Y ~ i(X1,X2) | f2"),
+    #("Y ~ i(X1,X2) | f2 + f3"),
+    #("Y ~ i(X1,X2) | sw(f2, f3)"),
+    #("Y ~ i(X1,X2) | csw(f2, f3)"),
 ])
 
 @pytest.mark.skip("interactions via i() produce pytest to get stuck")
-def test_py_vs_r_i(data, fml_i):
+def test_py_vs_r_i(N, seed, beta_type, error_type, fml_i):
 
     '''
     test pyfixest against fixest_multi objects
     '''
+
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
+
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
@@ -276,17 +320,40 @@ def test_py_vs_r_i(data, fml_i):
         #    raise ValueError("py_se != r_se ")
 
 
-
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("fml_C", [
-        ("Y ~ C(X2)", "Y ~ as.factor(X2)"),
+        ("Y ~ C(f1)", "Y ~ as.factor(f1)"),
         #("Y ~ C(X1) + X2", "Y ~ as.factor(X1) + X2"),
         #("Y ~ C(X1):X2", "Y ~ as.factor(X1):X2"),
         #("Y ~ C(X1):C(X2)", "Y ~ as.factor(X1):as.factor(X2)"),
         #("Y ~ C(X1) | X2", "Y ~ as.factor(X1) | X2"),
 ])
 
-def test_py_vs_r_C(data, fml_C):
+def test_py_vs_r_C(N, seed, beta_type, error_type, fml_C):
 
+
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
+    vars = fml.split("~")[1].split("|")[0].split("+")
+
+    # small intermezzo, as rpy2 does not drop NAs from factors automatically
+    # note that fixes does this correctly
+    # this currently does not yet work for C() interactions
+
+    factor_vars = []
+    for var in vars:
+        if "C(" in var:
+            var = var.replace(" ","")
+            var = var[2:-1]
+            factor_vars.append(var)
+
+    # if factor_vars is not empty
+    if factor_vars:
+        data_r = data[~data[factor_vars].isna().any(axis = 1)]
+    else:
+        data_r = data
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
@@ -308,14 +375,19 @@ def test_py_vs_r_C(data, fml_C):
     #if not np.allcloseual((np.array(py_se)), (fixest.se(r_fixest))):
     #    raise ValueError("py_se != r_se ")
 
-
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("fml_split", [
     ("Y ~ X1"),
     ("Y ~ X1 | X2 + X3"),
 ])
 
 @pytest.mark.skip("split method not yet fully implemented")
-def test_py_vs_r_split(data, fml_split):
+def test_py_vs_r_split(N, seed, beta_type, error_type, fml_split):
+
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
@@ -348,72 +420,50 @@ def test_py_vs_r_split(data, fml_split):
             raise ValueError("py_se != r_se ")
 
 
-
+@pytest.mark.parametrize("N", [100, 1000, 10000])
+@pytest.mark.parametrize("seed", [1234, 5678, 9012])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("fml_iv", [
 
     "Y ~ 1 | X1 ~ Z1",
-    "Y ~ 1 + X2 | X1 ~ Z1",
-    "Y ~ 1 + X2 + X3 | X1 ~ Z1",
+    "Y ~  X2 | X1 ~ Z1",
+    "Y ~ X2 + C(f1) | X1 ~ Z1",
 
     "Y2 ~ 1 | X1 ~ Z1",
-    "Y2 ~ 1 + X2 | X1 ~ Z1",
-    "Y2 ~ 1 + X2 + X3 | X1 ~ Z1",
+    "Y2 ~ X2 | X1 ~ Z1",
+    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
 
     "log(Y) ~ 1 | X1 ~ Z1",
-    "log(Y) ~ 1 + X2 | X1 ~ Z1",
-    "log(Y) ~ 1 + X2 + X3 | X1 ~ Z1",
+    "log(Y) ~ X2 | X1 ~ Z1",
+    "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
 
-    "Y ~ 1 | X2 | X1 ~ Z1",
-    "Y ~ 1 | X2 + X3 | X1 ~ Z1",
+    "Y ~ 1 | f1 | X1 ~ Z1",
+    "Y ~ 1 | f1 + f2 | X1 ~ Z1",
+    "Y ~ 1 | f1^f2 | X1 ~ Z1",
 
-    "Y ~  X2| X3 | X1 ~ Z1",
+    "Y ~  X2| f1 | X1 ~ Z1",
     #"Y ~ X1 + X2 | X1 + X2 ~ Z1 + Z2",
 
     # tests of overidentified models
     "Y ~ 1 | X1 ~ Z1 + Z2",
     "Y ~ X2 | X1 ~ Z1 + Z2",
-    "Y ~ X2 + X3 | X1 ~ Z1 + Z2",
+    "Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
 
-
-    "Y ~ 1 | X2 | X1 ~ Z1 + Z2",
-    "Y ~ 1 | X2 + X3 | X1 ~ Z1 + Z2",
-
-    "Y ~  X2| X3 | X1 ~ Z1 + Z2",
-
-
-
-    # tests for multiple estimation
-    #("Y + Y2 ~ 1 | X1 ~ Z1"),
-    #("Y + Y2 ~ X2 | X1 ~ Z1 + Z2 "),
-    #("Y + Y2 ~ 1 | X2 | X1 ~ Z1"),
-    #("Y + Y2 ~ 1| X2+X3 | X1 ~ Z1 + Z2"),
-    #("Y + Y2 ~ X2 | X3+X4 | X1 ~ Z1"),
-
-    #("Y + Y2 ~ sw(X3, X4)"),
-    #("Y + Y2 ~ sw(X3, X4) | X2"),
-
-   # ("Y + Y2 ~ csw(X3, X4)"),
-    #("Y + Y2 ~ csw(X3, X4) | X2"),
-
-    #("Y + Y2 ~ X1 + csw(X3, X4)"),
-    #("Y + Y2 ~ X1 + csw(X3, X4) | X2"),
-
-    #("Y + Y2 ~ X1 + csw0(X3, X4)"),
-    #("Y + Y2 ~ X1 + csw0(X3, X4) | X2"),
-
-    #("Y + Y2 ~ 1 | csw0(X3, X4) | X1 ~ Z1 + Z2"),
-    #("Y + Y2 ~ X2 | csw0(X3, X4) | X1 ~ Z1"),
-
-
+    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
+    "Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
+    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
 
 ])
 
 
-def test_py_vs_r_iv(data, fml_iv):
+def test_py_vs_r_iv(N, seed, beta_type, error_type, fml_iv):
 
     '''
     tests for instrumental variables regressions
     '''
+
+    data = get_data(N = N, seed = seed, beta_type = beta_type, error_type = error_type)
 
     # iid errors
     pyfixest = Fixest(data = data).feols(fml_iv, vcov = 'iid')
@@ -488,6 +538,7 @@ def _py_fml_to_r_fml(py_fml):
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     '''
 
+    py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
 
@@ -503,3 +554,18 @@ def _py_fml_to_r_fml(py_fml):
         return depvars + "~" + fml_split[1] + "|" + "|".join(fml2[1:])
 
 
+def _c_to_as_factor(py_fml):
+
+    '''
+    transform formulaic C-syntax for categorical variables into R's as.factor
+    '''
+    # Define a regular expression pattern to match "C(variable)"
+    pattern = r'C\((.*?)\)'
+
+    # Define the replacement string
+    replacement = r'factor(\1, exclude = NA)'
+
+    # Use re.sub() to perform the replacement
+    r_fml = re.sub(pattern, replacement, py_fml)
+
+    return r_fml

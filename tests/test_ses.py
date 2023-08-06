@@ -9,14 +9,22 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 @pytest.fixture
-def data(seed = 3212):
+def data(seed = 3212, N = 1000, G = 25, beta_type = "1", error_type = "1"):
     df = get_data()
     df = df.dropna()
     df["id"] = list(range(df.shape[0]))
     return df
 
+@pytest.mark.parametrize("seed", [3212, 3213, 3214])
+@pytest.mark.parametrize("N", [100, 400])
+@pytest.mark.parametrize("G", [25])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 
-def test_HC1_vs_CRV1(data):
+def test_HC1_vs_CRV1(N, G, seed, beta_type, error_type):
+
+    data = get_data(N = N, G = G, seed = seed, beta_type = beta_type, error_type = error_type)
+    data["id"] = list(range(data.shape[0]))
 
     fixest = pf.Fixest(data = data)
     fixest.feols('Y~X1', vcov = "HC1", ssc = ssc(adj = False, cluster_adj = False))
@@ -37,9 +45,10 @@ def test_HC1_vs_CRV1(data):
     #if not np.allclose(res_hc1["Pr(>|t|)"], res_crv1["Pr(>|t|)"]):
     #    raise ValueError("HC1 and CRV1 p values are not the same.")
 
-def test_HC3_vs_CRV3(data):
+def test_HC3_vs_CRV3(N, G, seed, beta_type, error_type):
 
-    #data = data.dropna()
+    data = get_data(N = N, G = G, seed = seed, beta_type = beta_type, error_type = error_type)
+    data["id"] = list(range(data.shape[0]))
 
     fixest = pf.Fixest(data = data)
     fixest.feols('Y~X1', vcov = "HC3", ssc = ssc(adj = False, cluster_adj = False))
@@ -62,10 +71,11 @@ def test_HC3_vs_CRV3(data):
     #    raise ValueError("HC3 and CRV3 p values are not the same.")
 
 @pytest.mark.skip("HC3 not implemented for regressions with fixed effects.")
-def test_HC3_vs_CRV3_fixef(data):
+def test_HC3_vs_CRV3_fixef(N, G, seed, beta_type, error_type):
 
+    data = get_data(N = N, G = G, seed = seed, beta_type = beta_type, error_type = error_type)
+    data["id"] = list(range(data.shape[0]))
 
-    #data = data.dropna()
 
     fixest = pf.Fixest(data = data)
     fixest.feols('Y~X1 | X2', vcov = "HC3", ssc = ssc(adj = False, cluster_adj = False))
