@@ -1,5 +1,6 @@
 import pyhdfe
 import re
+import pdb
 
 import numpy as np
 import pandas as pd
@@ -260,10 +261,17 @@ class Fixest:
 
 
 
-    def _clean_fe(self, data, fval):
+    def _clean_fe(self, data, fval) -> Tuple[pd.DataFrame, List[int]]:
 
         '''
         Function that transform and cleans fixed effects.
+        Args:
+            data: a pd.DataFrame of the data.
+            fval: a string of fixed effects. E.g. "fe1 + fe2"
+        Returns:
+            fe: a pd.DataFrame of the fixed effects. Note that NaNs are not yet dropped,
+                this is done in `_model_matrix_fixest()`.
+            fe_na: a list of columns in fe with NaNs
         '''
 
         fval_list = fval.split("+")
@@ -291,6 +299,8 @@ class Fixest:
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
         fe = fe.to_numpy()
+        fe_na = fe_na[fe_na].index.tolist()
+        fe = pd.DataFrame(fe)
 
         return fe, fe_na
 
@@ -324,8 +334,6 @@ class Fixest:
 
         if fval != "0":
             fe, fe_na = self._clean_fe(self._data, fval)
-            fe_na = list(fe_na[fe_na == True])
-            fe = pd.DataFrame(fe)
         else:
             fe = None
             fe_na = None
@@ -383,9 +391,10 @@ class Fixest:
         else:
             self._icovars = None
 
+
         if fe is not None:
-            na_index = (na_index + fe_na)
-            fe = fe.drop(na_index, axis=0)
+
+            fe = fe.drop(na_index, axis = 0)
             # drop intercept
             X = X.drop('Intercept', axis = 1)
             x_names.remove("Intercept")
@@ -394,11 +403,16 @@ class Fixest:
                 z_names.remove("Intercept")
                 cols.remove("Intercept")
 
-            # check if variables have already been demeaned
-            Y = Y.drop(fe_na, axis=0)
-            X = X.drop(fe_na, axis=0)
-            if self._is_iv:
-                I = I.drop(fe_na, axis=0)
+            # drop NaNs in fixed effects (not yet dropped via na_index)
+            fe_na_remaining = list(set(fe_na) - set(na_index))
+            if fe_na_remaining:
+                Y = Y.drop(fe_na_remaining, axis=0)
+                X = X.drop(fe_na_remaining, axis=0)
+                fe = fe.drop(fe_na_remaining, axis=0)
+                if self._is_iv:
+                    I = I.drop(fe_na_remaining, axis=0)
+                na_index += fe_na_remaining
+                na_index = list(set(na_index))
 
         N = X.shape[0]
 
@@ -473,7 +487,7 @@ class Fixest:
                     ids=fe,
                     residualize_method='map',
                     drop_singletons=self._drop_singletons,
-                    weights=weights
+                    #weights=weights
                 )
 
                 if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
@@ -521,7 +535,6 @@ class Fixest:
         Attributes:
             all_fitted_models: a dictionary of all fitted models. The keys are the formulas used to fit the models.
         '''
-
 
         if self._estimate_full_model:
 
@@ -1298,3 +1311,4 @@ def _find_untransformed_depvar(transformed_depvar):
         return match.group(1)
     else:
         return transformed_depvar
+

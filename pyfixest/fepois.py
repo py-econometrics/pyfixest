@@ -103,7 +103,7 @@ class Fepois(Feols):
 
         delta = np.ones((X.shape[1]))
 
-        X2 = X#.copy()
+        X2 = X
         Z2 = Z
 
         for x in range(self.maxiter):
@@ -143,7 +143,6 @@ class Fepois(Feols):
             Z_u = _update_Z(Y = Y, Xbeta = Xbeta_new)
 
             stop_iterating = np.sqrt(np.sum( ( delta - delta_new) ** 2 ) ) < self.tol
-            #stop_iterating = np.sqrt(np.sum((delta - delta_new) ** 2) / np.sum(delta ** 2)) < self.tol
 
             # update
             delta = delta_new
