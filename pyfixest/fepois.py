@@ -106,23 +106,23 @@ class Fepois(Feols):
         X2 = X#.copy()
         Z2 = Z
 
+        algorithm = pyhdfe.create(
+            ids=fe,
+            residualize_method='map',
+            drop_singletons=self._drop_singletons
+        )
+
         for x in range(self.maxiter):
 
             # Step 1: weighted demeaning
             ZX = np.concatenate([Z2, X2], axis = 1)
 
             if fe is not None:
-                algorithm = pyhdfe.create(
-                        ids=fe,
-                        residualize_method='map',
-                        drop_singletons=self._drop_singletons,
-                        weights = w
-                )
                 if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
                     print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
                     dropped_singleton_indices = np.where(algorithm._singleton_indices)[0].tolist()
                     na_index += dropped_singleton_indices
-                ZX_d = algorithm.residualize(ZX)
+                ZX_d = algorithm.residualize(ZX, w)
             else:
                 ZX_d = ZX
 
@@ -430,49 +430,3 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
         raise AssertionError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
-
-    # elif check == "separation":
-    #
-    #     raise NotImplementedError("Separation check via separation is not implemented yet.")
-    #
-    #     septol = 1e-05
-    #     u = np.where(self.Y == 0, 1, 0)
-    #     N0 = np.sum(u)
-    #     K = np.ceil(N0 / (septol ** 2))
-    #     w = np.where(self.Y == 1, K, 1)
-    #
-    #     u = u.reshape((self.N, 1))
-    #     w = w.reshape((self.N, 1))
-    #
-    #     for x in range(maxiter):
-    #
-    #            # demean via pyhdfe
-    #         algorithm = pyhdfe.create(
-    #             ids=self.fe,
-    #             residualize_method='map',
-    #             drop_singletons=self._drop_singletons,
-    #             weights = w
-    #         )
-    #
-    #         mat = np.concatenate([u, self.X], axis = 1)
-    #         mat_resid = algorithm.residualize(mat)
-    #         u_d = mat_resid[:, 0]
-    #         X_d = mat_resid[:, 1:]
-    #
-    #         FIT = Feols(Y = u_d, X = X_d, Z = X_d, weights = w)
-    #         FIT.get_fit(estimator = "ols")
-    #         gamma_hat = FIT.beta_hat
-    #         u_hat = X_d @ gamma_hat
-    #         u_hat = np.where(np.abs(u_hat) < septol, 0, u_hat)
-    #         if u_hat.all() > 0:
-    #             break
-    #         else:
-    #             u_hat = np.max(u_hat, 0)
-    #         if x == maxiter:
-    #             raise ValueError("No convergence in separation check")
-
-
-
-
-
-
