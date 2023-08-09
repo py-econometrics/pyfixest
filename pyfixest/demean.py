@@ -3,14 +3,14 @@ import scipy.sparse as sp
 from numba import njit, prange, types, typed, float64, int64
 from formulaic import model_matrix
 
-#@njit(float64[:](float64[:], int64[:], float64[:]))
+
+# @njit(float64[:](float64[:], int64[:], float64[:]))
 @njit
 def _ave3(x, f, w):
-
     N = len(x)
 
-    #wx_dict = {}
-    #w_dict = {}
+    # wx_dict = {}
+    # w_dict = {}
 
     wx_dict = typed.Dict.empty(key_type=types.int64, value_type=types.float64)
     w_dict = typed.Dict.empty(key_type=types.int64, value_type=types.float64)
@@ -37,11 +37,10 @@ def _ave3(x, f, w):
     return wxw_vec
 
 
-#@njit(float64[:,:](float64[:,:], int64[:,:], float64[:,:], float64, int64))
-@njit(parallel = True)
-def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
-
-    '''
+# @njit(float64[:,:](float64[:,:], int64[:,:], float64[:,:], float64, int64))
+@njit(parallel=True)
+def demean(cx, fmat, weights, tol=1e-08, maxiter=2000):
+    """
     Demean a Matrix cx by fixed effects in fmat.
     The fixed effects are weighted by weights. Convervence tolerance
     is set to 1e-08 for the sum of absolute differences.
@@ -52,9 +51,9 @@ def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
         tol: Convergence tolerance. 1e-08 by default.
     Returns
         res: Demeaned matrix of dimension cx.shape
-    '''
+    """
 
-    #cx = x.copy()
+    # cx = x.copy()
 
     fixef_vars = fmat.shape[1]
     K = cx.shape[1]
@@ -62,8 +61,7 @@ def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
     res = np.zeros_like(cx)
 
     for k in prange(K):
-
-        cxk = cx[:,k].copy()
+        cxk = cx[:, k].copy()
         oldxk = cxk - 1
 
         # initiate
@@ -71,9 +69,8 @@ def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
         fvec = np.empty_like(cxk)
 
         for _ in range(maxiter):
-
             for i in range(fixef_vars):
-                fvec = fmat[:,i]
+                fvec = fmat[:, i]
                 weighted_ave[:] = _ave3(cxk, fvec, weights)
                 cxk -= weighted_ave
 
@@ -82,16 +79,14 @@ def demean(cx, fmat, weights, tol = 1e-08, maxiter = 2000):
 
             oldxk = cxk.copy()
 
-
-        res[:,k] = cxk
+        res[:, k] = cxk
 
     return res
 
 
 @njit
 def _ave2(x, f, w):
-
-    N =  len(x)
+    N = len(x)
     weighted_ave = np.zeros(N)
     uvals = _unique2(f)
 
@@ -111,13 +106,13 @@ def _ave2(x, f, w):
 
 @njit
 def _unique2(x):
-    '''
+    """
     Returns the unique values of a numpy array as a list
     Args:
         A numpy array.
     Returns:
         A list with the unique values of the numpy array.
-    '''
+    """
     unique_values = set()
     res = []
     for i in range(len(x)):
@@ -127,17 +122,16 @@ def _unique2(x):
 
     return res
 
+
 @njit
 def _ave(x, f, w):
-
-
     N = len(x)
-    wx = np.bincount(f, w * x )
+    wx = np.bincount(f, w * x)
     w = np.bincount(f, w)
 
     # drop zeros
-    #wx = wxw[wxw != 0]
-    #w = w[w != 0]
+    # wx = wxw[wxw != 0]
+    # w = w[w != 0]
 
     wxw = wx / w
     wxw_long = np.zeros(N)
@@ -149,34 +143,32 @@ def _ave(x, f, w):
 
 
 def getfe(uhat, fe_fml, data):
+    """
+    Get fixed effects estimates after running a regression on demeaned data.
+      Args:
+          uhat: Residuals from a regression on demeaned data.
+          fe_fml: A one sided formula with the fixed effects.
+          data: A pandas dataframe with the fixed effects
+      Returns:
+          alpha: A numpy array with the fixed effects estimates.
+      Example:
+          get_fe(uhat, "~ firm + year", data)
+    """
 
-  '''
-  Get fixed effects estimates after running a regression on demeaned data.
-    Args:
-        uhat: Residuals from a regression on demeaned data.
-        fe_fml: A one sided formula with the fixed effects.
-        data: A pandas dataframe with the fixed effects
-    Returns:
-        alpha: A numpy array with the fixed effects estimates.
-    Example:
-        get_fe(uhat, "~ firm + year", data)
-  '''
+    # check if uhat is a numpy array
+    if not isinstance(uhat, np.ndarray):
+        raise ValueError("uhat must be a numpy array")
+    if not isinstance(fe_fml, str):
+        raise ValueError("fe_fml must be a string")
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("data must be a pandas dataframe")
 
-  # check if uhat is a numpy array
-  if not isinstance(uhat, np.ndarray):
-    raise ValueError("uhat must be a numpy array")
-  if not isinstance(fe_fml, str):
-    raise ValueError("fe_fml must be a string")
-  if not isinstance(data, pd.DataFrame):
-    raise ValueError("data must be a pandas dataframe")
+    if not fe_fml.startswith("~") or len(fe_fml.split("~")) > 1:
+        raise ValueError("fe_fml must be a one sided formula")
 
-  if not fe_fml.startswith("~") or len(fe_fml.split("~")) > 1:
-      raise ValueError("fe_fml must be a one sided formula")
+    D = model_matrix(fe_fml, data=data, output="sparse")
+    DD = D.transpose().dot(D)
+    Du = D.transpose().dot(uhat)
+    alpha = sp.linalg.spsolve(DD, Du)
 
-
-  D = model_matrix(fe_fml, data = data, output = "sparse")
-  DD = D.transpose().dot(D)
-  Du = D.transpose().dot(uhat)
-  alpha = sp.linalg.spsolve(DD, Du)
-
-  return alpha
+    return alpha

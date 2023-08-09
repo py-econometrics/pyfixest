@@ -7,17 +7,22 @@ from typing import Union, List, Dict
 from formulaic import model_matrix
 from pyfixest.feols import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.ssc_utils import get_ssc
-from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError, NonConvergenceError, NotImplementedError
+from pyfixest.exceptions import (
+    VcovTypeNotSupportedError,
+    NanInClusterVarError,
+    NonConvergenceError,
+    NotImplementedError,
+)
+
 
 class Fepois(Feols):
 
-    '''
+    """
     Class to estimate Poisson Regressions. Inherits from Feols. The following methods are overwritten: `get_fit()`.
-    '''
+    """
 
-    def __init__(self, Y, X, fe, weights, drop_singletons, maxiter = 25, tol = 1e-08):
-
-        '''
+    def __init__(self, Y, X, fe, weights, drop_singletons, maxiter=25, tol=1e-08):
+        """
         Args:
             Y (np.array): dependent variable. two-dimensional np.array
             Z (np.array): independent variables. two-dimensional np.array
@@ -26,9 +31,9 @@ class Fepois(Feols):
             drop_singletons (bool): whether to drop singleton fixed effects
             maxiter (int): maximum number of iterations for the IRLS algorithm
             tol (float): tolerance level for the convergence of the IRLS algorithm
-        '''
+        """
 
-        super().__init__(Y = Y, X = X, Z = X, weights = weights)
+        super().__init__(Y=Y, X=X, Z=X, weights=weights)
 
         # input checks
         _fepois_input_checks(fe, drop_singletons, tol, maxiter)
@@ -46,12 +51,12 @@ class Fepois(Feols):
 
         # check if Y is a weakly positive integer
         if not np.issubdtype(self.Y.dtype, np.integer):
-            raise AssertionError("For Poisson regression, the dependent variable must be a count, i.e. it must be a weakly positive integer.")
-
+            raise AssertionError(
+                "For Poisson regression, the dependent variable must be a count, i.e. it must be a weakly positive integer."
+            )
 
     def get_fit(self) -> None:
-
-        '''
+        """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
 
         Args:
@@ -68,7 +73,7 @@ class Fepois(Feols):
             Z (np.array): demeaned independent variables (from the last iteration of the IRLS algorithm)
             Y (np.array): demeaned dependent variable (from the last iteration of the IRLS algorithm)
 
-        '''
+        """
 
         self._check_for_separation()
 
@@ -76,18 +81,17 @@ class Fepois(Feols):
         X = self.X
         fe = self.fe
 
-        #print(Y.shape, X.shape, fe.shape)
+        # print(Y.shape, X.shape, fe.shape)
 
         def _update_w(Xbeta):
-
-            '''
+            """
             Implements the updating function for the weights in the IRLS algorithm.
             Uses the softmax for numerical stability.
             Args:
                 Xbeta (np.array): Xbeta from the last iteration of the IRLS algorithm
             Returns:
                 w (np.array): updated weights
-            '''
+            """
             expXbeta = np.exp(Xbeta - np.max(Xbeta))
             return expXbeta / np.sum(expXbeta)
 
@@ -97,9 +101,9 @@ class Fepois(Feols):
         # starting values: http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/spm/spmhtmlnode27.html
         # reference:  McCullagh, P. & Nelder, J. A. ( 1989). Generalized Linear Models,
         #  Vol. 37 of Monographs on Statistics and Applied Probability, 2 edn, Chapman and Hall, London.
-        Xbeta = np.log(np.repeat(np.mean(Y, axis = 0), self.N).reshape((self.N, 1)))
+        Xbeta = np.log(np.repeat(np.mean(Y, axis=0), self.N).reshape((self.N, 1)))
         w = _update_w(Xbeta)
-        Z = _update_Z(Y = Y, Xbeta = Xbeta)
+        Z = _update_Z(Y=Y, Xbeta=Xbeta)
 
         delta = np.ones((X.shape[1]))
 
@@ -107,28 +111,33 @@ class Fepois(Feols):
         Z2 = Z
 
         algorithm = pyhdfe.create(
-            ids=fe,
-            residualize_method='map',
-            drop_singletons=self._drop_singletons
+            ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
         )
 
         for x in range(self.maxiter):
-
             # Step 1: weighted demeaning
-            ZX = np.concatenate([Z2, X2], axis = 1)
+            ZX = np.concatenate([Z2, X2], axis=1)
 
             if fe is not None:
-                if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
-                    print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
-                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[0].tolist()
+                if (
+                    self._drop_singletons == True
+                    and algorithm.singletons != 0
+                    and algorithm.singletons is not None
+                ):
+                    print(
+                        algorithm.singletons,
+                        "columns are dropped due to singleton fixed effects.",
+                    )
+                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[
+                        0
+                    ].tolist()
                     na_index += dropped_singleton_indices
                 ZX_d = algorithm.residualize(ZX, w)
             else:
                 ZX_d = ZX
 
-
-            Z_d = ZX_d[:,0].reshape((self.N, 1))
-            X_d = ZX_d[:,1:]
+            Z_d = ZX_d[:, 0].reshape((self.N, 1))
+            X_d = ZX_d[:, 1:]
 
             WX_d = np.sqrt(w) * X_d
             WZ_d = np.sqrt(w) * Z_d
@@ -141,9 +150,9 @@ class Fepois(Feols):
 
             Xbeta_new = Z - e_new
             w_u = _update_w(Xbeta_new)
-            Z_u = _update_Z(Y = Y, Xbeta = Xbeta_new)
+            Z_u = _update_Z(Y=Y, Xbeta=Xbeta_new)
 
-            stop_iterating = np.sqrt(np.sum( ( delta - delta_new) ** 2 ) ) < self.tol
+            stop_iterating = np.sqrt(np.sum((delta - delta_new) ** 2)) < self.tol
 
             # update
             delta = delta_new
@@ -157,13 +166,15 @@ class Fepois(Feols):
             if stop_iterating:
                 break
             if x == self.maxiter:
-                raise NonConvergenceError("The IRLS algorithm did not converge. Try to increase the maximum number of iterations.")
+                raise NonConvergenceError(
+                    "The IRLS algorithm did not converge. Try to increase the maximum number of iterations."
+                )
 
         self.beta_hat = delta.flatten()
         self.Y_hat_response = np.exp(Xbeta)
         self.Y_hat_link = Xbeta
         self.u_hat = e_new
-        #(Y - self.Y_hat)
+        # (Y - self.Y_hat)
         # needed for the calculation of the vcov
 
         # updat for inference
@@ -180,9 +191,8 @@ class Fepois(Feols):
         self.tZXinv = np.linalg.inv(self.tZX)
         self.Xbeta = Xbeta
 
-
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
-        '''
+        """
         Compute covariance matrices for an estimated regression model.
 
         Parameters
@@ -218,57 +228,60 @@ class Fepois(Feols):
         -------
         None
 
-        '''
+        """
 
         _check_vcov_input(vcov, self._data)
 
-        self.vcov_type, self.vcov_type_detail, self.is_clustered, self.clustervar = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
+        (
+            self.vcov_type,
+            self.vcov_type_detail,
+            self.is_clustered,
+            self.clustervar,
+        ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
 
         # compute vcov
         WX = self.weights * self.X
         bread = np.linalg.inv(self.X.transpose() @ WX)
 
-
-        if self.vcov_type == 'iid':
-
-            raise NotImplementedError("iid inference is not supported for non-linear models.")
+        if self.vcov_type == "iid":
+            raise NotImplementedError(
+                "iid inference is not supported for non-linear models."
+            )
 
             self.ssc = get_ssc(
-                ssc_dict = self._ssc_dict,
-                N = self.N,
-                k = self.k,
-                G = 1,
-                vcov_sign = 1,
-                vcov_type='iid'
+                ssc_dict=self._ssc_dict,
+                N=self.N,
+                k=self.k,
+                G=1,
+                vcov_sign=1,
+                vcov_type="iid",
             )
 
             # only relevant factor for iid in ssc: fixef.K
-            sigma2 = np.sum(self.weights * (self.u_hat ** 2)) / (self.N - 1)
+            sigma2 = np.sum(self.weights * (self.u_hat**2)) / (self.N - 1)
             self.vcov = self.ssc * bread * sigma2
 
-
-        elif self.vcov_type == 'hetero':
-
+        elif self.vcov_type == "hetero":
             if self.vcov_type_detail in ["HC2", "HC3"]:
-                raise NotImplementedError("HC2 and HC3 are not implemented for non-linear models.")
+                raise NotImplementedError(
+                    "HC2 and HC3 are not implemented for non-linear models."
+                )
 
             self.ssc = get_ssc(
-                ssc_dict = self._ssc_dict,
-                N = self.N,
-                k = self.k,
-                G = 1,
-                vcov_sign = 1,
-                vcov_type='hetero'
+                ssc_dict=self._ssc_dict,
+                N=self.N,
+                k=self.k,
+                G=1,
+                vcov_sign=1,
+                vcov_type="hetero",
             )
 
-
-            Sigma = self.u_hat ** 2
+            Sigma = self.u_hat**2
             meat = WX.transpose() @ (Sigma * WX)
 
             self.vcov = self.ssc * bread @ meat @ bread
 
         elif self.vcov_type == "CRV":
-
             cluster_df = self._data[self.clustervar]
             # if there are missings - delete them!
 
@@ -286,16 +299,15 @@ class Fepois(Feols):
             self.G = len(clustid)
 
             self.ssc = get_ssc(
-                ssc_dict = self._ssc_dict,
-                N = self.N,
-                k = self.k,
-                G = self.G,
-                vcov_sign = 1,
-                vcov_type = "CRV"
+                ssc_dict=self._ssc_dict,
+                N=self.N,
+                k=self.k,
+                G=self.G,
+                vcov_sign=1,
+                vcov_type="CRV",
             )
 
             if self.vcov_type_detail == "CRV1":
-
                 k = self.X.shape[1]
                 meat = np.zeros((k, k))
 
@@ -308,14 +320,12 @@ class Fepois(Feols):
                 self.vcov = self.ssc * bread @ meat @ bread
 
             else:
-
                 raise NotImplementedError(
                     "CRV3 inference is not supported for non-linear models."
                 )
 
-    def predict(self, data : Union[None, pd.DataFrame] = None, type = "link") -> np.array:
-
-        '''
+    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.array:
+        """
         Return a flat np.array with predicted values of the regression model.
         Args:
             data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
@@ -324,20 +334,18 @@ class Fepois(Feols):
                 If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
                 If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
 
-        '''
+        """
 
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
         if data is None:
-
-                y_hat = self.Xbeta
+            y_hat = self.Xbeta
 
         else:
-
             fml_linear, _ = self._fml.split("|")
-            _ , X = model_matrix(fml_linear, data)
-            X = X.drop("Intercept", axis = 1)
+            _, X = model_matrix(fml_linear, data)
+            X = X.drop("Intercept", axis=1)
 
             y_hat = X @ self.beta_hat
 
@@ -347,10 +355,8 @@ class Fepois(Feols):
 
         return y_hat.flatten()
 
-
-    def _check_for_separation(self, check = "fe"):
-
-        '''
+    def _check_for_separation(self, check="fe"):
+        """
         Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
         separation checks. Currently, only the "fe" check is implemented.
 
@@ -366,51 +372,50 @@ class Fepois(Feols):
             N (int): number of observations
         Creates the following attributes
             separation_na (np.array): indices of dropped observations due to separation
-        '''
+        """
 
         if check == "fe":
-
             if not self._has_fixef:
-
                 pass
 
             else:
-
                 Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
-                fe_combined = fe.apply(lambda row: '-'.join(row.astype(str)), axis=1)
+                fe_combined = fe.apply(lambda row: "-".join(row.astype(str)), axis=1)
 
                 ctab = pd.crosstab(Y_help, fe_combined)
                 null_column = ctab.xs(0)
                 # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-                sep_candidate = (np.sum(ctab > 0, axis = 0).values == 1) & (null_column > 0).values.flatten()
+                sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+                    null_column > 0
+                ).values.flatten()
                 droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
                 if len(droplist) > 0:
-
                     self.separation_na = np.where(fe_combined.isin(droplist))[0]
                     n_separation_na = len(self.separation_na)
 
-                    self.Y = np.delete(self.Y, self.separation_na, axis = 0)
-                    self.X = np.delete(self.X, self.separation_na, axis = 0)
-                    #self.Z = np.delete(self.Z, self.separation_na, axis = 0)
-                    self.fe = np.delete(self.fe, self.separation_na, axis = 0)
+                    self.Y = np.delete(self.Y, self.separation_na, axis=0)
+                    self.X = np.delete(self.X, self.separation_na, axis=0)
+                    # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                    self.fe = np.delete(self.fe, self.separation_na, axis=0)
 
                     self.N = self.Y.shape[0]
-                    warnings.warn(str(n_separation_na) + " observations removed because of only 0 outcomes.")
+                    warnings.warn(
+                        str(n_separation_na)
+                        + " observations removed because of only 0 outcomes."
+                    )
 
                 else:
-
                     self.separation_na = None
 
         else:
-
-          raise NotImplementedError("Separation check via " + check + " is not implemented yet.")
-
+            raise NotImplementedError(
+                "Separation check via " + check + " is not implemented yet."
+            )
 
 
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
-
     # fe must be np.array of dimension 2 or None
     if fe is not None:
         if not isinstance(fe, np.ndarray):
