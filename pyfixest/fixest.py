@@ -14,13 +14,18 @@ from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
-from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError, NotImplementedError
+from pyfixest.exceptions import (
+    MatrixNotFullRankError,
+    MultiEstNotSupportedError,
+    NotImplementedError,
+)
 
 
 class Fixest:
-
-    def __init__(self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter:float = 25) -> None:
-        '''
+    def __init__(
+        self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter: float = 25
+    ) -> None:
+        """
         A class for fixed effects regression modeling.
 
         Args:
@@ -36,7 +41,7 @@ class Fixest:
             iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-8. Only relevant for non-linear estimation strategies.
             iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
             all_fitted_models: A dictionary of all fitted models. The keys are the formulas used to fit the models.
-        '''
+        """
 
         # assert that data is a pd.DataFrame
         if not isinstance(data, pd.DataFrame):
@@ -57,10 +62,15 @@ class Fixest:
         self._iwls_maxiter = iwls_maxiter
         self.all_fitted_models = dict()
 
-
-    def _prepare_estimation(self, estimation:str, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
-
-        '''
+    def _prepare_estimation(
+        self,
+        estimation: str,
+        fml: str,
+        vcov: Union[None, str, Dict[str, str]] = None,
+        ssc=ssc(),
+        fixef_rm: str = "none",
+    ) -> None:
+        """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
         Mostly deparses the fml string.
 
@@ -91,7 +101,7 @@ class Fixest:
             _splitvar: the split variable if split estimation is used, else None.
             _estimate_split_model: boolean indicating whether the split model is estimated.
             _estimate_full_model: boolean indicating whether the full model is estimated.
-        '''
+        """
 
         self._fml = fml.replace(" ", "")
         self._split = None
@@ -105,12 +115,12 @@ class Fixest:
             self._is_iv = False
 
         # add function argument to these methods for IV
-        fxst_fml.get_new_fml_dict() # fxst_fml._fml_dict_new
+        fxst_fml.get_new_fml_dict()  # fxst_fml._fml_dict_new
 
         self._fml_dict = fxst_fml._fml_dict_new
 
         if self._is_iv:
-            fxst_fml.get_new_fml_dict(iv = True) # fxst_fml._fml_dict_new
+            fxst_fml.get_new_fml_dict(iv=True)  # fxst_fml._fml_dict_new
             self._fml_dict_iv = fxst_fml._fml_dict_new_iv
         else:
             self._fml_dict_iv = None
@@ -128,14 +138,22 @@ class Fixest:
         # currently no fsplit allowed
         fsplit = None
 
-        self._splitvar, _, self._estimate_split_model, self._estimate_full_model = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
+        (
+            self._splitvar,
+            _,
+            self._estimate_split_model,
+            self._estimate_full_model,
+        ) = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
 
-
-
-
-
-    def feols(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none", weights = Optional) -> None:
-        '''
+    def feols(
+        self,
+        fml: str,
+        vcov: Union[None, str, Dict[str, str]] = None,
+        ssc=ssc(),
+        fixef_rm: str = "none",
+        weights=Optional,
+    ) -> None:
+        """
         Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
         Args:
             fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes:
@@ -216,7 +234,7 @@ class Fixest:
             - attributes set via _is_multiple_estimation():
                 is_fixef_multi: boolean indicating whether multiple regression models will be estimated
 
-        '''
+        """
 
         self._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
@@ -234,23 +252,25 @@ class Fixest:
 
         return self
 
-
-    def fepois(self, fml: str, vcov: Union[None, str, Dict[str, str]] = None, ssc=ssc(), fixef_rm: str = "none") -> None:
-
-        '''
+    def fepois(
+        self,
+        fml: str,
+        vcov: Union[None, str, Dict[str, str]] = None,
+        ssc=ssc(),
+        fixef_rm: str = "none",
+    ) -> None:
+        """
         Method for Estimation of Poisson Regression with high-dimensional fixed effects. See `feols()` for more details.
-        '''
+        """
 
         self._prepare_estimation(
-          estimation = "fepois",
-          fml = fml,
-          vcov = vcov,
-          ssc = ssc,
-          fixef_rm = fixef_rm
+            estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm
         )
 
         if self._is_iv:
-            raise NotImplementedError("IV Estimation is not supported for Poisson Regression")
+            raise NotImplementedError(
+                "IV Estimation is not supported for Poisson Regression"
+            )
 
         self._estimate_all_models2(vcov, self._fixef_keys)
 
@@ -259,11 +279,8 @@ class Fixest:
 
         return self
 
-
-
     def _clean_fe(self, data, fval) -> Tuple[pd.DataFrame, List[int]]:
-
-        '''
+        """
         Function that transform and cleans fixed effects.
         Args:
             data: a pd.DataFrame of the data.
@@ -272,29 +289,32 @@ class Fixest:
             fe: a pd.DataFrame of the fixed effects. Note that NaNs are not yet dropped,
                 this is done in `_model_matrix_fixest()`.
             fe_na: a list of columns in fe with NaNs
-        '''
+        """
 
         fval_list = fval.split("+")
 
         # find interacted fixed effects via "^"
-        interacted_fes = [x for x in fval_list if len(x.split('^')) > 1]
+        interacted_fes = [x for x in fval_list if len(x.split("^")) > 1]
 
-        varying_slopes = [x for x in fval_list if len(x.split('/')) > 1]
+        varying_slopes = [x for x in fval_list if len(x.split("/")) > 1]
 
         for x in interacted_fes:
             vars = x.split("^")
-            data[x] = data[vars].apply(lambda x: '^'.join(
-                x.dropna().astype(str)) if x.notna().all() else np.nan, axis=1)
+            data[x] = data[vars].apply(
+                lambda x: "^".join(x.dropna().astype(str))
+                if x.notna().all()
+                else np.nan,
+                axis=1,
+            )
 
         fe = data[fval_list]
         # all fes to factors / categories
 
         if varying_slopes != []:
-
             for x in varying_slopes:
                 mm_vs = model_matrix("-1 + " + x, data)
 
-            fe = pd.concat([fe, mm_vs], axis = 1)
+            fe = pd.concat([fe, mm_vs], axis=1)
 
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
@@ -304,10 +324,8 @@ class Fixest:
 
         return fe, fe_na
 
-
-    def _model_matrix_fixest(self, depvar, covar, fval, weights = None):
-
-        '''
+    def _model_matrix_fixest(self, depvar, covar, fval, weights=None):
+        """
         Create model matrices for fixed effects estimation. Preprocesses the data and then calls
         formulaic.model_matrix() to create the model matrices.
 
@@ -329,8 +347,7 @@ class Fixest:
             has_weights: boolean indicating whether weights are used.
         Attributes:
             icovars: a list of interaction variables. None if no interaction variables via `i()` provided.
-        '''
-
+        """
 
         if fval != "0":
             fe, fe_na = self._clean_fe(self._data, fval)
@@ -386,17 +403,18 @@ class Fixest:
             cols = yxz_names
 
         if self._ivars is not None:
-            self._icovars = [s for s in x_names if s.startswith(
-                self._ivars[0]) and s.endswith(self._ivars[1])]
+            self._icovars = [
+                s
+                for s in x_names
+                if s.startswith(self._ivars[0]) and s.endswith(self._ivars[1])
+            ]
         else:
             self._icovars = None
 
-
         if fe is not None:
-
-            fe = fe.drop(na_index, axis = 0)
+            fe = fe.drop(na_index, axis=0)
             # drop intercept
-            X = X.drop('Intercept', axis = 1)
+            X = X.drop("Intercept", axis=1)
             x_names.remove("Intercept")
             yxz_names.remove("Intercept")
             if self._is_iv:
@@ -420,19 +438,17 @@ class Fixest:
             has_weights = True
             weights = self._data[weights]
             weights = self.weights.drop(na_index, axis=0)
-            weights = weights.values.reshape((N,1))
+            weights = weights.values.reshape((N, 1))
         else:
-            weights = np.ones((N,1))
+            weights = np.ones((N, 1))
             has_weights = False
 
-        na_index_str = ','.join(str(x) for x in na_index)
+        na_index_str = ",".join(str(x) for x in na_index)
 
         return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
 
-
     def _demean_model2(self, Y, X, I, fe, weights, lookup_demeaned_data, na_index_str):
-
-        '''
+        """
         Demeans a single regression model. If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
         Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache
         `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
@@ -450,18 +466,17 @@ class Fixest:
             Yd: a pd.DataFrame of the demeaned dependent variable.
             Xd: a pd.DataFrame of the demeaned covariates
             Id: a pd.DataFrame of the demeaned Instruments. None if no IV.
-        '''
+        """
 
         if I is not None:
-            YXZ = pd.concat([Y, X, I], axis = 1)
+            YXZ = pd.concat([Y, X, I], axis=1)
         else:
-            YXZ = pd.concat([Y, X], axis = 1)
+            YXZ = pd.concat([Y, X], axis=1)
 
         yxz_names = YXZ.columns
         YXZ = YXZ.to_numpy()
 
         if fe is not None:
-
             # check if looked dict has data for na_index
             if lookup_demeaned_data.get(na_index_str) is not None:
                 # get data out of lookup table: list of [algo, data]
@@ -475,24 +490,34 @@ class Fixest:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YXZ_demean_new = algorithm.residualize(var_diff)
-                YXZ_demeaned = np.concatenate([YXZ_demeaned_old, YXZ_demean_new], axis=1)
+                YXZ_demeaned = np.concatenate(
+                    [YXZ_demeaned_old, YXZ_demean_new], axis=1
+                )
                 YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
 
                 YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [var_diff_names]
 
             else:
-
                 # not data demeaned yet for NA combination
                 algorithm = pyhdfe.create(
                     ids=fe,
-                    residualize_method='map',
+                    residualize_method="map",
                     drop_singletons=self._drop_singletons,
-                    #weights=weights
+                    # weights=weights
                 )
 
-                if self._drop_singletons == True and algorithm.singletons != 0 and algorithm.singletons is not None:
-                    print(algorithm.singletons, "columns are dropped due to singleton fixed effects.")
-                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[0].tolist()
+                if (
+                    self._drop_singletons == True
+                    and algorithm.singletons != 0
+                    and algorithm.singletons is not None
+                ):
+                    print(
+                        algorithm.singletons,
+                        "columns are dropped due to singleton fixed effects.",
+                    )
+                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[
+                        0
+                    ].tolist()
                     na_index += dropped_singleton_indices
 
                 YXZ_demeaned = algorithm.residualize(YXZ)
@@ -516,14 +541,10 @@ class Fixest:
         if I is not None:
             Id = YXZ_demeaned[I.columns]
 
-
         return Yd, Xd, Id
 
-
-
     def _estimate_all_models2(self, vcov, fixef_keys):
-
-        '''
+        """
         Estimate multiple regression models.
         Args:
             vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
@@ -534,12 +555,10 @@ class Fixest:
             None
         Attributes:
             all_fitted_models: a dictionary of all fitted models. The keys are the formulas used to fit the models.
-        '''
+        """
 
         if self._estimate_full_model:
-
             for _, fval in enumerate(fixef_keys):
-
                 dict2fe = self._fml_dict.get(fval)
 
                 # dictionary to cache demeaned data with index: na_index_str,
@@ -548,39 +567,45 @@ class Fixest:
 
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 for depvar in dict2fe.keys():
-
                     for _, fml_linear in enumerate(dict2fe.get(depvar)):
-
-
                         if isinstance(fml_linear, list):
                             fml_linear = fml_linear[0]
-
 
                         covar = fml_linear.split("~")[1]
 
                         # get Y, X, Z, fe, NA indices for model
-                        Y, X, I, fe, na_index, _, na_index_str, z_names, weights, has_weights = self._model_matrix_fixest(depvar, covar, fval)
+                        (
+                            Y,
+                            X,
+                            I,
+                            fe,
+                            na_index,
+                            _,
+                            na_index_str,
+                            z_names,
+                            weights,
+                            has_weights,
+                        ) = self._model_matrix_fixest(depvar, covar, fval)
 
                         y_names = Y.columns.tolist()
                         x_names = X.columns.tolist()
 
                         fml = get_fml(depvar, covar, fval)
 
-
                         if self._method == "feols":
-
                             # demean Y, X, Z, if not already done in previous estimation
-                            Yd, Xd, Id = self._demean_model2(Y, X, I, fe, weights, lookup_demeaned_data, na_index_str)
+                            Yd, Xd, Id = self._demean_model2(
+                                Y, X, I, fe, weights, lookup_demeaned_data, na_index_str
+                            )
 
                             if self._is_iv:
-                                Zd = pd.concat([Xd, Id], axis = 1)[z_names]
+                                Zd = pd.concat([Xd, Id], axis=1)[z_names]
                             else:
                                 Zd = Xd
 
                             Yd = Yd.to_numpy()
                             Xd = Xd.to_numpy()
                             Zd = Zd.to_numpy()
-
 
                             if has_weights:
                                 w = np.sqrt(weights.to_numpy())
@@ -592,7 +617,7 @@ class Fixest:
                             _multicollinearity_checks(Xd, Zd, self._ivars, fml)
 
                             # initiate OLS class
-                            FIT = Feols(Y = Yd, X = Xd, Z = Zd, weights = weights)
+                            FIT = Feols(Y=Yd, X=Xd, Z=Zd, weights=weights)
                             if fe is not None:
                                 self._has_fixef = True
                                 self.fixef_vars = fval
@@ -602,17 +627,15 @@ class Fixest:
 
                             # estimation
                             if self._is_iv:
-                                FIT.get_fit(estimator = "2sls")
+                                FIT.get_fit(estimator="2sls")
                                 FIT._is_iv = True
                             else:
-                                FIT.get_fit(estimator = "ols")
+                                FIT.get_fit(estimator="ols")
                                 FIT._is_iv = False
 
-
                         elif self._method == "fepois":
-
                             # check for separation and drop separated variables
-                            #Y, X, fe, na_index = self._separation()
+                            # Y, X, fe, na_index = self._separation()
 
                             Y = Y.to_numpy()
                             X = X.to_numpy()
@@ -626,24 +649,22 @@ class Fixest:
 
                             # initiate OLS class
                             FIT = Fepois(
-                                Y = Y,
-                                X = X,
-                                fe = fe,
-                                weights = weights,
-                                drop_singletons = self._drop_singletons,
-                                maxiter = self._iwls_maxiter,
-                                tol = self._iwls_tol
+                                Y=Y,
+                                X=X,
+                                fe=fe,
+                                weights=weights,
+                                drop_singletons=self._drop_singletons,
+                                maxiter=self._iwls_maxiter,
+                                tol=self._iwls_tol,
                             )
 
                             FIT._is_iv = False
                             FIT.get_fit()
 
                         else:
-
                             raise ValueError(
                                 "Estimation method not supported. Please use 'feols' or 'fepois'."
                             )
-
 
                         # some bookkeeping
                         FIT._fml = fml
@@ -658,8 +679,7 @@ class Fixest:
                         else:
                             FIT._has_fixef = False
                             FIT._fixef = None
-                        #FEOLS.split_log = x
-
+                        # FEOLS.split_log = x
 
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
@@ -679,11 +699,8 @@ class Fixest:
                         # store fitted model
                         self.all_fitted_models[fml] = FIT
 
-
-
     def _is_multiple_estimation(self):
-
-        '''
+        """
         helper method to check if multiple regression models will be estimated
         Args:
             None
@@ -691,7 +708,7 @@ class Fixest:
             None
         Attributes:
             is_fixef_multi: boolean indicating whether multiple regression models will be estimated
-        '''
+        """
 
         self._is_fixef_multi = False
         if len(self._fml_dict.keys()) > 1:
@@ -701,9 +718,8 @@ class Fixest:
             if len(self._fml_dict[first_key]) > 1:
                 self._is_fixef_multi = True
 
-
     def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
-        '''
+        """
         Update regression inference "on the fly".
         By calling vcov() on a "Fixest" object, all inference procedures applied
         to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
@@ -714,10 +730,9 @@ class Fixest:
                 or {"CRV3":"clustervar"} for CRV3 inference.
         Returns:
             None
-        '''
+        """
 
         for model in list(self.all_fitted_models.keys()):
-
             fxst = self.all_fitted_models[model]
             fxst._vcov_log = vcov
 
@@ -727,7 +742,7 @@ class Fixest:
         return self
 
     def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
-        '''
+        """
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
         Args:
             type : str, optional
@@ -746,25 +761,23 @@ class Fixest:
                 - ci_u: the upper bound of the confidence interval
                 If `type` is set to "markdown", the resulting DataFrame will be returned as a
                 markdown-formatted string with three decimal places.
-        '''
+        """
 
         res = []
         for x in list(self.all_fitted_models.keys()):
-
             fxst = self.all_fitted_models[x]
             df = fxst.tidy().reset_index()
             df["fml"] = fxst._fml
             res.append(df)
 
-
-        res = pd.concat(res, axis=0).set_index(['fml', 'coefnames'])
+        res = pd.concat(res, axis=0).set_index(["fml", "coefnames"])
         if type == "markdown":
             return res.to_markdown(floatfmt=".3f")
         else:
             return res
 
     def summary(self, digits: int = 3) -> None:
-        '''
+        """
         Prints a summary of the feols() estimation results for each estimated model.
         For each model, the method prints a header indicating the fixed-effects and the
         dependent variable, followed by a table of coefficient estimates with standard
@@ -773,10 +786,9 @@ class Fixest:
             digits: int, optional. The number of decimal places to round the summary statistics to. Default is 2.
         Returns:
             None
-        '''
+        """
 
         for x in list(self.all_fitted_models.keys()):
-
             split = x.split("|")
             if len(split) > 1:
                 fe = split[1]
@@ -795,75 +807,82 @@ class Fixest:
             else:
                 estimation_method = "Poisson"
 
-            print('###')
-            print('')
-            print('Model: ', estimation_method)
-            print('Dep. var.: ', depvar)
+            print("###")
+            print("")
+            print("Model: ", estimation_method)
+            print("Dep. var.: ", depvar)
             if fe is not None:
-                print('Fixed effects: ', fe)
+                print("Fixed effects: ", fe)
             # if fxst.split_log is not None:
             #    print('Split. var: ', self._split + ":" + fxst.split_log)
-            print('Inference: ', fxst._vcov_log)
-            print('Observations: ', fxst.N)
-            print('')
+            print("Inference: ", fxst._vcov_log)
+            print("Observations: ", fxst.N)
+            print("")
             print(df.to_string(index=True))
-            print('---')
+            print("---")
             if fxst._method == "feols":
                 if not fxst._is_iv:
-                    print(f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}")
+                    print(
+                        f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}"
+                    )
 
     def coef(self) -> pd.DataFrame:
-        '''
+        """
         Obtain the coefficients of the fitted models.
         Returns:
             A pd.DataFrame with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
-        '''
+        """
         return self.tidy()["Estimate"]
 
-    def se(self)-> pd.DataFrame:
-        '''
+    def se(self) -> pd.DataFrame:
+        """
         Obtain the standard errors of the fitted models.
 
         Returns:
             A pd.DataFrame with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
 
-        '''
+        """
         return self.tidy()["Std. Error"]
 
-
-    def tstat(self)-> pd.DataFrame:
-        '''
+    def tstat(self) -> pd.DataFrame:
+        """
         Obtain the t-statistics of the fitted models.
 
          Returns:
             A pd.DataFrame with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
 
-        '''
+        """
         return self.tidy()["t value"]
 
     def pvalue(self) -> pd.DataFrame:
-        '''
+        """
         Obtain the p-values of the fitted models.
 
         Returns:
             A pd.DataFrame with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
 
-        '''
+        """
         return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.DataFrame:
-
-        ''''
+        """'
         Obtain confidence intervals for the fitted models.
 
         Returns:
             A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
-        '''
+        """
 
         return self.tidy()[["ci_l", "ci_u"]]
 
-    def iplot(self, alpha: float = 0.05, figsize: tuple = (10, 10), yintercept: Union[int, str, None] = None, xintercept: Union[int, str, None] = None, rotate_xticks: int = 0) -> None:
-        '''
+    def iplot(
+        self,
+        alpha: float = 0.05,
+        figsize: tuple = (10, 10),
+        yintercept: Union[int, str, None] = None,
+        xintercept: Union[int, str, None] = None,
+        rotate_xticks: int = 0,
+    ) -> None:
+        """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
         Args:
             alpha: float, optional. The significance level for the confidence intervals. Default is 0.05.
@@ -872,7 +891,7 @@ class Fixest:
             xintercept: int or str (for a categorical y axis). The value at which to draw a vertical line.
         Returns:
             None
-        '''
+        """
 
         ivars = self._icovars
 
@@ -897,11 +916,19 @@ class Fixest:
             yintercept=yintercept,
             xintercept=xintercept,
             df=df,
-            is_iplot=True
+            is_iplot=True,
         )
 
-    def coefplot(self, alpha: float = 0.05, figsize: tuple = (5, 2), yintercept: int = 0, figtitle: str = None, figtext: str = None, rotate_xticks: int = 0) -> None:
-        '''
+    def coefplot(
+        self,
+        alpha: float = 0.05,
+        figsize: tuple = (5, 2),
+        yintercept: int = 0,
+        figtitle: str = None,
+        figtext: str = None,
+        rotate_xticks: int = 0,
+    ) -> None:
+        """
         Plot estimation results. The plot() method is only defined for single regressions.
         Args:
             alpha (float): the significance level for the confidence intervals. Default is 0.05.
@@ -911,7 +938,7 @@ class Fixest:
             figtext (str): the text at the bottom of the figure. Default is None.
         Returns:
             None
-        '''
+        """
 
         df = self.tidy().reset_index()
         models = df.fml.unique()
@@ -924,12 +951,21 @@ class Fixest:
             xintercept=None,
             df=df,
             is_iplot=False,
-            rotate_xticks=rotate_xticks
+            rotate_xticks=rotate_xticks,
         )
 
-    def wildboottest(self, B, param: Union[str, None] = None, weights_type: str = 'rademacher', impose_null: bool = True, bootstrap_type: str = '11', seed: Union[str, None] = None, adj: bool = True, cluster_adj: bool = True) -> pd.DataFrame:
-
-        '''
+    def wildboottest(
+        self,
+        B,
+        param: Union[str, None] = None,
+        weights_type: str = "rademacher",
+        impose_null: bool = True,
+        bootstrap_type: str = "11",
+        seed: Union[str, None] = None,
+        adj: bool = True,
+        cluster_adj: bool = True,
+    ) -> pd.DataFrame:
+        """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
 
         Args:
@@ -946,50 +982,50 @@ class Fixest:
 
         Returns:
             A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated statistic derives from.
-        '''
-
+        """
 
         res = []
         for x in list(self.all_fitted_models.keys()):
-
             fxst = self.all_fitted_models[x]
 
-            if hasattr(fxst, 'clustervar'):
+            if hasattr(fxst, "clustervar"):
                 cluster = fxst.clustervar
             else:
                 cluster = None
 
-            boot_res = fxst.get_wildboottest(B, cluster, param,  weights_type, impose_null, bootstrap_type, seed, adj, cluster_adj)
+            boot_res = fxst.get_wildboottest(
+                B,
+                cluster,
+                param,
+                weights_type,
+                impose_null,
+                bootstrap_type,
+                seed,
+                adj,
+                cluster_adj,
+            )
 
             pvalue = boot_res["pvalue"]
             tstat = boot_res["statistic"]
 
-
             res.append(
                 pd.Series(
-                    {
-                        'fml': x,
-                        'param':param,
-                        't value': tstat,
-                        'Pr(>|t|)': pvalue
-                    }
+                    {"fml": x, "param": param, "t value": tstat, "Pr(>|t|)": pvalue}
                 )
             )
 
-        res = pd.concat(res, axis=1).T.set_index('fml')
+        res = pd.concat(res, axis=1).T.set_index("fml")
 
         return res
 
-
     def fetch_model(self, i: Union[int, str]) -> Union[Feols, Fepois]:
-
-        '''
+        """
         Utility method to fetch a model of class Feols from the Fixest class.
         Args:
             i (int or str): The index of the model to fetch.
         Returns:
             A Feols object.
-        '''
+        """
 
         if isinstance(i, str):
             i = int(i)
@@ -1002,37 +1038,42 @@ class Fixest:
         model = self.all_fitted_models[key]
         return model
 
-def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: float, yintercept: Optional[int] = None,
-              xintercept: Optional[int] = None, is_iplot: bool = False,
-              rotate_xticks: float = 0) -> None:
+
+def _coefplot(
+    models: List,
+    df: pd.DataFrame,
+    figsize: Tuple[int, int],
+    alpha: float,
+    yintercept: Optional[int] = None,
+    xintercept: Optional[int] = None,
+    is_iplot: bool = False,
+    rotate_xticks: float = 0,
+) -> None:
     """
-        Plot model coefficients with confidence intervals.
-        Args:
-            models (list): A list of fitted models indices.
-            figsize (tuple): The size of the figure.
-            alpha (float): The significance level for the confidence intervals.
-            yintercept (int or None): The value at which to draw a horizontal line on the plot.
-            xintercept (int or None): The value at which to draw a vertical line on the plot.
-            df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-            is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
-            rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-        Returns:
-        None
+    Plot model coefficients with confidence intervals.
+    Args:
+        models (list): A list of fitted models indices.
+        figsize (tuple): The size of the figure.
+        alpha (float): The significance level for the confidence intervals.
+        yintercept (int or None): The value at which to draw a horizontal line on the plot.
+        xintercept (int or None): The value at which to draw a vertical line on the plot.
+        df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
+        is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
+        rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    Returns:
+    None
     """
 
     if len(models) > 1:
-
-        fig, ax = plt.subplots(len(models), gridspec_kw={
-                               'hspace': 0.5}, figsize=figsize)
+        fig, ax = plt.subplots(
+            len(models), gridspec_kw={"hspace": 0.5}, figsize=figsize
+        )
 
         for x, model in enumerate(models):
-
             df_model = df.reset_index().set_index("fml").xs(model)
             coef = df_model["Estimate"]
-            conf_l = coef - \
-                df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            conf_u = coef + \
-                df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
+            conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
+            conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
             coefnames = df_model["coefnames"].values.tolist()
 
             # could be moved out of the for loop, as the same ivars for all
@@ -1040,28 +1081,25 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
             if is_iplot == True:
                 fig.suptitle("iplot")
-                coefnames = [(i) for string in coefnames for i in re.findall(
-                    r'\[T\.([\d\.\-]+)\]', string)]
+                coefnames = [
+                    (i)
+                    for string in coefnames
+                    for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
+                ]
 
             ax[x].scatter(coefnames, coef, color="b", alpha=0.8)
-            ax[x].scatter(coefnames, conf_u, color="b",
-                          alpha=0.8, marker="_", s=100)
-            ax[x].scatter(coefnames, conf_l, color="b",
-                          alpha=0.8, marker="_", s=100)
-            ax[x].vlines(coefnames, ymin=conf_l,
-                         ymax=conf_u, color="b", alpha=0.8)
+            ax[x].scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
+            ax[x].scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
+            ax[x].vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
             if yintercept is not None:
-                ax[x].axhline(yintercept, color='red',
-                              linestyle='--', alpha=0.5)
+                ax[x].axhline(yintercept, color="red", linestyle="--", alpha=0.5)
             if xintercept is not None:
-                ax[x].axvline(xintercept, color='red',
-                              linestyle='--', alpha=0.5)
-            ax[x].set_ylabel('Coefficients')
+                ax[x].axvline(xintercept, color="red", linestyle="--", alpha=0.5)
+            ax[x].set_ylabel("Coefficients")
             ax[x].set_title(model)
-            ax[x].tick_params(axis='x', rotation=rotate_xticks)
+            ax[x].tick_params(axis="x", rotation=rotate_xticks)
 
     else:
-
         fig, ax = plt.subplots(figsize=figsize)
 
         model = models[0]
@@ -1075,48 +1113,60 @@ def _coefplot(models: List, df: pd.DataFrame, figsize: Tuple[int, int], alpha: f
 
         if is_iplot == True:
             fig.suptitle("iplot")
-            coefnames = [(i) for string in coefnames for i in re.findall(
-                r'\[T\.([\d\.\-]+)\]', string)]
+            coefnames = [
+                (i)
+                for string in coefnames
+                for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
+            ]
 
         ax.scatter(coefnames, coef, color="b", alpha=0.8)
         ax.scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
         ax.scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
         ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
         if yintercept is not None:
-            ax.axhline(yintercept, color='red', linestyle='--', alpha=0.5)
+            ax.axhline(yintercept, color="red", linestyle="--", alpha=0.5)
         if xintercept is not None:
-            ax.axvline(xintercept, color='red', linestyle='--', alpha=0.5)
-        ax.set_ylabel('Coefficients')
+            ax.axvline(xintercept, color="red", linestyle="--", alpha=0.5)
+        ax.set_ylabel("Coefficients")
         ax.set_title(model)
-        ax.tick_params(axis='x', rotation=rotate_xticks)
+        ax.tick_params(axis="x", rotation=rotate_xticks)
 
         plt.show()
         plt.close()
 
-def _check_ivars(data, ivars):
 
-    '''
+def _check_ivars(data, ivars):
+    """
     Checks if the variables in the i() syntax are of the correct type.
     Args:
         data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
         ivars (list): The list of variables specified in the i() syntax.
     Returns:
         None
-    '''
+    """
 
     i0_type = data[ivars[0]].dtype
     i1_type = data[ivars[1]].dtype
-    if not i0_type in ['category', "O"]:
-        raise ValueError("Column " + ivars[0] + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type " +
-                        i0_type.name + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.")
-        if not i1_type in ['int64', 'float64', 'int32', 'float32']:
-            raise ValueError("Column " + ivars[1] + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type " +
-                            i1_type.name + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'.")
+    if not i0_type in ["category", "O"]:
+        raise ValueError(
+            "Column "
+            + ivars[0]
+            + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type "
+            + i0_type.name
+            + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'."
+        )
+        if not i1_type in ["int64", "float64", "int32", "float32"]:
+            raise ValueError(
+                "Column "
+                + ivars[1]
+                + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type "
+                + i1_type.name
+                + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'."
+            )
 
 
 def _prepare_split_estimation(split, fsplit, data, fml_dict):
-
-    '''
+    """
     Cleans the input for the split estimation.
     Checks if the split variables are of the correct type.
 
@@ -1130,7 +1180,7 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
         splitvar_name (str): The name of the split variable. Either equal to split or fsplit.
         estimate_split_model (bool): Whether to estimate the split model.
         estimate_full_model (bool): Whether to estimate the full model.
-    '''
+    """
 
     if split is not None:
         if fsplit is not None:
@@ -1153,18 +1203,13 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
         estimate_split_model = False
         estimate_full_model = True
 
-
     if splitvar is not None:
         split_categories = np.unique(splitvar)
         if splitvar_name not in data.columns:
-            raise ValueError(
-                "Split variable " +
-                splitvar + " not found in data."
-                )
+            raise ValueError("Split variable " + splitvar + " not found in data.")
         if splitvar_name in fml_dict.keys():
             raise ValueError(
-                "Split variable " + splitvar +
-                " cannot be a fixed effect variable."
+                "Split variable " + splitvar + " cannot be a fixed effect variable."
             )
         if splitvar.dtype.name != "category":
             splitvar = pd.Categorical(splitvar)
@@ -1173,7 +1218,6 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
 
 
 def get_fml(depvar, covar, fval):
-
     if fval != "0":
         fml = depvar + " ~ " + covar + " | " + fval
     else:
@@ -1183,8 +1227,7 @@ def get_fml(depvar, covar, fval):
 
 
 def _multicollinearity_checks(X, Z, ivars, fml2):
-
-    '''
+    """
     Checks for multicollinearity in the design matrices X and Z.
     Args:
         X (numpy.ndarray): The design matrix X.
@@ -1192,38 +1235,37 @@ def _multicollinearity_checks(X, Z, ivars, fml2):
         ivars (list): The list of variables specified in the i() syntax.
         fml2 (str): The formula string.
 
-    '''
+    """
 
     if np.linalg.matrix_rank(X) < min(X.shape):
         if ivars is not None:
             raise MatrixNotFullRankError(
                 'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
-                'The model is skipped.'
-                'As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?'
-                )
+                "The model is skipped."
+                "As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?"
+            )
         else:
             raise MatrixNotFullRankError(
-                    'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
-                    'The model is skipped. '
-                )
+                'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
+                "The model is skipped. "
+            )
 
     if np.linalg.matrix_rank(Z) < min(Z.shape):
         if ivars is not None:
             raise MatrixNotFullRankError(
                 'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
-                'The model is skipped.'
+                "The model is skipped."
                 'As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?"'
-                )
+            )
         else:
             raise MatrixNotFullRankError(
-                    'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
-                    'The model is skipped.'
-                )
+                'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
+                "The model is skipped."
+            )
+
 
 def _get_vcov_type(vcov, fval):
-
-
-    '''
+    """
     Passes the specified vcov type. If no vcov type specified, sets the default vcov type as iid if no fixed effect
     is included in the model, and CRV1 clustered by the first fixed effect if a fixed effect is included in the model.
     Args:
@@ -1231,7 +1273,7 @@ def _get_vcov_type(vcov, fval):
         fval (str): The specified fixed effects. (i.e. "X1+X2")
     Returns:
         vcov_type (str): The specified vcov type.
-    '''
+    """
 
     if vcov is None:
         # iid if no fixed effects
@@ -1248,8 +1290,7 @@ def _get_vcov_type(vcov, fval):
 
 
 def _clean_ivars(ivars, data):
-
-    '''
+    """
     Clean variables interacted via i(X1, X2, ref = a) syntax.
 
     Args:
@@ -1258,10 +1299,9 @@ def _clean_ivars(ivars, data):
     Returns:
         ivars (list): The list of variables specified in the i() syntax minus the reference level
         drop_ref (str): The dropped reference level specified in the i() syntax. None if no level is dropped
-    '''
+    """
 
     if ivars is not None:
-
         if list(ivars.keys())[0] is not None:
             ref = list(ivars.keys())[0]
             ivars = ivars[ref]
@@ -1279,15 +1319,15 @@ def _clean_ivars(ivars, data):
 
     return ivars, drop_ref
 
-def _drop_singletons(fixef_rm):
 
-    '''
+def _drop_singletons(fixef_rm):
+    """
     Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
     Args:
         fixef_rm (str): The fixef_rm argument.
     Returns:
         drop_singletons (bool): Whether to drop singletons.
-    '''
+    """
 
     if fixef_rm == "singleton":
         return True
@@ -1295,20 +1335,17 @@ def _drop_singletons(fixef_rm):
         return False
 
 
-
 def _find_untransformed_depvar(transformed_depvar):
-
-    '''
+    """
     Args:
         transformed_depvar (str): The transformed depvar
 
     find untransformed depvar in a formula
     i.e. if "a" is transormed to "log(a)", then "a" is returned
-    '''
+    """
 
-    match = re.search(r'\((.*?)\)', transformed_depvar)
+    match = re.search(r"\((.*?)\)", transformed_depvar)
     if match:
         return match.group(1)
     else:
         return transformed_depvar
-

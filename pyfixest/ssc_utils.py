@@ -1,7 +1,8 @@
 import numpy as np
 
+
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
-    '''
+    """
     Set the small sample correction factor applied in `get_ssc()`
     Parameters:
         adj: bool, default True
@@ -19,7 +20,7 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
             all summands are multiplied with the same value, min(G) / (min(G) - 1)
     Returns:
         A dictionary with encoded info on how to form small sample corrections
-    '''
+    """
 
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
@@ -30,8 +31,12 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
     if cluster_df not in ["conventional", "min"]:
         raise ValueError("cluster_df must be 'conventional' or 'min'.")
 
-    res = {'adj': adj, 'fixef_k': fixef_k,
-           'cluster_adj': cluster_adj, 'cluster_df': cluster_df}
+    res = {
+        "adj": adj,
+        "fixef_k": fixef_k,
+        "cluster_adj": cluster_adj,
+        "cluster_df": cluster_df,
+    }
 
     return res
 
@@ -52,21 +57,21 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
     - A small sample adjustment factor
     """
 
-    adj = ssc_dict['adj']
-    fixef_k = ssc_dict['fixef_k']
-    cluster_adj = ssc_dict['cluster_adj']
-    cluster_df = ssc_dict['cluster_df']
+    adj = ssc_dict["adj"]
+    fixef_k = ssc_dict["fixef_k"]
+    cluster_adj = ssc_dict["cluster_adj"]
+    cluster_df = ssc_dict["cluster_df"]
 
     cluster_adj_value = 1
     adj_value = 1
 
     if vcov_type == "hetero":
         if adj:
-            #adj_value = (N - 1) / (N - k)
-            adj_value = N / (N-k)
+            # adj_value = (N - 1) / (N - k)
+            adj_value = N / (N - k)
         else:
-            #adj_value = 1
-            adj_value = N / (N-1)
+            # adj_value = 1
+            adj_value = N / (N - 1)
     elif vcov_type in ["iid", "CRV"]:
         if adj:
             adj_value = (N - 1) / (N - k)
@@ -76,9 +81,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
         raise ValueError("vcov_type must be either iid, hetero or CRV.")
 
     if vcov_type == "CRV":
-
         if cluster_adj:
-            if cluster_df == 'conventional':
+            if cluster_df == "conventional":
                 cluster_adj_value = G / (G - 1)
             elif cluster_df == "min":
                 G = np.min(G)
