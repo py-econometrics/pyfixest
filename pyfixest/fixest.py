@@ -311,11 +311,12 @@ class Fixest:
         fe = data[fval_list]
 
         for x in fe.columns:
-            if len(np.unique(fe[x])) == fe.shape[0]:
-                raise ValueError(
-                    f"Fixed effect {x} has only unique values. "
-                    "This is not allowed."
-                )
+            if fe[x].dtype != "category":
+                if len(fe[x].unique()) == fe.shape[0]:
+                    raise ValueError(
+                        f"Fixed effect {x} has only unique values. "
+                        "This is not allowed."
+                    )
 
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
