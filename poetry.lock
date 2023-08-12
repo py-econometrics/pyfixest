@@ -1780,7 +1780,7 @@ tests = ["pytest", "pytest-xdist"]
 type = "git"
 url = "https://github.com/s3alfisc/pyhdfe.git"
 reference = "HEAD"
-resolved_reference = "650a471b9b1fc37c33ff2739dd028bb6a5364208"
+resolved_reference = "f43f6934ea94b716474cb6f93e6b1b154466c456"
 
 [[package]]
 name = "pymdown-extensions"
@@ -2541,14 +2541,14 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "virtualenv"
-version = "20.24.2"
+version = "20.24.3"
 description = "Virtual Python Environment builder"
 category = "main"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "virtualenv-20.24.2-py3-none-any.whl", hash = "sha256:43a3052be36080548bdee0b42919c88072037d50d56c28bd3f853cbe92b953ff"},
-    {file = "virtualenv-20.24.2.tar.gz", hash = "sha256:fd8a78f46f6b99a67b7ec5cf73f92357891a7b3a40fd97637c27f854aae3b9e0"},
+    {file = "virtualenv-20.24.3-py3-none-any.whl", hash = "sha256:95a6e9398b4967fbcb5fef2acec5efaf9aa4972049d9ae41f95e0972a683fd02"},
+    {file = "virtualenv-20.24.3.tar.gz", hash = "sha256:e5c3b4ce817b0b328af041506a2a299418c98747c4b1e68cb7527e74ced23efc"},
 ]
 
 [package.dependencies]
