@@ -33,9 +33,10 @@ fixest.summary()
 # Inference:  {'CRV1': 'X4'}
 # Observations:  1000
 #
-#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
-#      0.87        0.04    23.78       0.0   0.8  0.95
-# ---
+# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | X1          |      0.874 |        0.037 |    23.780 |      0.000 |  0.802 |  0.946 |
+#
 ```
 
 Note that `v0.8.4` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
@@ -53,64 +54,79 @@ data = get_data()
 
 fixest = pf.Fixest(data = data)
 # OLS Estimation
-fixest.feols("Y~X1 | csw0(X2, X3)", vcov = {'CRV1':'group_id'})
+fixest.feols("Y~X1 | csw0(f1, f2)", vcov = {'CRV1':'group_id'})
 fixest.summary()
 
 # ###
-# #
+#
 # Model:  OLS
 # Dep. var.:  Y
 # Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
+# Observations:  998
 #
-#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
-#     -3.94        0.22   -17.80      0.00 -4.40 -3.48
-#     -0.27        0.17    -1.65      0.11 -0.61  0.07
+# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | Intercept   |      2.204 |        0.054 |    40.495 |      0.000 |  2.096 |  2.312 |
+# | X1          |      0.351 |        0.063 |     5.595 |      0.000 |  0.227 |  0.476 |
 # ---
-# RMSE: 8.26  Adj. R2: 0.0  Adj. R2 Within: 0.0
+#   RMSE: 1.751  Adj. R2: 0.037  Adj. R2 Within: 0.037
 # ###
 #
 # Model:  OLS
 # Dep. var.:  Y
-# Fixed effects:  X2
+# Fixed effects:  f1
 # Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
+# Observations:  997
 #
-#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
-#     -0.26        0.16    -1.59      0.13  -0.6  0.08
+# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | X1          |      0.326 |        0.048 |     6.756 |      0.000 |  0.230 |  0.422 |
 # ---
-# RMSE: 8.25  Adj. R2: 0.0  Adj. R2 Within: 0.0
-# ###
-# ...
-#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
-#      0.04        0.11     0.37      0.71 -0.18  0.26
+#   ...
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | X1          |      0.355 |        0.039 |     9.044 |      0.000 |  0.277 |  0.433 |
 # ---
-# RMSE: 5.5  Adj. R2: -0.0  Adj. R2 Within: -0.0
+# RMSE: 1.183  Adj. R2: 0.078  Adj. R2 Within: 0.078
 ```
 
 `PyFixest` also supports IV (Instrumental Variable) Estimation:
 
 ```python
 fixest = pf.Fixest(data = data)
-fixest.feols("Y~ 1 | X2 + X3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
+fixest.feols("Y~ 1 | f2 + f3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
 fixest.summary()
 
 # ###
 #
 # Model:  IV
 # Dep. var.:  Y
-# Fixed effects:  X2+X3
+# Fixed effects:  f2+f3
 # Inference:  {'CRV1': 'group_id'}
-# Observations:  1998
+# Observations:  998
 #
-#  Estimate  Std. Error  t value  Pr(>|t|)  ci_l  ci_u
-#      0.04         0.2      0.2      0.84 -0.38  0.46
+# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | X1          |      0.435 |        0.063 |     6.894 |      0.000 |  0.309 |  0.560 |
+# ---
 ```
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
-# 		            Estimate	Std. Error	t value	    Pr(>|t|)	   ci_l	     ci_u
-# fml	coefnames
-# Y~X1|X2+X3	X1	0.041142	0.167284	0.245939	0.805755	-0.286927	0.36921
+fixest.vcov("hetero")
+
+###
+
+# ###
+#
+# Model:  IV
+# Dep. var.:  Y
+# Fixed effects:  f2+f3
+# Inference:  hetero
+# Observations:  998
+#
+# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
+# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
+# | X1          |      0.435 |        0.065 |     6.690 |      0.000 |  0.307 |  0.562 |
+# ---
 ```

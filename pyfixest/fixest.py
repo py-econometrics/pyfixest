@@ -750,13 +750,11 @@ class Fixest:
 
         return self
 
-    def tidy(self, type: Optional[str] = None) -> Union[pd.DataFrame, str]:
+    def tidy(self, digits = 3) -> Union[pd.DataFrame, str]:
         """
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
         Args:
-            type : str, optional
-                The type of output format to use. If set to "markdown", the resulting DataFrame
-                will be returned in a markdown format with three decimal places. Default is None.
+            digits: the number of digits to display in the resulting DataFrame
         Returns:
             pd.DataFrame or str
                 A tidy DataFrame with the following columns:
@@ -780,10 +778,8 @@ class Fixest:
             res.append(df)
 
         res = pd.concat(res, axis=0).set_index(["fml", "coefnames"])
-        if type == "markdown":
-            return res.to_markdown(floatfmt=".3f")
-        else:
-            return res
+
+        return np.round(res, digits)
 
     def summary(self, digits: int = 3) -> None:
         """
