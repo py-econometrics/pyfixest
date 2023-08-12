@@ -827,7 +827,7 @@ class Fixest:
             print("Inference: ", fxst._vcov_log)
             print("Observations: ", fxst.N)
             print("")
-            print(df.to_markdown(floatfmt="." + digits + "f"))
+            print(df.to_markdown(floatfmt="." + str(digits) + "f"))
             print("---")
             if fxst._method == "feols":
                 if not fxst._is_iv:
