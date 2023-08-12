@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.8.5.0"
+version = "0.8.6.0"
 
 description = "Experimental draft package for high dimensional fixed effect estimation. Supports OLS and IV estimation."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
@@ -23,9 +23,11 @@ wildboottest = { version = ">=0.1.10", optional = true, python = "<3.11" }
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[poetry-extras]
 mkdocs-material = "^8.5.10"
 mkdocstrings = "^0.19.0"
+mkdocs-jupyter = "^0.20.0"
 
 [tool.poetry.group.dev.dependencies]
 mkdocstrings-python-legacy = "^0.2.3"
-mkdocstrings = {version = "^0.19.0", extras = ["python"], optional = true }

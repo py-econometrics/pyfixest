@@ -4,11 +4,11 @@ from pyfixest.exceptions import (
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
     UnderDeterminedIVError,
-    UnsupportedMultipleEstimationSyntax
+    UnsupportedMultipleEstimationSyntax,
 )
 
-class FixestFormulaParser:
 
+class FixestFormulaParser:
 
     """
     A class for parsing a formula string into its individual components.
@@ -28,7 +28,6 @@ class FixestFormulaParser:
     """
 
     def __init__(self, fml):
-
         """
         Constructor method that initializes the object with a given formula.
 
@@ -40,13 +39,13 @@ class FixestFormulaParser:
 
         """
 
-        #fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
+        # fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
 
         # Clean up the formula string
         fml = "".join(fml.split())
 
         # Split the formula string into its components
-        fml_split = fml.split('|')
+        fml_split = fml.split("|")
         depvars, covars = fml_split[0].split("~")
 
         if len(fml_split) == 1:
@@ -59,15 +58,18 @@ class FixestFormulaParser:
                 endogvars, instruments = fml_split[1].split("~")
                 # add endogeneous variable to "covars" - yes, bad naming
 
-
                 # check if any of the instruments or endogeneous variables are also specified
                 # as covariates
-                if any(element in covars.split("+") for element in endogvars.split("+")):
+                if any(
+                    element in covars.split("+") for element in endogvars.split("+")
+                ):
                     raise EndogVarsAsCovarsError(
                         "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
-                        )
+                    )
 
-                if any(element in covars.split("+") for element in instruments.split("+")):
+                if any(
+                    element in covars.split("+") for element in instruments.split("+")
+                ):
                     raise InstrumentsAsCovarsError(
                         "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
                     )
@@ -75,7 +77,7 @@ class FixestFormulaParser:
                 if covars == "1":
                     covars = endogvars
                 else:
-                    covars = endogvars + "+" +  covars
+                    covars = endogvars + "+" + covars
             else:
                 fevars = fml_split[1]
                 endogvars = None
@@ -100,7 +102,7 @@ class FixestFormulaParser:
             if covars == "1":
                 covars = endogvars
             else:
-                covars = endogvars + "+" +  covars
+                covars = endogvars + "+" + covars
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
@@ -123,7 +125,9 @@ class FixestFormulaParser:
             self._is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
             first_stage_covars_list = covars.split("+")
-            first_stage_covars_list[first_stage_covars_list.index(endogvars)] = instruments
+            first_stage_covars_list[
+                first_stage_covars_list.index(endogvars)
+            ] = instruments
             self.first_stage_covars_list = "+".join(first_stage_covars_list)
             self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
             self.depvars_first_stage = endogvars
@@ -149,7 +153,6 @@ class FixestFormulaParser:
         else:
             self._ivars = None
 
-
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)
@@ -158,10 +161,8 @@ class FixestFormulaParser:
         else:
             self.covars_first_stage_fml = None
 
-
-    def get_new_fml_dict(self, iv = False):
-
-        '''
+    def get_new_fml_dict(self, iv=False):
+        """
         Get a nested dictionary of all formulas.
 
         Parameters:
@@ -175,7 +176,7 @@ class FixestFormulaParser:
 
                 Here is an example:
                     fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
-        '''
+        """
 
         fml_dict = dict()
 
@@ -185,10 +186,10 @@ class FixestFormulaParser:
                 res[depvar] = []
                 if iv:
                     for covar in self.covars_first_stage_fml:
-                        res[depvar].append(depvar + '~' + covar)
+                        res[depvar].append(depvar + "~" + covar)
                 else:
                     for covar in self.covars_fml:
-                        res[depvar].append(depvar + '~' + covar)
+                        res[depvar].append(depvar + "~" + covar)
             fml_dict[fevar] = res
 
         if iv:
@@ -198,8 +199,7 @@ class FixestFormulaParser:
 
 
 def _unpack_fml(x):
-
-    '''
+    """
     Given a formula string `x` - e.g. 'X1 + csw(X2, X3)' - , splits it into its constituent variables and their types (if any),
     and returns a dictionary containing the result. The dictionary has the following keys: 'constant', 'sw', 'sw0', 'csw'.
     The values are lists of variables of the respective type.
@@ -241,17 +241,15 @@ def _unpack_fml(x):
      'csw': [['x1', 'x2']],
      'sw0': ['d'],
      'csw0': [['y1', 'y2', 'y3']]}
-    '''
-
+    """
 
     # Split the formula into its constituent variables
     var_split = x.split("+")
 
     res_s = dict()
-    res_s['constant'] = []
+    res_s["constant"] = []
 
     for var in var_split:
-
         # Check if this variable contains a switch
         varlist, sw_type = _find_sw(var)
 
@@ -260,13 +258,13 @@ def _unpack_fml(x):
             if _is_varying_slopes(var):
                 varlist, sw_type = _transform_varying_slopes(var)
                 for x in varlist.split("+"):
-                    res_s['constant'].append(x)
+                    res_s["constant"].append(x)
             else:
-                res_s['constant'].append(varlist)
+                res_s["constant"].append(varlist)
 
         # If there'_ a switch, unpack it and add it to the list
         else:
-            if sw_type in ['sw', 'sw0', 'csw', 'csw0', 'i']:
+            if sw_type in ["sw", "sw0", "csw", "csw0", "i"]:
                 _check_duplicate_key(res_s, sw_type)
                 res_s[sw_type] = varlist
             elif sw_type == "varying_slopes":
@@ -275,11 +273,9 @@ def _unpack_fml(x):
                 raise UnsupportedMultipleEstimationSyntax("Unsupported switch type")
 
     # Sort the list by type (strings first, then lists)
-    #res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
+    # res_s.sort(key=lambda x: 0 if isinstance(x, str) else 1)
 
     return res_s
-
-
 
 
 def _pack_to_fml(unpacked):
@@ -307,54 +303,59 @@ def _pack_to_fml(unpacked):
     res = dict()
 
     # add up all constant variables
-    if 'constant' in unpacked:
-         res['constant'] = unpacked['constant']
+    if "constant" in unpacked:
+        res["constant"] = unpacked["constant"]
     else:
-        res['constant'] = []
+        res["constant"] = []
 
-    if 'i' in unpacked:
-       if res['constant']:
-           res['constant'] =  res['constant'] + [":".join(unpacked['i'])]
-       else:
-           res['constant'] = [":".join(unpacked['i'])]
+    if "i" in unpacked:
+        if res["constant"]:
+            res["constant"] = res["constant"] + [":".join(unpacked["i"])]
+        else:
+            res["constant"] = [":".join(unpacked["i"])]
 
     # add up all variable constants (only required for csw)
     if "csw" in unpacked:
-        res['variable'] = unpacked['csw']
+        res["variable"] = unpacked["csw"]
         variable_type = "csw"
     elif "csw0" in unpacked:
-        res['variable'] = unpacked['csw0']
+        res["variable"] = unpacked["csw0"]
         variable_type = "csw0"
     elif "sw" in unpacked:
-        res['variable'] = unpacked['sw']
+        res["variable"] = unpacked["sw"]
         variable_type = "sw"
     elif "sw0" in unpacked:
-        res['variable'] = unpacked['sw0']
+        res["variable"] = unpacked["sw0"]
         variable_type = "sw0"
     else:
-        res['variable'] = []
+        res["variable"] = []
         variable_type = None
 
-    if res['constant']:
-        const_fml = "+".join(res['constant'])
+    if res["constant"]:
+        const_fml = "+".join(res["constant"])
     else:
         const_fml = []
 
     variable_fml = []
-    if res['variable']:
-        if variable_type in ['csw', 'csw0']:
-            variable_fml = [ "+".join(res['variable'][:i+1]) for i in range(len(res['variable']))]
+    if res["variable"]:
+        if variable_type in ["csw", "csw0"]:
+            variable_fml = [
+                "+".join(res["variable"][: i + 1]) for i in range(len(res["variable"]))
+            ]
         else:
-            variable_fml = [res['variable'][i] for i in range(len(res['variable']))]
-        if variable_type in ['sw0', 'csw0']:
-            variable_fml = ['0'] + variable_fml
-
+            variable_fml = [res["variable"][i] for i in range(len(res["variable"]))]
+        if variable_type in ["sw0", "csw0"]:
+            variable_fml = ["0"] + variable_fml
 
     fml_list = []
     if variable_fml:
         if const_fml:
-            fml_list = [ const_fml + "+" + variable_fml[i] for i in range(len(variable_fml)) if variable_fml[i] != "0"]
-            if variable_type in ['sw0', 'csw0']:
+            fml_list = [
+                const_fml + "+" + variable_fml[i]
+                for i in range(len(variable_fml))
+                if variable_fml[i] != "0"
+            ]
+            if variable_type in ["sw0", "csw0"]:
                 fml_list = [const_fml] + fml_list
         else:
             fml_list = variable_fml
@@ -368,7 +369,6 @@ def _pack_to_fml(unpacked):
         fml_list = [fml_list]
 
     return fml_list
-
 
 
 def _find_sw(x):
@@ -395,7 +395,6 @@ def _find_sw(x):
     csw0_match = re.findall(r"csw0\((.*?)\)", x)
     i_match = re.findall(r"i\((.*?)\)", x)
 
-
     # Check for sw matches
     if sw_match:
         if csw_match:
@@ -419,7 +418,6 @@ def _find_sw(x):
 
 
 def _flatten_list(lst):
-
     """
     Flattens a list that may contain sublists.
 
@@ -446,8 +444,7 @@ def _flatten_list(lst):
 
 
 def _check_duplicate_key(my_dict, key):
-
-    '''
+    """
     Checks if a key already exists in a dictionary. If it does, raises a DuplicateKeyError. Otherwise, does nothing.
 
     Args:
@@ -456,35 +453,38 @@ def _check_duplicate_key(my_dict, key):
 
     Returns:
         None
-    '''
+    """
 
-    if key == 'i' and 'i' in my_dict:
+    if key == "i" and "i" in my_dict:
         raise DuplicateKeyError(
-            "Duplicate key found: " + key + ". Fixed effect syntax i() can only be used once in the input formula."
-            )
+            "Duplicate key found: "
+            + key
+            + ". Fixed effect syntax i() can only be used once in the input formula."
+        )
     else:
-        for key in ['sw', 'csw', 'sw0', 'csw0']:
+        for key in ["sw", "csw", "sw0", "csw0"]:
             if key in my_dict:
                 raise DuplicateKeyError(
-                    "Duplicate key found: " + key + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
-                    )
+                    "Duplicate key found: "
+                    + key
+                    + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
+                )
             else:
                 None
 
 
 def _is_varying_slopes(x):
-
-    pattern = r'\[.*\]'
+    pattern = r"\[.*\]"
     match = re.search(pattern, x)
     if match:
         return True
     else:
         return False
 
+
 def _transform_varying_slopes(x):
-    parts = x.split('[')
+    parts = x.split("[")
     a = parts[0]
-    b = parts[1].replace(']', '')
+    b = parts[1].replace("]", "")
     transformed_string = f"{a}/{b}"
     return transformed_string, "varying_slopes"
-
