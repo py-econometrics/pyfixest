@@ -16,17 +16,17 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
     """
 
     rng = np.random.default_rng(seed)
-    G = np.random.choice(list(range(10, 100))).astype("int64")
-    fe_dims = np.random.choice(
+    G = rng.choice(list(range(10, 100))).astype("int64")
+    fe_dims = rng.choice(
         list(range(2, int(np.floor(np.sqrt(N))))), 3, True
     ).astype("int64")
 
     # create the covariates
-    X = np.random.normal(0, 1, N * 5).reshape((N, 5))
+    X = rng.normal(0, 1, N * 5).reshape((N, 5))
     # X = pd.DataFrame(X)
-    X[:, 2] = rng.choice(list(range(0, fe_dims[0])), N, True)
-    X[:, 3] = rng.choice(list(range(0, fe_dims[1])), N, True)
-    X[:, 4] = rng.choice(list(range(0, fe_dims[2])), N, True)
+    X[:, 2] = rng.choice(list(range(0, fe_dims[0])), N, True).astype(str)
+    X[:, 3] = rng.choice(list(range(0, fe_dims[1])), N, True).astype(str)
+    X[:, 4] = rng.choice(list(range(0, fe_dims[2])), N, True).astype(str)
 
     X = pd.DataFrame(X)
     X.columns = ["X1", "X2", "f1", "f2", "f3"]
@@ -84,6 +84,8 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
     # change all variables in the data frame to float
     for col in df.columns:
         df[col] = df[col].astype("float64")
+
+    df[df == "nan"] = np.nan
 
     return df
 

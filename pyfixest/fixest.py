@@ -30,7 +30,7 @@ class Fixest:
 
         Args:
             data: The input pd.DataFrame for the object.
-            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-8. Only relevant for non-linear estimation strategies.
+            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-5. Only relevant for non-linear estimation strategies.
             iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
 
         Returns:
@@ -38,7 +38,7 @@ class Fixest:
 
         Attributes:
             data: The input pd.DataFrame for the object.
-            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-8. Only relevant for non-linear estimation strategies.
+            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-5. Only relevant for non-linear estimation strategies.
             iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
             all_fitted_models: A dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
@@ -58,6 +58,9 @@ class Fixest:
             raise ValueError("iwls_maxiter must be larger than 0")
 
         self._data = data.copy()
+        # reindex: else, potential errors when pd.DataFrame.dropna()
+        # -> drops indices, but formulaic model_matrix starts from 0:N...
+        self._data.index = range(self._data.shape[0])
         self._iwls_tol = iwls_tol
         self._iwls_maxiter = iwls_maxiter
         self.all_fitted_models = dict()
@@ -310,17 +313,9 @@ class Fixest:
         fe = data[fval_list]
         # all fes to factors / categories
 
-        if varying_slopes != []:
-            for x in varying_slopes:
-                mm_vs = model_matrix("-1 + " + x, data)
-
-            fe = pd.concat([fe, mm_vs], axis=1)
-
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
-        fe = fe.to_numpy()
         fe_na = fe_na[fe_na].index.tolist()
-        fe = pd.DataFrame(fe)
 
         return fe, fe_na
 
@@ -373,7 +368,10 @@ class Fixest:
         lhs, rhs = model_matrix(fml2, self._data)
 
         Y = lhs[[depvar]]
-        X = pd.DataFrame(rhs)
+        X = rhs
+        Y = pd.DataFrame(Y)
+        X = pd.DataFrame(X)
+
         if self._is_iv:
             I = lhs[instrument_list]
             I = pd.DataFrame(I)
@@ -483,19 +481,28 @@ class Fixest:
                 algorithm, YXZ_demeaned_old = lookup_demeaned_data.get(na_index_str)
 
                 # get not yet demeaned covariates
-                var_diff_names = list(set(yxz_names) - set(YXZ_demeaned_old.columns))[0]
-                var_diff_index = list(yxz_names).index(var_diff_names)
-                var_diff = YXZ[:, var_diff_index]
-                if var_diff.ndim == 1:
-                    var_diff = var_diff.reshape(len(var_diff), 1)
+                var_diff_names = list(set(yxz_names) - set(YXZ_demeaned_old.columns))
 
-                YXZ_demean_new = algorithm.residualize(var_diff)
-                YXZ_demeaned = np.concatenate(
-                    [YXZ_demeaned_old, YXZ_demean_new], axis=1
-                )
-                YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                # if some variables still need to be demeaned
+                if var_diff_names:
+                    var_diff_names = var_diff_names[0]
 
-                YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [var_diff_names]
+                    var_diff_index = list(yxz_names).index(var_diff_names)
+                    var_diff = YXZ[:, var_diff_index]
+                    if var_diff.ndim == 1:
+                        var_diff = var_diff.reshape(len(var_diff), 1)
+
+                    YXZ_demean_new = algorithm.residualize(var_diff)
+                    YXZ_demeaned = np.concatenate(
+                        [YXZ_demeaned_old, YXZ_demean_new], axis=1
+                    )
+                    YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+
+                    YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [var_diff_names]
+
+                else:
+                    # all variables already demeaned
+                    YXZ_demeaned = YXZ_demeaned_old[yxz_names]
 
             else:
                 # not data demeaned yet for NA combination
@@ -669,7 +676,7 @@ class Fixest:
                         # some bookkeeping
                         FIT._fml = fml
                         FIT._ssc_dict = self._ssc_dict
-                        FIT._na_index = na_index
+                        #FIT._na_index = na_index
                         # data never makes it to Feols() class. needed for ex post
                         # clustered vcov estimation when clustervar not in model params
                         FIT._data = self._data.iloc[~self._data.index.isin(na_index)]
@@ -783,7 +790,7 @@ class Fixest:
         dependent variable, followed by a table of coefficient estimates with standard
         errors, t-values, and p-values.
         Args:
-            digits: int, optional. The number of decimal places to round the summary statistics to. Default is 2.
+            digits: int, optional. The number of decimal places to round the summary statistics to. Default is 3.
         Returns:
             None
         """
@@ -818,7 +825,7 @@ class Fixest:
             print("Inference: ", fxst._vcov_log)
             print("Observations: ", fxst.N)
             print("")
-            print(df.to_string(index=True))
+            print(df.to_markdown(floatfmt="." + digits + "f"))
             print("---")
             if fxst._method == "feols":
                 if not fxst._is_iv:

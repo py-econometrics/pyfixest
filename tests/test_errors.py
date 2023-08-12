@@ -60,13 +60,13 @@ def test_cluster_na():
     """
 
     data = get_data()
-    # data = data.dropna()
-    data["X3"] = data["X3"].astype("int64")
-    data["X3"][5] = np.nan
+    data = data.dropna()
+    data["f3"] = data["f3"].astype("int64")
+    data["f3"][5] = np.nan
 
     fixest = Fixest(data)
     with pytest.raises(NanInClusterVarError):
-        fixest.feols("Y ~ X1", vcov={"CRV1": "X3"})
+        fixest.feols("Y ~ X1", vcov={"CRV1": "f3"})
 
 
 def test_error_hc23_fe():
@@ -77,10 +77,10 @@ def test_error_hc23_fe():
 
     fixest = Fixest(data)
     with pytest.raises(VcovTypeNotSupportedError):
-        fixest.feols("Y ~ X1 | X2", vcov="HC2")
+        fixest.feols("Y ~ X1 | f2", vcov="HC2")
 
     with pytest.raises(VcovTypeNotSupportedError):
-        fixest.feols("Y ~ X1 | X2", vcov="HC3")
+        fixest.feols("Y ~ X1 | f2", vcov="HC3")
 
 
 def test_depvar_numeric():
@@ -99,13 +99,11 @@ def test_depvar_numeric():
 
 def test_iv_errors():
     data = get_data()
-    data["Z1"] = data["X1"] + np.random.normal(0, 1, data.shape[0])
-    data["Z2"] = data["X2"] + np.random.normal(0, 1, data.shape[0])
 
     fixest = Fixest(data)
     # under determined
     with pytest.raises(UnderDeterminedIVError):
-        fixest.feols("Y ~ X1 | Z1 + Z2 ~ X4 ")
+        fixest.feols("Y ~ X1 | Z1 + Z2 ~ 24 ")
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         fixest.feols("Y ~ X1 | Z1  ~ X1 + X2")
@@ -130,9 +128,9 @@ def test_iv_errors():
     with pytest.raises(MultiEstNotSupportedError):
         fixest.feols("Y + Y2 ~ 1 | Z1 ~ X1 ")
     with pytest.raises(MultiEstNotSupportedError):
-        fixest.feols("Y  ~ 1 | sw(X2, X3) | Z1 ~ X1 ")
+        fixest.feols("Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ")
     with pytest.raises(MultiEstNotSupportedError):
-        fixest.feols("Y  ~ 1 | csw(X2, X3) | Z1 ~ X1 ")
+        fixest.feols("Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ")
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
         fixest.feols("Y  ~ 1 | Z1 ~ X1", vcov="HC2")
