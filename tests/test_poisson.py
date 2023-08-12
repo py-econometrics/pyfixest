@@ -5,6 +5,7 @@ import pandas as pd
 from pyfixest.fixest import Fixest
 from pyfixest.utils import get_data, get_poisson_data, absolute_diff
 from pyfixest.ssc_utils import ssc
+from tests.test_vs_fixest import _c_to_as_factor
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -16,26 +17,9 @@ pandas2ri.activate()
 fixest = importr("fixest")
 stats = importr("stats")
 
-
-@pytest.fixture
-def data():
-    return get_data(seed=6574)
-
-
 @pytest.fixture
 def data_poisson():
     return get_poisson_data(N=1_000, seed=6574)
-
-
-def absolute_diff(x, y, tol=1e-03):
-    absolute_diff = (np.abs(x - y) > tol).any()
-    if not any(y == 0):
-        relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
-        res = absolute_diff and relative_diff
-    else:
-        res = absolute_diff
-
-    return res
 
 
 @pytest.mark.parametrize(
@@ -49,7 +33,7 @@ def absolute_diff(x, y, tol=1e-03):
         ("Y ~ X1:X2"),
         ("Y ~ X1:X2 | X3"),
         ("Y ~ X1:X2 | X3 + X4"),
-        ("Y ~  X2 + log(X1) | X3 + X4"),
+        ("Y ~  C(X2)  | X3 + X4"),
     ],
 )
 def test_py_vs_r_poisson(data_poisson, fml):
@@ -62,6 +46,8 @@ def test_py_vs_r_poisson(data_poisson, fml):
         - tba: t-statistics, covariance matrices, other metrics
     """
 
+    r_fml = _c_to_as_factor(fml)
+
     # iid errors
     pyfixest = Fixest(data=data_poisson).fepois(
         fml, vcov="HC1", ssc=ssc(adj=False, cluster_adj=False)
@@ -73,7 +59,7 @@ def test_py_vs_r_poisson(data_poisson, fml):
     py_tstat = pyfixest.tstat()
 
     r_fixest = fixest.fepois(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         se="iid",
         data=data_poisson,
         ssc=fixest.ssc(False, "none", False, "min", "min", False),
@@ -99,7 +85,7 @@ def test_py_vs_r_poisson(data_poisson, fml):
     py_tstat = pyfixest.tstat().values
 
     r_fixest = fixest.fepois(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         se="hetero",
         data=data_poisson,
         ssc=fixest.ssc(False, "none", False, "min", "min", False),
@@ -121,7 +107,7 @@ def test_py_vs_r_poisson(data_poisson, fml):
     py_pval = pyfixest.pvalue()
     py_tstat = pyfixest.tstat()
     r_fixest = fixest.fepois(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         cluster=ro.Formula("~X4"),
         data=data_poisson,
         ssc=fixest.ssc(False, "none", False, "min", "min", False),
