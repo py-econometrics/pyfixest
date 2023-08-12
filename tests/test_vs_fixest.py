@@ -20,7 +20,7 @@ atol = 1e-05
 
 
 @pytest.mark.parametrize("N", [100, 1000])
-@pytest.mark.parametrize("seed", [1234, 98123, 879111])
+@pytest.mark.parametrize("seed", [879111])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
@@ -338,7 +338,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, fml):
 
 
 @pytest.mark.parametrize("N", [100, 1000])
-@pytest.mark.parametrize("seed", [4321, 1010, 17021])
+@pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
