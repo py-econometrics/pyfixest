@@ -50,10 +50,11 @@ class Fepois(Feols):
             self._has_fixef = False
 
         # check if Y is a weakly positive integer
-        if not np.issubdtype(self.Y.dtype, np.integer):
-            raise AssertionError(
-                "For Poisson regression, the dependent variable must be a count, i.e. it must be a weakly positive integer."
-            )
+        self.Y = _to_integer(self.Y)
+        # check that self.Y is a weakly positive integer
+        if np.any(self.Y < 0):
+            raise ValueError("The dependent variable must be a weakly positive integer.")
+
 
     def get_fit(self) -> None:
         """
@@ -435,3 +436,13 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
         raise AssertionError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
+
+def _to_integer(x):
+    if x.dtype == int:
+        return x
+    else:
+        try:
+            x = x.astype(np.int64)
+            return x
+        except ValueError:
+            raise ValueError("Conversion of the dependent variable to integer is not possible. Please do so manually.")
