@@ -750,20 +750,20 @@ class Fixest:
 
         return self
 
-    def tidy(self) -> Union[pd.DataFrame, str]:
+    def tidy(self) -> pd.DataFrame:
         """
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
         Returns:
             pd.DataFrame or str
                 A tidy DataFrame with the following columns:
                 - fml: the formula used to generate the results
-                - coefnames: the names of the coefficients
+                - Coefficient: the names of the coefficients
                 - Estimate: the estimated coefficients
                 - Std. Error: the standard errors of the estimated coefficients
                 - t value: the t-values of the estimated coefficients
                 - Pr(>|t|): the p-values of the estimated coefficients
-                - ci_l: the lower bound of the confidence interval
-                - ci_u: the upper bound of the confidence interval
+                - 2.5 %: the lower bound of the 95% confidence interval
+                - 97.5 %: the upper bound of the 95% confidence interval
                 If `type` is set to "markdown", the resulting DataFrame will be returned as a
                 markdown-formatted string with three decimal places.
         """
@@ -775,7 +775,7 @@ class Fixest:
             df["fml"] = fxst._fml
             res.append(df)
 
-        res = pd.concat(res, axis=0).set_index(["fml", "coefnames"])
+        res = pd.concat(res, axis=0).set_index(["fml", "Coefficient"])
 
         return res
 
@@ -875,7 +875,7 @@ class Fixest:
             A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
         """
 
-        return self.tidy()[["ci_l", "ci_u"]]
+        return self.tidy()[["2.5 %", "97.5 %"]]
 
     def iplot(
         self,
@@ -909,7 +909,7 @@ class Fixest:
 
         df = self.tidy().reset_index()
 
-        df = df[df.coefnames.isin(ivars)]
+        df = df[df.Coefficient.isin(ivars)]
         models = df.fml.unique()
 
         _coefplot(
@@ -1077,7 +1077,7 @@ def _coefplot(
             coef = df_model["Estimate"]
             conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
             conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            coefnames = df_model["coefnames"].values.tolist()
+            coefnames = df_model["Coefficient"].values.tolist()
 
             # could be moved out of the for loop, as the same ivars for all
             # models.
@@ -1112,7 +1112,7 @@ def _coefplot(
         coef = df_model["Estimate"].values
         conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
         conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        coefnames = df_model["coefnames"].values.tolist()
+        coefnames = df_model["Coefficient"].values.tolist()
 
         if is_iplot == True:
             fig.suptitle("iplot")
