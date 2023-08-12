@@ -498,7 +498,9 @@ class Fixest:
                     )
                     YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
 
-                    YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [var_diff_names]
+                    YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [
+                        var_diff_names
+                    ]
 
                 else:
                     # all variables already demeaned
@@ -676,7 +678,7 @@ class Fixest:
                         # some bookkeeping
                         FIT._fml = fml
                         FIT._ssc_dict = self._ssc_dict
-                        #FIT._na_index = na_index
+                        # FIT._na_index = na_index
                         # data never makes it to Feols() class. needed for ex post
                         # clustered vcov estimation when clustervar not in model params
                         FIT._data = self._data.iloc[~self._data.index.isin(na_index)]

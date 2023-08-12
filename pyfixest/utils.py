@@ -17,9 +17,9 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
 
     rng = np.random.default_rng(seed)
     G = rng.choice(list(range(10, 100))).astype("int64")
-    fe_dims = rng.choice(
-        list(range(2, int(np.floor(np.sqrt(N))))), 3, True
-    ).astype("int64")
+    fe_dims = rng.choice(list(range(2, int(np.floor(np.sqrt(N))))), 3, True).astype(
+        "int64"
+    )
 
     # create the covariates
     X = rng.normal(0, 1, N * 5).reshape((N, 5))

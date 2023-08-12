@@ -53,8 +53,9 @@ class Fepois(Feols):
         self.Y = _to_integer(self.Y)
         # check that self.Y is a weakly positive integer
         if np.any(self.Y < 0):
-            raise ValueError("The dependent variable must be a weakly positive integer.")
-
+            raise ValueError(
+                "The dependent variable must be a weakly positive integer."
+            )
 
     def get_fit(self) -> None:
         """
@@ -112,9 +113,7 @@ class Fepois(Feols):
         Z2 = Z
 
         algorithm = pyhdfe.create(
-            ids=fe,
-            residualize_method='map',
-            drop_singletons=self._drop_singletons
+            ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
         )
 
         algorithm = pyhdfe.create(
@@ -443,6 +442,7 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
 
+
 def _to_integer(x):
     if x.dtype == int:
         return x
@@ -451,4 +451,6 @@ def _to_integer(x):
             x = x.astype(np.int64)
             return x
         except ValueError:
-            raise ValueError("Conversion of the dependent variable to integer is not possible. Please do so manually.")
+            raise ValueError(
+                "Conversion of the dependent variable to integer is not possible. Please do so manually."
+            )
