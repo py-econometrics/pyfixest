@@ -750,11 +750,9 @@ class Fixest:
 
         return self
 
-    def tidy(self, digits = 3) -> Union[pd.DataFrame, str]:
+    def tidy(self) -> Union[pd.DataFrame, str]:
         """
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
-        Args:
-            digits: the number of digits to display in the resulting DataFrame
         Returns:
             pd.DataFrame or str
                 A tidy DataFrame with the following columns:
@@ -779,7 +777,7 @@ class Fixest:
 
         res = pd.concat(res, axis=0).set_index(["fml", "coefnames"])
 
-        return np.round(res, digits)
+        return res
 
     def summary(self, digits: int = 3) -> None:
         """
