@@ -112,6 +112,12 @@ class Fepois(Feols):
         Z2 = Z
 
         algorithm = pyhdfe.create(
+            ids=fe,
+            residualize_method='map',
+            drop_singletons=self._drop_singletons
+        )
+
+        algorithm = pyhdfe.create(
             ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
         )
 
