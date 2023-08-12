@@ -299,8 +299,6 @@ class Fixest:
         # find interacted fixed effects via "^"
         interacted_fes = [x for x in fval_list if len(x.split("^")) > 1]
 
-        varying_slopes = [x for x in fval_list if len(x.split("/")) > 1]
-
         for x in interacted_fes:
             vars = x.split("^")
             data[x] = data[vars].apply(
@@ -311,7 +309,13 @@ class Fixest:
             )
 
         fe = data[fval_list]
-        # all fes to factors / categories
+
+        for x in fe.columns:
+            if len(np.unique(fe[x])) == fe.shape[0]:
+                raise ValueError(
+                    f"Fixed effect {x} has only unique values. "
+                    "This is not allowed."
+                )
 
         fe_na = fe.isna().any(axis=1)
         fe = fe.apply(lambda x: pd.factorize(x)[0])
