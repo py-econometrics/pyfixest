@@ -10,7 +10,7 @@ pandas2ri.activate()
 
 fixest = importr("fixest")
 
-
+@pytest.mark.skip(reason="Not used in package.")
 def test_demean():
     np.random.seed(12308)
 

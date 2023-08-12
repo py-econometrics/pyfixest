@@ -17,7 +17,7 @@ def data():
 def test_iplot(data):
     fixest = Fixest(data)
     fixest.feols("Y ~ i(f2, X1) | f1", vcov="iid").iplot()
-    fixest.feols("Y ~ i(f2, X1, ref = 1)", vcov="iid").iplot()
+    fixest.feols("Y ~ i(f2, X1, ref = 1.0)", vcov="iid").iplot()
     with pytest.raises(ValueError):
         fixest.feols("Y ~ X1", vcov="iid").iplot()
 

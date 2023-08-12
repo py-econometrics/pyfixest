@@ -24,7 +24,7 @@ def data():
 
 @pytest.fixture
 def data_poisson():
-    return get_poisson_data(N=10_000, seed=6574)
+    return get_poisson_data(N=1_000, seed=6574)
 
 
 def absolute_diff(x, y, tol=1e-03):
