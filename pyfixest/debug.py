@@ -12,7 +12,7 @@ error_type = "1"
 model = "Fepois"
 dropna = False
 vcov = {'CRV1':'group_id'}
-fml = "Y~X1|f2^f3^f1"
+fml = "Y~X1|f1+f2"
 
 data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type, model = model)
 
