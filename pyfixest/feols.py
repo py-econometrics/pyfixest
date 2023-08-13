@@ -653,17 +653,17 @@ class Feols:
 
         tidy_df = pd.DataFrame(
             {
-                "coefnames": self._coefnames,
+                "Coefficient": self._coefnames,
                 "Estimate": self.beta_hat,
                 "Std. Error": self._se,
                 "t value": self._tstat,
                 "Pr(>|t|)": self._pvalue,
-                "ci_l": self.conf_int[0],
-                "ci_u": self.conf_int[1],
+                "2.5 %": self.conf_int[0],
+                "97.5 %": self.conf_int[1],
             }
         )
 
-        return tidy_df.set_index("coefnames")
+        return tidy_df.set_index("Coefficient")
 
     def coef(self) -> pd.Series:
         """
@@ -693,7 +693,7 @@ class Feols:
         """
         Return a pd.DataFrame with confidence intervals for the estimated regression model.
         """
-        return self.tidy()[["ci_l", "ci_u"]]
+        return self.tidy()[["2.5 %", "97.5 %"]]
 
     def resid(self) -> np.ndarray:
         """

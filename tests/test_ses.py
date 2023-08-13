@@ -79,7 +79,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
     fixest.feols(
         "Y~X1 + C(f2)", vcov={"CRV3": "f1"}, ssc=ssc(adj=False, cluster_adj=False)
     )
-    res_crv3a = fixest.tidy().reset_index().set_index("coefnames").xs("X1")
+    res_crv3a = fixest.tidy().reset_index().set_index("Coefficient").xs("X1")
 
     fixest2 = pf.Fixest(data=data)
     fixest2.feols(

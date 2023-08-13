@@ -24,7 +24,6 @@ fixest = pf.Fixest(data = pdata)
 fixest.fepois("Y~X1 | X2+X3+X4", vcov = {'CRV1':'X4'})
 
 fixest.summary()
-
 # ###
 #
 # Model:  Poisson
@@ -33,10 +32,9 @@ fixest.summary()
 # Inference:  {'CRV1': 'X4'}
 # Observations:  1000
 #
-# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | X1          |      0.874 |        0.037 |    23.780 |      0.000 |  0.802 |  0.946 |
-#
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.874 |        0.037 |    23.780 |      0.000 |   0.802 |    0.946 |
 ```
 
 Note that `v0.8.4` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
@@ -56,7 +54,6 @@ fixest = pf.Fixest(data = data)
 # OLS Estimation
 fixest.feols("Y~X1 | csw0(f1, f2)", vcov = {'CRV1':'group_id'})
 fixest.summary()
-
 # ###
 #
 # Model:  OLS
@@ -64,12 +61,12 @@ fixest.summary()
 # Inference:  {'CRV1': 'group_id'}
 # Observations:  998
 #
-# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | Intercept   |      2.204 |        0.054 |    40.495 |      0.000 |  2.096 |  2.312 |
-# | X1          |      0.351 |        0.063 |     5.595 |      0.000 |  0.227 |  0.476 |
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | Intercept     |      2.204 |        0.054 |    40.495 |      0.000 |   2.096 |    2.312 |
+# | X1            |      0.351 |        0.063 |     5.595 |      0.000 |   0.227 |    0.476 |
 # ---
-#   RMSE: 1.751  Adj. R2: 0.037  Adj. R2 Within: 0.037
+# RMSE: 1.751  Adj. R2: 0.037  Adj. R2 Within: 0.037
 # ###
 #
 # Model:  OLS
@@ -78,13 +75,22 @@ fixest.summary()
 # Inference:  {'CRV1': 'group_id'}
 # Observations:  997
 #
-# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | X1          |      0.326 |        0.048 |     6.756 |      0.000 |  0.230 |  0.422 |
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.326 |        0.048 |     6.756 |      0.000 |   0.230 |    0.422 |
 # ---
-#   ...
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | X1          |      0.355 |        0.039 |     9.044 |      0.000 |  0.277 |  0.433 |
+# RMSE: 1.407  Adj. R2: 0.049  Adj. R2 Within: 0.049
+# ###
+#
+# Model:  OLS
+# Dep. var.:  Y
+# Fixed effects:  f1+f2
+# Inference:  {'CRV1': 'group_id'}
+# Observations:  997
+#
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.355 |        0.039 |     9.044 |      0.000 |   0.277 |    0.433 |
 # ---
 # RMSE: 1.183  Adj. R2: 0.078  Adj. R2 Within: 0.078
 ```
@@ -95,7 +101,6 @@ fixest.summary()
 fixest = pf.Fixest(data = data)
 fixest.feols("Y~ 1 | f2 + f3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
 fixest.summary()
-
 # ###
 #
 # Model:  IV
@@ -104,19 +109,16 @@ fixest.summary()
 # Inference:  {'CRV1': 'group_id'}
 # Observations:  998
 #
-# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | X1          |      0.435 |        0.063 |     6.894 |      0.000 |  0.309 |  0.560 |
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.309 |        0.058 |     5.306 |      0.000 |   0.193 |    0.424 |
 # ---
 ```
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
-fixest.vcov("hetero")
-
-###
-
+fixest.vcov("hetero").tidy()
 # ###
 #
 # Model:  IV
@@ -125,8 +127,7 @@ fixest.vcov("hetero")
 # Inference:  hetero
 # Observations:  998
 #
-# | coefnames   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   ci_l |   ci_u |
-# |:------------|-----------:|-------------:|----------:|-----------:|-------:|-------:|
-# | X1          |      0.435 |        0.065 |     6.690 |      0.000 |  0.307 |  0.562 |
-# ---
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.309 |        0.063 |     4.877 |      0.000 |   0.184 |    0.433 |
 ```
