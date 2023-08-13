@@ -677,8 +677,10 @@ class Fixest:
                             FIT.get_fit()
 
                             FIT.na_index = na_index
+                            FIT.n_separation_na = None
                             if FIT.separation_na:
                                 FIT.na_index += FIT.separation_na
+                                FIT.n_separation_na = len(FIT.separation_na)
 
                         else:
                             raise ValueError(
