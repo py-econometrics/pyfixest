@@ -5,20 +5,19 @@ import pandas as pd
 
 # import pdb; pdb.set_trace()
 
-N = 1000
-seed = 1234
+N = 100
+seed = 879111
 beta_type = "1"
 error_type = "1"
+model = "Fepois"
 dropna = False
+vcov = {'CRV1':'group_id'}
+fml = "Y~X1|f2^f3^f1"
 
-data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
+data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type, model = model)
 
 if dropna:
     data = data.dropna()
 
-# data["f2"] = pd.Categorical(data["f2"].astype(str))
-
-fml = "Y + Y2 ~ sw(X1, X2) |f1"
-
 fixest = Fixest(data=data)
-fixest.feols(fml, vcov="iid")
+fixest.fepois(fml, vcov=vcov)

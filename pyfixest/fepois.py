@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import warnings
 
+import pdb
+
 from typing import Union, List, Dict
 from formulaic import model_matrix
 from pyfixest.feols import Feols, _check_vcov_input, _deparse_vcov_input
@@ -58,6 +60,7 @@ class Fepois(Feols):
             )
 
         self.separation_na = None
+        self.n_separation_na = None
         self._check_for_separation()
 
 
@@ -238,6 +241,7 @@ class Fepois(Feols):
 
         """
 
+
         _check_vcov_input(vcov, self._data)
 
         (
@@ -319,7 +323,7 @@ class Fepois(Feols):
                 k = self.X.shape[1]
                 meat = np.zeros((k, k))
 
-                for g in range(self.G):
+                for _, g in enumerate(clustid):
                     WX_g = WX[np.where(cluster_df == g)]
                     u_g = self.u_hat[np.where(cluster_df == g)]
                     meat_g = WX_g.transpose() @ u_g @ u_g.transpose() @ WX_g
@@ -401,7 +405,7 @@ class Fepois(Feols):
 
                 if len(droplist) > 0:
                     self.separation_na = np.where(fe_combined.isin(droplist))[0].tolist()
-                    n_separation_na = len(self.separation_na)
+                    self.n_separation_na = len(self.separation_na)
 
                     self.Y = np.delete(self.Y, self.separation_na, axis=0)
                     self.X = np.delete(self.X, self.separation_na, axis=0)
@@ -410,12 +414,10 @@ class Fepois(Feols):
 
                     self.N = self.Y.shape[0]
                     warnings.warn(
-                        str(n_separation_na)
+                        str(self.n_separation_na)
                         + " observations removed because of only 0 outcomes."
                     )
 
-                else:
-                    self.separation_na = None
 
         else:
             raise NotImplementedError(
