@@ -22,14 +22,14 @@ atol = 1e-05
 iwls_maxiter = 1000
 iwls_tol = 1e-10
 
-small_test = False
+rng = np.random.default_rng(87685)
 
 @pytest.mark.parametrize("N", [100, 1000])
 @pytest.mark.parametrize("seed", [8711])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ['Feols','Fepois'])
+@pytest.mark.parametrize("model", ["Feols",'Fepois'])
 @pytest.mark.parametrize("inference", ['iid','hetero', {'CRV1':'group_id'}])
 
 
@@ -174,20 +174,14 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             is_iv = False
             run_test = True
 
-            # check for separation in C() in first part of the formula
-            if "C(" in fml.split("|")[0]:
-                #find all variables contained in "C()"
-                variables = re.findall(r"C\((.*?)\)", fml.split("|")[0])
-                variables = [x.strip() for x in variables]
-                #find the dependent variable
-                dependent_variable = fml.split("~")[0].strip()
-                Y = data[[dependent_variable]].values
-                fe = data[variables].values
-                ##check if there is separation
-                na_separation = _check_separation(Y, fe)
-                if na_separation:
-                    data = data.drop(na_separation, axis = 0)
-                    data_r = data_r.drop(na_separation, axis = 0)
+            # if formula does not contain "i(" or "C(", add, separation:
+            if "i(" not in fml and "C(" not in fml:
+                where_zeros = np.where(data["Y"] == 0)[0]     # because np.where evaluates to a tuple
+                # draw three random indices
+                idx = rng.choice(where_zeros, 3, True)
+                data.loc[idx[0], "f1"] = np.max(data["f1"]) + 1
+                data.loc[idx[1], "f2"] = np.max(data["f2"]) + 1
+                data.loc[idx[2], "f3"] = np.max(data["f3"]) + 1
 
             pyfixest = Fixest(data=data, iwls_tol = iwls_tol, iwls_maxiter = iwls_maxiter)
 
@@ -465,28 +459,3 @@ def get_data_r(fml, data):
         data_r = data
 
     return data_r
-
-
-def _check_separation(Y, fe):
-
-    Y_help = pd.Series(np.where(Y.flatten() > 0, 1, 0))
-    fe = pd.DataFrame(fe)
-
-    separation_na = set()
-    # loop over all elements of fe
-    for x in fe.columns:
-        ctab = pd.crosstab(Y_help, fe[x])
-        null_column = ctab.xs(0)
-        # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-        sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
-            null_column > 0
-        ).values.flatten()
-        droplist = ctab.xs(0)[sep_candidate].index.tolist()
-
-        if len(droplist) > 0:
-            dropset = set(np.where(fe[x].isin(droplist))[0])
-            separation_na = separation_na.union(dropset)
-
-    separation_na = list(separation_na)
-
-    return separation_na
