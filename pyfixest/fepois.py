@@ -398,7 +398,7 @@ class Fepois(Feols):
                 droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
                 if len(droplist) > 0:
-                    self.separation_na = np.where(fe_combined.isin(droplist))[0]
+                    self.separation_na = np.where(fe_combined.isin(droplist))[0].tolist()
                     n_separation_na = len(self.separation_na)
 
                     self.Y = np.delete(self.Y, self.separation_na, axis=0)
