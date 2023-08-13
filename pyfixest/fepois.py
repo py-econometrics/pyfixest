@@ -241,7 +241,6 @@ class Fepois(Feols):
 
         """
 
-
         _check_vcov_input(vcov, self._data)
 
         (
@@ -368,24 +367,24 @@ class Fepois(Feols):
         return y_hat.flatten()
 
 
-def _check_for_separation(Y, fe, has_fixef, check="fe"):
-    """
-    Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
-    separation checks. Currently, only the "fe" check is implemented.
+    def _check_for_separation(self, check="fe"):
+        """
+        Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
+        separation checks. Currently, only the "fe" check is implemented.
 
-    Args:
-        type: type of separation check. Currently, only "fe" is supported.
-    Returns:
-        None
-    Updates the following attributes (if columns are dropped):
-        Y (np.array): dependent variable
-        X (np.array): independent variables
-        Z (np.array): independent variables
-        fe (np.array): fixed effects
-        N (int): number of observations
-    Creates the following attributes
-    separation_na (np.array): indices of dropped observations due to separation
-    """
+        Args:
+            type: type of separation check. Currently, only "fe" is supported.
+        Returns:
+            None
+        Updates the following attributes (if columns are dropped):
+            Y (np.array): dependent variable
+            X (np.array): independent variables
+            Z (np.array): independent variables
+            fe (np.array): fixed effects
+            N (int): number of observations
+        Creates the following attributes
+        separation_na (np.array): indices of dropped observations due to separation
+        """
 
         if check == "fe":
             if not self._has_fixef:
