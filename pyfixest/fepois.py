@@ -391,30 +391,35 @@ class Fepois(Feols):
                 pass
 
             else:
+
                 Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
-                fe_combined = fe.apply(lambda row: "-".join(row.astype(str)), axis=1)
 
-                ctab = pd.crosstab(Y_help, fe_combined)
-                null_column = ctab.xs(0)
-                # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-                sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
-                    null_column > 0
-                ).values.flatten()
-                droplist = ctab.xs(0)[sep_candidate].index.tolist()
+                separation_na = set()
+                # loop over all elements of fe
+                for x in fe.columns:
+                    ctab = pd.crosstab(Y_help, fe[x])
+                    null_column = ctab.xs(0)
+                    # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+                    sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+                        null_column > 0
+                    ).values.flatten()
+                    droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
-                if len(droplist) > 0:
-                    self.separation_na = np.where(fe_combined.isin(droplist))[0].tolist()
-                    self.n_separation_na = len(self.separation_na)
+                    if len(droplist) > 0:
+                        dropset = set(np.where(fe[x].isin(droplist))[0])
+                        separation_na = separation_na.union(dropset)
 
-                    self.Y = np.delete(self.Y, self.separation_na, axis=0)
-                    self.X = np.delete(self.X, self.separation_na, axis=0)
-                    # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
-                    self.fe = np.delete(self.fe, self.separation_na, axis=0)
+                self.separation_na = list(separation_na)
 
-                    self.N = self.Y.shape[0]
-                    warnings.warn(
-                        str(self.n_separation_na)
+                self.Y = np.delete(self.Y, self.separation_na, axis=0)
+                self.X = np.delete(self.X, self.separation_na, axis=0)
+                # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                self.fe = np.delete(self.fe, self.separation_na, axis=0)
+
+                self.N = self.Y.shape[0]
+                warnings.warn(
+                        str(len(self.separation_na))
                         + " observations removed because of only 0 outcomes."
                     )
 
