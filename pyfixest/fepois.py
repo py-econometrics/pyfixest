@@ -57,6 +57,10 @@ class Fepois(Feols):
                 "The dependent variable must be a weakly positive integer."
             )
 
+        self.separation_na = None
+        self._check_for_separation()
+
+
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
@@ -76,8 +80,6 @@ class Fepois(Feols):
             Y (np.array): demeaned dependent variable (from the last iteration of the IRLS algorithm)
 
         """
-
-        self._check_for_separation()
 
         Y = self.Y
         X = self.X
