@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pyfixest.fixest import Fixest
 
+
 def test_separation():
     """
     Test separation detection.
