@@ -3,8 +3,7 @@ import pandas as pd
 from formulaic import model_matrix
 
 
-def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model = "Feols"):
-
+def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     """
     create a random example data set
     Args:

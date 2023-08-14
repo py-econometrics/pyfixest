@@ -570,7 +570,7 @@ class Fixest:
         Attributes:
             all_fitted_models: a dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
-        #pdb.set_trace()
+        # pdb.set_trace()
 
         if self._estimate_full_model:
             for _, fval in enumerate(fixef_keys):

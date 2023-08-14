@@ -24,16 +24,14 @@ iwls_tol = 1e-10
 
 rng = np.random.default_rng(87685)
 
+
 @pytest.mark.parametrize("N", [100, 1000])
 @pytest.mark.parametrize("seed", [8711])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-@pytest.mark.parametrize("dropna", [False,True])
-@pytest.mark.parametrize("model", ["Feols","Fepois"])
-@pytest.mark.parametrize("inference", ['iid','hetero', {'CRV1':'group_id'}])
-
-
-
+@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -50,40 +48,37 @@ rng = np.random.default_rng(87685)
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
-        #("Y ~ X1 + C(f1):C(fe2)"),            # currently does not work as C():C() translation not implemented
-        #("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
+        # ("Y ~ X1 + C(f1):C(fe2)"),            # currently does not work as C():C() translation not implemented
+        # ("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
         ("Y~X1|f2^f3^f1"),
         ("Y ~ X1:X2"),
         ("Y ~ X1:X2 | f3"),
         ("Y ~ X1:X2 | f3 + f1"),
-        #("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-        #("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
-        #("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
+        # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
+        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
+        # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
         ("Y ~ i(f1,X2)"),
         ("Y ~ i(f2,X2)"),
         ("Y ~ i(f1,X2) | f2"),
         ("Y ~ i(f1,X2) | f2 + f3"),
-        #("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
-        #("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
-        #("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
-        #("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
+        # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
+        # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
+        # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
+        # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
         ("Y ~ C(f1)"),
         ("Y ~ C(f1) + C(f2)"),
-        #("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
-        #("Y ~ C(f1):C(f2)"),                       # currently does not work
+        # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
+        # ("Y ~ C(f1):C(f2)"),                       # currently does not work
         ("Y ~ C(f1) | f2"),
-
         ("Y ~ I(X1 ** 2)"),
         ("Y ~ I(X1 ** 2) + I(X2**4)"),
         ("Y ~ X1*X2"),
         ("Y ~ X1*X2 | f1+f2"),
-        #("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
-        #("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
-
-        #("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
-
+        # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
+        # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
+        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
         # IV starts here
         ("Y ~ 1 | X1 ~ Z1"),
         "Y ~  X2 | X1 ~ Z1",
@@ -105,7 +100,6 @@ rng = np.random.default_rng(87685)
         "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
         "Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
         "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
-
     ],
 )
 def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
@@ -119,9 +113,13 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
     """
 
     if model == "Feols":
-        data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type, model = "Feols")
+        data = get_data(
+            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
+        )
     else:
-        data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type, model = "Fepois")
+        data = get_data(
+            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
+        )
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
@@ -151,19 +149,17 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             raise ValueError("Code fails with an uninformative error message.")
 
     if model == "Feols":
-
         pyfixest = Fixest(data=data).feols(fml, vcov=inference)
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(True, "none", True, "min", "min", False)
+            ssc=fixest.ssc(True, "none", True, "min", "min", False),
         )
 
         run_test = True
 
     else:
-
         # check if IV - only run poisson if not IV
         iv_check = Fixest(data=data).feols(fml, vcov="iid")
 
@@ -176,9 +172,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
             # if formula does not contain "i(" or "C(", add, separation:
             if "i(" not in fml and "C(" not in fml:
-                where_zeros = np.where(data["Y"] == 0)[0]     # because np.where evaluates to a tuple
+                where_zeros = np.where(data["Y"] == 0)[
+                    0
+                ]  # because np.where evaluates to a tuple
                 # draw three random indices
-                #idx = rng.choice(where_zeros, 3, True)
+                # idx = rng.choice(where_zeros, 3, True)
                 idx = np.array([10, 11, 12])
                 data.loc[idx[0], "f1"] = np.max(data["f1"]) + 1
                 data.loc[idx[1], "f2"] = np.max(data["f2"]) + 1
@@ -190,21 +188,29 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             if "^" in fml:
                 pytest.skip("Don't test '^' for Poisson.")
 
-            pyfixest = Fixest(data=data, iwls_tol = iwls_tol, iwls_maxiter = iwls_maxiter)
+            pyfixest = Fixest(data=data, iwls_tol=iwls_tol, iwls_maxiter=iwls_maxiter)
 
             try:
                 pyfixest.fepois(fml, vcov=inference)
             except ValueError as exception:
                 if "dependent variable must be a weakly positive" in str(exception):
-                    return pytest.skip("Poisson model requires strictly positive dependent variable.")
+                    return pytest.skip(
+                        "Poisson model requires strictly positive dependent variable."
+                    )
                 raise
             except NotImplementedError as exception:
-                if "iid inference is not supported for non-linear models" in str(exception):
-                    return pytest.skip("iid inference is not supported for non-linear models.")
+                if "iid inference is not supported for non-linear models" in str(
+                    exception
+                ):
+                    return pytest.skip(
+                        "iid inference is not supported for non-linear models."
+                    )
                 raise
             except RuntimeError as exception:
                 if "Failed to converge after 1000000 iterations." in str(exception):
-                    return pytest.skip("Maximum number of PyHDFE iterations reached. Nothing I can do here.")
+                    return pytest.skip(
+                        "Maximum number of PyHDFE iterations reached. Nothing I can do here."
+                    )
                 raise
 
             r_fixest = fixest.fepois(
@@ -212,18 +218,17 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
                 vcov=r_inference,
                 data=data_r,
                 ssc=fixest.ssc(True, "none", True, "min", "min", False),
-                glm_iter = iwls_maxiter,
-                glm_tol = iwls_tol
+                glm_iter=iwls_maxiter,
+                glm_tol=iwls_tol,
             )
 
             py_nobs = pyfixest.fetch_model(0).N
             r_nobs = stats.nobs(r_fixest)
 
-            #if py_nobs != r_nobs:
+            # if py_nobs != r_nobs:
             #    return pytest.skip("R and Py models run on different numbers observations.")
 
     if run_test:
-
         # get coefficients, standard errors, p-values, t-statistics, confidence intervals
         py_coef = pyfixest.coef().values
         py_se = pyfixest.se().values
@@ -232,9 +237,10 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         py_confint = pyfixest.confint().values.flatten()
         py_nobs = pyfixest.fetch_model(0).N
 
-
         # write list comprehension that sorts py_coef py_ses etc with np.sort
-        py_coef, py_se, py_pval, py_tstat, py_confint = [np.sort(x) for x in [py_coef, py_se, py_pval, py_tstat, py_confint]]
+        py_coef, py_se, py_pval, py_tstat, py_confint = [
+            np.sort(x) for x in [py_coef, py_se, py_pval, py_tstat, py_confint]
+        ]
 
         r_coef = stats.coef(r_fixest)
         r_se = fixest.se(r_fixest)
@@ -243,60 +249,54 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         r_confint = np.array(stats.confint(r_fixest)).flatten()
         r_nobs = stats.nobs(r_fixest)
 
-
         # write list comprehension that sorts py_coef py_ses etc with np.sort
-        r_coef, r_se, r_pval, r_tstat, r_confint = [np.sort(x) for x in [r_coef, r_se, r_pval, r_tstat, r_confint]]
+        r_coef, r_se, r_pval, r_tstat, r_confint = [
+            np.sort(x) for x in [r_coef, r_se, r_pval, r_tstat, r_confint]
+        ]
 
-
-
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_coef,
         #    r_coef,
         #    rtol = rtol,
         #    atol = atol,
         #    err_msg = "py_coef != r_coef"
-        #)
+        # )
 
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_se,
         #    r_se,
         #    rtol = rtol,
         #    atol = atol,
         #    err_msg = "py_se != r_se for iid errors"
-        #)
+        # )
 
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_pval,
         #    r_pval,
         #    rtol = rtol,
         #    atol = atol,
         #    err_msg = "py_pval != r_pval for iid errors"
-        #)
+        # )
 
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_tstat,
         #    r_tstat,
         #    rtol = rtol,
         #    atol = atol,
         #    err_msg = "py_tstat != r_tstat for iid errors"
-        #)
+        # )
 
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_confint,
         #    r_confint,
         #    rtol = rtol,
         #    atol = atol,
         #    err_msg = "py_confint != r_confint for iid errors"
-        #)
+        # )
 
         np.testing.assert_allclose(
-            py_nobs,
-            r_nobs,
-            rtol = rtol,
-            atol = atol,
-            err_msg = "py_nobs != r_nobs"
+            py_nobs, r_nobs, rtol=rtol, atol=atol, err_msg="py_nobs != r_nobs"
         )
-
 
 
 @pytest.mark.parametrize("N", [100, 1000])
@@ -304,7 +304,6 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-
 @pytest.mark.parametrize(
     "fml_multi",
     [
@@ -324,14 +323,12 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         ("Y + Y2 ~ X1 | csw0(f1,f2)"),
         ("Y + log(Y2) ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
-
-        #("Y ~ i(f1,X2) | csw0(f2)"),
-        #("Y ~ i(f1,X2) | sw0(f2)"),
-        #("Y ~ i(f1,X2) | csw(f2, f3)"),
-        #("Y ~ i(f1,X2) | sw(f2, f3)"),
-
-        #("Y ~ i(f1,X2, ref = -5) | sw(f2, f3)"),
-        #("Y ~ i(f1,X2, ref = -8) | csw(f2, f3)"),
+        # ("Y ~ i(f1,X2) | csw0(f2)"),
+        # ("Y ~ i(f1,X2) | sw0(f2)"),
+        # ("Y ~ i(f1,X2) | csw(f2, f3)"),
+        # ("Y ~ i(f1,X2) | sw(f2, f3)"),
+        # ("Y ~ i(f1,X2, ref = -5) | sw(f2, f3)"),
+        # ("Y ~ i(f1,X2, ref = -8) | csw(f2, f3)"),
     ],
 )
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
@@ -365,11 +362,10 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
 
     for x, _ in range(0):
-
         mod = pyfixest.fetch_model(x)
         py_coef = mod.coef().values
         py_se = mod.se().values
@@ -377,31 +373,22 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         # sort py_coef, py_se
         py_coef, py_se = [np.sort(x) for x in [py_coef, py_se]]
 
-        fixest_object = r_fixest.rx2(x+1)
+        fixest_object = r_fixest.rx2(x + 1)
         fixest_coef = fixest_object.rx2("coefficients")
         fixest_se = fixest_object.rx2("se")
 
-        #fixest_coef = stats.coef(r_fixest)
-        #fixest_se = fixest.se(r_fixest)
+        # fixest_coef = stats.coef(r_fixest)
+        # fixest_se = fixest.se(r_fixest)
 
         # sort fixest_coef, fixest_se
         fixest_coef, fixest_se = [np.sort(x) for x in [fixest_coef, fixest_se]]
 
         np.testing.assert_allclose(
-            py_coef,
-            fixest_coef,
-            rtol = rtol,
-            atol = atol,
-            err_msg = "Coefs are not equal."
+            py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."
         )
         np.testing.assert_allclose(
-            py_se,
-            fixest_se,
-            rtol = rtol,
-            atol = atol,
-            err_msg = "SEs are not equal."
+            py_se, fixest_se, rtol=rtol, atol=atol, err_msg="SEs are not equal."
         )
-
 
 
 def _py_fml_to_r_fml(py_fml):
@@ -443,9 +430,7 @@ def _c_to_as_factor(py_fml):
     return r_fml
 
 
-
 def get_data_r(fml, data):
-
     # small intermezzo, as rpy2 does not drop NAs from factors automatically
     # note that fixes does this correctly
     # this currently does not yet work for C() interactions

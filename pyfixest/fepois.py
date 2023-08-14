@@ -63,7 +63,6 @@ class Fepois(Feols):
         self.n_separation_na = None
         self._check_for_separation()
 
-
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
@@ -293,8 +292,7 @@ class Fepois(Feols):
             self.vcov = self.ssc * bread @ meat @ bread
 
         elif self.vcov_type == "CRV":
-
-            #pdb.set_trace()
+            # pdb.set_trace()
 
             cluster_df = self._data[self.clustervar]
             # if there are missings - delete them!
@@ -369,7 +367,6 @@ class Fepois(Feols):
 
         return y_hat.flatten()
 
-
     def _check_for_separation(self, check="fe"):
         """
         Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
@@ -394,7 +391,6 @@ class Fepois(Feols):
                 pass
 
             else:
-
                 Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
 
@@ -422,10 +418,9 @@ class Fepois(Feols):
 
                 self.N = self.Y.shape[0]
                 warnings.warn(
-                        str(len(self.separation_na))
-                        + " observations removed because of only 0 outcomes."
-                    )
-
+                    str(len(self.separation_na))
+                    + " observations removed because of only 0 outcomes."
+                )
 
         else:
             raise NotImplementedError(
