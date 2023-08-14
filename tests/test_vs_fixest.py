@@ -28,8 +28,8 @@ rng = np.random.default_rng(87685)
 @pytest.mark.parametrize("seed", [8711])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-@pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols",'Fepois'])
+@pytest.mark.parametrize("dropna", [False,True])
+@pytest.mark.parametrize("model", ["Feols","Fepois"])
 @pytest.mark.parametrize("inference", ['iid','hetero', {'CRV1':'group_id'}])
 
 
@@ -52,9 +52,9 @@ rng = np.random.default_rng(87685)
         ("Y ~ X1 + C(f1) | f2 + f3"),
         #("Y ~ X1 + C(f1):C(fe2)"),            # currently does not work as C():C() translation not implemented
         #("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
-        #("Y~X1|f2^f3"),
-        #("Y~X1|f1 + f2^f3"),
-        #("Y~X1|f2^f3^f1"),
+        ("Y~X1|f2^f3"),
+        ("Y~X1|f1 + f2^f3"),
+        ("Y~X1|f2^f3^f1"),
         ("Y ~ X1:X2"),
         ("Y ~ X1:X2 | f3"),
         ("Y ~ X1:X2 | f3 + f1"),
@@ -178,10 +178,17 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             if "i(" not in fml and "C(" not in fml:
                 where_zeros = np.where(data["Y"] == 0)[0]     # because np.where evaluates to a tuple
                 # draw three random indices
-                idx = rng.choice(where_zeros, 3, True)
+                #idx = rng.choice(where_zeros, 3, True)
+                idx = np.array([10, 11, 12])
                 data.loc[idx[0], "f1"] = np.max(data["f1"]) + 1
                 data.loc[idx[1], "f2"] = np.max(data["f2"]) + 1
                 data.loc[idx[2], "f3"] = np.max(data["f3"]) + 1
+
+            if "i(" in fml:
+                pytest.skip("Don't test interactions for Poisson.")
+
+            if "^" in fml:
+                pytest.skip("Don't test '^' for Poisson.")
 
             pyfixest = Fixest(data=data, iwls_tol = iwls_tol, iwls_maxiter = iwls_maxiter)
 

@@ -293,6 +293,9 @@ class Fepois(Feols):
             self.vcov = self.ssc * bread @ meat @ bread
 
         elif self.vcov_type == "CRV":
+
+            #pdb.set_trace()
+
             cluster_df = self._data[self.clustervar]
             # if there are missings - delete them!
 
