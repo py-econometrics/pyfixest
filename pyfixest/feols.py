@@ -117,6 +117,10 @@ class Feols:
         self.Y_hat_link = self.X @ self.beta_hat
         self.u_hat = self.Y.flatten() - self.Y_hat_link.flatten()
 
+        self.scores = self.u_hat[:,None] * self.X
+        self.hessian = self.X.transpose() @ self.X
+
+
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         """
         Compute covariance matrices for an estimated regression model.
@@ -171,6 +175,14 @@ class Feols:
                     "CRV3 inference is not supported for IV regressions."
                 )
 
+
+        if self._is_iv:
+            bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
+        else:
+            bread = np.linalg.inv(self.hessian)
+            #bread = self.tZXinv
+
+
         # compute vcov
         if self.vcov_type == "iid":
             self.ssc = get_ssc(
@@ -182,13 +194,13 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum(self.u_hat**2) / (self.N - 1)
+            sigma2 = np.sum(self.weights.flatten() * self.u_hat.flatten() **2) / (self.N - 1)
             # only relevant factor for iid in ssc: fixef.K
             if self._is_iv == False:
-                self.vcov = self.ssc * self.tZXinv * sigma2
+                self.vcov = self.ssc * bread * sigma2 # NOTE:   only valid for diagonal values
             else:
                 self.vcov = (
-                    self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) * sigma2
+                    self.ssc *  np.sum(np.diag(self.scores.transpose() @ self.scores)) / (self.N - 1)
                 )
 
         elif self.vcov_type == "hetero":
@@ -211,14 +223,13 @@ class Feols:
                     u = self.u_hat / (1 - leverage)
 
             if self._is_iv == False:
-                meat = np.transpose(self.Z) * (u**2) @ self.Z
-                self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                meat = self.scores.transpose() @ self.scores
+                self.vcov = self.ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
                     u = u.reshape((self.N, 1))
                 Omega = np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
                 meat = self.tXZ @ self.tZZinv @ Omega @ self.tZZinv @ self.tZX  # k x k
-                bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                 self.vcov = self.ssc * bread @ meat @ bread
 
         elif self.vcov_type == "CRV":
@@ -255,16 +266,13 @@ class Feols:
                     _,
                     g,
                 ) in enumerate(clustid):
-                    Zg = self.Z[np.where(cluster_df == g)]
-                    ug = self.u_hat[np.where(cluster_df == g)]
-                    score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
+                    score_g = self.scores[np.where(cluster_df == g)]
                     meat += np.dot(score_g, score_g.transpose())
 
                 if self._is_iv == False:
-                    self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                    self.vcov = self.ssc * bread @ meat @ bread
                 else:
                     meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
-                    bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                     self.vcov = self.ssc * bread @ meat @ bread
 
             elif self.vcov_type_detail == "CRV3":
