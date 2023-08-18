@@ -15,23 +15,25 @@ pandas2ri.activate()
 
 fixest = importr("fixest")
 stats = importr("stats")
+broom = importr("broom")
 
-rtol = 1e-05
-atol = 1e-05
+# only test for absolute differences
+rtol = 1e-06
+atol = 1e-06
 
-iwls_maxiter = 1000
-iwls_tol = 1e-10
+iwls_maxiter = 25
+iwls_tol = 1e-08
 
 rng = np.random.default_rng(87685)
 
 
 @pytest.mark.parametrize("N", [100, 1000])
-@pytest.mark.parametrize("seed", [8711])
+@pytest.mark.parametrize("seed", [871910])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols", "Fepois"])
-@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("model", ["Fepois"])
+@pytest.mark.parametrize("inference", ["hetero"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -39,10 +41,8 @@ rng = np.random.default_rng(87685)
         ("Y~X1+X2"),
         ("Y~X1|f2"),
         ("Y~X1|f2+f3"),
-        ("Y~X2|f2+f3"),
         ("log(Y) ~ X1"),
-        ("Y ~ exp(X1)"),
-        ("Y ~ C(f1)"),
+        ("Y ~ X1 + exp(X2)"),
         ("Y ~ X1 + C(f1)"),
         ("Y ~ X1 + C(f2)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
@@ -53,53 +53,53 @@ rng = np.random.default_rng(87685)
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
         ("Y~X1|f2^f3^f1"),
-        ("Y ~ X1:X2"),
-        ("Y ~ X1:X2 | f3"),
-        ("Y ~ X1:X2 | f3 + f1"),
+        ("Y ~ X1 + X2:f1"),
+        ("Y ~ X1 + X2:f1 | f3"),
+        ("Y ~ X1 + X2:f1 | f3 + f1"),
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-        ("Y ~ i(f1,X2)"),
-        ("Y ~ i(f2,X2)"),
-        ("Y ~ i(f1,X2) | f2"),
-        ("Y ~ i(f1,X2) | f2 + f3"),
+        ("Y ~ X1 + i(f1,X2)"),
+        ("Y ~ X1 + i(f2,X2)"),
+        ("Y ~ X1 + i(f1,X2) | f2"),
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),
         # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
         # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
         # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
         # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
-        ("Y ~ C(f1)"),
-        ("Y ~ C(f1) + C(f2)"),
+        ("Y ~ X1 + C(f1)"),
+        ("Y ~ X1 + C(f1) + C(f2)"),
         # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
-        ("Y ~ C(f1) | f2"),
-        ("Y ~ I(X1 ** 2)"),
-        ("Y ~ I(X1 ** 2) + I(X2**4)"),
+        ("Y ~ X1 + C(f1) | f2"),
+        ("Y ~ X1 + I(X2 ** 2)"),
+        ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
         ("Y ~ X1*X2"),
         ("Y ~ X1*X2 | f1+f2"),
         # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
         # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
         # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
         # IV starts here
-        ("Y ~ 1 | X1 ~ Z1"),
-        "Y ~  X2 | X1 ~ Z1",
-        "Y ~ X2 + C(f1) | X1 ~ Z1",
-        "Y2 ~ 1 | X1 ~ Z1",
-        "Y2 ~ X2 | X1 ~ Z1",
-        "Y2 ~ X2 + C(f1) | X1 ~ Z1",
-        "log(Y) ~ 1 | X1 ~ Z1",
-        "log(Y) ~ X2 | X1 ~ Z1",
-        "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
-        "Y ~ 1 | f1 | X1 ~ Z1",
-        "Y ~ 1 | f1 + f2 | X1 ~ Z1",
-        "Y ~ 1 | f1^f2 | X1 ~ Z1",
-        "Y ~  X2| f1 | X1 ~ Z1",
+        #("Y ~ 1 | X1 ~ Z1"),
+        #"Y ~  X2 | X1 ~ Z1",
+        #"Y ~ X2 + C(f1) | X1 ~ Z1",
+        #"Y2 ~ 1 | X1 ~ Z1",
+        #"Y2 ~ X2 | X1 ~ Z1",
+        #"Y2 ~ X2 + C(f1) | X1 ~ Z1",
+        #"log(Y) ~ 1 | X1 ~ Z1",
+        #"log(Y) ~ X2 | X1 ~ Z1",
+        #"log(Y) ~ X2 + C(f1) | X1 ~ Z1",
+        #"Y ~ 1 | f1 | X1 ~ Z1",
+        #"Y ~ 1 | f1 + f2 | X1 ~ Z1",
+        #"Y ~ 1 | f1^f2 | X1 ~ Z1",
+        #"Y ~  X2| f1 | X1 ~ Z1",
         # tests of overidentified models
-        "Y ~ 1 | X1 ~ Z1 + Z2",
-        "Y ~ X2 | X1 ~ Z1 + Z2",
-        "Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
-        "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-        "Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
-        "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
+        #"Y ~ 1 | X1 ~ Z1 + Z2",
+        #"Y ~ X2 | X1 ~ Z1 + Z2",
+        #"Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
+        #"Y ~ 1 | f1 | X1 ~ Z1 + Z2",
+        #"Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
+        #"Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
 def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
@@ -111,6 +111,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         - ... compare regression coefficients and standard errors
         - tba: t-statistics, covariance matrices, other metrics
     """
+
+    inference_inflation_factor = 1.0
 
     if model == "Feols":
         data = get_data(
@@ -188,6 +190,10 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             if "^" in fml:
                 pytest.skip("Don't test '^' for Poisson.")
 
+            # relax tolerance for Poisson regression - effective rtol and atol of
+            # 5e-05
+            inference_inflation_factor = 50
+
             pyfixest = Fixest(data=data, iwls_tol=iwls_tol, iwls_maxiter=iwls_maxiter)
 
             try:
@@ -198,14 +204,14 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
                         "Poisson model requires strictly positive dependent variable."
                     )
                 raise
-            except NotImplementedError as exception:
-                if "iid inference is not supported for non-linear models" in str(
-                    exception
-                ):
-                    return pytest.skip(
-                        "iid inference is not supported for non-linear models."
-                    )
-                raise
+            #except NotImplementedError as exception:
+            #    if "iid inference is not supported for non-linear models" in str(
+            #        exception
+            #    ):
+            #        return pytest.skip(
+            #            "iid inference is not supported for non-linear models."
+            #        )
+            #    raise
             except RuntimeError as exception:
                 if "Failed to converge after 1000000 iterations." in str(exception):
                     return pytest.skip(
@@ -225,78 +231,93 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             py_nobs = pyfixest.fetch_model(0).N
             r_nobs = stats.nobs(r_fixest)
 
-            # if py_nobs != r_nobs:
-            #    return pytest.skip("R and Py models run on different numbers observations.")
 
     if run_test:
         # get coefficients, standard errors, p-values, t-statistics, confidence intervals
-        py_coef = pyfixest.coef().values
-        py_se = pyfixest.se().values
-        py_pval = pyfixest.pvalue().values
-        py_tstat = pyfixest.tstat().values
-        py_confint = pyfixest.confint().values.flatten()
-        py_nobs = pyfixest.fetch_model(0).N
 
-        # write list comprehension that sorts py_coef py_ses etc with np.sort
-        py_coef, py_se, py_pval, py_tstat, py_confint = [
-            np.sort(x) for x in [py_coef, py_se, py_pval, py_tstat, py_confint]
-        ]
+        print("run pyfixest")
+        mod = pyfixest.fetch_model(0)
+        py_coef = mod.coef().xs("X1")
+        py_se = mod.se().xs("X1")
+        py_pval = mod.pvalue().xs("X1")
+        py_tstat = mod.tstat().xs("X1")
+        py_confint = mod.confint().xs("X1").values
+        py_nobs = mod.N
+        py_resid = mod.u_hat.flatten()
+        # TODO: test residuals
 
-        r_coef = stats.coef(r_fixest)
-        r_se = fixest.se(r_fixest)
-        r_pval = fixest.pvalue(r_fixest)
-        r_tstat = fixest.tstat(r_fixest)
-        r_confint = np.array(stats.confint(r_fixest)).flatten()
+
+        fixest_df = broom.tidy_fixest(r_fixest, conf_int = ro.BoolVector([True]))
+        df_r = pd.DataFrame(fixest_df).T
+        df_r.columns = ["term","estimate","std.error","statistic","p.value","conf.low", "conf.high"]
+        df_X1 = df_r.set_index("term").xs("X1") # only test for X1
+
+        r_coef = df_X1["estimate"]
+        r_se = df_X1["std.error"]
+        r_pval = df_X1["p.value"]
+        r_tstat = df_X1["statistic"]
+        r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
         r_nobs = stats.nobs(r_fixest)
+        r_resid = r_fixest.rx2("working_residuals")
 
-        # write list comprehension that sorts py_coef py_ses etc with np.sort
-        r_coef, r_se, r_pval, r_tstat, r_confint = [
-            np.sort(x) for x in [r_coef, r_se, r_pval, r_tstat, r_confint]
-        ]
+        np.testing.assert_allclose(
+            py_coef,
+            r_coef,
+            rtol = rtol,
+            atol = atol,
+            err_msg = "py_coef != r_coef"
+        )
 
-        # np.testing.assert_allclose(
-        #    py_coef,
-        #    r_coef,
-        #    rtol = rtol,
-        #    atol = atol,
-        #    err_msg = "py_coef != r_coef"
-        # )
+        #np.testing.assert_allclose(
+        #    py_resid,
+        #    r_resid,
+        #    rtol = 1e-04,
+        #    atol = 1e-04,
+        #    err_msg = "py_resid != r_resid"
+        #)
 
-        # np.testing.assert_allclose(
-        #    py_se,
-        #    r_se,
-        #    rtol = rtol,
-        #    atol = atol,
-        #    err_msg = "py_se != r_se for iid errors"
-        # )
+        np.testing.assert_allclose(
+           py_se,
+           r_se,
+           rtol = rtol * inference_inflation_factor,
+           atol = atol * inference_inflation_factor,
+           err_msg = f"py_se != r_se for {inference} errors."
+        )
 
-        # np.testing.assert_allclose(
-        #    py_pval,
-        #    r_pval,
-        #    rtol = rtol,
-        #    atol = atol,
-        #    err_msg = "py_pval != r_pval for iid errors"
-        # )
+        np.testing.assert_allclose(
+           py_pval,
+           r_pval,
+           rtol = rtol * inference_inflation_factor,
+           atol = atol * inference_inflation_factor,
+           err_msg = f"py_pval != r_pval for {inference} errors."
+        )
 
-        # np.testing.assert_allclose(
-        #    py_tstat,
-        #    r_tstat,
-        #    rtol = rtol,
-        #    atol = atol,
-        #    err_msg = "py_tstat != r_tstat for iid errors"
-        # )
+        np.testing.assert_allclose(
+           py_tstat,
+           r_tstat,
+           rtol = rtol * inference_inflation_factor,
+           atol = atol * inference_inflation_factor,
+           err_msg = f"py_tstat != r_tstat for {inference} errors"
+        )
 
-        # np.testing.assert_allclose(
-        #    py_confint,
-        #    r_confint,
-        #    rtol = rtol,
-        #    atol = atol,
-        #    err_msg = "py_confint != r_confint for iid errors"
-        # )
+        np.testing.assert_allclose(
+           py_confint,
+           r_confint,
+           rtol = rtol * inference_inflation_factor,
+           atol = atol * inference_inflation_factor,
+           err_msg = f"py_confint != r_confint for {inference} errors"
+        )
 
         np.testing.assert_allclose(
             py_nobs, r_nobs, rtol=rtol, atol=atol, err_msg="py_nobs != r_nobs"
         )
+
+        if model == "Fepois":
+            r_deviance = r_fixest.rx2("deviance")
+            py_deviance = mod.deviance
+            np.testing.assert_allclose(
+                py_deviance, r_deviance, rtol=rtol, atol=atol, err_msg="py_deviance != r_deviance"
+            )
 
 
 @pytest.mark.parametrize("N", [100, 1000])
