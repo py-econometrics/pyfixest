@@ -164,12 +164,6 @@ class Feols:
         else:
             bread = np.linalg.inv(self.hessian)
 
-        if self.weights is not None:
-            weighted_uhat = self.weights * self.u_hat
-        else:
-            weighted_uhat = self.u_hat
-
-
         # compute vcov
         if self.vcov_type == "iid":
 
@@ -185,8 +179,7 @@ class Feols:
                 vcov_type="iid",
             )
 
-
-            sigma2 = np.sum((self.weights.flatten() * self.u_hat.flatten()) **2) / (self.N - 1)
+            sigma2 = np.sum((self.u_hat.flatten()) **2) / (self.N - 1)
             self.vcov = self.ssc * bread * sigma2
 
         elif self.vcov_type == "hetero":
