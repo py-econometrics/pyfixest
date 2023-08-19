@@ -24,21 +24,18 @@ fixest = pf.Fixest(data = pdata)
 fixest.fepois("Y~X1 | X2+X3+X4", vcov = {'CRV1':'X4'})
 
 fixest.summary()
-# ###
-#
 # Model:  Poisson
 # Dep. var.:  Y
 # Fixed effects:  X2+X3+X4
 # Inference:  {'CRV1': 'X4'}
 # Observations:  1000
-#
+
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
 # | X1            |      0.874 |        0.037 |    23.780 |      0.000 |   0.802 |    0.946 |
+# ---
+# Deviance: 481157.824
 ```
-
-Note that `v0.8.4` is not yet on `PyPi` - I first need to finalize a PR to [PyHDFE](https://github.com/jeffgortmaker/pyhdfe/pull/4) to support weights - which
-is a requirement for Poisson regression via iterated weighted least squares. The github repo currently installs my PR fork of [PyHDFE](https://github.com/s3alfisc/pyhdfe).
 
 
 ## Quickstart
