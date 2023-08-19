@@ -64,6 +64,9 @@ class Fepois(Feols):
         self.n_separation_na = None
         self._check_for_separation()
 
+        self._support_crv3_inference = False
+        self._support_iid_inference = False
+
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
