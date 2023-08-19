@@ -9,7 +9,7 @@ This is a draft package (no longer highly experimental) for a Python clone of th
 
 ## Installation
 
-You can install the release version (v0.8.3) from `PyPi` by running `pip install pyfixest` (v0.8.3) or the development version from github.
+You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
 
 ## News
 
