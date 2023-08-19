@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import warnings
 
-import pdb
 
 from typing import Union, List, Dict
 from formulaic import model_matrix
@@ -90,17 +89,14 @@ class Fepois(Feols):
         Y = self.Y
         X = self.X
         fe = self.fe
-        #sum_log_factorial_Y = np.sum(np.log(np.math.factorial(Y.flatten())))
-
-        #def loglik(Xbeta, Y, sum_log_factorial_Y):
-        #    A = np.sum(Y * Xbeta)
-        #    B = np.sum(np.exp(Xbeta))
-        #    C = sum_log_factorial_Y
-        #    return A - B - C
 
         def compute_deviance(Y, mu):
-            return (2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))).flatten()
-
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                deviance = (
+                    2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+                ).flatten()
+            return deviance
 
         # initiate demeaning algo (if needed)
         if fe is not None:
@@ -109,24 +105,24 @@ class Fepois(Feols):
             )
             if (
                 self._drop_singletons == True
-                    and algorithm.singletons != 0
-                    and algorithm.singletons is not None
-                ):
+                and algorithm.singletons != 0
+                and algorithm.singletons is not None
+            ):
                 print(
                     algorithm.singletons,
                     "columns are dropped due to singleton fixed effects.",
                 )
-                dropped_singleton_indices = np.where(
-                    algorithm._singleton_indices)[0].tolist()
+                dropped_singleton_indices = np.where(algorithm._singleton_indices)[
+                    0
+                ].tolist()
                 na_index += dropped_singleton_indices
 
         accelerate = True
-        #inner_tol = 1e-04
+        # inner_tol = 1e-04
         stop_iterating = False
         crit = 1
 
         for i in range(self.maxiter):
-
             if stop_iterating:
                 self.convergence = True
                 break
@@ -136,33 +132,27 @@ class Fepois(Feols):
                 )
 
             if i == 0:
-
-                #pdb.set_trace()
                 _mean = np.mean(Y)
                 mu = (Y + _mean) / 2
                 eta = np.log(mu)
                 Z = eta + Y / mu - 1
                 last_Z = Z.copy()
                 reg_Z = Z.copy()
-                #pdb.set_trace()
                 last = compute_deviance(Y, mu)
-                #delta = np.ones(self.k)
 
             elif accelerate:
-
                 last_Z = Z.copy()
                 Z = eta + Y / mu - 1
                 reg_Z = Z - last_Z + Z_resid
                 X = X_resid.copy()
 
             else:
-
                 # update w and Z
-                Z = eta + self.Y / mu - 1                # eq (8)
-                reg_Z = Z.copy()                         # eq (9)
+                Z = eta + self.Y / mu - 1  # eq (8)
+                reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
-            #if crit < 10 * inner_tol:
+            # if crit < 10 * inner_tol:
             #    inner_tol = inner_tol / 10
 
             # Step 1: weighted demeaning
@@ -173,8 +163,8 @@ class Fepois(Feols):
             else:
                 ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((self.N, 1))       # z_resid
-            X_resid = ZX_resid[:, 1:]                           # x_resid
+            Z_resid = ZX_resid[:, 0].reshape((self.N, 1))  # z_resid
+            X_resid = ZX_resid[:, 1:]  # x_resid
 
             # Step 2: estimate WLS
             WX = np.sqrt(mu) * X_resid
@@ -183,25 +173,23 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = np.linalg.solve(XWX, XWZ)   # eq (10), delta_new -> reg_z
-            resid = (Z_resid - X_resid @ delta_new)
+            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()
             # more updating
             eta = Z - resid
             mu = np.exp(eta)
 
-            #pdb.set_trace()
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
             deviance = compute_deviance(Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            #crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
-            #crit = np.sqrt(((deviance - last)** 2))
+            # crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
+            # crit = np.sqrt(((deviance - last)** 2))
             last = deviance.copy()
 
             stop_iterating = crit < self.tol
-
 
         self.beta_hat = delta_new.flatten()
         self.Y_hat_response = mu
@@ -226,9 +214,8 @@ class Fepois(Feols):
         self.tZXinv = np.linalg.inv(self.tZX)
         self.Xbeta = eta
 
-        self.scores = self.u_hat[:,None] * self.weights * X_resid
+        self.scores = self.u_hat[:, None] * self.weights * X_resid
         self.hessian = XWX
-
 
     def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.array:
         """

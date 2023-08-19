@@ -81,8 +81,6 @@ class Feols:
         self._support_crv3_inference = True
         self._support_iid_inference = True
 
-
-
     def get_fit(self, estimator="ols") -> None:
         """
         Regression estimation for a single model, via ordinary least squares (OLS).
@@ -123,7 +121,6 @@ class Feols:
 
         self.scores = self.Z * self.u_hat[:, None]
         self.hessian = self.Z.transpose() @ self.Z
-
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         """
@@ -166,9 +163,10 @@ class Feols:
 
         # compute vcov
         if self.vcov_type == "iid":
-
             if not self._support_iid_inference:
-                raise NotImplementedError(f"'iid' inference is not supported for {self._method} regressions.")
+                raise NotImplementedError(
+                    f"'iid' inference is not supported for {self._method} regressions."
+                )
 
             self.ssc = get_ssc(
                 ssc_dict=self._ssc_dict,
@@ -179,7 +177,7 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum((self.u_hat.flatten()) **2) / (self.N - 1)
+            sigma2 = np.sum((self.u_hat.flatten()) ** 2) / (self.N - 1)
             self.vcov = self.ssc * bread * sigma2
 
         elif self.vcov_type == "hetero":
@@ -203,14 +201,15 @@ class Feols:
                 else:
                     transformed_scores = self.scores / (1 - leverage)[:, None]
 
-
             if self._is_iv == False:
                 meat = transformed_scores.transpose() @ transformed_scores
                 self.vcov = self.ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
                     u = u.reshape((self.N, 1))
-                Omega = transformed_scores.transpose() @ transformed_scores     #np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
+                Omega = (
+                    transformed_scores.transpose() @ transformed_scores
+                )  # np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
                 meat = self.tXZ @ self.tZZinv @ Omega @ self.tZZinv @ self.tZX  # k x k
                 self.vcov = self.ssc * bread @ meat @ bread
 
@@ -241,12 +240,13 @@ class Feols:
             )
 
             if self.vcov_type_detail == "CRV1":
-
                 k_instruments = self.Z.shape[1]
                 meat = np.zeros((k_instruments, k_instruments))
 
                 if self.weights is not None:
-                    weighted_uhat = (self.weights.flatten() * self.u_hat.flatten()).reshape((self.N, 1))
+                    weighted_uhat = (
+                        self.weights.flatten() * self.u_hat.flatten()
+                    ).reshape((self.N, 1))
                 else:
                     weighted_uhat = self.u_hat
 
@@ -261,7 +261,7 @@ class Feols:
 
                 if self._is_iv == False:
                     self.vcov = self.ssc * bread @ meat @ bread
-                #if self._is_iv == False:
+                # if self._is_iv == False:
                 #    self.vcov = self.ssc * bread @ meat @ bread
                 else:
                     meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
@@ -276,7 +276,9 @@ class Feols:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
                 if not self._support_iid_inference:
-                    raise NotImplementedError(f"'CRV3' inference is not supported for {self._method} regressions.")
+                    raise NotImplementedError(
+                        f"'CRV3' inference is not supported for {self._method} regressions."
+                    )
 
                 if self._is_iv:
                     raise VcovTypeNotSupportedError(
