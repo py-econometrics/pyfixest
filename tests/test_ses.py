@@ -4,13 +4,12 @@ import pyfixest as pf
 from pyfixest.ssc_utils import ssc
 from pyfixest.utils import get_data
 
+
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-
 def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
-
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
@@ -63,16 +62,11 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     #    raise ValueError("HC3 and CRV3 p values are not the same.")
 
 
-
-
-
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-
 def test_CRV3_fixef(N, seed, beta_type, error_type):
-
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
 
     fixest = pf.Fixest(data=data)

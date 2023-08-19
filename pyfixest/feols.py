@@ -78,6 +78,9 @@ class Feols:
         self.y_hat_link = None
         self.y_hat_response = None
 
+        self._support_crv3_inference = True
+        self._support_iid_inference = True
+
     def get_fit(self, estimator="ols") -> None:
         """
         Regression estimation for a single model, via ordinary least squares (OLS).
@@ -113,9 +116,11 @@ class Feols:
 
         else:
             raise ValueError("estimator must be one of 'ols' or '2sls'.")
-
         self.Y_hat_link = self.X @ self.beta_hat
         self.u_hat = self.Y.flatten() - self.Y_hat_link.flatten()
+
+        self.scores = self.Z * self.u_hat[:, None]
+        self.hessian = self.Z.transpose() @ self.Z
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         """
@@ -129,26 +134,6 @@ class Feols:
             If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
             or {"CRV3":"clustervar"} for CRV3 inference.
             Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
-
-        Raises
-        ------
-        AssertionError
-            If vcov is not a dict, string, or list.
-        AssertionError
-            If vcov is a dict and the key is not "CRV1" or "CRV3".
-        AssertionError
-            If vcov is a dict and the value is not a string.
-        AssertionError
-            If vcov is a dict and the value is not a column in the data.
-        AssertionError
-            CRV3 currently not supported with arbitrary fixed effects
-        AssertionError
-            If vcov is a list and it does not contain strings.
-        AssertionError
-            If vcov is a list and it does not contain columns in the data.
-        AssertionError
-            If vcov is a string and it is not one of "iid", "hetero", "HC1", "HC2", or "HC3".
-
 
         Returns
         -------
@@ -171,8 +156,18 @@ class Feols:
                     "CRV3 inference is not supported for IV regressions."
                 )
 
+        if self._is_iv:
+            bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
+        else:
+            bread = np.linalg.inv(self.hessian)
+
         # compute vcov
         if self.vcov_type == "iid":
+            if not self._support_iid_inference:
+                raise NotImplementedError(
+                    f"'iid' inference is not supported for {self._method} regressions."
+                )
+
             self.ssc = get_ssc(
                 ssc_dict=self._ssc_dict,
                 N=self.N,
@@ -182,14 +177,8 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum(self.u_hat**2) / (self.N - 1)
-            # only relevant factor for iid in ssc: fixef.K
-            if self._is_iv == False:
-                self.vcov = self.ssc * self.tZXinv * sigma2
-            else:
-                self.vcov = (
-                    self.ssc * np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX) * sigma2
-                )
+            sigma2 = np.sum((self.u_hat.flatten()) ** 2) / (self.N - 1)
+            self.vcov = self.ssc * bread * sigma2
 
         elif self.vcov_type == "hetero":
             self.ssc = get_ssc(
@@ -203,22 +192,25 @@ class Feols:
 
             if self.vcov_type_detail in ["hetero", "HC1"]:
                 u = self.u_hat
+                transformed_scores = self.scores
             elif self.vcov_type_detail in ["HC2", "HC3"]:
                 leverage = np.sum(self.X * (self.X @ self.tZXinv), axis=1)
                 if self.vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
+                    transformed_scores = self.scores / np.sqrt(1 - leverage)[:, None]
                 else:
-                    u = self.u_hat / (1 - leverage)
+                    transformed_scores = self.scores / (1 - leverage)[:, None]
 
             if self._is_iv == False:
-                meat = np.transpose(self.Z) * (u**2) @ self.Z
-                self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                meat = transformed_scores.transpose() @ transformed_scores
+                self.vcov = self.ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
                     u = u.reshape((self.N, 1))
-                Omega = np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
+                Omega = (
+                    transformed_scores.transpose() @ transformed_scores
+                )  # np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
                 meat = self.tXZ @ self.tZZinv @ Omega @ self.tZZinv @ self.tZX  # k x k
-                bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                 self.vcov = self.ssc * bread @ meat @ bread
 
         elif self.vcov_type == "CRV":
@@ -251,20 +243,28 @@ class Feols:
                 k_instruments = self.Z.shape[1]
                 meat = np.zeros((k_instruments, k_instruments))
 
+                if self.weights is not None:
+                    weighted_uhat = (
+                        self.weights.flatten() * self.u_hat.flatten()
+                    ).reshape((self.N, 1))
+                else:
+                    weighted_uhat = self.u_hat
+
                 for (
                     _,
                     g,
                 ) in enumerate(clustid):
                     Zg = self.Z[np.where(cluster_df == g)]
-                    ug = self.u_hat[np.where(cluster_df == g)]
+                    ug = weighted_uhat[np.where(cluster_df == g)]
                     score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
                 if self._is_iv == False:
-                    self.vcov = self.ssc * self.tZXinv @ meat @ self.tZXinv
+                    self.vcov = self.ssc * bread @ meat @ bread
+                # if self._is_iv == False:
+                #    self.vcov = self.ssc * bread @ meat @ bread
                 else:
                     meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
-                    bread = np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
                     self.vcov = self.ssc * bread @ meat @ bread
 
             elif self.vcov_type_detail == "CRV3":
@@ -274,6 +274,11 @@ class Feols:
 
                 # if self._has_fixef:
                 #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
+
+                if not self._support_iid_inference:
+                    raise NotImplementedError(
+                        f"'CRV3' inference is not supported for {self._method} regressions."
+                    )
 
                 if self._is_iv:
                     raise VcovTypeNotSupportedError(

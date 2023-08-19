@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.8.7.0"
+version = "0.8.9.0"
 
 description = "Experimental draft package for high dimensional fixed effect estimation. Supports OLS and IV estimation."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
@@ -14,7 +14,7 @@ python=">=3.8"
 pandas="^1.4"
 numpy=">=1.18"
 matplotlib = "^3.7"
-PyHDFE = {git = "https://github.com/s3alfisc/pyhdfe.git"}
+PyHDFE = "^0.2"
 scipy = "^1.0.0"
 formulaic = "^0.6.0"
 pytest="^7.0.0"

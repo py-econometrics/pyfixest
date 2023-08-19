@@ -3,7 +3,7 @@ import pandas as pd
 from formulaic import model_matrix
 
 
-def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
+def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     """
     create a random example data set
     Args:
@@ -11,18 +11,20 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
         seed: seed for the random number generator
         beta_type: type of beta coefficients
         error_type: type of error term
+        model: type of the dgp. Either "Feols" or "Fepois"
     Returns:
         df: a pandas data frame with simulated data
     """
 
     rng = np.random.default_rng(seed)
-    G = rng.choice(list(range(10, 100))).astype("int64")
+    G = rng.choice(list(range(10, 20))).astype("int64")
     fe_dims = rng.choice(list(range(2, int(np.floor(np.sqrt(N))))), 3, True).astype(
         "int64"
     )
 
     # create the covariates
-    X = rng.normal(0, 1, N * 5).reshape((N, 5))
+    X = rng.normal(0, 3, N * 5).reshape((N, 5))
+    X[:, 0] = np.random.choice(range(3), N, True)
     # X = pd.DataFrame(X)
     X[:, 2] = rng.choice(list(range(fe_dims[0])), N, True)
     X[:, 3] = rng.choice(list(range(fe_dims[1])), N, True)
@@ -60,17 +62,25 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1"):
         raise ValueError("error_type needs to be '1', '2' or '3'.")
 
     # create the depvar and cluster variable
-    Y = 1 + mm.to_numpy() @ beta + u
-    Y = pd.Series(Y.flatten())
-    Y.name = "Y"
+    if model == "Feols":
+        Y = (1 + mm.to_numpy() @ beta + u).flatten()
+        Y2 = Y + rng.normal(0, 5, N)
+    elif model == "Fepois":
+        mu = np.exp(mm.to_numpy() @ beta).flatten()
+        mu = 1 + mu / np.sum(mu)
+        Y = rng.poisson(mu, N)
+        Y2 = Y + rng.choice(range(10), N, True)
+    else:
+        raise ValueError("model needs to be 'Feols' or 'Fepois'.")
+
+    Y, Y2 = [pd.Series(x.flatten()) for x in [Y, Y2]]
+    Y.name, Y2.name = "Y", "Y2"
+
     cluster = rng.choice(list(range(0, G)), N)
     cluster = pd.Series(cluster)
     cluster.name = "group_id"
 
-    df = pd.concat([Y, X, cluster], axis=1)
-
-    # add another (noisier) outcome variable
-    df["Y2"] = df.Y.values + np.random.normal(0, 5, N)
+    df = pd.concat([Y, Y2, X, cluster], axis=1)
 
     # add some NaN values
     df.loc[0, "Y"] = np.nan
