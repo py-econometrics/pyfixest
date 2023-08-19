@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
+
 from typing import Union, List, Dict
 from formulaic import model_matrix
 from pyfixest.feols import Feols, _check_vcov_input, _deparse_vcov_input
@@ -43,6 +44,7 @@ class Fepois(Feols):
         self.tol = tol
         self._drop_singletons = drop_singletons
         self._method = "fepois"
+        self.convergence = False
 
         if self.fe is not None:
             self._has_fixef = True
@@ -56,6 +58,13 @@ class Fepois(Feols):
             raise ValueError(
                 "The dependent variable must be a weakly positive integer."
             )
+
+        self.separation_na = None
+        self.n_separation_na = None
+        self._check_for_separation()
+
+        self._support_crv3_inference = False
+        self._support_iid_inference = False
 
     def get_fit(self) -> None:
         """
@@ -77,258 +86,136 @@ class Fepois(Feols):
 
         """
 
-        self._check_for_separation()
-
         Y = self.Y
         X = self.X
         fe = self.fe
 
-        # print(Y.shape, X.shape, fe.shape)
+        def compute_deviance(Y, mu):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                deviance = (
+                    2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+                ).flatten()
+            return deviance
 
-        def _update_w(Xbeta):
-            """
-            Implements the updating function for the weights in the IRLS algorithm.
-            Uses the softmax for numerical stability.
-            Args:
-                Xbeta (np.array): Xbeta from the last iteration of the IRLS algorithm
-            Returns:
-                w (np.array): updated weights
-            """
-            expXbeta = np.exp(Xbeta - np.max(Xbeta))
-            return expXbeta / np.sum(expXbeta)
+        # initiate demeaning algo (if needed)
+        if fe is not None:
+            algorithm = pyhdfe.create(
+                ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
+            )
+            if (
+                self._drop_singletons == True
+                and algorithm.singletons != 0
+                and algorithm.singletons is not None
+            ):
+                print(
+                    algorithm.singletons,
+                    "columns are dropped due to singleton fixed effects.",
+                )
+                dropped_singleton_indices = np.where(algorithm._singleton_indices)[
+                    0
+                ].tolist()
+                na_index += dropped_singleton_indices
 
-        def _update_Z(Y, Xbeta):
-            return (Y - np.exp(Xbeta)) / np.exp(Xbeta) + Xbeta
+        accelerate = True
+        # inner_tol = 1e-04
+        stop_iterating = False
+        crit = 1
 
-        # starting values: http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/spm/spmhtmlnode27.html
-        # reference:  McCullagh, P. & Nelder, J. A. ( 1989). Generalized Linear Models,
-        #  Vol. 37 of Monographs on Statistics and Applied Probability, 2 edn, Chapman and Hall, London.
-        Xbeta = np.log(np.repeat(np.mean(Y, axis=0), self.N).reshape((self.N, 1)))
-        w = _update_w(Xbeta)
-        Z = _update_Z(Y=Y, Xbeta=Xbeta)
-
-        delta = np.ones((X.shape[1]))
-
-        X2 = X
-        Z2 = Z
-
-        algorithm = pyhdfe.create(
-            ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
-        )
-
-        algorithm = pyhdfe.create(
-            ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
-        )
-
-        for x in range(self.maxiter):
-            # Step 1: weighted demeaning
-            ZX = np.concatenate([Z2, X2], axis=1)
-
-            if fe is not None:
-                if (
-                    self._drop_singletons == True
-                    and algorithm.singletons != 0
-                    and algorithm.singletons is not None
-                ):
-                    print(
-                        algorithm.singletons,
-                        "columns are dropped due to singleton fixed effects.",
-                    )
-                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[
-                        0
-                    ].tolist()
-                    na_index += dropped_singleton_indices
-                ZX_d = algorithm.residualize(ZX, w)
-            else:
-                ZX_d = ZX
-
-            Z_d = ZX_d[:, 0].reshape((self.N, 1))
-            X_d = ZX_d[:, 1:]
-
-            WX_d = np.sqrt(w) * X_d
-            WZ_d = np.sqrt(w) * Z_d
-
-            XdWXd = WX_d.transpose() @ WX_d
-            XdWZd = WX_d.transpose() @ WZ_d
-
-            delta_new = np.linalg.solve(XdWXd, XdWZd)
-            e_new = Z_d - X_d @ delta_new
-
-            Xbeta_new = Z - e_new
-            w_u = _update_w(Xbeta_new)
-            Z_u = _update_Z(Y=Y, Xbeta=Xbeta_new)
-
-            stop_iterating = np.sqrt(np.sum((delta - delta_new) ** 2)) < self.tol
-
-            # update
-            delta = delta_new
-            Z2 = Z_d + Z_u - Z
-            X2 = X_d
-            Z = Z_u
-            w_old = w.copy()
-            w = w_u
-            Xbeta = Xbeta_new
-
+        for i in range(self.maxiter):
             if stop_iterating:
+                self.convergence = True
                 break
-            if x == self.maxiter:
+            if i == self.maxiter:
                 raise NonConvergenceError(
-                    "The IRLS algorithm did not converge. Try to increase the maximum number of iterations."
+                    f"The IRLS algorithm did not converge with {self._iwls_maxiter} iterations. Try to increase the maximum number of iterations."
                 )
 
-        self.beta_hat = delta.flatten()
-        self.Y_hat_response = np.exp(Xbeta)
-        self.Y_hat_link = Xbeta
-        self.u_hat = e_new
+            if i == 0:
+                _mean = np.mean(Y)
+                mu = (Y + _mean) / 2
+                eta = np.log(mu)
+                Z = eta + Y / mu - 1
+                last_Z = Z.copy()
+                reg_Z = Z.copy()
+                last = compute_deviance(Y, mu)
+
+            elif accelerate:
+                last_Z = Z.copy()
+                Z = eta + Y / mu - 1
+                reg_Z = Z - last_Z + Z_resid
+                X = X_resid.copy()
+
+            else:
+                # update w and Z
+                Z = eta + self.Y / mu - 1  # eq (8)
+                reg_Z = Z.copy()  # eq (9)
+
+            # tighten HDFE tolerance - currently not possible with PyHDFE
+            # if crit < 10 * inner_tol:
+            #    inner_tol = inner_tol / 10
+
+            # Step 1: weighted demeaning
+            ZX = np.concatenate([reg_Z, X], axis=1)
+
+            if fe is not None:
+                ZX_resid = algorithm.residualize(ZX, mu)
+            else:
+                ZX_resid = ZX
+
+            Z_resid = ZX_resid[:, 0].reshape((self.N, 1))  # z_resid
+            X_resid = ZX_resid[:, 1:]  # x_resid
+
+            # Step 2: estimate WLS
+            WX = np.sqrt(mu) * X_resid
+            WZ = np.sqrt(mu) * Z_resid
+
+            XWX = WX.transpose() @ WX
+            XWZ = WX.transpose() @ WZ
+
+            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            resid = Z_resid - X_resid @ delta_new
+
+            mu_old = mu.copy()
+            # more updating
+            eta = Z - resid
+            mu = np.exp(eta)
+
+            # same criterion as fixest
+            # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
+            deviance = compute_deviance(Y, mu)
+            crit = np.abs(deviance - last) / (0.1 + np.abs(last))
+            # crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
+            # crit = np.sqrt(((deviance - last)** 2))
+            last = deviance.copy()
+
+            stop_iterating = crit < self.tol
+
+        self.beta_hat = delta_new.flatten()
+        self.Y_hat_response = mu
+        self.Y_hat_link = eta
         # (Y - self.Y_hat)
         # needed for the calculation of the vcov
 
         # updat for inference
-        self.weights = w_old
+        self.weights = mu_old
         # if only one dim
         if self.weights.ndim == 1:
             self.weights = self.weights.reshape((self.N, 1))
 
-        self.X = X_d
-        self.Z = X_d
-        self.ZX = ZX
+        self.u_hat = resid.flatten()
+
+        self.Y = Z_resid
+        self.X = X_resid
+        self.Z = self.X
+        self.deviance = deviance
 
         self.tZX = np.transpose(self.Z) @ self.X
         self.tZXinv = np.linalg.inv(self.tZX)
-        self.Xbeta = Xbeta
+        self.Xbeta = eta
 
-    def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
-        """
-        Compute covariance matrices for an estimated regression model.
-
-        Parameters
-        ----------
-        vcov : Union[str, Dict[str, str], List[str]]
-            A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-            If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
-            or {"CRV3":"clustervar"} for CRV3 inference.
-            Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
-
-        Raises
-        ------
-        AssertionError
-            If vcov is not a dict, string, or list.
-        AssertionError
-            If vcov is a dict and the key is not "CRV1" or "CRV3".
-        AssertionError
-            If vcov is a dict and the value is not a string.
-        AssertionError
-            If vcov is a dict and the value is not a column in the data.
-        AssertionError
-            CRV3 currently not supported with arbitrary fixed effects
-        AssertionError
-            If vcov is a list and it does not contain strings.
-        AssertionError
-            If vcov is a list and it does not contain columns in the data.
-        AssertionError
-            If vcov is a string and it is not one of "iid", "hetero", "HC1", "HC2", or "HC3".
-
-
-        Returns
-        -------
-        None
-
-        """
-
-        _check_vcov_input(vcov, self._data)
-
-        (
-            self.vcov_type,
-            self.vcov_type_detail,
-            self.is_clustered,
-            self.clustervar,
-        ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
-
-        # compute vcov
-        WX = self.weights * self.X
-        bread = np.linalg.inv(self.X.transpose() @ WX)
-
-        if self.vcov_type == "iid":
-            raise NotImplementedError(
-                "iid inference is not supported for non-linear models."
-            )
-
-            self.ssc = get_ssc(
-                ssc_dict=self._ssc_dict,
-                N=self.N,
-                k=self.k,
-                G=1,
-                vcov_sign=1,
-                vcov_type="iid",
-            )
-
-            # only relevant factor for iid in ssc: fixef.K
-            sigma2 = np.sum(self.weights * (self.u_hat**2)) / (self.N - 1)
-            self.vcov = self.ssc * bread * sigma2
-
-        elif self.vcov_type == "hetero":
-            if self.vcov_type_detail in ["HC2", "HC3"]:
-                raise NotImplementedError(
-                    "HC2 and HC3 are not implemented for non-linear models."
-                )
-
-            self.ssc = get_ssc(
-                ssc_dict=self._ssc_dict,
-                N=self.N,
-                k=self.k,
-                G=1,
-                vcov_sign=1,
-                vcov_type="hetero",
-            )
-
-            Sigma = self.u_hat**2
-            meat = WX.transpose() @ (Sigma * WX)
-
-            self.vcov = self.ssc * bread @ meat @ bread
-
-        elif self.vcov_type == "CRV":
-            cluster_df = self._data[self.clustervar]
-            # if there are missings - delete them!
-
-            if cluster_df.dtype != "category":
-                cluster_df = pd.Categorical(cluster_df)
-
-            if cluster_df.isna().any():
-                raise NanInClusterVarError(
-                    "CRV inference not supported with missing values in the cluster variable."
-                    "Please drop missing values before running the regression."
-                )
-
-            _, clustid = pd.factorize(cluster_df)
-
-            self.G = len(clustid)
-
-            self.ssc = get_ssc(
-                ssc_dict=self._ssc_dict,
-                N=self.N,
-                k=self.k,
-                G=self.G,
-                vcov_sign=1,
-                vcov_type="CRV",
-            )
-
-            if self.vcov_type_detail == "CRV1":
-                k = self.X.shape[1]
-                meat = np.zeros((k, k))
-
-                for g in range(self.G):
-                    WX_g = WX[np.where(cluster_df == g)]
-                    u_g = self.u_hat[np.where(cluster_df == g)]
-                    meat_g = WX_g.transpose() @ u_g @ u_g.transpose() @ WX_g
-                    meat += meat_g
-
-                self.vcov = self.ssc * bread @ meat @ bread
-
-            else:
-                raise NotImplementedError(
-                    "CRV3 inference is not supported for non-linear models."
-                )
+        self.scores = self.u_hat[:, None] * self.weights * X_resid
+        self.hessian = XWX
 
     def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.array:
         """
@@ -377,7 +264,7 @@ class Fepois(Feols):
             fe (np.array): fixed effects
             N (int): number of observations
         Creates the following attributes
-            separation_na (np.array): indices of dropped observations due to separation
+        separation_na (np.array): indices of dropped observations due to separation
         """
 
         if check == "fe":
@@ -387,33 +274,35 @@ class Fepois(Feols):
             else:
                 Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
-                fe_combined = fe.apply(lambda row: "-".join(row.astype(str)), axis=1)
 
-                ctab = pd.crosstab(Y_help, fe_combined)
-                null_column = ctab.xs(0)
-                # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-                sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
-                    null_column > 0
-                ).values.flatten()
-                droplist = ctab.xs(0)[sep_candidate].index.tolist()
+                separation_na = set()
+                # loop over all elements of fe
+                for x in fe.columns:
+                    ctab = pd.crosstab(Y_help, fe[x])
+                    null_column = ctab.xs(0)
+                    # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+                    sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+                        null_column > 0
+                    ).values.flatten()
+                    droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
-                if len(droplist) > 0:
-                    self.separation_na = np.where(fe_combined.isin(droplist))[0]
-                    n_separation_na = len(self.separation_na)
+                    if len(droplist) > 0:
+                        dropset = set(np.where(fe[x].isin(droplist))[0])
+                        separation_na = separation_na.union(dropset)
 
-                    self.Y = np.delete(self.Y, self.separation_na, axis=0)
-                    self.X = np.delete(self.X, self.separation_na, axis=0)
-                    # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
-                    self.fe = np.delete(self.fe, self.separation_na, axis=0)
+                self.separation_na = list(separation_na)
 
-                    self.N = self.Y.shape[0]
+                self.Y = np.delete(self.Y, self.separation_na, axis=0)
+                self.X = np.delete(self.X, self.separation_na, axis=0)
+                # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                self.fe = np.delete(self.fe, self.separation_na, axis=0)
+
+                self.N = self.Y.shape[0]
+                if len(self.separation_na) > 0:
                     warnings.warn(
-                        str(n_separation_na)
+                        str(len(self.separation_na))
                         + " observations removed because of only 0 outcomes."
                     )
-
-                else:
-                    self.separation_na = None
 
         else:
             raise NotImplementedError(

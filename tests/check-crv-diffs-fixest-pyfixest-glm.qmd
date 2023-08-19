@@ -1,0 +1,65 @@
+---
+title: "Check if pyfixest gets as close to fixest inference as glm for CRV inference"
+format: html
+editor: visual
+---
+
+## Check CRV tolerance
+
+Check that `PyFixest` inference for CRV gets as close to `fixest` as `glm`.
+
+
+```{python, messages = FALSE, warnings = FALSE}
+import pyfixest as pf
+from pyfixest.utils import get_data
+
+fml = "Y ~ X1 + X2"
+
+se_list = []
+data_list = []
+
+for x in range(1000):
+
+  data = get_data(100, x, "2", "3", "Fepois").dropna()
+  fit = pf.Fixest(data = data).fepois(fml, vcov = {'CRV1':"group_id"}).fetch_model(0)
+  se_list.append(fit._se)
+  data_list.append(data)
+
+
+
+```
+
+Run R variant and compare all code:
+
+```{r}
+library(fixest)
+library(reticulate)
+data_list <- py$data_list
+se_list <- py$se_list
+
+fml = as.formula(py$fml)
+
+res_list <- list()
+for(x in seq_along(data_list)){
+
+  data = data_list[[x]]
+
+  fit = fepois(fml , data = data, cluster = ~group_id)
+  glm_fit = glm(fml, data = data, family = "poisson")
+  vcov_glm = sandwich::vcovCL(glm_fit, ~group_id)
+
+  glm_se = lmtest::coeftest(glm_fit, vcov_glm)[, "Std. Error"]
+  fit_se = se(fit)
+
+  a = abs(glm_se - fit_se)
+  b = abs(glm_se - se_list[[x]])
+  c = abs(fit_se - se_list[[x]])
+
+  res_list[[x]] = cbind("fixest-vs-glm" = a, "glm-vs-py" = b, "fixest-vs-py" = c)
+
+}
+
+Reduce("+",res_list) / length(data_list)
+
+
+```

@@ -23,7 +23,7 @@ from pyfixest.exceptions import (
 
 class Fixest:
     def __init__(
-        self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter: float = 25
+        self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter: int = 25
     ) -> None:
         """
         A class for fixed effects regression modeling.
@@ -570,6 +570,7 @@ class Fixest:
         Attributes:
             all_fitted_models: a dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
+        # pdb.set_trace()
 
         if self._estimate_full_model:
             for _, fval in enumerate(fixef_keys):
@@ -674,6 +675,12 @@ class Fixest:
 
                             FIT._is_iv = False
                             FIT.get_fit()
+
+                            FIT.na_index = na_index
+                            FIT.n_separation_na = None
+                            if FIT.separation_na:
+                                FIT.na_index += FIT.separation_na
+                                FIT.n_separation_na = len(FIT.separation_na)
 
                         else:
                             raise ValueError(
@@ -833,6 +840,10 @@ class Fixest:
                     print(
                         f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}"
                     )
+            elif fxst._method == "fepois":
+                print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
+            else:
+                pass
 
     def coef(self) -> pd.DataFrame:
         """
