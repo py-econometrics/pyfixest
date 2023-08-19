@@ -298,10 +298,11 @@ class Fepois(Feols):
                 self.fe = np.delete(self.fe, self.separation_na, axis=0)
 
                 self.N = self.Y.shape[0]
-                warnings.warn(
-                    str(len(self.separation_na))
-                    + " observations removed because of only 0 outcomes."
-                )
+                if len(self.separation_na) > 0:
+                    warnings.warn(
+                        str(len(self.separation_na))
+                        + " observations removed because of only 0 outcomes."
+                    )
 
         else:
             raise NotImplementedError(
