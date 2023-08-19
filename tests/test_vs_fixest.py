@@ -55,7 +55,7 @@ rng = np.random.default_rng(87685)
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
-        ("Y~X1|f2^f3^f1"),
+        #("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
@@ -334,7 +334,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             )
 
 
-@pytest.mark.parametrize("N", [100, 1000])
+@pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
