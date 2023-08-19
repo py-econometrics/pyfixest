@@ -117,7 +117,7 @@ class Feols:
         self.Y_hat_link = self.X @ self.beta_hat
         self.u_hat = self.Y.flatten() - self.Y_hat_link.flatten()
 
-        self.scores = self.u_hat[:,None] * self.X
+        self.scores = self.X * self.u_hat[:, None]
         self.hessian = self.X.transpose() @ self.X
 
 
@@ -194,13 +194,13 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum(self.weights.flatten() * self.u_hat.flatten() **2) / (self.N - 1)
+            sigma2 = np.sum((self.weights.flatten() * self.u_hat.flatten()) **2) / (self.N - 1)
             # only relevant factor for iid in ssc: fixef.K
             if self._is_iv == False:
                 self.vcov = self.ssc * bread * sigma2 # NOTE:   only valid for diagonal values
             else:
                 self.vcov = (
-                    self.ssc *  np.sum(np.diag(self.scores.transpose() @ self.scores)) / (self.N - 1)
+                    self.ssc *  np.sum((self.weights * self.u_hat) ** 2) / (self.N - 1)
                 )
 
         elif self.vcov_type == "hetero":
@@ -214,21 +214,24 @@ class Feols:
             )
 
             if self.vcov_type_detail in ["hetero", "HC1"]:
-                u = self.u_hat
+                #u = self.u_hat
+                transformed_scores = self.scores
             elif self.vcov_type_detail in ["HC2", "HC3"]:
                 leverage = np.sum(self.X * (self.X @ self.tZXinv), axis=1)
                 if self.vcov_type_detail == "HC2":
                     u = self.u_hat / np.sqrt(1 - leverage)
+                    transformed_scores = self.scores / np.sqrt(1 - leverage)[:, None]
                 else:
-                    u = self.u_hat / (1 - leverage)
+                    transformed_scores = self.scores / (1 - leverage)[:, None]
+
 
             if self._is_iv == False:
-                meat = self.scores.transpose() @ self.scores
+                meat = transformed_scores.transpose() @ transformed_scores
                 self.vcov = self.ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
                     u = u.reshape((self.N, 1))
-                Omega = np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
+                Omega = transformed_scores.transpose() @ transformed_scores     #np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
                 meat = self.tXZ @ self.tZZinv @ Omega @ self.tZZinv @ self.tZX  # k x k
                 self.vcov = self.ssc * bread @ meat @ bread
 
@@ -259,18 +262,28 @@ class Feols:
             )
 
             if self.vcov_type_detail == "CRV1":
+
                 k_instruments = self.Z.shape[1]
                 meat = np.zeros((k_instruments, k_instruments))
+
+                if self.weights is not None:
+                    weighted_uhat = (self.weights.flatten() * self.u_hat.flatten()).reshape((self.N, 1))
+                else:
+                    weighted_uhat = self.u_hat
 
                 for (
                     _,
                     g,
                 ) in enumerate(clustid):
-                    score_g = self.scores[np.where(cluster_df == g)]
+                    Zg = self.Z[np.where(cluster_df == g)]
+                    ug = weighted_uhat[np.where(cluster_df == g)]
+                    score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
                     meat += np.dot(score_g, score_g.transpose())
 
                 if self._is_iv == False:
                     self.vcov = self.ssc * bread @ meat @ bread
+                #if self._is_iv == False:
+                #    self.vcov = self.ssc * bread @ meat @ bread
                 else:
                     meat = self.tXZ @ self.tZZinv @ meat @ self.tZZinv @ self.tZX
                     self.vcov = self.ssc * bread @ meat @ bread
