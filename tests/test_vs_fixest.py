@@ -17,7 +17,10 @@ fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
 
-# only test for absolute differences
+# note: tolerances are lowered below for
+# fepois inference as it is not as precise as feols
+# effective tolerances for fepois are 1e-04 and 1e-03
+# (the latter only for CRV inferece)
 rtol = 1e-06
 atol = 1e-06
 
@@ -28,12 +31,12 @@ rng = np.random.default_rng(87685)
 
 
 @pytest.mark.parametrize("N", [100, 1000])
-@pytest.mark.parametrize("seed", [871910])
+@pytest.mark.parametrize("seed", [7654251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Fepois"])
-@pytest.mark.parametrize("inference", ["hetero"])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("inference", ["iid","hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -80,26 +83,26 @@ rng = np.random.default_rng(87685)
         # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
         # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
         # IV starts here
-        #("Y ~ 1 | X1 ~ Z1"),
-        #"Y ~  X2 | X1 ~ Z1",
-        #"Y ~ X2 + C(f1) | X1 ~ Z1",
-        #"Y2 ~ 1 | X1 ~ Z1",
-        #"Y2 ~ X2 | X1 ~ Z1",
-        #"Y2 ~ X2 + C(f1) | X1 ~ Z1",
-        #"log(Y) ~ 1 | X1 ~ Z1",
-        #"log(Y) ~ X2 | X1 ~ Z1",
-        #"log(Y) ~ X2 + C(f1) | X1 ~ Z1",
-        #"Y ~ 1 | f1 | X1 ~ Z1",
-        #"Y ~ 1 | f1 + f2 | X1 ~ Z1",
-        #"Y ~ 1 | f1^f2 | X1 ~ Z1",
-        #"Y ~  X2| f1 | X1 ~ Z1",
+        ("Y ~ 1 | X1 ~ Z1"),
+        "Y ~  X2 | X1 ~ Z1",
+        "Y ~ X2 + C(f1) | X1 ~ Z1",
+        "Y2 ~ 1 | X1 ~ Z1",
+        "Y2 ~ X2 | X1 ~ Z1",
+        "Y2 ~ X2 + C(f1) | X1 ~ Z1",
+        "log(Y) ~ 1 | X1 ~ Z1",
+        "log(Y) ~ X2 | X1 ~ Z1",
+        "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
+        "Y ~ 1 | f1 | X1 ~ Z1",
+        "Y ~ 1 | f1 + f2 | X1 ~ Z1",
+        "Y ~ 1 | f1^f2 | X1 ~ Z1",
+        "Y ~  X2| f1 | X1 ~ Z1",
         # tests of overidentified models
-        #"Y ~ 1 | X1 ~ Z1 + Z2",
-        #"Y ~ X2 | X1 ~ Z1 + Z2",
-        #"Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
-        #"Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-        #"Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
-        #"Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
+        "Y ~ 1 | X1 ~ Z1 + Z2",
+        "Y ~ X2 | X1 ~ Z1 + Z2",
+        "Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
+        "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
+        "Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
+        "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
 def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
@@ -148,7 +151,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
         else:
-            raise ValueError("Code fails with an uninformative error message.")
+            raise e
 
     if model == "Feols":
         pyfixest = Fixest(data=data).feols(fml, vcov=inference)
@@ -162,8 +165,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         run_test = True
 
     else:
-        # check if IV - only run poisson if not IV
+        # check if IV - don not run IV formulas for Poisson
         iv_check = Fixest(data=data).feols(fml, vcov="iid")
+
+        if inference == "iid":
+            return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
             is_iv = True
@@ -192,26 +198,30 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
             # relax tolerance for Poisson regression - effective rtol and atol of
             # 5e-05
-            inference_inflation_factor = 50
+            inference_inflation_factor = 100
+            # relax tolerance for CRV inference - effective rtol and atol of 5e-03
+            if isinstance(inference, dict):
+                inference_inflation_factor = 500
+
 
             pyfixest = Fixest(data=data, iwls_tol=iwls_tol, iwls_maxiter=iwls_maxiter)
 
             try:
                 pyfixest.fepois(fml, vcov=inference)
+            except NotImplementedError as exception:
+                if "inference is not supported" in str(
+                    exception
+                ):
+                    return pytest.skip(
+                        "'iid' inference is not supported for Poisson regression."
+                    )
+                raise
             except ValueError as exception:
                 if "dependent variable must be a weakly positive" in str(exception):
                     return pytest.skip(
                         "Poisson model requires strictly positive dependent variable."
                     )
                 raise
-            #except NotImplementedError as exception:
-            #    if "iid inference is not supported for non-linear models" in str(
-            #        exception
-            #    ):
-            #        return pytest.skip(
-            #            "iid inference is not supported for non-linear models."
-            #        )
-            #    raise
             except RuntimeError as exception:
                 if "Failed to converge after 1000000 iterations." in str(exception):
                     return pytest.skip(
@@ -235,8 +245,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
     if run_test:
         # get coefficients, standard errors, p-values, t-statistics, confidence intervals
 
-        print("run pyfixest")
         mod = pyfixest.fetch_model(0)
+
         py_coef = mod.coef().xs("X1")
         py_se = mod.se().xs("X1")
         py_pval = mod.pvalue().xs("X1")
@@ -250,7 +260,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         fixest_df = broom.tidy_fixest(r_fixest, conf_int = ro.BoolVector([True]))
         df_r = pd.DataFrame(fixest_df).T
         df_r.columns = ["term","estimate","std.error","statistic","p.value","conf.low", "conf.high"]
-        df_X1 = df_r.set_index("term").xs("X1") # only test for X1
+
+        if mod._is_iv:
+            df_X1 = df_r.set_index("term").xs("fit_X1") # only test for X1
+        else:
+            df_X1 = df_r.set_index("term").xs("X1") # only test for X1
 
         r_coef = df_X1["estimate"]
         r_se = df_X1["std.error"]

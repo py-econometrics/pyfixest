@@ -676,6 +676,7 @@ class Fixest:
                             FIT._is_iv = False
                             FIT.get_fit()
 
+
                             FIT.na_index = na_index
                             FIT.n_separation_na = None
                             if FIT.separation_na:
