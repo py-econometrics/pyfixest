@@ -842,7 +842,7 @@ class Fixest:
                         f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}"
                     )
             elif fxst._method == "fepois":
-                print(f"Deviance: {np.round(fxst.deviance, digits)}")
+                print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
             else:
                 pass
 
