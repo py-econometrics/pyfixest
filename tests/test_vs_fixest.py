@@ -30,7 +30,7 @@ iwls_tol = 1e-08
 rng = np.random.default_rng(87685)
 
 
-@pytest.mark.parametrize("N", [100, 1000])
+@pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [7654251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])

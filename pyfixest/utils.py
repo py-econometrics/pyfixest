@@ -24,7 +24,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     # create the covariates
     X = rng.normal(0, 3, N * 5).reshape((N, 5))
-    X[:,0] = np.random.choice(range(3), N, True)
+    X[:, 0] = np.random.choice(range(3), N, True)
     # X = pd.DataFrame(X)
     X[:, 2] = rng.choice(list(range(fe_dims[0])), N, True)
     X[:, 3] = rng.choice(list(range(fe_dims[1])), N, True)
