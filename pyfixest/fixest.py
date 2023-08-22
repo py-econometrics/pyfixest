@@ -1,6 +1,7 @@
 import pyhdfe
 import re
 import pdb
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -58,6 +59,15 @@ class Fixest:
             raise ValueError("iwls_maxiter must be larger than 0")
 
         self._data = data.copy()
+
+        # turn all datetypes into factors
+        for col in self._data.columns:
+            if pd.api.types.is_datetime64_any_dtype(self._data[col]):
+                self._data[col] = self._data[col].astype("category")
+                warnings.warn(
+                    f"Column {col} was converted to a factor because it was a datetime."
+                )
+
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.index = range(self._data.shape[0])
