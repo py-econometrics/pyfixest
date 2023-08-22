@@ -65,7 +65,7 @@ class Fixest:
             if pd.api.types.is_datetime64_any_dtype(self._data[col]):
                 self._data[col] = self._data[col].astype("category")
                 warnings.warn(
-                    f"Column {col} was converted to a factor because it was a datetime."
+                    f"Column {col} was converted to a factor because it was a datetime. If you want to use it as a continuous variable, please convert it to numeric first."
                 )
 
         # reindex: else, potential errors when pd.DataFrame.dropna()
