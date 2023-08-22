@@ -63,9 +63,14 @@ class Fixest:
         # turn all datetypes into factors
         for col in self._data.columns:
             if pd.api.types.is_datetime64_any_dtype(self._data[col]):
-                self._data[col] = self._data[col].astype("category")
+                min_time = self._data[col].min()
+                self._data[col] = (self._data[col] - min_time).dt.total_seconds().astype("int64")
                 warnings.warn(
-                    f"Column {col} was converted to a factor because it was a datetime. If you want to use it as a continuous variable, please convert it to numeric first."
+                    f"""Column {col} was converted to a time difference as it was a datetime.
+                    The time difference is relative to the minimum value of the column,
+                    which is {min_time}, and measured in seconds (nanosecond differences are
+                    ignored).
+                    """
                 )
 
         # reindex: else, potential errors when pd.DataFrame.dropna()
