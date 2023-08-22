@@ -11,7 +11,7 @@ This is a draft package (no longer highly experimental) for a Python clone of th
 
 At the moment, `PyFixest` supports
 
-- OLS and IV regression
+- OLS and IV Regression
 - Poisson Regression
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
