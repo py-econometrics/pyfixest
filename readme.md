@@ -7,13 +7,23 @@
 
 This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as possible. Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
+## Functionality
+
+At the moment, `PyFixest` supports
+
+- OLS and IV regression
+- Poisson Regression
+- Multiple Estimation Syntax
+- Several Robust and Cluster Robust Variance-Covariance Types
+- Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
+
 ## Installation
 
 You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
 
 ## News
 
-The dev version of `PyFixest` (v0.8.4) now supports Poisson regression!
+`PyFixest` now supports Poisson regression!
 
 ```python
 import pyfixest as pf
