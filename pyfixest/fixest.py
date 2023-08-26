@@ -791,6 +791,10 @@ class Fixest:
 
         return res
 
+    def etable(self, digits: int = 3) -> None:
+
+        return self.tidy().T.round(digits)
+
     def summary(self, digits: int = 3) -> None:
         """
         Prints a summary of the feols() estimation results for each estimated model.
