@@ -9,14 +9,14 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This notebook replicates code examples from Nick Huntington-Klein's book on causal inference, The Effect. 
+This notebook replicates code examples from Nick Huntington-Klein's book on causal inference, The Effect.
 
 ## Chapter 4: Describing Relationships
 
-### R code 
+### R code
 
 ```{r, warning = FALSE, message = FALSE, eval = FALSE}
-library(tidyverse) 
+library(tidyverse)
 library(modelsummary)
 # 5. Run a linear regression, by itself and including controls
 model1 <- lm(lwg ~ log(inc), data = df)
@@ -50,7 +50,7 @@ fixest.summary()
 
 ```
 
-## Chapter 13: Regression 
+## Chapter 13: Regression
 
 ### Example 1
 
@@ -68,7 +68,7 @@ res <- res %>%
     mutate(NumberofLocations = n())
 
 # Perform the first, one-predictor regression
-# use the lm() function, with ~ telling us what 
+# use the lm() function, with ~ telling us what
 # the dependent variable varies over
 m1 <- feols(inspection_score ~ NumberofLocations, data = res)
 
@@ -98,7 +98,7 @@ fixest.tidy()
 
 ```
 
-Ok, estimates in R and Python are different ... turns out this is not an error in `PyFixest`, but the data set created for R and Python look slightly different. Passing the `pd.DataFrame` from R to Python leads to matching results: 
+Ok, estimates in R and Python are different ... turns out this is not an error in `PyFixest`, but the data set created for R and Python look slightly different. Passing the `pd.DataFrame` from R to Python leads to matching results:
 
 ```{r}
 library(reticulate)
@@ -119,8 +119,8 @@ df <- causaldata::restaurant_inspections
 
 # Use I() to add calculations of variables
 # Including squares
-m1 <- lm(inspection_score ~ NumberofLocations + 
-                         I(NumberofLocations^2) + 
+m1 <- lm(inspection_score ~ NumberofLocations +
+                         I(NumberofLocations^2) +
                          Year, data = df)
 summary(m1)
 
@@ -178,14 +178,14 @@ library(fixest)
 
 df <- causaldata::restaurant_inspections
 
-# In R there are many ways to get at clustered SEs. For the first 
-# two methods we'll look at, we need to estimate the regression on 
+# In R there are many ways to get at clustered SEs. For the first
+# two methods we'll look at, we need to estimate the regression on
 # its own. (most commands will work, not just lm()!)
 m1 <- lm(inspection_score ~ Year + Weekend, data = df)
 
-# Third, we can use a regression function with clustered SEs built in, 
+# Third, we can use a regression function with clustered SEs built in,
 # like fixest::feols(). Don't forget the ~ before Weekend.
-feols(inspection_score ~ Year + Weekend, 
+feols(inspection_score ~ Year + Weekend,
     cluster = ~Weekend,
     data = df)
 
@@ -217,7 +217,7 @@ boot <- boottest(m, param = ~WeekendTRUE, clustid = ~Weekend, B = 9999)
 ```
 
 
-#### Python 
+#### Python
 
 via wildboottest. to be implemented
 
@@ -229,7 +229,7 @@ via wildboottest. to be implemented
 
 ### Example 1
 
-#### R Code 
+#### R Code
 
 ```{r, warning = FALSE, message=FALSE}
 library(tidyverse); library(modelsummary)
@@ -263,7 +263,7 @@ gm = gapminder.load_pandas().data
 gm['logGDPpercap'] = gm['gdpPercap'].apply('log')
 
 # Use groupby to perform calculations by group
-# Then use transform to subtract each variable's 
+# Then use transform to subtract each variable's
 # within-group mean to get within variation
 gm[['logGDPpercap_within','lifeExp_within']] =(gm.groupby('country')[['logGDPpercap','lifeExp']].transform(lambda x: x - np.mean(x)))
 
@@ -280,12 +280,12 @@ fixest.tidy().head()
 library(tidyverse);
 library(fixest)
 
-gm <- causaldata::gapminder 
+gm <- causaldata::gapminder
 
-# Simply include a factor variable in the model to get it turned 
+# Simply include a factor variable in the model to get it turned
 # to binary variables. You can use factor() to ensure it's done.
 m2 <- feols(lifeExp ~ factor(country) + log(gdpPercap), data = gm)
-summary(m2) 
+summary(m2)
 ```
 
 
@@ -310,18 +310,18 @@ fixest.summary()
 #### R Code
 
 ```{r, warning = FALSE, message=FALSE}
-library(tidyverse); 
+library(tidyverse);
 library(modelsummary);
 library(fixest)
 
-gm <- causaldata::gapminder 
+gm <- causaldata::gapminder
 
 # Run our two-way fixed effects model (TWFE).
 # First the non-fixed effects part of the model
 # Then a |, then the fixed effects we want
 twfe <- feols(lifeExp ~ log(gdpPercap) | country + year,
              data = gm)
-# Note that standard errors will be clustered by the first 
+# Note that standard errors will be clustered by the first
 # fixed effect by default. Set se = 'standard' to not do this
 msummary(twfe, stars = c('*' = .1, '**' = .05, '***' = .01))
 ```
@@ -352,7 +352,7 @@ od <- causaldata::organ_donations
 
 # Treatment variable
 od <- od %>%
-     mutate(Treated = State == 'California' & 
+     mutate(Treated = State == 'California' &
             Quarter %in% c('Q32011','Q42011','Q12012'))
 
 # feols clusters by the first
@@ -391,7 +391,7 @@ od <- od %>% mutate(California = State == 'California')
 # Interact quarter with being in the treated group using
 # the fixest i() function, which also lets us specify
 # a reference period (using the numeric version of Quarter)
-clfe <- feols(Rate ~ i(Quarter_Num, California, ref = 3) | 
+clfe <- feols(Rate ~ i(Quarter_Num, California, ref = 3) |
             State + Quarter_Num, data = od)
 
 # And use coefplot() for a graph of effects
