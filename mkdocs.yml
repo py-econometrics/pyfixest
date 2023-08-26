@@ -1,7 +1,7 @@
 site_name: PyFixest
 
 theme:
-  name: "readthedocs"
+  name: "mkdocs"
 
 plugins:
   - mkdocstrings
@@ -11,6 +11,7 @@ plugins:
 nav:
   - index.ipynb
   - tutorial.ipynb
+  - Replicating-the-Effect.ipynb
   - reference.md
 
 
