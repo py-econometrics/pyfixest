@@ -12,6 +12,7 @@ from formulaic import model_matrix
 
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
+from pyfixest.feiv import Feiv
 from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
 from pyfixest.ssc_utils import ssc
 from pyfixest.exceptions import (
@@ -631,8 +632,11 @@ class Fixest:
                             # check for multicollinearity
                             _multicollinearity_checks(Xd, Zd, self._ivars, fml)
 
-                            # initiate OLS class
-                            FIT = Feols(Y=Yd, X=Xd, Z=Zd, weights=weights)
+                            if self._is_iv:
+                                FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
+                            else:
+                                # initiate OLS class
+                                FIT = Feols(Y=Yd, X=Xd, weights=weights)
                             if fe is not None:
                                 self._has_fixef = True
                                 self.fixef_vars = fval
@@ -640,13 +644,7 @@ class Fixest:
                                 self._has_fixef = False
                                 self.fixef_vars = None
 
-                            # estimation
-                            if self._is_iv:
-                                FIT.get_fit(estimator="2sls")
-                                FIT._is_iv = True
-                            else:
-                                FIT.get_fit(estimator="ols")
-                                FIT._is_iv = False
+                            FIT.get_fit()
 
                         elif self._method == "fepois":
                             # check for separation and drop separated variables
