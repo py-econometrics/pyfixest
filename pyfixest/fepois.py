@@ -34,7 +34,7 @@ class Fepois(Feols):
             tol (float): tolerance level for the convergence of the IRLS algorithm
         """
 
-        super().__init__(Y=Y, X=X, Z=X, weights=weights)
+        super().__init__(Y=Y, X=X, weights=weights)
 
         # input checks
         _fepois_input_checks(fe, drop_singletons, tol, maxiter)
