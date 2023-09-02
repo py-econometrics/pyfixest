@@ -66,6 +66,10 @@ class Fepois(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = False
 
+        # attributes that are updated outside of the class (not optimal)
+        self.n_separation_na = None
+        self.na_index = None
+
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
@@ -86,25 +90,50 @@ class Fepois(Feols):
 
         """
 
-        Y = self.Y
-        X = self.X
-        fe = self.fe
+        _Y = self.Y
+        _X = self.X
+        _fe = self.fe
+        _N = self.N
+        _drop_singletons = self._drop_singletons
+        _convergence = self.convergence
+        _maxiter = self.maxiter
+        _iwls_maxiter = 25
+        _tol = self.tol
 
-        def compute_deviance(Y, mu):
+        self.beta_hat = None
+        self.Y_hat_response = None
+        self.Y_hat_link = None
+        self.weights = None
+        self.X = None
+        self.Z = None
+        self.Y = None
+        self.u_hat = None
+        self.deviance = None
+        self.tZX = None
+        self.tZXinv = None
+        self.Xbeta = None
+        self.scores = None
+        self.hessian = None
+        # only needed for IV
+        self.tXZ = None
+        self.tZZinv = None
+
+
+        def compute_deviance(_Y, mu):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 deviance = (
-                    2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+                    2 * np.sum(np.where(_Y == 0, 0, _Y * np.log(_Y / mu)) - (_Y - mu))
                 ).flatten()
             return deviance
 
         # initiate demeaning algo (if needed)
-        if fe is not None:
+        if _fe is not None:
             algorithm = pyhdfe.create(
-                ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
+                ids=_fe, residualize_method="map", drop_singletons=_drop_singletons
             )
             if (
-                self._drop_singletons == True
+                _drop_singletons == True
                 and algorithm.singletons != 0
                 and algorithm.singletons is not None
             ):
@@ -122,33 +151,33 @@ class Fepois(Feols):
         stop_iterating = False
         crit = 1
 
-        for i in range(self.maxiter):
+        for i in range(_maxiter):
             if stop_iterating:
-                self.convergence = True
+                _convergence = True
                 break
-            if i == self.maxiter:
+            if i == _maxiter:
                 raise NonConvergenceError(
-                    f"The IRLS algorithm did not converge with {self._iwls_maxiter} iterations. Try to increase the maximum number of iterations."
+                    f"The IRLS algorithm did not converge with {_iwls_maxiter} iterations. Try to increase the maximum number of iterations."
                 )
 
             if i == 0:
-                _mean = np.mean(Y)
-                mu = (Y + _mean) / 2
+                _mean = np.mean(_Y)
+                mu = (_Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + Y / mu - 1
+                Z = eta + _Y / mu - 1
                 last_Z = Z.copy()
                 reg_Z = Z.copy()
-                last = compute_deviance(Y, mu)
+                last = compute_deviance(_Y, mu)
 
             elif accelerate:
                 last_Z = Z.copy()
-                Z = eta + Y / mu - 1
+                Z = eta + _Y / mu - 1
                 reg_Z = Z - last_Z + Z_resid
                 X = X_resid.copy()
 
             else:
                 # update w and Z
-                Z = eta + self.Y / mu - 1  # eq (8)
+                Z = eta + _Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -156,14 +185,14 @@ class Fepois(Feols):
             #    inner_tol = inner_tol / 10
 
             # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, X], axis=1)
+            ZX = np.concatenate([reg_Z, _X], axis=1)
 
-            if fe is not None:
+            if _fe is not None:
                 ZX_resid = algorithm.residualize(ZX, mu)
             else:
                 ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((self.N, 1))  # z_resid
+            Z_resid = ZX_resid[:, 0].reshape((_N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
             # Step 2: estimate WLS
@@ -183,13 +212,13 @@ class Fepois(Feols):
 
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = compute_deviance(Y, mu)
+            deviance = compute_deviance(_Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
             # crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
             # crit = np.sqrt(((deviance - last)** 2))
             last = deviance.copy()
 
-            stop_iterating = crit < self.tol
+            stop_iterating = crit < _tol
 
         self.beta_hat = delta_new.flatten()
         self.Y_hat_response = mu
@@ -217,7 +246,9 @@ class Fepois(Feols):
         self.scores = self.u_hat[:, None] * self.weights * X_resid
         self.hessian = XWX
 
-    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.array:
+
+
+    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
