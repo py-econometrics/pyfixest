@@ -1,6 +1,5 @@
 import numpy as np
 from pyfixest.feols import Feols
-from typing import Optional
 
 class Feiv(Feols):
 
@@ -30,7 +29,7 @@ class Feiv(Feols):
 
     def get_fit(self) -> None:
         """
-        Regression estimation for a single model, via ordinary least squares (OLS).
+        IV  estimation for a single model, via 2SLS.
         Returns:
             None
         Attributes:
@@ -39,16 +38,27 @@ class Feiv(Feols):
             u_hat (np.ndarray): The residuals of the regression model.
         """
 
-        #import pdb
-        #pdb.set_trace()
+        _X = self.X
+        _Z = self.Z
+        _Y = self.Y
 
-        self.tZX = np.transpose(self.Z) @ self.X
-        self.tXZ = np.transpose(self.tZX)
+        self.tZX = None
+        self.tZXinv = None
+        self.tXZ = None
+        self.tZy = None
+        self.tZZinv = None
+        self.beta_hat = None
+        self.Y_hat_link = None
+        self.u_hat = None
+        self.scores = None
+        self.hessian = None
+        self.bread = None
 
-        self.tZy = np.transpose(self.Z) @ self.Y
 
-        #self.tXZ = np.transpose(self.X) @ self.Z
-        self.tZZinv = np.linalg.inv(np.transpose(self.Z) @ self.Z)
+        self.tZX = _Z.T @ _X
+        self.tXZ = _X.T @ _Z
+        self.tZy = _Z.T @ _Y
+        self.tZZinv = np.linalg.inv(_Z.T @ _Z)
 
         H = self.tXZ @ self.tZZinv
         A = H @ self.tZX
