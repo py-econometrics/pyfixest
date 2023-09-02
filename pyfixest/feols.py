@@ -63,19 +63,16 @@ class Feols:
         self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
         self._method = "feols"
 
-        self.Y = Y
-        self.X = X
-        self.Z = X
+        self._Y = Y
+        self._X = X
+        self._Z = X
 
         _feols_input_checks(Y, X, weights)
 
-        self.weights = weights
+        self._weights = weights
         self._is_iv = False
 
-        self.N, self.k = X.shape
-        self.sumFE = None
-        self.y_hat_link = None
-        self.y_hat_response = None
+        self._N, self._k = X.shape
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -89,6 +86,49 @@ class Feols:
         self._coefnames = None
         self._icovars = None
         self._ssc_dict = None
+
+        # set in get_fit()
+        self._tZX = None
+        self._tZXinv = None
+        self._tXZ = None
+        self._tZy = None
+        self._tZZinv = None
+        self._beta_hat = None
+        self._Y_hat_link = None
+        self._Y_hat_response = None
+        self._u_hat = None
+        self._scores = None
+        self._hessian = None
+        self._bread = None
+
+        # set in get_vcov()
+        self._vcov_type = None
+        self._vcov_type_detail = None
+        self._is_clustered = None
+        self._clustervar = None
+        self._G = None
+        self._ssc = None
+        self._vcov = None
+
+        # set in get_inference()
+        self._se = None
+        self._tstat = None
+        self._pvalue = None
+        self._conf_int = None
+
+        # set in get_Ftest()
+        self._F_stat = None
+
+        # set in fixef()
+        self._fixef_dict = None
+        self._sumFE = None
+
+        # set in get_performance()
+        self._rmse = None
+        self._r2 = None
+        self._r2_within = None
+        self._adj_r2 = None
+        self._adj_r2_within = None
 
 
     def get_fit(self) -> None:
@@ -104,26 +144,26 @@ class Feols:
 
         """
 
-        _X = self.X
-        _Y = self.Y
-        _Z = self.Z
+        _X = self._X
+        _Y = self._Y
+        _Z = self._Z
 
-        self.tZX = _Z.T @ _X
-        self.tZy = _Z.T @ _Y
+        self._tZX = _Z.T @ _X
+        self._tZy = _Z.T @ _Y
 
-        self.tZXinv = np.linalg.inv(self.tZX)
-        self.beta_hat = np.linalg.solve(self.tZX, self.tZy).flatten()
-        # self.beta_hat = (self.tZXinv @ self.tZy).flatten()
+        self._tZXinv = np.linalg.inv(self._tZX)
+        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
+        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
 
-        self.Y_hat_link = self.X @ self.beta_hat
-        self.u_hat = self.Y.flatten() - self.Y_hat_link.flatten()
+        self._Y_hat_link = self._X @ self._beta_hat
+        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self.scores = self.Z * self.u_hat[:, None]
-        self.hessian = self.Z.transpose() @ self.Z
+        self._scores = self._Z * self._u_hat[:, None]
+        self._hessian = self._Z.transpose() @ self._Z
 
         # IV attributes, set to None for OLS, Poisson
-        self.tXZ = None
-        self.tZZinv = None
+        self._tXZ = None
+        self._tZZinv = None
 
     def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         """
@@ -152,43 +192,35 @@ class Feols:
         _support_iid_inference = self._support_iid_inference
         _support_crv3_inference = self._support_crv3_inference
 
-        _beta_hat = self.beta_hat
+        _beta_hat = self._beta_hat
 
-        _X = self.X
-        _Z = self.Z
-        _tXZ = self.tXZ
-        _tZZinv = self.tZZinv
-        _tZX = self.tZX
-        _tZXinv = self.tZXinv
-        _hessian = self.hessian
-        _scores = self.scores
+        _X = self._X
+        _Z = self._Z
+        _tXZ = self._tXZ
+        _tZZinv = self._tZZinv
+        _tZX = self._tZX
+        _tZXinv = self._tZXinv
+        _hessian = self._hessian
+        _scores = self._scores
 
-        _weights = self.weights
+        _weights = self._weights
         _ssc_dict = self._ssc_dict
-        _N = self.N
-        _k = self.k
+        _N = self._N
+        _k = self._k
 
-        _u_hat = self.u_hat
-
-        self.vcov_type = None
-        self.vcov_type_detail = None
-        self.is_clustered = None
-        self.clustervar = None
-        self. G = None
-        self.ssc = None
-        self.vcov = None
+        _u_hat = self._u_hat
 
         _check_vcov_input(vcov, _data)
 
         (
-            self.vcov_type,
-            self.vcov_type_detail,
-            self.is_clustered,
-            self.clustervar,
+            self._vcov_type,
+            self._vcov_type_detail,
+            self._is_clustered,
+            self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
 
         if _is_iv:
-            if self.vcov_type in ["CRV3"]:
+            if self._vcov_type in ["CRV3"]:
                 raise VcovTypeNotSupportedError(
                     "CRV3 inference is not supported for IV regressions."
                 )
@@ -199,13 +231,13 @@ class Feols:
             bread = np.linalg.inv(_hessian)
 
         # compute vcov
-        if self.vcov_type == "iid":
+        if self._vcov_type == "iid":
             if not _support_iid_inference:
                 raise NotImplementedError(
                     f"'iid' inference is not supported for {_method} regressions."
                 )
 
-            self.ssc = get_ssc(
+            self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=_k,
@@ -215,10 +247,10 @@ class Feols:
             )
 
             sigma2 = np.sum((_u_hat.flatten()) ** 2) / (_N - 1)
-            self.vcov = self.ssc * bread * sigma2
+            self._vcov = self._ssc * bread * sigma2
 
-        elif self.vcov_type == "hetero":
-            self.ssc = get_ssc(
+        elif self._vcov_type == "hetero":
+            self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=_k,
@@ -227,20 +259,18 @@ class Feols:
                 vcov_type="hetero",
             )
 
-            if self.vcov_type_detail in ["hetero", "HC1"]:
+            if self._vcov_type_detail in ["hetero", "HC1"]:
                 u = _u_hat
                 transformed_scores = _scores
-            elif self.vcov_type_detail in ["HC2", "HC3"]:
+            elif self._vcov_type_detail in ["HC2", "HC3"]:
 
                 if _is_iv:
                     raise VcovTypeNotSupportedError(
                         "HC2 and HC3 inference is not supported for IV regressions."
                     )
 
-                tXXinv = np.linalg.inv(_X.T @ _X)
-
                 leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
-                if self.vcov_type_detail == "HC2":
+                if self._vcov_type_detail == "HC2":
                     u = _u_hat / np.sqrt(1 - leverage)
                     transformed_scores = _scores / np.sqrt(1 - leverage)[:, None]
                 else:
@@ -248,18 +278,18 @@ class Feols:
 
             if _is_iv == False:
                 meat = transformed_scores.transpose() @ transformed_scores
-                self.vcov = self.ssc * bread @ meat @ bread
+                self._vcov = self._ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
                     u = u.reshape((_N, 1))
                 Omega = (
                     transformed_scores.transpose() @ transformed_scores
-                )  # np.transpose(self.Z) @ (self.Z * (u**2))  # k x k
+                )  # np.transpose( self._Z) @ ( self._Z * (u**2))  # k x k
                 meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
-                self.vcov = self.ssc * bread @ meat @ bread
+                self._vcov = self._ssc * bread @ meat @ bread
 
-        elif self.vcov_type == "CRV":
-            cluster_df = _data[self.clustervar]
+        elif self._vcov_type == "CRV":
+            cluster_df = _data[self._clustervar]
             # if there are missings - delete them!
 
             if cluster_df.dtype != "category":
@@ -273,18 +303,18 @@ class Feols:
 
             _, clustid = pd.factorize(cluster_df)
 
-            self.G = len(clustid)
+            self._G = len(clustid)
 
-            self.ssc = get_ssc(
+            self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=_k,
-                G=self.G,
+                G=self._G,
                 vcov_sign=1,
                 vcov_type="CRV",
             )
 
-            if self.vcov_type_detail == "CRV1":
+            if self._vcov_type_detail == "CRV1":
                 k_instruments = _Z.shape[1]
                 meat = np.zeros((k_instruments, k_instruments))
 
@@ -305,14 +335,14 @@ class Feols:
                     meat += np.dot(score_g, score_g.transpose())
 
                 if _is_iv == False:
-                    self.vcov = self.ssc * bread @ meat @ bread
+                    self._vcov = self._ssc * bread @ meat @ bread
                 # if self._is_iv == False:
-                #    self.vcov = self.ssc * bread @ meat @ bread
+                #    self._vcov = self._ssc * bread @ meat @ bread
                 else:
-                    meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self.tZX
-                    self.vcov = self.ssc * bread @ meat @ bread
+                    meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
+                    self._vcov = self._ssc * bread @ meat @ bread
 
-            elif self.vcov_type_detail == "CRV3":
+            elif self._vcov_type_detail == "CRV3":
                 # check: is fixed effect cluster fixed effect?
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
@@ -330,25 +360,21 @@ class Feols:
                         f"'CRV3' inference is not supported for {_method} regressions."
                     )
 
-                k_params = _k
-
-                beta_hat = self.beta_hat
-
                 clusters = clustid
-                n_groups = self.G
+                n_groups = self._G
                 group = cluster_df
 
-                beta_jack = np.zeros((n_groups, k_params))
+                beta_jack = np.zeros((n_groups, _k))
 
                 if self._has_fixef == False:
                     # inverse hessian precomputed?
-                    tXX = np.transpose(self.X) @ self.X
-                    tXy = np.transpose(self.X) @ self.Y
+                    tXX = np.transpose( self._X) @ self._X
+                    tXy = np.transpose( self._X) @ self._Y
 
                     # compute leave-one-out regression coefficients (aka clusterjacks')
                     for ixg, g in enumerate(clusters):
-                        Xg = self.X[np.equal(ixg, group)]
-                        Yg = self.Y[np.equal(ixg, group)]
+                        Xg = self._X[np.equal(ixg, group)]
+                        Yg = self._Y[np.equal(ixg, group)]
                         tXgXg = np.transpose(Xg) @ Xg
                         # jackknife regression coefficient
                         beta_jack[ixg, :] = (
@@ -373,14 +399,14 @@ class Feols:
                 #    beta_center = beta_hat
                 # else:
                 #    beta_center = np.mean(beta_jack, axis = 0)
-                beta_center = beta_hat
+                beta_center = _beta_hat
 
-                vcov = np.zeros((k_params, k_params))
+                vcov = np.zeros((_k, _k))
                 for ixg, g in enumerate(clusters):
                     beta_centered = beta_jack[ixg, :] - beta_center
                     vcov += np.outer(beta_centered, beta_centered)
 
-                self.vcov = self.ssc * vcov
+                self._vcov = self._ssc * vcov
 
     def get_inference(self, alpha=0.95):
         """
@@ -397,19 +423,13 @@ class Feols:
 
         """
 
-        _vcov = self.vcov
-        _beta_hat = self.beta_hat
-        _vcov_type = self.vcov_type
-        _N = self.N
-        _k = self.k
-        _G = self.G
+        _vcov = self._vcov
+        _beta_hat = self._beta_hat
+        _vcov_type = self._vcov_type
+        _N = self._N
+        _k = self._k
+        _G = self._G
         _method = self._method
-
-        self._se = None
-        self._tstat = None
-        self._pvalue = None
-        self.conf_int = None
-
 
         self._se = np.sqrt(np.diagonal(_vcov))
         self._tstat = _beta_hat / self._se
@@ -428,7 +448,7 @@ class Feols:
             z = np.abs(norm.ppf((1 - alpha) / 2))
 
         z_se = z * self._se
-        self.conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
+        self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
 
     def get_Ftest(self, vcov, is_iv=False):
         """
@@ -437,21 +457,21 @@ class Feols:
         Returns: None
         """
 
-        R = np.ones(self.k).reshape((1, self.k))
+        R = np.ones(self._k).reshape((1, self._k))
         q = 0
-        beta = self.beta_hat
+        beta = self._beta_hat
         Rbetaq = R @ beta - q
-        # Rbetaq = self.beta_hat
+        # Rbetaq = self._beta_hat
 
         if self._is_iv:
-            first_stage = Feols(self.Y, self.Z, self.Z)
+            first_stage = Feols(self._Y, self._Z, self._Z)
             first_stage.get_fit()
             first_stage.get_vcov(vcov=vcov)
             vcov = first_stage.vcov
         else:
-            vcov = self.vcov
+            vcov = self._vcov
 
-        self.F_stat = Rbetaq @ np.linalg.inv(R @ self.vcov @ np.transpose(R)) @ Rbetaq
+        self._F_stat = Rbetaq @ np.linalg.inv(R @ self._vcov @ np.transpose(R)) @ Rbetaq
 
     def get_wildboottest(
         self,
@@ -487,8 +507,8 @@ class Feols:
 
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
-        _Y = self.Y.flatten()
-        _X = self.X
+        _Y = self._Y.flatten()
+        _X = self._X
         _xnames = self._coefnames
         _data = self._data
 
@@ -607,7 +627,7 @@ class Feols:
         X = X.drop("Intercept", axis=1)
         Y = Y.to_numpy().flatten().astype(np.float64)
         X = X.to_numpy()
-        uhat = csr_matrix(Y - X @ self.beta_hat).transpose()
+        uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
         D2 = model_matrix("-1+" + fixef_vars, df).astype(np.float64)
         cols = D2.columns
@@ -624,7 +644,7 @@ class Feols:
             var.append(res[0])
             level.append(res[1])
 
-        self.fixef_dict = dict()
+        self._fixef_dict = dict()
         ki_start = 0
         for x in np.unique(var):
             ki = len(list(filter(lambda x: x == "group", var)))
@@ -634,13 +654,13 @@ class Feols:
                 pd.DataFrame({"level": levi, "value": alphai}).set_index("level").T
             )
 
-            self.fixef_dict[x] = fe_dict
+            self._fixef_dict[x] = fe_dict
             ki_start = ki
 
-        for key, df in self.fixef_dict.items():
+        for key, df in self._fixef_dict.items():
             print(f"{key}:\n{df.to_string(index=True)}\n")
 
-        self.sumFE = D2 @ alpha
+        self._sumFE = D2 @ alpha
 
     def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.ndarray:
         """
@@ -656,8 +676,8 @@ class Feols:
 
         _fml = self._fml
         _data = self._data
-        _u_hat = self.u_hat
-        _beta_hat = self.beta_hat
+        _u_hat = self._u_hat
+        _beta_hat = self._beta_hat
 
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
@@ -683,7 +703,7 @@ class Feols:
         -------
         None
         """
-        self.N = len(self.Y)
+        self._N = len(self._Y)
 
     def get_performance(self) -> None:
         """
@@ -702,10 +722,10 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
-        _Y = self.Y
-        _u_hat = self.u_hat
-        _N = self.N
-        _k = self.k
+        _Y = self._Y
+        _u_hat = self._u_hat
+        _N = self._N
+        _k = self._k
 
         Y_no_demean = _Y
 
@@ -713,15 +733,15 @@ class Feols:
         ssy_within = np.sum((_Y - np.mean(_Y)) ** 2)
         ssy = np.sum((Y_no_demean - np.mean(Y_no_demean)) ** 2)
 
-        self.rmse = np.sqrt(ssu / _N)
+        self._rmse = np.sqrt(ssu / _N)
 
-        self.r2_within = 1 - (ssu / ssy_within)
-        self.r2 = 1 - (ssu / ssy)
+        self._r2_within = 1 - (ssu / ssy_within)
+        self._r2 = 1 - (ssu / ssy)
 
-        self.adj_r2_within = 1 - (1 - self.r2_within) * (_N - 1) / (
+        self._adj_r2_within = 1 - (1 - self._r2_within) * (_N - 1) / (
             _N - _k - 1
         )
-        self.adj_r2 = 1 - (1 - self.r2) * (_N - 1) / (_N - _k - 1)
+        self._adj_r2 = 1 - (1 - self._r2) * (_N - 1) / (_N - _k - 1)
 
     def tidy(self) -> pd.DataFrame:
         """
@@ -734,8 +754,8 @@ class Feols:
         _se = self._se
         _tstat = self._tstat
         _pvalue = self._pvalue
-        _beta_hat = self.beta_hat
-        _conf_int = self.conf_int
+        _beta_hat = self._beta_hat
+        _conf_int = self._conf_int
 
         tidy_df = pd.DataFrame(
             {
@@ -785,7 +805,7 @@ class Feols:
         """
         Returns a one dimensional np.array with the residuals of the estimated regression model.
         """
-        return self.u_hat
+        return self._u_hat
 
 
 def _check_vcov_input(vcov, data):

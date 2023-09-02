@@ -21,7 +21,7 @@ class Feiv(Feols):
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
 
-        self.Z = Z
+        self._Z = Z
         self._is_iv = True
 
         self._support_crv3_inference = False
@@ -38,42 +38,29 @@ class Feiv(Feols):
             u_hat (np.ndarray): The residuals of the regression model.
         """
 
-        _X = self.X
-        _Z = self.Z
-        _Y = self.Y
+        _X = self._X
+        _Z = self._Z
+        _Y = self._Y
 
-        self.tZX = None
-        self.tZXinv = None
-        self.tXZ = None
-        self.tZy = None
-        self.tZZinv = None
-        self.beta_hat = None
-        self.Y_hat_link = None
-        self.u_hat = None
-        self.scores = None
-        self.hessian = None
-        self.bread = None
+        self._tZX = _Z.T @ _X
+        self._tXZ = _X.T @ _Z
+        self._tZy = _Z.T @ _Y
+        self._tZZinv = np.linalg.inv(_Z.T @ _Z)
 
+        H = self._tXZ @ self._tZZinv
+        A = H @ self._tZX
+        B = H @ self._tZy
 
-        self.tZX = _Z.T @ _X
-        self.tXZ = _X.T @ _Z
-        self.tZy = _Z.T @ _Y
-        self.tZZinv = np.linalg.inv(_Z.T @ _Z)
+        self._beta_hat = np.linalg.solve(A, B).flatten()
 
-        H = self.tXZ @ self.tZZinv
-        A = H @ self.tZX
-        B = H @ self.tZy
+        self._Y_hat_link = self._X @ self._beta_hat
+        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self.beta_hat = np.linalg.solve(A, B).flatten()
+        self._scores = self._Z * self._u_hat[:, None]
+        self._hessian = self._Z.transpose() @ self._Z
 
-        self.Y_hat_link = self.X @ self.beta_hat
-        self.u_hat = self.Y.flatten() - self.Y_hat_link.flatten()
-
-        self.scores = self.Z * self.u_hat[:, None]
-        self.hessian = self.Z.transpose() @ self.Z
-
-        D =  np.linalg.inv(self.tXZ @ self.tZZinv @ self.tZX)
-        self.bread = (H.T) @ D @ H
+        D =  np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
+        self._bread = (H.T) @ D @ H
 
 
 

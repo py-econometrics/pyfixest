@@ -492,7 +492,7 @@ class Fixest:
         if weights is not None:
             has_weights = True
             weights = _data[weights]
-            weights = self.weights.drop(na_index, axis=0)
+            weights = self._weights.drop(na_index, axis=0)
             weights = weights.values.reshape((N, 1))
         else:
             weights = np.ones((N, 1))
