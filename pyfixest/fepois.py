@@ -52,23 +52,30 @@ class Fepois(Feols):
             self._has_fixef = False
 
         # check if Y is a weakly positive integer
-        self.Y = _to_integer(self.Y)
-        # check that self.Y is a weakly positive integer
-        if np.any(self.Y < 0):
+        self._Y = _to_integer(self._Y)
+        # check that self._Y is a weakly positive integer
+        if np.any(self._Y < 0):
             raise ValueError(
                 "The dependent variable must be a weakly positive integer."
             )
 
         self.separation_na = None
-        self.n_separation_na = None
+        self._N_separation_na = None
         self._check_for_separation()
 
         self._support_crv3_inference = False
         self._support_iid_inference = False
 
         # attributes that are updated outside of the class (not optimal)
-        self.n_separation_na = None
-        self.na_index = None
+        self._N_separation_na = None
+        self._Na_index = None
+
+        self._Y_hat_response = None
+        self.deviance = None
+        self._Xbeta = None
+
+
+
 
     def get_fit(self) -> None:
         """
@@ -90,33 +97,15 @@ class Fepois(Feols):
 
         """
 
-        _Y = self.Y
-        _X = self.X
+        _Y = self._Y
+        _X = self._X
         _fe = self.fe
-        _N = self.N
+        _N = self._N
         _drop_singletons = self._drop_singletons
         _convergence = self.convergence
         _maxiter = self.maxiter
         _iwls_maxiter = 25
         _tol = self.tol
-
-        self.beta_hat = None
-        self.Y_hat_response = None
-        self.Y_hat_link = None
-        self.weights = None
-        self.X = None
-        self.Z = None
-        self.Y = None
-        self.u_hat = None
-        self.deviance = None
-        self.tZX = None
-        self.tZXinv = None
-        self.Xbeta = None
-        self.scores = None
-        self.hessian = None
-        # only needed for IV
-        self.tXZ = None
-        self.tZZinv = None
 
 
         def compute_deviance(_Y, mu):
@@ -220,31 +209,31 @@ class Fepois(Feols):
 
             stop_iterating = crit < _tol
 
-        self.beta_hat = delta_new.flatten()
-        self.Y_hat_response = mu
-        self.Y_hat_link = eta
-        # (Y - self.Y_hat)
+        self._beta_hat = delta_new.flatten()
+        self._Y_hat_response = mu
+        self._Y_hat_link = eta
+        # (Y - self._Y_hat)
         # needed for the calculation of the vcov
 
         # updat for inference
-        self.weights = mu_old
+        self._weights = mu_old
         # if only one dim
-        if self.weights.ndim == 1:
-            self.weights = self.weights.reshape((self.N, 1))
+        if self._weights.ndim == 1:
+            self._weights = self._weights.reshape((self._N, 1))
 
-        self.u_hat = resid.flatten()
+        self._u_hat = resid.flatten()
 
-        self.Y = Z_resid
-        self.X = X_resid
-        self.Z = self.X
+        self._Y = Z_resid
+        self._X = X_resid
+        self._Z = self._X
         self.deviance = deviance
 
-        self.tZX = np.transpose(self.Z) @ self.X
-        self.tZXinv = np.linalg.inv(self.tZX)
-        self.Xbeta = eta
+        self._tZX = np.transpose( self._Z) @ self._X
+        self._tZXinv = np.linalg.inv(self._tZX)
+        self._Xbeta = eta
 
-        self.scores = self.u_hat[:, None] * self.weights * X_resid
-        self.hessian = XWX
+        self._scores = self._u_hat[:, None] * self._weights * X_resid
+        self._hessian = XWX
 
 
 
@@ -264,14 +253,14 @@ class Fepois(Feols):
             raise ValueError("type must be one of 'response' or 'link'.")
 
         if data is None:
-            y_hat = self.Xbeta
+            y_hat = self._Xbeta
 
         else:
             fml_linear, _ = self._fml.split("|")
             _, X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis=1)
 
-            y_hat = X @ self.beta_hat
+            y_hat = X @ self._beta_hat
 
         if type == "link":
             if self._method == "fepois":
@@ -303,7 +292,7 @@ class Fepois(Feols):
                 pass
 
             else:
-                Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
+                Y_help = pd.Series(np.where(self._Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
 
                 separation_na = set()
@@ -323,12 +312,12 @@ class Fepois(Feols):
 
                 self.separation_na = list(separation_na)
 
-                self.Y = np.delete(self.Y, self.separation_na, axis=0)
-                self.X = np.delete(self.X, self.separation_na, axis=0)
-                # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                self._Y = np.delete(self._Y, self.separation_na, axis=0)
+                self._X = np.delete( self._X, self.separation_na, axis=0)
+                # self._Z = np.delete( self._Z, self.separation_na, axis = 0)
                 self.fe = np.delete(self.fe, self.separation_na, axis=0)
 
-                self.N = self.Y.shape[0]
+                self._N = self._Y.shape[0]
                 if len(self.separation_na) > 0:
                     warnings.warn(
                         str(len(self.separation_na))

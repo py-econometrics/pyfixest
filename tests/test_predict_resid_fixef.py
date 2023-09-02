@@ -91,12 +91,12 @@ def test_vs_fixest(data, fml):
         raise ValueError("Coefficients are not equal")
 
     # test sumFE for OLS
-    if not np.allclose(feols_mod.sumFE, r_fixest_ols.rx2("sumFE")):
+    if not np.allclose(feols_mod._sumFE, r_fixest_ols.rx2("sumFE")):
         raise ValueError("sumFE for OLS are not equal")
 
     # test sumFE for Poisson
     # if not np.allclose(
-    #    fepois_mod.sumFE,
+    #    fepois_mod._sumFE,
     #    r_fixest_pois.rx2("sumFE")
     # ):
     #    raise ValueError("sumFE for Poisson are not equal")

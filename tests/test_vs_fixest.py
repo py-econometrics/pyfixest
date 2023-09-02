@@ -238,7 +238,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
                 glm_tol=iwls_tol,
             )
 
-            py_nobs = pyfixest.fetch_model(0).N
+            py_nobs = pyfixest.fetch_model(0)._N
             r_nobs = stats.nobs(r_fixest)
 
 
@@ -252,8 +252,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         py_pval = mod.pvalue().xs("X1")
         py_tstat = mod.tstat().xs("X1")
         py_confint = mod.confint().xs("X1").values
-        py_nobs = mod.N
-        py_resid = mod.u_hat.flatten()
+        py_nobs = mod._N
+        py_resid = mod._u_hat.flatten()
         # TODO: test residuals
 
 
