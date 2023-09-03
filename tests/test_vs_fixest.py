@@ -36,7 +36,7 @@ rng = np.random.default_rng(87685)
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("model", ["Feols", "Fepois"])
-@pytest.mark.parametrize("inference", ["iid","hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -55,7 +55,7 @@ rng = np.random.default_rng(87685)
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
-        #("Y~X1|f2^f3^f1"),
+        # ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
@@ -203,15 +203,12 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             if isinstance(inference, dict):
                 inference_inflation_factor = 500
 
-
             pyfixest = Fixest(data=data, iwls_tol=iwls_tol, iwls_maxiter=iwls_maxiter)
 
             try:
                 pyfixest.fepois(fml, vcov=inference)
             except NotImplementedError as exception:
-                if "inference is not supported" in str(
-                    exception
-                ):
+                if "inference is not supported" in str(exception):
                     return pytest.skip(
                         "'iid' inference is not supported for Poisson regression."
                     )
@@ -241,7 +238,6 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             py_nobs = pyfixest.fetch_model(0)._N
             r_nobs = stats.nobs(r_fixest)
 
-
     if run_test:
         # get coefficients, standard errors, p-values, t-statistics, confidence intervals
 
@@ -256,15 +252,22 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         py_resid = mod._u_hat.flatten()
         # TODO: test residuals
 
-
-        fixest_df = broom.tidy_fixest(r_fixest, conf_int = ro.BoolVector([True]))
+        fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
         df_r = pd.DataFrame(fixest_df).T
-        df_r.columns = ["term","estimate","std.error","statistic","p.value","conf.low", "conf.high"]
+        df_r.columns = [
+            "term",
+            "estimate",
+            "std.error",
+            "statistic",
+            "p.value",
+            "conf.low",
+            "conf.high",
+        ]
 
         if mod._is_iv:
-            df_X1 = df_r.set_index("term").xs("fit_X1") # only test for X1
+            df_X1 = df_r.set_index("term").xs("fit_X1")  # only test for X1
         else:
-            df_X1 = df_r.set_index("term").xs("X1") # only test for X1
+            df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
 
         r_coef = df_X1["estimate"]
         r_se = df_X1["std.error"]
@@ -275,51 +278,47 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         r_resid = r_fixest.rx2("working_residuals")
 
         np.testing.assert_allclose(
-            py_coef,
-            r_coef,
-            rtol = rtol,
-            atol = atol,
-            err_msg = "py_coef != r_coef"
+            py_coef, r_coef, rtol=rtol, atol=atol, err_msg="py_coef != r_coef"
         )
 
-        #np.testing.assert_allclose(
+        # np.testing.assert_allclose(
         #    py_resid,
         #    r_resid,
         #    rtol = 1e-04,
         #    atol = 1e-04,
         #    err_msg = "py_resid != r_resid"
-        #)
+        # )
 
         np.testing.assert_allclose(
-           py_se,
-           r_se,
-           rtol = rtol * inference_inflation_factor,
-           atol = atol * inference_inflation_factor,
-           err_msg = f"py_se != r_se for {inference} errors."
+            py_se,
+            r_se,
+            rtol=rtol * inference_inflation_factor,
+            atol=atol * inference_inflation_factor,
+            err_msg=f"py_se != r_se for {inference} errors.",
         )
 
         np.testing.assert_allclose(
-           py_pval,
-           r_pval,
-           rtol = rtol * inference_inflation_factor,
-           atol = atol * inference_inflation_factor,
-           err_msg = f"py_pval != r_pval for {inference} errors."
+            py_pval,
+            r_pval,
+            rtol=rtol * inference_inflation_factor,
+            atol=atol * inference_inflation_factor,
+            err_msg=f"py_pval != r_pval for {inference} errors.",
         )
 
         np.testing.assert_allclose(
-           py_tstat,
-           r_tstat,
-           rtol = rtol * inference_inflation_factor,
-           atol = atol * inference_inflation_factor,
-           err_msg = f"py_tstat != r_tstat for {inference} errors"
+            py_tstat,
+            r_tstat,
+            rtol=rtol * inference_inflation_factor,
+            atol=atol * inference_inflation_factor,
+            err_msg=f"py_tstat != r_tstat for {inference} errors",
         )
 
         np.testing.assert_allclose(
-           py_confint,
-           r_confint,
-           rtol = rtol * inference_inflation_factor,
-           atol = atol * inference_inflation_factor,
-           err_msg = f"py_confint != r_confint for {inference} errors"
+            py_confint,
+            r_confint,
+            rtol=rtol * inference_inflation_factor,
+            atol=atol * inference_inflation_factor,
+            err_msg=f"py_confint != r_confint for {inference} errors",
         )
 
         np.testing.assert_allclose(
@@ -330,7 +329,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             r_deviance = r_fixest.rx2("deviance")
             py_deviance = mod.deviance
             np.testing.assert_allclose(
-                py_deviance, r_deviance, rtol=rtol, atol=atol, err_msg="py_deviance != r_deviance"
+                py_deviance,
+                r_deviance,
+                rtol=rtol,
+                atol=atol,
+                err_msg="py_deviance != r_deviance",
             )
 
 

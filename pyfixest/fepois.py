@@ -74,9 +74,6 @@ class Fepois(Feols):
         self.deviance = None
         self._Xbeta = None
 
-
-
-
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares
@@ -106,7 +103,6 @@ class Fepois(Feols):
         _maxiter = self.maxiter
         _iwls_maxiter = 25
         _tol = self.tol
-
 
         def compute_deviance(_Y, mu):
             with warnings.catch_warnings():
@@ -228,16 +224,16 @@ class Fepois(Feols):
         self._Z = self._X
         self.deviance = deviance
 
-        self._tZX = np.transpose( self._Z) @ self._X
+        self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
         self._scores = self._u_hat[:, None] * self._weights * X_resid
         self._hessian = XWX
 
-
-
-    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(
+        self, data: Union[None, pd.DataFrame] = None, type="link"
+    ) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
@@ -313,7 +309,7 @@ class Fepois(Feols):
                 self.separation_na = list(separation_na)
 
                 self._Y = np.delete(self._Y, self.separation_na, axis=0)
-                self._X = np.delete( self._X, self.separation_na, axis=0)
+                self._X = np.delete(self._X, self.separation_na, axis=0)
                 # self._Z = np.delete( self._Z, self.separation_na, axis = 0)
                 self.fe = np.delete(self.fe, self.separation_na, axis=0)
 

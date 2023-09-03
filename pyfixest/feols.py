@@ -59,8 +59,7 @@ class Feols:
 
     """
 
-    def __init__(
-        self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
         self._method = "feols"
 
         self._Y = Y
@@ -129,7 +128,6 @@ class Feols:
         self._r2_within = None
         self._adj_r2 = None
         self._adj_r2_within = None
-
 
     def get_fit(self) -> None:
         """
@@ -263,7 +261,6 @@ class Feols:
                 u = _u_hat
                 transformed_scores = _scores
             elif self._vcov_type_detail in ["HC2", "HC3"]:
-
                 if _is_iv:
                     raise VcovTypeNotSupportedError(
                         "HC2 and HC3 inference is not supported for IV regressions."
@@ -319,9 +316,9 @@ class Feols:
                 meat = np.zeros((k_instruments, k_instruments))
 
                 if _weights is not None:
-                    weighted_uhat = (
-                        _weights.flatten() * _u_hat.flatten()
-                    ).reshape((_N, 1))
+                    weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
+                        (_N, 1)
+                    )
                 else:
                     weighted_uhat = _u_hat
 
@@ -368,8 +365,8 @@ class Feols:
 
                 if self._has_fixef == False:
                     # inverse hessian precomputed?
-                    tXX = np.transpose( self._X) @ self._X
-                    tXy = np.transpose( self._X) @ self._Y
+                    tXX = np.transpose(self._X) @ self._X
+                    tXy = np.transpose(self._X) @ self._Y
 
                     # compute leave-one-out regression coefficients (aka clusterjacks')
                     for ixg, g in enumerate(clusters):
@@ -662,7 +659,9 @@ class Feols:
 
         self._sumFE = D2 @ alpha
 
-    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(
+        self, data: Union[None, pd.DataFrame] = None, type="link"
+    ) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
@@ -738,9 +737,7 @@ class Feols:
         self._r2_within = 1 - (ssu / ssy_within)
         self._r2 = 1 - (ssu / ssy)
 
-        self._adj_r2_within = 1 - (1 - self._r2_within) * (_N - 1) / (
-            _N - _k - 1
-        )
+        self._adj_r2_within = 1 - (1 - self._r2_within) * (_N - 1) / (_N - _k - 1)
         self._adj_r2 = 1 - (1 - self._r2) * (_N - 1) / (_N - _k - 1)
 
     def tidy(self) -> pd.DataFrame:
