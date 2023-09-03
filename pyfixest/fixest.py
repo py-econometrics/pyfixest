@@ -1,6 +1,5 @@
 import pyhdfe
 import re
-import pdb
 
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ from formulaic import model_matrix
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.feiv import Feiv
-from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
+from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.ssc_utils import ssc
 from pyfixest.exceptions import (
     MatrixNotFullRankError,
@@ -77,7 +76,8 @@ class Fixest:
         fml: str,
         vcov: Union[None, str, Dict[str, str]] = None,
         ssc=ssc(),
-        fixef_rm: str = "none") -> None:
+        fixef_rm: str = "none",
+    ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
         Mostly deparses the fml string.
@@ -110,7 +110,6 @@ class Fixest:
             _estimate_split_model: boolean indicating whether the split model is estimated.
             _estimate_full_model: boolean indicating whether the full model is estimated.
         """
-
 
         self._fml = fml.replace(" ", "")
         self._split = None
@@ -157,7 +156,7 @@ class Fixest:
     def feols(
         self,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Optional[Union[str, Dict[str, str]]] = None,
         ssc=ssc(),
         fixef_rm: str = "none",
         weights=Optional,
@@ -238,7 +237,7 @@ class Fixest:
                 _estimate_full_model: boolean indicating whether the full model is estimated.
             - attributes set via _model_matrix_fixest():
                 icovars: a list of interaction variables. None if no interaction variables via `i()` provided.
-            - attributes set via _estimate_all_models2():
+            - attributes set via _estimate_all_models():
 
             - attributes set via _is_multiple_estimation():
                 is_fixef_multi: boolean indicating whether multiple regression models will be estimated
@@ -248,7 +247,7 @@ class Fixest:
         self._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
         # demean all models: based on fixed effects x split x missing value combinations
-        self._estimate_all_models2(vcov, self._fixef_keys)
+        self._estimate_all_models(vcov, self._fixef_keys)
 
         # create self._is_fixef_multi flag
         self._is_multiple_estimation()
@@ -264,7 +263,7 @@ class Fixest:
     def fepois(
         self,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Optional[Union[str, Dict[str, str]]] = None,
         ssc=ssc(),
         fixef_rm: str = "none",
     ) -> None:
@@ -281,14 +280,16 @@ class Fixest:
                 "IV Estimation is not supported for Poisson Regression"
             )
 
-        self._estimate_all_models2(vcov, self._fixef_keys)
+        self._estimate_all_models(vcov, self._fixef_keys)
 
         # create self._is_fixef_multi flag
         self._is_multiple_estimation()
 
         return self
 
-    def _clean_fe(self, data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
+    def _clean_fe(
+        self, data: pd.DataFrame, fval: str
+    ) -> Tuple[pd.DataFrame, List[int]]:
         """
         Clean and transform fixed effects in a DataFrame.
 
@@ -338,11 +339,7 @@ class Fixest:
         return fe, fe_na
 
     def _model_matrix_fixest(
-        self,
-        depvar: str,
-        covar: str,
-        fval: str,
-        weights: Optional[str] = None
+        self, depvar: str, covar: str, fval: str, weights: Optional[str] = None
     ) -> Tuple[
         pd.DataFrame,  # Y
         pd.DataFrame,  # X
@@ -353,7 +350,7 @@ class Fixest:
         str,  # na_index_str
         Optional[List[str]],  # z_names
         Optional[str],  # weights
-        bool  # has_weights
+        bool,  # has_weights
     ]:
         """
         Create model matrices for fixed effects estimation.
@@ -407,12 +404,10 @@ class Fixest:
             fe = None
             fe_na = None
 
-        if _is_iv:
-            dict2fe_iv = _fml_dict_iv.get(fval)
-
         fml = depvar + " ~ " + covar
 
         if _is_iv:
+            dict2fe_iv = _fml_dict_iv.get(fval)
             instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
             endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
             instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
@@ -429,6 +424,7 @@ class Fixest:
         Y = pd.DataFrame(Y)
         X = pd.DataFrame(X)
 
+        # type: ignore # ignoring as instrument_list always exists here if _is_iv
         if _is_iv:
             I = lhs[instrument_list]
             I = pd.DataFrame(I)
@@ -459,9 +455,7 @@ class Fixest:
 
         if _ivars is not None:
             self._icovars = [
-                s
-                for s in x_names
-                if s.startswith(_ivars[0]) and s.endswith(_ivars[1])
+                s for s in x_names if s.startswith(_ivars[0]) and s.endswith(_ivars[1])
             ]
         else:
             self._icovars = None
@@ -502,7 +496,7 @@ class Fixest:
 
         return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
 
-    def _demean_model2(
+    def _demean_model(
         self,
         Y: pd.DataFrame,
         X: pd.DataFrame,
@@ -510,7 +504,7 @@ class Fixest:
         fe: Optional[pd.DataFrame],
         weights: Optional[np.ndarray],
         lookup_demeaned_data: Dict[str, Any],
-        na_index_str: str
+        na_index_str: str,
     ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
         """
         Demeans a single regression model.
@@ -625,10 +619,8 @@ class Fixest:
 
         return Yd, Xd, Id
 
-    def _estimate_all_models2(
-        self,
-        vcov: Union[str, Dict[str, str]],
-        fixef_keys: List[str]
+    def _estimate_all_models(
+        self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
     ) -> None:
         """
         Estimate multiple regression models.
@@ -651,20 +643,18 @@ class Fixest:
         # pdb.set_trace()
 
         _estimate_full_model = self._estimate_full_model
-        #_estimate_split_model = self._estimate_split_model
+        # _estimate_split_model = self._estimate_split_model
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
         _ivars = self._ivars
-        #_drop_ref = self._drop_ref
+        # _drop_ref = self._drop_ref
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
         _iwls_maxiter = self._iwls_maxiter
         _iwls_tol = self._iwls_tol
-        #_icovars = self._icovars
-
-
+        # _icovars = self._icovars
 
         if _estimate_full_model:
             for _, fval in enumerate(fixef_keys):
@@ -703,7 +693,7 @@ class Fixest:
 
                         if _method == "feols":
                             # demean Y, X, Z, if not already done in previous estimation
-                            Yd, Xd, Id = self._demean_model2(
+                            Yd, Xd, Id = self._demean_model(
                                 Y, X, I, fe, weights, lookup_demeaned_data, na_index_str
                             )
 
@@ -831,7 +821,6 @@ class Fixest:
                 self._is_fixef_multi = True
 
     def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
-
         """
         Update regression inference "on the fly".
 
@@ -888,7 +877,6 @@ class Fixest:
         return res
 
     def etable(self, digits: int = 3) -> None:
-
         return self.tidy().T.round(digits)
 
     def summary(self, digits: int = 3) -> None:
@@ -1090,7 +1078,6 @@ class Fixest:
         adj: bool = True,
         cluster_adj: bool = True,
     ) -> pd.DataFrame:
-
         """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
 

@@ -1,10 +1,11 @@
 import numpy as np
 from pyfixest.feols import Feols
 
-class Feiv(Feols):
 
+class Feiv(Feols):
     def __init__(
-        self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray) -> None:
+        self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray
+    ) -> None:
         """
         Args:
             Y (np.array): dependent variable. two-dimensional np.array
@@ -59,17 +60,5 @@ class Feiv(Feols):
         self._scores = self._Z * self._u_hat[:, None]
         self._hessian = self._Z.transpose() @ self._Z
 
-        D =  np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
+        D = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
         self._bread = (H.T) @ D @ H
-
-
-
-
-
-
-
-
-
-
-
-
