@@ -115,6 +115,7 @@ class Fixest:
         self._split = None
         self._method = estimation
         # deparse formula, at least partially
+
         fxst_fml = FixestFormulaParser(fml)
 
         if fxst_fml._is_iv:
@@ -339,7 +340,7 @@ class Fixest:
         return fe, fe_na
 
     def _model_matrix_fixest(
-        self, depvar: str, covar: str, fval: str, weights: Optional[str] = None
+        self, fml: str, weights: Optional[str] = None
     ) -> Tuple[
         pd.DataFrame,  # Y
         pd.DataFrame,  # X
@@ -359,9 +360,7 @@ class Fixest:
         to create the model matrices.
 
         Args:
-            depvar (str): Dependent variable as a string, e.g., "Y".
-            covar (str): Covariates as a string, e.g., "X1 + X2".
-            fval (str): Fixed effects as a string, e.g., "fe1 + fe2", or "0" if no fixed effects.
+            fml (str): A two-sided formula string using fixest formula syntax.
             weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
 
         Returns:
@@ -398,62 +397,71 @@ class Fixest:
         _ivars = self._ivars
         _drop_ref = self._drop_ref
 
+        # step 1: deparse formula
+        fml_parts = fml.split("|")
+        depvar, covar = fml_parts[0].split("~")
+
+        if len(fml_parts) == 3:
+            fval, fml_iv = fml_parts[1], fml_parts[2]
+        elif len(fml_parts) == 2:
+            if _is_iv:
+                fval, fml_iv = "0", fml_parts[1]
+            else:
+                fval, fml_iv = fml_parts[1], None
+        else:
+            fval = "0"
+            fml_iv = None
+
+        if _is_iv:
+            endogvar, instruments = fml_iv.split("~")
+
+        # step 2: create formulas
+        fml_exog = depvar + " ~ " + covar
+        if _is_iv:
+            fml_iv_full = fml_iv + "+" + covar + "-" + endogvar
+
+        # clean fixed effects
         if fval != "0":
             fe, fe_na = self._clean_fe(_data, fval)
+            #fml_exog += " | " + fval
         else:
             fe = None
             fe_na = None
+        # fml_iv already created
 
-        fml = depvar + " ~ " + covar
+        Y, X = model_matrix(fml_exog, _data)
+        if _is_iv:
+            endogvar, Z = model_matrix(fml_iv_full, _data)
+        else:
+            endogvar, Z = None, None
+
+        Y, X, endogvar, Z = [pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]]
+
+        # step 3: catch NaNs (before converting to numpy arrays)
+        na_index_stage2 = list(set(_data.index) - set(Y.index))
 
         if _is_iv:
-            dict2fe_iv = _fml_dict_iv.get(fval)
-            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
-            endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
-            instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
-
-            fml2 = "+".join(instrument_list) + "+" + fml
-
+            na_index_stage1 = list(set(_data.index) - set(Z.index))
+            diff1 = list(set(na_index_stage1) - set(na_index_stage2))
+            diff2 = list(set(na_index_stage2) - set(na_index_stage1))
+            if diff1:
+                Y = Y.drop(diff1, axis=0)
+                X = X.drop(diff1, axis=0)
+            if diff2:
+                Z = Z.drop(diff2, axis=0)
+                endogvar = endogvar.drop(diff2, axis=0)
+            na_index = list(set(na_index_stage1 + na_index_stage2))
         else:
-            fml2 = fml
+            na_index = na_index_stage2
 
-        lhs, rhs = model_matrix(fml2, _data)
-
-        Y = lhs[[depvar]]
-        X = rhs
-        Y = pd.DataFrame(Y)
-        X = pd.DataFrame(X)
-
-        # type: ignore # ignoring as instrument_list always exists here if _is_iv
-        if _is_iv:
-            I = lhs[instrument_list]
-            I = pd.DataFrame(I)
-        else:
-            I = None
-
-        # get NA index before converting Y to numpy array
-        na_index = list(set(_data.index) - set(Y.index))
         # drop variables before collecting variable names
         if _ivars is not None:
             if _drop_ref is not None:
                 X = X.drop(_drop_ref, axis=1)
-
-        y_names = list(Y.columns)
-        x_names = list(X.columns)
-        yxz_names = list(y_names) + list(x_names)
-
-        if _is_iv:
-            iv_names = list(I.columns)
-            x_names_copy = x_names.copy()
-            x_names_copy = [x for x in x_names_copy if x not in endogvar_list]
-            z_names = x_names_copy + instrument_list
-            cols = yxz_names + iv_names
-        else:
-            iv_names = None
-            z_names = None
-            cols = yxz_names
+                Z = Z.drop(_drop_ref, axis=1)
 
         if _ivars is not None:
+            x_names = X.columns.tolist()
             self._icovars = [
                 s for s in x_names if s.startswith(_ivars[0]) and s.endswith(_ivars[1])
             ]
@@ -464,11 +472,10 @@ class Fixest:
             fe = fe.drop(na_index, axis=0)
             # drop intercept
             X = X.drop("Intercept", axis=1)
-            x_names.remove("Intercept")
-            yxz_names.remove("Intercept")
+            #x_names.remove("Intercept")
             if _is_iv:
-                z_names.remove("Intercept")
-                cols.remove("Intercept")
+                Z = Z.drop("Intercept", axis=1)
+            #    z_names.remove("Intercept")
 
             # drop NaNs in fixed effects (not yet dropped via na_index)
             fe_na_remaining = list(set(fe_na) - set(na_index))
@@ -477,34 +484,26 @@ class Fixest:
                 X = X.drop(fe_na_remaining, axis=0)
                 fe = fe.drop(fe_na_remaining, axis=0)
                 if _is_iv:
-                    I = I.drop(fe_na_remaining, axis=0)
+                    Z = Z.drop(fe_na_remaining, axis=0)
+                    endogvar = endogvar.drop(fe_na_remaining, axis=0)
                 na_index += fe_na_remaining
                 na_index = list(set(na_index))
 
         N = X.shape[0]
 
-        if weights is not None:
-            has_weights = True
-            weights = _data[weights]
-            weights = self._weights.drop(na_index, axis=0)
-            weights = weights.values.reshape((N, 1))
-        else:
-            weights = np.ones((N, 1))
-            has_weights = False
-
         na_index_str = ",".join(str(x) for x in na_index)
 
-        return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
+        return Y, X, fe, endogvar, Z, na_index, na_index_str
 
     def _demean_model(
         self,
         Y: pd.DataFrame,
         X: pd.DataFrame,
-        I: Optional[pd.DataFrame],
         fe: Optional[pd.DataFrame],
         weights: Optional[np.ndarray],
         lookup_demeaned_data: Dict[str, Any],
         na_index_str: str,
+        val = 1
     ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
         """
         Demeans a single regression model.
@@ -516,7 +515,6 @@ class Fixest:
         Args:
             Y (pd.DataFrame): A DataFrame of the dependent variable.
             X (pd.DataFrame): A DataFrame of the covariates.
-            I (pd.DataFrame or None): A DataFrame of the Instruments. None if no IV.
             fe (pd.DataFrame or None): A DataFrame of the fixed effects. None if no fixed effects specified.
             weights (np.ndarray or None): A numpy array of weights. None if no weights.
             lookup_demeaned_data (Dict[str, Any]): A dictionary with keys for each fixed effects combination and
@@ -531,47 +529,52 @@ class Fixest:
                 - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
         """
 
+        #if val == 1:
+        #    import pdb
+        #    pdb.set_trace()
+
         _drop_singletons = self._drop_singletons
 
-        if I is not None:
-            YXZ = pd.concat([Y, X, I], axis=1)
-        else:
-            YXZ = pd.concat([Y, X], axis=1)
+        YX = pd.concat([Y, X], axis=1)
 
-        yxz_names = YXZ.columns
-        YXZ = YXZ.to_numpy()
+        yx_names = YX.columns
+        YX = YX.to_numpy()
 
         if fe is not None:
             # check if looked dict has data for na_index
             if lookup_demeaned_data.get(na_index_str) is not None:
                 # get data out of lookup table: list of [algo, data]
-                algorithm, YXZ_demeaned_old = lookup_demeaned_data.get(na_index_str)
+                algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
 
                 # get not yet demeaned covariates
-                var_diff_names = list(set(yxz_names) - set(YXZ_demeaned_old.columns))
+                var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
 
                 # if some variables still need to be demeaned
                 if var_diff_names:
-                    var_diff_names = var_diff_names[0]
+                    #var_diff_names = var_diff_names
 
-                    var_diff_index = list(yxz_names).index(var_diff_names)
-                    var_diff = YXZ[:, var_diff_index]
+                    yx_names_list = list(yx_names)
+                    var_diff_index = [yx_names_list.index(item) for item in var_diff_names]
+                    #var_diff_index = list(yx_names).index(var_diff_names)
+                    var_diff = YX[:, var_diff_index]
                     if var_diff.ndim == 1:
                         var_diff = var_diff.reshape(len(var_diff), 1)
 
-                    YXZ_demean_new = algorithm.residualize(var_diff)
-                    YXZ_demeaned = np.concatenate(
-                        [YXZ_demeaned_old, YXZ_demean_new], axis=1
+                    YX_demean_new = algorithm.residualize(var_diff)
+                    YX_demeaned = np.concatenate(
+                        [YX_demeaned_old, YX_demean_new], axis=1
                     )
-                    YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                    YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                    YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [
-                        var_diff_names
-                    ]
+                    # check if var_diff_names is a list
+                    if isinstance(var_diff_names, str):
+                        var_diff_names = [var_diff_names]
+
+                    YX_demeaned.columns = list(YX_demeaned_old.columns) + var_diff_names
 
                 else:
                     # all variables already demeaned
-                    YXZ_demeaned = YXZ_demeaned_old[yxz_names]
+                    YX_demeaned = YX_demeaned_old[yx_names]
 
             else:
                 # not data demeaned yet for NA combination
@@ -596,28 +599,25 @@ class Fixest:
                     ].tolist()
                     na_index += dropped_singleton_indices
 
-                YXZ_demeaned = algorithm.residualize(YXZ)
-                YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                YX_demeaned = algorithm.residualize(YX)
+                YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                YXZ_demeaned.columns = yxz_names
+                YX_demeaned.columns = yx_names
 
-            lookup_demeaned_data[na_index_str] = [algorithm, YXZ_demeaned]
+            lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
 
         else:
             # nothing to demean here
             pass
 
-            YXZ_demeaned = pd.DataFrame(YXZ)
-            YXZ_demeaned.columns = yxz_names
+            YX_demeaned = pd.DataFrame(YX)
+            YX_demeaned.columns = yx_names
 
-        # get demeaned Y, X, I (if no fixef, equal to Y, X, I)
-        Yd = YXZ_demeaned[Y.columns]
-        Xd = YXZ_demeaned[X.columns]
-        Id = None
-        if I is not None:
-            Id = YXZ_demeaned[I.columns]
+        # get demeaned Y, X (if no fixef, equal to Y, X, I)
+        Yd = YX_demeaned[Y.columns]
+        Xd = YX_demeaned[X.columns]
 
-        return Yd, Xd, Id
+        return Yd, Xd
 
     def _estimate_all_models(
         self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
@@ -672,40 +672,57 @@ class Fixest:
 
                         covar = fml_linear.split("~")[1]
 
+                        if _is_iv:
+                            dict2fe_iv = self._fml_dict_iv.get(fval)
+                            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
+                            endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
+                            instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
+                            endogvars = endogvar_list[0]
+                            instruments = "+".join(instrument_list)
+                        else:
+                            endogvars = None
+                            instruments = None
+
+
+                        fml = get_fml(depvar, covar, fval, endogvars, instruments)
+
                         # get Y, X, Z, fe, NA indices for model
-                        (
-                            Y,
-                            X,
-                            I,
-                            fe,
-                            na_index,
-                            _,
-                            na_index_str,
-                            z_names,
-                            weights,
-                            has_weights,
-                        ) = self._model_matrix_fixest(depvar, covar, fval)
+                        Y, X, fe, endogvar, Z, na_index, na_index_str = self._model_matrix_fixest(fml)
+                        weights = np.ones((Y.shape[0], 1))
 
                         y_names = Y.columns.tolist()
                         x_names = X.columns.tolist()
-
-                        fml = get_fml(depvar, covar, fval)
+                        if _is_iv:
+                            z_names = Z.columns.tolist()
+                            endogvar_names = endogvar.columns.tolist()
+                        else:
+                            z_names = None
+                            endogvar_names = None
 
                         if _method == "feols":
+
                             # demean Y, X, Z, if not already done in previous estimation
-                            Yd, Xd, Id = self._demean_model(
-                                Y, X, I, fe, weights, lookup_demeaned_data, na_index_str
+
+
+                            Yd, Xd = self._demean_model(
+                                Y, X, fe, weights, lookup_demeaned_data, na_index_str
                             )
 
                             if _is_iv:
-                                Zd = pd.concat([Xd, Id], axis=1)[z_names]
+                                endogvard, Zd = self._demean_model(
+                                    endogvar, Z, fe, weights, lookup_demeaned_data, na_index_str, val = 1
+                                )
                             else:
+                                endogvard, Zd = None, None
+
+
+
+                            if not _is_iv:
                                 Zd = Xd
 
-                            Yd = Yd.to_numpy()
-                            Xd = Xd.to_numpy()
-                            Zd = Zd.to_numpy()
+                            Yd, Xd, Zd, endogvard = [x.to_numpy() if x is not None else x for x in [Yd, Xd, Zd, endogvard]]
 
+                            has_weights = False
                             if has_weights:
                                 w = np.sqrt(weights.to_numpy())
                                 Yd *= np.sqrt(w)
@@ -727,9 +744,7 @@ class Fixest:
                             # check for separation and drop separated variables
                             # Y, X, fe, na_index = self._separation()
 
-                            Y = Y.to_numpy()
-                            X = X.to_numpy()
-
+                            Y, X = [x.to_numpy() for x in [Y, X]]
                             N = X.shape[0]
 
                             if fe is not None:
@@ -1334,7 +1349,47 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
     return splitvar, splitvar_name, estimate_split_model, estimate_full_model
 
 
-def get_fml(depvar, covar, fval):
+def get_fml(depvar, covar, fval, endogvars = None, instruments = None) -> str:
+
+    '''
+    Stiches together the formula string for the regression.
+
+    Args:
+        depvar (str): The dependent variable.
+        covar (str): The covariates. E.g. "X1+X2+X3"
+        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+        endogvars (str): The endogenous variables.
+        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+    Returns:
+        fml (str): The formula string for the regression.
+    '''
+
+    fml = depvar + " ~ " + covar
+
+    if endogvars is not None:
+        fml_iv = "|" + endogvars + "~" + instruments
+    else:
+        fml_iv = None
+
+    if fval != "0":
+        fml_fval = "|" + fval
+    else:
+        fml_fval = None
+
+    if fml_fval is not None:
+        fml += fml_fval
+
+    if fml_iv is not None:
+        fml += fml_iv
+
+
+    fml = fml.replace(" ","")
+
+
+    return fml
+
+
+
     if fval != "0":
         fml = depvar + " ~ " + covar + " | " + fval
     else:
