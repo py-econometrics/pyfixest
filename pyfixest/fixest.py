@@ -458,7 +458,8 @@ class Fixest:
         if _ivars is not None:
             if _drop_ref is not None:
                 X = X.drop(_drop_ref, axis=1)
-                Z = Z.drop(_drop_ref, axis=1)
+                if _is_iv:
+                    Z = Z.drop(_drop_ref, axis=1)
 
         if _ivars is not None:
             x_names = X.columns.tolist()
@@ -502,8 +503,7 @@ class Fixest:
         fe: Optional[pd.DataFrame],
         weights: Optional[np.ndarray],
         lookup_demeaned_data: Dict[str, Any],
-        na_index_str: str,
-        val = 1
+        na_index_str: str
     ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
         """
         Demeans a single regression model.
@@ -710,7 +710,7 @@ class Fixest:
 
                             if _is_iv:
                                 endogvard, Zd = self._demean_model(
-                                    endogvar, Z, fe, weights, lookup_demeaned_data, na_index_str, val = 1
+                                    endogvar, Z, fe, weights, lookup_demeaned_data, na_index_str
                                 )
                             else:
                                 endogvard, Zd = None, None
