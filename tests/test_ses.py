@@ -21,7 +21,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
     res_crv1 = fixest.tidy()
 
     _, B = next(iter(fixest.all_fitted_models.items()))
-    N = B.N
+    N = B._N
 
     # adj: default adjustments are different for HC3 and CRV3
     adj_correction = np.sqrt((N - 1) / N)
@@ -49,7 +49,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     res_crv3 = fixest.tidy()
 
     _, B = next(iter(fixest.all_fitted_models.items()))
-    N = B.N
+    N = B._N
 
     # adj: default adjustments are different for HC3 and CRV3
     adj_correction = np.sqrt((N - 1) / N)
