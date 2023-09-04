@@ -414,6 +414,8 @@ class Fixest:
 
         if _is_iv:
             endogvar, instruments = fml_iv.split("~")
+        else:
+            endogvar, instruments = None, None
 
         # step 2: create formulas
         fml_exog = depvar + " ~ " + covar
@@ -436,6 +438,13 @@ class Fixest:
             endogvar, Z = None, None
 
         Y, X, endogvar, Z = [pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]]
+
+        # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
+        if Y.shape[1] > 1:
+            raise TypeError(f"The dependent variable must be numeric, but it is of type {_data[depvar].dtype}.")
+        if endogvar is not None:
+            if endogvar.shape[1] > 1:
+                raise TypeError(f"The endogenous variable must be numeric, but it is of type {_data[endogvar].dtype}.")
 
         # step 3: catch NaNs (before converting to numpy arrays)
         na_index_stage2 = list(set(_data.index) - set(Y.index))
