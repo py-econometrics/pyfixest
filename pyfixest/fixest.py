@@ -1,6 +1,5 @@
 import pyhdfe
 import re
-import pdb
 
 import numpy as np
 import pandas as pd
@@ -12,7 +11,8 @@ from formulaic import model_matrix
 
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
-from pyfixest.FormulaParser import FixestFormulaParser, _flatten_list
+from pyfixest.feiv import Feiv
+from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.ssc_utils import ssc
 from pyfixest.exceptions import (
     MatrixNotFullRankError,
@@ -42,6 +42,11 @@ class Fixest:
             iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
             all_fitted_models: A dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
+
+        self._data = None
+        self._iwls_tol = None
+        self._iwls_maxiter = None
+        self._all_fitted_models = None
 
         # assert that data is a pd.DataFrame
         if not isinstance(data, pd.DataFrame):
@@ -110,6 +115,7 @@ class Fixest:
         self._split = None
         self._method = estimation
         # deparse formula, at least partially
+
         fxst_fml = FixestFormulaParser(fml)
 
         if fxst_fml._is_iv:
@@ -151,7 +157,7 @@ class Fixest:
     def feols(
         self,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Optional[Union[str, Dict[str, str]]] = None,
         ssc=ssc(),
         fixef_rm: str = "none",
         weights=Optional,
@@ -232,7 +238,7 @@ class Fixest:
                 _estimate_full_model: boolean indicating whether the full model is estimated.
             - attributes set via _model_matrix_fixest():
                 icovars: a list of interaction variables. None if no interaction variables via `i()` provided.
-            - attributes set via _estimate_all_models2():
+            - attributes set via _estimate_all_models():
 
             - attributes set via _is_multiple_estimation():
                 is_fixef_multi: boolean indicating whether multiple regression models will be estimated
@@ -242,7 +248,7 @@ class Fixest:
         self._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
         # demean all models: based on fixed effects x split x missing value combinations
-        self._estimate_all_models2(vcov, self._fixef_keys)
+        self._estimate_all_models(vcov, self._fixef_keys)
 
         # create self._is_fixef_multi flag
         self._is_multiple_estimation()
@@ -258,7 +264,7 @@ class Fixest:
     def fepois(
         self,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Optional[Union[str, Dict[str, str]]] = None,
         ssc=ssc(),
         fixef_rm: str = "none",
     ) -> None:
@@ -275,23 +281,32 @@ class Fixest:
                 "IV Estimation is not supported for Poisson Regression"
             )
 
-        self._estimate_all_models2(vcov, self._fixef_keys)
+        self._estimate_all_models(vcov, self._fixef_keys)
 
         # create self._is_fixef_multi flag
         self._is_multiple_estimation()
 
         return self
 
-    def _clean_fe(self, data, fval) -> Tuple[pd.DataFrame, List[int]]:
+    def _clean_fe(
+        self, data: pd.DataFrame, fval: str
+    ) -> Tuple[pd.DataFrame, List[int]]:
         """
-        Function that transform and cleans fixed effects.
+        Clean and transform fixed effects in a DataFrame.
+
+        This is a helper function used in `_model_matrix_fixest()`. The function converts
+        the fixed effects to integers and marks fixed effects with NaNs. It's important
+        to note that NaNs are not removed at this stage; this is done in `_model_matrix_fixest()`.
+
         Args:
-            data: a pd.DataFrame of the data.
-            fval: a string of fixed effects. E.g. "fe1 + fe2"
+            data (pd.DataFrame): The input DataFrame containing the data.
+            fval (str): A string describing the fixed effects, e.g., "fe1 + fe2".
+
         Returns:
-            fe: a pd.DataFrame of the fixed effects. Note that NaNs are not yet dropped,
-                this is done in `_model_matrix_fixest()`.
-            fe_na: a list of columns in fe with NaNs
+            Tuple[pd.DataFrame, List[int]]: A tuple containing two items:
+                - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
+                present in this DataFrame.
+                - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
         """
 
         fval_list = fval.split("+")
@@ -324,92 +339,141 @@ class Fixest:
 
         return fe, fe_na
 
-    def _model_matrix_fixest(self, depvar, covar, fval, weights=None):
+    def _model_matrix_fixest(
+        self, fml: str, weights: Optional[str] = None
+    ) -> Tuple[
+        pd.DataFrame,  # Y
+        pd.DataFrame,  # X
+        Optional[pd.DataFrame],  # I
+        Optional[pd.DataFrame],  # fe
+        np.ndarray,  # na_index
+        np.ndarray,  # fe_na
+        str,  # na_index_str
+        Optional[List[str]],  # z_names
+        Optional[str],  # weights
+        bool,  # has_weights
+    ]:
         """
-        Create model matrices for fixed effects estimation. Preprocesses the data and then calls
-        formulaic.model_matrix() to create the model matrices.
+        Create model matrices for fixed effects estimation.
+
+        This function preprocesses the data and then calls `formulaic.model_matrix()`
+        to create the model matrices.
 
         Args:
-            depvar: dependent variable. string. E.g. "Y"
-            covar: covariates. string. E.g. "X1 + X2"
-            fval: fixed effects. string. E.g. "fe1 + fe2". "0" if no fixed effects.
-            weights: weights. None if no weights. string if weights. E.g. "weights"
+            fml (str): A two-sided formula string using fixest formula syntax.
+            weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
+
         Returns:
-            Y: a pd.DataFrame of the dependent variable.
-            X: a pd.DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
-            I: a pd.DataFrame of the Instruments. None if no IV.
-            fe: a pd.DataFrame of the fixed effects. None if no fixed effects specified. Only if `combine = False`
-            na_index: a np.array with indices of dropped columns.
-            fe_na: a np.array with indices of dropped columns due to fixed effect singletons / NaNs in the fixed effects
-            na_index_str: na_index, but as a comma separated string. Used for caching of demeaned variables
-            z_names: names of all covariates, minus the endogeneous variables, plus the instruments. None if no IV.
-            weights: weights. None if no weights. string if weights. E.g. "weights"
-            has_weights: boolean indicating whether weights are used.
+            Tuple[
+                pd.DataFrame,  # Y
+                pd.DataFrame,  # X
+                Optional[pd.DataFrame],  # I
+                Optional[pd.DataFrame],  # fe
+                np.array,  # na_index
+                np.array,  # fe_na
+                str,  # na_index_str
+                Optional[List[str]],  # z_names
+                Optional[str],  # weights
+                bool  # has_weights
+            ]: A tuple of the following elements:
+                - Y: A DataFrame of the dependent variable.
+                - X: A DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
+                - I: A DataFrame of the Instruments, None if no IV.
+                - fe: A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if `combine = False`.
+                - na_index: An array with indices of dropped columns.
+                - fe_na: An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
+                - na_index_str: na_index, but as a comma-separated string. Used for caching of demeaned variables.
+                - z_names: Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
+                - weights: Weights as a string if provided, or None if no weights, e.g., "weights".
+                - has_weights: A boolean indicating whether weights are used.
+
         Attributes:
-            icovars: a list of interaction variables. None if no interaction variables via `i()` provided.
+            list or None: icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
         """
 
+        _is_iv = self._is_iv
+        _data = self._data
+        _fml_dict_iv = self._fml_dict_iv
+        _ivars = self._ivars
+        _drop_ref = self._drop_ref
+
+        # step 1: deparse formula
+        fml_parts = fml.split("|")
+        depvar, covar = fml_parts[0].split("~")
+
+        if len(fml_parts) == 3:
+            fval, fml_iv = fml_parts[1], fml_parts[2]
+        elif len(fml_parts) == 2:
+            if _is_iv:
+                fval, fml_iv = "0", fml_parts[1]
+            else:
+                fval, fml_iv = fml_parts[1], None
+        else:
+            fval = "0"
+            fml_iv = None
+
+        if _is_iv:
+            endogvar, instruments = fml_iv.split("~")
+        else:
+            endogvar, instruments = None, None
+
+        # step 2: create formulas
+        fml_exog = depvar + " ~ " + covar
+        if _is_iv:
+            fml_iv_full = fml_iv + "+" + covar + "-" + endogvar
+
+        # clean fixed effects
         if fval != "0":
-            fe, fe_na = self._clean_fe(self._data, fval)
+            fe, fe_na = self._clean_fe(_data, fval)
+            #fml_exog += " | " + fval
         else:
             fe = None
             fe_na = None
+        # fml_iv already created
 
-        if self._is_iv:
-            dict2fe_iv = self._fml_dict_iv.get(fval)
-
-        fml = depvar + " ~ " + covar
-
-        if self._is_iv:
-            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
-            endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
-            instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
-
-            fml2 = "+".join(instrument_list) + "+" + fml
-
+        Y, X = model_matrix(fml_exog, _data)
+        if _is_iv:
+            endogvar, Z = model_matrix(fml_iv_full, _data)
         else:
-            fml2 = fml
+            endogvar, Z = None, None
 
-        lhs, rhs = model_matrix(fml2, self._data)
+        Y, X, endogvar, Z = [pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]]
 
-        Y = lhs[[depvar]]
-        X = rhs
-        Y = pd.DataFrame(Y)
-        X = pd.DataFrame(X)
+        # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
+        if Y.shape[1] > 1:
+            raise TypeError(f"The dependent variable must be numeric, but it is of type {_data[depvar].dtype}.")
+        if endogvar is not None:
+            if endogvar.shape[1] > 1:
+                raise TypeError(f"The endogenous variable must be numeric, but it is of type {_data[endogvar].dtype}.")
 
-        if self._is_iv:
-            I = lhs[instrument_list]
-            I = pd.DataFrame(I)
+        # step 3: catch NaNs (before converting to numpy arrays)
+        na_index_stage2 = list(set(_data.index) - set(Y.index))
+
+        if _is_iv:
+            na_index_stage1 = list(set(_data.index) - set(Z.index))
+            diff1 = list(set(na_index_stage1) - set(na_index_stage2))
+            diff2 = list(set(na_index_stage2) - set(na_index_stage1))
+            if diff1:
+                Y = Y.drop(diff1, axis=0)
+                X = X.drop(diff1, axis=0)
+            if diff2:
+                Z = Z.drop(diff2, axis=0)
+                endogvar = endogvar.drop(diff2, axis=0)
+            na_index = list(set(na_index_stage1 + na_index_stage2))
         else:
-            I = None
+            na_index = na_index_stage2
 
-        # get NA index before converting Y to numpy array
-        na_index = list(set(self._data.index) - set(Y.index))
         # drop variables before collecting variable names
-        if self._ivars is not None:
-            if self._drop_ref is not None:
-                X = X.drop(self._drop_ref, axis=1)
+        if _ivars is not None:
+            if _drop_ref is not None:
+                X = X.drop(_drop_ref, axis=1)
+                if _is_iv:
+                    Z = Z.drop(_drop_ref, axis=1)
 
-        y_names = list(Y.columns)
-        x_names = list(X.columns)
-        yxz_names = list(y_names) + list(x_names)
-
-        if self._is_iv:
-            iv_names = list(I.columns)
-            x_names_copy = x_names.copy()
-            x_names_copy = [x for x in x_names_copy if x not in endogvar_list]
-            z_names = x_names_copy + instrument_list
-            cols = yxz_names + iv_names
-        else:
-            iv_names = None
-            z_names = None
-            cols = yxz_names
-
-        if self._ivars is not None:
+        if _ivars is not None:
+            x_names = X.columns.tolist()
             self._icovars = [
-                s
-                for s in x_names
-                if s.startswith(self._ivars[0]) and s.endswith(self._ivars[1])
+                s for s in x_names if s.startswith(_ivars[0]) and s.endswith(_ivars[1])
             ]
         else:
             self._icovars = None
@@ -418,11 +482,10 @@ class Fixest:
             fe = fe.drop(na_index, axis=0)
             # drop intercept
             X = X.drop("Intercept", axis=1)
-            x_names.remove("Intercept")
-            yxz_names.remove("Intercept")
-            if self._is_iv:
-                z_names.remove("Intercept")
-                cols.remove("Intercept")
+            #x_names.remove("Intercept")
+            if _is_iv:
+                Z = Z.drop("Intercept", axis=1)
+            #    z_names.remove("Intercept")
 
             # drop NaNs in fixed effects (not yet dropped via na_index)
             fe_na_remaining = list(set(fe_na) - set(na_index))
@@ -430,98 +493,109 @@ class Fixest:
                 Y = Y.drop(fe_na_remaining, axis=0)
                 X = X.drop(fe_na_remaining, axis=0)
                 fe = fe.drop(fe_na_remaining, axis=0)
-                if self._is_iv:
-                    I = I.drop(fe_na_remaining, axis=0)
+                if _is_iv:
+                    Z = Z.drop(fe_na_remaining, axis=0)
+                    endogvar = endogvar.drop(fe_na_remaining, axis=0)
                 na_index += fe_na_remaining
                 na_index = list(set(na_index))
 
         N = X.shape[0]
 
-        if weights is not None:
-            has_weights = True
-            weights = self._data[weights]
-            weights = self.weights.drop(na_index, axis=0)
-            weights = weights.values.reshape((N, 1))
-        else:
-            weights = np.ones((N, 1))
-            has_weights = False
-
         na_index_str = ",".join(str(x) for x in na_index)
 
-        return Y, X, I, fe, na_index, fe_na, na_index_str, z_names, weights, has_weights
+        return Y, X, fe, endogvar, Z, na_index, na_index_str
 
-    def _demean_model2(self, Y, X, I, fe, weights, lookup_demeaned_data, na_index_str):
+    def _demean_model(
+        self,
+        Y: pd.DataFrame,
+        X: pd.DataFrame,
+        fe: Optional[pd.DataFrame],
+        weights: Optional[np.ndarray],
+        lookup_demeaned_data: Dict[str, Any],
+        na_index_str: str
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
         """
-        Demeans a single regression model. If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
-        Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache
-        `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
+        Demeans a single regression model.
+
+        If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
+        Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values
+        from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
 
         Args:
-            Y: a pd.DataFrame of the dependent variable.
-            X: a pd.DataFrame of the covariates
-            I: a pd.DataFrame of the Instruments. None if no IV.
-            fe: a pd.DataFrame of the fixed effects. None if no fixed effects specified.
-            lookup_demeaned_data: a dictionary with keys for each fixed effects combination and potentially values of demeaned data.frames.
-                The function checks this dictionary to see if some of the variables have already been demeaned.
-            na_index_str: a string with indices of dropped columns. Used for caching of demeaned variables.
+            Y (pd.DataFrame): A DataFrame of the dependent variable.
+            X (pd.DataFrame): A DataFrame of the covariates.
+            fe (pd.DataFrame or None): A DataFrame of the fixed effects. None if no fixed effects specified.
+            weights (np.ndarray or None): A numpy array of weights. None if no weights.
+            lookup_demeaned_data (Dict[str, Any]): A dictionary with keys for each fixed effects combination and
+                potentially values of demeaned data frames. The function checks this dictionary to see if some of
+                the variables have already been demeaned.
+            na_index_str (str): A string with indices of dropped columns. Used for caching of demeaned variables.
 
         Returns:
-            Yd: a pd.DataFrame of the demeaned dependent variable.
-            Xd: a pd.DataFrame of the demeaned covariates
-            Id: a pd.DataFrame of the demeaned Instruments. None if no IV.
+            Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]: A tuple of the following elements:
+                - Yd (pd.DataFrame): A DataFrame of the demeaned dependent variable.
+                - Xd (pd.DataFrame): A DataFrame of the demeaned covariates.
+                - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
         """
 
-        if I is not None:
-            YXZ = pd.concat([Y, X, I], axis=1)
-        else:
-            YXZ = pd.concat([Y, X], axis=1)
+        #if val == 1:
+        #    import pdb
+        #    pdb.set_trace()
 
-        yxz_names = YXZ.columns
-        YXZ = YXZ.to_numpy()
+        _drop_singletons = self._drop_singletons
+
+        YX = pd.concat([Y, X], axis=1)
+
+        yx_names = YX.columns
+        YX = YX.to_numpy()
 
         if fe is not None:
             # check if looked dict has data for na_index
             if lookup_demeaned_data.get(na_index_str) is not None:
                 # get data out of lookup table: list of [algo, data]
-                algorithm, YXZ_demeaned_old = lookup_demeaned_data.get(na_index_str)
+                algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
 
                 # get not yet demeaned covariates
-                var_diff_names = list(set(yxz_names) - set(YXZ_demeaned_old.columns))
+                var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
 
                 # if some variables still need to be demeaned
                 if var_diff_names:
-                    var_diff_names = var_diff_names[0]
+                    #var_diff_names = var_diff_names
 
-                    var_diff_index = list(yxz_names).index(var_diff_names)
-                    var_diff = YXZ[:, var_diff_index]
+                    yx_names_list = list(yx_names)
+                    var_diff_index = [yx_names_list.index(item) for item in var_diff_names]
+                    #var_diff_index = list(yx_names).index(var_diff_names)
+                    var_diff = YX[:, var_diff_index]
                     if var_diff.ndim == 1:
                         var_diff = var_diff.reshape(len(var_diff), 1)
 
-                    YXZ_demean_new = algorithm.residualize(var_diff)
-                    YXZ_demeaned = np.concatenate(
-                        [YXZ_demeaned_old, YXZ_demean_new], axis=1
+                    YX_demean_new = algorithm.residualize(var_diff)
+                    YX_demeaned = np.concatenate(
+                        [YX_demeaned_old, YX_demean_new], axis=1
                     )
-                    YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                    YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                    YXZ_demeaned.columns = list(YXZ_demeaned_old.columns) + [
-                        var_diff_names
-                    ]
+                    # check if var_diff_names is a list
+                    if isinstance(var_diff_names, str):
+                        var_diff_names = [var_diff_names]
+
+                    YX_demeaned.columns = list(YX_demeaned_old.columns) + var_diff_names
 
                 else:
                     # all variables already demeaned
-                    YXZ_demeaned = YXZ_demeaned_old[yxz_names]
+                    YX_demeaned = YX_demeaned_old[yx_names]
 
             else:
                 # not data demeaned yet for NA combination
                 algorithm = pyhdfe.create(
                     ids=fe,
                     residualize_method="map",
-                    drop_singletons=self._drop_singletons,
+                    drop_singletons=_drop_singletons,
                     # weights=weights
                 )
 
                 if (
-                    self._drop_singletons == True
+                    _drop_singletons == True
                     and algorithm.singletons != 0
                     and algorithm.singletons is not None
                 ):
@@ -534,47 +608,66 @@ class Fixest:
                     ].tolist()
                     na_index += dropped_singleton_indices
 
-                YXZ_demeaned = algorithm.residualize(YXZ)
-                YXZ_demeaned = pd.DataFrame(YXZ_demeaned)
+                YX_demeaned = algorithm.residualize(YX)
+                YX_demeaned = pd.DataFrame(YX_demeaned)
 
-                YXZ_demeaned.columns = yxz_names
+                YX_demeaned.columns = yx_names
 
-            lookup_demeaned_data[na_index_str] = [algorithm, YXZ_demeaned]
+            lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
 
         else:
             # nothing to demean here
             pass
 
-            YXZ_demeaned = pd.DataFrame(YXZ)
-            YXZ_demeaned.columns = yxz_names
+            YX_demeaned = pd.DataFrame(YX)
+            YX_demeaned.columns = yx_names
 
-        # get demeaned Y, X, I (if no fixef, equal to Y, X, I)
-        Yd = YXZ_demeaned[Y.columns]
-        Xd = YXZ_demeaned[X.columns]
-        Id = None
-        if I is not None:
-            Id = YXZ_demeaned[I.columns]
+        # get demeaned Y, X (if no fixef, equal to Y, X, I)
+        Yd = YX_demeaned[Y.columns]
+        Xd = YX_demeaned[X.columns]
 
-        return Yd, Xd, Id
+        return Yd, Xd
 
-    def _estimate_all_models2(self, vcov, fixef_keys):
+    def _estimate_all_models(
+        self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
+    ) -> None:
         """
         Estimate multiple regression models.
+
         Args:
-            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            fixef_keys: a list of fixed effects combinations.
+            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+                matrix to use for inference.
+                - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
+                  or {"CRV3": "clustervar"} for CRV3 inference.
+            fixef_keys (List[str]): A list of fixed effects combinations.
+
         Returns:
             None
+
         Attributes:
-            all_fitted_models: a dictionary of all fitted models. The keys are the formulas used to fit the models.
+            all_fitted_models (Dict[str, Any]): A dictionary of all fitted models. The keys are the formulas
+                used to fit the models.
         """
         # pdb.set_trace()
 
-        if self._estimate_full_model:
+        _estimate_full_model = self._estimate_full_model
+        # _estimate_split_model = self._estimate_split_model
+        _fml_dict = self._fml_dict
+        _is_iv = self._is_iv
+        _data = self._data
+        _method = self._method
+        _ivars = self._ivars
+        # _drop_ref = self._drop_ref
+        _drop_singletons = self._drop_singletons
+        _ssc_dict = self._ssc_dict
+        _iwls_maxiter = self._iwls_maxiter
+        _iwls_tol = self._iwls_tol
+        # _icovars = self._icovars
+
+        if _estimate_full_model:
             for _, fval in enumerate(fixef_keys):
-                dict2fe = self._fml_dict.get(fval)
+                dict2fe = _fml_dict.get(fval)
 
                 # dictionary to cache demeaned data with index: na_index_str,
                 # only relevant for `.feols()`
@@ -588,40 +681,57 @@ class Fixest:
 
                         covar = fml_linear.split("~")[1]
 
+                        if _is_iv:
+                            dict2fe_iv = self._fml_dict_iv.get(fval)
+                            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
+                            endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
+                            instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
+                            endogvars = endogvar_list[0]
+                            instruments = "+".join(instrument_list)
+                        else:
+                            endogvars = None
+                            instruments = None
+
+
+                        fml = get_fml(depvar, covar, fval, endogvars, instruments)
+
                         # get Y, X, Z, fe, NA indices for model
-                        (
-                            Y,
-                            X,
-                            I,
-                            fe,
-                            na_index,
-                            _,
-                            na_index_str,
-                            z_names,
-                            weights,
-                            has_weights,
-                        ) = self._model_matrix_fixest(depvar, covar, fval)
+                        Y, X, fe, endogvar, Z, na_index, na_index_str = self._model_matrix_fixest(fml)
+                        weights = np.ones((Y.shape[0], 1))
 
                         y_names = Y.columns.tolist()
                         x_names = X.columns.tolist()
+                        if _is_iv:
+                            z_names = Z.columns.tolist()
+                            endogvar_names = endogvar.columns.tolist()
+                        else:
+                            z_names = None
+                            endogvar_names = None
 
-                        fml = get_fml(depvar, covar, fval)
+                        if _method == "feols":
 
-                        if self._method == "feols":
                             # demean Y, X, Z, if not already done in previous estimation
-                            Yd, Xd, Id = self._demean_model2(
-                                Y, X, I, fe, weights, lookup_demeaned_data, na_index_str
+
+
+                            Yd, Xd = self._demean_model(
+                                Y, X, fe, weights, lookup_demeaned_data, na_index_str
                             )
 
-                            if self._is_iv:
-                                Zd = pd.concat([Xd, Id], axis=1)[z_names]
+                            if _is_iv:
+                                endogvard, Zd = self._demean_model(
+                                    endogvar, Z, fe, weights, lookup_demeaned_data, na_index_str
+                                )
                             else:
+                                endogvard, Zd = None, None
+
+
+
+                            if not _is_iv:
                                 Zd = Xd
 
-                            Yd = Yd.to_numpy()
-                            Xd = Xd.to_numpy()
-                            Zd = Zd.to_numpy()
+                            Yd, Xd, Zd, endogvard = [x.to_numpy() if x is not None else x for x in [Yd, Xd, Zd, endogvard]]
 
+                            has_weights = False
                             if has_weights:
                                 w = np.sqrt(weights.to_numpy())
                                 Yd *= np.sqrt(w)
@@ -629,38 +739,30 @@ class Fixest:
                                 Xd *= np.sqrt(w)
 
                             # check for multicollinearity
-                            _multicollinearity_checks(Xd, Zd, self._ivars, fml)
+                            _multicollinearity_checks(Xd, Zd, _ivars, fml)
 
-                            # initiate OLS class
-                            FIT = Feols(Y=Yd, X=Xd, Z=Zd, weights=weights)
-                            if fe is not None:
-                                self._has_fixef = True
-                                self.fixef_vars = fval
+                            if _is_iv:
+                                FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
                             else:
-                                self._has_fixef = False
-                                self.fixef_vars = None
+                                # initiate OLS class
+                                FIT = Feols(Y=Yd, X=Xd, weights=weights)
 
-                            # estimation
-                            if self._is_iv:
-                                FIT.get_fit(estimator="2sls")
-                                FIT._is_iv = True
-                            else:
-                                FIT.get_fit(estimator="ols")
-                                FIT._is_iv = False
+                            FIT.get_fit()
 
-                        elif self._method == "fepois":
+                        elif _method == "fepois":
                             # check for separation and drop separated variables
                             # Y, X, fe, na_index = self._separation()
 
-                            Y = Y.to_numpy()
-                            X = X.to_numpy()
+                            Y, X = [x.to_numpy() for x in [Y, X]]
+                            N = X.shape[0]
+
                             if fe is not None:
                                 fe = fe.to_numpy()
                                 if fe.ndim == 1:
-                                    fe = fe.reshape((self.N, 1))
+                                    fe = fe.reshape((N, 1))
 
                             # check for multicollinearity
-                            _multicollinearity_checks(X, X, self._ivars, fml)
+                            _multicollinearity_checks(X, X, _ivars, fml)
 
                             # initiate OLS class
                             FIT = Fepois(
@@ -668,9 +770,9 @@ class Fixest:
                                 X=X,
                                 fe=fe,
                                 weights=weights,
-                                drop_singletons=self._drop_singletons,
-                                maxiter=self._iwls_maxiter,
-                                tol=self._iwls_tol,
+                                drop_singletons=_drop_singletons,
+                                maxiter=_iwls_maxiter,
+                                tol=_iwls_tol,
                             )
 
                             FIT._is_iv = False
@@ -689,11 +791,11 @@ class Fixest:
 
                         # some bookkeeping
                         FIT._fml = fml
-                        FIT._ssc_dict = self._ssc_dict
+                        FIT._ssc_dict = _ssc_dict
                         # FIT._na_index = na_index
                         # data never makes it to Feols() class. needed for ex post
                         # clustered vcov estimation when clustervar not in model params
-                        FIT._data = self._data.iloc[~self._data.index.isin(na_index)]
+                        FIT._data = _data.iloc[~_data.index.isin(na_index)]
                         if fval != "0":
                             FIT._has_fixef = True
                             FIT._fixef = fval
@@ -720,15 +822,18 @@ class Fixest:
                         # store fitted model
                         self.all_fitted_models[fml] = FIT
 
-    def _is_multiple_estimation(self):
+    def _is_multiple_estimation(self) -> None:
         """
-        helper method to check if multiple regression models will be estimated
+        Helper method to check if multiple regression models will be estimated.
+
         Args:
             None
+
         Returns:
             None
+
         Attributes:
-            is_fixef_multi: boolean indicating whether multiple regression models will be estimated
+            is_fixef_multi (bool): A boolean indicating whether multiple regression models will be estimated.
         """
 
         self._is_fixef_multi = False
@@ -742,13 +847,17 @@ class Fixest:
     def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
         """
         Update regression inference "on the fly".
+
         By calling vcov() on a "Fixest" object, all inference procedures applied
-        to the "Fixest" object are replaced with the variance covariance matrix specified via the method.
+        to the "Fixest" object are replaced with the variance-covariance matrix specified via the method.
+
         Args:
-            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
-                or {"CRV3":"clustervar"} for CRV3 inference.
+            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+                matrix to use for inference.
+                - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
+                  or {"CRV3": "clustervar"} for CRV3 inference.
+
         Returns:
             None
         """
@@ -792,17 +901,19 @@ class Fixest:
         return res
 
     def etable(self, digits: int = 3) -> None:
-
         return self.tidy().T.round(digits)
 
     def summary(self, digits: int = 3) -> None:
         """
         Prints a summary of the feols() estimation results for each estimated model.
+
         For each model, the method prints a header indicating the fixed-effects and the
         dependent variable, followed by a table of coefficient estimates with standard
         errors, t-values, and p-values.
+
         Args:
-            digits: int, optional. The number of decimal places to round the summary statistics to. Default is 3.
+            digits (int, optional): The number of decimal places to round the summary statistics to. Default is 3.
+
         Returns:
             None
         """
@@ -907,11 +1018,14 @@ class Fixest:
     ) -> None:
         """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
+
         Args:
-            alpha: float, optional. The significance level for the confidence intervals. Default is 0.05.
-            figsize: tuple, optional. The size of the figure. Default is (10, 10).
-            yintercept: int or str (for a categorical x axis). The value at which to draw a horizontal line.
-            xintercept: int or str (for a categorical y axis). The value at which to draw a vertical line.
+            alpha (float, optional): The significance level for the confidence intervals. Default is 0.05.
+            figsize (tuple, optional): The size of the figure. Default is (10, 10).
+            yintercept (Union[int, str, None], optional): The value at which to draw a horizontal line.
+            xintercept (Union[int, str, None], optional): The value at which to draw a vertical line.
+            rotate_xticks (int, optional): The rotation angle for x-axis tick labels. Default is 0.
+
         Returns:
             None
         """
@@ -947,8 +1061,8 @@ class Fixest:
         alpha: float = 0.05,
         figsize: tuple = (5, 2),
         yintercept: int = 0,
-        figtitle: str = None,
-        figtext: str = None,
+        figtitle: Optional[str] = None,
+        figtext: Optional[str] = None,
         rotate_xticks: int = 0,
     ) -> None:
         """
@@ -957,8 +1071,8 @@ class Fixest:
             alpha (float): the significance level for the confidence intervals. Default is 0.05.
             figsize (tuple): the size of the figure. Default is (5, 2).
             yintercept (float): the value of the y-intercept. Default is 0.
-            figtitle (str): the title of the figure. Default is None.
-            figtext (str): the text at the bottom of the figure. Default is None.
+            figtitle (str, optional): The title of the figure. Default is None.
+            figtext (str, optional): The text at the bottom of the figure. Default is None.
         Returns:
             None
         """
@@ -979,12 +1093,12 @@ class Fixest:
 
     def wildboottest(
         self,
-        B,
-        param: Union[str, None] = None,
+        B: int,
+        param: Optional[str] = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
         bootstrap_type: str = "11",
-        seed: Union[str, None] = None,
+        seed: Optional[str] = None,
         adj: bool = True,
         cluster_adj: bool = True,
     ) -> pd.DataFrame:
@@ -992,19 +1106,23 @@ class Fixest:
         Run a wild cluster bootstrap for all regressions in the Fixest object.
 
         Args:
-
-            B (int): The number of bootstrap iterations to run
-            param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
-            weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
-                                'rademacher' by default. Defaults to 'rademacher'.
+            B (int): The number of bootstrap iterations to run.
+            param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Default is None.
+            weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb', or 'normal'.
+                Default is 'rademacher'.
             impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
-                                Defaults to True.
-            bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
-                                to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
-            seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
+                Default is True.
+            bootstrap_type (str, optional): A string of length one. Allows choosing the bootstrap type
+                to be run. Either '11', '31', '13', or '33'. Default is '11'.
+            seed (Union[str, None], optional): Option to provide a random seed. Default is None.
+            adj (bool, optional): Whether to adjust the original coefficients with the bootstrap distribution.
+                Default is True.
+            cluster_adj (bool, optional): Whether to adjust standard errors for clustering in the bootstrap.
+                Default is True.
 
         Returns:
-            A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated statistic derives from.
+            A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated
+            statistic derives from.
         """
 
         res = []
@@ -1240,7 +1358,47 @@ def _prepare_split_estimation(split, fsplit, data, fml_dict):
     return splitvar, splitvar_name, estimate_split_model, estimate_full_model
 
 
-def get_fml(depvar, covar, fval):
+def get_fml(depvar, covar, fval, endogvars = None, instruments = None) -> str:
+
+    '''
+    Stiches together the formula string for the regression.
+
+    Args:
+        depvar (str): The dependent variable.
+        covar (str): The covariates. E.g. "X1+X2+X3"
+        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+        endogvars (str): The endogenous variables.
+        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+    Returns:
+        fml (str): The formula string for the regression.
+    '''
+
+    fml = depvar + " ~ " + covar
+
+    if endogvars is not None:
+        fml_iv = "|" + endogvars + "~" + instruments
+    else:
+        fml_iv = None
+
+    if fval != "0":
+        fml_fval = "|" + fval
+    else:
+        fml_fval = None
+
+    if fml_fval is not None:
+        fml += fml_fval
+
+    if fml_iv is not None:
+        fml += fml_iv
+
+
+    fml = fml.replace(" ","")
+
+
+    return fml
+
+
+
     if fval != "0":
         fml = depvar + " ~ " + covar + " | " + fval
     else:
