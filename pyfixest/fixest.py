@@ -135,8 +135,6 @@ class Fixest:
         else:
             self._fml_dict_iv = None
 
-        self._ivars = fxst_fml._ivars
-
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
 
@@ -442,7 +440,7 @@ class Fixest:
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
-        _ivars = self._ivars
+        #_ivars = self._ivars
         # _drop_ref = self._drop_ref
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
@@ -541,7 +539,7 @@ class Fixest:
                                 Xd *= np.sqrt(w)
 
                             # check for multicollinearity
-                            _multicollinearity_checks(Xd, Zd, _ivars, fml)
+                            _multicollinearity_checks(Xd, Zd)
 
                             if _is_iv:
                                 FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
@@ -564,7 +562,7 @@ class Fixest:
                                     fe = fe.reshape((N, 1))
 
                             # check for multicollinearity
-                            _multicollinearity_checks(X, X, _ivars, fml)
+                            _multicollinearity_checks(X, X)
 
                             # initiate OLS class
                             FIT = Fepois(
@@ -840,9 +838,8 @@ class Fixest:
                 "In consequence, the '.iplot()' method is not supported."
             )
 
-
-        if "Intercept" in ivars:
-            ivars.remove("Intercept")
+            if "Intercept" in fxst._icovars:
+                fxst._icovars.remove("Intercept")
 
         df = self.tidy().reset_index()
 
@@ -1175,42 +1172,27 @@ def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
     return fml.replace(" ", "")
 
 
-def _multicollinearity_checks(X, Z, ivars, fml2):
+def _multicollinearity_checks(X, Z):
     """
     Checks for multicollinearity in the design matrices X and Z.
     Args:
         X (numpy.ndarray): The design matrix X.
         Z (numpy.ndarray): The design matrix (with instruments) Z.
-        ivars (list): The list of variables specified in the i() syntax.
-        fml2 (str): The formula string.
-
     """
 
     if np.linalg.matrix_rank(X) < min(X.shape):
-        if ivars is not None:
-            raise MatrixNotFullRankError(
-                'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
-                "The model is skipped."
-                "As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?"
-            )
-        else:
-            raise MatrixNotFullRankError(
-                'The design Matrix X does not have full rank for the regression with fml" + fml2 + "."'
-                "The model is skipped. "
-            )
+        raise MatrixNotFullRankError(
+            """
+            The design Matrix X does not have full rank. The model is skipped.
+            """
+        )
 
     if np.linalg.matrix_rank(Z) < min(Z.shape):
-        if ivars is not None:
-            raise MatrixNotFullRankError(
-                'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
-                "The model is skipped."
-                'As you are running a regression via `i()` syntax, maybe you need to drop a level via i(var1, var2, ref = ...)?"'
-            )
-        else:
-            raise MatrixNotFullRankError(
-                'The design Matrix Z does not have full rank for the regression with fml" + fml2 + "."'
-                "The model is skipped."
-            )
+        raise MatrixNotFullRankError(
+            """
+            The design Matrix X does not have full rank. The model is skipped.
+            """
+        )
 
 
 def _get_vcov_type(vcov, fval):
