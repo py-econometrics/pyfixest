@@ -52,19 +52,27 @@ class Fepois(Feols):
             self._has_fixef = False
 
         # check if Y is a weakly positive integer
-        self.Y = _to_integer(self.Y)
-        # check that self.Y is a weakly positive integer
-        if np.any(self.Y < 0):
+        self._Y = _to_integer(self._Y)
+        # check that self._Y is a weakly positive integer
+        if np.any(self._Y < 0):
             raise ValueError(
                 "The dependent variable must be a weakly positive integer."
             )
 
         self.separation_na = None
-        self.n_separation_na = None
+        self._N_separation_na = None
         self._check_for_separation()
 
         self._support_crv3_inference = False
         self._support_iid_inference = False
+
+        # attributes that are updated outside of the class (not optimal)
+        self._N_separation_na = None
+        self._Na_index = None
+
+        self._Y_hat_response = None
+        self.deviance = None
+        self._Xbeta = None
 
     def get_fit(self) -> None:
         """
@@ -86,25 +94,31 @@ class Fepois(Feols):
 
         """
 
-        Y = self.Y
-        X = self.X
-        fe = self.fe
+        _Y = self._Y
+        _X = self._X
+        _fe = self.fe
+        _N = self._N
+        _drop_singletons = self._drop_singletons
+        _convergence = self.convergence
+        _maxiter = self.maxiter
+        _iwls_maxiter = 25
+        _tol = self.tol
 
-        def compute_deviance(Y, mu):
+        def compute_deviance(_Y, mu):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 deviance = (
-                    2 * np.sum(np.where(Y == 0, 0, Y * np.log(Y / mu)) - (Y - mu))
+                    2 * np.sum(np.where(_Y == 0, 0, _Y * np.log(_Y / mu)) - (_Y - mu))
                 ).flatten()
             return deviance
 
         # initiate demeaning algo (if needed)
-        if fe is not None:
+        if _fe is not None:
             algorithm = pyhdfe.create(
-                ids=fe, residualize_method="map", drop_singletons=self._drop_singletons
+                ids=_fe, residualize_method="map", drop_singletons=_drop_singletons
             )
             if (
-                self._drop_singletons == True
+                _drop_singletons == True
                 and algorithm.singletons != 0
                 and algorithm.singletons is not None
             ):
@@ -122,33 +136,33 @@ class Fepois(Feols):
         stop_iterating = False
         crit = 1
 
-        for i in range(self.maxiter):
+        for i in range(_maxiter):
             if stop_iterating:
-                self.convergence = True
+                _convergence = True
                 break
-            if i == self.maxiter:
+            if i == _maxiter:
                 raise NonConvergenceError(
-                    f"The IRLS algorithm did not converge with {self._iwls_maxiter} iterations. Try to increase the maximum number of iterations."
+                    f"The IRLS algorithm did not converge with {_iwls_maxiter} iterations. Try to increase the maximum number of iterations."
                 )
 
             if i == 0:
-                _mean = np.mean(Y)
-                mu = (Y + _mean) / 2
+                _mean = np.mean(_Y)
+                mu = (_Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + Y / mu - 1
+                Z = eta + _Y / mu - 1
                 last_Z = Z.copy()
                 reg_Z = Z.copy()
-                last = compute_deviance(Y, mu)
+                last = compute_deviance(_Y, mu)
 
             elif accelerate:
                 last_Z = Z.copy()
-                Z = eta + Y / mu - 1
+                Z = eta + _Y / mu - 1
                 reg_Z = Z - last_Z + Z_resid
                 X = X_resid.copy()
 
             else:
                 # update w and Z
-                Z = eta + self.Y / mu - 1  # eq (8)
+                Z = eta + _Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -156,14 +170,14 @@ class Fepois(Feols):
             #    inner_tol = inner_tol / 10
 
             # Step 1: weighted demeaning
-            ZX = np.concatenate([reg_Z, X], axis=1)
+            ZX = np.concatenate([reg_Z, _X], axis=1)
 
-            if fe is not None:
+            if _fe is not None:
                 ZX_resid = algorithm.residualize(ZX, mu)
             else:
                 ZX_resid = ZX
 
-            Z_resid = ZX_resid[:, 0].reshape((self.N, 1))  # z_resid
+            Z_resid = ZX_resid[:, 0].reshape((_N, 1))  # z_resid
             X_resid = ZX_resid[:, 1:]  # x_resid
 
             # Step 2: estimate WLS
@@ -183,41 +197,43 @@ class Fepois(Feols):
 
             # same criterion as fixest
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
-            deviance = compute_deviance(Y, mu)
+            deviance = compute_deviance(_Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
             # crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
             # crit = np.sqrt(((deviance - last)** 2))
             last = deviance.copy()
 
-            stop_iterating = crit < self.tol
+            stop_iterating = crit < _tol
 
-        self.beta_hat = delta_new.flatten()
-        self.Y_hat_response = mu
-        self.Y_hat_link = eta
-        # (Y - self.Y_hat)
+        self._beta_hat = delta_new.flatten()
+        self._Y_hat_response = mu
+        self._Y_hat_link = eta
+        # (Y - self._Y_hat)
         # needed for the calculation of the vcov
 
         # updat for inference
-        self.weights = mu_old
+        self._weights = mu_old
         # if only one dim
-        if self.weights.ndim == 1:
-            self.weights = self.weights.reshape((self.N, 1))
+        if self._weights.ndim == 1:
+            self._weights = self._weights.reshape((self._N, 1))
 
-        self.u_hat = resid.flatten()
+        self._u_hat = resid.flatten()
 
-        self.Y = Z_resid
-        self.X = X_resid
-        self.Z = self.X
+        self._Y = Z_resid
+        self._X = X_resid
+        self._Z = self._X
         self.deviance = deviance
 
-        self.tZX = np.transpose(self.Z) @ self.X
-        self.tZXinv = np.linalg.inv(self.tZX)
-        self.Xbeta = eta
+        self._tZX = np.transpose(self._Z) @ self._X
+        self._tZXinv = np.linalg.inv(self._tZX)
+        self._Xbeta = eta
 
-        self.scores = self.u_hat[:, None] * self.weights * X_resid
-        self.hessian = XWX
+        self._scores = self._u_hat[:, None] * self._weights * X_resid
+        self._hessian = XWX
 
-    def predict(self, data: Union[None, pd.DataFrame] = None, type="link") -> np.array:
+    def predict(
+        self, data: Union[None, pd.DataFrame] = None, type="link"
+    ) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
@@ -233,14 +249,14 @@ class Fepois(Feols):
             raise ValueError("type must be one of 'response' or 'link'.")
 
         if data is None:
-            y_hat = self.Xbeta
+            y_hat = self._Xbeta
 
         else:
             fml_linear, _ = self._fml.split("|")
             _, X = model_matrix(fml_linear, data)
             X = X.drop("Intercept", axis=1)
 
-            y_hat = X @ self.beta_hat
+            y_hat = X @ self._beta_hat
 
         if type == "link":
             if self._method == "fepois":
@@ -272,7 +288,7 @@ class Fepois(Feols):
                 pass
 
             else:
-                Y_help = pd.Series(np.where(self.Y.flatten() > 0, 1, 0))
+                Y_help = pd.Series(np.where(self._Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
 
                 separation_na = set()
@@ -292,12 +308,12 @@ class Fepois(Feols):
 
                 self.separation_na = list(separation_na)
 
-                self.Y = np.delete(self.Y, self.separation_na, axis=0)
-                self.X = np.delete(self.X, self.separation_na, axis=0)
-                # self.Z = np.delete(self.Z, self.separation_na, axis = 0)
+                self._Y = np.delete(self._Y, self.separation_na, axis=0)
+                self._X = np.delete(self._X, self.separation_na, axis=0)
+                # self._Z = np.delete( self._Z, self.separation_na, axis = 0)
                 self.fe = np.delete(self.fe, self.separation_na, axis=0)
 
-                self.N = self.Y.shape[0]
+                self._N = self._Y.shape[0]
                 if len(self.separation_na) > 0:
                     warnings.warn(
                         str(len(self.separation_na))
