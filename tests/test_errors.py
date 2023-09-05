@@ -93,7 +93,7 @@ def test_depvar_numeric():
     data["Y"] = pd.Categorical(data["Y"])
 
     fixest = Fixest(data)
-    with pytest.raises(KeyError):
+    with pytest.raises(TypeError):
         fixest.feols("Y ~ X1")
 
 
