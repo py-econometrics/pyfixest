@@ -136,22 +136,6 @@ class FixestFormulaParser:
             self.covars_first_stage = None
             self.depvars_first_stage = None
 
-        # parse i() syntax
-        if self.covars.get("i") is not None:
-            self._ivars = dict()
-            i_split = self.covars.get("i")[-1].split("=")
-            if len(i_split) > 1:
-                ref = self.covars.get("i")[-1].split("=")[1]
-                ivar_list = self.covars.get("i")[:-1]
-                self.covars["i"] = self.covars.get("i")[:-1]
-            else:
-                ref = None
-                ivar_list = self.covars.get("i")
-
-            self._ivars[ref] = ivar_list
-
-        else:
-            self._ivars = None
 
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
@@ -264,7 +248,7 @@ def _unpack_fml(x):
 
         # If there'_ a switch, unpack it and add it to the list
         else:
-            if sw_type in ["sw", "sw0", "csw", "csw0", "i"]:
+            if sw_type in ["sw", "sw0", "csw", "csw0"]:
                 _check_duplicate_key(res_s, sw_type)
                 res_s[sw_type] = varlist
             elif sw_type == "varying_slopes":
@@ -307,12 +291,6 @@ def _pack_to_fml(unpacked):
         res["constant"] = unpacked["constant"]
     else:
         res["constant"] = []
-
-    if "i" in unpacked:
-        if res["constant"]:
-            res["constant"] = res["constant"] + [":".join(unpacked["i"])]
-        else:
-            res["constant"] = [":".join(unpacked["i"])]
 
     # add up all variable constants (only required for csw)
     if "csw" in unpacked:
@@ -373,7 +351,7 @@ def _pack_to_fml(unpacked):
 
 def _find_sw(x):
     """
-    Search for matches in a string. Matches are either 'sw', 'sw0', 'csw', 'csw0', or 'i'. If a match is found, returns a
+    Search for matches in a string. Matches are either 'sw', 'sw0', 'csw', 'csw0'. If a match is found, returns a
     tuple containing a list of the elements found and the type of match. Otherwise, returns the original string and None.
 
     Args:
@@ -393,7 +371,6 @@ def _find_sw(x):
     csw_match = re.findall(r"csw\((.*?)\)", x)
     sw0_match = re.findall(r"sw0\((.*?)\)", x)
     csw0_match = re.findall(r"csw0\((.*?)\)", x)
-    i_match = re.findall(r"i\((.*?)\)", x)
 
     # Check for sw matches
     if sw_match:
@@ -408,9 +385,6 @@ def _find_sw(x):
             return csw0_match[0].split(","), "csw0"
         else:
             return sw0_match[0].split(","), "sw0"
-
-    elif i_match:
-        return i_match[0].split(","), "i"
 
     # No matches found
     else:
@@ -455,22 +429,15 @@ def _check_duplicate_key(my_dict, key):
         None
     """
 
-    if key == "i" and "i" in my_dict:
-        raise DuplicateKeyError(
-            "Duplicate key found: "
-            + key
-            + ". Fixed effect syntax i() can only be used once in the input formula."
-        )
-    else:
-        for key in ["sw", "csw", "sw0", "csw0"]:
-            if key in my_dict:
-                raise DuplicateKeyError(
-                    "Duplicate key found: "
-                    + key
-                    + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
-                )
-            else:
-                None
+    for key in ["sw", "csw", "sw0", "csw0"]:
+        if key in my_dict:
+            raise DuplicateKeyError(
+                "Duplicate key found: "
+                + key
+                + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
+            )
+        else:
+            None
 
 
 def _is_varying_slopes(x):
