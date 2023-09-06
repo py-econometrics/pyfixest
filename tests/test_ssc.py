@@ -1,5 +1,5 @@
 import pytest
-from pyfixest.ssc_utils import get_ssc
+from pyfixest.utils import get_ssc
 
 
 @pytest.fixture
