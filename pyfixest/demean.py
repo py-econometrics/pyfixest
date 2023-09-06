@@ -37,7 +37,6 @@ def demean_model(
             - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
     """
 
-
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns

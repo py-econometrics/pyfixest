@@ -3,6 +3,7 @@ import numpy as np
 import pyfixest as pf
 from pyfixest.ssc_utils import ssc
 from pyfixest.utils import get_data
+from pyfixest.estimation import feols
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
@@ -13,11 +14,17 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
-    fixest = pf.Fixest(data=data)
-    fixest.feols("Y~X1", vcov="HC1", ssc=ssc(adj=False, cluster_adj=False))
+    fixest = feols(
+        fml="Y~X1", data=data, vcov="HC1", ssc=ssc(adj=False, cluster_adj=False)
+    )
     res_hc1 = fixest.tidy()
 
-    fixest.feols("Y~X1", vcov={"CRV1": "id"}, ssc=ssc(adj=False, cluster_adj=False))
+    fixest = feols(
+        fml="Y~X1",
+        data=data,
+        vcov={"CRV1": "id"},
+        ssc=ssc(adj=False, cluster_adj=False),
+    )
     res_crv1 = fixest.tidy()
 
     _, B = next(iter(fixest.all_fitted_models.items()))
@@ -41,8 +48,9 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
-    fixest = pf.Fixest(data=data)
-    fixest.feols("Y~X1", vcov="HC3", ssc=ssc(adj=False, cluster_adj=False))
+    fixest = feols(
+        fml="Y~X1", data=data, vcov="HC3", ssc=ssc(adj=False, cluster_adj=False)
+    )
     res_hc3 = fixest.tidy()
 
     fixest.vcov({"CRV3": "id"})
@@ -69,15 +77,19 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
 def test_CRV3_fixef(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
 
-    fixest = pf.Fixest(data=data)
-    fixest.feols(
-        "Y~X1 + C(f2)", vcov={"CRV3": "f1"}, ssc=ssc(adj=False, cluster_adj=False)
+    fixest = feols(
+        fml="Y~X1 + C(f2)",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
     )
     res_crv3a = fixest.tidy().reset_index().set_index("Coefficient").xs("X1")
 
-    fixest2 = pf.Fixest(data=data)
-    fixest2.feols(
-        "Y~X1 | f2", vcov={"CRV3": "f1"}, ssc=ssc(adj=False, cluster_adj=False)
+    fixest2 = feols(
+        fml="Y~X1 | f2",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
     )
     res_crv3b = fixest2.tidy()
 
