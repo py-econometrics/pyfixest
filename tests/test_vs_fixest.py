@@ -2,7 +2,7 @@ import pytest
 import re
 import numpy as np
 import pandas as pd
-from pyfixest.fixest import Fixest
+from pyfixest.estimation import feols, fepois
 from pyfixest.utils import get_data
 from pyfixest.exceptions import NotImplementedError
 
@@ -144,7 +144,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
     # iid errors
     try:
-        pyfixest = Fixest(data=data).feols(fml, vcov=inference)
+        pyfixest = feols(fml = fml, data = data, vcov=inference)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
@@ -154,7 +154,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             raise e
 
     if model == "Feols":
-        pyfixest = Fixest(data=data).feols(fml, vcov=inference)
+        pyfixest = feols(fml = fml, data = data, vcov=inference)
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
             vcov=r_inference,
@@ -166,7 +166,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
     else:
         # check if IV - don not run IV formulas for Poisson
-        iv_check = Fixest(data=data).feols(fml, vcov="iid")
+        iv_check = feols(fml=fml, data = data, vcov="iid")
 
         if inference == "iid":
             return pytest.skip("Poisson does not support iid inference")
@@ -203,10 +203,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             if isinstance(inference, dict):
                 inference_inflation_factor = 500
 
-            pyfixest = Fixest(data=data, iwls_tol=iwls_tol, iwls_maxiter=iwls_maxiter)
-
             try:
-                pyfixest.fepois(fml, vcov=inference)
+                pyfixest = fepois(fml=fml, data = data, vcov=inference)
             except NotImplementedError as exception:
                 if "inference is not supported" in str(exception):
                     return pytest.skip(
@@ -386,14 +384,14 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     r_fml = _py_fml_to_r_fml(fml_multi)
 
     try:
-        pyfixest = Fixest(data=data).feols(fml_multi)
+        pyfixest = feols(fml = fml_multi, data = data)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
             data[data == "nan"] = np.nan
-            pyfixest = Fixest(data=data).feols(fml_multi)
+            pyfixest = feols(fml = fml_multi, data = data)
         else:
             raise ValueError("Code fails with an uninformative error message.")
 

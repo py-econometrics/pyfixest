@@ -14,11 +14,7 @@ from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.ssc_utils import ssc
-from pyfixest.exceptions import (
-    MatrixNotFullRankError,
-    MultiEstNotSupportedError,
-    NotImplementedError,
-)
+from pyfixest.exceptions import MatrixNotFullRankError
 
 
 class Fixest:
@@ -150,140 +146,6 @@ class Fixest:
             self._estimate_full_model,
         ) = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
 
-    def feols(
-        self,
-        fml: str,
-        vcov: Optional[Union[str, Dict[str, str]]] = None,
-        ssc=ssc(),
-        fixef_rm: str = "none",
-        weights=Optional,
-    ) -> None:
-        """
-        Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
-        Args:
-            fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes:
-                The syntax is as follows: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1" where:
-
-                Y: Dependent variable
-                X1, X2: Independent variables
-                FE1, FE2: Fixed effects
-                Z1, Z2: Instruments
-                |: Separates left-hand side, fixed effects, and instruments
-
-                If no fixed effects and instruments are specified, the formula can be simplified to "Y ~ X1 + X2".
-                If no instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | FE1 + FE2".
-                If no fixed effects are specified but instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | X1 ~ Z1".
-
-                Supported multiple estimation syntax includes:
-
-                Stepwise regressions (sw, sw0)
-                Cumulative stepwise regression (csw, csw0)
-                Multiple dependent variables (Y1 + Y2 ~ X)
-
-                Other special syntax includes:
-                i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-                Using i() is required to use with some custom methods, e.g. iplot().
-                ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
-
-                All other parts of the formula must be compatible with formula parsing via the formulaic module.
-                You can use formulaic functionaloty such as "C", "I", ":",, "*", "np.log", "np.power", etc.
-
-            vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-                If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
-        Returns:
-            None
-        Examples:
-            Standard formula:
-                fml = 'Y ~ X1 + X2'
-                fixest_model = Fixest(data=data).feols(fml, vcov='iid')
-            With fixed effects:
-                fml = 'Y ~ X1 + X2 | fe1 + fe2'
-            With interacted fixed effects:
-                fml = 'Y ~ X1 + X2 | fe1^fe2'
-            Multiple dependent variables:
-                fml = 'Y1 + Y2 ~ X1 + X2'
-            Stepwise regressions (sw and sw0):
-                fml = 'Y1 + Y2 ~ sw(X1, X2, X3)'
-            Cumulative stepwise regressions (csw and csw0):
-                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) '
-            Combinations:
-                fml = 'Y1 + Y2 ~ csw(X1, X2, X3) | sw(X4, X5) + X6'
-            With instruments:
-                fml = 'Y ~ X1 + X2 | X1 ~ Z1'
-            With instruments and fixed effects:
-                fml = 'Y ~ X1 + X2 | X1 ~ Z1  | fe1 + fe2'
-
-        Attributes:
-            - attributes set via _prepare_estimation():
-                _fml: the provided formula string.
-                _method: the estimation method. Either "feols" or "fepois".
-                _is_iv: boolean indicating whether the model is an IV model.
-                _fml_dict: a dictionary of deparsed formulas.
-                _fml_dict_iv: a dictionary of deparsed formulas for IV models. None if no IV models. Basically, the same as
-                                `_fml_dict` but with instruments.
-                _ivars: a list of interaction variables. None if no interaction variables.
-                _ssc_dict: a dictionary with information on small sample corrections.
-                _drop_singletons: boolean indicating whether singleton fixed effects are dropped in the estimation.
-                _fixef_keys: a list of fixed effects combinations.
-                _drop_ref: a list of dropped reference categories for `i()` interactions.
-                _split: the split variable if split estimation is used, else None.
-                _splitvar: the split variable if split estimation is used, else None.
-                _estimate_split_model: boolean indicating whether the split model is estimated.
-                _estimate_full_model: boolean indicating whether the full model is estimated.
-            - attributes set via _model_matrix_fixest():
-                icovars: a list of interaction variables. None if no interaction variables via `i()` provided.
-            - attributes set via _estimate_all_models():
-
-            - attributes set via _is_multiple_estimation():
-                is_fixef_multi: boolean indicating whether multiple regression models will be estimated
-
-        """
-
-        self._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
-
-        # demean all models: based on fixed effects x split x missing value combinations
-        self._estimate_all_models(vcov, self._fixef_keys)
-
-        # create self._is_fixef_multi flag
-        self._is_multiple_estimation()
-
-        if self._is_fixef_multi and self._is_iv:
-            raise MultiEstNotSupportedError(
-                "Multiple Estimations is currently not supported with IV."
-                "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
-            )
-
-        return self
-
-    def fepois(
-        self,
-        fml: str,
-        vcov: Optional[Union[str, Dict[str, str]]] = None,
-        ssc=ssc(),
-        fixef_rm: str = "none",
-    ) -> None:
-        """
-        Method for Estimation of Poisson Regression with high-dimensional fixed effects. See `feols()` for more details.
-        """
-
-        self._prepare_estimation(
-            estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm
-        )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "IV Estimation is not supported for Poisson Regression"
-            )
-
-        self._estimate_all_models(vcov, self._fixef_keys)
-
-        # create self._is_fixef_multi flag
-        self._is_multiple_estimation()
-
-        return self
-
     def _estimate_all_models(
         self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
     ) -> None:
@@ -381,7 +243,13 @@ class Fixest:
                             # demean Y, X, Z, if not already done in previous estimation
 
                             Yd, Xd = demean_model(
-                                Y, X, fe, weights, lookup_demeaned_data, na_index_str, self._drop_singletons
+                                Y,
+                                X,
+                                fe,
+                                weights,
+                                lookup_demeaned_data,
+                                na_index_str,
+                                self._drop_singletons,
                             )
 
                             if _is_iv:
@@ -392,7 +260,7 @@ class Fixest:
                                     weights,
                                     lookup_demeaned_data,
                                     na_index_str,
-                                    self._drop_singletons
+                                    self._drop_singletons,
                                 )
                             else:
                                 endogvard, Zd = None, None
@@ -627,7 +495,7 @@ class Fixest:
             if fxst._method == "feols":
                 if not fxst._is_iv:
                     print(
-                        f"RMSE: {np.round(fxst.rmse, digits)}  Adj. R2: {np.round(fxst.adj_r2, digits)}  Adj. R2 Within: {np.round(fxst.adj_r2_within, digits)}"
+                        f"RMSE: {np.round(fxst._rmse, digits)}  Adj. R2: {np.round(fxst._adj_r2, digits)}  Adj. R2 Within: {np.round(fxst._adj_r2_within, digits)}"
                     )
             elif fxst._method == "fepois":
                 print(f"Deviance: {np.round(fxst.deviance[0], digits)}")

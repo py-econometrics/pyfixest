@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-import pyfixest as pf
-from pyfixest.utils import get_data, get_poisson_data
+from pyfixest.utils import get_poisson_data
+from pyfixest.estimation import feols, fepois
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -31,7 +31,7 @@ def test_internally(data):
     Currently only for OLS.
     """
 
-    pyfixest = pf.Fixest(data=data).feols(fml="Y~csw(X1, X2) | X3", vcov="iid")
+    pyfixest = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
 
     mod = pyfixest.fetch_model("0")
     mod.fixef()
@@ -58,8 +58,8 @@ def test_vs_fixest(data, fml):
     Test predict and resid methods against fixest.
     """
 
-    pyfixest = pf.Fixest(data=data).feols(fml=fml, vcov="HC1")
-    pyfixest2 = pf.Fixest(data=data).fepois(fml=fml, vcov="HC1")
+    pyfixest = feols(fml=fml, data=data, vcov="HC1")
+    pyfixest2 = fepois(fml=fml, data=data, vcov="HC1")
 
     feols_mod = pyfixest.fetch_model("0")
     feols_mod.fixef()

@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import warnings
@@ -7,7 +6,7 @@ from importlib import import_module
 from typing import Union, List, Dict
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
-from scipy.sparse import csr_matrix, hstack
+from scipy.sparse import csr_matrix
 from formulaic import model_matrix
 
 from pyfixest.ssc_utils import get_ssc
@@ -380,15 +379,14 @@ class Feols:
 
                 else:
                     # lazy loading to avoid circular import
-                    fixest_module = import_module("pyfixest.fixest")
-                    Fixest_ = getattr(fixest_module, "Fixest")
+                    fixest_module = import_module("pyfixest.estimation")
+                    feols_ = getattr(fixest_module, "feols")
 
                     for ixg, g in enumerate(clusters):
                         # direct leave one cluster out implementation
                         data = _data[~np.equal(ixg, group)]
-                        model = Fixest_(data)
-                        model.feols(self._fml, vcov="iid")
-                        beta_jack[ixg, :] = model.coef().to_numpy()
+                        fit = feols_(fml = self._fml, data = data, vcov="iid")
+                        beta_jack[ixg, :] = fit.coef().to_numpy()
 
                 # optional: beta_bar in MNW (2022)
                 # center = "estimate"
