@@ -1,18 +1,17 @@
-import pyhdfe
 import re
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from typing import Any, Union, Dict, Optional, List, Tuple
+from typing import Union, Dict, Optional, List, Tuple
 from scipy.stats import norm
-from formulaic import model_matrix
 
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.feiv import Feiv
 from pyfixest.model_matrix_fixest import model_matrix_fixest
+from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.ssc_utils import ssc
 from pyfixest.exceptions import (
@@ -285,132 +284,6 @@ class Fixest:
 
         return self
 
-
-    def _demean_model(
-        self,
-        Y: pd.DataFrame,
-        X: pd.DataFrame,
-        fe: Optional[pd.DataFrame],
-        weights: Optional[np.ndarray],
-        lookup_demeaned_data: Dict[str, Any],
-        na_index_str: str,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
-        """
-        Demeans a single regression model.
-
-        If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
-        Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values
-        from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
-
-        Args:
-            Y (pd.DataFrame): A DataFrame of the dependent variable.
-            X (pd.DataFrame): A DataFrame of the covariates.
-            fe (pd.DataFrame or None): A DataFrame of the fixed effects. None if no fixed effects specified.
-            weights (np.ndarray or None): A numpy array of weights. None if no weights.
-            lookup_demeaned_data (Dict[str, Any]): A dictionary with keys for each fixed effects combination and
-                potentially values of demeaned data frames. The function checks this dictionary to see if some of
-                the variables have already been demeaned.
-            na_index_str (str): A string with indices of dropped columns. Used for caching of demeaned variables.
-
-        Returns:
-            Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]: A tuple of the following elements:
-                - Yd (pd.DataFrame): A DataFrame of the demeaned dependent variable.
-                - Xd (pd.DataFrame): A DataFrame of the demeaned covariates.
-                - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
-        """
-
-        # if val == 1:
-        #    import pdb
-        #    pdb.set_trace()
-
-        _drop_singletons = self._drop_singletons
-
-        YX = pd.concat([Y, X], axis=1)
-
-        yx_names = YX.columns
-        YX = YX.to_numpy()
-
-        if fe is not None:
-            # check if looked dict has data for na_index
-            if lookup_demeaned_data.get(na_index_str) is not None:
-                # get data out of lookup table: list of [algo, data]
-                algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
-
-                # get not yet demeaned covariates
-                var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
-
-                # if some variables still need to be demeaned
-                if var_diff_names:
-                    # var_diff_names = var_diff_names
-
-                    yx_names_list = list(yx_names)
-                    var_diff_index = [
-                        yx_names_list.index(item) for item in var_diff_names
-                    ]
-                    # var_diff_index = list(yx_names).index(var_diff_names)
-                    var_diff = YX[:, var_diff_index]
-                    if var_diff.ndim == 1:
-                        var_diff = var_diff.reshape(len(var_diff), 1)
-
-                    YX_demean_new = algorithm.residualize(var_diff)
-                    YX_demeaned = np.concatenate(
-                        [YX_demeaned_old, YX_demean_new], axis=1
-                    )
-                    YX_demeaned = pd.DataFrame(YX_demeaned)
-
-                    # check if var_diff_names is a list
-                    if isinstance(var_diff_names, str):
-                        var_diff_names = [var_diff_names]
-
-                    YX_demeaned.columns = list(YX_demeaned_old.columns) + var_diff_names
-
-                else:
-                    # all variables already demeaned
-                    YX_demeaned = YX_demeaned_old[yx_names]
-
-            else:
-                # not data demeaned yet for NA combination
-                algorithm = pyhdfe.create(
-                    ids=fe,
-                    residualize_method="map",
-                    drop_singletons=_drop_singletons,
-                    # weights=weights
-                )
-
-                if (
-                    _drop_singletons == True
-                    and algorithm.singletons != 0
-                    and algorithm.singletons is not None
-                ):
-                    print(
-                        algorithm.singletons,
-                        "columns are dropped due to singleton fixed effects.",
-                    )
-                    dropped_singleton_indices = np.where(algorithm._singleton_indices)[
-                        0
-                    ].tolist()
-                    na_index += dropped_singleton_indices
-
-                YX_demeaned = algorithm.residualize(YX)
-                YX_demeaned = pd.DataFrame(YX_demeaned)
-
-                YX_demeaned.columns = yx_names
-
-            lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
-
-        else:
-            # nothing to demean here
-            pass
-
-            YX_demeaned = pd.DataFrame(YX)
-            YX_demeaned.columns = yx_names
-
-        # get demeaned Y, X (if no fixef, equal to Y, X, I)
-        Yd = YX_demeaned[Y.columns]
-        Xd = YX_demeaned[X.columns]
-
-        return Yd, Xd
-
     def _estimate_all_models(
         self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
     ) -> None:
@@ -440,7 +313,7 @@ class Fixest:
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
-        #_ivars = self._ivars
+        # _ivars = self._ivars
         # _drop_ref = self._drop_ref
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
@@ -490,7 +363,7 @@ class Fixest:
                             Z,
                             na_index,
                             na_index_str,
-                            _icovars
+                            _icovars,
                         ) = model_matrix_fixest(fml=fml, data=self._data)
 
                         weights = np.ones((Y.shape[0], 1))
@@ -507,18 +380,19 @@ class Fixest:
                         if _method == "feols":
                             # demean Y, X, Z, if not already done in previous estimation
 
-                            Yd, Xd = self._demean_model(
-                                Y, X, fe, weights, lookup_demeaned_data, na_index_str
+                            Yd, Xd = demean_model(
+                                Y, X, fe, weights, lookup_demeaned_data, na_index_str, self._drop_singletons
                             )
 
                             if _is_iv:
-                                endogvard, Zd = self._demean_model(
+                                endogvard, Zd = demean_model(
                                     endogvar,
                                     Z,
                                     fe,
                                     weights,
                                     lookup_demeaned_data,
                                     na_index_str,
+                                    self._drop_singletons
                                 )
                             else:
                                 endogvard, Zd = None, None
@@ -834,12 +708,12 @@ class Fixest:
             fxst = self.all_fitted_models[val]
             if fxst._icovars is None:
                 raise ValueError(
-                f"The {x} th estimated model did not have ivars / 'i()' model syntax."
-                "In consequence, the '.iplot()' method is not supported."
-            )
+                    f"The {x} th estimated model did not have ivars / 'i()' model syntax."
+                    "In consequence, the '.iplot()' method is not supported."
+                )
 
-            if "Intercept" in fxst._icovars:
-                fxst._icovars.remove("Intercept")
+        if "Intercept" in ivars:
+            ivars.remove("Intercept")
 
         df = self.tidy().reset_index()
 

@@ -79,7 +79,6 @@ def model_matrix_fixest(
             covar = covar.replace(x, "C(" + is_ivar[0][0] + ")" + ":" + is_ivar[0][1])
             break
 
-
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
     elif len(fml_parts) == 2:
@@ -186,8 +185,6 @@ def model_matrix_fixest(
             na_index = list(set(na_index))
 
     na_index_str = ",".join(str(x) for x in na_index)
-
-
 
     return Y, X, fe, endogvar, Z, na_index, na_index_str, _icovars
 

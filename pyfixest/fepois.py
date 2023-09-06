@@ -4,13 +4,10 @@ import pandas as pd
 import warnings
 
 
-from typing import Union, List, Dict
+from typing import Union
 from formulaic import model_matrix
-from pyfixest.feols import Feols, _check_vcov_input, _deparse_vcov_input
-from pyfixest.ssc_utils import get_ssc
+from pyfixest.feols import Feols
 from pyfixest.exceptions import (
-    VcovTypeNotSupportedError,
-    NanInClusterVarError,
     NonConvergenceError,
     NotImplementedError,
 )
