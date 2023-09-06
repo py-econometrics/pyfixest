@@ -136,7 +136,6 @@ class FixestFormulaParser:
             self.covars_first_stage = None
             self.depvars_first_stage = None
 
-
         # Pack the formula components back into strings
         self.covars_fml = _pack_to_fml(self.covars)
         self.fevars_fml = _pack_to_fml(self.fevars)

@@ -15,6 +15,7 @@ from pyfixest.exceptions import (
 
 from pyfixest.FormulaParser import FixestFormulaParser
 
+
 def test_formula_parser2():
     with pytest.raises(DuplicateKeyError):
         FixestFormulaParser("y ~ sw(a, b) +  sw(c, d)| sw(X3, X4))")
