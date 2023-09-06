@@ -18,52 +18,32 @@ from pyfixest.exceptions import MatrixNotFullRankError
 
 
 class Fixest:
-    def __init__(
-        self, data: pd.DataFrame, iwls_tol: float = 1e-08, iwls_maxiter: int = 25
-    ) -> None:
+    def __init__(self, data: pd.DataFrame) -> None:
         """
         A class for fixed effects regression modeling.
 
         Args:
             data: The input pd.DataFrame for the object.
-            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-5. Only relevant for non-linear estimation strategies.
-            iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
 
         Returns:
             None
 
         Attributes:
             data: The input pd.DataFrame for the object.
-            iwls_tol: The tolerance level for the IWLS algorithm. Default is 1e-5. Only relevant for non-linear estimation strategies.
-            iwls_maxiter: The maximum number of iterations for the IWLS algorithm. Default is 25. Only relevant for non-linear estimation strategies.
             all_fitted_models: A dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
 
         self._data = None
-        self._iwls_tol = None
-        self._iwls_maxiter = None
         self._all_fitted_models = None
 
         # assert that data is a pd.DataFrame
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be a pd.DataFrame")
-        # assert that iwls_tol is a float between 0 and 1
-        if not isinstance(iwls_tol, float):
-            raise TypeError("iwls_tol must be a float")
-        if iwls_tol < 0 or iwls_tol > 1:
-            raise ValueError("iwls_tol must be between 0 and 1")
-        # assert that iwls_maxiter is an integer and larger than 0
-        if not isinstance(iwls_maxiter, int):
-            raise TypeError("iwls_maxiter must be an integer")
-        if iwls_maxiter < 1:
-            raise ValueError("iwls_maxiter must be larger than 0")
 
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.index = range(self._data.shape[0])
-        self._iwls_tol = iwls_tol
-        self._iwls_maxiter = iwls_maxiter
         self.all_fitted_models = dict()
 
     def _prepare_estimation(
@@ -147,7 +127,7 @@ class Fixest:
         ) = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
 
     def _estimate_all_models(
-        self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str]
+        self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str], iwls_maxiter: int = 25, iwls_tol: float = 1e-08
     ) -> None:
         """
         Estimate multiple regression models.
@@ -159,6 +139,10 @@ class Fixest:
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
                   or {"CRV3": "clustervar"} for CRV3 inference.
             fixef_keys (List[str]): A list of fixed effects combinations.
+            iwls_maxiter (int, optional): The maximum number of iterations for the IWLS algorithm. Default is 25.
+                Only relevant for non-linear estimation strategies.
+            iwls_tol (float, optional): The tolerance level for the IWLS algorithm. Default is 1e-8.
+                Only relevant for non-linear estimation strategies.
 
         Returns:
             None
@@ -179,8 +163,6 @@ class Fixest:
         # _drop_ref = self._drop_ref
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
-        _iwls_maxiter = self._iwls_maxiter
-        _iwls_tol = self._iwls_tol
         # _icovars = self._icovars
 
         if _estimate_full_model:
@@ -313,8 +295,8 @@ class Fixest:
                                 fe=fe,
                                 weights=weights,
                                 drop_singletons=_drop_singletons,
-                                maxiter=_iwls_maxiter,
-                                tol=_iwls_tol,
+                                maxiter=iwls_maxiter,
+                                tol=iwls_tol,
                             )
 
                             FIT._is_iv = False

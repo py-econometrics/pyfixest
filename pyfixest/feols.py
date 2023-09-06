@@ -385,7 +385,7 @@ class Feols:
                     for ixg, g in enumerate(clusters):
                         # direct leave one cluster out implementation
                         data = _data[~np.equal(ixg, group)]
-                        fit = feols_(fml = self._fml, data = data, vcov="iid")
+                        fit = feols_(fml=self._fml, data=data, vcov="iid")
                         beta_jack[ixg, :] = fit.coef().to_numpy()
 
                 # optional: beta_bar in MNW (2022)
