@@ -13,7 +13,7 @@ from pyfixest.feiv import Feiv
 from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
-from pyfixest.ssc_utils import ssc
+from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError
 
 

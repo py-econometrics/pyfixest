@@ -1,5 +1,5 @@
 from typing import Optional, Union, Dict
-from pyfixest.ssc_utils import ssc
+from pyfixest.utils import ssc
 from pyfixest.exceptions import (
     MultiEstNotSupportedError,
 )
@@ -13,7 +13,6 @@ def feols(
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
-    weights=Optional,
 ) -> None:
     """
     Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
@@ -48,13 +47,14 @@ def feols(
         vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+        ssc (ssc): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
         fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
     Returns:
         An instance of the Feols class.
     Examples:
         Standard formula:
             fml = 'Y ~ X1 + X2'
-            fixest_model = Fixest(data=data).feols(fml, vcov='iid')
+            fit = feols(fml, data, vcov='iid')
         With fixed effects:
             fml = 'Y ~ X1 + X2 | fe1 + fe2'
         With interacted fixed effects:
@@ -159,16 +159,17 @@ def fepois(
         vcov (Union(str, dict)): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+        ssc (ssc): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
         fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
         iwls_tol: tolerance for IWLS convergence. 1e-08 by default.
         iwls_maxiter: maximum number of iterations for IWLS convergence. 25 by default.
 
     Returns:
-        An instance of the Feols class.
+        An instance of class Fixest.
     Examples:
         Standard formula:
             fml = 'Y ~ X1 + X2'
-            fixest_model = Fixest(data=data).feols(fml, vcov='iid')
+            fit = fepois(fml, data, vcov='iid')
         With fixed effects:
             fml = 'Y ~ X1 + X2 | fe1 + fe2'
         With interacted fixed effects:

@@ -9,7 +9,7 @@ from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 from formulaic import model_matrix
 
-from pyfixest.ssc_utils import get_ssc
+from pyfixest.utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
 
