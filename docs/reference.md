@@ -1,19 +1,11 @@
 # Reference
 
-# Modeling interfaces
+:::pyfixest.estimation
 
-:::pyfixest.estimation.feols
-:::pyfixest.estimation.fepois
+:::pyfixest.summarize
+:::pyfixest.visualize
 
-# Summarize and Plot Results
-
-:::pyfixest.summarize.summary
-:::pyfixest.visualize.coefplot
-:::pyfixest.visualize.iplot
-
-# Details on Main Classes
-
-:::pyfixest.fixest.Fixest
-:::pyfixest.feols.Feols
-:::pyfixest.feiv.Feiv
-:::pyfixest.fepois.Fepois
+:::pyfixest.fixest
+:::pyfixest.feols
+:::pyfixest.feiv
+:::pyfixest.fepois

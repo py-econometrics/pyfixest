@@ -18,6 +18,12 @@ from matplotlib.figure import Figure
 
 
 class Fixest:
+
+    """
+    # Fixest
+    A class to estimate multiple regression models with fixed effects.
+    """
+
     def __init__(self, data: pd.DataFrame) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -42,7 +48,6 @@ class Fixest:
         self._data.index = range(data.shape[0])
         self.all_fitted_models = dict()
 
-
     def _prepare_estimation(
         self,
         estimation: str,
@@ -66,7 +71,6 @@ class Fixest:
         Returns:
             None
         """
-
 
         self._method = None
         self._is_iv = None
@@ -101,7 +105,6 @@ class Fixest:
                 "Multiple Estimations is currently not supported with IV."
                 "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
             )
-
 
     def _estimate_all_models(
         self,
@@ -146,11 +149,15 @@ class Fixest:
             # loop over both dictfe and dictfe_iv (if the latter is not None)
             for depvar in dict2fe.keys():
                 for _, fml_linear in enumerate(dict2fe.get(depvar)):
-
                     covar = fml_linear.split("~")[1]
                     endogvars, instruments = None, None
                     if _is_iv:
-                        endogvars, instruments = _get_endogvars_instruments(fml_dict_iv = self._fml_dict_iv, fval = fval, depvar = depvar, covar = covar)
+                        endogvars, instruments = _get_endogvars_instruments(
+                            fml_dict_iv=self._fml_dict_iv,
+                            fval=fval,
+                            depvar=depvar,
+                            covar=covar,
+                        )
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
@@ -367,13 +374,11 @@ class Fixest:
         return res
 
     def summary(self, digits: int = 3) -> None:
-
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
             fxst.summary(digits=digits)
 
     def etable(self, digits: int = 3) -> pd.DataFrame:
-
         return self.tidy().T.round(digits)
 
     def coef(self) -> pd.Series:
@@ -581,8 +586,9 @@ class Fixest:
         return model
 
 
-
-def get_fml(depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None) -> str:
+def get_fml(
+    depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None
+) -> str:
     """
     Stitches together the formula string for the regression.
 
@@ -620,8 +626,7 @@ def get_fml(depvar: str, covar: str, fval: str, endogvars: str = None, instrumen
     return fml
 
 
-
-def _multicollinearity_checks(X:np.ndarray) -> None:
+def _multicollinearity_checks(X: np.ndarray) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
 
@@ -696,8 +701,9 @@ def _find_untransformed_depvar(transformed_depvar):
         return transformed_depvar
 
 
-def _get_endogvars_instruments(fml_dict_iv: dict, fval:str, depvar:str, covar:str) -> tuple:
-
+def _get_endogvars_instruments(
+    fml_dict_iv: dict, fval: str, depvar: str, covar: str
+) -> tuple:
     """
     Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
 
