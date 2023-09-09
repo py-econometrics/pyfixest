@@ -1,7 +1,5 @@
 import pytest
 import numpy as np
-from pytz_deprecation_shim import fixed_offset_timezone
-import pyfixest as pf
 from pyfixest.utils import ssc
 from pyfixest.utils import get_data
 from pyfixest.estimation import feols
