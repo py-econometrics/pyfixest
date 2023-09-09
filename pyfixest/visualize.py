@@ -18,6 +18,8 @@ def iplot(
 ) -> None:
     """
 
+    # iplot
+
     Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals.
     Args:
         models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
@@ -80,6 +82,9 @@ def coefplot(
     coefficients: Optional[List[str]] = None,
 ):
     """
+
+    # coefplot
+
     Plot model coefficients with confidence intervals.
     Args:
         models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.

@@ -14,15 +14,18 @@ from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
 from matplotlib.figure import Figure
 
+
 class Feols:
 
     """
+
+    # Feols
+
     A class for estimating regression models with high-dimensional fixed effects via
     ordinary least squares.
     """
 
     def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
-
         """
         Initiate an instance of class `Feols`.
 
@@ -112,7 +115,6 @@ class Feols:
 
         Args:
             None
-
         Returns:
             None
         """
@@ -380,7 +382,7 @@ class Feols:
 
         return self
 
-    def get_inference(self, alpha: float =0.95) -> None:
+    def get_inference(self, alpha: float = 0.95) -> None:
         """
         Compute standard errors, t-statistics and p-values for the regression model.
 
@@ -423,9 +425,13 @@ class Feols:
         """
         compute an F-test statistic of the form H0: R*beta = q
 
-        is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
-        Returns: None
+        Args:
+            is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
+        Returns:
+            None
         """
+
+        raise NotImplementedError("The F-test is currently not supported.")
 
         R = np.ones(self._k).reshape((1, self._k))
         q = 0
@@ -493,7 +499,6 @@ class Feols:
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
     ) -> Figure:
-
         """
         Create a coefficient plots for variables interaceted via `i()` syntax.
 
@@ -549,8 +554,7 @@ class Feols:
         param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
         weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
                             'rademacher' by default. Defaults to 'rademacher'.
-        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
-                            Defaults to True.
+        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not? Defaults to True.
         bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
                             to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
         seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
@@ -637,13 +641,16 @@ class Feols:
 
     def fixef(self) -> None:
         """
+        Compute the coefficients of (sweeped out) fixed effects for a regression model.
 
-        Compute the coefficients of (sweeped out) fixed effects for a regression model. Creates the
-        following attributes: `alphaDF`, `sumDF`. `alphaDF` is a pd.DataFrame with the estimated fixed effects,
-        while `sumDF` is a np.array with the sum of fixed effects for each of the i = 1, ..., N observations.
+        This method creates the following attributes:
+
+        - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
+        - `sumDF` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
 
         Args:
             None
+
         Returns:
             None
         """
@@ -716,7 +723,6 @@ class Feols:
             print(f"{key}:\n{df.to_string(index=True)}\n")
 
         self._sumFE = D2 @ alpha
-
 
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """

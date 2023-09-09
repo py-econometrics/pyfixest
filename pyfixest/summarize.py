@@ -5,6 +5,8 @@ import numpy as np
 
 def summary(models, digits: int = 3) -> None:
     """
+    # Summary
+
     Prints a summary of the feols() estimation results for each estimated model.
 
     For each model, the method prints a header indicating the fixed-effects and the

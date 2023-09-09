@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 
 
-from typing import Union
+from typing import Union, Optional
 from formulaic import model_matrix
 from pyfixest.feols import Feols
 from pyfixest.exceptions import (
@@ -16,10 +16,21 @@ from pyfixest.exceptions import (
 class Fepois(Feols):
 
     """
+    # Fepois
+
     Class to estimate Poisson Regressions. Inherits from Feols. The following methods are overwritten: `get_fit()`.
     """
 
-    def __init__(self, Y, X, fe, weights, drop_singletons, maxiter=25, tol=1e-08):
+    def __init__(
+        self,
+        Y: np.ndarray,
+        X: np.ndarray,
+        fe: np.ndarray,
+        weights: np.ndarray,
+        drop_singletons: bool,
+        maxiter: Optional[int] = 25,
+        tol: Optional[float] = 1e-08,
+    ):
         """
         Args:
             Y (np.array): dependent variable. two-dimensional np.array
@@ -96,7 +107,7 @@ class Fepois(Feols):
         _fe = self.fe
         _N = self._N
         _drop_singletons = self._drop_singletons
-        _convergence = self.convergence # False
+        _convergence = self.convergence  # False
         _maxiter = self.maxiter
         _iwls_maxiter = 25
         _tol = self.tol
@@ -196,8 +207,6 @@ class Fepois(Feols):
             # https://github.com/lrberge/fixest/blob/6b852fa277b947cea0bad8630986225ddb2d6f1b/R/ESTIMATION_FUNS.R#L2746
             deviance = compute_deviance(_Y, mu)
             crit = np.abs(deviance - last) / (0.1 + np.abs(last))
-            # crit = np.sqrt(((deviance - last)** 2) / (last ** 2))
-            # crit = np.sqrt(((deviance - last)** 2))
             last = deviance.copy()
 
             stop_iterating = crit < _tol
@@ -231,10 +240,7 @@ class Fepois(Feols):
         if _convergence:
             self._convergence = True
 
-
-    def predict(
-        self, data: Union[None, pd.DataFrame] = None, type="link"
-    ) -> np.ndarray:
+    def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
@@ -265,7 +271,7 @@ class Fepois(Feols):
 
         return y_hat.flatten()
 
-    def _check_for_separation(self, check="fe"):
+    def _check_for_separation(self, check: str = "fe") -> None:
         """
         Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
         separation checks. Currently, only the "fe" check is implemented.
