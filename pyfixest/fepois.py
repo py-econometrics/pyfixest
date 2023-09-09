@@ -323,13 +323,12 @@ class Fepois(Feols):
                 self._N = self._Y.shape[0]
                 if len(self.separation_na) > 0:
                     warnings.warn(
-                        str(len(self.separation_na))
-                        + " observations removed because of only 0 outcomes."
+                        f"{str(len(self.separation_na))} observations removed because of separation."
                     )
 
         else:
             raise NotImplementedError(
-                "Separation check via " + check + " is not implemented yet."
+                f"Separation check via {check} is not implemented yet."
             )
 
 

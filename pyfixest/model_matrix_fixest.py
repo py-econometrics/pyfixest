@@ -76,7 +76,7 @@ def model_matrix_fixest(
     for x in covar.split("+"):
         is_ivar = _find_ivars(x)
         if is_ivar[1]:
-            covar = covar.replace(x, "C(" + is_ivar[0][0] + ")" + ":" + is_ivar[0][1])
+            covar = covar.replace(x, f"C({is_ivar[0][0]}):{is_ivar[0][1]}")
             break
 
     if len(fml_parts) == 3:
@@ -96,10 +96,9 @@ def model_matrix_fixest(
         endogvar, instruments = None, None
 
     # step 2: create formulas
-    fml_exog = depvar + " ~ " + covar
+    fml_exog = f"{depvar}~{covar}"
     if _is_iv:
-        fml_iv_full = fml_iv + "+" + covar + "-" + endogvar
-
+        fml_iv_full = f"{fml_iv}+{covar}-{endogvar}"
     # clean fixed effects
     if fval != "0":
         fe, fe_na = _clean_fe(data, fval)
@@ -251,7 +250,7 @@ def _clean_ivars(ivars, data):
         if list(ivars.keys())[0] is not None:
             ref = list(ivars.keys())[0]
             ivars = ivars[ref]
-            drop_ref = "C(" + ivars[0] + ")[T." + ref + "]" + ":" + ivars[1]
+            drop_ref = f"C({ivars[0]})[T.{ref}]:{ivars[1]}"
         else:
             ivars = ivars[None]
             drop_ref = None
@@ -280,20 +279,11 @@ def _check_ivars(data, ivars):
     i1_type = data[ivars[1]].dtype
     if not i0_type in ["category", "O"]:
         raise ValueError(
-            "Column "
-            + ivars[0]
-            + " is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type "
-            + i0_type.name
-            + ". If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'."
+            f"""
+            Column {ivars[0]} is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type "
+            {i0_type.name} If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.
+            """
         )
-        if not i1_type in ["int64", "float64", "int32", "float32"]:
-            raise ValueError(
-                "Column "
-                + ivars[1]
-                + " is not of type 'int' or 'float', which is required in the second position of i(). Instead it is of type "
-                + i1_type.name
-                + ". If a reference level is set, iti is required that the variable in the second position of 'i()' is of type 'int' or 'float'."
-            )
 
 
 def _check_is_iv(fml):
