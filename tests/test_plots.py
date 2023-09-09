@@ -18,7 +18,7 @@ def data():
 def test_iplot(data):
     fit1 = feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
     fit2 = feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
-    #fit2 = feols(fml="Y ~ i(f2, X1, ref = 1)", data=data, vcov="iid")
+    # fit2 = feols(fml="Y ~ i(f2, X1, ref = 1)", data=data, vcov="iid")
 
     fit1.iplot()
     fit2.iplot()
@@ -33,7 +33,7 @@ def test_iplot(data):
         fit3.iplot()
         iplot(fit3)
 
-    fit_multi = feols(fml = "Y + Y2 ~ i(f2, X1)", data = data)
+    fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
     fit_multi.iplot()
 
 
@@ -49,5 +49,5 @@ def test_coefplot(data):
     coefplot([fit1, fit2])
     coefplot([fit1, fit2], yintercept=0)
 
-    fit_multi = feols(fml = "Y + Y2 ~ i(f2, X1)", data = data)
+    fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
     fit_multi.coefplot()
