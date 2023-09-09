@@ -1,0 +1,83 @@
+from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
+import numpy as np
+
+
+def summary(models, digits: int = 3) -> None:
+    """
+    Prints a summary of the feols() estimation results for each estimated model.
+
+    For each model, the method prints a header indicating the fixed-effects and the
+    dependent variable, followed by a table of coefficient estimates with standard
+    errors, t-values, and p-values.
+
+    Args:
+        digits (int, optional): The number of decimal places to round the summary statistics to. Default is 3.
+
+    Returns:
+        None
+    """
+
+    models = _post_processing_input_checks(models)
+
+    for fxst in list(models):
+        fml = fxst._fml
+        split = fml.split("|")
+
+        depvar = split[0].split("~")[0]
+        # fxst = [x]
+
+        df = fxst.tidy().round(digits)
+
+        if fxst._method == "feols":
+            if fxst._is_iv:
+                estimation_method = "IV"
+            else:
+                estimation_method = "OLS"
+        else:
+            estimation_method = "Poisson"
+
+        print("###")
+        print("")
+        print("Model: ", estimation_method)
+        print("Dep. var.: ", depvar)
+        if fxst._fixef is not None:
+            print("Fixed effects: ", fxst._fixef)
+        print("Inference: ", fxst._vcov_type_detail)
+        print("Observations: ", fxst._N)
+        print("")
+        print(df.to_markdown(floatfmt="." + str(digits) + "f"))
+        print("---")
+        if fxst._method == "feols":
+            if not fxst._is_iv:
+                print(
+                    f"RMSE: {np.round(fxst._rmse, digits)}  Adj. R2: {np.round(fxst._adj_r2, digits)}  Adj. R2 Within: {np.round(fxst._adj_r2_within, digits)}"
+                )
+        elif fxst._method == "fepois":
+            print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
+        else:
+            pass
+
+
+def _post_processing_input_checks(models):
+    # check if models instance of Feols or Fepois
+    if isinstance(models, (Feols, Fepois)):
+        models = [models]
+    else:
+        if isinstance(models, list):
+            for model in models:
+                if not isinstance(model, (Feols, Fepois)):
+                    raise TypeError(
+                        """
+                        The models argument must be either a list of Feols or Fepois instances,
+                        a dict of Feols or Fepois instances, or simply a Feols or Fepois instance.
+                        """
+                    )
+        elif isinstance(models, dict):
+            for model in models.keys():
+                if not isinstance(models[model], (Feols, Fepois)):
+                    raise TypeError(
+                        "The models argument must be a list of Feols or Fepois instances."
+                    )
+
+    return models

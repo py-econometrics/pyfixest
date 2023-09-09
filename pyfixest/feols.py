@@ -3,7 +3,7 @@ import pandas as pd
 import warnings
 
 from importlib import import_module
-from typing import Union, List, Dict
+from typing import Optional, Union, List, Dict
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
@@ -48,7 +48,7 @@ class Feols:
     -------
     get_fit()
         Regression estimation for a single model, via ordinary least squares (OLS).
-    get_vcov(vcov)
+    vcov(vcov)
         Compute covariance matrices for an estimated model.
 
     Raises
@@ -64,6 +64,7 @@ class Feols:
         self._Y = Y
         self._X = X
         self._Z = X
+        self.get_nobs()
 
         _feols_input_checks(Y, X, weights)
 
@@ -99,7 +100,7 @@ class Feols:
         self._hessian = None
         self._bread = None
 
-        # set in get_vcov()
+        # set in vcov()
         self._vcov_type = None
         self._vcov_type_detail = None
         self._is_clustered = None
@@ -162,7 +163,7 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def get_vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
+    def vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
         """
         Compute covariance matrices for an estimated regression model.
 
@@ -403,6 +404,10 @@ class Feols:
 
                 self._vcov = self._ssc * vcov
 
+        self.get_inference()
+
+        return self
+
     def get_inference(self, alpha=0.95):
         """
         Compute standard errors, t-statistics and p-values for the regression model.
@@ -461,24 +466,72 @@ class Feols:
         if self._is_iv:
             first_stage = Feols(self._Y, self._Z, self._Z)
             first_stage.get_fit()
-            first_stage.get_vcov(vcov=vcov)
+            first_stage.vcov(vcov=vcov)
             vcov = first_stage.vcov
         else:
             vcov = self._vcov
 
         self._F_stat = Rbetaq @ np.linalg.inv(R @ self._vcov @ np.transpose(R)) @ Rbetaq
 
-    def get_wildboottest(
+    def coefplot(
+        self,
+        alpha=0.05,
+        figsize=(10, 10),
+        yintercept=None,
+        xintercept=None,
+        rotate_xticks=0,
+        coefficients: Optional[List[str]] = None,
+    ):
+        # lazy loading to avoid circular import
+        visualize_module = import_module("pyfixest.visualize")
+        _coefplot = getattr(visualize_module, "coefplot")
+
+        plot = _coefplot(
+            models=self,
+            alpha=alpha,
+            figsize=figsize,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            rotate_xticks=rotate_xticks,
+            coefficients=coefficients,
+        )
+
+        return plot
+
+    def iplot(
+        self,
+        alpha=0.05,
+        figsize=(10, 10),
+        yintercept=None,
+        xintercept=None,
+        rotate_xticks=0,
+    ):
+        visualize_module = import_module("pyfixest.visualize")
+        _iplot = getattr(visualize_module, "iplot")
+
+        plot = _iplot(
+            models=self,
+            alpha=alpha,
+            figsize=figsize,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            rotate_xticks=rotate_xticks,
+        )
+
+        return plot
+
+    def wildboottest(
         self,
         B: int,
-        cluster: Union[np.ndarray, pd.Series, pd.DataFrame, None],
-        param: Union[str, None],
-        weights_type: str,
-        impose_null: bool,
-        bootstrap_type: str,
-        seed: Union[str, None],
-        adj: bool,
-        cluster_adj: bool,
+        cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        param: Optional[str] = None,
+        weights_type: Optional[str] = "rademacher",
+        impose_null: Optional[bool] = True,
+        bootstrap_type: Optional[str] = "11",
+        seed: Optional[int] = None,
+        adj: Optional[bool] = True,
+        cluster_adj: Optional[bool] = True,
+        digits: Optional[int] = 3,
     ):
         """
         Run a wild cluster bootstrap based on an object of type "Feols"
@@ -486,8 +539,10 @@ class Feols:
         Args:
 
         B (int): The number of bootstrap iterations to run
-        cluster (Union[None, np.ndarray, pd.Series, pd.DataFrame], optional): If None (default), a 'heteroskedastic' wild boostrap
-            is run. For a wild cluster bootstrap, requires a numpy array of dimension one,a  pandas Series or DataFrame, containing the clustering variable.
+        cluster (Union[None, np.ndarray, pd.Series, pd.DataFrame], optional): If None (default), checks if the model's vcov type was CRV. If yes, uses
+                            `self._clustervar` as cluster. If None and no clustering was employed in the initial model, runs a heteroskedastic wild bootstrap.
+                            If an argument is supplied, uses the argument as cluster variable for the wild cluster bootstrap.
+                            Requires a numpy array of dimension one,a  pandas Series or DataFrame, containing the clustering variable.
         param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
         weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
                             'rademacher' by default. Defaults to 'rademacher'.
@@ -506,6 +561,11 @@ class Feols:
         _X = self._X
         _xnames = self._coefnames
         _data = self._data
+        _clustervar = self._clustervar
+
+        if cluster is None:
+            if hasattr(self, "clustervar"):
+                cluster = _clustervar
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -551,7 +611,7 @@ class Feols:
             boot.get_numer()
             boot.get_denom()
             boot.get_tboot()
-            boot.get_vcov()
+            boot.vcov()
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
 
@@ -562,8 +622,8 @@ class Feols:
 
         res = {
             "param": param,
-            "statistic": boot.t_stat,
-            "pvalue": boot.pvalue,
+            "statistic": np.round(boot.t_stat, digits),
+            "pvalue": np.round(boot.pvalue, digits),
             "bootstrap_type": bootstrap_type,
             "impose_null": impose_null,
         }
@@ -657,13 +717,11 @@ class Feols:
 
         self._sumFE = D2 @ alpha
 
-    def predict(
-        self, data: Union[None, pd.DataFrame] = None, type="link"
-    ) -> np.ndarray:
+    def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
-            data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            data (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
             type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
                 If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
@@ -802,6 +860,21 @@ class Feols:
         """
         return self._u_hat
 
+    def summary(self, digits=3) -> None:
+        """
+        Print a summary of the estimated regression model.
+        Args:
+            digits (int, optional): Number of digits to be printed. Defaults to 3.
+        Returns:
+            None
+        """
+
+        # lazy loading to avoid circular import
+        summarize_module = import_module("pyfixest.summarize")
+        _summary = getattr(summarize_module, "summary")
+
+        return _summary(models=self, digits=digits)
+
 
 def _check_vcov_input(vcov, data):
     """
@@ -915,3 +988,28 @@ def _feols_input_checks(Y, X, weights):
         raise ValueError("X must be a 2D array")
     if weights.ndim != 2:
         raise ValueError("weights must be a 2D array")
+
+
+def _get_vcov_type(vcov, fval):
+    """
+    Passes the specified vcov type. If no vcov type specified, sets the default vcov type as iid if no fixed effect
+    is included in the model, and CRV1 clustered by the first fixed effect if a fixed effect is included in the model.
+    Args:
+        vcov (str): The specified vcov type.
+        fval (str): The specified fixed effects. (i.e. "X1+X2")
+    Returns:
+        vcov_type (str): The specified vcov type.
+    """
+
+    if vcov is None:
+        # iid if no fixed effects
+        if fval == "0":
+            vcov_type = "iid"
+        else:
+            # CRV1 inference, clustered by first fixed effect
+            first_fe = fval.split("+")[0]
+            vcov_type = {"CRV1": first_fe}
+    else:
+        vcov_type = vcov
+
+    return vcov_type

@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+from pytz_deprecation_shim import fixed_offset_timezone
 import pyfixest as pf
 from pyfixest.utils import ssc
 from pyfixest.utils import get_data
@@ -14,21 +15,20 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
-    fixest = feols(
+    fit1 = feols(
         fml="Y~X1", data=data, vcov="HC1", ssc=ssc(adj=False, cluster_adj=False)
     )
-    res_hc1 = fixest.tidy()
+    res_hc1 = fit1.tidy()
 
-    fixest = feols(
+    fit2 = feols(
         fml="Y~X1",
         data=data,
         vcov={"CRV1": "id"},
         ssc=ssc(adj=False, cluster_adj=False),
     )
-    res_crv1 = fixest.tidy()
+    res_crv1 = fit2.tidy()
 
-    _, B = next(iter(fixest.all_fitted_models.items()))
-    N = B._N
+    N = fit1._N
 
     # adj: default adjustments are different for HC3 and CRV3
     adj_correction = np.sqrt((N - 1) / N)
@@ -48,16 +48,15 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
-    fixest = feols(
+    fit1 = feols(
         fml="Y~X1", data=data, vcov="HC3", ssc=ssc(adj=False, cluster_adj=False)
     )
-    res_hc3 = fixest.tidy()
+    res_hc3 = fit1.tidy()
 
-    fixest.vcov({"CRV3": "id"})
-    res_crv3 = fixest.tidy()
+    fit1.vcov({"CRV3": "id"})
+    res_crv3 = fit1.tidy()
 
-    _, B = next(iter(fixest.all_fitted_models.items()))
-    N = B._N
+    N = fit1._N
 
     # adj: default adjustments are different for HC3 and CRV3
     adj_correction = np.sqrt((N - 1) / N)
@@ -77,21 +76,21 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
 def test_CRV3_fixef(N, seed, beta_type, error_type):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
 
-    fixest = feols(
+    fit1 = feols(
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
         ssc=ssc(adj=False, cluster_adj=False),
     )
-    res_crv3a = fixest.tidy().reset_index().set_index("Coefficient").xs("X1")
+    res_crv3a = fit1.tidy().reset_index().set_index("Coefficient").xs("X1")
 
-    fixest2 = feols(
+    fit2 = feols(
         fml="Y~X1 | f2",
         data=data,
         vcov={"CRV3": "f1"},
         ssc=ssc(adj=False, cluster_adj=False),
     )
-    res_crv3b = fixest2.tidy()
+    res_crv3b = fit2.tidy()
 
     if not np.allclose(res_crv3a["Std. Error"], res_crv3b["Std. Error"]):
         raise ValueError("HC3 and CRV3 ses are not the same.")

@@ -19,7 +19,7 @@ def test_separation():
     with pytest.warns(
         UserWarning, match="2 observations removed because of only 0 outcomes"
     ):
-        mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero").fetch_model(0)
+        mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero")
     # mod._check_for_separation()
 
     # np.allclose(mod.separation_na, np.array([0, 1]))

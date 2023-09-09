@@ -233,13 +233,13 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
                 glm_tol=iwls_tol,
             )
 
-            py_nobs = pyfixest.fetch_model(0)._N
+            py_nobs = pyfixest._N
             r_nobs = stats.nobs(r_fixest)
 
     if run_test:
         # get coefficients, standard errors, p-values, t-statistics, confidence intervals
 
-        mod = pyfixest.fetch_model(0)
+        mod = pyfixest
 
         py_coef = mod.coef().xs("X1")
         py_se = mod.se().xs("X1")

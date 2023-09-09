@@ -4,6 +4,8 @@ from pyfixest.exceptions import (
     MultiEstNotSupportedError,
 )
 from pyfixest.fixest import Fixest
+from pyfixest.fepois import Fepois
+from pyfixest.feols import Feols
 import pandas as pd
 
 
@@ -13,7 +15,7 @@ def feols(
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
-) -> None:
+) -> Union[Feols, Fixest]:
     """
     Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
     Args:
@@ -50,7 +52,7 @@ def feols(
         ssc (ssc): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
         fixef_rm: A string specifiny whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
     Returns:
-        An instance of the Feols class.
+        An instance of the Feols class or a dictionary of Feols classes if multiple models are estimated.
     Examples:
         Standard formula:
             fml = 'Y ~ X1 + X2'
@@ -114,7 +116,10 @@ def feols(
             "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
         )
 
-    return fixest
+    if fixest._is_fixef_multi:
+        return fixest
+    else:
+        return fixest.fetch_model(0)
 
 
 def fepois(
@@ -125,7 +130,7 @@ def fepois(
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-) -> None:
+) -> Union[Fepois, Fixest]:
     """
     Method for fixed effects regression modeling using the PyHDFE package for projecting out fixed effects.
     Args:
@@ -188,7 +193,7 @@ def fepois(
             fml = 'Y ~ X1 + X2 | X1 ~ Z1  | fe1 + fe2'
 
     Returns:
-        An instance of a Fixest class.
+        An instance of a Fepois class or an object of type Fixest if more than one model is estimated.
 
 
 
@@ -212,4 +217,7 @@ def fepois(
     # create self._is_fixef_multi flag
     fixest._is_multiple_estimation()
 
-    return fixest
+    if fixest._is_fixef_multi:
+        return fixest
+    else:
+        return fixest.fetch_model(0)

@@ -11,7 +11,7 @@ from pyfixest.exceptions import (
 class FixestFormulaParser:
 
     """
-    A class for parsing a formula string into its individual components.
+    A class for deparsing formulas with multiple estimation syntax.
 
     Attributes:
         depvars (list): A list of dependent variables in the formula.
@@ -38,8 +38,6 @@ class FixestFormulaParser:
             None
 
         """
-
-        # fml =' Y + Y2 ~  i(X1, X2) |csw0(X3, X4)'
 
         # Clean up the formula string
         fml = "".join(fml.split())
