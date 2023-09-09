@@ -163,23 +163,20 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
+    def vcov(self, vcov: Union[str, Dict[str, str], List[str]]):
         """
         Compute covariance matrices for an estimated regression model.
 
-        Parameters
-        ----------
-        vcov : Union[str, Dict[str, str], List[str]]
-            A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-            If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
-            or {"CRV3":"clustervar"} for CRV3 inference.
-            Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
+        Args:
+            vcov : Union[str, Dict[str, str], List[str]]
+                A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
+                or {"CRV3":"clustervar"} for CRV3 inference.
+                Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
 
-        Returns
-        -------
-        None
-
+        Returns:
+            An instance of class `Feols` with updated inference.
         """
 
         _data = self._data
