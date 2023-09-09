@@ -18,7 +18,7 @@ def data():
 def test_iplot(data):
     fit1 = feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
     fit2 = feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
-    # fit2 = feols(fml="Y ~ i(f2, X1, ref = 1)", data=data, vcov="iid")
+    fit3 = feols(fml="Y ~ i(f2, X1, ref = 1.0)", data=data, vcov="iid")
 
     fit1.iplot()
     fit2.iplot()

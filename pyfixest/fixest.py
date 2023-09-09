@@ -2,10 +2,8 @@ import re
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
-from typing import Union, Dict, Optional, List, Tuple
-from scipy.stats import norm
+from typing import Union, Dict, Optional, List
 
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
@@ -14,7 +12,7 @@ from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
-from pyfixest.exceptions import MatrixNotFullRankError
+from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
 
 
@@ -44,7 +42,7 @@ class Fixest:
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
-        self._data.index = range(self._data.shape[0])
+        self._data.index = range(data.shape[0])
         self.all_fitted_models = dict()
 
     def _prepare_estimation(
@@ -88,44 +86,40 @@ class Fixest:
             _estimate_full_model: boolean indicating whether the full model is estimated.
         """
 
-        self._fml = fml.replace(" ", "")
-        self._split = None
-        self._method = estimation
-        # deparse formula, at least partially
+        self._method = None
+        self._is_iv = None
+        self._fml_dict = None
+        self._fml_dict_iv = None
+        self._ssc_dict = None
+        self._drop_singletons = None
+        self._fixef_keys = None
+        self._is_fixef_multi = None
 
         fxst_fml = FixestFormulaParser(fml)
-
+        fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
         if fxst_fml._is_iv:
-            self._is_iv = True
+            _is_iv = True
+            fxst_fml.get_fml_dict(iv=True)
         else:
-            self._is_iv = False
+            _is_iv = False
 
-        # add function argument to these methods for IV
-        fxst_fml.get_new_fml_dict()  # fxst_fml._fml_dict_new
-
-        self._fml_dict = fxst_fml._fml_dict_new
-
-        if self._is_iv:
-            fxst_fml.get_new_fml_dict(iv=True)  # fxst_fml._fml_dict_new
-            self._fml_dict_iv = fxst_fml._fml_dict_new_iv
-        else:
-            self._fml_dict_iv = None
-
+        self._method = estimation
+        self._is_iv = _is_iv
+        self._fml_dict = fxst_fml._fml_dict
+        if _is_iv:
+            self._fml_dict_iv = fxst_fml._fml_dict_iv
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
-
-        # get all fixed effects combinations
         self._fixef_keys = list(self._fml_dict.keys())
 
-        # currently no fsplit allowed
-        fsplit = None
+        # check for multiple estimation
+        self._is_multiple_estimation()
+        if self._is_fixef_multi and _is_iv:
+            raise MultiEstNotSupportedError(
+                "Multiple Estimations is currently not supported with IV."
+                "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
+            )
 
-        (
-            self._splitvar,
-            _,
-            self._estimate_split_model,
-            self._estimate_full_model,
-        ) = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
 
     def _estimate_all_models(
         self,
@@ -158,197 +152,167 @@ class Fixest:
         """
         # pdb.set_trace()
 
-        _estimate_full_model = self._estimate_full_model
-        # _estimate_split_model = self._estimate_split_model
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
-        # _ivars = self._ivars
-        # _drop_ref = self._drop_ref
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
-        # _icovars = self._icovars
 
-        if _estimate_full_model:
-            for _, fval in enumerate(fixef_keys):
-                dict2fe = _fml_dict.get(fval)
+        for _, fval in enumerate(fixef_keys):
+            dict2fe = _fml_dict.get(fval)
 
-                # dictionary to cache demeaned data with index: na_index_str,
-                # only relevant for `.feols()`
-                lookup_demeaned_data = dict()
+            # dictionary to cache demeaned data with index: na_index_str,
+            # only relevant for `.feols()`
+            lookup_demeaned_data = dict()
 
-                # loop over both dictfe and dictfe_iv (if the latter is not None)
-                for depvar in dict2fe.keys():
-                    for _, fml_linear in enumerate(dict2fe.get(depvar)):
-                        if isinstance(fml_linear, list):
-                            fml_linear = fml_linear[0]
+            # loop over both dictfe and dictfe_iv (if the latter is not None)
+            for depvar in dict2fe.keys():
+                for _, fml_linear in enumerate(dict2fe.get(depvar)):
 
-                        covar = fml_linear.split("~")[1]
+                    covar = fml_linear.split("~")[1]
+                    endogvars, instruments = None, None
+                    if _is_iv:
+                        endogvars, instruments = _get_endogvars_instruments(fml_dict_iv = self._fml_dict_iv, fval = fval, depvar = depvar, covar = covar)
+                    # stitch formula back together
+                    fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
-                        if _is_iv:
-                            dict2fe_iv = self._fml_dict_iv.get(fval)
-                            instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
-                            endogvar_list = list(
-                                set(covar.split("+")) - set(instruments2.split("+"))
-                            )
-                            instrument_list = list(
-                                set(instruments2.split("+")) - set(covar.split("+"))
-                            )
-                            endogvars = endogvar_list[0]
-                            instruments = "+".join(instrument_list)
-                        else:
-                            endogvars = None
-                            instruments = None
+                    # get Y, X, Z, fe, NA indices for model
+                    (
+                        Y,
+                        X,
+                        fe,
+                        endogvar,
+                        Z,
+                        na_index,
+                        na_index_str,
+                        _icovars,
+                    ) = model_matrix_fixest(fml=fml, data=_data)
 
-                        fml = get_fml(depvar, covar, fval, endogvars, instruments)
+                    weights = np.ones((Y.shape[0], 1))
 
-                        # get Y, X, Z, fe, NA indices for model
-                        (
+                    coef_names = X.columns.tolist()
+
+                    if _method == "feols":
+                        # demean Y, X, Z, if not already done in previous estimation
+
+                        Yd, Xd = demean_model(
                             Y,
                             X,
                             fe,
-                            endogvar,
-                            Z,
-                            na_index,
+                            weights,
+                            lookup_demeaned_data,
                             na_index_str,
-                            _icovars,
-                        ) = model_matrix_fixest(fml=fml, data=self._data)
+                            self._drop_singletons,
+                        )
 
-                        weights = np.ones((Y.shape[0], 1))
-
-                        y_names = Y.columns.tolist()
-                        x_names = X.columns.tolist()
                         if _is_iv:
-                            z_names = Z.columns.tolist()
-                            endogvar_names = endogvar.columns.tolist()
-                        else:
-                            z_names = None
-                            endogvar_names = None
-
-                        if _method == "feols":
-                            # demean Y, X, Z, if not already done in previous estimation
-
-                            Yd, Xd = demean_model(
-                                Y,
-                                X,
+                            endogvard, Zd = demean_model(
+                                endogvar,
+                                Z,
                                 fe,
                                 weights,
                                 lookup_demeaned_data,
                                 na_index_str,
                                 self._drop_singletons,
                             )
+                        else:
+                            endogvard, Zd = None, None
 
-                            if _is_iv:
-                                endogvard, Zd = demean_model(
-                                    endogvar,
-                                    Z,
-                                    fe,
-                                    weights,
-                                    lookup_demeaned_data,
-                                    na_index_str,
-                                    self._drop_singletons,
-                                )
-                            else:
-                                endogvard, Zd = None, None
+                        if not _is_iv:
+                            Zd = Xd
 
-                            if not _is_iv:
-                                Zd = Xd
+                        Yd, Xd, Zd, endogvard = [
+                            x.to_numpy() if x is not None else x
+                            for x in [Yd, Xd, Zd, endogvard]
+                        ]
 
-                            Yd, Xd, Zd, endogvard = [
-                                x.to_numpy() if x is not None else x
-                                for x in [Yd, Xd, Zd, endogvard]
-                            ]
+                        has_weights = False
+                        if has_weights:
+                            w = np.sqrt(weights.to_numpy())
+                            Yd *= np.sqrt(w)
+                            Zd *= np.sqrt(w)
+                            Xd *= np.sqrt(w)
 
-                            has_weights = False
-                            if has_weights:
-                                w = np.sqrt(weights.to_numpy())
-                                Yd *= np.sqrt(w)
-                                Zd *= np.sqrt(w)
-                                Xd *= np.sqrt(w)
+                        # check for multicollinearity
+                        _multicollinearity_checks(Xd)
 
-                            # check for multicollinearity
-                            _multicollinearity_checks(Xd, Zd)
-
-                            if _is_iv:
-                                FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
-                            else:
-                                # initiate OLS class
-                                FIT = Feols(Y=Yd, X=Xd, weights=weights)
-
-                            FIT.get_fit()
-
-                        elif _method == "fepois":
-                            # check for separation and drop separated variables
-                            # Y, X, fe, na_index = self._separation()
-
-                            Y, X = [x.to_numpy() for x in [Y, X]]
-                            N = X.shape[0]
-
-                            if fe is not None:
-                                fe = fe.to_numpy()
-                                if fe.ndim == 1:
-                                    fe = fe.reshape((N, 1))
-
-                            # check for multicollinearity
-                            _multicollinearity_checks(X, X)
-
+                        if _is_iv:
+                            _multicollinearity_checks(Zd)
+                            FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
+                        else:
                             # initiate OLS class
-                            FIT = Fepois(
-                                Y=Y,
-                                X=X,
-                                fe=fe,
-                                weights=weights,
-                                drop_singletons=_drop_singletons,
-                                maxiter=iwls_maxiter,
-                                tol=iwls_tol,
-                            )
+                            FIT = Feols(Y=Yd, X=Xd, weights=weights)
 
-                            FIT._is_iv = False
-                            FIT.get_fit()
+                        FIT.get_fit()
 
-                            FIT.na_index = na_index
-                            FIT.n_separation_na = None
-                            if FIT.separation_na:
-                                FIT.na_index += FIT.separation_na
-                                FIT.n_separation_na = len(FIT.separation_na)
+                    elif _method == "fepois":
+                        # check for separation and drop separated variables
+                        # Y, X, fe, na_index = self._separation()
 
-                        else:
-                            raise ValueError(
-                                "Estimation method not supported. Please use 'feols' or 'fepois'."
-                            )
+                        Y, X = [x.to_numpy() for x in [Y, X]]
+                        N = X.shape[0]
 
-                        # some bookkeeping
-                        FIT._fml = fml
-                        FIT._ssc_dict = _ssc_dict
-                        # FIT._na_index = na_index
-                        # data never makes it to Feols() class. needed for ex post
-                        # clustered vcov estimation when clustervar not in model params
-                        FIT._data = _data.iloc[~_data.index.isin(na_index)]
-                        if fval != "0":
-                            FIT._has_fixef = True
-                            FIT._fixef = fval
-                        else:
-                            FIT._has_fixef = False
-                            FIT._fixef = None
-                        # FEOLS.split_log = x
+                        if fe is not None:
+                            fe = fe.to_numpy()
+                            if fe.ndim == 1:
+                                fe = fe.reshape((N, 1))
 
-                        # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type)
-                        FIT.get_inference()
+                        # check for multicollinearity
+                        _multicollinearity_checks(X)
 
-                        # other regression stats
-                        FIT.get_performance()
+                        # initiate OLS class
+                        FIT = Fepois(
+                            Y=Y,
+                            X=X,
+                            fe=fe,
+                            weights=weights,
+                            drop_singletons=_drop_singletons,
+                            maxiter=iwls_maxiter,
+                            tol=iwls_tol,
+                        )
 
-                        FIT._coefnames = x_names
-                        if _icovars is not None:
-                            FIT._icovars = _icovars
-                        else:
-                            FIT._icovars = None
+                        FIT.get_fit()
 
-                        # store fitted model
-                        self.all_fitted_models[fml] = FIT
+                        FIT.na_index = na_index
+                        FIT.n_separation_na = None
+                        if FIT.separation_na:
+                            FIT.na_index += FIT.separation_na
+                            FIT.n_separation_na = len(FIT.separation_na)
+
+                    else:
+                        raise ValueError(
+                            "Estimation method not supported. Please use 'feols' or 'fepois'."
+                        )
+
+                    # some bookkeeping
+                    FIT._fml = fml
+                    FIT._data = _data.iloc[~_data.index.isin(na_index)]
+                    FIT._ssc_dict = _ssc_dict
+                    if fval != "0":
+                        FIT._has_fixef = True
+                        FIT._fixef = fval
+                    else:
+                        FIT._has_fixef = False
+                        FIT._fixef = None
+                    # FEOLS.split_log = x
+
+                    # inference
+                    vcov_type = _get_vcov_type(vcov, fval)
+                    FIT.vcov(vcov=vcov_type)
+                    FIT.get_inference()
+
+                    # other regression stats
+                    FIT.get_performance()
+
+                    FIT._coefnames = coef_names
+                    if _icovars is not None:
+                        FIT._icovars = _icovars
+                    else:
+                        FIT._icovars = None
+
+                    # store fitted model
+                    self.all_fitted_models[fml] = FIT
 
     def _is_multiple_estimation(self) -> None:
         """
@@ -639,102 +603,6 @@ class Fixest:
         return model
 
 
-def _coefplot(
-    models: List,
-    df: pd.DataFrame,
-    figsize: Tuple[int, int],
-    alpha: float,
-    yintercept: Optional[int] = None,
-    xintercept: Optional[int] = None,
-    is_iplot: bool = False,
-    rotate_xticks: float = 0,
-) -> None:
-    """
-    Plot model coefficients with confidence intervals.
-    Args:
-        models (list): A list of fitted models indices.
-        figsize (tuple): The size of the figure.
-        alpha (float): The significance level for the confidence intervals.
-        yintercept (int or None): The value at which to draw a horizontal line on the plot.
-        xintercept (int or None): The value at which to draw a vertical line on the plot.
-        df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
-        rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-    Returns:
-    None
-    """
-
-    if len(models) > 1:
-        fig, ax = plt.subplots(
-            len(models), gridspec_kw={"hspace": 0.5}, figsize=figsize
-        )
-
-        for x, model in enumerate(models):
-            df_model = df.reset_index().set_index("fml").xs(model)
-            coef = df_model["Estimate"]
-            conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            coefnames = df_model["Coefficient"].values.tolist()
-
-            # could be moved out of the for loop, as the same ivars for all
-            # models.
-
-            if is_iplot == True:
-                fig.suptitle("iplot")
-                coefnames = [
-                    (i)
-                    for string in coefnames
-                    for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
-                ]
-
-            ax[x].scatter(coefnames, coef, color="b", alpha=0.8)
-            ax[x].scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
-            ax[x].scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
-            ax[x].vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
-            if yintercept is not None:
-                ax[x].axhline(yintercept, color="red", linestyle="--", alpha=0.5)
-            if xintercept is not None:
-                ax[x].axvline(xintercept, color="red", linestyle="--", alpha=0.5)
-            ax[x].set_ylabel("Coefficients")
-            ax[x].set_title(model)
-            ax[x].tick_params(axis="x", rotation=rotate_xticks)
-
-    else:
-        fig, ax = plt.subplots(figsize=figsize)
-
-        model = models[0]
-
-        df_model = df.reset_index().set_index("fml").xs(model)
-
-        coef = df_model["Estimate"].values
-        conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        coefnames = df_model["Coefficient"].values.tolist()
-
-        if is_iplot == True:
-            fig.suptitle("iplot")
-            coefnames = [
-                (i)
-                for string in coefnames
-                for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
-            ]
-
-        ax.scatter(coefnames, coef, color="b", alpha=0.8)
-        ax.scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
-        ax.scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
-        ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
-        if yintercept is not None:
-            ax.axhline(yintercept, color="red", linestyle="--", alpha=0.5)
-        if xintercept is not None:
-            ax.axvline(xintercept, color="red", linestyle="--", alpha=0.5)
-        ax.set_ylabel("Coefficients")
-        ax.set_title(model)
-        ax.tick_params(axis="x", rotation=rotate_xticks)
-
-        plt.show()
-        plt.close()
-
-
 def _prepare_split_estimation(split, fsplit, data, fml_dict):
     """
     Cleans the input for the split estimation.
@@ -831,22 +699,14 @@ def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
     return fml.replace(" ", "")
 
 
-def _multicollinearity_checks(X, Z):
+def _multicollinearity_checks(X):
     """
     Checks for multicollinearity in the design matrices X and Z.
     Args:
         X (numpy.ndarray): The design matrix X.
-        Z (numpy.ndarray): The design matrix (with instruments) Z.
     """
 
     if np.linalg.matrix_rank(X) < min(X.shape):
-        raise MatrixNotFullRankError(
-            """
-            The design Matrix X does not have full rank. The model is skipped.
-            """
-        )
-
-    if np.linalg.matrix_rank(Z) < min(Z.shape):
         raise MatrixNotFullRankError(
             """
             The design Matrix X does not have full rank. The model is skipped.
@@ -908,3 +768,15 @@ def _find_untransformed_depvar(transformed_depvar):
         return match.group(1)
     else:
         return transformed_depvar
+
+
+def _get_endogvars_instruments(fml_dict_iv, fval, depvar, covar):
+
+    dict2fe_iv = fml_dict_iv.get(fval)
+    instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
+    endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
+    instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
+    endogvars = endogvar_list[0]
+    instruments = "+".join(instrument_list)
+
+    return endogvars, instruments

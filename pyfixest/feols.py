@@ -622,7 +622,7 @@ class Feols:
 
         res = {
             "param": param,
-            "statistic": np.round(boot.t_stat, digits),
+            "statistic": np.round(boot.t_stat[0], digits),
             "pvalue": np.round(boot.pvalue, digits),
             "bootstrap_type": bootstrap_type,
             "impose_null": impose_null,
