@@ -604,15 +604,15 @@ def get_fml(
         str: The formula string for the regression.
     """
 
-    fml = depvar + " ~ " + covar
+    fml = f"{depvar} ~ {covar}"
 
     if endogvars is not None:
-        fml_iv = "|" + endogvars + "~" + instruments
+        fml_iv = f"| {endogvars} ~ {instruments}"
     else:
         fml_iv = None
 
     if fval != "0":
-        fml_fval = "|" + fval
+        fml_fval = f"| {fval}"
     else:
         fml_fval = None
 

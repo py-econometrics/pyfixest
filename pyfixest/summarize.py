@@ -48,7 +48,7 @@ def summary(models, digits: int = 3) -> None:
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
         print("")
-        print(df.to_markdown(floatfmt="." + str(digits) + "f"))
+        print(df.to_markdown(floatfmt= f". {str(digits)}f"))
         print("---")
         if fxst._method == "feols":
             if not fxst._is_iv:

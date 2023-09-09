@@ -448,14 +448,14 @@ def _py_fml_to_r_fml(py_fml):
 
     fml_split = fml2[0].split("~")
     depvars = fml_split[0]
-    depvars = "c(" + ",".join(depvars.split("+")) + ")"
+    depvars = f"c({','.join(depvars.split('+'))})"
 
     if len(fml2) == 1:
-        return depvars + "~" + fml_split[1]
+        return f"{depvars}~{fml_split[1]}"
     elif len(fml2) == 2:
-        return depvars + "~" + fml_split[1] + "|" + fml2[1]
+        return f"{depvars}~{fml_split[1]}|{fml2[1]}"
     else:
-        return depvars + "~" + fml_split[1] + "|" + "|".join(fml2[1:])
+        return f"{depvars}~fml_split{1} | {'|'.join(fml2[1:])}"
 
 
 def _c_to_as_factor(py_fml):

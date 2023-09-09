@@ -684,7 +684,7 @@ class Feols:
         for x in fixef_vars.split("+"):
             df[x] = pd.Categorical(df[x])
 
-        fml_linear = depvars + "~" + covars
+        fml_linear = f"{depvars} ~ {covars}"
         Y, X = model_matrix(fml_linear, df)
         X = X.drop("Intercept", axis=1)
         Y = Y.to_numpy().flatten().astype(np.float64)
