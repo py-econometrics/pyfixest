@@ -96,7 +96,7 @@ class Fepois(Feols):
         _fe = self.fe
         _N = self._N
         _drop_singletons = self._drop_singletons
-        _convergence = self.convergence
+        _convergence = self.convergence # False
         _maxiter = self.maxiter
         _iwls_maxiter = 25
         _tol = self.tol
@@ -227,6 +227,10 @@ class Fepois(Feols):
 
         self._scores = self._u_hat[:, None] * self._weights * X_resid
         self._hessian = XWX
+
+        if _convergence:
+            self._convergence = True
+
 
     def predict(
         self, data: Union[None, pd.DataFrame] = None, type="link"

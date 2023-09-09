@@ -30,10 +30,9 @@ import pyfixest as pf
 from pyfixest.utils import get_poisson_data
 
 pdata = get_poisson_data()
-fixest = pf.Fixest(data = pdata)
-fixest.fepois("Y~X1 | X2+X3+X4", vcov = {'CRV1':'X4'})
+fitpois = fepois("Y~X1 | X2+X3+X4", vcov = {'CRV1':'X4'})
 
-fixest.summary()
+fitpois.summary()
 # Model:  Poisson
 # Dep. var.:  Y
 # Fixed effects:  X2+X3+X4
@@ -57,10 +56,9 @@ from pyfixest.utils import get_data
 
 data = get_data()
 
-fixest = pf.Fixest(data = data)
 # OLS Estimation
-fixest.feols("Y~X1 | csw0(f1, f2)", vcov = {'CRV1':'group_id'})
-fixest.summary()
+fit = feols("Y~X1 | csw0(f1, f2)", vcov = {'CRV1':'group_id'})
+fit.summary()
 # ###
 #
 # Model:  OLS
@@ -105,9 +103,8 @@ fixest.summary()
 `PyFixest` also supports IV (Instrumental Variable) Estimation:
 
 ```python
-fixest = pf.Fixest(data = data)
-fixest.feols("Y~ 1 | f2 + f3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
-fixest.summary()
+fit_iv = feols("Y~ 1 | f2 + f3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
+fit_iv.summary()
 # ###
 #
 # Model:  IV
@@ -125,7 +122,7 @@ fixest.summary()
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
-fixest.vcov("hetero").tidy()
+fit_iv.vcov("hetero").tidy()
 # ###
 #
 # Model:  IV

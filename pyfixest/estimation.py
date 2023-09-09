@@ -10,8 +10,8 @@ import pandas as pd
 
 
 def feols(
-    data: pd.DataFrame,
     fml: str,
+    data: pd.DataFrame,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -101,20 +101,10 @@ def feols(
     """
 
     fixest = Fixest(data=data)
-
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys)
-
-    # create self._is_fixef_multi flag
-    fixest._is_multiple_estimation()
-
-    if fixest._is_fixef_multi and fixest._is_iv:
-        raise MultiEstNotSupportedError(
-            "Multiple Estimations is currently not supported with IV."
-            "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
-        )
 
     if fixest._is_fixef_multi:
         return fixest
@@ -214,10 +204,8 @@ def fepois(
 
     fixest._estimate_all_models(vcov, fixest._fixef_keys)
 
-    # create self._is_fixef_multi flag
-    fixest._is_multiple_estimation()
-
     if fixest._is_fixef_multi:
         return fixest
     else:
         return fixest.fetch_model(0)
+

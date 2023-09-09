@@ -13,13 +13,6 @@ class FixestFormulaParser:
     """
     A class for deparsing formulas with multiple estimation syntax.
 
-    Attributes:
-        depvars (list): A list of dependent variables in the formula.
-        covars (list): A list of covariates in the formula.
-        fevars (list): A list of fixed effect variables in the formula.
-        covars_fml (str): A string representation of the covariates in the formula.
-        fevars_fml (str): A string representation of the fixed effect variables in the formula.
-
     Methods:
         __init__(self, fml): Constructor method that initializes the object with a given formula.
         get_fml_dict(self): Returns a dictionary of all fevars & formula without fevars.
@@ -32,7 +25,7 @@ class FixestFormulaParser:
         Constructor method that initializes the object with a given formula.
 
         Args:
-        fml (str): A two-formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2".
+        fml (str): A one-to three sided formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
 
         Returns:
             None
@@ -142,7 +135,7 @@ class FixestFormulaParser:
         else:
             self.covars_first_stage_fml = None
 
-    def get_new_fml_dict(self, iv=False):
+    def get_fml_dict(self, iv=False):
         """
         Get a nested dictionary of all formulas.
 
@@ -174,9 +167,9 @@ class FixestFormulaParser:
             fml_dict[fevar] = res
 
         if iv:
-            self._fml_dict_new_iv = fml_dict
+            self._fml_dict_iv = fml_dict
         else:
-            self._fml_dict_new = fml_dict
+            self._fml_dict = fml_dict
 
 
 def _unpack_fml(x):
@@ -236,12 +229,7 @@ def _unpack_fml(x):
 
         # If there's no switch, just add the variable to the list
         if sw_type is None:
-            if _is_varying_slopes(var):
-                varlist, sw_type = _transform_varying_slopes(var)
-                for x in varlist.split("+"):
-                    res_s["constant"].append(x)
-            else:
-                res_s["constant"].append(varlist)
+            res_s["constant"].append(varlist)
 
         # If there'_ a switch, unpack it and add it to the list
         else:
@@ -435,20 +423,3 @@ def _check_duplicate_key(my_dict, key):
             )
         else:
             None
-
-
-def _is_varying_slopes(x):
-    pattern = r"\[.*\]"
-    match = re.search(pattern, x)
-    if match:
-        return True
-    else:
-        return False
-
-
-def _transform_varying_slopes(x):
-    parts = x.split("[")
-    a = parts[0]
-    b = parts[1].replace("]", "")
-    transformed_string = f"{a}/{b}"
-    return transformed_string, "varying_slopes"

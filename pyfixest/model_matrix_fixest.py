@@ -148,6 +148,7 @@ def model_matrix_fixest(
         na_index = na_index_stage2
 
     # drop variables before collecting variable names
+
     if _ivars is not None:
         if _drop_ref is not None:
             X = X.drop(_drop_ref, axis=1)
@@ -250,7 +251,7 @@ def _clean_ivars(ivars, data):
         if list(ivars.keys())[0] is not None:
             ref = list(ivars.keys())[0]
             ivars = ivars[ref]
-            drop_ref = "C(" + ivars[0] + "[T." + ref + "]" + "):" + ivars[1]
+            drop_ref = "C(" + ivars[0] + ")[T." + ref + "]" + ":" + ivars[1]
         else:
             ivars = ivars[None]
             drop_ref = None
