@@ -31,9 +31,8 @@ def test_internally(data):
     Currently only for OLS.
     """
 
-    pyfixest = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
+    mod = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
 
-    mod = pyfixest.fetch_model("0")
     mod.fixef()
     original_prediction = mod.predict()
     updated_prediction = mod.predict(data=mod._data)
@@ -58,13 +57,11 @@ def test_vs_fixest(data, fml):
     Test predict and resid methods against fixest.
     """
 
-    pyfixest = feols(fml=fml, data=data, vcov="HC1")
-    pyfixest2 = fepois(fml=fml, data=data, vcov="HC1")
+    feols_mod = feols(fml=fml, data=data, vcov="HC1")
+    fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
 
-    feols_mod = pyfixest.fetch_model("0")
     feols_mod.fixef()
 
-    fepois_mod = pyfixest2.fetch_model("0")
     # fepois_mod.fixef()
 
     # fixest estimation

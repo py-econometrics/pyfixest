@@ -15,6 +15,7 @@ from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError
+from pyfixest.visualize import iplot, coefplot
 
 
 class Fixest:
@@ -127,7 +128,11 @@ class Fixest:
         ) = _prepare_split_estimation(self._split, fsplit, self._data, self._fml_dict)
 
     def _estimate_all_models(
-        self, vcov: Union[str, Dict[str, str]], fixef_keys: List[str], iwls_maxiter: int = 25, iwls_tol: float = 1e-08
+        self,
+        vcov: Union[str, Dict[str, str]],
+        fixef_keys: List[str],
+        iwls_maxiter: int = 25,
+        iwls_tol: float = 1e-08,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -330,8 +335,7 @@ class Fixest:
 
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
-                        FIT._vcov_log = vcov_type
-                        FIT.get_vcov(vcov=vcov_type)
+                        FIT.vcov(vcov=vcov_type)
                         FIT.get_inference()
 
                         # other regression stats
@@ -388,9 +392,9 @@ class Fixest:
 
         for model in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[model]
-            fxst._vcov_log = vcov
+            fxst._vcov_type = vcov
 
-            fxst.get_vcov(vcov=vcov)
+            fxst.vcov(vcov=vcov)
             fxst.get_inference()
 
         return self
@@ -424,65 +428,13 @@ class Fixest:
 
         return res
 
+    def summary(self, digits: int = 3) -> None:
+        for x in list(self.all_fitted_models.keys()):
+            fxst = self.all_fitted_models[x]
+            fxst.summary(digits=digits)
+
     def etable(self, digits: int = 3) -> None:
         return self.tidy().T.round(digits)
-
-    def summary(self, digits: int = 3) -> None:
-        """
-        Prints a summary of the feols() estimation results for each estimated model.
-
-        For each model, the method prints a header indicating the fixed-effects and the
-        dependent variable, followed by a table of coefficient estimates with standard
-        errors, t-values, and p-values.
-
-        Args:
-            digits (int, optional): The number of decimal places to round the summary statistics to. Default is 3.
-
-        Returns:
-            None
-        """
-
-        for x in list(self.all_fitted_models.keys()):
-            split = x.split("|")
-            if len(split) > 1:
-                fe = split[1]
-            else:
-                fe = None
-            depvar = split[0].split("~")[0]
-            fxst = self.all_fitted_models[x]
-
-            df = fxst.tidy().round(digits)
-
-            if fxst._method == "feols":
-                if fxst._is_iv:
-                    estimation_method = "IV"
-                else:
-                    estimation_method = "OLS"
-            else:
-                estimation_method = "Poisson"
-
-            print("###")
-            print("")
-            print("Model: ", estimation_method)
-            print("Dep. var.: ", depvar)
-            if fe is not None:
-                print("Fixed effects: ", fe)
-            # if fxst.split_log is not None:
-            #    print('Split. var: ', self._split + ":" + fxst.split_log)
-            print("Inference: ", fxst._vcov_log)
-            print("Observations: ", fxst._N)
-            print("")
-            print(df.to_markdown(floatfmt="." + str(digits) + "f"))
-            print("---")
-            if fxst._method == "feols":
-                if not fxst._is_iv:
-                    print(
-                        f"RMSE: {np.round(fxst._rmse, digits)}  Adj. R2: {np.round(fxst._adj_r2, digits)}  Adj. R2 Within: {np.round(fxst._adj_r2_within, digits)}"
-                    )
-            elif fxst._method == "fepois":
-                print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
-            else:
-                pass
 
     def coef(self) -> pd.DataFrame:
         """
@@ -554,31 +506,20 @@ class Fixest:
             None
         """
 
-        for x, val in enumerate(self.all_fitted_models):
-            fxst = self.all_fitted_models[val]
-            if fxst._icovars is None:
-                raise ValueError(
-                    f"The {x} th estimated model did not have ivars / 'i()' model syntax."
-                    "In consequence, the '.iplot()' method is not supported."
-                )
+        models = self.all_fitted_models
+        # get a list, not a dict, as iplot only works with lists
+        models = [models[x] for x in list(self.all_fitted_models.keys())]
 
-        if "Intercept" in ivars:
-            ivars.remove("Intercept")
-
-        df = self.tidy().reset_index()
-
-        df = df[df.Coefficient.isin(ivars)]
-        models = df.fml.unique()
-
-        _coefplot(
+        plot = iplot(
             models=models,
-            figsize=figsize,
             alpha=alpha,
+            figsize=figsize,
             yintercept=yintercept,
             xintercept=xintercept,
-            df=df,
-            is_iplot=True,
+            rotate_xticks=rotate_xticks,
         )
+
+        return plot
 
     def coefplot(
         self,
@@ -601,17 +542,16 @@ class Fixest:
             None
         """
 
-        df = self.tidy().reset_index()
-        models = df.fml.unique()
+        # get a list, not a dict, as iplot only works with lists
+        models = self.all_fitted_models
+        models = [models[x] for x in list(self.all_fitted_models.keys())]
 
-        _coefplot(
+        coefplot(
             models=models,
             figsize=figsize,
             alpha=alpha,
             yintercept=yintercept,
             xintercept=None,
-            df=df,
-            is_iplot=False,
             rotate_xticks=rotate_xticks,
         )
 
@@ -653,12 +593,7 @@ class Fixest:
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
 
-            if hasattr(fxst, "clustervar"):
-                cluster = fxst.clustervar
-            else:
-                cluster = None
-
-            boot_res = fxst.get_wildboottest(
+            boot_res = fxst.wildboottest(
                 B,
                 cluster,
                 param,

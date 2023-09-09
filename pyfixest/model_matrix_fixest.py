@@ -158,7 +158,9 @@ def model_matrix_fixest(
     if _ivars is not None:
         x_names = X.columns.tolist()
         _icovars = [
-            s for s in x_names if s.startswith(_ivars[0]) and s.endswith(_ivars[1])
+            s
+            for s in x_names
+            if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
         ]
     else:
         _icovars = None
