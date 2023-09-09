@@ -287,7 +287,8 @@ class Fixest:
                     FIT.get_inference()
 
                     # other regression stats
-                    FIT.get_performance()
+                    if _method == "feols":
+                        FIT.get_performance()
 
                     FIT._coefnames = coef_names
                     if _icovars is not None:
