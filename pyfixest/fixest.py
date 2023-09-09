@@ -105,8 +105,8 @@ class Fixest:
 
     def _estimate_all_models(
         self,
-        vcov: Union[str, Dict[str, str]],
-        fixef_keys: List[str],
+        vcov: Union[str, Dict[str, str], None],
+        fixef_keys: Union[List[str], None],
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
     ) -> None:
@@ -581,18 +581,20 @@ class Fixest:
         return model
 
 
-def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
+
+def get_fml(depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None) -> str:
     """
-    Stiches together the formula string for the regression.
+    Stitches together the formula string for the regression.
 
     Args:
         depvar (str): The dependent variable.
         covar (str): The covariates. E.g. "X1+X2+X3"
         fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-        endogvars (str): The endogenous variables.
-        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+        endogvars (str, optional): The endogenous variables.
+        instruments (str, optional): The instruments. E.g. "Z1+Z2+Z3"
+
     Returns:
-        fml (str): The formula string for the regression.
+        str: The formula string for the regression.
     """
 
     fml = depvar + " ~ " + covar
@@ -617,19 +619,17 @@ def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
 
     return fml
 
-    if fval != "0":
-        fml = depvar + " ~ " + covar + " | " + fval
-    else:
-        fml = depvar + " ~ " + covar
-
-    return fml.replace(" ", "")
 
 
-def _multicollinearity_checks(X):
+def _multicollinearity_checks(X:np.ndarray) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
+
     Args:
         X (numpy.ndarray): The design matrix X.
+
+    Returns:
+        None
     """
 
     if np.linalg.matrix_rank(X) < min(X.shape):
@@ -665,7 +665,7 @@ def _get_vcov_type(vcov, fval):
     return vcov_type
 
 
-def _drop_singletons(fixef_rm):
+def _drop_singletons(fixef_rm: bool) -> bool:
     """
     Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
     Args:
@@ -696,7 +696,20 @@ def _find_untransformed_depvar(transformed_depvar):
         return transformed_depvar
 
 
-def _get_endogvars_instruments(fml_dict_iv, fval, depvar, covar):
+def _get_endogvars_instruments(fml_dict_iv: dict, fval:str, depvar:str, covar:str) -> tuple:
+
+    """
+    Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
+
+    Args:
+        fml_dict_iv (dict): The dictionary of formulas for the IV estimation.
+        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+        depvar (str): The dependent variable.
+        covar (str): The covariates. E.g. "X1+X2+X3"
+    Returns:
+        endogvars (str): The endogenous variables.
+        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+    """
 
     dict2fe_iv = fml_dict_iv.get(fval)
     instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
