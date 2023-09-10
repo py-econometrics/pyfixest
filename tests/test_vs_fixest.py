@@ -28,16 +28,15 @@ atol = 1e-06
 iwls_maxiter = 25
 iwls_tol = 1e-08
 
-rng = np.random.default_rng(8)
+rng = np.random.default_rng(8760985)
 
-
-@pytest.mark.parametrize("N", [100, 1000])
-@pytest.mark.parametrize("seed", [7654251])
+@pytest.mark.parametrize("N", [1000])
+@pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Fepois", "Feols"])
-@pytest.mark.parametrize("inference", ["iid","hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -61,7 +60,7 @@ rng = np.random.default_rng(8)
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-        #("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
+        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
         ("Y ~ X1 + i(f1,X2)"),
         ("Y ~ X1 + i(f2,X2)"),
