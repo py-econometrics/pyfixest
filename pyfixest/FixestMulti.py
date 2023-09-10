@@ -17,10 +17,11 @@ from pyfixest.visualize import iplot, coefplot
 from matplotlib.figure import Figure
 
 
-class Fixest:
+class FixestMulti:
 
     """
-    # Fixest
+    # FixestMulti:
+
     A class to estimate multiple regression models with fixed effects.
     """
 

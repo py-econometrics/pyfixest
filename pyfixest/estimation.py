@@ -1,6 +1,6 @@
 from typing import Optional, Union, Dict
 from pyfixest.utils import ssc
-from pyfixest.fixest import Fixest
+from pyfixest.FixestMulti import FixestMulti
 from pyfixest.fepois import Fepois
 from pyfixest.feols import Feols
 import pandas as pd
@@ -12,7 +12,7 @@ def feols(
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
-) -> Union[Feols, Fixest]:
+) -> Union[Feols, FixestMulti]:
     """
 
     # feols
@@ -61,7 +61,7 @@ def feols(
         fixef_rm (str): A string to specify whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
 
     Returns:
-        An instance of the `Feols` class or an instance of class `Fixest` if multiple models are specified via the `fml` argument.
+        An instance of the `Feols` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
 
     Examples:
         >>> from pyfixest.estimation import feols
@@ -117,7 +117,7 @@ def feols(
 
     """
 
-    fixest = Fixest(data=data)
+    fixest = FixestMulti(data=data)
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
     # demean all models: based on fixed effects x split x missing value combinations
@@ -137,7 +137,7 @@ def fepois(
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-) -> Union[Fepois, Fixest]:
+) -> Union[Fepois, FixestMulti]:
     """
     # fepois
 
@@ -185,7 +185,7 @@ def fepois(
         iwls_maxiter (Optional[float]): maximum number of iterations for IWLS convergence. 25 by default.
 
     Returns:
-        An instance of the `Fepois` class or an instance of class `Fixest` if multiple models are specified via the `fml` argument.
+        An instance of the `Fepois` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
 
     Examples:
         >>> from pyfixest.estimation import fepois
@@ -229,7 +229,7 @@ def fepois(
 
     """
 
-    fixest = Fixest(data=data)
+    fixest = FixestMulti(data=data)
 
     fixest._prepare_estimation(
         estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm
