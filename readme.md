@@ -26,112 +26,122 @@ You can install the release version from `PyPi` by running `pip install pyfixest
 `PyFixest` now supports Poisson regression!
 
 ```python
-import pyfixest as pf
-from pyfixest.utils import get_poisson_data
+from pyfixest.estimation import fepois
+from pyfixest.utils import get_data
 
-pdata = get_poisson_data()
-fitpois = fepois("Y~X1 | X2+X3+X4", vcov = {'CRV1':'X4'})
+pdata = get_data(model = "Fepois")
+fitpois = fepois("Y~X1 | f1 + f2", vcov = {'CRV1':'group_id'}, data = pdata)
 
 fitpois.summary()
+
+# Model:  Y~X1|f1+f2
+# ###
+#
 # Model:  Poisson
 # Dep. var.:  Y
-# Fixed effects:  X2+X3+X4
-# Inference:  {'CRV1': 'X4'}
-# Observations:  1000
-
+# Fixed effects:  f1+f2
+# Inference:  CRV1
+# Observations:  997
+#
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |      0.874 |        0.037 |    23.780 |      0.000 |   0.802 |    0.946 |
+# | X1            |     -0.019 |        0.050 |    -0.370 |      0.711 |  -0.117 |    0.080 |
 # ---
-# Deviance: 481157.824
+# Deviance: 1067.853
 ```
 
 
 ## Quickstart
 
 ```python
-import pyfixest as pf
-import numpy as np
+from pyfixest.estimation import feols
 from pyfixest.utils import get_data
 
 data = get_data()
 
 # OLS Estimation
-fit = feols("Y~X1 | csw0(f1, f2)", vcov = {'CRV1':'group_id'})
+fit = feols("Y~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_id'})
 fit.summary()
+
 # ###
 #
 # Model:  OLS
 # Dep. var.:  Y
-# Inference:  {'CRV1': 'group_id'}
+# Inference:  CRV1
 # Observations:  998
 #
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | Intercept     |      2.204 |        0.054 |    40.495 |      0.000 |   2.096 |    2.312 |
-# | X1            |      0.351 |        0.063 |     5.595 |      0.000 |   0.227 |    0.476 |
+# | Intercept     |      2.206 |        0.078 |    28.304 |      0.000 |   2.043 |    2.370 |
+# | X1            |      0.358 |        0.051 |     6.962 |      0.000 |   0.250 |    0.466 |
 # ---
-# RMSE: 1.751  Adj. R2: 0.037  Adj. R2 Within: 0.037
+# RMSE: 1.765  Adj. R2: 0.024  Adj. R2 Within: 0.024
 # ###
 #
 # Model:  OLS
 # Dep. var.:  Y
 # Fixed effects:  f1
-# Inference:  {'CRV1': 'group_id'}
+# Inference:  CRV1
 # Observations:  997
 #
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |      0.326 |        0.048 |     6.756 |      0.000 |   0.230 |    0.422 |
+# | X1            |      0.411 |        0.040 |    10.188 |      0.000 |   0.326 |    0.495 |
 # ---
-# RMSE: 1.407  Adj. R2: 0.049  Adj. R2 Within: 0.049
+# RMSE: 1.421  Adj. R2: 0.048  Adj. R2 Within: 0.048
 # ###
 #
 # Model:  OLS
 # Dep. var.:  Y
 # Fixed effects:  f1+f2
-# Inference:  {'CRV1': 'group_id'}
+# Inference:  CRV1
 # Observations:  997
 #
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |      0.355 |        0.039 |     9.044 |      0.000 |   0.277 |    0.433 |
+# | X1            |      0.431 |        0.035 |    12.319 |      0.000 |   0.358 |    0.505 |
 # ---
-# RMSE: 1.183  Adj. R2: 0.078  Adj. R2 Within: 0.078
-```
+# RMSE: 1.2  Adj. R2: 0.07  Adj. R2 Within: 0.07
 
-`PyFixest` also supports IV (Instrumental Variable) Estimation:
-
-```python
-fit_iv = feols("Y~ 1 | f2 + f3 | X1 ~ Z1", vcov = {'CRV1':'group_id'})
-fit_iv.summary()
-# ###
-#
-# Model:  IV
-# Dep. var.:  Y
-# Fixed effects:  f2+f3
-# Inference:  {'CRV1': 'group_id'}
-# Observations:  998
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |      0.309 |        0.058 |     5.306 |      0.000 |   0.193 |    0.424 |
-# ---
 ```
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ```python
-fit_iv.vcov("hetero").tidy()
+fit1 = fit.fetch_model(0)
+fit1.vcov("hetero").tidy()
+# Model:  Y~X1
 # ###
 #
-# Model:  IV
+# Model:  OLS
 # Dep. var.:  Y
-# Fixed effects:  f2+f3
 # Inference:  hetero
 # Observations:  998
 #
 # | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
 # |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |      0.309 |        0.063 |     4.877 |      0.000 |   0.184 |    0.433 |
+# | Intercept     |      2.206 |        0.088 |    25.180 |      0.000 |   2.034 |    2.378 |
+# | X1            |      0.358 |        0.068 |     5.254 |      0.000 |   0.224 |    0.491 |
+# ---
+# RMSE: 1.765  Adj. R2: 0.024  Adj. R2 Within: 0.024
+```
+
+Last, `PyFixest` also supports IV estimation via three part formula syntax:
+
+```py
+fit_iv = feols("Y ~ 1 | f1 | X1 ~ Z1", data = data)
+fit_iv.summary()
+
+# ###
+#
+# Model:  IV
+# Dep. var.:  Y
+# Fixed effects:  f1
+# Inference:  CRV1
+# Observations:  997
+#
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | X1            |      0.479 |        0.096 |     4.979 |      0.000 |   0.282 |    0.676 |
+# ---
 ```
