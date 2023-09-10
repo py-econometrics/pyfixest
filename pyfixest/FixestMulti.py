@@ -14,22 +14,26 @@ from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
+from matplotlib.figure import Figure
 
 
-class Fixest:
+class FixestMulti:
+
+    """
+    # FixestMulti:
+
+    A class to estimate multiple regression models with fixed effects.
+    """
+
     def __init__(self, data: pd.DataFrame) -> None:
         """
-        A class for fixed effects regression modeling.
+        Initialize a class for multiple fixed effect estimations.
 
         Args:
-            data: The input pd.DataFrame for the object.
+            data (pd.DataFrame): The input DataFrame for the object.
 
         Returns:
             None
-
-        Attributes:
-            data: The input pd.DataFrame for the object.
-            all_fitted_models: A dictionary of all fitted models. The keys are the formulas used to fit the models.
         """
 
         self._data = None
@@ -50,7 +54,7 @@ class Fixest:
         estimation: str,
         fml: str,
         vcov: Union[None, str, Dict[str, str]] = None,
-        ssc=ssc(),
+        ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
     ) -> None:
         """
@@ -58,32 +62,15 @@ class Fixest:
         Mostly deparses the fml string.
 
         Args:
-            estimation: type of estimation. Either "feols" or "fepois".
-            fml: A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
-            vcov: A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
-            ssc: A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
-            fixef_rm: A string specifiny whether singleton fixed effects should be dropped.
-            Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+            estimation (str): Type of estimation. Either "feols" or "fepois".
+            fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
+            vcov (Union[None, str, Dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
+            fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
+                Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
 
         Returns:
             None
-
-        Attributes:
-            _fml: the provided formula string.
-            _method: the estimation method. Either "feols" or "fepois".
-            _is_iv: boolean indicating whether the model is an IV model.
-            _fml_dict: a dictionary of deparsed formulas.
-            _fml_dict_iv: a dictionary of deparsed formulas for IV models. None if no IV models. Basically, the same as
-                         `_fml_dict` but with instruments.
-            _ivars: a list of interaction variables. None if no interaction variables.
-            _ssc_dict: a dictionary with information on small sample corrections.
-            _drop_singletons: boolean indicating whether singleton fixed effects are dropped in the estimation.
-            _fixef_keys: a list of fixed effects combinations.
-            _drop_ref: a list of dropped reference categories for `i()` interactions.
-            _split: the split variable if split estimation is used, else None.
-            _splitvar: the split variable if split estimation is used, else None.
-            _estimate_split_model: boolean indicating whether the split model is estimated.
-            _estimate_full_model: boolean indicating whether the full model is estimated.
         """
 
         self._method = None
@@ -120,11 +107,10 @@ class Fixest:
                 "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
             )
 
-
     def _estimate_all_models(
         self,
-        vcov: Union[str, Dict[str, str]],
-        fixef_keys: List[str],
+        vcov: Union[str, Dict[str, str], None],
+        fixef_keys: Union[List[str], None],
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
     ) -> None:
@@ -145,12 +131,7 @@ class Fixest:
 
         Returns:
             None
-
-        Attributes:
-            all_fitted_models (Dict[str, Any]): A dictionary of all fitted models. The keys are the formulas
-                used to fit the models.
         """
-        # pdb.set_trace()
 
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
@@ -169,11 +150,15 @@ class Fixest:
             # loop over both dictfe and dictfe_iv (if the latter is not None)
             for depvar in dict2fe.keys():
                 for _, fml_linear in enumerate(dict2fe.get(depvar)):
-
                     covar = fml_linear.split("~")[1]
                     endogvars, instruments = None, None
                     if _is_iv:
-                        endogvars, instruments = _get_endogvars_instruments(fml_dict_iv = self._fml_dict_iv, fval = fval, depvar = depvar, covar = covar)
+                        endogvars, instruments = _get_endogvars_instruments(
+                            fml_dict_iv=self._fml_dict_iv,
+                            fval=fval,
+                            depvar=depvar,
+                            covar=covar,
+                        )
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
@@ -303,7 +288,8 @@ class Fixest:
                     FIT.get_inference()
 
                     # other regression stats
-                    FIT.get_performance()
+                    if _method == "feols":
+                        FIT.get_performance()
 
                     FIT._coefnames = coef_names
                     if _icovars is not None:
@@ -323,9 +309,6 @@ class Fixest:
 
         Returns:
             None
-
-        Attributes:
-            is_fixef_multi (bool): A boolean indicating whether multiple regression models will be estimated.
         """
 
         self._is_fixef_multi = False
@@ -336,7 +319,7 @@ class Fixest:
             if len(self._fml_dict[first_key]) > 1:
                 self._is_fixef_multi = True
 
-    def vcov(self, vcov: Union[str, Dict[str, str]]) -> None:
+    def vcov(self, vcov: Union[str, Dict[str, str]]):
         """
         Update regression inference "on the fly".
 
@@ -351,7 +334,7 @@ class Fixest:
                   or {"CRV3": "clustervar"} for CRV3 inference.
 
         Returns:
-            None
+            An instance of the "Fixest" class with updated inference.f
         """
 
         for model in list(self.all_fitted_models.keys()):
@@ -397,53 +380,53 @@ class Fixest:
             fxst = self.all_fitted_models[x]
             fxst.summary(digits=digits)
 
-    def etable(self, digits: int = 3) -> None:
+    def etable(self, digits: int = 3) -> pd.DataFrame:
         return self.tidy().T.round(digits)
 
-    def coef(self) -> pd.DataFrame:
+    def coef(self) -> pd.Series:
         """
         Obtain the coefficients of the fitted models.
         Returns:
-            A pd.DataFrame with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
         """
         return self.tidy()["Estimate"]
 
-    def se(self) -> pd.DataFrame:
+    def se(self) -> pd.Series:
         """
         Obtain the standard errors of the fitted models.
 
         Returns:
-            A pd.DataFrame with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["Std. Error"]
 
-    def tstat(self) -> pd.DataFrame:
+    def tstat(self) -> pd.Series:
         """
         Obtain the t-statistics of the fitted models.
 
          Returns:
-            A pd.DataFrame with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["t value"]
 
-    def pvalue(self) -> pd.DataFrame:
+    def pvalue(self) -> pd.Series:
         """
         Obtain the p-values of the fitted models.
 
         Returns:
-            A pd.DataFrame with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["Pr(>|t|)"]
 
-    def confint(self) -> pd.DataFrame:
+    def confint(self) -> pd.Series:
         """'
         Obtain confidence intervals for the fitted models.
 
         Returns:
-            A pd.DataFrame with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
         """
 
         return self.tidy()[["2.5 %", "97.5 %"]]
@@ -455,7 +438,7 @@ class Fixest:
         yintercept: Union[int, str, None] = None,
         xintercept: Union[int, str, None] = None,
         rotate_xticks: int = 0,
-    ) -> None:
+    ) -> Figure:
         """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
 
@@ -467,7 +450,7 @@ class Fixest:
             rotate_xticks (int, optional): The rotation angle for x-axis tick labels. Default is 0.
 
         Returns:
-            None
+            A matplotlib figure of coefficients (and respective CIs) interacted via the `i()` syntax.
         """
 
         models = self.all_fitted_models
@@ -493,7 +476,7 @@ class Fixest:
         figtitle: Optional[str] = None,
         figtext: Optional[str] = None,
         rotate_xticks: int = 0,
-    ) -> None:
+    ) -> Figure:
         """
         Plot estimation results. The plot() method is only defined for single regressions.
         Args:
@@ -503,14 +486,14 @@ class Fixest:
             figtitle (str, optional): The title of the figure. Default is None.
             figtext (str, optional): The text at the bottom of the figure. Default is None.
         Returns:
-            None
+            A matplotlib figure of regression coefficients.
         """
 
         # get a list, not a dict, as iplot only works with lists
         models = self.all_fitted_models
         models = [models[x] for x in list(self.all_fitted_models.keys())]
 
-        coefplot(
+        plot = coefplot(
             models=models,
             figsize=figsize,
             alpha=alpha,
@@ -518,6 +501,8 @@ class Fixest:
             xintercept=None,
             rotate_xticks=rotate_xticks,
         )
+
+        return plot
 
     def wildboottest(
         self,
@@ -603,81 +588,32 @@ class Fixest:
         return model
 
 
-def _prepare_split_estimation(split, fsplit, data, fml_dict):
+def get_fml(
+    depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None
+) -> str:
     """
-    Cleans the input for the split estimation.
-    Checks if the split variables are of the correct type.
-
-    Args:
-        split (str): The name of the variable used for the split estimation.
-        fsplit (str): The name of the variable used for the fixed split estimation.
-        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        var_dict (dict): The dictionary containing the variables used in the model.
-    Returns:
-        splitvar (pandas.Series): The series containing the split variable.
-        splitvar_name (str): The name of the split variable. Either equal to split or fsplit.
-        estimate_split_model (bool): Whether to estimate the split model.
-        estimate_full_model (bool): Whether to estimate the full model.
-    """
-
-    if split is not None:
-        if fsplit is not None:
-            raise ValueError(
-                "Cannot specify both split and fsplit. Please specify only one of the two."
-            )
-        else:
-            splitvar = data[split]
-            estimate_full_model = False
-            estimate_split_model = True
-            splitvar_name = split
-    elif fsplit is not None:
-        splitvar = data[fsplit]
-        splitvar_name = fsplit
-        estimate_full_model = False
-        estimate_split_model = True
-    else:
-        splitvar = None
-        splitvar_name = None
-        estimate_split_model = False
-        estimate_full_model = True
-
-    if splitvar is not None:
-        split_categories = np.unique(splitvar)
-        if splitvar_name not in data.columns:
-            raise ValueError("Split variable " + splitvar + " not found in data.")
-        if splitvar_name in fml_dict.keys():
-            raise ValueError(
-                "Split variable " + splitvar + " cannot be a fixed effect variable."
-            )
-        if splitvar.dtype.name != "category":
-            splitvar = pd.Categorical(splitvar)
-
-    return splitvar, splitvar_name, estimate_split_model, estimate_full_model
-
-
-def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
-    """
-    Stiches together the formula string for the regression.
+    Stitches together the formula string for the regression.
 
     Args:
         depvar (str): The dependent variable.
         covar (str): The covariates. E.g. "X1+X2+X3"
         fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-        endogvars (str): The endogenous variables.
-        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+        endogvars (str, optional): The endogenous variables.
+        instruments (str, optional): The instruments. E.g. "Z1+Z2+Z3"
+
     Returns:
-        fml (str): The formula string for the regression.
+        str: The formula string for the regression.
     """
 
-    fml = depvar + " ~ " + covar
+    fml = f"{depvar} ~ {covar}"
 
     if endogvars is not None:
-        fml_iv = "|" + endogvars + "~" + instruments
+        fml_iv = f"| {endogvars} ~ {instruments}"
     else:
         fml_iv = None
 
     if fval != "0":
-        fml_fval = "|" + fval
+        fml_fval = f"| {fval}"
     else:
         fml_fval = None
 
@@ -691,19 +627,16 @@ def get_fml(depvar, covar, fval, endogvars=None, instruments=None) -> str:
 
     return fml
 
-    if fval != "0":
-        fml = depvar + " ~ " + covar + " | " + fval
-    else:
-        fml = depvar + " ~ " + covar
 
-    return fml.replace(" ", "")
-
-
-def _multicollinearity_checks(X):
+def _multicollinearity_checks(X: np.ndarray) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
+
     Args:
         X (numpy.ndarray): The design matrix X.
+
+    Returns:
+        None
     """
 
     if np.linalg.matrix_rank(X) < min(X.shape):
@@ -739,7 +672,7 @@ def _get_vcov_type(vcov, fval):
     return vcov_type
 
 
-def _drop_singletons(fixef_rm):
+def _drop_singletons(fixef_rm: bool) -> bool:
     """
     Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
     Args:
@@ -770,7 +703,21 @@ def _find_untransformed_depvar(transformed_depvar):
         return transformed_depvar
 
 
-def _get_endogvars_instruments(fml_dict_iv, fval, depvar, covar):
+def _get_endogvars_instruments(
+    fml_dict_iv: dict, fval: str, depvar: str, covar: str
+) -> tuple:
+    """
+    Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
+
+    Args:
+        fml_dict_iv (dict): The dictionary of formulas for the IV estimation.
+        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+        depvar (str): The dependent variable.
+        covar (str): The covariates. E.g. "X1+X2+X3"
+    Returns:
+        endogvars (str): The endogenous variables.
+        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+    """
 
     dict2fe_iv = fml_dict_iv.get(fval)
     instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]

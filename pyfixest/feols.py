@@ -3,7 +3,7 @@ import pandas as pd
 import warnings
 
 from importlib import import_module
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Tuple
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
@@ -12,53 +12,33 @@ from formulaic import model_matrix
 from pyfixest.utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
+from matplotlib.figure import Figure
+
 
 class Feols:
 
     """
+
+    # Feols
+
     A class for estimating regression models with high-dimensional fixed effects via
     ordinary least squares.
-
-    Parameters
-    ----------
-    Y : Union[np.ndarray, pd.DataFrame]
-        Dependent variable of the regression.
-    X : Union[np.ndarray, pd.DataFrame]
-        Independent variable of the regression.
-    weights: np.ndarray
-        Weights for the regression.
-    Z: Union[np.ndarray, pd.DataFrame]
-        Instruments of the regression.
-
-    Attributes
-    ----------
-    Y : np.ndarray
-        The dependent variable of the regression.
-    X : np.ndarray
-        The independent variable of the regression.
-    Z : np.ndarray
-        The instruments of the regression. If None, equal to `X`.
-    N : int
-        The number of observations.
-    k : int
-        The number of columns in X.
-
-
-    Methods
-    -------
-    get_fit()
-        Regression estimation for a single model, via ordinary least squares (OLS).
-    vcov(vcov)
-        Compute covariance matrices for an estimated model.
-
-    Raises
-    ------
-    AssertionError
-        If the vcov argument is not a dict, a string, or a list.
-
     """
 
     def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
+        """
+        Initiate an instance of class `Feols`.
+
+        Args:
+            Y (np.array): dependent variable. two-dimensional np.array
+            X (np.array): independent variables. two-dimensional np.array
+            weights (np.array): weights. one-dimensional np.array
+
+        Returns:
+            None
+
+        """
+
         self._method = "feols"
 
         self._Y = Y
@@ -131,15 +111,12 @@ class Feols:
 
     def get_fit(self) -> None:
         """
-        Regression estimation for a single model, via ordinary least squares (OLS).
+        Fit a single regression model, via ordinary least squares (OLS).
+
+        Args:
+            None
         Returns:
             None
-        Attributes:
-            beta_hat (np.ndarray): The estimated regression coefficients.
-            Y_hat (np.ndarray): The predicted values of the regression model.
-            u_hat (np.ndarray): The residuals of the regression model.
-
-
         """
 
         _X = self._X
@@ -163,23 +140,20 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def vcov(self, vcov: Union[str, Dict[str, str], List[str]]) -> None:
+    def vcov(self, vcov: Union[str, Dict[str, str]]):
         """
         Compute covariance matrices for an estimated regression model.
 
-        Parameters
-        ----------
-        vcov : Union[str, Dict[str, str], List[str]]
-            A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-            If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
-            or {"CRV3":"clustervar"} for CRV3 inference.
-            Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
+        Args:
+            vcov : Union[str, Dict[str, str]
+                A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
+                or {"CRV3":"clustervar"} for CRV3 inference.
+                Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
 
-        Returns
-        -------
-        None
-
+        Returns:
+            An instance of class `Feols` with updated inference.
         """
 
         _data = self._data
@@ -408,18 +382,15 @@ class Feols:
 
         return self
 
-    def get_inference(self, alpha=0.95):
+    def get_inference(self, alpha: float = 0.95) -> None:
         """
         Compute standard errors, t-statistics and p-values for the regression model.
 
-        Parameters
-        ----------
-        alpha : float, optional
-            Significance level for confidence intervals, by default 0.95
+        Args:
+            alpha (float): The significance level for confidence intervals. Defaults to 0.95.
 
-        Returns
-        -------
-        None
+        Returns:
+            None
 
         """
 
@@ -453,9 +424,14 @@ class Feols:
     def get_Ftest(self, vcov, is_iv=False):
         """
         compute an F-test statistic of the form H0: R*beta = q
-        Args: is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
-        Returns: None
+
+        Args:
+            is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
+        Returns:
+            None
         """
+
+        raise NotImplementedError("The F-test is currently not supported.")
 
         R = np.ones(self._k).reshape((1, self._k))
         q = 0
@@ -475,13 +451,30 @@ class Feols:
 
     def coefplot(
         self,
-        alpha=0.05,
-        figsize=(10, 10),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
+        alpha: float = 0.05,
+        figsize: Tuple[int, int] = (10, 10),
+        yintercept: Optional[float] = None,
+        xintercept: Optional[float] = None,
+        rotate_xticks: int = 0,
         coefficients: Optional[List[str]] = None,
-    ):
+    ) -> Figure:
+        """
+        Create a coefficient plot to visualize model coefficients.
+
+        Args:
+            alpha (float, optional): Significance level for highlighting significant coefficients.
+            figsize (Tuple[int, int], optional): Size of the plot (width, height) in inches.
+            yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
+            xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
+            rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
+            coefficients (List[str], optional): List of coefficients to include in the plot.
+                If None, all coefficients are included.
+
+        Returns:
+            A matplotlib figure with coefficient estimates and confidence intervals.
+
+        """
+
         # lazy loading to avoid circular import
         visualize_module = import_module("pyfixest.visualize")
         _coefplot = getattr(visualize_module, "coefplot")
@@ -500,12 +493,27 @@ class Feols:
 
     def iplot(
         self,
-        alpha=0.05,
-        figsize=(10, 10),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
-    ):
+        alpha: float = 0.05,
+        figsize: Tuple[int, int] = (10, 10),
+        yintercept: Optional[float] = None,
+        xintercept: Optional[float] = None,
+        rotate_xticks: int = 0,
+    ) -> Figure:
+        """
+        Create a coefficient plots for variables interaceted via `i()` syntax.
+
+        Args:
+            alpha (float, optional): Significance level for visualization options.
+            figsize (Tuple[int, int], optional): Size of the plot (width, height) in inches.
+            yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
+            xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
+            rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
+
+        Returns:
+            A matplotlib figure with coefficient estimates and confidence intervals.
+
+        """
+
         visualize_module = import_module("pyfixest.visualize")
         _iplot = getattr(visualize_module, "iplot")
 
@@ -546,13 +554,12 @@ class Feols:
         param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
         weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
                             'rademacher' by default. Defaults to 'rademacher'.
-        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
-                            Defaults to True.
+        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not? Defaults to True.
         bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
                             to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
         seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
 
-        Returns: a pd.DataFrame with bootstrapped t-statistic and p-value
+        Returns: a pd.DataFrame with the original t-statistic and bootstrapped p-value.
         """
 
         _is_iv = self._is_iv
@@ -632,20 +639,20 @@ class Feols:
 
         return res_df
 
-    def fixef(self) -> np.ndarray:
+    def fixef(self) -> None:
         """
-        Return a np.array with estimated fixed effects of a fixed effects regression model.
-        Additionally, computes the sum of fixed effects for each observation (this is required for the predict() method)
-        If the model does not have a fixed effect, raises an error.
+        Compute the coefficients of (sweeped out) fixed effects for a regression model.
+
+        This method creates the following attributes:
+
+        - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
+        - `sumDF` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
+
         Args:
             None
+
         Returns:
-            alphaDF (pd.DataFrame): A pd.DataFrame with the estimated fixed effects. For only one fixed effects,
-                                    no level of the fixed effects is dropped. For multiple fixed effects, one
-                                    level of each fixed effect is dropped to avoid perfect multicollinearity.
-            sumDF (np.array): A np.array with the sum of fixed effects for each of the i = 1, ..., N observations.
-        Creates the following attributes:
-            alphaDF, sumDF
+            None
         """
 
         _has_fixef = self._has_fixef
@@ -677,7 +684,7 @@ class Feols:
         for x in fixef_vars.split("+"):
             df[x] = pd.Categorical(df[x])
 
-        fml_linear = depvars + "~" + covars
+        fml_linear = f"{depvars} ~ {covars}"
         Y, X = model_matrix(fml_linear, df)
         X = X.drop("Intercept", axis=1)
         Y = Y.to_numpy().flatten().astype(np.float64)
@@ -720,12 +727,16 @@ class Feols:
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
+
         Args:
             data (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
             type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
                 If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
                 If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
+
+        Returns:
+            y_hat (np.ndarray): A flat np.array with predicted values of the regression model.
 
         """
 
@@ -754,9 +765,10 @@ class Feols:
         """
         Fetch the number of observations used in fitting the regression model.
 
-        Returns
-        -------
-        None
+        Params:
+            None
+        Returns:
+            None
         """
         self._N = len(self._Y)
 
