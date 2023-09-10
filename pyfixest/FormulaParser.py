@@ -68,7 +68,7 @@ class FixestFormulaParser:
                 if covars == "1":
                     covars = endogvars
                 else:
-                    covars = endogvars + "+" + covars
+                    covars = f"{endogvars}+{covars}"
             else:
                 fevars = fml_split[1]
                 endogvars = None
@@ -93,7 +93,7 @@ class FixestFormulaParser:
             if covars == "1":
                 covars = endogvars
             else:
-                covars = endogvars + "+" + covars
+                covars = f"{endogvars}+{covars}"
 
         if endogvars is not None:
             if len(endogvars) > len(instruments):
@@ -160,10 +160,10 @@ class FixestFormulaParser:
                 res[depvar] = []
                 if iv:
                     for covar in self.covars_first_stage_fml:
-                        res[depvar].append(depvar + "~" + covar)
+                        res[depvar].append(f"{depvar}~{covar}")
                 else:
                     for covar in self.covars_fml:
-                        res[depvar].append(depvar + "~" + covar)
+                        res[depvar].append(f"{depvar}~{covar}")
             fml_dict[fevar] = res
 
         if iv:
@@ -314,7 +314,7 @@ def _pack_to_fml(unpacked):
     if variable_fml:
         if const_fml:
             fml_list = [
-                const_fml + "+" + variable_fml[i]
+                f"{const_fml}+{variable_fml[i]}"
                 for i in range(len(variable_fml))
                 if variable_fml[i] != "0"
             ]
@@ -417,9 +417,9 @@ def _check_duplicate_key(my_dict, key):
     for key in ["sw", "csw", "sw0", "csw0"]:
         if key in my_dict:
             raise DuplicateKeyError(
-                "Duplicate key found: "
-                + key
-                + ". Multiple estimation syntax can only be used once on the rhs of the two-sided formula."
+                f"""
+                Duplicate key found: "{key}. Multiple estimation syntax can only be used once on the rhs of the two-sided formula.
+                """
             )
         else:
             None

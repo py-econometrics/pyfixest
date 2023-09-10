@@ -3,6 +3,12 @@ from pyfixest.feols import Feols
 
 
 class Feiv(Feols):
+
+    """
+    # Feiv
+    A class to estimate a single model with instrumental variables.
+    """
+
     def __init__(
         self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray
     ) -> None:

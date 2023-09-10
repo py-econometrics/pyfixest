@@ -1,5 +1,6 @@
 import pytest
 import re
+import warnings
 import numpy as np
 import pandas as pd
 from pyfixest.estimation import feols, fepois
@@ -27,11 +28,10 @@ atol = 1e-06
 iwls_maxiter = 25
 iwls_tol = 1e-08
 
-rng = np.random.default_rng(87685)
+rng = np.random.default_rng(8760985)
 
-
-@pytest.mark.parametrize("N", [100])
-@pytest.mark.parametrize("seed", [7654251])
+@pytest.mark.parametrize("N", [1000])
+@pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
@@ -144,7 +144,10 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
     # iid errors
     try:
-        pyfixest = feols(fml=fml, data=data, vcov=inference)
+        with warnings.catch_warnings():
+            # ignore run time warnings (likely due to large Y values)
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            pyfixest = feols(fml=fml, data=data, vcov=inference)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
@@ -166,7 +169,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
     else:
         # check if IV - don not run IV formulas for Poisson
-        iv_check = feols(fml=fml, data=data, vcov="iid")
+
+        with warnings.catch_warnings():
+            # ignore run time warnings (likely due to large Y values)
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            iv_check = feols(fml=fml, data=data, vcov="iid")
 
         if inference == "iid":
             return pytest.skip("Poisson does not support iid inference")
@@ -440,14 +447,14 @@ def _py_fml_to_r_fml(py_fml):
 
     fml_split = fml2[0].split("~")
     depvars = fml_split[0]
-    depvars = "c(" + ",".join(depvars.split("+")) + ")"
+    depvars = f"c({','.join(depvars.split('+'))})"
 
     if len(fml2) == 1:
-        return depvars + "~" + fml_split[1]
+        return f"{depvars}~{fml_split[1]}"
     elif len(fml2) == 2:
-        return depvars + "~" + fml_split[1] + "|" + fml2[1]
+        return f"{depvars}~{fml_split[1]}|{fml2[1]}"
     else:
-        return depvars + "~" + fml_split[1] + "|" + "|".join(fml2[1:])
+        return f"{depvars}~fml_split{1} | {'|'.join(fml2[1:])}"
 
 
 def _c_to_as_factor(py_fml):
