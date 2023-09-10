@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import numpy as np
 from typing import List, Tuple, Optional
 from scipy.stats import norm
 import re
 from pyfixest.summarize import _post_processing_input_checks
 from typing import Union
+from matplotlib.figure import Figure
 
 
 def iplot(
@@ -15,7 +15,7 @@ def iplot(
     yintercept: Union[int, str, None] = None,
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
-) -> None:
+) -> Figure:
     """
 
     # iplot
@@ -29,7 +29,7 @@ def iplot(
         xintercept (int or None): The value at which to draw a vertical line on the plot.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     Returns:
-        None
+        A matplotlib figure.
     """
 
     models = _post_processing_input_checks(models)
@@ -80,12 +80,13 @@ def coefplot(
     xintercept=None,
     rotate_xticks=0,
     coefficients: Optional[List[str]] = None,
-):
+) -> Figure:
     """
 
     # coefplot
 
     Plot model coefficients with confidence intervals.
+
     Args:
         models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
         figsize (tuple): The size of the figure.
@@ -95,7 +96,7 @@ def coefplot(
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
         coefficients (list): A list of coefficients to plot. If None, all coefficients are plotted.
     Returns:
-        None
+        A matplotlib figure.
     """
 
     models = _post_processing_input_checks(models)
@@ -136,7 +137,7 @@ def _coefplot(
     xintercept: Optional[int] = None,
     is_iplot: bool = False,
     rotate_xticks: float = 0,
-) -> None:
+) -> Figure:
     """
     Plot model coefficients with confidence intervals.
     Args:
@@ -149,7 +150,7 @@ def _coefplot(
         is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     Returns:
-    None
+        A matplotlib figure.
     """
 
     if len(models) > 1:
