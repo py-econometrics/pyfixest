@@ -28,7 +28,7 @@ atol = 1e-06
 iwls_maxiter = 25
 iwls_tol = 1e-08
 
-rng = np.random.default_rng(8432634)
+rng = np.random.default_rng(8)
 
 
 @pytest.mark.parametrize("N", [100, 1000])
