@@ -80,7 +80,7 @@ class FixestMulti:
         self._ssc_dict = None
         self._drop_singletons = None
         self._fixef_keys = None
-        self._is_fixef_multi = None
+        self._is_multiple_estimation = None
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -99,13 +99,6 @@ class FixestMulti:
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
 
-        # check for multiple estimation
-        self._is_multiple_estimation()
-        if self._is_fixef_multi and _is_iv:
-            raise MultiEstNotSupportedError(
-                "Multiple Estimations is currently not supported with IV."
-                "This is mostly due to insufficient testing and will be possible with the next release of PyFixest."
-            )
 
     def _estimate_all_models(
         self,
@@ -300,24 +293,17 @@ class FixestMulti:
                     # store fitted model
                     self.all_fitted_models[fml] = FIT
 
-    def _is_multiple_estimation(self) -> None:
-        """
-        Helper method to check if multiple regression models will be estimated.
+        if len(self.all_fitted_models) > 1:
+            self._is_multiple_estimation = True
+            if self._is_iv:
+                    raise MultiEstNotSupportedError(
+                        f"""
+                        Multiple Estimations is currently not supported with IV.
+                        This is mostly due to insufficient testing and will be possible with a future release of PyFixest.
+                        """
+            )
 
-        Args:
-            None
 
-        Returns:
-            None
-        """
-
-        self._is_fixef_multi = False
-        if len(self._fml_dict.keys()) > 1:
-            self._is_fixef_multi = True
-        elif len(self._fml_dict.keys()) == 1:
-            first_key = next(iter(self._fml_dict))
-            if len(self._fml_dict[first_key]) > 1:
-                self._is_fixef_multi = True
 
     def vcov(self, vcov: Union[str, Dict[str, str]]):
         """
@@ -567,11 +553,12 @@ class FixestMulti:
 
         return res
 
-    def fetch_model(self, i: Union[int, str]) -> Union[Feols, Fepois]:
+    def fetch_model(self, i: Union[int, str], print_fml: Optional[bool] = True) -> Union[Feols, Fepois]:
         """
         Utility method to fetch a model of class Feols from the Fixest class.
         Args:
             i (int or str): The index of the model to fetch.
+            print_fml (bool, optional): Whether to print the formula of the model. Default is True.
         Returns:
             A Feols object.
         """
@@ -583,7 +570,8 @@ class FixestMulti:
         if i >= len(keys):
             raise IndexError(f"Index {i} is larger than the number of fitted models.")
         key = keys[i]
-        print("Model: ", key)
+        if print_fml:
+            print("Model: ", key)
         model = self.all_fitted_models[key]
         return model
 
