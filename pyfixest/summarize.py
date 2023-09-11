@@ -1,9 +1,14 @@
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
+from pyfixest.feiv import Feiv
+
 import numpy as np
+import pandas as pd
+from typing import Union, List, Optional
 
 
-def summary(models, digits: int = 3) -> None:
+def summary(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3) -> None:
+
     """
     # Summary
 
@@ -41,10 +46,11 @@ def summary(models, digits: int = 3) -> None:
 
         print("###")
         print("")
-        print("Model: ", estimation_method)
-        print("Dep. var.: ", depvar)
+        print("Estimation: ", estimation_method)
+        depvar_fixef = f"Dep. var.: {depvar}"
         if fxst._fixef is not None:
-            print("Fixed effects: ", fxst._fixef)
+            depvar_fixef += f", Fixed effects: {fxst._fixef}"
+        print(depvar_fixef)
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
         print("")
