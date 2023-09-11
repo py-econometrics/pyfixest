@@ -31,7 +31,8 @@ def test_internally(data):
     Currently only for OLS.
     """
 
-    mod = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
+    fit = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
+    mod = fit.fetch_model(0)
 
     mod.fixef()
     original_prediction = mod.predict()
