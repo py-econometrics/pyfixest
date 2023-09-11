@@ -493,6 +493,7 @@ class FixestMulti:
     def wildboottest(
         self,
         B: int,
+        cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
         param: Optional[str] = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
@@ -507,6 +508,7 @@ class FixestMulti:
         Args:
             B (int): The number of bootstrap iterations to run.
             param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Default is None.
+            cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
             weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb', or 'normal'.
                 Default is 'rademacher'.
             impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
@@ -540,8 +542,8 @@ class FixestMulti:
                 cluster_adj,
             )
 
-            pvalue = boot_res["pvalue"]
-            tstat = boot_res["statistic"]
+            pvalue = boot_res["Pr(>|t|)"]
+            tstat = boot_res["t value"]
 
             res.append(
                 pd.Series(
