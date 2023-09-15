@@ -691,10 +691,8 @@ class Feols:
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_vars, df).astype(np.float64)
-        cols = D2.columns
-
-        D2 = csr_matrix(D2.values)
+        D2 = model_matrix("-1+" + fixef_vars, df, output = "sparse")
+        cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
         k_fe = len(alpha)
