@@ -163,7 +163,7 @@ def _coefplot(
             coef = df_model["Estimate"]
             conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
             conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            coefnames = df_model["Coefficient"].values.tolist()
+            coefnames = df_model["Coefficient"].tolist()
 
             # could be moved out of the for loop, as the same ivars for all
             # models.
@@ -195,10 +195,10 @@ def _coefplot(
 
         df_model = df.reset_index().set_index("fml").xs(model)
 
-        coef = df_model["Estimate"].values
-        conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        coefnames = df_model["Coefficient"].values.tolist()
+        coef = df_model["Estimate"]
+        conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
+        conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
+        coefnames = df_model["Coefficient"].tolist()
 
         if is_iplot == True:
             fig.suptitle("iplot")
