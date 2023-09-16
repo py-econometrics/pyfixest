@@ -126,7 +126,7 @@ def feols(
     if fixest._is_multiple_estimation:
         return fixest
     else:
-        return fixest.fetch_model(0, print_fml = False)
+        return fixest.fetch_model(0, print_fml=False)
 
 
 def fepois(
@@ -250,4 +250,4 @@ def fepois(
     if fixest._is_multiple_estimation:
         return fixest
     else:
-        return fixest.fetch_model(0, print_fml = False)
+        return fixest.fetch_model(0, print_fml=False)

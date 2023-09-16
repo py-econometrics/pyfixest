@@ -14,7 +14,6 @@ from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
-from matplotlib.figure import Figure
 
 
 class FixestMulti:
@@ -98,7 +97,6 @@ class FixestMulti:
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
-
 
     def _estimate_all_models(
         self,
@@ -296,14 +294,12 @@ class FixestMulti:
         if len(self.all_fitted_models) > 1:
             self._is_multiple_estimation = True
             if self._is_iv:
-                    raise MultiEstNotSupportedError(
-                        f"""
+                raise MultiEstNotSupportedError(
+                    f"""
                         Multiple Estimations is currently not supported with IV.
                         This is mostly due to insufficient testing and will be possible with a future release of PyFixest.
                         """
-            )
-
-
+                )
 
     def vcov(self, vcov: Union[str, Dict[str, str]]):
         """
@@ -420,11 +416,12 @@ class FixestMulti:
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: tuple = (10, 10),
+        figsize: tuple = (500, 300),
         yintercept: Union[int, str, None] = None,
         xintercept: Union[int, str, None] = None,
         rotate_xticks: int = 0,
-    ) -> Figure:
+        title : Optional[str] = None,
+    ):
         """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
 
@@ -434,9 +431,10 @@ class FixestMulti:
             yintercept (Union[int, str, None], optional): The value at which to draw a horizontal line.
             xintercept (Union[int, str, None], optional): The value at which to draw a vertical line.
             rotate_xticks (int, optional): The rotation angle for x-axis tick labels. Default is 0.
+            title (str, optional): The title of the plot. Default is None.
 
         Returns:
-            A matplotlib figure of coefficients (and respective CIs) interacted via the `i()` syntax.
+            A lets-plot figure of coefficients (and respective CIs) interacted via the `i()` syntax.
         """
 
         models = self.all_fitted_models
@@ -450,6 +448,7 @@ class FixestMulti:
             yintercept=yintercept,
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
+            title=title,
         )
 
         return plot
@@ -457,12 +456,11 @@ class FixestMulti:
     def coefplot(
         self,
         alpha: float = 0.05,
-        figsize: tuple = (5, 2),
+        figsize: tuple = (500, 300),
         yintercept: int = 0,
-        figtitle: Optional[str] = None,
-        figtext: Optional[str] = None,
         rotate_xticks: int = 0,
-    ) -> Figure:
+        title : Optional[str] = None,
+    ):
         """
         Plot estimation results. The plot() method is only defined for single regressions.
         Args:
@@ -471,8 +469,9 @@ class FixestMulti:
             yintercept (float): the value of the y-intercept. Default is 0.
             figtitle (str, optional): The title of the figure. Default is None.
             figtext (str, optional): The text at the bottom of the figure. Default is None.
+            title (str, optional): The title of the plot. Default is None.
         Returns:
-            A matplotlib figure of regression coefficients.
+            A lets-plot figure of regression coefficients.
         """
 
         # get a list, not a dict, as iplot only works with lists
@@ -486,6 +485,7 @@ class FixestMulti:
             yintercept=yintercept,
             xintercept=None,
             rotate_xticks=rotate_xticks,
+            title=title
         )
 
         return plot
@@ -555,7 +555,9 @@ class FixestMulti:
 
         return res
 
-    def fetch_model(self, i: Union[int, str], print_fml: Optional[bool] = True) -> Union[Feols, Fepois]:
+    def fetch_model(
+        self, i: Union[int, str], print_fml: Optional[bool] = True
+    ) -> Union[Feols, Fepois]:
         """
         Utility method to fetch a model of class Feols from the Fixest class.
         Args:

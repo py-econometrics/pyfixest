@@ -12,8 +12,6 @@ from formulaic import model_matrix
 from pyfixest.utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
-from matplotlib.figure import Figure
-
 
 class Feols:
 
@@ -452,12 +450,12 @@ class Feols:
     def coefplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (10, 10),
-        yintercept: Optional[float] = None,
+        figsize: Tuple[int, int] = (500, 300),
+        yintercept: Optional[float] = 0,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
         coefficients: Optional[List[str]] = None,
-    ) -> Figure:
+    ) :
         """
         Create a coefficient plot to visualize model coefficients.
 
@@ -471,7 +469,7 @@ class Feols:
                 If None, all coefficients are included.
 
         Returns:
-            A matplotlib figure with coefficient estimates and confidence intervals.
+            A lets-plot figure with coefficient estimates and confidence intervals.
 
         """
 
@@ -480,7 +478,7 @@ class Feols:
         _coefplot = getattr(visualize_module, "coefplot")
 
         plot = _coefplot(
-            models=self,
+            models=[self],
             alpha=alpha,
             figsize=figsize,
             yintercept=yintercept,
@@ -494,11 +492,11 @@ class Feols:
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (10, 10),
+        figsize: Tuple[int, int] = (500, 300),
         yintercept: Optional[float] = None,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
-    ) -> Figure:
+    ):
         """
         Create a coefficient plots for variables interaceted via `i()` syntax.
 
@@ -510,7 +508,7 @@ class Feols:
             rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
 
         Returns:
-            A matplotlib figure with coefficient estimates and confidence intervals.
+            A lets-plot figure with coefficient estimates and confidence intervals.
 
         """
 
@@ -518,7 +516,7 @@ class Feols:
         _iplot = getattr(visualize_module, "iplot")
 
         plot = _iplot(
-            models=self,
+            models=[self],
             alpha=alpha,
             figsize=figsize,
             yintercept=yintercept,
@@ -691,7 +689,7 @@ class Feols:
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_vars, df).astype(np.float64)
+        D2 = model_matrix("-1+" + fixef_vars, df, output="sparse").astype(np.float64)
         cols = D2.columns
 
         D2 = csr_matrix(D2.values)

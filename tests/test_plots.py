@@ -1,11 +1,8 @@
 import pytest
 import pandas as pd
 from pyfixest.utils import get_data
-import matplotlib
 from pyfixest.estimation import feols
 from pyfixest.visualize import iplot, coefplot
-
-matplotlib.use("Agg")
 
 
 @pytest.fixture
