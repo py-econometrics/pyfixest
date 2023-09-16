@@ -155,9 +155,6 @@ def _coefplot(
         A lets-plot figure.
     """
 
-    import pdb;
-    pdb.set_trace()
-
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
 
@@ -171,7 +168,7 @@ def _coefplot(
     )
 
     if yintercept is not None:
-        plot += geom_hline(yintercept=yintercept, linetype="dashed")
+        plot += geom_hline(yintercept=yintercept, linetype="dashed", color = "red")
     if xintercept is not None:
         plot += geom_vline(xintercept=xintercept, linetype="dashed")
     if figsize is not None:
