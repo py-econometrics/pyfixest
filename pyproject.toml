@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.9.4"
+version = "0.9.5"
 
 description = "Experimental draft package for high dimensional fixed effect estimation. Supports OLS and IV estimation."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
@@ -13,12 +13,12 @@ repository = "https://github.com/s3alfisc/pyfixest"
 python=">=3.8"
 pandas=">=1.1.0"
 numpy=">=1.19.0"
-matplotlib=">=3.0"
 PyHDFE=">=0.2"
 scipy=">=1.6"
 formulaic=">=0.6.0"
 pytest="^7.0.0"
 wildboottest={ version = ">=0.1.10", optional = true, python = "<3.11" }
+lets-plot = "^4.0.1"
 
 [build-system]
 requires = ["poetry-core"]

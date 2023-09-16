@@ -12,8 +12,6 @@ from formulaic import model_matrix
 from pyfixest.utils import get_ssc
 from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
 
-from matplotlib.figure import Figure
-
 
 class Feols:
 
@@ -452,12 +450,14 @@ class Feols:
     def coefplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (10, 10),
-        yintercept: Optional[float] = None,
+        figsize: Tuple[int, int] = (500, 300),
+        yintercept: Optional[float] = 0,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
         coefficients: Optional[List[str]] = None,
-    ) -> Figure:
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
+    ) :
         """
         Create a coefficient plot to visualize model coefficients.
 
@@ -469,9 +469,11 @@ class Feols:
             rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
             coefficients (List[str], optional): List of coefficients to include in the plot.
                 If None, all coefficients are included.
+            title (str, optional): Title of the plot.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
 
         Returns:
-            A matplotlib figure with coefficient estimates and confidence intervals.
+            A lets-plot figure with coefficient estimates and confidence intervals.
 
         """
 
@@ -480,13 +482,15 @@ class Feols:
         _coefplot = getattr(visualize_module, "coefplot")
 
         plot = _coefplot(
-            models=self,
+            models=[self],
             alpha=alpha,
             figsize=figsize,
             yintercept=yintercept,
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
             coefficients=coefficients,
+            title=title,
+            coord_flip=coord_flip,
         )
 
         return plot
@@ -494,11 +498,13 @@ class Feols:
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (10, 10),
+        figsize: Tuple[int, int] = (500, 300),
         yintercept: Optional[float] = None,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
-    ) -> Figure:
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
+    ):
         """
         Create a coefficient plots for variables interaceted via `i()` syntax.
 
@@ -508,9 +514,11 @@ class Feols:
             yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
             xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
             rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
+            title (str, optional): Title of the plot.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
 
         Returns:
-            A matplotlib figure with coefficient estimates and confidence intervals.
+            A lets-plot figure with coefficient estimates and confidence intervals.
 
         """
 
@@ -518,12 +526,14 @@ class Feols:
         _iplot = getattr(visualize_module, "iplot")
 
         plot = _iplot(
-            models=self,
+            models=[self],
             alpha=alpha,
             figsize=figsize,
             yintercept=yintercept,
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
+            title=title,
+            coord_flip=coord_flip,
         )
 
         return plot
@@ -691,38 +701,20 @@ class Feols:
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_vars, df).astype(np.float64)
-        cols = D2.columns
-
-        D2 = csr_matrix(D2.values)
+        D2 = model_matrix("-1+" + fixef_vars, df, output="sparse")
+        cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
-        k_fe = len(alpha)
 
-        var, level = [], []
+        res = dict()
+        for i, col in enumerate(cols):
+            res[col] = alpha[i]
 
-        for _, x in enumerate(cols):
-            res = x.replace("[", "").replace("]", "").split("T.")
-            var.append(res[0])
-            level.append(res[1])
+        self._fixef_df = pd.Series(res, name = "estimated_fixed_effects")
+        self._alpha = alpha
+        self._sumFE = D2.dot(alpha)
 
-        self._fixef_dict = dict()
-        ki_start = 0
-        for x in np.unique(var):
-            ki = len(list(filter(lambda x: x == "group", var)))
-            alphai = alpha[ki_start : (ki + ki_start)]
-            levi = level[ki_start : (ki + ki_start)]
-            fe_dict = (
-                pd.DataFrame({"level": levi, "value": alphai}).set_index("level").T
-            )
-
-            self._fixef_dict[x] = fe_dict
-            ki_start = ki
-
-        for key, df in self._fixef_dict.items():
-            print(f"{key}:\n{df.to_string(index=True)}\n")
-
-        self._sumFE = D2 @ alpha
+        return self._fixef_df
 
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """

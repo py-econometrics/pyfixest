@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.utils import get_poisson_data
+from pyfixest.utils import get_data
 from pyfixest.estimation import feols, fepois
 
 # rpy2 imports
@@ -17,10 +17,8 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = get_poisson_data(seed=6574)
+    data = get_data(seed=6574, model = "Fepois")
     data = data.dropna()
-    data["X3"] = pd.Categorical(data.X3.astype(str))
-    data["X4"] = pd.Categorical(data.X4.astype(str))
 
     return data
 
@@ -31,7 +29,7 @@ def test_internally(data):
     Currently only for OLS.
     """
 
-    fit = feols(fml="Y~csw(X1, X2) | X3", data=data, vcov="iid")
+    fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
     mod = fit.fetch_model(0)
 
     mod.fixef()
@@ -48,8 +46,8 @@ def test_internally(data):
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y~ X1 | X3",
-        "Y~ X1 | X3 + X4",
+        "Y~ X1 | f1",
+        "Y~ X1 | f1 + f2",
         # "Y~ X1 | X3^X4",
     ],
 )
