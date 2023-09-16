@@ -455,6 +455,8 @@ class Feols:
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
         coefficients: Optional[List[str]] = None,
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
     ) :
         """
         Create a coefficient plot to visualize model coefficients.
@@ -467,6 +469,8 @@ class Feols:
             rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
             coefficients (List[str], optional): List of coefficients to include in the plot.
                 If None, all coefficients are included.
+            title (str, optional): Title of the plot.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
 
         Returns:
             A lets-plot figure with coefficient estimates and confidence intervals.
@@ -485,6 +489,8 @@ class Feols:
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
             coefficients=coefficients,
+            title=title,
+            coord_flip=coord_flip,
         )
 
         return plot
@@ -496,6 +502,8 @@ class Feols:
         yintercept: Optional[float] = None,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
     ):
         """
         Create a coefficient plots for variables interaceted via `i()` syntax.
@@ -506,6 +514,8 @@ class Feols:
             yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
             xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
             rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
+            title (str, optional): Title of the plot.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
 
         Returns:
             A lets-plot figure with coefficient estimates and confidence intervals.
@@ -522,6 +532,8 @@ class Feols:
             yintercept=yintercept,
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
+            title=title,
+            coord_flip=coord_flip,
         )
 
         return plot
@@ -693,37 +705,16 @@ class Feols:
         cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
-        k_fe = len(alpha)
 
-        var, level = [], []
+        res = dict()
+        for i, col in enumerate(cols):
+            res[col] = alpha[i]
 
-        for _, x in enumerate(cols):
-            res = x.replace("[", "").replace("]", "").split("T.")
-            var.append(res[0])
-            level.append(res[1])
-
-
-        import pdb; pdb.set_trace()
-
-        self._fixef_dict = dict()
-        ki_start = 0
-        for x in np.unique(var):
-            ki = len(list(filter(lambda x: x == "group", var)))
-            alphai = alpha[ki_start : (ki + ki_start)]
-            levi = level[ki_start : (ki + ki_start)]
-            fe_dict = (
-                pd.DataFrame({"level": levi, "value": alphai}).set_index("level").T
-            )
-
-            self._fixef_dict[x] = fe_dict
-            ki_start = ki
-
-
-
-        for key, df in self._fixef_dict.items():
-            print(f"{key}:\n{df.to_string(index=True)}\n")
-
+        self._fixef_df = pd.Series(res, name = "estimated_fixed_effects")
+        self._alpha = alpha
         self._sumFE = D2.dot(alpha)
+
+        return self._fixef_df
 
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """

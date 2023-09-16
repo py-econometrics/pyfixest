@@ -421,6 +421,7 @@ class FixestMulti:
         xintercept: Union[int, str, None] = None,
         rotate_xticks: int = 0,
         title : Optional[str] = None,
+        coord_flip: Optional[bool] = True
     ):
         """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
@@ -432,6 +433,7 @@ class FixestMulti:
             xintercept (Union[int, str, None], optional): The value at which to draw a vertical line.
             rotate_xticks (int, optional): The rotation angle for x-axis tick labels. Default is 0.
             title (str, optional): The title of the plot. Default is None.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
 
         Returns:
             A lets-plot figure of coefficients (and respective CIs) interacted via the `i()` syntax.
@@ -449,6 +451,7 @@ class FixestMulti:
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
             title=title,
+            coord_flip=coord_flip
         )
 
         return plot
@@ -460,6 +463,7 @@ class FixestMulti:
         yintercept: int = 0,
         rotate_xticks: int = 0,
         title : Optional[str] = None,
+        coord_flip: Optional[bool] = True
     ):
         """
         Plot estimation results. The plot() method is only defined for single regressions.
@@ -470,6 +474,7 @@ class FixestMulti:
             figtitle (str, optional): The title of the figure. Default is None.
             figtext (str, optional): The text at the bottom of the figure. Default is None.
             title (str, optional): The title of the plot. Default is None.
+            coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
         Returns:
             A lets-plot figure of regression coefficients.
         """
@@ -485,7 +490,8 @@ class FixestMulti:
             yintercept=yintercept,
             xintercept=None,
             rotate_xticks=rotate_xticks,
-            title=title
+            title=title,
+            coord_flip=coord_flip
         )
 
         return plot
