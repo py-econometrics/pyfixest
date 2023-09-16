@@ -7,8 +7,9 @@ import pandas as pd
 from typing import Union, List, Optional
 
 
-def summary(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3) -> None:
-
+def summary(
+    models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
+) -> None:
     """
     # Summary
 
