@@ -17,6 +17,7 @@ def iplot(
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
+    coord_flip: Optional[bool] = True,
 ):
     """
 
@@ -31,6 +32,7 @@ def iplot(
         xintercept (int or None): The value at which to draw a vertical line on the plot.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
         title (str): The title of the plot.
+        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
         A lets-plot figure.
     """
@@ -68,7 +70,8 @@ def iplot(
         yintercept=yintercept,
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
-        title=title
+        title=title,
+        flip_coord=coord_flip
     )
 
     return plot
@@ -83,6 +86,7 @@ def coefplot(
     rotate_xticks: int =0,
     coefficients: Optional[List[str]] = None,
     title: Optional[str] = None,
+    coord_flip: Optional[bool] = True
 ) :
     """
 
@@ -99,6 +103,7 @@ def coefplot(
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
         coefficients (list): A list of coefficients to plot. If None, all coefficients are plotted.
         title (str): The title of the plot.
+        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
         A lets-plot figure.
     """
@@ -125,7 +130,8 @@ def coefplot(
         yintercept=yintercept,
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
-        title=title
+        title=title,
+        flip_coord=coord_flip
     )
 
     return plot
@@ -138,7 +144,8 @@ def _coefplot(
     yintercept: Optional[int] = None,
     xintercept: Optional[int] = None,
     rotate_xticks: float = 0,
-    title: Optional[str] = None
+    title: Optional[str] = None,
+    flip_coord: Optional[bool] = True,
 ) :
     """
     Plot model coefficients with confidence intervals.
@@ -151,6 +158,7 @@ def _coefplot(
         df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
         title (str): The title of the plot.
+        flip_coord (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
         A lets-plot figure.
     """
@@ -163,10 +171,11 @@ def _coefplot(
         ggplot(df, aes(x = "Coefficient", y = "Estimate", color = "Model")) +
             geom_point(position=position_dodge(0.5)) +
             geom_errorbar(aes(ymin = "2.5 %", ymax = "97.5 %"), width = 0.05, position=position_dodge(0.5)) +
-            ylab("Estimate and 95% Confidence Interval") +
-            coord_flip()
+            ylab("Estimate and 95% Confidence Interval")
     )
 
+    if flip_coord:
+        plot += coord_flip()
     if yintercept is not None:
         plot += geom_hline(yintercept=yintercept, linetype="dashed", color = "red")
     if xintercept is not None:
@@ -177,7 +186,5 @@ def _coefplot(
         plot += theme(axis_text_x=element_text(angle=rotate_xticks))
     if title is not None:
         plot += ggtitle(title)
-
-    plot.show()
 
     return plot

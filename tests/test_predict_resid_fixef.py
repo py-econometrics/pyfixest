@@ -17,7 +17,7 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = get_poisson_data(seed=6574)
+    data = get_data(seed=6574)
     data = data.dropna()
     data["X3"] = pd.Categorical(data.X3.astype(str))
     data["X4"] = pd.Categorical(data.X4.astype(str))
