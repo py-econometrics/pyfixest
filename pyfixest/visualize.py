@@ -1,21 +1,24 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 from typing import List, Tuple, Optional
 from scipy.stats import norm
 import re
 from pyfixest.summarize import _post_processing_input_checks
 from typing import Union
-from matplotlib.figure import Figure
-
+import numpy as np
+from lets_plot import ggplot, aes, geom_point, geom_errorbar, geom_hline, geom_vline, ggsize, theme, element_text, position_dodge, coord_flip, ggtitle, ylab
+from lets_plot import *
+LetsPlot.setup_html()
 
 def iplot(
     models,
     alpha: float = 0.05,
-    figsize: tuple = (10, 10),
+    figsize: tuple = (500, 300),
     yintercept: Union[int, str, None] = None,
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
-) -> Figure:
+    title: Optional[str] = None,
+    coord_flip: Optional[bool] = True,
+):
     """
 
     # iplot
@@ -28,8 +31,10 @@ def iplot(
         yintercept (int or None): The value at which to draw a horizontal line on the plot.
         xintercept (int or None): The value at which to draw a vertical line on the plot.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+        title (str): The title of the plot.
+        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
-        A matplotlib figure.
+        A lets-plot figure.
     """
 
     models = _post_processing_input_checks(models)
@@ -59,28 +64,30 @@ def iplot(
     df = df[df.Coefficient.isin(all_icovars)].reset_index()
 
     plot = _coefplot(
-        models=fml_list,
         df=df,
         figsize=figsize,
         alpha=alpha,
         yintercept=yintercept,
         xintercept=xintercept,
-        is_iplot=True,
         rotate_xticks=rotate_xticks,
+        title=title,
+        flip_coord=coord_flip
     )
 
     return plot
 
 
 def coefplot(
-    models,
-    alpha=0.05,
-    figsize=(10, 10),
-    yintercept=None,
-    xintercept=None,
-    rotate_xticks=0,
+    models: List,
+    alpha: int =0.05,
+    figsize: tuple =(500, 300),
+    yintercept: float =0,
+    xintercept: float =None,
+    rotate_xticks: int =0,
     coefficients: Optional[List[str]] = None,
-) -> Figure:
+    title: Optional[str] = None,
+    coord_flip: Optional[bool] = True
+) :
     """
 
     # coefplot
@@ -91,13 +98,16 @@ def coefplot(
         models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
         figsize (tuple): The size of the figure.
         alpha (float): The significance level for the confidence intervals.
-        yintercept (int or None): The value at which to draw a horizontal line on the plot.
-        xintercept (int or None): The value at which to draw a vertical line on the plot.
+        yintercept (float or None): The value at which to draw a horizontal line on the plot. Default is 0.
+        xintercept (float or None): The value at which to draw a vertical line on the plot. Default is None.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
         coefficients (list): A list of coefficients to plot. If None, all coefficients are plotted.
+        title (str): The title of the plot.
+        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
-        A matplotlib figure.
+        A lets-plot figure.
     """
+
 
     models = _post_processing_input_checks(models)
     df_all = []
@@ -109,35 +119,34 @@ def coefplot(
         df_all.append(df_model)
 
     df = pd.concat(df_all, axis=0)
-    fml_list = df.index.unique()
 
     if coefficients is not None:
         df = df[df.Coefficient.isin(coefficients)].reset_index()
 
     plot = _coefplot(
-        models=fml_list,
         df=df,
         figsize=figsize,
         alpha=alpha,
         yintercept=yintercept,
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
-        is_iplot=False,
+        title=title,
+        flip_coord=coord_flip
     )
 
     return plot
 
 
 def _coefplot(
-    models: List,
     df: pd.DataFrame,
     figsize: Tuple[int, int],
     alpha: float,
     yintercept: Optional[int] = None,
     xintercept: Optional[int] = None,
-    is_iplot: bool = False,
     rotate_xticks: float = 0,
-) -> Figure:
+    title: Optional[str] = None,
+    flip_coord: Optional[bool] = True,
+) :
     """
     Plot model coefficients with confidence intervals.
     Args:
@@ -147,78 +156,35 @@ def _coefplot(
         yintercept (int or None): The value at which to draw a horizontal line on the plot.
         xintercept (int or None): The value at which to draw a vertical line on the plot.
         df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        is_iplot (bool): If True, plot variable interactions specified via the `i()` syntax.
         rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+        title (str): The title of the plot.
+        flip_coord (bool): Whether to flip the coordinates of the plot. Default is True.
     Returns:
-        A matplotlib figure.
+        A lets-plot figure.
     """
 
-    if len(models) > 1:
-        fig, ax = plt.subplots(
-            len(models), gridspec_kw={"hspace": 0.5}, figsize=figsize
-        )
+    df.reset_index(inplace=True)
+    df.rename(columns={"fml": "Model"}, inplace=True)
 
-        for x, model in enumerate(models):
-            df_model = df.reset_index().set_index("fml").xs(model)
-            coef = df_model["Estimate"]
-            conf_l = coef - df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            conf_u = coef + df_model["Std. Error"] * norm.ppf(1 - alpha / 2)
-            coefnames = df_model["Coefficient"].values.tolist()
+    plot = (
 
-            # could be moved out of the for loop, as the same ivars for all
-            # models.
+        ggplot(df, aes(x = "Coefficient", y = "Estimate", color = "Model")) +
+            geom_point(position=position_dodge(0.5)) +
+            geom_errorbar(aes(ymin = "2.5 %", ymax = "97.5 %"), width = 0.05, position=position_dodge(0.5)) +
+            ylab("Estimate and 95% Confidence Interval")
+    )
 
-            if is_iplot == True:
-                fig.suptitle("iplot")
-                coefnames = [
-                    (i)
-                    for string in coefnames
-                    for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
-                ]
+    if flip_coord:
+        plot += coord_flip()
+    if yintercept is not None:
+        plot += geom_hline(yintercept=yintercept, linetype="dashed", color = "red")
+    if xintercept is not None:
+        plot += geom_vline(xintercept=xintercept, linetype="dashed")
+    if figsize is not None:
+        plot += ggsize(figsize[0], figsize[1])
+    if rotate_xticks is not None:
+        plot += theme(axis_text_x=element_text(angle=rotate_xticks))
+    if title is not None:
+        plot += ggtitle(title)
 
-            ax[x].scatter(coefnames, coef, color="b", alpha=0.8)
-            ax[x].scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
-            ax[x].scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
-            ax[x].vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
-            if yintercept is not None:
-                ax[x].axhline(yintercept, color="red", linestyle="--", alpha=0.5)
-            if xintercept is not None:
-                ax[x].axvline(xintercept, color="red", linestyle="--", alpha=0.5)
-            ax[x].set_ylabel("Coefficients")
-            ax[x].set_title(model)
-            ax[x].tick_params(axis="x", rotation=rotate_xticks)
-
-    else:
-        fig, ax = plt.subplots(figsize=figsize)
-
-        model = models[0]
-
-        df_model = df.reset_index().set_index("fml").xs(model)
-
-        coef = df_model["Estimate"].values
-        conf_l = coef - df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        conf_u = coef + df_model["Std. Error"].values * norm.ppf(1 - alpha / 2)
-        coefnames = df_model["Coefficient"].values.tolist()
-
-        if is_iplot == True:
-            fig.suptitle("iplot")
-            coefnames = [
-                (i)
-                for string in coefnames
-                for i in re.findall(r"\[T\.([\d\.\-]+)\]", string)
-            ]
-
-        ax.scatter(coefnames, coef, color="b", alpha=0.8)
-        ax.scatter(coefnames, conf_u, color="b", alpha=0.8, marker="_", s=100)
-        ax.scatter(coefnames, conf_l, color="b", alpha=0.8, marker="_", s=100)
-        ax.vlines(coefnames, ymin=conf_l, ymax=conf_u, color="b", alpha=0.8)
-        if yintercept is not None:
-            ax.axhline(yintercept, color="red", linestyle="--", alpha=0.5)
-        if xintercept is not None:
-            ax.axvline(xintercept, color="red", linestyle="--", alpha=0.5)
-        ax.set_ylabel("Coefficients")
-        ax.set_title(model)
-        ax.tick_params(axis="x", rotation=rotate_xticks)
-
-        plt.show()
-        plt.close()
+    return plot
