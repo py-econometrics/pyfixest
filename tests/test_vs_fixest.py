@@ -367,6 +367,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         ("Y~ X1 + csw0(X2, f3) + X2"),
         ("Y ~ X1 + csw0(f1, f2) | f3"),
         ("Y ~ X1 | csw0(f1,f2)"),
+
+        ("Y ~ X1 + sw(X2, f1, f2)"),
+        ("Y ~ csw(X1, X2, f3)"),
+        #("Y ~ X3 + csw0(, X2, X3)"),
+
         ("Y ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
         ("Y + Y2 ~X1"),

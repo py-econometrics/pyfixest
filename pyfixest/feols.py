@@ -689,10 +689,8 @@ class Feols:
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_vars, df, output="sparse").astype(np.float64)
-        cols = D2.columns
-
-        D2 = csr_matrix(D2.values)
+        D2 = model_matrix("-1+" + fixef_vars, df, output="sparse")
+        cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
         k_fe = len(alpha)
@@ -703,6 +701,9 @@ class Feols:
             res = x.replace("[", "").replace("]", "").split("T.")
             var.append(res[0])
             level.append(res[1])
+
+
+        import pdb; pdb.set_trace()
 
         self._fixef_dict = dict()
         ki_start = 0
@@ -717,10 +718,12 @@ class Feols:
             self._fixef_dict[x] = fe_dict
             ki_start = ki
 
+
+
         for key, df in self._fixef_dict.items():
             print(f"{key}:\n{df.to_string(index=True)}\n")
 
-        self._sumFE = D2 @ alpha
+        self._sumFE = D2.dot(alpha)
 
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
