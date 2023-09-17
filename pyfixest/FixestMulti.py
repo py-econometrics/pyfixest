@@ -1,4 +1,5 @@
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -102,8 +103,9 @@ class FixestMulti:
         self,
         vcov: Union[str, Dict[str, str], None],
         fixef_keys: Union[List[str], None],
+        collin_tol : float = 1e-6,
         iwls_maxiter: int = 25,
-        iwls_tol: float = 1e-08,
+        iwls_tol: float = 1e-08
     ) -> None:
         """
         Estimate multiple regression models.
@@ -115,6 +117,7 @@ class FixestMulti:
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
                   or {"CRV3": "clustervar"} for CRV3 inference.
             fixef_keys (List[str]): A list of fixed effects combinations.
+            collin_tol (float, optional): The tolerance level for the multicollinearity check. Default is 1e-6.
             iwls_maxiter (int, optional): The maximum number of iterations for the IWLS algorithm. Default is 25.
                 Only relevant for non-linear estimation strategies.
             iwls_tol (float, optional): The tolerance level for the IWLS algorithm. Default is 1e-8.
@@ -167,7 +170,7 @@ class FixestMulti:
 
                     weights = np.ones((Y.shape[0], 1))
 
-                    coef_names = X.columns.tolist()
+                    coefnames = X.columns.tolist()
 
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
@@ -210,15 +213,11 @@ class FixestMulti:
                             Zd *= np.sqrt(w)
                             Xd *= np.sqrt(w)
 
-                        # check for multicollinearity
-                        _multicollinearity_checks(Xd)
-
                         if _is_iv:
-                            _multicollinearity_checks(Zd)
-                            FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights)
+                            FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights, coefnames = coefnames, collin_tol = collin_tol)
                         else:
                             # initiate OLS class
-                            FIT = Feols(Y=Yd, X=Xd, weights=weights)
+                            FIT = Feols(Y=Yd, X=Xd, weights=weights, coefnames = coefnames, collin_tol = collin_tol)
 
                         FIT.get_fit()
 
@@ -234,18 +233,17 @@ class FixestMulti:
                             if fe.ndim == 1:
                                 fe = fe.reshape((N, 1))
 
-                        # check for multicollinearity
-                        _multicollinearity_checks(X)
-
                         # initiate OLS class
                         FIT = Fepois(
                             Y=Y,
                             X=X,
                             fe=fe,
                             weights=weights,
+                            coefnames = coefnames,
                             drop_singletons=_drop_singletons,
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
+                            collin_tol = collin_tol
                         )
 
                         FIT.get_fit()
@@ -282,7 +280,6 @@ class FixestMulti:
                     if _method == "feols":
                         FIT.get_performance()
 
-                    FIT._coefnames = coef_names
                     if _icovars is not None:
                         FIT._icovars = _icovars
                     else:
@@ -624,25 +621,6 @@ def get_fml(
     fml = fml.replace(" ", "")
 
     return fml
-
-
-def _multicollinearity_checks(X: np.ndarray) -> None:
-    """
-    Checks for multicollinearity in the design matrices X and Z.
-
-    Args:
-        X (numpy.ndarray): The design matrix X.
-
-    Returns:
-        None
-    """
-
-    if np.linalg.matrix_rank(X) < min(X.shape):
-        raise MatrixNotFullRankError(
-            """
-            The design Matrix X does not have full rank. The model is skipped.
-            """
-        )
 
 
 def _get_vcov_type(vcov, fval):

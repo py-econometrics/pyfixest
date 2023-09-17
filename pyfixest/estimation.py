@@ -12,6 +12,7 @@ def feols(
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
+    collin_tol : float = 1e-10
 ) -> Union[Feols, FixestMulti]:
     """
 
@@ -59,6 +60,10 @@ def feols(
         ssc (str): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
 
         fixef_rm (str): A string to specify whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+
+        collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
+                            via the diagonal cholesky decomposition of the correlation matrix of the variables.
+                            If the tolerance is higher, more variables will be dropped.
 
     Returns:
         An instance of the `Feols` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
@@ -117,11 +122,13 @@ def feols(
 
     """
 
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, fixest._fixef_keys)
+    fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol = collin_tol)
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -137,6 +144,7 @@ def fepois(
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
+    collin_tol : float = 1e-10
 ) -> Union[Fepois, FixestMulti]:
     """
     # fepois
@@ -184,6 +192,9 @@ def fepois(
 
         iwls_maxiter (Optional[float]): maximum number of iterations for IWLS convergence. 25 by default.
 
+        collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
+                            via the diagonal cholesky decomposition of the correlation matrix of the variables. If the tolerance is higher, more variables will be dropped.
+
     Returns:
         An instance of the `Fepois` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
 
@@ -229,6 +240,8 @@ def fepois(
 
     """
 
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+
     fixest = FixestMulti(data=data)
 
     fixest._prepare_estimation(
@@ -245,9 +258,33 @@ def fepois(
         fixef_keys=fixest._fixef_keys,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
+        collin_tol = collin_tol
     )
 
     if fixest._is_multiple_estimation:
         return fixest
     else:
         return fixest.fetch_model(0, print_fml=False)
+
+
+
+def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
+
+
+    if not isinstance(fml, str):
+        raise ValueError("fml must be a string")
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("data must be a pandas dataframe")
+    if not isinstance(vcov, (str, dict, type(None))):
+        raise ValueError("vcov must be a string, dictionary, or None")
+    if not isinstance(fixef_rm, str):
+        raise ValueError("fixef_rm must be a string")
+    if not isinstance(collin_tol, float):
+        raise ValueError("collin_tol must be a float")
+
+    if not fixef_rm in ["none", "singleton"]:
+        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
+    if not collin_tol > 0:
+        raise ValueError("collin_tol must be greater than zero")
+    if not collin_tol < 1:
+        raise ValueError("collin_tol must be less than one")
