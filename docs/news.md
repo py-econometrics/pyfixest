@@ -1,5 +1,16 @@
 # News
 
+## PyFixest `0.9.6`
+
+Improved Collinearity handling. See [#145](https://github.com/s3alfisc/pyfixest/issues/145)
+
+## PyFixest `0.9.5`
+
+
+- Moves plotting from `matplotlin` to `lets-plot`.
+- Fixes a few minor bugs in plotting and the `fixef()` method.
+
+
 ## PyFixest `0.9.1`
 
 ### Breaking API changes

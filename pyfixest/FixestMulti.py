@@ -6,8 +6,6 @@ import pandas as pd
 
 from typing import Union, Dict, Optional, List
 
-from regex import F
-
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.feiv import Feiv
