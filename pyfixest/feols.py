@@ -5,7 +5,7 @@ import warnings
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
-from regex import R
+
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
