@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 
 
-from typing import Union, Optional
+from typing import Union, Optional, List
 from formulaic import model_matrix
 from pyfixest.feols import Feols
 from pyfixest.exceptions import (
@@ -27,9 +27,11 @@ class Fepois(Feols):
         X: np.ndarray,
         fe: np.ndarray,
         weights: np.ndarray,
+        coefnames: List[str],
         drop_singletons: bool,
+        collin_tol: float,
         maxiter: Optional[int] = 25,
-        tol: Optional[float] = 1e-08,
+        tol: Optional[float] = 1e-08
     ):
         """
         Args:
@@ -37,12 +39,14 @@ class Fepois(Feols):
             Z (np.array): independent variables. two-dimensional np.array
             fe (np.array): fixed effects. two dimensional np.array or None
             weights (np.array): weights. one dimensional np.array or None
+            coefnames (list): names of the coefficients in the design matrix X.
             drop_singletons (bool): whether to drop singleton fixed effects
+            collin_tol (float): tolerance level for the detection of collinearity
             maxiter (int): maximum number of iterations for the IRLS algorithm
             tol (float): tolerance level for the convergence of the IRLS algorithm
         """
 
-        super().__init__(Y=Y, X=X, weights=weights)
+        super().__init__(Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol)
 
         # input checks
         _fepois_input_checks(fe, drop_singletons, tol, maxiter)
