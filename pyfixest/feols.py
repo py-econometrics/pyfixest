@@ -1,16 +1,18 @@
+import re
 import numpy as np
 import pandas as pd
 import warnings
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
+
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 from formulaic import model_matrix
 
 from pyfixest.utils import get_ssc
-from pyfixest.exceptions import VcovTypeNotSupportedError, NanInClusterVarError
+from pyfixest.exceptions import MatrixNotFullRankError, VcovTypeNotSupportedError, NanInClusterVarError
 
 
 class Feols:
@@ -23,7 +25,7 @@ class Feols:
     ordinary least squares.
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray) -> None:
+    def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray, collin_tol: float, coefnames: List[str]) -> None:
         """
         Initiate an instance of class `Feols`.
 
@@ -31,7 +33,8 @@ class Feols:
             Y (np.array): dependent variable. two-dimensional np.array
             X (np.array): independent variables. two-dimensional np.array
             weights (np.array): weights. one-dimensional np.array
-
+            collin_tol (float): tolerance level for collinearity checks
+            coefnames (List[str]): names of the coefficients (of the design matrix X)
         Returns:
             None
 
@@ -41,10 +44,13 @@ class Feols:
 
         self._Y = Y
         self._X = X
-        self._Z = X
         self.get_nobs()
 
         _feols_input_checks(Y, X, weights)
+
+        self._collin_tol = collin_tol
+        self._X, self._coefnames, self._collin_vars, self._collin_index = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+        self._Z = self._X
 
         self._weights = weights
         self._is_iv = False
@@ -60,7 +66,7 @@ class Feols:
         self._fml = None
         self._has_fixef = False
         self._fixef = None
-        self._coefnames = None
+        #self._coefnames = None
         self._icovars = None
         self._ssc_dict = None
 
@@ -1017,3 +1023,116 @@ def _get_vcov_type(vcov, fval):
         vcov_type = vcov
 
     return vcov_type
+
+
+def _drop_multicollinear_variables(X: np.ndarray, names: List[str], collin_tol: float) -> None:
+    """
+    Checks for multicollinearity in the design matrices X and Z.
+
+    Args:
+        X (numpy.ndarray): The design matrix X.
+        names (List[str]): The names of the coefficients.
+        collin_tol (float): The tolerance level for the multicollinearity check.
+
+    Returns:
+        Xd (numpy.ndarray): The design matrix X.
+        names (List[str]): The names of the coefficients.
+        collin_vars (List[str]): The collinear variables.
+        collin_index (numpy.ndarray): Logical array, True if the variable is collinear.
+    """
+
+    # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
+
+    tXX = X.T @ X
+    res = _find_collinear_variables(tXX, collin_tol)
+
+    collin_vars = None
+    collin_index = None
+
+    if res["n_excl"] > 0:
+
+        names = np.array(names)
+        collin_vars = names[res["id_excl"]]
+        warnings.warn(
+            f"""
+            The following variables are collinear: {collin_vars}.
+            The variables are dropped from the model.
+            """
+        )
+
+        X = np.delete(X, res["id_excl"], axis=1)
+        names = np.delete(names, res["id_excl"])
+        names = names.tolist()
+        collin_index = res["id_excl"]
+
+    return X, names, collin_vars, collin_index
+
+
+
+def _find_collinear_variables(X, tol = 1e-10):
+
+    """
+    Detect multicollinear variables.
+    Brute force copy of Laurent's c++ implementation.
+    See the fixest repo here: https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130
+    Args:
+        X (numpy.ndarray): A symmetrix matrix X.
+        tol (float): The tolerance level for the multicollinearity check.
+    Returns:
+        res (dict): A dictionary with the following keys:
+            id_excl (numpy.ndarray): A boolean array, True if the variable is collinear.
+            n_excl (int): The number of collinear variables.
+            all_removed (bool): True if all variables are collinear.
+    """
+
+    #import pdb; pdb.set_trace()
+
+    res = dict()
+    K = X.shape[1]
+    R = np.zeros((K,K))
+    id_excl = np.zeros(K, dtype=bool)
+    n_excl = 0
+    min_norm = X[0, 0]
+
+    for j in range(K):
+
+        R_jj = X[j,j]
+        for k in range(j):
+
+            if id_excl[k]:
+                continue
+            R_jj -= R[k,j] * R[k,j]
+
+        if R_jj < tol:
+            n_excl += 1
+            id_excl[j] = True
+
+            if n_excl == K:
+                res["all_removed"] = True
+                return res
+
+            continue
+
+        if min_norm > R_jj:
+            min_norm = R_jj
+
+        R_jj = np.sqrt(R_jj)
+        R[j,j] = R_jj
+
+        for i in range(j+1, K):
+            value = X[i,j]
+            for k in range(j):
+                if id_excl[k]:
+                    continue
+                value -= R[k,i] * R[k,j]
+            R[j,i] = value / R_jj
+
+
+    res["id_excl"] = id_excl
+    res["n_excl"] = n_excl
+    res["all_removed"] = False
+
+    return res
+
+
+

@@ -10,7 +10,7 @@ class Feiv(Feols):
     """
 
     def __init__(
-        self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray
+        self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray, coefnames: list, collin_tol: float
     ) -> None:
         """
         Args:
@@ -18,17 +18,25 @@ class Feiv(Feols):
             X (np.array): independent variables. two-dimensional np.array
             Z (np.array): instruments. two-dimensional np.array
             weights (np.array): weights. one-dimensional np.array
+            coefnames (list): names of the coefficients
+            collin_tol (float): tolerance for collinearity check
         Returns:
             None
         """
 
-        super().__init__(Y=Y, X=X, weights=weights)
+        super().__init__(Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol)
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
 
-        self._Z = Z
+        #import pdb; pdb.set_trace()
+
+        if self._collin_index is not None:
+            self._Z = Z[:,~self._collin_index]
+        else:
+            self._Z = Z
+
         self._is_iv = True
 
         self._support_crv3_inference = False
