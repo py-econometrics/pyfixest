@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.9.7`
+
+Fixes a bug in `predict()` produced when multicollinear variables are dropped.
+
 ## PyFixest `0.9.6`
 
 Improved Collinearity handling. See [#145](https://github.com/s3alfisc/pyfixest/issues/145)
