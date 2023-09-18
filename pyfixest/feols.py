@@ -702,7 +702,7 @@ class Feols:
 
         fml_linear = f"{depvars} ~ {covars}"
         Y, X = model_matrix(fml_linear, df)
-        X = X.drop("Intercept", axis=1)
+        X = X[self._coefnames] # drop intercept, potentially multicollinear vars
         Y = Y.to_numpy().flatten().astype(np.float64)
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
