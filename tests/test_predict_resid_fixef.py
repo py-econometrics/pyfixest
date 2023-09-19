@@ -29,10 +29,25 @@ def test_internally(data):
     Currently only for OLS.
     """
 
+
+    # predict via feols
     fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
     mod = fit.fetch_model(0)
 
     mod.fixef()
+    original_prediction = mod.predict()
+    updated_prediction = mod.predict(data=mod._data)
+    np.allclose(original_prediction, updated_prediction)
+
+    # now expect error with updated predicted being a subset of data
+    with pytest.raises(ValueError):
+        updated_prediction = mod.predict(data=data.iloc[0:100, :])
+        np.allclose(original_prediction, updated_prediction)
+
+
+    fit = fepois(fml="Y~csw(X1, X2) | f1", data=data, vcov="hetero")
+    mod = fit.fetch_model(0)
+
     original_prediction = mod.predict()
     updated_prediction = mod.predict(data=mod._data)
     np.allclose(original_prediction, updated_prediction)
@@ -59,6 +74,8 @@ def test_vs_fixest(data, fml):
     feols_mod = feols(fml=fml, data=data, vcov="HC1")
     fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
 
+    data2 = data[1:500]
+
     feols_mod.fixef()
 
     # fepois_mod.fixef()
@@ -77,6 +94,7 @@ def test_vs_fixest(data, fml):
         ssc=fixest.ssc(True, "none", True, "min", "min", False),
         se="hetero",
     )
+
 
     # test OLS fit
     if not np.allclose(feols_mod.coef().values, r_fixest_ols.rx2("coefficients")):
@@ -103,6 +121,14 @@ def test_vs_fixest(data, fml):
 
     # test predict for Poisson
     if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
+        raise ValueError("Predictions for Poisson are not equal")
+
+    # test on new data - OLS.
+    if not np.allclose(feols_mod.predict(data = data2), stats.predict(r_fixest_ols, newdata = data2)):
+        raise ValueError("Predictions for OLS are not equal")
+
+    # test predict for Poisson
+    if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):
         raise ValueError("Predictions for Poisson are not equal")
 
     # test resid for OLS
