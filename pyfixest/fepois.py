@@ -256,6 +256,10 @@ class Fepois(Feols):
 
         """
 
+        _fml = self._fml
+        _beta_hat = self._beta_hat
+
+
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
@@ -263,15 +267,14 @@ class Fepois(Feols):
             y_hat = self._Xbeta
 
         else:
-            fml_linear, _ = self._fml.split("|")
+            fml_linear = _fml.split("|")[0]
             _, X = model_matrix(fml_linear, data)
-            X = X.drop("Intercept", axis=1)
-
-            y_hat = X @ self._beta_hat
+            X = X[self._coefnames]
+            X = X.to_numpy()
+            y_hat = X @ _beta_hat
 
         if type == "link":
-            if self._method == "fepois":
-                y_hat = np.exp(y_hat)
+            y_hat = np.exp(y_hat)
 
         return y_hat.flatten()
 

@@ -714,13 +714,28 @@ class Feols:
 
         res = dict()
         for i, col in enumerate(cols):
-            res[col] = alpha[i]
 
-        self._fixef_df = pd.Series(res, name = "estimated_fixed_effects")
+            matches = re.match(r'([a-zA-Z0-9]+)\[T\.(\d+)\]', col)
+            if matches:
+                variable = matches.group(1)
+                level = matches.group(2)
+            else:
+                raise ValueError("Something went wrong with the regex. Please open a PR in the github repo!")
+
+            # check if res already has a key variable
+            if variable not in res:
+                res[variable] = dict()
+                res[variable][level] = alpha[i]
+                continue
+            else:
+                if level not in res[variable]:
+                    res[variable][level] = alpha[i]
+
+        self._fixef_dict = res
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
 
-        return self._fixef_df
+        return self._fixef_dict
 
     def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
@@ -742,6 +757,14 @@ class Feols:
         _data = self._data
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
+        _is_iv = self._is_iv
+        _fixef = "+".split(self._fixef) # name of the fixef effects variables
+
+        if _is_iv:
+            raise NotImplementedError(
+                "The predict() method is currently not supported for IV models."
+            )
+
 
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
@@ -751,11 +774,37 @@ class Feols:
             y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
 
         else:
-            fml_linear, _ = _fml.split("|")
+
+            if self._has_fixef:
+                fml_linear, fml_fe = _fml.split("|")
+
+                if self._sumFE is None:
+                    self.fixef()
+
+                fvals = self._fixef.split("+")
+
+                #fevars = self._fixef_df.index.tolist()
+                df_fe = data[fvals].astype(str)
+
+                # populate matrix with fixed effects estimates
+                fixef_mat = np.zeros((data.shape[0], len(fvals)))
+                for i, fixef in enumerate(self._fixef_dict.keys()):
+
+                    subdict = self._fixef_dict[fixef]
+                    for level in subdict.keys():
+                        fixef_mat[df_fe[fixef] == level, i] = subdict[level]
+
+            else:
+                fml_linear = _fml
+                fml_fe = None
+
+            # deal with the linear part
             _, X = model_matrix(fml_linear, data)
-            X = X.drop("Intercept", axis=1)
+            X = X[self._coefnames]
             X = X.to_numpy()
             y_hat = X @ _beta_hat
+            if self._has_fixef:
+                y_hat += np.sum(fixef_mat, axis = 1)
 
         return y_hat.flatten()
 
