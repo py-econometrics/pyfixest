@@ -715,7 +715,7 @@ class Feols:
         res = dict()
         for i, col in enumerate(cols):
 
-            matches = re.match(r'([a-zA-Z0-9]+)\[T\.(\d+)\]', col)
+            matches = re.match(r'([a-zA-Z0-9]+)\[T\.(.*?)\]', col)
             if matches:
                 variable = matches.group(1)
                 level = matches.group(2)
