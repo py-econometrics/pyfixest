@@ -735,6 +735,8 @@ class Feols:
     def predict(self, newdata: Optional[pd.DataFrame] = None) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
+        If new fixed effect levels are introduced in `newdata`, predicted values for such observations
+        will be set to NaN.
 
         Args:
             newdata (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
@@ -777,11 +779,22 @@ class Feols:
                 fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
                 #fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
 
-                for i, fixef in enumerate(self._fixef_dict.keys()):
+                for i, fixef in enumerate(df_fe.columns):
 
+                    new_levels = df_fe[fixef].unique()
+                    old_levels = _data[fixef].unique().astype(str)
                     subdict = self._fixef_dict[fixef]
-                    for level in subdict.keys():
-                        fixef_mat[df_fe[fixef] == level, i] = subdict[level]
+
+                    for level in new_levels:
+                        # if level estimated: either estimated value (or 0 for reference level)
+                        if level in old_levels:
+                            if level in subdict:
+                                fixef_mat[df_fe[fixef] == level, i] = subdict[level]
+                            else:
+                                fixef_mat[df_fe[fixef] == level, i] = 0
+                        # if new level not estimated: set to NaN
+                        else:
+                            fixef_mat[df_fe[fixef] == level, i] = np.nan
 
             else:
                 fml_linear = _fml
