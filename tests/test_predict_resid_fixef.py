@@ -154,11 +154,30 @@ def test_vs_fixest(data, fml):
 
     # test with missing fixed effects
 
-    data3 = data.copy()[0:200]
-    data3["f1"].iloc[0] = 999
 
-    #import pdb; pdb.set_trace()
-    updated_prediction_py = feols_mod.predict(newdata=data3)[0:4]
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y~ X1 | f1",
+        "Y~ X1 | f1 + f2",
+        # "Y~ X1 | X3^X4",
+    ],
+)
+def test_new_fixef_level(data, fml):
 
-    if not np.allclose(updated_prediction_py, stats.predict(r_fixest_ols, newdata = data3)[0:4]):
+    data2 = data.copy()[1:500]
+
+    feols_mod = feols(fml=fml, data=data, vcov="HC1")
+    # fixest estimation
+    r_fixest_ols = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        se="hetero",
+    )
+
+    updated_prediction_py = feols_mod.predict(newdata=data2)
+    updated_prediction_r = stats.predict(r_fixest_ols, newdata = data2)
+
+    if not np.allclose(updated_prediction_py, updated_prediction_r):
         raise ValueError("Updated predictions are not equal")
