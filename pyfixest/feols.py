@@ -685,11 +685,6 @@ class Feols:
                 "The fixef() method is currently not supported for IV models."
             )
 
-        if _method == "fepois":
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for Poisson models."
-            )
-
         # fixef_vars = self._fixef.split("+")[0]
 
         depvars, res = _fml.split("~")
@@ -714,24 +709,38 @@ class Feols:
 
         res = dict()
         for i, col in enumerate(cols):
-            res[col] = alpha[i]
 
-        self._fixef_df = pd.Series(res, name = "estimated_fixed_effects")
+            matches = re.match(r'(.+?)\[T\.(.+?)\]', col)
+            if matches:
+                variable = matches.group(1)
+                level = matches.group(2)
+            else:
+                raise ValueError("Something went wrong with the regex. Please open a PR in the github repo!")
+
+            # check if res already has a key variable
+            if variable not in res:
+                res[variable] = dict()
+                res[variable][level] = alpha[i]
+                continue
+            else:
+                if level not in res[variable]:
+                    res[variable][level] = alpha[i]
+
+        self._fixef_dict = res
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
 
-        return self._fixef_df
+        return self._fixef_dict
 
-    def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(self, newdata: Optional[pd.DataFrame] = None) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
+        If new fixed effect levels are introduced in `newdata`, predicted values for such observations
+        will be set to NaN.
 
         Args:
-            data (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            newdata (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
-            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
-                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
-                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
 
         Returns:
             y_hat (np.ndarray): A flat np.array with predicted values of the regression model.
@@ -742,20 +751,62 @@ class Feols:
         _data = self._data
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
+        _is_iv = self._is_iv
+        #_fixef = "+".split(self._fixef) # name of the fixef effects variables
 
-        if type not in ["response", "link"]:
-            raise ValueError("type must be one of 'response' or 'link'.")
+        if _is_iv:
+            raise NotImplementedError(
+                "The predict() method is currently not supported for IV models."
+            )
 
-        if data is None:
+        if newdata is None:
             depvar = _fml.split("~")[0]
             y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
 
         else:
-            fml_linear, _ = _fml.split("|")
-            _, X = model_matrix(fml_linear, data)
-            X = X.drop("Intercept", axis=1)
+
+            if self._has_fixef:
+                fml_linear, _ = _fml.split("|")
+
+                if self._sumFE is None:
+                    self.fixef()
+
+                fvals = self._fixef.split("+")
+
+                df_fe = newdata[fvals].astype(str)
+
+                # populate matrix with fixed effects estimates
+                fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
+                #fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
+
+                for i, fixef in enumerate(df_fe.columns):
+
+                    new_levels = df_fe[fixef].unique()
+                    old_levels = _data[fixef].unique().astype(str)
+                    subdict = self._fixef_dict[fixef]
+
+                    for level in new_levels:
+                        # if level estimated: either estimated value (or 0 for reference level)
+                        if level in old_levels:
+                            if level in subdict:
+                                fixef_mat[df_fe[fixef] == level, i] = subdict[level]
+                            else:
+                                fixef_mat[df_fe[fixef] == level, i] = 0
+                        # if new level not estimated: set to NaN
+                        else:
+                            fixef_mat[df_fe[fixef] == level, i] = np.nan
+
+            else:
+                fml_linear = _fml
+                fml_fe = None
+
+            # deal with the linear part
+            _, X = model_matrix(fml_linear, newdata)
+            X = X[self._coefnames]
             X = X.to_numpy()
             y_hat = X @ _beta_hat
+            if self._has_fixef:
+                y_hat += np.sum(fixef_mat, axis = 1)
 
         return y_hat.flatten()
 
