@@ -685,11 +685,6 @@ class Feols:
                 "The fixef() method is currently not supported for IV models."
             )
 
-        if _method == "fepois":
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for Poisson models."
-            )
-
         # fixef_vars = self._fixef.split("+")[0]
 
         depvars, res = _fml.split("~")
@@ -715,7 +710,7 @@ class Feols:
         res = dict()
         for i, col in enumerate(cols):
 
-            matches = re.match(r'([a-zA-Z0-9]+)\[T\.(.*?)\]', col)
+            matches = re.match(r'(.+?)\[T\.(.+?)\]', col)
             if matches:
                 variable = matches.group(1)
                 level = matches.group(2)
@@ -737,16 +732,13 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(self, newdata: Optional[pd.DataFrame] = None) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
 
         Args:
-            data (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            newdata (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
-            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
-                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
-                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
 
         Returns:
             y_hat (np.ndarray): A flat np.array with predicted values of the regression model.
@@ -758,36 +750,33 @@ class Feols:
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
-        _fixef = "+".split(self._fixef) # name of the fixef effects variables
+        #_fixef = "+".split(self._fixef) # name of the fixef effects variables
 
         if _is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
 
-
-        if type not in ["response", "link"]:
-            raise ValueError("type must be one of 'response' or 'link'.")
-
-        if data is None:
+        if newdata is None:
             depvar = _fml.split("~")[0]
             y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
 
         else:
 
             if self._has_fixef:
-                fml_linear, fml_fe = _fml.split("|")
+                fml_linear, _ = _fml.split("|")
 
                 if self._sumFE is None:
                     self.fixef()
 
                 fvals = self._fixef.split("+")
 
-                #fevars = self._fixef_df.index.tolist()
-                df_fe = data[fvals].astype(str)
+                df_fe = newdata[fvals].astype(str)
 
                 # populate matrix with fixed effects estimates
-                fixef_mat = np.zeros((data.shape[0], len(fvals)))
+                fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
+                #fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
+
                 for i, fixef in enumerate(self._fixef_dict.keys()):
 
                     subdict = self._fixef_dict[fixef]
@@ -799,7 +788,7 @@ class Feols:
                 fml_fe = None
 
             # deal with the linear part
-            _, X = model_matrix(fml_linear, data)
+            _, X = model_matrix(fml_linear, newdata)
             X = X[self._coefnames]
             X = X.to_numpy()
             y_hat = X @ _beta_hat

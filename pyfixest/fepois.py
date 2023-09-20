@@ -244,11 +244,11 @@ class Fepois(Feols):
         if _convergence:
             self._convergence = True
 
-    def predict(self, data: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(self, newdata: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         Args:
-            data (Union[None, pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            newdata (Union[None, pd.DataFrame], optional): A pd.DataFrame with the new data, to be used for prediction.
                 If None (default), uses the data used for fitting the model.
             type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
                 If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
@@ -256,27 +256,22 @@ class Fepois(Feols):
 
         """
 
-        _fml = self._fml
-        _beta_hat = self._beta_hat
+        _Xbeta = self._Xbeta
+        _has_fixef = self._has_fixef
 
+        if _has_fixef:
+            raise NotImplementedError("Prediction with fixed effects is not yet implemented for Poisson regression.")
+        if newdata is not None:
+            raise NotImplementedError("Prediction with function argument `newdata` is not yet implemented for Poisson regression.")
 
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
-        if data is None:
-            y_hat = self._Xbeta
-
-        else:
-            fml_linear = _fml.split("|")[0]
-            _, X = model_matrix(fml_linear, data)
-            X = X[self._coefnames]
-            X = X.to_numpy()
-            y_hat = X @ _beta_hat
-
+        y_hat = super().predict(data=newdata)
         if type == "link":
             y_hat = np.exp(y_hat)
 
-        return y_hat.flatten()
+        return y_hat
 
     def _check_for_separation(self, check: str = "fe") -> None:
         """
