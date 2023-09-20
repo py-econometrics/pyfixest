@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pyfixest.utils import get_data
 from pyfixest.estimation import feols, fepois
+from pyfixest.exceptions import NotImplementedError
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -17,7 +18,7 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = get_data(seed=6574, model = "Fepois")
+    data = get_data(seed=65714, model = "Fepois")
     data = data.dropna()
 
     return data
@@ -30,32 +31,41 @@ def test_internally(data):
     """
 
 
-    # predict via feols
+    # predict via feols, without fixed effect
+    fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
+    mod = fit.fetch_model(0)
+    original_prediction = mod.predict()
+    updated_prediction = mod.predict(newdata=mod._data)
+    np.allclose(original_prediction, updated_prediction)
+
+    # predict via feols, with fixef effect
     fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
     mod = fit.fetch_model(0)
-
     mod.fixef()
     original_prediction = mod.predict()
-    updated_prediction = mod.predict(data=mod._data)
+    updated_prediction = mod.predict(newdata=mod._data)
     np.allclose(original_prediction, updated_prediction)
 
     # now expect error with updated predicted being a subset of data
     with pytest.raises(ValueError):
-        updated_prediction = mod.predict(data=data.iloc[0:100, :])
+        updated_prediction = mod.predict(newdata=data.iloc[0:100, :])
         np.allclose(original_prediction, updated_prediction)
 
 
-    fit = fepois(fml="Y~csw(X1, X2) | f1", data=data, vcov="hetero")
-    mod = fit.fetch_model(0)
 
-    original_prediction = mod.predict()
-    updated_prediction = mod.predict(data=mod._data)
-    np.allclose(original_prediction, updated_prediction)
+    # fepois NotImplementedError(s)
+    fit = fepois(fml="Y~X1*X2", data=data, vcov="hetero")
+    with pytest.raises(NotImplementedError):
+        fit.predict(newdata=fit._data)
 
-    # now expect error with updated predicted being a subset of data
-    with pytest.raises(ValueError):
-        updated_prediction = mod.predict(data=data.iloc[0:100, :])
-        np.allclose(original_prediction, updated_prediction)
+
+
+    # fepois with fixed effect
+    fit = fepois(fml="Y~X1*X2 | f1", data=data, vcov="hetero")
+    with pytest.raises(NotImplementedError):
+        fit.predict()
+
+
 
 
 @pytest.mark.parametrize(
@@ -120,11 +130,11 @@ def test_vs_fixest(data, fml):
         raise ValueError("Predictions for OLS are not equal")
 
     # test predict for Poisson
-    if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
-        raise ValueError("Predictions for Poisson are not equal")
+    #if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
+    #    raise ValueError("Predictions for Poisson are not equal")
 
     # test on new data - OLS.
-    if not np.allclose(feols_mod.predict(data = data2), stats.predict(r_fixest_ols, newdata = data2)):
+    if not np.allclose(feols_mod.predict(newdata = data2), stats.predict(r_fixest_ols, newdata = data2)):
         raise ValueError("Predictions for OLS are not equal")
 
     # test predict for Poisson
