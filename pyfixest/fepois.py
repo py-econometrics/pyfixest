@@ -247,6 +247,9 @@ class Fepois(Feols):
     def predict(self, newdata: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
+        If new fixed effect levels are introduced in `newdata`, predicted values for such observations
+        will be set to NaN.
+
         Args:
             newdata (Union[None, pd.DataFrame], optional): A pd.DataFrame with the new data, to be used for prediction.
                 If None (default), uses the data used for fitting the model.

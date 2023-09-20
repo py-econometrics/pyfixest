@@ -84,7 +84,7 @@ def test_vs_fixest(data, fml):
     feols_mod = feols(fml=fml, data=data, vcov="HC1")
     fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
 
-    data2 = data[1:500]
+    data2 = data.copy()[1:500]
 
     feols_mod.fixef()
 
@@ -151,3 +151,14 @@ def test_vs_fixest(data, fml):
     #    r_fixest_pois.rx2("residuals")
     # ):
     #    raise ValueError("Residuals for Poisson are not equal")
+
+    # test with missing fixed effects
+
+    data3 = data.copy()[0:200]
+    data3["f1"].iloc[0] = 999
+
+    #import pdb; pdb.set_trace()
+    updated_prediction_py = feols_mod.predict(newdata=data3)[0:4]
+
+    if not np.allclose(updated_prediction_py, stats.predict(r_fixest_ols, newdata = data3)[0:4]):
+        raise ValueError("Updated predictions are not equal")
