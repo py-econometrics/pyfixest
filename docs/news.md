@@ -1,5 +1,14 @@
 # News
 
+## PyFixest `0.9.9
+
+- Adds support for `wildboottest` for Python `3.11`.
+
+## PyFixest `0.9.8`
+
+- Fixes a couple more bugs in the `predict()` and `fixef()` methods.
+- The `predict()` argument `data` is renamed to `newdata`.
+
 ## PyFixest `0.9.7`
 
 Fixes a bug in `predict()` produced when multicollinear variables are dropped.
