@@ -1,6 +1,6 @@
 # News
 
-## PyFixest `0.9.9
+## PyFixest `0.9.9`
 
 - Adds support for `wildboottest` for Python `3.11`.
 

@@ -555,6 +555,7 @@ class Feols:
         seed: Optional[int] = None,
         adj: Optional[bool] = True,
         cluster_adj: Optional[bool] = True,
+        parallel: Optional[bool] = False,
         digits: Optional[int] = 3,
     ):
         """
@@ -573,6 +574,10 @@ class Feols:
         impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not? Defaults to True.
         bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
                             to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
+        seed (Union[int, None], optional): Option to provide a random seed. Defaults to None.
+        adj (bool, optional): Should the bootstrap be adjusted? Defaults to True.
+        cluster_adj (bool, optional): Should the bootstrap be adjusted for clustering? Defaults to True.
+        parallel (bool, optional): Should the bootstrap be run in parallel? Defaults to False.
         seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
 
         Returns: a pd.DataFrame with the original t-statistic and bootstrapped p-value.
@@ -594,17 +599,28 @@ class Feols:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
         except ImportError:
             print(
-                "Module 'wildboottest' not found. Please install 'wildboottest'. Note that it 'wildboottest 'requires Python < 3.11 due to its dependency on 'numba'."
+                "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
             )
 
         if _is_iv:
             raise VcovTypeNotSupportedError(
                 "Wild cluster bootstrap is not supported with IV estimation."
             )
+
         if _has_fixef:
-            raise VcovTypeNotSupportedError(
-                "Wild cluster bootstrap is not supported with fixed effects."
-            )
+
+            # update _X, _xnames
+            fml_linear, fixef = self._fml.split("|")
+            fixef_vars = fixef.split("+")
+            # wrap all fixef vars in "C()"
+            fixef_vars_C = [f"C({x})" for x in fixef_vars]
+            fixef_fml = "+".join(fixef_vars_C)
+
+            fml_dummies = f"{fml_linear} + {fixef_fml}"
+
+            # make this sparse once wildboottest allows it
+            _, _X = model_matrix(fml_dummies, _data, output = "numpy")
+            _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -623,7 +639,7 @@ class Feols:
         else:
             cluster = _data[cluster]
 
-            boot = WildboottestCL(X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed)
+            boot = WildboottestCL(X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel)
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
@@ -634,7 +650,7 @@ class Feols:
             boot.get_numer()
             boot.get_denom()
             boot.get_tboot()
-            boot.vcov()
+            boot.get_vcov()
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
 
