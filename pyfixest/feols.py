@@ -574,12 +574,21 @@ class Feols:
         bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
                             to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
         seed (Union[int, None], optional): Option to provide a random seed. Defaults to None.
-        adj (bool, optional): Should the bootstrap be adjusted? Defaults to True.
-        cluster_adj (bool, optional): Should the bootstrap be adjusted for clustering? Defaults to True.
+        adj (bool, optional): Should a small sample adjustment be applied for number of observations and covariates? Defaults to True.
+                              Note that the small sample adjustment in the bootstrap might differ from the one in the original model.
+                              This will only affect the returned non-bootstrapped t-statistic, but not the bootstrapped p-value.
+                              For exact matches, set `adj = False` and `cluster_adj = False` in `wildboottest()` and via the
+                              `ssc(adj = False, cluster_adj = False)` option in `feols()`.
+        cluster_adj (bool, optional): Should a small sample adjustment be applied for the number of clusters? Defaults to True.
+                                Note that the small sample adjustment in the bootstrap might differ from the one in the original model.
+                                This will only affect the returned non-bootstrapped t-statistic, but not the bootstrapped p-value.
+                                For exact matches, set `adj = False` and `cluster_adj = False` in `wildboottest()` and via the
+                                `ssc(adj = False, cluster_adj = False)` option in `feols()`.
         parallel (bool, optional): Should the bootstrap be run in parallel? Defaults to False.
         seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
 
-        Returns: a pd.DataFrame with the original t-statistic and bootstrapped p-value.
+        Returns: a pd.DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value as well as
+                the bootstrap type, inference type (HC vs CRV) and whether the null hypothesis was imposed on the bootstrap dgp.
         """
 
         _is_iv = self._is_iv
@@ -605,8 +614,14 @@ class Feols:
             )
 
         if _is_iv:
-            raise VcovTypeNotSupportedError(
+            raise NotImplementedError(
                 "Wild cluster bootstrap is not supported with IV estimation."
+            )
+
+        if self._method == "fepois":
+            raise NotImplementedError(
+                "Wild cluster bootstrap is not supported for Poisson regression."
+            )
             )
 
         if _has_fixef:
