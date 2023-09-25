@@ -555,8 +555,7 @@ class Feols:
         seed: Optional[int] = None,
         adj: Optional[bool] = True,
         cluster_adj: Optional[bool] = True,
-        parallel: Optional[bool] = False,
-        digits: Optional[int] = 3,
+        parallel: Optional[bool] = False
     ):
         """
         Run a wild cluster bootstrap based on an object of type "Feols"
@@ -591,9 +590,12 @@ class Feols:
         _data = self._data
         _clustervar = self._clustervar
 
+        _ssc = self._ssc
+
         if cluster is None:
-            if hasattr(self, "clustervar"):
-                cluster = _clustervar
+            if self._clustervar is not None:
+                cluster = self._clustervar
+
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -628,6 +630,9 @@ class Feols:
         r = 0
 
         if cluster is None:
+
+            inference = "HC"
+
             boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=B, seed=seed)
             boot.get_adjustments(bootstrap_type=bootstrap_type)
             boot.get_uhat(impose_null=impose_null)
@@ -637,6 +642,8 @@ class Feols:
             full_enumeration_warn = False
 
         else:
+
+            inference = f"CRV({self._clustervar})"
             cluster = _data[cluster]
 
             boot = WildboottestCL(X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel)
@@ -659,11 +666,19 @@ class Feols:
                     "2^G < the number of boot iterations, setting full_enumeration to True."
                 )
 
+
+        if np.isscalar(boot.t_stat):
+            boot.t_stat = boot.t_stat
+        else:
+            boot.t_stat = boot.t_stat[0]
+
+
         res = {
             "param": param,
-            "t value": np.round(boot.t_stat[0], digits),
-            "Pr(>|t|)": np.round(boot.pvalue, digits),
+            "t value": boot.t_stat.astype(np.float64),
+            "Pr(>|t|)": boot.pvalue.astype(np.float64),
             "bootstrap_type": bootstrap_type,
+            "inference": inference,
             "impose_null": impose_null,
         }
 
