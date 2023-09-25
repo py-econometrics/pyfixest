@@ -622,7 +622,6 @@ class Feols:
             raise NotImplementedError(
                 "Wild cluster bootstrap is not supported for Poisson regression."
             )
-            )
 
         if _has_fixef:
 
