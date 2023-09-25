@@ -10,7 +10,13 @@ class Feiv(Feols):
     """
 
     def __init__(
-        self, Y: np.ndarray, X: np.ndarray, Z: np.ndarray, weights: np.ndarray, coefnames: list, collin_tol: float
+        self,
+        Y: np.ndarray,
+        X: np.ndarray,
+        Z: np.ndarray,
+        weights: np.ndarray,
+        coefnames: list,
+        collin_tol: float,
     ) -> None:
         """
         Args:
@@ -24,16 +30,18 @@ class Feiv(Feols):
             None
         """
 
-        super().__init__(Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol)
+        super().__init__(
+            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+        )
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
 
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         if self._collin_index is not None:
-            self._Z = Z[:,~self._collin_index]
+            self._Z = Z[:, ~self._collin_index]
         else:
             self._Z = Z
 

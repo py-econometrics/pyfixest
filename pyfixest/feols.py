@@ -12,7 +12,11 @@ from scipy.sparse import csr_matrix
 from formulaic import model_matrix
 
 from pyfixest.utils import get_ssc
-from pyfixest.exceptions import MatrixNotFullRankError, VcovTypeNotSupportedError, NanInClusterVarError
+from pyfixest.exceptions import (
+    MatrixNotFullRankError,
+    VcovTypeNotSupportedError,
+    NanInClusterVarError,
+)
 
 
 class Feols:
@@ -25,7 +29,14 @@ class Feols:
     ordinary least squares.
     """
 
-    def __init__(self, Y: np.ndarray, X: np.ndarray, weights: np.ndarray, collin_tol: float, coefnames: List[str]) -> None:
+    def __init__(
+        self,
+        Y: np.ndarray,
+        X: np.ndarray,
+        weights: np.ndarray,
+        collin_tol: float,
+        coefnames: List[str],
+    ) -> None:
         """
         Initiate an instance of class `Feols`.
 
@@ -49,7 +60,12 @@ class Feols:
         _feols_input_checks(Y, X, weights)
 
         self._collin_tol = collin_tol
-        self._X, self._coefnames, self._collin_vars, self._collin_index = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+        (
+            self._X,
+            self._coefnames,
+            self._collin_vars,
+            self._collin_index,
+        ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
         self._Z = self._X
 
         self._weights = weights
@@ -66,7 +82,7 @@ class Feols:
         self._fml = None
         self._has_fixef = False
         self._fixef = None
-        #self._coefnames = None
+        # self._coefnames = None
         self._icovars = None
         self._ssc_dict = None
 
@@ -463,7 +479,7 @@ class Feols:
         coefficients: Optional[List[str]] = None,
         title: Optional[str] = None,
         coord_flip: Optional[bool] = True,
-    ) :
+    ):
         """
         Create a coefficient plot to visualize model coefficients.
 
@@ -555,7 +571,7 @@ class Feols:
         seed: Optional[int] = None,
         adj: Optional[bool] = True,
         cluster_adj: Optional[bool] = True,
-        parallel: Optional[bool] = False
+        parallel: Optional[bool] = False,
     ):
         """
         Run a wild cluster bootstrap based on an object of type "Feols"
@@ -605,7 +621,6 @@ class Feols:
             if self._clustervar is not None:
                 cluster = self._clustervar
 
-
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
         except ImportError:
@@ -624,7 +639,6 @@ class Feols:
             )
 
         if _has_fixef:
-
             # update _X, _xnames
             fml_linear, fixef = self._fml.split("|")
             fixef_vars = fixef.split("+")
@@ -635,7 +649,7 @@ class Feols:
             fml_dummies = f"{fml_linear} + {fixef_fml}"
 
             # make this sparse once wildboottest allows it
-            _, _X = model_matrix(fml_dummies, _data, output = "numpy")
+            _, _X = model_matrix(fml_dummies, _data, output="numpy")
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
@@ -644,7 +658,6 @@ class Feols:
         r = 0
 
         if cluster is None:
-
             inference = "HC"
 
             boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=B, seed=seed)
@@ -656,11 +669,12 @@ class Feols:
             full_enumeration_warn = False
 
         else:
-
             inference = f"CRV({self._clustervar})"
             cluster = _data[cluster]
 
-            boot = WildboottestCL(X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel)
+            boot = WildboottestCL(
+                X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel
+            )
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
                 impose_null=impose_null,
@@ -680,12 +694,10 @@ class Feols:
                     "2^G < the number of boot iterations, setting full_enumeration to True."
                 )
 
-
         if np.isscalar(boot.t_stat):
             boot.t_stat = boot.t_stat
         else:
             boot.t_stat = boot.t_stat[0]
-
 
         res = {
             "param": param,
@@ -742,7 +754,7 @@ class Feols:
 
         fml_linear = f"{depvars} ~ {covars}"
         Y, X = model_matrix(fml_linear, df)
-        X = X[self._coefnames] # drop intercept, potentially multicollinear vars
+        X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
         Y = Y.to_numpy().flatten().astype(np.float64)
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
@@ -754,13 +766,14 @@ class Feols:
 
         res = dict()
         for i, col in enumerate(cols):
-
-            matches = re.match(r'(.+?)\[T\.(.+?)\]', col)
+            matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
             if matches:
                 variable = matches.group(1)
                 level = matches.group(2)
             else:
-                raise ValueError("Something went wrong with the regex. Please open a PR in the github repo!")
+                raise ValueError(
+                    "Something went wrong with the regex. Please open a PR in the github repo!"
+                )
 
             # check if res already has a key variable
             if variable not in res:
@@ -797,7 +810,7 @@ class Feols:
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
-        #_fixef = "+".split(self._fixef) # name of the fixef effects variables
+        # _fixef = "+".split(self._fixef) # name of the fixef effects variables
 
         if _is_iv:
             raise NotImplementedError(
@@ -809,7 +822,6 @@ class Feols:
             y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
 
         else:
-
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
 
@@ -822,10 +834,9 @@ class Feols:
 
                 # populate matrix with fixed effects estimates
                 fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
-                #fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
+                # fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
 
                 for i, fixef in enumerate(df_fe.columns):
-
                     new_levels = df_fe[fixef].unique()
                     old_levels = _data[fixef].unique().astype(str)
                     subdict = self._fixef_dict[fixef]
@@ -851,7 +862,7 @@ class Feols:
             X = X.to_numpy()
             y_hat = X @ _beta_hat
             if self._has_fixef:
-                y_hat += np.sum(fixef_mat, axis = 1)
+                y_hat += np.sum(fixef_mat, axis=1)
 
         return y_hat.flatten()
 
@@ -1121,7 +1132,9 @@ def _get_vcov_type(vcov, fval):
     return vcov_type
 
 
-def _drop_multicollinear_variables(X: np.ndarray, names: List[str], collin_tol: float) -> None:
+def _drop_multicollinear_variables(
+    X: np.ndarray, names: List[str], collin_tol: float
+) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
 
@@ -1146,7 +1159,6 @@ def _drop_multicollinear_variables(X: np.ndarray, names: List[str], collin_tol: 
     collin_index = None
 
     if res["n_excl"] > 0:
-
         names = np.array(names)
         collin_vars = names[res["id_excl"]]
         warnings.warn(
@@ -1164,9 +1176,7 @@ def _drop_multicollinear_variables(X: np.ndarray, names: List[str], collin_tol: 
     return X, names, collin_vars, collin_index
 
 
-
-def _find_collinear_variables(X, tol = 1e-10):
-
+def _find_collinear_variables(X, tol=1e-10):
     """
     Detect multicollinear variables.
     Brute force copy of Laurent's c++ implementation.
@@ -1181,23 +1191,21 @@ def _find_collinear_variables(X, tol = 1e-10):
             all_removed (bool): True if all variables are collinear.
     """
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     res = dict()
     K = X.shape[1]
-    R = np.zeros((K,K))
+    R = np.zeros((K, K))
     id_excl = np.zeros(K, dtype=bool)
     n_excl = 0
     min_norm = X[0, 0]
 
     for j in range(K):
-
-        R_jj = X[j,j]
+        R_jj = X[j, j]
         for k in range(j):
-
             if id_excl[k]:
                 continue
-            R_jj -= R[k,j] * R[k,j]
+            R_jj -= R[k, j] * R[k, j]
 
         if R_jj < tol:
             n_excl += 1
@@ -1213,22 +1221,18 @@ def _find_collinear_variables(X, tol = 1e-10):
             min_norm = R_jj
 
         R_jj = np.sqrt(R_jj)
-        R[j,j] = R_jj
+        R[j, j] = R_jj
 
-        for i in range(j+1, K):
-            value = X[i,j]
+        for i in range(j + 1, K):
+            value = X[i, j]
             for k in range(j):
                 if id_excl[k]:
                     continue
-                value -= R[k,i] * R[k,j]
-            R[j,i] = value / R_jj
-
+                value -= R[k, i] * R[k, j]
+            R[j, i] = value / R_jj
 
     res["id_excl"] = id_excl
     res["n_excl"] = n_excl
     res["all_removed"] = False
 
     return res
-
-
-

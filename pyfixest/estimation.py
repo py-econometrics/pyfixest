@@ -12,7 +12,7 @@ def feols(
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
-    collin_tol : float = 1e-10
+    collin_tol: float = 1e-10,
 ) -> Union[Feols, FixestMulti]:
     """
 
@@ -128,7 +128,7 @@ def feols(
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol = collin_tol)
+    fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -144,7 +144,7 @@ def fepois(
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
-    collin_tol : float = 1e-10
+    collin_tol: float = 1e-10,
 ) -> Union[Fepois, FixestMulti]:
     """
     # fepois
@@ -258,7 +258,7 @@ def fepois(
         fixef_keys=fixest._fixef_keys,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
-        collin_tol = collin_tol
+        collin_tol=collin_tol,
     )
 
     if fixest._is_multiple_estimation:
@@ -267,10 +267,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-
 def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
-
-
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
