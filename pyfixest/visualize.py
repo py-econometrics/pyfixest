@@ -5,9 +5,25 @@ import re
 from pyfixest.summarize import _post_processing_input_checks
 from typing import Union
 import numpy as np
-from lets_plot import ggplot, aes, geom_point, geom_errorbar, geom_hline, geom_vline, ggsize, theme, element_text, position_dodge, coord_flip, ggtitle, ylab
+from lets_plot import (
+    ggplot,
+    aes,
+    geom_point,
+    geom_errorbar,
+    geom_hline,
+    geom_vline,
+    ggsize,
+    theme,
+    element_text,
+    position_dodge,
+    coord_flip,
+    ggtitle,
+    ylab,
+)
 from lets_plot import *
+
 LetsPlot.setup_html()
+
 
 def iplot(
     models,
@@ -71,7 +87,7 @@ def iplot(
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
         title=title,
-        flip_coord=coord_flip
+        flip_coord=coord_flip,
     )
 
     return plot
@@ -79,15 +95,15 @@ def iplot(
 
 def coefplot(
     models: List,
-    alpha: int =0.05,
-    figsize: tuple =(500, 300),
-    yintercept: float =0,
-    xintercept: float =None,
-    rotate_xticks: int =0,
+    alpha: int = 0.05,
+    figsize: tuple = (500, 300),
+    yintercept: float = 0,
+    xintercept: float = None,
+    rotate_xticks: int = 0,
     coefficients: Optional[List[str]] = None,
     title: Optional[str] = None,
-    coord_flip: Optional[bool] = True
-) :
+    coord_flip: Optional[bool] = True,
+):
     """
 
     # coefplot
@@ -107,7 +123,6 @@ def coefplot(
     Returns:
         A lets-plot figure.
     """
-
 
     models = _post_processing_input_checks(models)
     df_all = []
@@ -131,7 +146,7 @@ def coefplot(
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
         title=title,
-        flip_coord=coord_flip
+        flip_coord=coord_flip,
     )
 
     return plot
@@ -146,7 +161,7 @@ def _coefplot(
     rotate_xticks: float = 0,
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
-) :
+):
     """
     Plot model coefficients with confidence intervals.
     Args:
@@ -167,17 +182,18 @@ def _coefplot(
     df.rename(columns={"fml": "Model"}, inplace=True)
 
     plot = (
-
-        ggplot(df, aes(x = "Coefficient", y = "Estimate", color = "Model")) +
-            geom_point(position=position_dodge(0.5)) +
-            geom_errorbar(aes(ymin = "2.5 %", ymax = "97.5 %"), width = 0.05, position=position_dodge(0.5)) +
-            ylab("Estimate and 95% Confidence Interval")
+        ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
+        + geom_point(position=position_dodge(0.5))
+        + geom_errorbar(
+            aes(ymin="2.5 %", ymax="97.5 %"), width=0.05, position=position_dodge(0.5)
+        )
+        + ylab("Estimate and 95% Confidence Interval")
     )
 
     if flip_coord:
         plot += coord_flip()
     if yintercept is not None:
-        plot += geom_hline(yintercept=yintercept, linetype="dashed", color = "red")
+        plot += geom_hline(yintercept=yintercept, linetype="dashed", color="red")
     if xintercept is not None:
         plot += geom_vline(xintercept=xintercept, linetype="dashed")
     if figsize is not None:

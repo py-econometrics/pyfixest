@@ -106,7 +106,7 @@ def test_iv_errors():
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", vcov={"CRV3": "group_id"}, data=data)
     # wild bootstrap
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", B=999)
     # multi estimation error
     with pytest.raises(MultiEstNotSupportedError):

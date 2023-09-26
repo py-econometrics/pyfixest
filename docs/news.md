@@ -1,6 +1,11 @@
 # News
 
-## PyFixest `0.9.9
+## PyFixest `0.9.10`
+
+- Fixes a big in the `wildboottest` method (see [#158](https://github.com/s3alfisc/pyfixest/issues/158)).
+- Allows to run a wild bootstrap after fixed effect estimation.
+
+## PyFixest `0.9.9`
 
 - Adds support for `wildboottest` for Python `3.11`.
 
