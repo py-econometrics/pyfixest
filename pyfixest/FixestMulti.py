@@ -103,9 +103,9 @@ class FixestMulti:
         self,
         vcov: Union[str, Dict[str, str], None],
         fixef_keys: Union[List[str], None],
-        collin_tol : float = 1e-6,
+        collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
-        iwls_tol: float = 1e-08
+        iwls_tol: float = 1e-08,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -214,10 +214,23 @@ class FixestMulti:
                             Xd *= np.sqrt(w)
 
                         if _is_iv:
-                            FIT = Feiv(Y=Yd, X=Xd, Z=Zd, weights=weights, coefnames = coefnames, collin_tol = collin_tol)
+                            FIT = Feiv(
+                                Y=Yd,
+                                X=Xd,
+                                Z=Zd,
+                                weights=weights,
+                                coefnames=coefnames,
+                                collin_tol=collin_tol,
+                            )
                         else:
                             # initiate OLS class
-                            FIT = Feols(Y=Yd, X=Xd, weights=weights, coefnames = coefnames, collin_tol = collin_tol)
+                            FIT = Feols(
+                                Y=Yd,
+                                X=Xd,
+                                weights=weights,
+                                coefnames=coefnames,
+                                collin_tol=collin_tol,
+                            )
 
                         FIT.get_fit()
 
@@ -239,11 +252,11 @@ class FixestMulti:
                             X=X,
                             fe=fe,
                             weights=weights,
-                            coefnames = coefnames,
+                            coefnames=coefnames,
                             drop_singletons=_drop_singletons,
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
-                            collin_tol = collin_tol
+                            collin_tol=collin_tol,
                         )
 
                         FIT.get_fit()
@@ -417,8 +430,8 @@ class FixestMulti:
         yintercept: Union[int, str, None] = None,
         xintercept: Union[int, str, None] = None,
         rotate_xticks: int = 0,
-        title : Optional[str] = None,
-        coord_flip: Optional[bool] = True
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
     ):
         """
         Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
@@ -448,7 +461,7 @@ class FixestMulti:
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
             title=title,
-            coord_flip=coord_flip
+            coord_flip=coord_flip,
         )
 
         return plot
@@ -459,8 +472,8 @@ class FixestMulti:
         figsize: tuple = (500, 300),
         yintercept: int = 0,
         rotate_xticks: int = 0,
-        title : Optional[str] = None,
-        coord_flip: Optional[bool] = True
+        title: Optional[str] = None,
+        coord_flip: Optional[bool] = True,
     ):
         """
         Plot estimation results. The plot() method is only defined for single regressions.
@@ -488,7 +501,7 @@ class FixestMulti:
             xintercept=None,
             rotate_xticks=rotate_xticks,
             title=title,
-            coord_flip=coord_flip
+            coord_flip=coord_flip,
         )
 
         return plot

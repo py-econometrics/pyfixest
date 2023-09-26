@@ -31,7 +31,7 @@ class Fepois(Feols):
         drop_singletons: bool,
         collin_tol: float,
         maxiter: Optional[int] = 25,
-        tol: Optional[float] = 1e-08
+        tol: Optional[float] = 1e-08,
     ):
         """
         Args:
@@ -46,7 +46,9 @@ class Fepois(Feols):
             tol (float): tolerance level for the convergence of the IRLS algorithm
         """
 
-        super().__init__(Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol)
+        super().__init__(
+            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+        )
 
         # input checks
         _fepois_input_checks(fe, drop_singletons, tol, maxiter)
@@ -244,7 +246,9 @@ class Fepois(Feols):
         if _convergence:
             self._convergence = True
 
-    def predict(self, newdata: Optional[pd.DataFrame] = None, type="link") -> np.ndarray:
+    def predict(
+        self, newdata: Optional[pd.DataFrame] = None, type="link"
+    ) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
@@ -263,9 +267,13 @@ class Fepois(Feols):
         _has_fixef = self._has_fixef
 
         if _has_fixef:
-            raise NotImplementedError("Prediction with fixed effects is not yet implemented for Poisson regression.")
+            raise NotImplementedError(
+                "Prediction with fixed effects is not yet implemented for Poisson regression."
+            )
         if newdata is not None:
-            raise NotImplementedError("Prediction with function argument `newdata` is not yet implemented for Poisson regression.")
+            raise NotImplementedError(
+                "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
+            )
 
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
