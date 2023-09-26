@@ -719,7 +719,7 @@ class Feols:
         This method creates the following attributes:
 
         - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
-        - `sumDF` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
+        - `sumFE` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
 
         Args:
             None
@@ -747,19 +747,18 @@ class Feols:
         depvars, res = _fml.split("~")
         covars, fixef_vars = res.split("|")
 
-        df = _data.copy()
-        # all fixef vars to pd.Categorical
-        for x in fixef_vars.split("+"):
-            df[x] = pd.Categorical(df[x])
+        fixef_vars = fixef_vars.split("+")
+        fixef_vars_C = [f"C({x})" for x in fixef_vars]
+        fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
-        Y, X = model_matrix(fml_linear, df)
+        Y, X = model_matrix(fml_linear, _data)
         X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
         Y = Y.to_numpy().flatten().astype(np.float64)
         X = X.to_numpy()
         uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_vars, df, output="sparse")
+        D2 = model_matrix("-1+" + fixef_fml, _data, output="sparse")
         cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
@@ -829,7 +828,6 @@ class Feols:
                     self.fixef()
 
                 fvals = self._fixef.split("+")
-
                 df_fe = newdata[fvals].astype(str)
 
                 # populate matrix with fixed effects estimates
@@ -839,7 +837,7 @@ class Feols:
                 for i, fixef in enumerate(df_fe.columns):
                     new_levels = df_fe[fixef].unique()
                     old_levels = _data[fixef].unique().astype(str)
-                    subdict = self._fixef_dict[fixef]
+                    subdict = self._fixef_dict[f"C({fixef})"] # as variables are called C(var) in the fixef_dict
 
                     for level in new_levels:
                         # if level estimated: either estimated value (or 0 for reference level)

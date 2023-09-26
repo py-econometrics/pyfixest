@@ -489,14 +489,14 @@ typing = ["typing-extensions (>=4.7.1)"]
 
 [[package]]
 name = "formulaic"
-version = "0.6.4"
+version = "0.6.5"
 description = "An implementation of Wilkinson formulas."
 category = "main"
 optional = false
 python-versions = ">=3.7.2"
 files = [
-    {file = "formulaic-0.6.4-py3-none-any.whl", hash = "sha256:570b3c7ab15fe8095e0dc86a4f71217102b23ce7e715053751a6cdcc580d7767"},
-    {file = "formulaic-0.6.4.tar.gz", hash = "sha256:a8c84b6fa6df9216dbeaddcfa3f097bd5efe88e340211ac34c18cffe133cdb78"},
+    {file = "formulaic-0.6.5-py3-none-any.whl", hash = "sha256:12890896fec86f80f1da713907e7b789f4d2c09fa06c4d5dc0ec4e5327e6e309"},
+    {file = "formulaic-0.6.5.tar.gz", hash = "sha256:7deeac5d74a0268e9e7e55988094f0ed13cf4e940a17a7eeb296a2cc67530c41"},
 ]
 
 [package.dependencies]
@@ -2325,4 +2325,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "d178a76a5b9d7ca3b6e2c0ab68d78906a04e6fdc1015e88bc963e33446f304ee"
+content-hash = "73c81967cad2471322ef5da1ab1c392f61b3c9f644024960dc0850a221e64aa9"
