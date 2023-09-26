@@ -11,8 +11,9 @@ def feols(
     data: pd.DataFrame,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
-    fixef_rm: str = "none",
-    collin_tol: float = 1e-10,
+    fixef_rm: Optional[str] = "none",
+    collin_tol: Optional[float] = 1e-10,
+    solver: Optional[str] = "np.linalg.solve"
 ) -> Union[Feols, FixestMulti]:
     """
 
@@ -64,6 +65,8 @@ def feols(
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables.
                             If the tolerance is higher, more variables will be dropped.
+
+        solver (str): solver to use for the estimation. "np.linalg.solve" by default. The other option is "sp.linalg.solve".
 
     Returns:
         An instance of the `Feols` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
@@ -122,10 +125,10 @@ def feols(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, solver)
 
     fixest = FixestMulti(data=data)
-    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
+    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, solver)
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
@@ -141,10 +144,11 @@ def fepois(
     data: pd.DataFrame,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
-    fixef_rm: str = "none",
-    iwls_tol: float = 1e-08,
-    iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    fixef_rm: Optional[str] = "none",
+    iwls_tol: Optional[float] = 1e-08,
+    iwls_maxiter: Optional[int] = 25,
+    collin_tol: Optional[float] = 1e-10,
+    solver: Optional[str] = "np.linalg.solve"
 ) -> Union[Fepois, FixestMulti]:
     """
     # fepois
@@ -195,6 +199,8 @@ def fepois(
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables. If the tolerance is higher, more variables will be dropped.
 
+        solver (str): solver to use for the estimation. "np.linalg.solve" by default. The other option is "sp.linalg.solve".
+
     Returns:
         An instance of the `Fepois` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
 
@@ -240,12 +246,12 @@ def fepois(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, solver)
 
     fixest = FixestMulti(data=data)
 
     fixest._prepare_estimation(
-        estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm
+        estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm, solver=solver
     )
 
     if fixest._is_iv:
@@ -258,7 +264,7 @@ def fepois(
         fixef_keys=fixest._fixef_keys,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
+        collin_tol=collin_tol
     )
 
     if fixest._is_multiple_estimation:
@@ -267,7 +273,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
+def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, solver):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -285,3 +291,6 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
         raise ValueError("collin_tol must be greater than zero")
     if not collin_tol < 1:
         raise ValueError("collin_tol must be less than one")
+
+    if not solver in ["np.linalg.solve", "sp.linalg.solve"]:
+        raise ValueError("solver must be either 'np.linalg.solve' or 'sp.linalg.solve'")

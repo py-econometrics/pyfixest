@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-
+from scipy.linalg import solve as scipy_solve
 from typing import Union, Optional, List
 from formulaic import model_matrix
 from pyfixest.feols import Feols
@@ -32,6 +32,7 @@ class Fepois(Feols):
         collin_tol: float,
         maxiter: Optional[int] = 25,
         tol: Optional[float] = 1e-08,
+        solver:str,
     ):
         """
         Args:
@@ -44,10 +45,11 @@ class Fepois(Feols):
             collin_tol (float): tolerance level for the detection of collinearity
             maxiter (int): maximum number of iterations for the IRLS algorithm
             tol (float): tolerance level for the convergence of the IRLS algorithm
+            solver (str): solver to use for the least squares problem. Either "np.linalg.solve" or "sp.linalg.solve".
         """
 
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol, solver = solver
         )
 
         # input checks
@@ -201,7 +203,13 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            if self._solver == "np.linalg.solve":
+                delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            elif self._solver == "sp.linalg.solve":
+                delta_new = scipy_solve(XWX, XWZ)
+            else:
+                raise ValueError("Solver not supported")
+
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()

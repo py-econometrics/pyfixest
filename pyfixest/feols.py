@@ -9,6 +9,7 @@ from typing import Optional, Union, List, Dict, Tuple
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
+from scipy.linalg import solve as scipy_solve
 from formulaic import model_matrix
 
 from pyfixest.utils import get_ssc
@@ -36,6 +37,7 @@ class Feols:
         weights: np.ndarray,
         collin_tol: float,
         coefnames: List[str],
+        solver: str,
     ) -> None:
         """
         Initiate an instance of class `Feols`.
@@ -46,12 +48,14 @@ class Feols:
             weights (np.array): weights. one-dimensional np.array
             collin_tol (float): tolerance level for collinearity checks
             coefnames (List[str]): names of the coefficients (of the design matrix X)
+            solver (str): solver to use for the least squares problem. Either "np.linalg.solve" or "sp.linalg.solve".
         Returns:
             None
 
         """
 
         self._method = "feols"
+        self._solver = solver
 
         self._Y = Y
         self._X = X
@@ -147,8 +151,13 @@ class Feols:
         self._tZy = _Z.T @ _Y
 
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
+
+        if self._solver == "np.linalg.solve":
+            self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
+        elif self._solver == "sp.linalg.solve":
+            self._beta_hat = scipy_solve(self.Y, self._X).flatten()
+        else:
+            raise ValueError("Solver not recognized.")
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()

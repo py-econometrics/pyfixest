@@ -56,6 +56,7 @@ class FixestMulti:
         vcov: Union[None, str, Dict[str, str]] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
+        solver = "np.linalg.solve"
     ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
@@ -68,6 +69,7 @@ class FixestMulti:
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+            solver (str, optional): A string specifying the solver to use for the estimation. Default is "np.linalg.solve".
 
         Returns:
             None
@@ -81,6 +83,7 @@ class FixestMulti:
         self._drop_singletons = None
         self._fixef_keys = None
         self._is_multiple_estimation = None
+        self._solver = None
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -98,6 +101,7 @@ class FixestMulti:
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
+        self._solver = solver
 
     def _estimate_all_models(
         self,
@@ -133,6 +137,7 @@ class FixestMulti:
         _method = self._method
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
+        _solver = self._solver
 
         for _, fval in enumerate(fixef_keys):
             dict2fe = _fml_dict.get(fval)
@@ -221,6 +226,7 @@ class FixestMulti:
                                 weights=weights,
                                 coefnames=coefnames,
                                 collin_tol=collin_tol,
+                                solver = _solver
                             )
                         else:
                             # initiate OLS class
@@ -230,6 +236,7 @@ class FixestMulti:
                                 weights=weights,
                                 coefnames=coefnames,
                                 collin_tol=collin_tol,
+                                solver = _solver
                             )
 
                         FIT.get_fit()
@@ -257,6 +264,7 @@ class FixestMulti:
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
                             collin_tol=collin_tol,
+                            solver = _solver
                         )
 
                         FIT.get_fit()

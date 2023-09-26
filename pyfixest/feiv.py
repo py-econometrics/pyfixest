@@ -1,6 +1,6 @@
 import numpy as np
+from scipy.linalg import solve as scipy_solve
 from pyfixest.feols import Feols
-
 
 class Feiv(Feols):
 
@@ -17,6 +17,7 @@ class Feiv(Feols):
         weights: np.ndarray,
         coefnames: list,
         collin_tol: float,
+        solver:str,
     ) -> None:
         """
         Args:
@@ -26,12 +27,13 @@ class Feiv(Feols):
             weights (np.array): weights. one-dimensional np.array
             coefnames (list): names of the coefficients
             collin_tol (float): tolerance for collinearity check
+            solver (str): solver to use for the least squares problem. Either "np.linalg.solve" or "sp.linalg.solve".
         Returns:
             None
         """
 
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol, solver=solver
         )
 
         # check if Z is two dimensional array
@@ -64,6 +66,7 @@ class Feiv(Feols):
         _X = self._X
         _Z = self._Z
         _Y = self._Y
+        _solver = self._solver
 
         self._tZX = _Z.T @ _X
         self._tXZ = _X.T @ _Z
@@ -74,7 +77,13 @@ class Feiv(Feols):
         A = H @ self._tZX
         B = H @ self._tZy
 
-        self._beta_hat = np.linalg.solve(A, B).flatten()
+        if self._solver == "np.linalg.solve":
+            self._beta_hat = np.linalg.solve(A, B).flatten()
+        elif self._solver == "sp.linalg.solve":
+            self._beta_hat = scipy_solve(A, B).flatten()
+        else:
+            raise ValueError("Solver not supported")
+
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
