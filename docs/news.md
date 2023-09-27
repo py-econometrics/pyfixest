@@ -1,5 +1,10 @@
 # News
 
+## PyFixest `0.9.11`
+
+- Bump required `formulaic` version to `0.6.5`.
+- Stop copying the data frame in `fixef()`.
+
 ## PyFixest `0.9.10`
 
 - Fixes a big in the `wildboottest` method (see [#158](https://github.com/s3alfisc/pyfixest/issues/158)).
