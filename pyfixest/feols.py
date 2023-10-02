@@ -238,7 +238,11 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum((_u_hat.flatten()) ** 2) / (_N - 1)
+            if self._weights is None:
+                self._weights = np.ones((_N, 1))
+
+            sigma2 = np.sum(self._weights.flatten() * (_u_hat.flatten()) ** 2) / (_N - 1)
+
             self._vcov = self._ssc * bread * sigma2
 
         elif self._vcov_type == "hetero":

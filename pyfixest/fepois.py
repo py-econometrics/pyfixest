@@ -78,7 +78,7 @@ class Fepois(Feols):
         self._check_for_separation()
 
         self._support_crv3_inference = False
-        self._support_iid_inference = False
+        self._support_iid_inference = True
 
         # attributes that are updated outside of the class (not optimal)
         self._N_separation_na = None
@@ -242,6 +242,7 @@ class Fepois(Feols):
 
         self._scores = self._u_hat[:, None] * self._weights * X_resid
         self._hessian = XWX
+        self._T = self._weights * X_resid
 
         if _convergence:
             self._convergence = True
