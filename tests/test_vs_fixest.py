@@ -34,9 +34,9 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
-@pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("error_type",["1", "2", "3"])
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("model", ["Fepois", "Feols"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
@@ -176,8 +176,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             warnings.filterwarnings("ignore", category=RuntimeWarning)
             iv_check = feols(fml=fml, data=data, vcov="iid")
 
-        if inference == "iid":
-            return pytest.skip("Poisson does not support iid inference")
+        #if inference == "iid":
+        #    return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
             is_iv = True
@@ -206,10 +206,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
             # relax tolerance for Poisson regression - effective rtol and atol of
             # 5e-05
-            inference_inflation_factor = 100
-            # relax tolerance for CRV inference - effective rtol and atol of 5e-03
-            if isinstance(inference, dict):
-                inference_inflation_factor = 500
+            inference_inflation_factor = 50
 
             try:
                 pyfixest = fepois(fml=fml, data=data, vcov=inference)

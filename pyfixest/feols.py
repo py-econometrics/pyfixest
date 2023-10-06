@@ -238,10 +238,19 @@ class Feols:
                 vcov_type="iid",
             )
 
-            sigma2 = np.sum((_u_hat.flatten()) ** 2) / (_N - 1)
-            self._vcov = self._ssc * bread * sigma2
+            if self._method == "feols":
+                sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
+            elif self._method == "fepois":
+                sigma2 = 1
+            else:
+                raise NotImplementedError(
+                    f"'iid' inference is not supported for {_method} regressions."
+                )
+
+            self._vcov =  self._ssc * bread * sigma2
 
         elif self._vcov_type == "hetero":
+
             self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
@@ -280,6 +289,10 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
+            #import pdb;
+            #pdb.set_trace()
+
             cluster_df = _data[self._clustervar]
             # if there are missings - delete them!
 
@@ -327,8 +340,6 @@ class Feols:
 
                 if _is_iv == False:
                     self._vcov = self._ssc * bread @ meat @ bread
-                # if self._is_iv == False:
-                #    self._vcov = self._ssc * bread @ meat @ bread
                 else:
                     meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
                     self._vcov = self._ssc * bread @ meat @ bread
@@ -337,9 +348,6 @@ class Feols:
                 # check: is fixed effect cluster fixed effect?
                 # if not, either error or turn fixefs into dummies
                 # for now: don't allow for use with fixed effects
-
-                # if self._has_fixef:
-                #    raise ValueError("CRV3 inference is currently not supported with fixed effects.")
 
                 if _is_iv:
                     raise VcovTypeNotSupportedError(

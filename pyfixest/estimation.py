@@ -149,7 +149,8 @@ def fepois(
     """
     # fepois
 
-    Method for estimating Poisson regression models with fixed effects.
+    Method for estimating Poisson regression models with fixed effects. Implements the `pplmhdfe` algorithm from the
+    Stata package of the same name.
 
     Args:
         fml (str): A two-sided formula string using fixest formula syntax.
