@@ -250,6 +250,7 @@ class Feols:
             self._vcov =  self._ssc * bread * sigma2
 
         elif self._vcov_type == "hetero":
+
             self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
@@ -288,6 +289,10 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
+            #import pdb;
+            #pdb.set_trace()
+
             cluster_df = _data[self._clustervar]
             # if there are missings - delete them!
 

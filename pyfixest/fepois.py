@@ -307,7 +307,8 @@ class Fepois(Feols):
         if check == "fe":
             if not self._has_fixef:
                 pass
-
+            elif (self._Y > 0).all():
+                pass
             else:
                 Y_help = pd.Series(np.where(self._Y.flatten() > 0, 1, 0))
                 fe = pd.DataFrame(self.fe)
