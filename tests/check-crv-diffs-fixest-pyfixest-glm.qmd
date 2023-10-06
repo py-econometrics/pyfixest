@@ -10,7 +10,7 @@ Check that `PyFixest` inference for CRV gets as close to `fixest` as `glm`.
 
 
 ```{python, messages = FALSE, warnings = FALSE}
-import pyfixest as pf
+from pyfixest.estimation import fepois
 from pyfixest.utils import get_data
 
 fml = "Y ~ X1 + X2"
@@ -21,7 +21,7 @@ data_list = []
 for x in range(1000):
 
   data = get_data(100, x, "2", "3", "Fepois").dropna()
-  fit = pf.Fixest(data = data).fepois(fml, vcov = {'CRV1':"group_id"}).fetch_model(0)
+  fit = fepois(fml, vcov = {'CRV1':"group_id"})
   se_list.append(fit._se)
   data_list.append(data)
 
