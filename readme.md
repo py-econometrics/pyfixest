@@ -11,8 +11,8 @@ This is a draft package (no longer highly experimental) for a Python clone of th
 
 At the moment, `PyFixest` supports
 
-- OLS and IV Regression
-- Poisson Regression
+- OLS and IV Regression with HDFEs
+- Poisson Regression with HDFEs (following the `pplmhdfe` algorithm)
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
@@ -23,33 +23,7 @@ You can install the release version from `PyPi` by running `pip install pyfixest
 
 ## News
 
-`PyFixest` now supports Poisson regression!
-
-```python
-from pyfixest.estimation import fepois
-from pyfixest.utils import get_data
-
-pdata = get_data(model = "Fepois")
-fitpois = fepois("Y~X1 | f1 + f2", vcov = {'CRV1':'group_id'}, data = pdata)
-
-fitpois.summary()
-
-# Model:  Y~X1|f1+f2
-# ###
-#
-# Model:  Poisson
-# Dep. var.:  Y
-# Fixed effects:  f1+f2
-# Inference:  CRV1
-# Observations:  997
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |     -0.019 |        0.050 |    -0.370 |      0.711 |  -0.117 |    0.080 |
-# ---
-# Deviance: 1067.853
-```
-
+- Version `0.10` comes with significant performance improvements.
 
 ## Quickstart
 
@@ -110,20 +84,6 @@ Standard Errors can be adjusted after estimation, "on-the-fly":
 ```python
 fit1 = fit.fetch_model(0)
 fit1.vcov("hetero").tidy()
-# Model:  Y~X1
-# ###
-#
-# Model:  OLS
-# Dep. var.:  Y
-# Inference:  hetero
-# Observations:  998
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | Intercept     |      2.206 |        0.088 |    25.180 |      0.000 |   2.034 |    2.378 |
-# | X1            |      0.358 |        0.068 |     5.254 |      0.000 |   0.224 |    0.491 |
-# ---
-# RMSE: 1.765  Adj. R2: 0.024  Adj. R2 Within: 0.024
 ```
 
 Last, `PyFixest` also supports IV estimation via three part formula syntax:
