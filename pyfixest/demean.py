@@ -108,7 +108,7 @@ def demean_model(
 
             weights = np.ones(YX.shape[0])
 
-            YX_demeaned, success = demean(cx = YX, flist = fe.to_numpy(), weights = weights)
+            YX_demeaned, success = demean(x = YX, flist = fe.to_numpy(), weights = weights)
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
