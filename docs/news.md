@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.1`
+
++ Minor documentation updates.
+
 ## PyFixest `0.10`
 
 - Multiple performance improvements.
