@@ -181,7 +181,7 @@ def demean(
     weights: np.ndarray,
     tol: float = 1e-10,
     maxiter: int = 100_000,
-) -> tuple[np.ndarray, bool]:
+) -> Tuple[np.ndarray, bool]:
     n_samples, n_features = x.shape
     n_factors = flist.shape[1]
 
