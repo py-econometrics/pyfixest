@@ -67,6 +67,7 @@ def demean_model(
                 YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
                 YX_demeaned = pd.DataFrame(YX_demean_new)
 
+
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
 
@@ -96,12 +97,14 @@ def demean_model(
             ):
                 print(
                     algorithm.singletons,
-                    "columns are dropped due to singleton fixed effects.",
+                    "observations are dropped due to singleton fixed effects.",
                 )
                 dropped_singleton_indices = np.where(algorithm._singleton_indices)[
                     0
                 ].tolist()
                 na_index += dropped_singleton_indices
+
+                YX = np.delete(YX, dropped_singleton_indices, axis=0)
 
             weights = np.ones(YX.shape[0])
 
