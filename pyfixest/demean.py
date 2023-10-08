@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
 import pyhdfe
-
+from numba import jit, njit, prange
 
 def demean_model(
     Y: pd.DataFrame,
@@ -63,6 +63,11 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new = algorithm.residualize(var_diff)
+
+                weights = np.ones(YX.shape[0])
+                YX_demean_new = demean(var_diff, fe.to_numpy(), weights)
+                YX_demeaned = pd.DataFrame(YX_demean_new)
+
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
 
@@ -99,9 +104,10 @@ def demean_model(
                 ].tolist()
                 na_index += dropped_singleton_indices
 
-            YX_demeaned = algorithm.residualize(YX)
-            YX_demeaned = pd.DataFrame(YX_demeaned)
+            weights = np.ones(YX.shape[0])
 
+            YX_demeaned = demean(cx = YX, flist = fe.to_numpy(), weights = weights)
+            YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
         lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
@@ -118,3 +124,90 @@ def demean_model(
     Xd = YX_demeaned[X.columns]
 
     return Yd, Xd
+
+
+
+@njit(parallel = False, cache = False, fastmath = False)
+def demean(cx, flist, weights, tol = 1e-10, maxiter = 2000):
+
+    '''
+    Demean a Matrix cx by fixed effects in flist.
+    The fixed effects are weighted by weights. Convervence tolerance
+    is set to 1e-08 for the sum of absolute differences.
+    Args:
+        cx: Matrix to be demeaned
+        flist: Matrix of fixed effects
+        weights: Weights for fixed effects
+        tol: Convergence tolerance. 1e-08 by default.
+    Returns
+        res: Demeaned matrix of dimension cx.shape
+    '''
+
+
+    N = cx.shape[0]
+    fixef_vars = flist.shape[1]
+    K = cx.shape[1]
+
+    res = np.zeros((N,K))
+
+    # loop over all variables to demean, in parallel
+    for k in prange(K):
+
+        cxk = cx[:,k]#.copy()
+        oldxk = cxk - 1
+
+        converged = False
+        for _ in range(maxiter):
+
+            for i in range(fixef_vars):
+                fmat = flist[:,i]
+                weighted_ave = _ave3(cxk, fmat, weights)
+                cxk -= weighted_ave
+
+            if np.sum(np.abs(cxk - oldxk)) < tol:
+                converged = True
+                break
+
+            # update
+            oldxk = cxk.copy()
+
+
+
+        res[:,k] = cxk
+
+    return res
+
+@njit
+def _ave3(x, f, w):
+
+    N = len(x)
+
+    wx_dict = {}
+    w_dict = {}
+
+    # Compute weighted sums using a dictionary
+    for i in prange(N):
+        j = f[i]
+        if j in wx_dict:
+            wx_dict[j] += w[i] * x[i]
+        else:
+            wx_dict[j] = w[i] * x[i]
+
+        if j in w_dict:
+            w_dict[j] += w[i]
+        else:
+            w_dict[j] = w[i]
+
+    # Convert the dictionaries to arrays
+    wx = np.zeros_like(f, dtype=x.dtype)
+    w = np.zeros_like(f, dtype=w.dtype)
+
+    for i in range(N):
+        j = f[i]
+        wx[i] = wx_dict[j]
+        w[i] = w_dict[j]
+
+    # Compute the average
+    wxw_long = wx / w
+
+    return wxw_long

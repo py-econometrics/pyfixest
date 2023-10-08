@@ -290,9 +290,6 @@ class Feols:
 
         elif self._vcov_type == "CRV":
 
-            #import pdb;
-            #pdb.set_trace()
-
             cluster_df = _data[self._clustervar]
             # if there are missings - delete them!
 
@@ -1198,8 +1195,6 @@ def _find_collinear_variables(X, tol=1e-10):
             n_excl (int): The number of collinear variables.
             all_removed (bool): True if all variables are collinear.
     """
-
-    # import pdb; pdb.set_trace()
 
     res = dict()
     K = X.shape[1]

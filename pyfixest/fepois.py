@@ -11,6 +11,7 @@ from pyfixest.exceptions import (
     NonConvergenceError,
     NotImplementedError,
 )
+from pyfixest.demean import demean
 
 
 class Fepois(Feols):
@@ -187,7 +188,8 @@ class Fepois(Feols):
             ZX = np.concatenate([reg_Z, _X], axis=1)
 
             if _fe is not None:
-                ZX_resid = algorithm.residualize(ZX, mu)
+                #ZX_resid = algorithm.residualize(ZX, mu)
+                ZX_resid = demean(ZX, _fe, mu.flatten())
             else:
                 ZX_resid = ZX
 
