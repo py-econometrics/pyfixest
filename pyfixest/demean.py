@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
 import pyhdfe
-import numba as nb 
+import numba as nb
 
 
 def demean_model(
@@ -130,7 +130,7 @@ def demean_model(
 
 @nb.njit
 def _sad_converged(a, b, tol):
-    for i in range(0, a.size, 4):
+    for i in range(a.size):
         tol -= np.abs(a[i] - b[i])
         if tol < 0:
             return False
@@ -161,7 +161,7 @@ def _calc_group_weights(sample_weights, group_ids, n_groups):
     n_samples, n_factors = group_ids.shape
     dtype = sample_weights.dtype
     group_weights = np.zeros((n_factors, n_groups), dtype=dtype).T
-    
+
     for j in range(n_factors):
         for i in range(n_samples):
             id = group_ids[i, j]
