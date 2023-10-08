@@ -94,7 +94,7 @@ def demean_model(
             ):
                 print(
                     algorithm.singletons,
-                    "columns are dropped due to singleton fixed effects.",
+                    "observations are dropped due to singleton fixed effects.",
                 )
                 dropped_singleton_indices = np.where(algorithm._singleton_indices)[
                     0
