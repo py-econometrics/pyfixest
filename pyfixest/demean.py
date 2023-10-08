@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
 import pyhdfe
-from numba import jit, njit, prange
+import numba as nb 
+
 
 def demean_model(
     Y: pd.DataFrame,
@@ -63,7 +64,9 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 weights = np.ones(YX.shape[0])
-                YX_demean_new = demean(var_diff, fe.to_numpy(), weights)
+                YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
+                YX_demeaned = pd.DataFrame(YX_demean_new)
+
 
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
@@ -105,7 +108,7 @@ def demean_model(
 
             weights = np.ones(YX.shape[0])
 
-            YX_demeaned = demean(cx = YX, flist = fe.to_numpy(), weights = weights)
+            YX_demeaned, success = demean(cx = YX, flist = fe.to_numpy(), weights = weights)
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
@@ -125,88 +128,100 @@ def demean_model(
     return Yd, Xd
 
 
-
-@njit(parallel = False, cache = False, fastmath = False)
-def demean(cx, flist, weights, tol = 1e-10, maxiter = 2000):
-
-    '''
-    Demean a Matrix cx by fixed effects in flist.
-    The fixed effects are weighted by weights. Convervence tolerance
-    is set to 1e-08 for the sum of absolute differences.
-    Args:
-        cx: Matrix to be demeaned
-        flist: Matrix of fixed effects
-        weights: Weights for fixed effects
-        tol: Convergence tolerance. 1e-08 by default.
-    Returns
-        res: Demeaned matrix of dimension cx.shape
-    '''
+@nb.njit
+def _sad_converged(a, b, tol):
+    for i in range(0, a.size, 4):
+        tol -= np.abs(a[i] - b[i])
+        if tol < 0:
+            return False
+    return True
 
 
-    N = cx.shape[0]
-    fixef_vars = flist.shape[1]
-    K = cx.shape[1]
+@nb.njit(locals=dict(id=nb.uint32))
+def _subtract_weighted_group_mean(
+    x,
+    sample_weights,
+    group_ids,
+    group_weights,
+    _group_weighted_sums,
+):
+    _group_weighted_sums[:] = 0
 
-    res = np.zeros((N,K))
+    for i in range(x.size):
+        id = group_ids[i]
+        _group_weighted_sums[id] += sample_weights[i] * x[i]
 
-    # loop over all variables to demean, in parallel
-    for k in prange(K):
+    for i in range(x.size):
+        id = group_ids[i]
+        x[i] -= _group_weighted_sums[id] / group_weights[id]
 
-        cxk = cx[:,k]#.copy()
-        oldxk = cxk - 1
 
-        converged = False
+@nb.njit
+def _calc_group_weights(sample_weights, group_ids, n_groups):
+    n_samples, n_factors = group_ids.shape
+    dtype = sample_weights.dtype
+    group_weights = np.zeros((n_factors, n_groups), dtype=dtype).T
+    
+    for j in range(n_factors):
+        for i in range(n_samples):
+            id = group_ids[i, j]
+            group_weights[id, j] += sample_weights[i]
+
+    return group_weights
+
+
+@nb.njit(parallel=True)
+def demean(
+    x: np.ndarray,
+    flist: np.ndarray,
+    weights: np.ndarray,
+    tol: float = 1e-10,
+    maxiter: int = 2_000,
+) -> tuple[np.ndarray, bool]:
+    n_samples, n_features = x.shape
+    n_factors = flist.shape[1]
+
+    if x.flags.f_contiguous:
+        res = np.empty((n_features, n_samples), dtype=x.dtype).T
+    else:
+        res = np.empty((n_samples, n_features), dtype=x.dtype)
+
+    n_threads = nb.get_num_threads()
+
+    n_groups = flist.max() + 1
+    group_weights = _calc_group_weights(weights, flist, n_groups)
+    _group_weighted_sums = np.empty((n_threads, n_groups), dtype=x.dtype)
+
+    x_curr = np.empty((n_threads, n_samples), dtype=x.dtype)
+    x_prev = np.empty((n_threads, n_samples), dtype=x.dtype)
+
+    not_converged = 0
+    for k in nb.prange(n_features):
+        tid = nb.get_thread_id()
+
+        xk_curr = x_curr[tid, :]
+        xk_prev = x_prev[tid, :]
+        for i in range(n_samples):
+            xk_curr[i] = x[i, k]
+            xk_prev[i] = x[i, k] - 1.0
+
         for _ in range(maxiter):
-
-            for i in range(fixef_vars):
-                fmat = flist[:,i]
-                weighted_ave = _ave3(cxk, fmat, weights)
-                cxk -= weighted_ave
-
-            if np.sum(np.abs(cxk - oldxk)) < tol:
-                converged = True
+            for j in range(n_factors):
+                _subtract_weighted_group_mean(
+                    xk_curr,
+                    weights,
+                    flist[:, j],
+                    group_weights[:, j],
+                    _group_weighted_sums[tid, :],
+                )
+            if _sad_converged(xk_curr, xk_prev, tol):
                 break
 
-            # update
-            oldxk = cxk.copy()
-
-
-
-        res[:,k] = cxk
-
-    return res
-
-@njit
-def _ave3(x, f, w):
-
-    N = len(x)
-
-    wx_dict = {}
-    w_dict = {}
-
-    # Compute weighted sums using a dictionary
-    for i in prange(N):
-        j = f[i]
-        if j in wx_dict:
-            wx_dict[j] += w[i] * x[i]
+            xk_prev[:] = xk_curr[:]
         else:
-            wx_dict[j] = w[i] * x[i]
+            not_converged += 1
 
-        if j in w_dict:
-            w_dict[j] += w[i]
-        else:
-            w_dict[j] = w[i]
+        res[:, k] = xk_curr[:]
 
-    # Convert the dictionaries to arrays
-    wx = np.zeros_like(f, dtype=x.dtype)
-    w = np.zeros_like(f, dtype=w.dtype)
-
-    for i in range(N):
-        j = f[i]
-        wx[i] = wx_dict[j]
-        w[i] = w_dict[j]
-
-    # Compute the average
-    wxw_long = wx / w
-
-    return wxw_long
+    success = not not_converged
+    return (res, success)
