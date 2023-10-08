@@ -1,5 +1,51 @@
 # News
 
+## PyFixest `0.10`
+
+- Multiple performance improvements.
+- Most importantly, implements a custom demeaning algorithm in `numba` - thanks to Styfen Schaer (@styfenschaer),
+  which leads to performance improvements of 5x or more:
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+import numpy as np
+import time
+import pyhdfe
+from pyfixest.demean import demean
+
+np.random.seed(1238)
+N = 10_000_000
+x = np.random.normal(0, 1, 10*N).reshape((N,10))
+f1 = np.random.choice(list(range(1000)), N).reshape((N,1))
+f2 = np.random.choice(list(range(1000)), N).reshape((N,1))
+
+flist = np.concatenate((f1, f2), axis = 1)
+weights = np.ones(N)
+
+algorithm = pyhdfe.create(flist)
+
+start_time = time.time()
+res_pyhdfe = algorithm.residualize(x)
+end_time = time.time()
+print(end_time - start_time)
+# 26.04527711868286
+
+
+start_time = time.time()
+res_pyfixest, success = demean(x, flist, weights, tol = 1e-10)
+# Calculate the execution time
+end_time = time.time()
+print(end_time - start_time)
+#4.334428071975708
+
+np.allclose(res_pyhdfe , res_pyfixest)
+# True
+```
+
+
+
 ## PyFixest `0.9.11`
 
 - Bump required `formulaic` version to `0.6.5`.
