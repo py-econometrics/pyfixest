@@ -16,10 +16,11 @@ pandas=">=1.1.0"
 numpy=">=1.19.0"
 PyHDFE=">=0.2"
 scipy=">=1.6"
-formulaic=">=0.6.5"
+formulaic=">=0.6.6"
 pytest="^7.0.0"
 lets-plot = "^4.0.1"
 wildboottest={ version = ">=0.2", optional = true}
+numba = "^0.58.0"
 
 [build-system]
 requires = ["poetry-core"]

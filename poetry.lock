@@ -776,7 +776,7 @@ name = "llvmlite"
 version = "0.41.0"
 description = "lightweight wrapper around basic LLVM functionality"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "llvmlite-0.41.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:acc81c1279f858e5eab460844cc381e30d6666bc8eea04724b54d4eeb1fd1e54"},
@@ -1070,7 +1070,7 @@ name = "numba"
 version = "0.58.0"
 description = "compiling Python code using LLVM"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "numba-0.58.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2f146c11af62ad25021d93fccf48715a96d1ea76d43c1c3bc97dca561c6a2693"},
@@ -2344,4 +2344,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "73c81967cad2471322ef5da1ab1c392f61b3c9f644024960dc0850a221e64aa9"
+content-hash = "52542446e8e8d8399016a024e9a0f85a89da9ef090baa3420c8841c424dd2610"
