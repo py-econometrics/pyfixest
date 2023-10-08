@@ -5,8 +5,8 @@ import warnings
 
 
 from typing import Union, Optional, List
-from formulaic import model_matrix
 from pyfixest.feols import Feols
+from pyfixest.demean import demean
 from pyfixest.exceptions import (
     NonConvergenceError,
     NotImplementedError,
@@ -187,7 +187,8 @@ class Fepois(Feols):
             ZX = np.concatenate([reg_Z, _X], axis=1)
 
             if _fe is not None:
-                ZX_resid = algorithm.residualize(ZX, mu)
+                #ZX_resid = algorithm.residualize(ZX, mu)
+                ZX_resid = demean(ZX, _fe, mu.flatten())
             else:
                 ZX_resid = ZX
 
