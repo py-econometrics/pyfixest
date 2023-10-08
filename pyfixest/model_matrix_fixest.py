@@ -130,18 +130,18 @@ def model_matrix_fixest(
             )
 
     # step 3: catch NaNs (before converting to numpy arrays)
-    na_index_stage2 = list(set(data.index) - set(Y.index))
+    na_index_stage2 = data.index.difference(Y.index).tolist()
 
     if _is_iv:
-        na_index_stage1 = list(set(data.index) - set(Z.index))
+        na_index_stage1 = data.index.difference(Z.index).tolist()
         diff1 = list(set(na_index_stage1) - set(na_index_stage2))
         diff2 = list(set(na_index_stage2) - set(na_index_stage1))
         if diff1:
-            Y = Y.drop(diff1, axis=0)
-            X = X.drop(diff1, axis=0)
+            Y.drop(diff1, axis=0, inplace = True) # 21520
+            X.drop(diff1, axis=0, inplace = True) # 21520
         if diff2:
-            Z = Z.drop(diff2, axis=0)
-            endogvar = endogvar.drop(diff2, axis=0)
+            Z.drop(diff2, axis=0, inplace = True)
+            endogvar.drop(diff2, axis=0, inplace = True)
         na_index = list(set(na_index_stage1 + na_index_stage2))
     else:
         na_index = na_index_stage2
@@ -150,9 +150,9 @@ def model_matrix_fixest(
 
     if _ivars is not None:
         if _drop_ref is not None:
-            X = X.drop(_drop_ref, axis=1)
+            X.drop(_drop_ref, axis=1, inplace = True)
             if _is_iv:
-                Z = Z.drop(_drop_ref, axis=1)
+                Z.drop(_drop_ref, axis=1, inplace = True)
 
     # drop reference level, if specified
     if _ivars is not None:
@@ -166,23 +166,23 @@ def model_matrix_fixest(
         _icovars = None
 
     if fe is not None:
-        fe = fe.drop(na_index, axis=0)
+        fe.drop(na_index, axis=0, inplace = True)
         # drop intercept
-        X = X.drop("Intercept", axis=1)
+        X.drop("Intercept", axis=1, inplace=True)
         # x_names.remove("Intercept")
         if _is_iv:
-            Z = Z.drop("Intercept", axis=1)
+            Z.drop("Intercept", axis=1, inplace=True)
         #    z_names.remove("Intercept")
 
         # drop NaNs in fixed effects (not yet dropped via na_index)
         fe_na_remaining = list(set(fe_na) - set(na_index))
         if fe_na_remaining:
-            Y = Y.drop(fe_na_remaining, axis=0)
-            X = X.drop(fe_na_remaining, axis=0)
-            fe = fe.drop(fe_na_remaining, axis=0)
+            Y.drop(fe_na_remaining, axis=0, inplace = True)
+            X.drop(fe_na_remaining, axis=0, inplace = True)
+            fe.drop(fe_na_remaining, axis=0, inplace = True)
             if _is_iv:
-                Z = Z.drop(fe_na_remaining, axis=0)
-                endogvar = endogvar.drop(fe_na_remaining, axis=0)
+                Z.drop(fe_na_remaining, axis=0, inplace = True)
+                endogvar.drop(fe_na_remaining, axis=0, inplace = True)
             na_index += fe_na_remaining
             na_index = list(set(na_index))
 
