@@ -174,7 +174,7 @@ def _calc_group_weights(sample_weights, group_ids, n_groups):
     return group_weights
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=False)
 def demean(
     x: np.ndarray,
     flist: np.ndarray,
