@@ -179,7 +179,7 @@ def demean(
     x: np.ndarray,
     flist: np.ndarray,
     weights: np.ndarray,
-    tol: float = 1e-10,
+    tol: float = 1e-08,             # note: fixest uses 1e-06, but potentially different tolerance criterion
     maxiter: int = 100_000,
 ) -> Tuple[np.ndarray, bool]:
     n_samples, n_features = x.shape
