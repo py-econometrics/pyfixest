@@ -65,9 +65,10 @@ def demean_model(
 
                 weights = np.ones(YX.shape[0])
                 YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
+                if success == False:
+                    raise ValueError("Demeaning failed after 100_000 iterations.")
+
                 YX_demeaned = pd.DataFrame(YX_demean_new)
-
-
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
 
@@ -109,6 +110,9 @@ def demean_model(
             weights = np.ones(YX.shape[0])
 
             YX_demeaned, success = demean(x = YX, flist = fe.to_numpy(), weights = weights)
+            if success == False:
+                raise ValueError("Demeaning failed after 100_000 iterations.")
+
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
@@ -176,7 +180,7 @@ def demean(
     flist: np.ndarray,
     weights: np.ndarray,
     tol: float = 1e-10,
-    maxiter: int = 2_000,
+    maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]:
     n_samples, n_features = x.shape
     n_factors = flist.shape[1]

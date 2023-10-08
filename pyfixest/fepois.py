@@ -189,6 +189,8 @@ class Fepois(Feols):
             if _fe is not None:
                 #ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(x = ZX, flist = _fe, weights = mu.flatten())
+                if success == False:
+                    raise ValueError("Demeaning failed after 100_000 iterations.")
             else:
                 ZX_resid = ZX
 
