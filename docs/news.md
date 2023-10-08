@@ -3,7 +3,7 @@
 ## PyFixest `0.10`
 
 - Multiple performance improvements.
-- Most importantly, implements a custom demeaning algorithm in `numba` - thanks to Styfen Schaer (@styfenschaer),
+- Most importantly, implements a custom demeaning algorithm in `numba` - thanks to Styfen (@styfenschaer),
   which leads to performance improvements of 5x or more:
 
 ```python
