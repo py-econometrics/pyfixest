@@ -64,7 +64,6 @@ def demean_model(
 
                 weights = np.ones(YX.shape[0])
                 YX_demean_new = demean(var_diff, fe.to_numpy(), weights)
-                YX_demeaned = pd.DataFrame(YX_demean_new)
 
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
@@ -101,6 +100,8 @@ def demean_model(
                     0
                 ].tolist()
                 na_index += dropped_singleton_indices
+
+                YX = np.delete(YX, dropped_singleton_indices, axis=0)
 
             weights = np.ones(YX.shape[0])
 
