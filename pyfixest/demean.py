@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
 import pyhdfe
+import numba as nb
 
 
 def demean_model(
@@ -62,7 +63,12 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new = algorithm.residualize(var_diff)
+                weights = np.ones(YX.shape[0])
+                YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
+                if success == False:
+                    raise ValueError("Demeaning failed after 100_000 iterations.")
+
+                YX_demeaned = pd.DataFrame(YX_demean_new)
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
                 YX_demeaned = pd.DataFrame(YX_demeaned)
 
@@ -92,16 +98,22 @@ def demean_model(
             ):
                 print(
                     algorithm.singletons,
-                    "columns are dropped due to singleton fixed effects.",
+                    "observations are dropped due to singleton fixed effects.",
                 )
                 dropped_singleton_indices = np.where(algorithm._singleton_indices)[
                     0
                 ].tolist()
                 na_index += dropped_singleton_indices
 
-            YX_demeaned = algorithm.residualize(YX)
-            YX_demeaned = pd.DataFrame(YX_demeaned)
+                YX = np.delete(YX, dropped_singleton_indices, axis=0)
 
+            weights = np.ones(YX.shape[0])
+
+            YX_demeaned, success = demean(x = YX, flist = fe.to_numpy(), weights = weights)
+            if success == False:
+                raise ValueError("Demeaning failed after 100_000 iterations.")
+
+            YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
         lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
@@ -118,3 +130,102 @@ def demean_model(
     Xd = YX_demeaned[X.columns]
 
     return Yd, Xd
+
+
+@nb.njit
+def _sad_converged(a, b, tol):
+    for i in range(a.size):
+        tol -= np.abs(a[i] - b[i])
+        if tol < 0:
+            return False
+    return True
+
+
+@nb.njit(locals=dict(id=nb.uint32))
+def _subtract_weighted_group_mean(
+    x,
+    sample_weights,
+    group_ids,
+    group_weights,
+    _group_weighted_sums,
+):
+    _group_weighted_sums[:] = 0
+
+    for i in range(x.size):
+        id = group_ids[i]
+        _group_weighted_sums[id] += sample_weights[i] * x[i]
+
+    for i in range(x.size):
+        id = group_ids[i]
+        x[i] -= _group_weighted_sums[id] / group_weights[id]
+
+
+@nb.njit
+def _calc_group_weights(sample_weights, group_ids, n_groups):
+    n_samples, n_factors = group_ids.shape
+    dtype = sample_weights.dtype
+    group_weights = np.zeros((n_factors, n_groups), dtype=dtype).T
+
+    for j in range(n_factors):
+        for i in range(n_samples):
+            id = group_ids[i, j]
+            group_weights[id, j] += sample_weights[i]
+
+    return group_weights
+
+
+@nb.njit(parallel=True)
+def demean(
+    x: np.ndarray,
+    flist: np.ndarray,
+    weights: np.ndarray,
+    tol: float = 1e-08,             # note: fixest uses 1e-06, but potentially different tolerance criterion
+    maxiter: int = 100_000,
+) -> Tuple[np.ndarray, bool]:
+    n_samples, n_features = x.shape
+    n_factors = flist.shape[1]
+
+    if x.flags.f_contiguous:
+        res = np.empty((n_features, n_samples), dtype=x.dtype).T
+    else:
+        res = np.empty((n_samples, n_features), dtype=x.dtype)
+
+    n_threads = nb.get_num_threads()
+
+    n_groups = flist.max() + 1
+    group_weights = _calc_group_weights(weights, flist, n_groups)
+    _group_weighted_sums = np.empty((n_threads, n_groups), dtype=x.dtype)
+
+    x_curr = np.empty((n_threads, n_samples), dtype=x.dtype)
+    x_prev = np.empty((n_threads, n_samples), dtype=x.dtype)
+
+    not_converged = 0
+    for k in nb.prange(n_features):
+        tid = nb.get_thread_id()
+
+        xk_curr = x_curr[tid, :]
+        xk_prev = x_prev[tid, :]
+        for i in range(n_samples):
+            xk_curr[i] = x[i, k]
+            xk_prev[i] = x[i, k] - 1.0
+
+        for _ in range(maxiter):
+            for j in range(n_factors):
+                _subtract_weighted_group_mean(
+                    xk_curr,
+                    weights,
+                    flist[:, j],
+                    group_weights[:, j],
+                    _group_weighted_sums[tid, :],
+                )
+            if _sad_converged(xk_curr, xk_prev, tol):
+                break
+
+            xk_prev[:] = xk_curr[:]
+        else:
+            not_converged += 1
+
+        res[:, k] = xk_curr[:]
+
+    success = not not_converged
+    return (res, success)
