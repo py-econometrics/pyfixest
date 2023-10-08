@@ -188,7 +188,7 @@ class Fepois(Feols):
 
             if _fe is not None:
                 #ZX_resid = algorithm.residualize(ZX, mu)
-                ZX_resid = demean(ZX, _fe, mu.flatten())
+                ZX_resid, success = demean(x = ZX, flist = _fe, weights = mu.flatten())
             else:
                 ZX_resid = ZX
 
