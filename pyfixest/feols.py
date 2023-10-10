@@ -445,7 +445,7 @@ class Feols:
         _vcov_type = self._vcov_type
         _N = self._N
         _k = self._k
-        _G = self._G
+        _G = np.min(np.array(self._G)) #fixest default
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(_vcov))
