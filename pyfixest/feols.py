@@ -212,9 +212,6 @@ class Feols:
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
 
-        self._twoway_clustering = False
-        if len(self._clustervar) == 2:
-            self._twoway_clustering = True
 
         if _is_iv:
             if self._vcov_type in ["CRV3"]:
@@ -303,7 +300,7 @@ class Feols:
                     "Please drop missing values before running the regression."
                 )
 
-            if self._twoway_clustering:
+            if cluster_df.shape[1] > 1:
                 # paste both columns together
                 #cluster_df['cluster_intersection'] = str(cluster_df.iloc[:,0]) + "-" + str(cluster_df.iloc[:,1])
                 # set cluster_df to string
