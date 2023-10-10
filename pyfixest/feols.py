@@ -302,7 +302,6 @@ class Feols:
 
             if cluster_df.shape[1] > 1:
                 # paste both columns together
-                #cluster_df['cluster_intersection'] = str(cluster_df.iloc[:,0]) + "-" + str(cluster_df.iloc[:,1])
                 # set cluster_df to string
                 cluster_df = cluster_df.astype(str)
                 cluster_df['cluster_intersection'] = cluster_df.iloc[:,0].str.cat(cluster_df.iloc[:,1], sep='-')
