@@ -356,7 +356,7 @@ class Feols:
                         meat += np.dot(score_g, score_g.transpose())
 
                     if _is_iv == False:
-                        self._vcov += self._ssc[x] * bread @ meat @ bread
+                        self._vcov = self._ssc[x] * bread @ meat @ bread
                     else:
                         meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
                         self._vcov += self._ssc[x] * bread @ meat @ bread

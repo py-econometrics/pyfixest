@@ -135,7 +135,8 @@ def demean_model(
 @nb.njit
 def _sad_converged(a, b, tol):
     for i in range(a.size):
-        if np.abs(a[i] - b[i]) >= tol:
+        tol -= np.abs(a[i] - b[i])
+        if tol < 0:
             return False
     return True
 
