@@ -653,6 +653,9 @@ class Feols:
             if self._clustervar is not None:
                 cluster = self._clustervar
 
+        if isinstance(cluster, str):
+            cluster = [cluster]
+
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
         except ImportError:
@@ -701,8 +704,12 @@ class Feols:
             full_enumeration_warn = False
 
         else:
-            inference = f"CRV({self._clustervar})"
-            cluster = _data[cluster]
+            inference = f"CRV({cluster})"
+
+            if len(cluster) > 1:
+                raise ValueError("Multiway clustering is currently not supported with the wild cluster bootstrap.")
+
+            cluster = _data[cluster[0]]
 
             boot = WildboottestCL(
                 X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel
