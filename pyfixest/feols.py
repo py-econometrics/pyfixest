@@ -384,7 +384,7 @@ class Feols:
 
                     beta_jack = np.zeros((len(clustid), _k))
 
-                    if self._has_fixef == False:
+                    if (self._has_fixef == False) and (self._method == "feols"):
                         # inverse hessian precomputed?
                         tXX = np.transpose(self._X) @ self._X
                         tXy = np.transpose(self._X) @ self._Y
@@ -404,12 +404,15 @@ class Feols:
                     else:
                         # lazy loading to avoid circular import
                         fixest_module = import_module("pyfixest.estimation")
-                        feols_ = getattr(fixest_module, "feols")
+                        if self._method == "feols":
+                            fit_ = getattr(fixest_module, "feols")
+                        else:
+                            fit_ = getattr(fixest_module, "fepois")
 
                         for ixg, g in enumerate(clustid):
                             # direct leave one cluster out implementation
                             data = _data[~np.equal(g, cluster_col)]
-                            fit = feols_(fml=self._fml, data=data, vcov="iid")
+                            fit = fit_(fml=self._fml, data=data, vcov="iid")
                             beta_jack[ixg, :] = fit.coef().to_numpy()
 
                     # optional: beta_bar in MNW (2022)
