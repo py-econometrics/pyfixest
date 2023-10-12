@@ -305,14 +305,22 @@ class Feols:
                 # set cluster_df to string
                 cluster_df = cluster_df.astype(str)
                 cluster_df['cluster_intersection'] = cluster_df.iloc[:,0].str.cat(cluster_df.iloc[:,1], sep='-')
-            # if there are missings - delete them!
+
+            G = []
+            for col in cluster_df.columns:
+                G.append(cluster_df[col].nunique())
+
+            if _ssc_dict["cluster_df"] == "min":
+                G = [min(G)] * 3
+
+
 
             # all elements of cluster_df to pd.Categorical
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
             self._ssc = []
-            self._G = []
+            self._G = G
 
             self._vcov = np.zeros((self._k, self._k))
 
@@ -320,7 +328,6 @@ class Feols:
 
                 cluster_col =  cluster_df[col]
                 _, clustid = pd.factorize(cluster_col)
-                self._G.append(len(clustid))
 
                 ssc = get_ssc(
                     ssc_dict=_ssc_dict,
@@ -375,9 +382,7 @@ class Feols:
                             f"'CRV3' inference is not supported for {_method} regressions."
                         )
 
-                    #group = cluster_df
-
-                    beta_jack = np.zeros((self._G[x], _k))
+                    beta_jack = np.zeros((len(clustid), _k))
 
                     if self._has_fixef == False:
                         # inverse hessian precomputed?
@@ -386,13 +391,15 @@ class Feols:
 
                         # compute leave-one-out regression coefficients (aka clusterjacks')
                         for ixg, g in enumerate(clustid):
-                            Xg = self._X[np.equal(ixg, cluster_col)]
-                            Yg = self._Y[np.equal(ixg, cluster_col)]
+
+                            Xg = self._X[np.equal(g, cluster_col)]
+                            Yg = self._Y[np.equal(g, cluster_col)]
                             tXgXg = np.transpose(Xg) @ Xg
                             # jackknife regression coefficient
                             beta_jack[ixg, :] = (
                                 np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
                             ).flatten()
+
 
                     else:
                         # lazy loading to avoid circular import
@@ -401,7 +408,7 @@ class Feols:
 
                         for ixg, g in enumerate(clustid):
                             # direct leave one cluster out implementation
-                            data = _data[~np.equal(ixg, cluster_col)]
+                            data = _data[~np.equal(g, cluster_col)]
                             fit = feols_(fml=self._fml, data=data, vcov="iid")
                             beta_jack[ixg, :] = fit.coef().to_numpy()
 
