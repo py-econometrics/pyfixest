@@ -206,7 +206,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
             # relax tolerance for Poisson regression - effective rtol and atol of
             # 5e-05
-            inference_inflation_factor = 100
+            inference_inflation_factor = 50
 
             try:
                 pyfixest = fepois(fml=fml, data=data, vcov=inference)
