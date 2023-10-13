@@ -214,12 +214,6 @@ class Feols:
 
 
         if _is_iv:
-            if self._vcov_type in ["CRV3"]:
-                raise VcovTypeNotSupportedError(
-                    "CRV3 inference is not supported for IV regressions."
-                )
-
-        if _is_iv:
             bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
         else:
             bread = np.linalg.inv(_hessian)
@@ -372,19 +366,14 @@ class Feols:
                     # if not, either error or turn fixefs into dummies
                     # for now: don't allow for use with fixed effects
 
-                    if _is_iv:
-                        raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV estimation."
-                        )
-
                     if not _support_crv3_inference:
-                        raise NotImplementedError(
-                            f"'CRV3' inference is not supported for {_method} regressions."
+                        raise VcovTypeNotSupportedError(
+                            "CRV3 inference is not supported with IV regression."
                         )
 
                     beta_jack = np.zeros((len(clustid), _k))
 
-                    if (self._has_fixef == False) and (self._method == "feols"):
+                    if (self._has_fixef == False) and (self._method == "feols") and (_is_iv == False):
                         # inverse hessian precomputed?
                         tXX = np.transpose(self._X) @ self._X
                         tXy = np.transpose(self._X) @ self._Y

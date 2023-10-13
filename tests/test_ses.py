@@ -94,3 +94,22 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         raise ValueError("HC3 and CRV3 ses are not the same.")
     if not np.allclose(res_crv3a["t value"], res_crv3b["t value"]):
         raise ValueError("HC3 and CRV3 t values are not the same.")
+
+
+
+def run_crv3_poisson():
+
+    data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
+    fit = fepois(
+        fml="Y~X1 + C(f2)",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+    )
+
+    fit = fepois(
+        fml="Y~X1 |f1 + f2",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+    )
