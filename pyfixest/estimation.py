@@ -56,6 +56,7 @@ def feols(
         vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+            For twoway clustering, combine the cluster variables via a "+", i.e. dict(".CRV1":"clustervar1+clustervar2").
 
         ssc (str): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
 
@@ -184,6 +185,7 @@ def fepois(
         vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
+            For twoway clustering, combine the cluster variables via a "+", i.e. dict(".CRV1":"clustervar1+clustervar2").
 
         ssc (string): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
 

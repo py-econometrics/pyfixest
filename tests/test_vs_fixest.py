@@ -465,8 +465,8 @@ def test_twoway_clustering():
     for cluster_adj in cluster_adj_options:
         for cluster_df in cluster_df_options:
 
-            fit1 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV1":"f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
-            fit2 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV3":"f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
+            fit1 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV1":"f1 +f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
+            fit2 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV3":" f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
 
             feols_fit1 = fixest.feols(
                 ro.Formula("Y ~ X1 + X2"),
