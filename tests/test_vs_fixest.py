@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from pyfixest.estimation import feols, fepois
-from pyfixest.utils import get_data
+from pyfixest.utils import get_data, ssc
 from pyfixest.exceptions import NotImplementedError
 
 # rpy2 imports
@@ -453,6 +453,57 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         )
 
 
+
+def test_twoway_clustering():
+
+    data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
+
+    cluster_adj_options = [True]
+    cluster_df_options = ["min", "conventional"]
+
+
+    for cluster_adj in cluster_adj_options:
+        for cluster_df in cluster_df_options:
+
+            fit1 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV1":"f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
+            fit2 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV3":"f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
+
+            feols_fit1 = fixest.feols(
+                ro.Formula("Y ~ X1 + X2"),
+                data=data,
+                cluster = ro.Formula("~f1+f2"),
+                ssc=fixest.ssc(True, "none", cluster_adj, cluster_df, "min", False)
+            )
+
+            # test vcov's
+            np.testing.assert_allclose(
+                fit1._vcov,
+                stats.vcov(feols_fit1),
+                rtol = 1e-04,
+                atol = 1e-04,
+                err_msg = f"CRV1-vcov: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+            )
+
+            # now test se's
+            np.testing.assert_allclose(
+                fit1.se(),
+                fixest.se(feols_fit1),
+                rtol = 1e-04,
+                atol = 1e-04,
+                err_msg = f"CRV1-se: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+            )
+
+            # now test pvalues
+            np.testing.assert_allclose(
+                fit1.pvalue(),
+                fixest.pvalue(feols_fit1),
+                rtol = 1e-04,
+                atol = 1e-04,
+                err_msg = f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+            )
+
+
+
 def _py_fml_to_r_fml(py_fml):
     """
     pyfixest multiple estimation fml syntax to fixest multiple depvar
@@ -513,3 +564,5 @@ def get_data_r(fml, data):
         data_r = data
 
     return data_r
+
+

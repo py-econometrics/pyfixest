@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.2`
+
+- Adds support for two-way clustering.
+
 ## PyFixest `0.10.1`
 
 - Adapts the internal fixed effects demeaning criteron to match `PyHDFE`'s default.
