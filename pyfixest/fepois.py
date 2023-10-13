@@ -77,7 +77,7 @@ class Fepois(Feols):
         self._N_separation_na = None
         self._check_for_separation()
 
-        self._support_crv3_inference = False
+        self._support_crv3_inference = True
         self._support_iid_inference = True
 
         # attributes that are updated outside of the class (not optimal)

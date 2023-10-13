@@ -176,6 +176,7 @@ class Feols:
             An instance of class `Feols` with updated inference.
         """
 
+
         _data = self._data
         _fml = self._fml
         _has_fixef = self._has_fixef
@@ -211,11 +212,6 @@ class Feols:
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
 
-        if _is_iv:
-            if self._vcov_type in ["CRV3"]:
-                raise VcovTypeNotSupportedError(
-                    "CRV3 inference is not supported for IV regressions."
-                )
 
         if _is_iv:
             bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
@@ -290,121 +286,138 @@ class Feols:
 
         elif self._vcov_type == "CRV":
 
-            #import pdb;
-            #pdb.set_trace()
 
             cluster_df = _data[self._clustervar]
-            # if there are missings - delete them!
-
-            if cluster_df.dtype != "category":
-                cluster_df = pd.Categorical(cluster_df)
-
-            if cluster_df.isna().any():
+            if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
                     "CRV inference not supported with missing values in the cluster variable."
                     "Please drop missing values before running the regression."
                 )
 
-            _, clustid = pd.factorize(cluster_df)
+            if cluster_df.shape[1] > 1:
+                # paste both columns together
+                # set cluster_df to string
+                cluster_df = cluster_df.astype(str)
+                cluster_df['cluster_intersection'] = cluster_df.iloc[:,0].str.cat(cluster_df.iloc[:,1], sep='-')
 
-            self._G = len(clustid)
+            G = []
+            for col in cluster_df.columns:
+                G.append(cluster_df[col].nunique())
 
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=self._G,
-                vcov_sign=1,
-                vcov_type="CRV",
-            )
+            if _ssc_dict["cluster_df"] == "min":
+                G = [min(G)] * 3
 
-            if self._vcov_type_detail == "CRV1":
-                k_instruments = _Z.shape[1]
-                meat = np.zeros((k_instruments, k_instruments))
 
-                if _weights is not None:
-                    weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
-                        (_N, 1)
-                    )
-                else:
-                    weighted_uhat = _u_hat
 
-                for (
-                    _,
-                    g,
-                ) in enumerate(clustid):
-                    Zg = _Z[np.where(cluster_df == g)]
-                    ug = weighted_uhat[np.where(cluster_df == g)]
-                    score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
-                    meat += np.dot(score_g, score_g.transpose())
+            # all elements of cluster_df to pd.Categorical
 
-                if _is_iv == False:
-                    self._vcov = self._ssc * bread @ meat @ bread
-                else:
-                    meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
-                    self._vcov = self._ssc * bread @ meat @ bread
+            # loop over columns of cluster_df
+            vcov_sign_list = [1, 1, -1]
+            self._ssc = []
+            self._G = G
 
-            elif self._vcov_type_detail == "CRV3":
-                # check: is fixed effect cluster fixed effect?
-                # if not, either error or turn fixefs into dummies
-                # for now: don't allow for use with fixed effects
+            self._vcov = np.zeros((self._k, self._k))
 
-                if _is_iv:
-                    raise VcovTypeNotSupportedError(
-                        "CRV3 inference is not supported with IV estimation."
-                    )
+            for x, col in enumerate(cluster_df.columns):
 
-                if not _support_crv3_inference:
-                    raise NotImplementedError(
-                        f"'CRV3' inference is not supported for {_method} regressions."
-                    )
+                cluster_col =  cluster_df[col]
+                _, clustid = pd.factorize(cluster_col)
 
-                clusters = clustid
-                n_groups = self._G
-                group = cluster_df
+                ssc = get_ssc(
+                    ssc_dict=_ssc_dict,
+                    N=_N,
+                    k=_k,
+                    G=self._G[x],
+                    vcov_sign=vcov_sign_list[x],
+                    vcov_type="CRV",
+                )
 
-                beta_jack = np.zeros((n_groups, _k))
+                self._ssc.append(ssc)
 
-                if self._has_fixef == False:
-                    # inverse hessian precomputed?
-                    tXX = np.transpose(self._X) @ self._X
-                    tXy = np.transpose(self._X) @ self._Y
+                if self._vcov_type_detail == "CRV1":
+                    k_instruments = _Z.shape[1]
+                    meat = np.zeros((k_instruments, k_instruments))
 
-                    # compute leave-one-out regression coefficients (aka clusterjacks')
-                    for ixg, g in enumerate(clusters):
-                        Xg = self._X[np.equal(ixg, group)]
-                        Yg = self._Y[np.equal(ixg, group)]
-                        tXgXg = np.transpose(Xg) @ Xg
-                        # jackknife regression coefficient
-                        beta_jack[ixg, :] = (
-                            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
-                        ).flatten()
+                    if _weights is not None:
+                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
+                            (_N, 1)
+                        )
+                    else:
+                        weighted_uhat = _u_hat
 
-                else:
-                    # lazy loading to avoid circular import
-                    fixest_module = import_module("pyfixest.estimation")
-                    feols_ = getattr(fixest_module, "feols")
+                    for (
+                        _,
+                        g,
+                    ) in enumerate(clustid):
 
-                    for ixg, g in enumerate(clusters):
-                        # direct leave one cluster out implementation
-                        data = _data[~np.equal(ixg, group)]
-                        fit = feols_(fml=self._fml, data=data, vcov="iid")
-                        beta_jack[ixg, :] = fit.coef().to_numpy()
+                        Zg = _Z[np.where(cluster_col == g)]
+                        ug = weighted_uhat[np.where(cluster_col == g)]
+                        score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
+                        meat += np.dot(score_g, score_g.transpose())
 
-                # optional: beta_bar in MNW (2022)
-                # center = "estimate"
-                # if center == 'estimate':
-                #    beta_center = beta_hat
-                # else:
-                #    beta_center = np.mean(beta_jack, axis = 0)
-                beta_center = _beta_hat
+                    if _is_iv == False:
+                        self._vcov += self._ssc[x] * bread @ meat @ bread
+                    else:
+                        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
+                        self._vcov += self._ssc[x] * bread @ meat @ bread
 
-                vcov = np.zeros((_k, _k))
-                for ixg, g in enumerate(clusters):
-                    beta_centered = beta_jack[ixg, :] - beta_center
-                    vcov += np.outer(beta_centered, beta_centered)
+                elif self._vcov_type_detail == "CRV3":
+                    # check: is fixed effect cluster fixed effect?
+                    # if not, either error or turn fixefs into dummies
+                    # for now: don't allow for use with fixed effects
 
-                self._vcov = self._ssc * vcov
+                    if not _support_crv3_inference:
+                        raise VcovTypeNotSupportedError(
+                            "CRV3 inference is not supported with IV regression."
+                        )
+
+                    beta_jack = np.zeros((len(clustid), _k))
+
+                    if (self._has_fixef == False) and (self._method == "feols") and (_is_iv == False):
+                        # inverse hessian precomputed?
+                        tXX = np.transpose(self._X) @ self._X
+                        tXy = np.transpose(self._X) @ self._Y
+
+                        # compute leave-one-out regression coefficients (aka clusterjacks')
+                        for ixg, g in enumerate(clustid):
+
+                            Xg = self._X[np.equal(g, cluster_col)]
+                            Yg = self._Y[np.equal(g, cluster_col)]
+                            tXgXg = np.transpose(Xg) @ Xg
+                            # jackknife regression coefficient
+                            beta_jack[ixg, :] = (
+                                np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+                            ).flatten()
+
+
+                    else:
+                        # lazy loading to avoid circular import
+                        fixest_module = import_module("pyfixest.estimation")
+                        if self._method == "feols":
+                            fit_ = getattr(fixest_module, "feols")
+                        else:
+                            fit_ = getattr(fixest_module, "fepois")
+
+                        for ixg, g in enumerate(clustid):
+                            # direct leave one cluster out implementation
+                            data = _data[~np.equal(g, cluster_col)]
+                            fit = fit_(fml=self._fml, data=data, vcov="iid")
+                            beta_jack[ixg, :] = fit.coef().to_numpy()
+
+                    # optional: beta_bar in MNW (2022)
+                    # center = "estimate"
+                    # if center == 'estimate':
+                    #    beta_center = beta_hat
+                    # else:
+                    #    beta_center = np.mean(beta_jack, axis = 0)
+                    beta_center = _beta_hat
+
+                    vcov = np.zeros((_k, _k))
+                    for ixg, g in enumerate(clustid):
+                        beta_centered = beta_jack[ixg, :] - beta_center
+                        vcov += np.outer(beta_centered, beta_centered)
+
+                    self._vcov += self._ssc[x] * vcov
 
         self.get_inference()
 
@@ -427,7 +440,7 @@ class Feols:
         _vcov_type = self._vcov_type
         _N = self._N
         _k = self._k
-        _G = self._G
+        _G = np.min(np.array(self._G)) #fixest default
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(_vcov))
@@ -629,6 +642,9 @@ class Feols:
             if self._clustervar is not None:
                 cluster = self._clustervar
 
+        if isinstance(cluster, str):
+            cluster = [cluster]
+
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
         except ImportError:
@@ -677,8 +693,12 @@ class Feols:
             full_enumeration_warn = False
 
         else:
-            inference = f"CRV({self._clustervar})"
-            cluster = _data[cluster]
+            inference = f"CRV({cluster})"
+
+            if len(cluster) > 1:
+                raise ValueError("Multiway clustering is currently not supported with the wild cluster bootstrap.")
+
+            cluster = _data[cluster[0]]
 
             boot = WildboottestCL(
                 X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel
@@ -1020,9 +1040,14 @@ def _check_vcov_input(vcov, data):
         assert isinstance(
             list(vcov.values())[0], str
         ), "vcov dict value must be a string"
+        deparse_vcov = list(vcov.values())[0].split("+")
+        assert all(col in data.columns for col in deparse_vcov), "vcov dict value must be a column in the data"
+
         assert (
-            list(vcov.values())[0] in data.columns
-        ), "vcov dict value must be a column in the data"
+            len(deparse_vcov) <= 2
+        ), "not more than twoway clustering is supported"
+
+
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
         assert all(
@@ -1052,10 +1077,11 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         is_clustered (bool): Whether the vcov is clustered.
         clustervar (str): The name of the cluster variable.
     """
-
     if isinstance(vcov, dict):
         vcov_type_detail = list(vcov.keys())[0]
-        clustervar = list(vcov.values())[0]
+        deparse_vcov = list(vcov.values())[0].split("+")
+        if isinstance(deparse_vcov, str):
+            deparse_vcov = [deparse_vcov]
     elif isinstance(vcov, list):
         vcov_type_detail = vcov
     elif isinstance(vcov, str):
@@ -1083,7 +1109,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         is_clustered = True
 
     if is_clustered:
-        clustervar = list(vcov.values())[0]
+        clustervar = deparse_vcov
     else:
         clustervar = None
 
@@ -1199,7 +1225,6 @@ def _find_collinear_variables(X, tol=1e-10):
             all_removed (bool): True if all variables are collinear.
     """
 
-    # import pdb; pdb.set_trace()
 
     res = dict()
     K = X.shape[1]
