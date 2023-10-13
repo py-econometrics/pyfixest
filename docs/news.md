@@ -1,5 +1,10 @@
 # News
 
+## PyFixest `0.10.1`
+
+- Adapts the internal fixed effects demeaning criteron to match `PyHDFE`'s default.
+- Adds Styfen as coauthor.
+
 ## PyFixest `0.10`
 
 - Multiple performance improvements.

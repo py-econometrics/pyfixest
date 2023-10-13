@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.10"
+version = "0.10.1"
 
 
 description = "(Not so) experimental draft package for high dimensional fixed effect estimation. Supports OLS, IV and Poisson regression and a range of inference procedures."
-authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>"]
+authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
 license = "MIT"
 readme = "readme.md"
 homepage = "https://s3alfisc.github.io/pyfixest/"
