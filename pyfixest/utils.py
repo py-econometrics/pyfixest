@@ -3,7 +3,7 @@ import pandas as pd
 from formulaic import model_matrix
 
 
-def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
+def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
     """
     Set the small sample correction factor applied in `get_ssc()`
     Parameters:
@@ -43,7 +43,7 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="conventional"):
     return res
 
 
-def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
+def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     """
     Compute small sample adjustment factors
 
@@ -54,6 +54,7 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type):
     - G: The number of clusters
     - vcov_sign: A vector that helps create the covariance matrix
     - vcov_type: Either "iid", "hetero" or "CRV"
+    - is_twoway: Whether the covariance matrix is of the form V = V_1 + V_2 - V_12, i.e. whether it is a two-way cluster matrix
 
     Returns:
     - A small sample adjustment factor
