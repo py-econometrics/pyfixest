@@ -1041,7 +1041,7 @@ def _check_vcov_input(vcov, data):
             list(vcov.values())[0], str
         ), "vcov dict value must be a string"
         deparse_vcov = list(vcov.values())[0].split("+")
-        assert all(col in data.columns for col in deparse_vcov), "vcov dict value must be a column in the data"
+        assert all(col.replace(" ","") in data.columns for col in deparse_vcov), "vcov dict value must be a column in the data"
 
         assert (
             len(deparse_vcov) <= 2
@@ -1082,6 +1082,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         deparse_vcov = list(vcov.values())[0].split("+")
         if isinstance(deparse_vcov, str):
             deparse_vcov = [deparse_vcov]
+        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
     elif isinstance(vcov, list):
         vcov_type_detail = vcov
     elif isinstance(vcov, str):

@@ -1,8 +1,14 @@
 # News
 
+## PyFixest `0.10.3`
+
+- Allows for white space in the multiway clustering formula.
+- Adds documentation for multiway clustering.
+
 ## PyFixest `0.10.2`
 
 - Adds support for two-way clustering.
+- Adds support for CRV3 inference for Poisson regression.
 
 ## PyFixest `0.10.1`
 
