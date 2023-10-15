@@ -96,13 +96,6 @@ def demean_model(
 
             dropped_singleton_indices = _detect_singletons(fe)
 
-            #algorithm = pyhdfe.create(
-            #    ids=fe,
-            #    residualize_method="map",
-            #    drop_singletons=drop_singletons,
-            #    # weights=weights
-            #)
-
             toc = time.time()
             print("Time to create algorithm:", toc - tic)
 
@@ -270,6 +263,8 @@ def _detect_singletons(ids):
             col = ids[:, x]
             col_tmp = ids_tmp[:, x]
 
+            # note that this only "works" as fixed effects are integers from 0, 1, ..., n_fixef -1
+            # and np.bincount orders results in ascending (integer) order
             counts = np.bincount(col_tmp)
 
             if (counts == 1).any():
