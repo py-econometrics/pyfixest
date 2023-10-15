@@ -4,6 +4,7 @@ from pyfixest.FixestMulti import FixestMulti
 from pyfixest.fepois import Fepois
 from pyfixest.feols import Feols
 import pandas as pd
+import time
 
 
 def feols(
@@ -124,8 +125,15 @@ def feols(
 
     _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
 
+    tic = time.time()
     fixest = FixestMulti(data=data)
+    toc = time.time()
+    print(f"FixestMulti init: {toc - tic}")
+
+    tic = time.time()
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
+    toc = time.time()
+    print(f"FixestMulti prep: {toc - tic}")
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)

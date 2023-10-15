@@ -15,6 +15,7 @@ from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
+import time
 
 
 class FixestMulti:
@@ -157,6 +158,9 @@ class FixestMulti:
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
                     # get Y, X, Z, fe, NA indices for model
+
+                    tic = time.time()
+
                     (
                         Y,
                         X,
@@ -167,6 +171,9 @@ class FixestMulti:
                         na_index_str,
                         _icovars,
                     ) = model_matrix_fixest(fml=fml, data=_data)
+
+                    toc = time.time()
+                    print(f"model_matrix_fixest: {toc-tic}")
 
                     weights = np.ones((Y.shape[0], 1))
 

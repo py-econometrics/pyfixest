@@ -3,6 +3,7 @@ import pandas as pd
 import re
 from typing import Optional, Tuple, List
 import numpy as np
+import time
 
 
 def model_matrix_fixest(
@@ -108,11 +109,14 @@ def model_matrix_fixest(
         fe_na = None
     # fml_iv already created
 
+    tic = time.time()
     Y, X = model_matrix(fml_exog, data)
     if _is_iv:
         endogvar, Z = model_matrix(fml_iv_full, data)
     else:
         endogvar, Z = None, None
+    toc = time.time()
+    print(f"model_matrix took {toc-tic} seconds")
 
     Y, X, endogvar, Z = [
         pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]
