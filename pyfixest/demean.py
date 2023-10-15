@@ -41,11 +41,14 @@ def demean_model(
             - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
     """
 
+
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
     YX = YX.to_numpy()
-    fe = fe.to_numpy()
+
+    if fe is not None:
+        fe = fe.to_numpy()
 
     if fe is not None:
         # check if looked dict has data for na_index
@@ -68,7 +71,7 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 weights = np.ones(YX.shape[0])
-                YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
+                YX_demean_new, success = demean(var_diff, fe, weights)
                 if success == False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -272,8 +275,8 @@ def _detect_singletons(ids):
             if (counts == 1).any():
                 idx = np.where(counts == 1)
 
-                singleton_idx = np.where((col == idx).flatten(), True, singleton_idx)
-                singleton_idx_tmp = (col_tmp == idx).flatten()
+                singleton_idx = np.where((np.isin(col, idx)).flatten(), True, singleton_idx)
+                singleton_idx_tmp = (np.isin(col_tmp , idx)).flatten()
 
                 ids_tmp = ids_tmp[~singleton_idx_tmp,:]
                 singleton_idx_tmp = singleton_idx_tmp[~singleton_idx_tmp]
