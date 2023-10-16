@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 import pandas as pd
 from pyfixest.estimation import feols
-from pyfixest.exceptions import MatrixNotFullRankError
 
 
 def test_multicollinearity_error():

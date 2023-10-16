@@ -565,4 +565,3 @@ def get_data_r(fml, data):
 
     return data_r
 
-

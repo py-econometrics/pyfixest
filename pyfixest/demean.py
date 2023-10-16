@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
-import pyhdfe
 import numba as nb
+from typing import Any, Sequence, Optional
+
 
 
 def demean_model(
@@ -38,16 +39,20 @@ def demean_model(
             - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
     """
 
+
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
     YX = YX.to_numpy()
 
     if fe is not None:
+        fe = fe.to_numpy()
+
+    if fe is not None:
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index_str) is not None:
             # get data out of lookup table: list of [algo, data]
-            algorithm, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
+            _, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
 
             # get not yet demeaned covariates
             var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
@@ -64,7 +69,7 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 weights = np.ones(YX.shape[0])
-                YX_demean_new, success = demean(var_diff, fe.to_numpy(), weights)
+                YX_demean_new, success = demean(var_diff, fe, weights)
                 if success == False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -84,39 +89,32 @@ def demean_model(
 
         else:
             # not data demeaned yet for NA combination
-            algorithm = pyhdfe.create(
-                ids=fe,
-                residualize_method="map",
-                drop_singletons=drop_singletons,
-                # weights=weights
-            )
 
-            if (
-                drop_singletons == True
-                and algorithm.singletons != 0
-                and algorithm.singletons is not None
-            ):
-                print(
-                    algorithm.singletons,
-                    "observations are dropped due to singleton fixed effects.",
-                )
-                dropped_singleton_indices = np.where(algorithm._singleton_indices)[
-                    0
-                ].tolist()
-                na_index += dropped_singleton_indices
+            if drop_singletons:
 
-                YX = np.delete(YX, dropped_singleton_indices, axis=0)
+                dropped_singleton_indices = _detect_singletons(fe)
+
+                if np.any(dropped_singleton_indices == True):
+
+                    print(
+                        np.sum(dropped_singleton_indices),
+                        "observations are dropped due to singleton fixed effects.",
+                    )
+                    na_index += dropped_singleton_indices.tolist()
+
+                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
+                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
 
             weights = np.ones(YX.shape[0])
 
-            YX_demeaned, success = demean(x = YX, flist = fe.to_numpy(), weights = weights)
+            YX_demeaned, success = demean(x = YX, flist = fe, weights = weights)
             if success == False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
 
-        lookup_demeaned_data[na_index_str] = [algorithm, YX_demeaned]
+        lookup_demeaned_data[na_index_str] = [None, YX_demeaned]
 
     else:
         # nothing to demean here
@@ -228,3 +226,55 @@ def demean(
 
     success = not not_converged
     return (res, success)
+
+
+#@nb.jit(nopython=False)
+def _detect_singletons(ids):
+
+    """
+    Detect singleton fixed effects
+    Args:have a
+        ids (np.ndarray): A numpy array of fixed effects.
+    Returns:
+        An array of booleans indicating which observations have a singleton fixed effect.
+    """
+
+    N, k = ids.shape
+
+    singleton_idx = np.full(N, False, dtype=bool)
+    singleton_idx_tmp = np.full(N, False, dtype=bool)
+    singleton_idx_tmp_old = singleton_idx.copy()
+
+    ids_tmp = ids.copy()
+
+    while True:
+        for x in range(k):
+
+            col = ids[:, x]
+            col_tmp = ids_tmp[:, x]
+
+            # note that this only "works" as fixed effects are integers from 0, 1, ..., n_fixef -1
+            # and np.bincount orders results in ascending (integer) order
+            counts = np.bincount(col_tmp)
+
+            if np.any(counts == 1):
+                idx = np.where(counts == 1)
+
+                singleton_idx[np.isin(col, idx)] = True
+                singleton_idx_tmp[np.isin(col_tmp, idx)] = True
+
+                ids_tmp = ids_tmp[~singleton_idx_tmp,:].astype(ids_tmp.dtype)
+                singleton_idx_tmp = singleton_idx_tmp[~singleton_idx_tmp]
+
+            break
+
+
+        if np.array_equal(singleton_idx_tmp, singleton_idx_tmp_old):
+            break
+
+        singleton_idx_tmp_old = singleton_idx_tmp.copy()
+
+
+
+
+    return singleton_idx
