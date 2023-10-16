@@ -128,22 +128,21 @@ class Fepois(Feols):
 
         # initiate demeaning algo (if needed)
         if _fe is not None:
-            algorithm = pyhdfe.create(
-                ids=_fe, residualize_method="map", drop_singletons=_drop_singletons
-            )
-            if (
-                _drop_singletons == True
-                and algorithm.singletons != 0
-                and algorithm.singletons is not None
-            ):
-                print(
-                    algorithm.singletons,
-                    "columns are dropped due to singleton fixed effects.",
-                )
-                dropped_singleton_indices = np.where(algorithm._singleton_indices)[
-                    0
-                ].tolist()
-                na_index += dropped_singleton_indices
+
+            if _drop_singletons:
+
+                dropped_singleton_indices = _detect_singletons(fe)
+
+                if np.any(dropped_singleton_indices == True):
+
+                    print(
+                        np.sum(dropped_singleton_indices),
+                        "observations are dropped due to singleton fixed effects.",
+                    )
+                    na_index += dropped_singleton_indices.tolist()
+
+                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
+                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
 
         accelerate = True
         # inner_tol = 1e-04

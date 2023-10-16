@@ -48,3 +48,7 @@ class NotImplementedError(Exception):
 
 class NonConvergenceError(Exception):
     pass
+
+
+class MatrixNotFullRankError(Exception):
+    pass

@@ -150,8 +150,8 @@ def model_matrix_fixest(
         diff1 = list(set(na_index_stage1) - set(na_index_stage2))
         diff2 = list(set(na_index_stage2) - set(na_index_stage1))
         if diff1:
-            Y.drop(diff1, axis=0, inplace = True) # 21520
-            X.drop(diff1, axis=0, inplace = True) # 21520
+            Y.drop(diff1, axis=0, inplace = True)
+            X.drop(diff1, axis=0, inplace = True)
         if diff2:
             Z.drop(diff2, axis=0, inplace = True)
             endogvar.drop(diff2, axis=0, inplace = True)

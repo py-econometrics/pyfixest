@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Tuple
-import pyhdfe
 import numba as nb
-import time
 from typing import Any, Sequence, Optional
 
 
@@ -92,34 +90,26 @@ def demean_model(
         else:
             # not data demeaned yet for NA combination
 
-            tic = time.time()
+            if drop_singletons:
 
-            dropped_singleton_indices = _detect_singletons(fe)
+                dropped_singleton_indices = _detect_singletons(fe)
 
-            toc = time.time()
-            print("Time to create algorithm:", toc - tic)
+                if np.any(dropped_singleton_indices == True):
 
-            if (
-                drop_singletons == True
-                and np.any(dropped_singleton_indices == True)
-            ):
-                print(
-                    np.sum(dropped_singleton_indices),
-                    "observations are dropped due to singleton fixed effects.",
-                )
-                na_index += dropped_singleton_indices.tolist()
+                    print(
+                        np.sum(dropped_singleton_indices),
+                        "observations are dropped due to singleton fixed effects.",
+                    )
+                    na_index += dropped_singleton_indices.tolist()
 
-                YX = np.delete(YX, dropped_singleton_indices, axis=0)
-                fe = np.delete(fe, dropped_singleton_indices, axis=0)
+                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
+                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
 
             weights = np.ones(YX.shape[0])
 
-            tic = time.time()
             YX_demeaned, success = demean(x = YX, flist = fe, weights = weights)
             if success == False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
-            toc = time.time()
-            print("Time to demean:", toc - tic)
 
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
