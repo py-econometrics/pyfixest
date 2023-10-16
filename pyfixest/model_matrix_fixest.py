@@ -109,6 +109,19 @@ def model_matrix_fixest(
     # fml_iv already created
 
     Y, X = model_matrix(fml_exog, data)
+    # if int, turn, Y into int64, else float64
+    # if Y is int
+    if Y.dtypes[0] == "int64":
+        pass
+    else:
+        Y = Y.astype("float64")
+    for x in X.columns:
+        if X[x].dtype == "int64":
+            pass
+        else:
+            X[x] = X[x].astype("float64")
+
+
     if _is_iv:
         endogvar, Z = model_matrix(fml_iv_full, data)
     else:
@@ -137,8 +150,8 @@ def model_matrix_fixest(
         diff1 = list(set(na_index_stage1) - set(na_index_stage2))
         diff2 = list(set(na_index_stage2) - set(na_index_stage1))
         if diff1:
-            Y.drop(diff1, axis=0, inplace = True) # 21520
-            X.drop(diff1, axis=0, inplace = True) # 21520
+            Y.drop(diff1, axis=0, inplace = True)
+            X.drop(diff1, axis=0, inplace = True)
         if diff2:
             Z.drop(diff2, axis=0, inplace = True)
             endogvar.drop(diff2, axis=0, inplace = True)
