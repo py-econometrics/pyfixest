@@ -238,7 +238,7 @@ def demean(
     return (res, success)
 
 
-#@nb.jit
+#@nb.jit(nopython=False)
 def _detect_singletons(ids):
 
     """
@@ -267,14 +267,16 @@ def _detect_singletons(ids):
             # and np.bincount orders results in ascending (integer) order
             counts = np.bincount(col_tmp)
 
-            if (counts == 1).any():
+            if np.any(counts == 1):
                 idx = np.where(counts == 1)
 
-                singleton_idx = np.where((np.isin(col, idx)).flatten(), True, singleton_idx)
-                singleton_idx_tmp = (np.isin(col_tmp , idx)).flatten()
+                singleton_idx[np.isin(col, idx)] = True
+                singleton_idx_tmp[np.isin(col_tmp, idx)] = True
 
-                ids_tmp = ids_tmp[~singleton_idx_tmp,:]
+                ids_tmp = ids_tmp[~singleton_idx_tmp,:].astype(ids_tmp.dtype)
                 singleton_idx_tmp = singleton_idx_tmp[~singleton_idx_tmp]
+
+            break
 
 
         if np.array_equal(singleton_idx_tmp, singleton_idx_tmp_old):

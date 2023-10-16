@@ -13,7 +13,6 @@ from formulaic import model_matrix
 
 from pyfixest.utils import get_ssc
 from pyfixest.exceptions import (
-    MatrixNotFullRankError,
     VcovTypeNotSupportedError,
     NanInClusterVarError,
 )
@@ -88,7 +87,7 @@ class Feols:
 
         # set in get_fit()
         self._tZX = None
-        self._tZXinv = None
+        #self._tZXinv = None
         self._tXZ = None
         self._tZy = None
         self._tZZinv = None
@@ -146,15 +145,17 @@ class Feols:
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        self._tZXinv = np.linalg.inv(self._tZX)
+        #self._tZXinv = np.linalg.inv(self._tZX)
         self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
+        #self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
+
         # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
         self._scores = self._Z * self._u_hat[:, None]
-        self._hessian = self._Z.transpose() @ self._Z
+        self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
         self._tXZ = None
@@ -192,7 +193,7 @@ class Feols:
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
-        _tZXinv = self._tZXinv
+        #_tZXinv = self._tZXinv
         _hessian = self._hessian
         _scores = self._scores
 
@@ -264,7 +265,7 @@ class Feols:
                     raise VcovTypeNotSupportedError(
                         "HC2 and HC3 inference is not supported for IV regressions."
                     )
-
+                _tZXinv = np.linalg.inv(_tZX)
                 leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
                 if self._vcov_type_detail == "HC2":
                     u = _u_hat / np.sqrt(1 - leverage)
@@ -1209,7 +1210,6 @@ def _drop_multicollinear_variables(
         collin_index = res["id_excl"]
 
     return X, names, collin_vars, collin_index
-
 
 def _find_collinear_variables(X, tol=1e-10):
     """

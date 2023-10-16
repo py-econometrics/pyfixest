@@ -34,10 +34,6 @@ class MultiEstNotSupportedError(Exception):
     pass
 
 
-class MatrixNotFullRankError(Exception):
-    pass
-
-
 class NanInClusterVarError(Exception):
     pass
 
