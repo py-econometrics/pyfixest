@@ -166,9 +166,14 @@ class FixestMulti:
                         na_index,
                         na_index_str,
                         _icovars,
+                        X_is_empty
                     ) = model_matrix_fixest(fml=fml, data=_data)
 
                     weights = np.ones((Y.shape[0], 1))
+
+                    self._X_is_empty = False
+                    if X_is_empty:
+                        self._X_is_empty = True
 
                     coefnames = X.columns.tolist()
 
@@ -229,10 +234,14 @@ class FixestMulti:
                                 X=Xd,
                                 weights=weights,
                                 coefnames=coefnames,
-                                collin_tol=collin_tol,
+                                collin_tol=collin_tol
                             )
 
-                        FIT.get_fit()
+                        # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
+                        if FIT._X_is_empty:
+                            FIT._u_hat = Y.to_numpy() - Yd
+                        else:
+                            FIT.get_fit()
 
                     elif _method == "fepois":
                         # check for separation and drop separated variables
@@ -284,19 +293,21 @@ class FixestMulti:
                         FIT._fixef = None
                     # FEOLS.split_log = x
 
-                    # inference
-                    vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type)
-                    FIT.get_inference()
+                    if not FIT._X_is_empty:
 
-                    # other regression stats
-                    if _method == "feols":
-                        FIT.get_performance()
+                        # inference
+                        vcov_type = _get_vcov_type(vcov, fval)
+                        FIT.vcov(vcov=vcov_type)
+                        FIT.get_inference()
 
-                    if _icovars is not None:
-                        FIT._icovars = _icovars
-                    else:
-                        FIT._icovars = None
+                        # other regression stats
+                        if _method == "feols":
+                            FIT.get_performance()
+
+                        if _icovars is not None:
+                            FIT._icovars = _icovars
+                        else:
+                            FIT._icovars = None
 
                     # store fitted model
                     self.all_fitted_models[fml] = FIT
