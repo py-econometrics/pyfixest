@@ -21,6 +21,13 @@ def event_study(data, yname, idname, tname, gname, xfml, estimator):
         fit._G = did2s._G
         fit._method = "did2s"
 
+    elif estimator == "twfe":
+
+        twfe = TWFE(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml)
+        fit = twfe.estimate()
+        vcov = fit.vcov(vcov = {"CRV1": twfe._idname})
+        fit._method = "twfe"
+
     else:
         raise Exception("Estimator not supported")
 
@@ -71,6 +78,34 @@ class DID(ABC):
     #@abstractmethod
     #def aggregate(self):
     #    pass
+
+
+class TWFE(DID):
+
+    def __init__(self, data, yname, idname, tname, gname, xfml):
+        super().__init__(data, yname, idname, tname, gname, xfml)
+
+        self._estimator = "twfe"
+
+        if self._xfml is not None:
+            self._fml = f"{yname} ~ treat + {xfml} | {idname} + {tname}"
+        else:
+            self._fml = f"{yname} ~ treat | {idname} + {tname}"
+
+    def estimate(self):
+
+            _fml = self._fml
+            _data = self._data
+
+            fit = feols(fml = _fml, data = _data)
+            self._fit = fit
+
+            return fit
+
+    def vcov(self, cluster = None):
+
+        pass
+
 
 
 class DID2S(DID):

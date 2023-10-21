@@ -42,8 +42,14 @@ def summary(
                 estimation_method = "IV"
             else:
                 estimation_method = "OLS"
-        else:
+        elif fxst._method == "fepois":
             estimation_method = "Poisson"
+        elif fxst._method == "twfe":
+            estimation_method = "TWFE"
+        elif fxst._method == "did2s":
+            estimation_method = "DID2S"
+        else:
+            raise ValueError("Unknown estimation method.")
 
         print("###")
         print("")
