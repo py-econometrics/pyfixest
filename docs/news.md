@@ -1,5 +1,64 @@
 # News
 
+## PyFixest 0.11.0 (not yet released)
+
++ Add an `event_study()` function with support for two-way fixed effects difference-in differences
+  and Gardner's two stage estimator.
+
+```python
+%load_ext autoreload
+%autoreload 2
+from pyfixest.experimental.did import event_study
+from pyfixest.summarize import summary
+import pandas as pd
+
+df_het = pd.read_csv("pyfixest/data/df_het.csv")
+
+fit_twfe = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "twfe"
+)
+
+fit_did2s = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "did2s"
+)
+
+summary([fit_twfe, fit_did2s])
+
+# ###
+#
+# Estimation:  TWFE
+# Dep. var.: dep_var, Fixed effects: state+year
+# Inference:  CRV1
+# Observations:  46500
+#
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | zz00_treat    |      2.135 |        0.044 |    48.803 |      0.000 |   2.049 |    2.220 |
+# ---
+# ###
+#
+#   Estimation:  DID2S
+# Dep. var.: dep_var
+# Inference:  CRV1 (GMM)
+# Observations:  46500
+#
+# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
+# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+# | zz00_treat    |      2.152 |        0.048 |    45.208 |      0.000 |   2.059 |    2.246 |
+# ---
+
+```
+
 ## PyFixest `0.10.3`
 
 - Allows for white space in the multiway clustering formula.
