@@ -1,15 +1,16 @@
-from multiprocessing import Value
+import pandas as pd
+import numpy as np
+
 from pyfixest.estimation import feols
-from pyfixest.demean import demean
+from pyfixest.exceptions import NotImplementedError
+
 from abc import ABC, abstractmethod
 from formulaic import model_matrix
 from scipy.sparse.linalg import spsolve
-import pandas as pd
-import numpy as np
-import warnings
-import time
 
-def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twfe", att = True):
+
+
+def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twfe", att = True, cluster = "idname"):
 
     """
     Estimate a treatment effect using an event study design. If estimator is "twfe", then
@@ -40,10 +41,12 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
     assert isinstance(estimator, str), "estimator must be a string"
     assert isinstance(att, bool), "att must be a boolean"
+    assert isinstance(cluster, str), "cluster must be a string"
+    assert cluster == "idname", "cluster must be idname"
 
     if estimator == "did2s":
 
-        did2s = DID2S(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att)
+        did2s = DID2S(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
         fit = did2s.estimate()
         vcov = did2s.vcov()
         fit._vcov = vcov
@@ -54,7 +57,7 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
 
     elif estimator == "twfe":
 
-        twfe = TWFE(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att)
+        twfe = TWFE(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
         fit = twfe.estimate()
         vcov = fit.vcov(vcov = {"CRV1": twfe._idname})
         fit._method = "twfe"
@@ -71,7 +74,7 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
 class DID(ABC):
 
     @abstractmethod
-    def __init__(self, data, yname, idname, tname, gname, xfml, att):
+    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
 
         """
         Args:
@@ -87,6 +90,7 @@ class DID(ABC):
             estimator: The estimator to use. Options are "did2s".
             att: Whether to estimate the average treatment effect on the treated (ATT) or the
                 canonical event study design with all leads and lags. Default is True.
+            cluster: The name of the cluster variable.
         Returns:
             None
         """
@@ -99,6 +103,15 @@ class DID(ABC):
         self._tname = tname
         self._gname = gname
         self._xfml = xfml
+        self._att = att
+        self._cluster = cluster
+
+        if self._xfml is not None:
+            raise NotImplementedError("Covariates are not yet supported.")
+        if self._att is False:
+            raise NotImplementedError("Event study design with leads and lags is not yet supported.")
+        if self._cluster is not "idname":
+            raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
 
         # check if idname, tname and gname are in data
         if self._idname not in self._data.columns:
@@ -121,25 +134,6 @@ class DID(ABC):
         # create a treatment variable
         self._data["zz00_treat"] = (self._data[self._tname] >= self._data[self._gname]) * (self._data[self._gname] > 0)
 
-        # create treat variable
-        if att:
-            if "treat" not in self._data.columns:
-                # Step 1: check if tname and gname are of type int
-                if self._data[self._tname].dtype != "int64":
-                    raise ValueError(f"The variable {self._tname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS.")
-                if self._data[self._gname].dtype != "int64":
-                    raise ValueError(f"The variable {self._gname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS.")
-                self._data["treat"] = (self._data[self._tname] >= self._data[self._gname])
-        #else:
-        #    # get rel_year variable
-        #    if "rel_year" not in self._data.columns:
-        #        self._data["rel_year"] = self._data[self._tname] - self._data[self._gname]
-
-        # get never treated units
-        #ct = pd.crosstab(self._data[self._idname], self._data["treat"])
-
-
-
 
     @abstractmethod
     def estimate(self):
@@ -156,8 +150,31 @@ class DID(ABC):
 
 class TWFE(DID):
 
-    def __init__(self, data, yname, idname, tname, gname, xfml, att):
-        super().__init__(data, yname, idname, tname, gname, xfml, att)
+    """
+    Estimate a Difference-in-Differences model using the two-way fixed effects estimator.
+    """
+
+    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
+
+        """
+        Args:
+            data: The DataFrame containing all variables.
+            yname: The name of the dependent variable.
+            idname: The name of the id variable.
+            tname: Variable name for calendar period. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
+                   possible to compare two dates via '>'. Date time variables are currently not accepted.
+            gname: unit-specific time of initial treatment. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
+                     possible to compare two dates via '>'. Date time variables are currently not accepted. Never treated units
+                     must have a value of 0.
+            xfml: The formula for the covariates.
+            att: Whether to estimate the average treatment effect on the treated (ATT) or the
+                canonical event study design with all leads and lags. Default is True.
+            cluster (str): The name of the cluster variable.
+        Returns:
+            None
+        """
+
+        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "twfe"
 
@@ -178,15 +195,41 @@ class TWFE(DID):
 
     def vcov(self, cluster = None):
 
+        """
+        Method not needed. The vcov matrix is calculated via the `Feols` object.
+        """
+
         pass
 
 
 
 class DID2S(DID):
 
-    def __init__(self, data, yname, idname, tname, gname, xfml, att):
+    """
+    Difference-in-Differences estimation using Gardner's two-step DID2S estimator (2021).
+    """
 
-        super().__init__(data, yname, idname, tname, gname, xfml, att)
+    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
+
+        """
+        Args:
+            data: The DataFrame containing all variables.
+            yname: The name of the dependent variable.
+            idname: The name of the id variable.
+            tname: Variable name for calendar period. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
+                   possible to compare two dates via '>'. Date time variables are currently not accepted.
+            gname: unit-specific time of initial treatment. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
+                     possible to compare two dates via '>'. Date time variables are currently not accepted. Never treated units
+                     must have a value of 0.
+            xfml: The formula for the covariates.
+            att: Whether to estimate the average treatment effect on the treated (ATT) or the
+                canonical event study design with all leads and lags. Default is True.
+            cluster (str): The name of the cluster variable.
+        Returns:
+            None
+        """
+
+        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "did2s"
 
@@ -197,8 +240,6 @@ class DID2S(DID):
             self._fml1 = f"{yname} ~ 0 | {idname} + {tname}"
             self._fml2 = f"{yname} ~ 0 + zz00_treat"
 
-        #self._not_yet_treated_idx = data[data["treat"] == False] #data[gname] <= data[tname]
-
 
     def estimate(self):
 
@@ -208,29 +249,18 @@ class DID2S(DID):
         _not_yet_treated_data = _data[_data["zz00_treat"] == False]
         _yname = self._yname
 
-
-        tic = time.time()
+        # estimate first stage
         fit1 = feols(fml = _fml1, data = _not_yet_treated_data)
-        toc = time.time() - tic
-        print(f"Time for first fit: {toc} seconds")
 
-        tic = time.time()
+        # obtain estimated fixed effects
         fit1.fixef()
-        toc = time.time() - tic
-        print(f"Time for fixef: {toc} seconds")
 
-        tic = time.time()
+        # demean data
         Y_hat = fit1.predict(newdata = _data)
-        toc = time.time() - tic
-        print(f"Time for predict: {toc} seconds")
-
         self._first_u = _data[f"{_yname}"].to_numpy().flatten() - Y_hat
         _data[f"{_yname}"] = self._first_u
 
-        tic = time.time()
         fit2 = feols(_fml2, data = _data)
-        toc = time.time() - tic
-        print(f"Time for second fit: {toc} seconds")
         self._second_u = fit2.resid()
 
         return fit2
@@ -251,11 +281,10 @@ class DID2S(DID):
 
         self._G = clustid.nunique()
 
-        fml_group_time = f"~C({self._idname}) + C({self._tname})"   # add covariates
+        fml_group_time = f"~C({self._idname}) + C({self._tname})"          # add covariates
         fml_treatment_vars = "~0+zz00_treat"                               # add covariates
 
         X1 = model_matrix(fml_group_time, _data, output = "sparse")
-        #X10 = X1[self._not_yet_treated_idx, :]
         X2 = model_matrix(fml_treatment_vars, _data, output = "sparse")
 
         X10 = X1.copy().tocsr()
