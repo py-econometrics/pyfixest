@@ -1,9 +1,9 @@
 # News
 
-## PyFixest 0.11.0 (not yet released)
+## PyFixest 0.10.5
 
-+ Add an `event_study()` function with support for two-way fixed effects difference-in differences
-  and Gardner's two stage estimator.
++ Adds an experimental `event_study()` function with support for two-way fixed effects difference-in differences
+  and Gardner's two stage estimator to `pyfixest.experimental.did`.
 
 ```python
 %load_ext autoreload
