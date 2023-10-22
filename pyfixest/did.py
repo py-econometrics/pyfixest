@@ -207,6 +207,9 @@ class DID2S(DID):
 
     """
     Difference-in-Differences estimation using Gardner's two-step DID2S estimator (2021).
+
+    Multiple parts of this code are direct translations of Kyle Butt's R code `did2s`, published
+    under MIT license: https://github.com/kylebutts/did2s/tree/main.
     """
 
     def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
