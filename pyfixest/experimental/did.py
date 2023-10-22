@@ -51,7 +51,7 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
         vcov = did2s.vcov()
         fit._vcov = vcov
         fit._vcov_type = "CRV1"
-        fit._vcov_type_detail = "CRV (GMM)"
+        fit._vcov_type_detail = "CRV1 (GMM)"
         fit._G = did2s._G
         fit._method = "did2s"
 
@@ -110,7 +110,7 @@ class DID(ABC):
             raise NotImplementedError("Covariates are not yet supported.")
         if self._att is False:
             raise NotImplementedError("Event study design with leads and lags is not yet supported.")
-        if self._cluster is not "idname":
+        if self._cluster != "idname":
             raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
 
         # check if idname, tname and gname are in data
