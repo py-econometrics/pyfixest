@@ -1,3 +1,4 @@
+from tkinter import N
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.feiv import Feiv
