@@ -71,6 +71,66 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     return fit
 
 
+#did2s <- function(data, yname, first_stage, second_stage, treatment, cluster_var,
+#                  weights = NULL, bootstrap = FALSE, n_bootstraps = 250,
+#                  return_bootstrap = FALSE, verbose = TRUE) {
+
+def did2s(data, yname, first_stage, second_stage, treatment, cluster = None):
+
+    """
+    Estimate a treatment effect using Gardner's two-step DID2S estimator (2021).
+
+    Multiple parts of this code are direct translations of Kyle Butt's R code `did2s`, published
+    under MIT license.
+
+    Args:
+        data: The DataFrame containing all variables.
+        first_stage: The formula for the first stage regression.
+        second_stage: The formula for the second stage regression.
+        treatment: The name of the treatment variable.
+        cluster: The name of the cluster variable.
+    Returns:
+        A fitted model object of class feols.
+
+    """
+
+    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
+    assert isinstance(first_stage, str), "first_stage must be a string"
+    assert isinstance(second_stage, str), "second_stage must be a string"
+    assert isinstance(treatment, str), "treatment must be a string"
+    assert isinstance(cluster, str), "cluster must be a string"
+
+    # check if treatment and cluster are in data
+    if treatment not in data.columns:
+        raise ValueError(f"The variable {treatment} is not in the data.")
+
+    if cluster is not None:
+        if cluster not in data.columns:
+            raise ValueError(f"The variable {cluster} is not in the data.")
+
+    # hack: set idname, tname and gname to fantasy values
+    did2s = DID2S(data = data, yname = yname, idname="a", tname = "b", gname = "c", xfml = None, att = False, cluster = cluster)
+    did2s._fml1 = first_stage
+    did2s._fml2 = second_stage
+    fml_dict = {"fml1": first_stage, "fml2": second_stage}
+    did2s._yname = None
+    did2s._idname = None
+    did2s._tname = None
+
+    fit = did2s.estimate(fml_dict=fml_dict, treatment = treatment)
+    vcov = did2s.vcov()
+    fit._vcov = vcov
+    fit._vcov_type = "CRV1"
+    fit._vcov_type_detail = "CRV1 (GMM)"
+    fit._G = did2s._G
+    fit._method = "did2s"
+
+    fit.get_inference()
+
+    return fit
+
+
+
 class DID(ABC):
 
     @abstractmethod
@@ -114,12 +174,12 @@ class DID(ABC):
             raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
 
         # check if idname, tname and gname are in data
-        if self._idname not in self._data.columns:
-            raise ValueError(f"The variable {self._idname} is not in the data.")
-        if self._tname not in self._data.columns:
-            raise ValueError(f"The variable {self._tname} is not in the data.")
-        if self._gname not in self._data.columns:
-            raise ValueError(f"The variable {self._gname} is not in the data.")
+        #if self._idname not in self._data.columns:
+        #    raise ValueError(f"The variable {self._idname} is not in the data.")
+        #if self._tname not in self._data.columns:
+        #    raise ValueError(f"The variable {self._tname} is not in the data.")
+        #if self._gname not in self._data.columns:
+        #    raise ValueError(f"The variable {self._gname} is not in the data.")
 
         # check if tname and gname are of type int (either int 64, 32, 8)
         if self._data[self._tname].dtype not in ["int64", "int32", "int8"]:
@@ -193,7 +253,7 @@ class TWFE(DID):
 
             return fit
 
-    def vcov(self, cluster = None):
+    def vcov(self):
 
         """
         Method not needed. The vcov matrix is calculated via the `Feols` object.
@@ -244,12 +304,22 @@ class DID2S(DID):
             self._fml2 = f"{yname} ~ 0 + zz00_treat"
 
 
-    def estimate(self):
+    def estimate(self, fml_dict = None, treatment = None):
+
+        if fml_dict is not None:
+            self._fml1 = fml_dict["fml1"]
+            self._fml2 = fml_dict["fml2"]
 
         _fml1 = self._fml1
         _fml2 = self._fml2
+
         _data = self._data
-        _not_yet_treated_data = _data[_data["zz00_treat"] == False]
+
+        if treatment is not None:
+            _not_yet_treated_data = _data[_data[treatment] == False]
+        else:
+            _not_yet_treated_data = _data[_data["zz00_treat"] == False]
+
         _yname = self._yname
 
         # estimate first stage
@@ -268,18 +338,22 @@ class DID2S(DID):
 
         return fit2
 
-    def vcov(self, cluster = None):
+    def vcov(self):
 
 
         _data = self._data
         _first_u = self._first_u
         _second_u = self._second_u
+        _cluster = self._cluster
 
 
-        if cluster is None:
-            cluster = self._idname
+        #if _cluster is None:
+        #    _cluster = self._idname
+        #else:
+        #    if _cluster not in _data.columns:
+        #        raise ValueError(f"The variable {_cluster} is not in the data.")
 
-        cluster_col =  _data[cluster]
+        cluster_col =  _data[_cluster]
         _, clustid = pd.factorize(cluster_col)
 
         self._G = clustid.nunique()
