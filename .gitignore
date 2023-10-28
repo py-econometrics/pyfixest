@@ -9,3 +9,5 @@ dist
 .mypy_cache
 .pytest_cache
 .vscode
+*.pyc
+__pycache__/
