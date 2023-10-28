@@ -1,5 +1,14 @@
 # News
 
+## PyFixest `0.10.5`
+
+- Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/s3alfisc/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
+
+## PyFixest `0.10.4`
+
+- Implements a custom function to drop singleton fixed effects.
+- Additional small performance improvements.
+
 ## PyFixest `0.10.3`
 
 - Allows for white space in the multiway clustering formula.

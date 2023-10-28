@@ -6,3 +6,8 @@ pyfixest/debug.py
 pyfixest/profile.py
 site
 dist
+.mypy_cache
+.pytest_cache
+.vscode
+*.pyc
+__pycache__/

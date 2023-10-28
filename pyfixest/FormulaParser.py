@@ -96,9 +96,13 @@ class FixestFormulaParser:
                 covars = f"{endogvars}+{covars}"
 
         if endogvars is not None:
-            if len(endogvars) > len(instruments):
+            if not isinstance(endogvars, list):
+                endogvars_list = endogvars.split("+")
+            if not isinstance(instruments, list):
+                instruments_list = instruments.split("+")
+            if len(endogvars_list) > len(instruments_list):
                 raise UnderDeterminedIVError(
-                    "The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables."
+                    "The IV system is underdetermined. Please provide as many or more instruments as endogenous variables."
                 )
             else:
                 pass
