@@ -95,8 +95,14 @@ class FixestFormulaParser:
             else:
                 covars = f"{endogvars}+{covars}"
 
+        #import pdb; pdb.set_trace()
+
         if endogvars is not None:
-            if len(endogvars) > len(instruments):
+            if not isinstance(endogvars, list):
+                endogvars_list = [endogvars]
+            if not isinstance(instruments, list):
+                instruments_list = [instruments]
+            if len(endogvars_list) > len(instruments_list):
                 raise UnderDeterminedIVError(
                     "The IV system is underdetermined. Only fully determined systems are allowed. Please provide as many instruments as endogenous variables."
                 )
