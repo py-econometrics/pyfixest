@@ -30,7 +30,7 @@ jobs:
           r-version: '4.2.0'
 
       - name: install fixest and broom for testing
-        run: Rscript -e 'install.packages(c("fixest", "broom"), repos="https://cloud.r-project.org")'
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"), repos="https://cloud.r-project.org")'
         shell: bash
 
 
