@@ -1,4 +1,3 @@
-from tkinter import N
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
 from pyfixest.feiv import Feiv
@@ -29,7 +28,8 @@ def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, 
     for i, model in enumerate(models):
 
         model = model.tidy().reset_index().round(digits)
-        model['Estimate (Std. Error)'] = pd.Categorical(model.apply(lambda row: f"{row['Estimate']} ({row['Std. Error']})", axis=1))
+        model["stars"] = np.where(model["Pr(>|t|)"] < 0.001, "***", np.where(model["Pr(>|t|)"] < 0.01, "**", np.where(model["Pr(>|t|)"] < 0.05, "*", "")))
+        model['Estimate (Std. Error)'] = pd.Categorical(model.apply(lambda row: f"{row['Estimate']}{row['stars']} ({row['Std. Error']})", axis=1))
         model = model[["Coefficient","Estimate (Std. Error)"]]
         model = pd.melt(model, id_vars=["Coefficient"], var_name="Metric", value_name=f"est{i+1}")
         model = model.drop("Metric", axis = 1).set_index("Coefficient")
@@ -40,9 +40,11 @@ def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, 
     #res = pd.concat([res, separator_row], ignore_index=True)
 
     if type == "tex":
-        return print(res.to_latex())
+        return res.to_latex()
     elif type == "md":
-        return print(res.to_markdown())
+        res = res.to_markdown()
+        print(res)
+        print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
     else:
         return res
 

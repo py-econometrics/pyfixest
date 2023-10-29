@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.6`
+
+- Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.
+
 ## PyFixest `0.10.5`
 
 - Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/s3alfisc/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
