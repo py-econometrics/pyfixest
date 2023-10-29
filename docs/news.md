@@ -1,5 +1,6 @@
 # News
 
+<<<<<<< HEAD
 ## PyFixest 0.10.5
 
 + Adds an experimental `event_study()` function with support for two-way fixed effects difference-in differences
@@ -58,6 +59,20 @@ summary([fit_twfe, fit_did2s])
 # ---
 
 ```
+=======
+## PyFixest `0.10.6`
+
+- Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.
+
+## PyFixest `0.10.5`
+
+- Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/s3alfisc/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
+
+## PyFixest `0.10.4`
+
+- Implements a custom function to drop singleton fixed effects.
+- Additional small performance improvements.
+>>>>>>> 0c3b1626897c515cb1efa80797f477854c1f739c
 
 ## PyFixest `0.10.3`
 

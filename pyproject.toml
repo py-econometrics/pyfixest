@@ -1,6 +1,10 @@
 [tool.poetry]
 name = "pyfixest"
+<<<<<<< HEAD
 version = "0.10.7"
+=======
+version = "0.10.6"
+>>>>>>> 0c3b1626897c515cb1efa80797f477854c1f739c
 
 
 description = "(Not so) experimental draft package for high dimensional fixed effect estimation. Supports OLS, IV and Poisson regression and a range of inference procedures."
