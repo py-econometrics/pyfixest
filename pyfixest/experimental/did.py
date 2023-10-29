@@ -44,6 +44,11 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     assert isinstance(cluster, str), "cluster must be a string"
     assert cluster == "idname", "cluster must be idname"
 
+    if cluster == "idname":
+        cluster = idname
+    else:
+        raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
+
     if estimator == "did2s":
 
         did2s = DID2S(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
@@ -69,11 +74,6 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     fit.get_inference()
 
     return fit
-
-
-#did2s <- function(data, yname, first_stage, second_stage, treatment, cluster_var,
-#                  weights = NULL, bootstrap = FALSE, n_bootstraps = 250,
-#                  return_bootstrap = FALSE, verbose = TRUE) {
 
 def did2s(data, yname, first_stage, second_stage, treatment, cluster = None):
 
@@ -170,8 +170,6 @@ class DID(ABC):
             raise NotImplementedError("Covariates are not yet supported.")
         if self._att is False:
             raise NotImplementedError("Event study design with leads and lags is not yet supported.")
-        if self._cluster != "idname":
-            raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
 
         # check if idname, tname and gname are in data
         #if self._idname not in self._data.columns:
@@ -339,7 +337,6 @@ class DID2S(DID):
         return fit2
 
     def vcov(self):
-
 
         _data = self._data
         _first_u = self._first_u
