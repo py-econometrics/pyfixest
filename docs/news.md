@@ -1,19 +1,19 @@
 # News
 
-<<<<<<< HEAD
-## PyFixest 0.10.5
+## PyFixest `0.10.7`
 
-+ Adds an experimental `event_study()` function with support for two-way fixed effects difference-in differences
-  and Gardner's two stage estimator to `pyfixest.experimental.did`.
+- Adds basic support for event study estimation via two-way fixed effects and Gardner's two-stage "Did2s" approach.
+  This is a beta version and experimental. Further updates (i.e. proper event studies vs "only" ATTs) and a more flexible
+  did2s front end will follow in future releases.
 
 ```python
 %load_ext autoreload
 %autoreload 2
-from pyfixest.experimental.did import event_study
-from pyfixest.summarize import summary
-import pandas as pd
 
-df_het = pd.read_csv("pyfixest/data/df_het.csv")
+from pyfixest.experimental.did import event_study
+from pyfixest.summarize import etable
+import pandas as pd
+df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
 
 fit_twfe = event_study(
     data = df_het,
@@ -33,33 +33,13 @@ fit_did2s = event_study(
     estimator = "did2s"
 )
 
-summary([fit_twfe, fit_did2s])
-
-# ###
-#
-# Estimation:  TWFE
-# Dep. var.: dep_var, Fixed effects: state+year
-# Inference:  CRV1
-# Observations:  46500
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | zz00_treat    |      2.135 |        0.044 |    48.803 |      0.000 |   2.049 |    2.220 |
-# ---
-# ###
-#
-#   Estimation:  DID2S
-# Dep. var.: dep_var
-# Inference:  CRV1 (GMM)
-# Observations:  46500
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | zz00_treat    |      2.152 |        0.048 |    45.208 |      0.000 |   2.059 |    2.246 |
-# ---
-
+etable([fit_twfe, fit_did2s])
+# | Coefficient   | est1             | est2             |
+# |:--------------|:-----------------|:-----------------|
+# | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |
+# Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
 ```
-=======
+
 ## PyFixest `0.10.6`
 
 - Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.
@@ -72,7 +52,6 @@ summary([fit_twfe, fit_did2s])
 
 - Implements a custom function to drop singleton fixed effects.
 - Additional small performance improvements.
->>>>>>> 0c3b1626897c515cb1efa80797f477854c1f739c
 
 ## PyFixest `0.10.3`
 

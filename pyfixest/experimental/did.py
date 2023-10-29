@@ -136,7 +136,7 @@ class DID(ABC):
             raise ValueError(f"There must be at least one unit that is never treated.")
 
         # create a treatment variable
-        self._data["zz00_treat"] = (self._data[self._tname] >= self._data[self._gname]) * (self._data[self._gname] > 0)
+        self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (self._data[self._gname] > 0)
 
 
     @abstractmethod
@@ -183,9 +183,9 @@ class TWFE(DID):
         self._estimator = "twfe"
 
         if self._xfml is not None:
-            self._fml = f"{yname} ~ zz00_treat + {xfml} | {idname} + {tname}"
+            self._fml = f"{yname} ~ ATT + {xfml} | {idname} + {tname}"
         else:
-            self._fml = f"{yname} ~ zz00_treat | {idname} + {tname}"
+            self._fml = f"{yname} ~ ATT | {idname} + {tname}"
 
     def estimate(self):
 
@@ -242,10 +242,10 @@ class DID2S(DID):
 
         if self._xfml is not None:
             self._fml1 = f"{yname} ~ {xfml} | {idname} + {tname}"
-            self._fml2 = f"{yname} ~ 0 + zz00_treat + {xfml}"
+            self._fml2 = f"{yname} ~ 0 + ATT + {xfml}"
         else:
             self._fml1 = f"{yname} ~ 0 | {idname} + {tname}"
-            self._fml2 = f"{yname} ~ 0 + zz00_treat"
+            self._fml2 = f"{yname} ~ 0 + ATT"
 
 
     def estimate(self, fml_dict = None, treatment = None):
@@ -262,7 +262,7 @@ class DID2S(DID):
         if treatment is not None:
             _not_yet_treated_data = _data[_data[treatment] == False]
         else:
-            _not_yet_treated_data = _data[_data["zz00_treat"] == False]
+            _not_yet_treated_data = _data[_data["ATT"] == False]
 
         _yname = self._yname
 
@@ -295,13 +295,13 @@ class DID2S(DID):
         self._G = clustid.nunique()
 
         fml_group_time = f"~C({self._idname}) + C({self._tname})"          # add covariates
-        fml_treatment_vars = "~0+zz00_treat"                               # add covariates
+        fml_treatment_vars = "~0+ATT"                               # add covariates
 
         X1 = model_matrix(fml_group_time, _data, output = "sparse")
         X2 = model_matrix(fml_treatment_vars, _data, output = "sparse")
 
         X10 = X1.copy().tocsr()
-        treated_rows = np.where(_data["zz00_treat"], 0, 1)
+        treated_rows = np.where(_data["ATT"], 0, 1)
         X10 = X10.multiply(treated_rows[:, None])
 
         X10X10 = X10.T.dot(X10)
