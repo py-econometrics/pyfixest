@@ -16,6 +16,7 @@ from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
 
+import time
 
 class FixestMulti:
 
@@ -156,6 +157,7 @@ class FixestMulti:
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
+                    tic = time.time()
                     # get Y, X, Z, fe, NA indices for model
                     (
                         Y,
@@ -167,6 +169,8 @@ class FixestMulti:
                         na_index_str,
                         _icovars,
                     ) = model_matrix_fixest(fml=fml, data=_data)
+                    toc = time.time()
+                    print(f"model_matrix_fixest: {toc-tic}")
 
                     weights = np.ones((Y.shape[0], 1))
 
@@ -175,6 +179,7 @@ class FixestMulti:
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
 
+                        tic = time.time()
                         Yd, Xd = demean_model(
                             Y,
                             X,
@@ -184,6 +189,8 @@ class FixestMulti:
                             na_index_str,
                             self._drop_singletons,
                         )
+                        toc = time.time()
+                        print(f"demean_model: {toc-tic}")
 
                         if _is_iv:
                             endogvard, Zd = demean_model(
@@ -232,7 +239,10 @@ class FixestMulti:
                                 collin_tol=collin_tol,
                             )
 
+                        tic = time.time()
                         FIT.get_fit()
+                        toc = time.time()
+                        print(f"get_fit: {toc-tic}")
 
                     elif _method == "fepois":
                         # check for separation and drop separated variables
@@ -273,6 +283,8 @@ class FixestMulti:
                         )
 
                     # some bookkeeping
+
+                    tic = time.time()
                     FIT._fml = fml
                     FIT._data = _data.iloc[~_data.index.isin(na_index)]
                     FIT._ssc_dict = _ssc_dict
@@ -283,11 +295,16 @@ class FixestMulti:
                         FIT._has_fixef = False
                         FIT._fixef = None
                     # FEOLS.split_log = x
+                    toc = time.time()
+                    print(f"bookkeeping: {toc-tic}")
 
+                    tic = time.time()
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type)
                     FIT.get_inference()
+                    toc = time.time()
+                    print(f"inference: {toc-tic}")
 
                     # other regression stats
                     if _method == "feols":
