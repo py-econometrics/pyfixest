@@ -22,7 +22,7 @@ jobs:
 
     steps:
 
-        - name: Setup python
+      - name: Setup python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
