@@ -1,13 +1,9 @@
 [tool.poetry]
 name = "pyfixest"
-<<<<<<< HEAD
 version = "0.10.7"
-=======
-version = "0.10.6"
->>>>>>> 0c3b1626897c515cb1efa80797f477854c1f739c
 
 
-description = "(Not so) experimental draft package for high dimensional fixed effect estimation. Supports OLS, IV and Poisson regression and a range of inference procedures."
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
 license = "MIT"
 readme = "readme.md"
