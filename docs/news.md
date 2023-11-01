@@ -1,5 +1,45 @@
 # News
 
+## PyFixest `0.10.7`
+
+- Adds basic support for event study estimation via two-way fixed effects and Gardner's two-stage "Did2s" approach.
+  This is a beta version and experimental. Further updates (i.e. proper event studies vs "only" ATTs) and a more flexible
+  did2s front end will follow in future releases.
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+from pyfixest.experimental.did import event_study
+from pyfixest.summarize import etable
+import pandas as pd
+df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+
+fit_twfe = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "twfe"
+)
+
+fit_did2s = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "did2s"
+)
+
+etable([fit_twfe, fit_did2s])
+# | Coefficient   | est1             | est2             |
+# |:--------------|:-----------------|:-----------------|
+# | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |
+# Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
+```
+
 ## PyFixest `0.10.6`
 
 - Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.

@@ -15,6 +15,7 @@ from pyfixest.utils import get_ssc
 from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
+    EmptyDesignMatrixError
 )
 
 
@@ -54,17 +55,24 @@ class Feols:
 
         self._Y = Y
         self._X = X
+
         self.get_nobs()
 
         _feols_input_checks(Y, X, weights)
 
-        self._collin_tol = collin_tol
-        (
-            self._X,
-            self._coefnames,
-            self._collin_vars,
-            self._collin_index,
-        ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+
+        if self._X.shape[1] == 0:
+            self._X_is_empty = True
+        else:
+            self._X_is_empty = False
+            self._collin_tol = collin_tol
+            (
+                self._X,
+                self._coefnames,
+                self._collin_vars,
+                self._collin_index,
+            ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+
         self._Z = self._X
 
         self._weights = weights
@@ -782,10 +790,15 @@ class Feols:
 
         fml_linear = f"{depvars} ~ {covars}"
         Y, X = model_matrix(fml_linear, _data)
-        X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
-        Y = Y.to_numpy().flatten().astype(np.float64)
-        X = X.to_numpy()
-        uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
+        if self._X_is_empty:
+            Y = Y.to_numpy()
+            uhat = Y
+
+        else:
+            X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
+            Y = Y.to_numpy().flatten().astype(np.float64)
+            X = X.to_numpy()
+            uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
         D2 = model_matrix("-1+" + fixef_fml, _data, output="sparse")
         cols = D2.model_spec.column_names
@@ -885,11 +898,15 @@ class Feols:
                 fml_linear = _fml
                 fml_fe = None
 
-            # deal with the linear part
-            _, X = model_matrix(fml_linear, newdata)
-            X = X[self._coefnames]
-            X = X.to_numpy()
-            y_hat = X @ _beta_hat
+            if not self._X_is_empty:
+                # deal with linear part
+                _, X = model_matrix(fml_linear , newdata)
+                X = X[self._coefnames]
+                X = X.to_numpy()
+                y_hat = X @ _beta_hat
+            else:
+                y_hat = np.zeros(newdata.shape[0])
+
             if self._has_fixef:
                 y_hat += np.sum(fixef_mat, axis=1)
 

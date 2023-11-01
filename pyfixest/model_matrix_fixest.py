@@ -109,6 +109,11 @@ def model_matrix_fixest(
     # fml_iv already created
 
     Y, X = model_matrix(fml_exog, data)
+
+    X_is_empty = False          # special case: sometimes it is useful to run models "Y ~ 0 | f1" to demean Y + to use the predict method
+    if X.shape[1] == 0:
+        X_is_empty = True
+
     # if int, turn, Y into int64, else float64
     # if Y is int
     if Y.dtypes[0] == "int64":
@@ -163,7 +168,8 @@ def model_matrix_fixest(
 
     if _ivars is not None:
         if _drop_ref is not None:
-            X.drop(_drop_ref, axis=1, inplace = True)
+            if not X_is_empty:
+                X.drop(_drop_ref, axis=1, inplace = True)
             if _is_iv:
                 Z.drop(_drop_ref, axis=1, inplace = True)
 
@@ -181,7 +187,8 @@ def model_matrix_fixest(
     if fe is not None:
         fe.drop(na_index, axis=0, inplace = True)
         # drop intercept
-        X.drop("Intercept", axis=1, inplace=True)
+        if not X_is_empty:
+            X.drop("Intercept", axis=1, inplace=True)
         # x_names.remove("Intercept")
         if _is_iv:
             Z.drop("Intercept", axis=1, inplace=True)
@@ -191,7 +198,8 @@ def model_matrix_fixest(
         fe_na_remaining = list(set(fe_na) - set(na_index))
         if fe_na_remaining:
             Y.drop(fe_na_remaining, axis=0, inplace = True)
-            X.drop(fe_na_remaining, axis=0, inplace = True)
+            if not X_is_empty:
+                X.drop(fe_na_remaining, axis=0, inplace = True)
             fe.drop(fe_na_remaining, axis=0, inplace = True)
             if _is_iv:
                 Z.drop(fe_na_remaining, axis=0, inplace = True)
@@ -201,7 +209,7 @@ def model_matrix_fixest(
 
     na_index_str = ",".join(str(x) for x in na_index)
 
-    return Y, X, fe, endogvar, Z, na_index, na_index_str, _icovars
+    return Y, X, fe, endogvar, Z, na_index, na_index_str, _icovars, X_is_empty
 
 
 def _find_ivars(x):
