@@ -31,6 +31,29 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
             canonical event study design with all leads and lags. Default is True.
     Returns:
         A fitted model object of class feols.
+    Examples:
+        >>> from pyfixest.experimental.did import event_study, did2s
+        >>> from pyfixest.estimation import feols
+        >>> from pyfixest.summarize import etable, summary
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+        >>> fit_twfe = event_study(
+        >>>     data = df_het,
+        >>>     yname = "dep_var",
+        >>>     idname= "state",
+        >>>     tname = "year",
+        >>>     gname = "g",
+        >>>     estimator = "twfe"
+        >>> )
+        >>> fit_did2s = event_study(
+        >>>     data = df_het,
+        >>>     yname = "dep_var",
+        >>>     idname= "state",
+        >>>     tname = "year",
+        >>>     gname = "g",
+        >>>     estimator = "did2s"
+        >>> )
     """
 
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
@@ -380,6 +403,34 @@ def _did2s_vcov(data: pd.DataFrame, first_stage: str, second_stage: str, treatme
 
 
 def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str, cluster: str):
+
+    """
+    Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
+    Args:
+        data (pd.DataFrame): The DataFrame containing all variables.
+        yname (str): The name of the dependent variable.
+        first_stage (str): The formula for the first stage. Must start with '~'.
+        second_stage (str): The formula for the second stage. Must start with '~'.
+        treatment (str): The name of the treatment variable.
+        cluster (str): The name of the cluster variable.
+    Returns:
+        A fitted model object of class feols.
+    Examples:
+        >>> from pyfixest.experimental.did import event_study, did2s
+        >>> from pyfixest.estimation import feols
+        >>> from pyfixest.summarize import etable, summary
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+        >>> fit = did2s(
+        >>>     yname = "dep_var",
+        >>>     first_stage = "~ X | state + year",
+        >>>     second_stage = "~ 0 + treat",
+        >>>     treatment = "treat",
+        >>>     data = df_het,
+        >>>     cluster = "state",
+        >>> )
+    """
 
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
