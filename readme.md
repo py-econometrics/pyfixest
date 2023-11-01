@@ -17,7 +17,7 @@ At the moment, `PyFixest` supports
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
 - Support for estimators of the "new" Difference-in-Difference literature is work in progress. `PyFixest` currently provides an
-  experimentla implementation of Gardner's Did2s estimtator (via the `pyfixest.experimental.did` module, only ATT estimation).
+  experimental implementation of Gardner's Did2s estimtator (via the `pyfixest.experimental.did` module, only ATT estimation).
 
 ## Installation
 
