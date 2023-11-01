@@ -52,7 +52,7 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     if estimator == "did2s":
 
         did2s = DID2S(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
-        fit = did2s.estimate()
+        fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov = did2s.vcov()
         fit._vcov = vcov
         fit._vcov_type = "CRV1"
@@ -248,91 +248,127 @@ class DID2S(DID):
             self._fml2 = f"{yname} ~ 0 + ATT"
 
 
-    def estimate(self, fml_dict = None, treatment = None):
+    def estimate(self):
 
-        if fml_dict is not None:
-            self._fml1 = fml_dict["fml1"]
-            self._fml2 = fml_dict["fml2"]
+        """
+        Args:
+            data (pd.DataFrame): The DataFrame containing all variables.
+            yname (str): The name of the dependent variable.
+            _first_stage (str): The formula for the first stage.
+            _second_stage (str): The formula for the second stage.
+            treatment (str): The name of the treatment variable.
+        Returns:
+            tba
+        """
 
-        _fml1 = self._fml1
-        _fml2 = self._fml2
+        return _did2s_estimate(data, yname, _first_stage, _second_stage, treatment) # returns triple Feols, first_u, second_u
 
-        _data = self._data
+
+    def vcov(self):
+
+        return _did2s_vcov(_data = _data, _first_stage = _first_stage, _second_stage = _second_stage, _first_u = _first_u, _second_u = _second_u)
+
+
+
+def _did2s_estimate(_data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str):
+
+        """
+        Args:
+            data (pd.DataFrame): The DataFrame containing all variables.
+            yname (str): The name of the dependent variable.
+            _first_stage (str): The formula for the first stage.
+            _second_stage (str): The formula for the second stage.
+            treatment (str): The name of the treatment variable.
+        Returns:
+            A fitted model object of class feols and the first and second stage residuals.
+        """
+        _first_stage = _first_stage.replace(" ", "")
+        _second_stage = _second_stage.replace(" ", "")
+        assert _first_stage[0] == "~", "First stage must start with ~"
+        assert _second_stage[0] == "~", "Second stage must start with ~"
+
+        _first_stage_full = f"{yname} {_fml1}"
+        _second_stage_full = f"{yname}_hat {_fml2}"
 
         if treatment is not None:
-            _not_yet_treated_data = _data[_data[treatment] == False]
+            _not_yet_treated_data = data[data[treatment] == False]
         else:
-            _not_yet_treated_data = _data[_data["ATT"] == False]
-
-        _yname = self._yname
+            _not_yet_treated_data = data[data["ATT"] == False]
 
         # estimate first stage
-        fit1 = feols(fml = _fml1, data = _not_yet_treated_data)
+        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data)
 
         # obtain estimated fixed effects
         fit1.fixef()
 
         # demean data
         Y_hat = fit1.predict(newdata = _data)
-        self._first_u = _data[f"{_yname}"].to_numpy().flatten() - Y_hat
-        _data[f"{_yname}"] = self._first_u
+        _first_u = _data[f"{_yname}"].to_numpy().flatten() - Y_hat
+        _data[f"{_yname}_hat"] = self._first_u
 
-        fit2 = feols(_fml2, data = _data)
-        self._second_u = fit2.resid()
+        fit2 = feols(_second_stage_full, data = _data)
+        _second_u = fit2.resid()
 
-        return fit2
+        return fit2, _first_u, _second_u
 
-    def vcov(self):
 
-        _data = self._data
-        _first_u = self._first_u
-        _second_u = self._second_u
-        _cluster = self._cluster
+def _did2s_vcov(_data: pd.DataFrame, _first_stage: str, _second_stage: str, _first_u: np.ndarray, _second_u: np.ndarray, _cluster : str):
 
-        cluster_col =  _data[_cluster]
-        _, clustid = pd.factorize(cluster_col)
+    """
+    Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.
+    Args:
+        data (pd.DataFrame):
 
-        self._G = clustid.nunique()
+    """
 
-        fml_group_time = f"~C({self._idname}) + C({self._tname})"          # add covariates
-        fml_treatment_vars = "~0+ATT"                               # add covariates
+    cluster_col =  _data[_cluster]
+    _, clustid = pd.factorize(cluster_col)
 
-        X1 = model_matrix(fml_group_time, _data, output = "sparse")
-        X2 = model_matrix(fml_treatment_vars, _data, output = "sparse")
+    _G = clustid.nunique()                                      # actually not used here, neither in did2s
 
-        X10 = X1.copy().tocsr()
-        treated_rows = np.where(_data["ATT"], 0, 1)
-        X10 = X10.multiply(treated_rows[:, None])
+    X1 = model_matrix(_first_stage, _data, output = "sparse")   # here: from potential two part formula to one - part formula
+    X2 = model_matrix(_second_stage, _data, output = "sparse")
 
-        X10X10 = X10.T.dot(X10)
-        X2X1 = X2.T.dot(X1)
-        X2X2 = X2.T.dot(X2)
+    X10 = X1.copy().tocsr()
+    treated_rows = np.where(_data["ATT"], 0, 1)
+    X10 = X10.multiply(treated_rows[:, None])
 
-        V = spsolve(X10X10, X2X1.T).T
+    X10X10 = X10.T.dot(X10)
+    X2X1 = X2.T.dot(X1)
+    X2X2 = X2.T.dot(X2)
 
-        k = X2.shape[1]
-        vcov = np.zeros((k, k))
+    V = spsolve(X10X10, X2X1.T).T
 
-        X10 = X10.tocsr()
-        X2 = X2.tocsr()
+    k = X2.shape[1]
+    vcov = np.zeros((k, k))
 
-        for (_,g,) in enumerate(clustid):
+    X10 = X10.tocsr()
+    X2 = X2.tocsr()
 
-            X10g = X10[cluster_col == g, :]
-            X2g = X2[cluster_col == g, :]
-            first_u_g = _first_u[cluster_col == g]
-            second_u_g = _second_u[cluster_col == g]
+    for (_,g,) in enumerate(clustid):
 
-            W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
+        X10g = X10[cluster_col == g, :]
+        X2g = X2[cluster_col == g, :]
+        first_u_g = _first_u[cluster_col == g]
+        second_u_g = _second_u[cluster_col == g]
 
-            score = spsolve(X2X2, W_g)
-            cov_g = score.dot(score.T)
+        W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
 
-            vcov += cov_g
+        score = spsolve(X2X2, W_g)
+        cov_g = score.dot(score.T)
 
-        self._vcov = vcov
+        vcov += cov_g
 
-        return self._vcov
+    return vcov
+
+
+def did2s(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str, cluster: str):
+
+    fit, first_u, second_u = _did2s_estimate(data, yname, first_stage, second_stage, treatment)
+    vcov = _did2s_vcov(data, first_stage, second_stage, first_u, second_u, cluster)
+    fit._vcov = vcov
+
+    return fit
 
 
 
