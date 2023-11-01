@@ -16,40 +16,12 @@ At the moment, `PyFixest` supports
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
+- Support for estimators of the "new" Difference-in-Difference literature is work in progress. `PyFixest` currently provides an
+  experimentla implementation of Gardner's Did2s estimtator (via the `pyfixest.experimental.did` module, only ATT estimation).
 
 ## Installation
 
 You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
-
-## News
-
-`PyFixest` now supports Poisson regression!
-
-```python
-from pyfixest.estimation import fepois
-from pyfixest.utils import get_data
-
-pdata = get_data(model = "Fepois")
-fitpois = fepois("Y~X1 | f1 + f2", vcov = {'CRV1':'group_id'}, data = pdata)
-
-fitpois.summary()
-
-# Model:  Y~X1|f1+f2
-# ###
-#
-# Model:  Poisson
-# Dep. var.:  Y
-# Fixed effects:  f1+f2
-# Inference:  CRV1
-# Observations:  997
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |     -0.019 |        0.050 |    -0.370 |      0.711 |  -0.117 |    0.080 |
-# ---
-# Deviance: 1067.853
-```
-
 
 ## Quickstart
 

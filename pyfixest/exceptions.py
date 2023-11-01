@@ -52,3 +52,6 @@ class NonConvergenceError(Exception):
 
 class MatrixNotFullRankError(Exception):
     pass
+
+class EmptyDesignMatrixError(Exception):
+    pass
