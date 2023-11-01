@@ -270,7 +270,7 @@ class DID2S(DID):
 
 
 
-def _did2s_estimate(_data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str):
+def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str):
 
         """
         Args:
@@ -282,13 +282,9 @@ def _did2s_estimate(_data: pd.DataFrame, yname : str, _first_stage: str, _second
         Returns:
             A fitted model object of class feols and the first and second stage residuals.
         """
-        _first_stage = _first_stage.replace(" ", "")
-        _second_stage = _second_stage.replace(" ", "")
-        assert _first_stage[0] == "~", "First stage must start with ~"
-        assert _second_stage[0] == "~", "Second stage must start with ~"
 
-        _first_stage_full = f"{yname} {_fml1}"
-        _second_stage_full = f"{yname}_hat {_fml2}"
+        _first_stage_full = f"{yname} {_first_stage}"
+        _second_stage_full = f"{yname}_hat {_second_stage}"
 
         if treatment is not None:
             _not_yet_treated_data = data[data[treatment] == False]
@@ -296,23 +292,23 @@ def _did2s_estimate(_data: pd.DataFrame, yname : str, _first_stage: str, _second
             _not_yet_treated_data = data[data["ATT"] == False]
 
         # estimate first stage
-        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data)
+        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data, vcov = "iid") # iid as it might be faster than CRV
 
         # obtain estimated fixed effects
         fit1.fixef()
 
         # demean data
-        Y_hat = fit1.predict(newdata = _data)
-        _first_u = _data[f"{_yname}"].to_numpy().flatten() - Y_hat
-        _data[f"{_yname}_hat"] = self._first_u
+        Y_hat = fit1.predict(newdata =data)
+        _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
+        data[f"{yname}_hat"] = _first_u
 
-        fit2 = feols(_second_stage_full, data = _data)
+        fit2 = feols(_second_stage_full, data =data, vcov = "iid")
         _second_u = fit2.resid()
 
         return fit2, _first_u, _second_u
 
 
-def _did2s_vcov(_data: pd.DataFrame, _first_stage: str, _second_stage: str, _first_u: np.ndarray, _second_u: np.ndarray, _cluster : str):
+def _did2s_vcov(_data: pd.DataFrame, first_stage: str, second_stage: str, treatment: str,  _first_u: np.ndarray, _second_u: np.ndarray, _cluster : str):
 
     """
     Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.
@@ -326,11 +322,19 @@ def _did2s_vcov(_data: pd.DataFrame, _first_stage: str, _second_stage: str, _fir
 
     _G = clustid.nunique()                                      # actually not used here, neither in did2s
 
-    X1 = model_matrix(_first_stage, _data, output = "sparse")   # here: from potential two part formula to one - part formula
-    X2 = model_matrix(_second_stage, _data, output = "sparse")
+
+    # some formula parsing to get the correct formula for the first and second stage model matrix
+    first_stage_x, first_stage_fe = first_stage.split("|")
+    first_stage_fe = [f"C({i})" for i in first_stage_fe.split("+")]
+    first_stage_fe = "+".join(first_stage_fe)
+    first_stage = f"{first_stage_x}+{first_stage_fe}"
+
+
+    X1 = model_matrix(first_stage, _data, output = "sparse")   # here: from potential two part formula to one - part formula
+    X2 = model_matrix(second_stage, _data, output = "sparse")
 
     X10 = X1.copy().tocsr()
-    treated_rows = np.where(_data["ATT"], 0, 1)
+    treated_rows = np.where(_data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
     X10X10 = X10.T.dot(X10)
@@ -362,11 +366,21 @@ def _did2s_vcov(_data: pd.DataFrame, _first_stage: str, _second_stage: str, _fir
     return vcov
 
 
-def did2s(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str, cluster: str):
+def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str, cluster: str):
+
+    first_stage = first_stage.replace(" ", "")
+    second_stage = second_stage.replace(" ", "")
+    assert first_stage[0] == "~", "First stage must start with ~"
+    assert second_stage[0] == "~", "Second stage must start with ~"
 
     fit, first_u, second_u = _did2s_estimate(data, yname, first_stage, second_stage, treatment)
-    vcov = _did2s_vcov(data, first_stage, second_stage, first_u, second_u, cluster)
+    vcov = _did2s_vcov(data, first_stage, second_stage, treatment, first_u, second_u, cluster)
     fit._vcov = vcov
+
+    fit._vcov_type = "CRV1"
+    fit._vcov_type_detail = "CRV1 (GMM)"
+    #fit._G = did2s._G
+    fit._method = "did2s"
 
     return fit
 
