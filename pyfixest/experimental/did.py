@@ -3,9 +3,11 @@ import numpy as np
 
 from pyfixest.estimation import feols
 from pyfixest.exceptions import NotImplementedError
+from pyfixest.model_matrix_fixest import model_matrix_fixest
 
 from abc import ABC, abstractmethod
 from formulaic import model_matrix
+from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from typing import Optional, Union, List
 
@@ -298,6 +300,7 @@ class DID2S(DID):
 
         return _did2s_vcov(
             data = self._data,
+            yname = self._yname,
             first_stage = self._fml1,
             second_stage = self._fml2,
             treatment = "ATT",
@@ -317,6 +320,8 @@ def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_
             _first_stage (str): The formula for the first stage.
             _second_stage (str): The formula for the second stage.
             treatment (str): The name of the treatment variable.
+            i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
+            i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
         Returns:
             A fitted model object of class feols and the first and second stage residuals.
         """
@@ -346,13 +351,23 @@ def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_
         return fit2, _first_u, _second_u
 
 
-def _did2s_vcov(data: pd.DataFrame, first_stage: str, second_stage: str, treatment: str,  first_u: np.ndarray, second_u: np.ndarray, cluster : str):
+def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str,  first_u: np.ndarray, second_u: np.ndarray, cluster : str, i_ref1: Optional[Union[int, str, List]] = None, i_ref2: Optional[Union[int, str, List]] = None):
 
     """
     Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.
     Args:
-        data (pd.DataFrame):
-
+        data (pd.DataFrame): The DataFrame containing all variables.
+        yname (str): The name of the dependent variable.
+        first_stage (str): The formula for the first stage.
+        second_stage (str): The formula for the second stage.
+        treatment (str): The name of the treatment variable.
+        first_u (np.ndarray): The first stage residuals.
+        second_u (np.ndarray): The second stage residuals.
+        cluster (str): The name of the cluster variable.
+        i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
+        i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
+    Returns:
+        A variance covariance matrix.
     """
 
     cluster_col =  data[cluster]
@@ -367,9 +382,22 @@ def _did2s_vcov(data: pd.DataFrame, first_stage: str, second_stage: str, treatme
     first_stage_fe = "+".join(first_stage_fe)
     first_stage = f"{first_stage_x}+{first_stage_fe}"
 
+    second_stage = f"{second_stage}"
+    _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
+        fml = f"{yname} {first_stage}",
+        data = data,
+        i_ref1=i_ref1,
+        i_ref2 = i_ref2
+    )
+    _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
+        fml = f"{yname} {second_stage}",
+        data = data,
+        i_ref1 = i_ref1,
+        i_ref2 = i_ref2
+    ) # reference values not dropped, multicollinearity error
 
-    X1 = model_matrix(first_stage, data, output = "sparse")   # here: from potential two part formula to one - part formula
-    X2 = model_matrix(second_stage, data, output = "sparse")
+    X1 = csr_matrix(X1.values)
+    X2 = csr_matrix(X2.values)
 
     X10 = X1.copy().tocsr()
     treated_rows = np.where(data[treatment], 0, 1)
@@ -415,8 +443,8 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
         second_stage (str): The formula for the second stage. Must start with '~'.
         treatment (str): The name of the treatment variable.
         cluster (str): The name of the cluster variable.
-        i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax.
-        i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax.
+        i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
+        i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
     Returns:
         A fitted model object of class feols.
     Examples:
@@ -441,18 +469,36 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
     assert first_stage[0] == "~", "First stage must start with ~"
     assert second_stage[0] == "~", "Second stage must start with ~"
 
-    fit, first_u, second_u = _did2s_estimate(data, yname, first_stage, second_stage, treatment, i_ref1, i_ref2)
+    fit, first_u, second_u = _did2s_estimate(
+        data = data,
+        yname = yname,
+        _first_stage = first_stage,
+        _second_stage = second_stage,
+        treatment = treatment,
+        i_ref1 = i_ref1,
+        i_ref2 = i_ref2
+    )
 
-    if False:
-        vcov, _G = _did2s_vcov(data, first_stage, second_stage, treatment, first_u, second_u, cluster, i_ref1, i_ref2)
-        fit._vcov = vcov
-        fit._G = _G
-        fit.get_inference()     # update inference with correct vcov matrix
+    vcov, _G = _did2s_vcov(
+        data = data,
+        yname = yname,
+        first_stage = first_stage,
+        second_stage = second_stage,
+        treatment = treatment,
+        first_u = first_u,
+        second_u = second_u,
+        cluster = cluster,
+        i_ref1 = i_ref1,
+        i_ref2 = i_ref2
+    )
+    fit._vcov = vcov
+    fit._G = _G
+    fit.get_inference()     # update inference with correct vcov matrix
 
-        fit._vcov_type = "CRV1"
-        fit._vcov_type_detail = "CRV1 (GMM)"
-        #fit._G = did2s._G
-        fit._method = "did2s"
+    fit._vcov_type = "CRV1"
+    fit._vcov_type_detail = "CRV1 (GMM)"
+    #fit._G = did2s._G
+    fit._method = "did2s"
 
 
     return fit

@@ -50,8 +50,6 @@ def iplot(
         A lets-plot figure.
     """
 
-    import pdb; pdb.set_trace()
-
     models = _post_processing_input_checks(models)
 
     df_all = []
