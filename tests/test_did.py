@@ -17,7 +17,7 @@ broom = importr("broom")
 def test_event_study():
 
     """
-    Test hte event_study() function.
+    Test the event_study() function.
     """
 
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")

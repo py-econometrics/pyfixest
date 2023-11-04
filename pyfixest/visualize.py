@@ -1,10 +1,7 @@
 import pandas as pd
 from typing import List, Tuple, Optional
-from scipy.stats import norm
-import re
 from pyfixest.summarize import _post_processing_input_checks
 from typing import Union
-import numpy as np
 from lets_plot import (
     ggplot,
     aes,
@@ -52,6 +49,8 @@ def iplot(
     Returns:
         A lets-plot figure.
     """
+
+    import pdb; pdb.set_trace()
 
     models = _post_processing_input_checks(models)
 

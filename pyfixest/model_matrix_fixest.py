@@ -1,12 +1,12 @@
 from formulaic import model_matrix
 import pandas as pd
 import re
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 import numpy as np
 
 
 def model_matrix_fixest(
-    fml: str, data: pd.DataFrame, weights: Optional[str] = None
+    fml: str, data: pd.DataFrame, weights: Optional[str] = None, i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None
 ) -> Tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -29,6 +29,9 @@ def model_matrix_fixest(
     Args:
         fml (str): A two-sided formula string using fixest formula syntax.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
+        data (pd.DataFrame): The input DataFrame containing the data.
+        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
+        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
 
     Returns:
         Tuple[
@@ -64,9 +67,10 @@ def model_matrix_fixest(
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
-    _ivars = _find_ivars(fml)
-    _ivars = _deparse_ivars(_ivars)
-    _ivars, _drop_ref = _clean_ivars(_ivars, data)
+    _ivars = _find_ivars(fml)[0]
+
+    #_ivars = _deparse_ivars(_ivars)
+    #_ivars, _drop_ref = _clean_ivars(_ivars, data)
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -76,8 +80,31 @@ def model_matrix_fixest(
     for x in covar.split("+"):
         is_ivar = _find_ivars(x)
         if is_ivar[1]:
-            covar = covar.replace(x, f"C({is_ivar[0][0]}):{is_ivar[0][1]}")
+            if len(_ivars) == 2:
+                interact_vars = f"C({_ivars[0]}):{_ivars[1]}"
+            elif len(_ivars) == 1:
+                interact_vars = f"C({_ivars[0]})"
+            else:
+                raise ValueError("Something went wrong with the i() syntax. Please report this issue to the package author via github.")
+            covar = covar.replace(x, interact_vars)
             break
+
+    # drop_ref
+    _ivar1 = _ivars[0]
+
+    #_ivar2_is_discrete = data[_ivar2].dtype.name in ["category", "object"]
+    if i_ref1 is not None:
+        if len(_ivars) == 2:
+            _drop_ref = f"C({_ivar1})[T.{i_ref1}]:"
+            #else:
+            #    pass
+            #    #raise NotImplementedError("Interaction of two discrete variables is not yet implemented.")
+
+        elif len(_ivars) == 1:
+            _drop_ref = f"C({_ivars})[T.{i_ref1}]"
+
+    else:
+        _drop_ref = None
 
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
@@ -166,23 +193,23 @@ def model_matrix_fixest(
 
     # drop variables before collecting variable names
 
+    if isinstance(_drop_ref, list):
+        _drop_ref = _drop_ref[0]
+
     if _ivars is not None:
         if _drop_ref is not None:
+
+            columns_to_drop = [col for col in X.columns if _drop_ref in col]
+
             if not X_is_empty:
-                X.drop(_drop_ref, axis=1, inplace = True)
-            if _is_iv:
-                Z.drop(_drop_ref, axis=1, inplace = True)
+                X.drop(columns_to_drop, axis=1, inplace = True)
+                if _is_iv:
+                    Z.drop(columns_to_drop, axis=1, inplace = True)
 
     # drop reference level, if specified
-    if _ivars is not None:
-        x_names = X.columns.tolist()
-        _icovars = [
-            s
-            for s in x_names
-            if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
-        ]
-    else:
-        _icovars = None
+    # ivars are needed for plotting of all interacted variables via iplot()
+
+    _icovars = _get_icovars(_ivars, X)
 
     if fe is not None:
         fe.drop(na_index, axis=0, inplace = True)
@@ -222,68 +249,12 @@ def _find_ivars(x):
     """
 
     i_match = re.findall(r"i\((.*?)\)", x)
+
     if i_match:
-        return [x.replace(" ", "") for x in i_match[0].split(",")], "i"
+        return i_match[0].split(","), "i"
     else:
         return x, None
 
-
-def _deparse_ivars(x):
-    """
-    Deparse the result of _find_ivars() into a dictionary.
-    Args:
-        x (list): A list of interaction variables.
-    Returns:
-        dict: A dictionary of interaction variables. Keys are the reference variables, values are the interaction variables.
-              If no reference variable is provided, the key is None.
-    """
-
-    if x[1] is not None:
-        ivars = dict()
-        # check for reference by searching for "="
-        i_split = x[0][-1].split("=")
-        if len(i_split) > 1:
-            ref = x[0][-1].split("=")[1]
-            _ivars_list = x[0][:-1]
-        else:
-            ref = None
-            _ivars_list = x[0]
-        ivars[ref] = _ivars_list
-    else:
-        ivars = None
-
-    return ivars
-
-
-def _clean_ivars(ivars, data):
-    """
-    Clean variables interacted via i(X1, X2, ref = a) syntax.
-
-    Args:
-        ivars (list): The list of variables specified in the i() syntax.
-        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-    Returns:
-        ivars (list): The list of variables specified in the i() syntax minus the reference level
-        drop_ref (str): The dropped reference level specified in the i() syntax. None if no level is dropped
-    """
-
-    if ivars is not None:
-        if list(ivars.keys())[0] is not None:
-            ref = list(ivars.keys())[0]
-            ivars = ivars[ref]
-            drop_ref = f"C({ivars[0]})[T.{ref}]:{ivars[1]}"
-        else:
-            ivars = ivars[None]
-            drop_ref = None
-
-        # type checking for ivars variable
-        _check_ivars(data, ivars)
-
-    else:
-        ivars = None
-        drop_ref = None
-
-    return ivars, drop_ref
 
 
 def _check_ivars(data, ivars):
@@ -297,7 +268,7 @@ def _check_ivars(data, ivars):
     """
 
     i0_type = data[ivars[0]].dtype
-    i1_type = data[ivars[1]].dtype
+    #i1_type = data[ivars[1]].dtype
     if not i0_type in ["category", "O"]:
         raise ValueError(
             f"""
@@ -372,3 +343,24 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     fe_na = fe_na[fe_na].index.tolist()
 
     return fe, fe_na
+
+
+def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
+    """
+    Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
+    Args:
+        _ivars (list): A list of interaction variables.
+        X (pd.DataFrame): The DataFrame containing the covariates.
+    Returns:
+        list: A list of interacted variables or None.
+    """
+    if _ivars is not None:
+        x_names = X.columns.tolist()
+        if len(_ivars) == 2:
+            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])]
+        else:
+            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")]
+    else:
+        _icovars = None
+
+    return _icovars
