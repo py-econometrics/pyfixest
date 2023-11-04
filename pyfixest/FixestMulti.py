@@ -86,6 +86,14 @@ class FixestMulti:
         self._fixef_keys = None
         self._is_multiple_estimation = None
 
+        # set i_ref1 and i_ref2 to list if not None
+        if i_ref1 is not None:
+            if not isinstance(i_ref1, list):
+                i_ref1 = [i_ref1]
+        if i_ref2 is not None:
+            if not isinstance(i_ref2, list):
+                i_ref2 = [i_ref2]
+
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
         if fxst_fml._is_iv:

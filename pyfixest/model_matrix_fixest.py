@@ -69,9 +69,6 @@ def model_matrix_fixest(
 
     _ivars = _find_ivars(fml)[0]
 
-    #_ivars = _deparse_ivars(_ivars)
-    #_ivars, _drop_ref = _clean_ivars(_ivars, data)
-
     # step 1: deparse formula
     fml_parts = fml.split("|")
     depvar, covar = fml_parts[0].split("~")
@@ -89,22 +86,9 @@ def model_matrix_fixest(
             covar = covar.replace(x, interact_vars)
             break
 
-    # drop_ref
-    _ivar1 = _ivars[0]
-
-    #_ivar2_is_discrete = data[_ivar2].dtype.name in ["category", "object"]
-    if i_ref1 is not None:
-        if len(_ivars) == 2:
-            _drop_ref = f"C({_ivar1})[T.{i_ref1}]:"
-            #else:
-            #    pass
-            #    #raise NotImplementedError("Interaction of two discrete variables is not yet implemented.")
-
-        elif len(_ivars) == 1:
-            _drop_ref = f"C({_ivars})[T.{i_ref1}]"
-
-    else:
-        _drop_ref = None
+    # should any variables be dropped from the model matrix
+    # (e.g., reference level dummies, if specified)
+    _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
@@ -191,15 +175,14 @@ def model_matrix_fixest(
     else:
         na_index = na_index_stage2
 
-    # drop variables before collecting variable names
-
-    if isinstance(_drop_ref, list):
-        _drop_ref = _drop_ref[0]
-
+    # now drop variables before collecting variable names
     if _ivars is not None:
-        if _drop_ref is not None:
+        if _drop_ref:
 
-            columns_to_drop = [col for col in X.columns if _drop_ref in col]
+            if len(_drop_ref) == 1:
+                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col]
+            else:
+                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col or _drop_ref[1] in col]
 
             if not X_is_empty:
                 X.drop(columns_to_drop, axis=1, inplace = True)
@@ -364,3 +347,33 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
         _icovars = None
 
     return _icovars
+
+
+def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None) -> Optional[List[str]]:
+
+    """
+    Get the name of reference level dummies to be dropped from the model matrix.
+    Args:
+        _ivars (list): A list of interaction variables.
+        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
+        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
+    Returns:
+        _drop_ref (list): A list of reference level dummies to be dropped from the model matrix. If no reference level is specified, None is returned.
+    Examples:
+        >>> _get_drop_ref(_ivars = ["f2", "X1"], i_ref1 = [1.0, 2.0])
+        >>> ['C(f2)[T.1.0]:', 'C(f2)[T.2.0]:']
+    """
+
+    _drop_ref = None    # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
+    if _ivars:
+        _ivar1 = _ivars[0]
+        if i_ref1 is not None:
+            len_i_ref1 = len(i_ref1)
+            if len_i_ref1 not in [1, 2]:
+                raise ValueError(f"i_ref1 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref1}.")
+            if len(_ivars) == 2:
+                _drop_ref = [f"C({_ivar1})[T.{x}]:" for x in i_ref1]
+            else: #len(_ivars) == 1:
+                _drop_ref = [f"C({_ivars})[T.{x}]" for x in i_ref1]
+
+    return _drop_ref
