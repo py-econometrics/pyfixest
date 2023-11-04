@@ -20,6 +20,7 @@ def test_event_study():
     Test the event_study() function.
     """
 
+
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
 
     fit_did2s = event_study(
@@ -84,6 +85,5 @@ def test_did2s():
         np.testing.assert_allclose(
             fit_did2s.se(), float(did2s_df[2])
         )
-
 
 
