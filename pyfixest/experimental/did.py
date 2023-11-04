@@ -382,7 +382,8 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
     first_stage_fe = "+".join(first_stage_fe)
     first_stage = f"{first_stage_x}+{first_stage_fe}"
 
-    second_stage = f"{second_stage}"
+    second_stage = f"{second_stage} + 0"
+
     _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml = f"{yname} {first_stage}",
         data = data,
@@ -423,8 +424,9 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
         second_u_g = second_u[cluster_col == g]
 
         W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
-
         score = spsolve(X2X2, W_g)
+        if score.ndim == 1:
+            score = score.reshape(-1,1)
         cov_g = score.dot(score.T)
 
         vcov += cov_g
@@ -491,6 +493,7 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
         i_ref1 = i_ref1,
         i_ref2 = i_ref2
     )
+
     fit._vcov = vcov
     fit._G = _G
     fit.get_inference()     # update inference with correct vcov matrix
