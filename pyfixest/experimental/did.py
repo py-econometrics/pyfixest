@@ -7,6 +7,8 @@ from pyfixest.exceptions import NotImplementedError
 from abc import ABC, abstractmethod
 from formulaic import model_matrix
 from scipy.sparse.linalg import spsolve
+from typing import Optional, Union, List
+
 
 
 
@@ -306,7 +308,7 @@ class DID2S(DID):
 
 
 
-def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str):
+def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str, i_ref1: Optional[Union[int, str, List]] = None, i_ref2: Optional[Union[int, str, List]] = None):
 
         """
         Args:
@@ -320,7 +322,7 @@ def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_
         """
 
         _first_stage_full = f"{yname} {_first_stage}"
-        _second_stage_full = f"{yname}_hat {_second_stage}"
+        _second_stage_full = f"{yname}_hat {_second_stage} + 0"
 
         if treatment is not None:
             _not_yet_treated_data = data[data[treatment] == False]
@@ -338,7 +340,7 @@ def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_
         _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
         data[f"{yname}_hat"] = _first_u
 
-        fit2 = feols(_second_stage_full, data =data, vcov = "iid")
+        fit2 = feols(_second_stage_full, data =data, vcov = "iid", i_ref1=i_ref1, i_ref2=i_ref2)
         _second_u = fit2.resid()
 
         return fit2, _first_u, _second_u
@@ -402,7 +404,7 @@ def _did2s_vcov(data: pd.DataFrame, first_stage: str, second_stage: str, treatme
     return vcov, _G
 
 
-def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str, cluster: str):
+def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str, cluster: str, i_ref1 : Optional[Union[int, str, List]] = None, i_ref2 : Optional[Union[int, str, List]] = None):
 
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -413,6 +415,8 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
         second_stage (str): The formula for the second stage. Must start with '~'.
         treatment (str): The name of the treatment variable.
         cluster (str): The name of the cluster variable.
+        i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax.
+        i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax.
     Returns:
         A fitted model object of class feols.
     Examples:
@@ -437,16 +441,18 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
     assert first_stage[0] == "~", "First stage must start with ~"
     assert second_stage[0] == "~", "Second stage must start with ~"
 
-    fit, first_u, second_u = _did2s_estimate(data, yname, first_stage, second_stage, treatment)
-    vcov, _G = _did2s_vcov(data, first_stage, second_stage, treatment, first_u, second_u, cluster)
-    fit._vcov = vcov
-    fit._G = _G
-    fit.get_inference()     # update inference with correct vcov matrix
+    fit, first_u, second_u = _did2s_estimate(data, yname, first_stage, second_stage, treatment, i_ref1, i_ref2)
 
-    fit._vcov_type = "CRV1"
-    fit._vcov_type_detail = "CRV1 (GMM)"
-    #fit._G = did2s._G
-    fit._method = "did2s"
+    if False:
+        vcov, _G = _did2s_vcov(data, first_stage, second_stage, treatment, first_u, second_u, cluster, i_ref1, i_ref2)
+        fit._vcov = vcov
+        fit._G = _G
+        fit.get_inference()     # update inference with correct vcov matrix
+
+        fit._vcov_type = "CRV1"
+        fit._vcov_type_detail = "CRV1 (GMM)"
+        #fit._G = did2s._G
+        fit._method = "did2s"
 
 
     return fit

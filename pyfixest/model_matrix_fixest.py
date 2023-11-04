@@ -88,6 +88,7 @@ def model_matrix_fixest(
 
     # should any variables be dropped from the model matrix
     # (e.g., reference level dummies, if specified)
+    _check_i_refs(_ivars, i_ref1, i_ref2, data)
     _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
     if len(fml_parts) == 3:
@@ -177,6 +178,7 @@ def model_matrix_fixest(
 
     # now drop variables before collecting variable names
     if _ivars is not None:
+
         if _drop_ref:
 
             if len(_drop_ref) == 1:
@@ -237,28 +239,6 @@ def _find_ivars(x):
         return i_match[0].split(","), "i"
     else:
         return x, None
-
-
-
-def _check_ivars(data, ivars):
-    """
-    Checks if the variables in the i() syntax are of the correct type.
-    Args:
-        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        ivars (list): The list of variables specified in the i() syntax.
-    Returns:
-        None
-    """
-
-    i0_type = data[ivars[0]].dtype
-    #i1_type = data[ivars[1]].dtype
-    if not i0_type in ["category", "O"]:
-        raise ValueError(
-            f"""
-            Column {ivars[0]} is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type "
-            {i0_type.name} If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.
-            """
-        )
 
 
 def _check_is_iv(fml):
@@ -366,6 +346,7 @@ def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = N
 
     _drop_ref = None    # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
     if _ivars:
+
         _ivar1 = _ivars[0]
         if i_ref1 is not None:
             len_i_ref1 = len(i_ref1)
@@ -374,6 +355,60 @@ def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = N
             if len(_ivars) == 2:
                 _drop_ref = [f"C({_ivar1})[T.{x}]:" for x in i_ref1]
             else: #len(_ivars) == 1:
-                _drop_ref = [f"C({_ivars})[T.{x}]" for x in i_ref1]
+                _drop_ref = [f"C({_ivar1})[T.{x}]" for x in i_ref1]
+
+        if len(_ivars) == 2:
+
+            if i_ref2 is not None:
+                _ivar2 = _ivars[1]
+                len_i_ref2 = len(i_ref2)
+                if len_i_ref2 not in [1, 2]:
+                    raise ValueError(f"i_ref2 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref2}.")
+                if len(_ivars) == 2:
+                    _drop_ref += [f":{_ivar2}[T.{x}]" for x in i_ref2]
+                else: #len(_ivars) == 1:
+                    _drop_ref += [f"{_ivar2}[T.{x}]" for x in i_ref2]
+
+        else:
+
+            if i_ref2 is not None:
+                warnings.warn(f"i_ref2 is not used because there is only one variable in the i() syntax, i({_ivar1}).")
+
+    else:
+
+        if i_ref1 is not None:
+            warnings.warn(f"i_ref1 is not used because i() syntax is not used.")
+        if i_ref2 is not None:
+            warnings.warn(f"i_ref2 is not used because i() syntax is not used.")
 
     return _drop_ref
+
+
+def _check_i_refs(ivars, i_ref1, i_ref2, data):
+
+    if ivars:
+
+        ivar1 = ivars[0]
+        if i_ref1:
+            if len(i_ref1) == 1:
+                if not i_ref1[0] in data[ivar1].unique():
+                    raise ValueError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+            else:
+                if not i_ref1[0] and i_ref1[1] in data[ivar1].unique():
+                    raise ValueError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+
+
+        if len(ivars) == 2:
+            ivar2 = ivars[1]
+            if i_ref2:
+
+                if data[ivar2].dtype not in ["category", "int"]:
+                    raise ValueError(f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}.")
+
+                if len(i_ref2) == 1:
+                    if not i_ref2[0] in data[ivar2].unique():
+                        raise ValueError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+                else:
+                    if not i_ref2[0] and i_ref2[1] in data[ivar2].unique():
+                        raise ValueError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+

@@ -19,10 +19,21 @@ def test_i():
     feols("dep_var~i(rel_year, year)", df_het, i_ref1 = [1.0, 2.0])
     feols("dep_var~i(rel_year)", df_het, i_ref1 = [1.0, 2.0])
 
+    feols("dep_var~i(rel_year, treat)", df_het, i_ref1 = [1.0, 2.0], i_ref2 = [1.0])
 
     feols("dep_var~i(rel_year, treat)", df_het)
     feols("dep_var~i(rel_year, year)", df_het)
     feols("dep_var~i(rel_year)", df_het)
+
+    with pytest.raises(ValueError):
+        feols("dep_var~i(rel_year, treat)", df_het, i_ref1 = "1.0")
+    with pytest.raises(ValueError):
+        feols("dep_var~i(rel_year, treat)", df_het, i_ref2 = "1.0")
+    with pytest.raises(ValueError):
+        feols("dep_var~i(rel_year, treat)", df_het, i_ref1 = [1.0], i_ref2 = "1.0")
+
+    with pytest.raises(ValueError):
+        feols("dep_var~i(rel_year, X)", df_het, i_ref1 = [1.0, 2.0], i_ref2 = [1.0])
 
 
 
