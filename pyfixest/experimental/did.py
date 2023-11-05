@@ -10,6 +10,7 @@ from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from typing import Optional, Union, List
+import warnings
 
 
 def event_study(
@@ -361,8 +362,15 @@ def _did2s_estimate(
         if treatment not in data.columns:
             raise ValueError(f"The variable {treatment} is not in the data.")
         # check that treatment is boolean
-        if data[treatment].dtype is not "bool":
-            raise ValueError(f"The variable {treatment} must be boolean.")
+        if data[treatment].dtype != "bool":
+            if data[treatment].dtype in ["int64", "int32", "int8", "float64", "float32"]:
+                if data[treatment].nunique() == 2:
+                    data[treatment] = data[treatment].astype(bool)
+                    warnings.warn(f"The treatment variable {treatment} was converted to boolean.")
+                else:
+                    raise ValueError(
+                        f"The treatment variable {treatment} must be boolean."
+                    )
         _not_yet_treated_data = data[data[treatment] == False]
     else:
         _not_yet_treated_data = data[data["ATT"] == False]
@@ -524,6 +532,8 @@ def did2s(
     second_stage = second_stage.replace(" ", "")
     assert first_stage[0] == "~", "First stage must start with ~"
     assert second_stage[0] == "~", "Second stage must start with ~"
+
+    data = data.copy()
 
     fit, first_u, second_u = _did2s_estimate(
         data=data,
