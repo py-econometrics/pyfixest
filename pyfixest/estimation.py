@@ -48,7 +48,8 @@ def feols(
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
               Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
-              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments.
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
+              will always be treated as a categorical.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
@@ -185,7 +186,8 @@ def fepois(
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
               Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
-              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments.
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
+              will always be treated as a categorical.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.

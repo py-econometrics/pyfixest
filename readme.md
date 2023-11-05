@@ -5,7 +5,7 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as possible. Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
+`PyFixest` is a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ## Functionality
 
@@ -16,8 +16,41 @@ At the moment, `PyFixest` supports
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
-- Support for estimators of the "new" Difference-in-Difference literature is work in progress. `PyFixest` currently provides an
-  experimental implementation of Gardner's Did2s estimtator (via the `pyfixest.experimental.did` module, only ATT estimation).
+- Support for estimators of the "new" Difference-in-Difference literature is work in progress.
+  - Gardner's two-stage ("`Did2s`") estimator is available via the `pyfixest.experimental.did` module
+
+## News
+
+`PyFixest` 0.10.8 adds experimental support for Gardner's two stage "DID2s" estimator:
+
+```py
+from pyfixest.experimental.did import did2s
+from pyfixest.estimation import feols
+from pyfixest.visualize import iplot
+import pandas as pd
+import numpy as np
+
+df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+
+fit = did2s(
+    df_het,
+    yname = "dep_var",
+    first_stage = "~ 0 | state + year",
+    second_stage = "~i(rel_year)",
+    treatment = "treat",
+    cluster = "state",
+    i_ref1 = [-1.0, np.inf],
+)
+
+fit_twfe = feols(
+    "dep_var ~ i(rel_year) | state + year",
+    df_het,
+    i_ref1 = [-1.0, np.inf]
+)
+
+iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
+```
+![](./figures/event_study.svg)
 
 ## Installation
 
