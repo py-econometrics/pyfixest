@@ -161,8 +161,6 @@ def test_did2s():
     np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
     np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-
-
     # binary non boolean treatment variable
     df_het["treat"] = df_het["treat"].astype(int)
     fit = did2s_pyfixest(
@@ -177,7 +175,6 @@ def test_did2s():
 
 
 def test_errors():
-
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
 
     # test expected errors: treatment
@@ -185,7 +182,6 @@ def test_errors():
     # boolean strings cannot be converted
     df_het["treat"] = df_het["treat"].astype(str)
     with pytest.raises(ValueError):
-
         fit = did2s_pyfixest(
             df_het,
             yname="dep_var",
@@ -198,7 +194,6 @@ def test_errors():
 
     df_het["treat2"] = np.random.choice([0, 1, 2], size=len(df_het))
     with pytest.raises(ValueError):
-
         fit = did2s_pyfixest(
             df_het,
             yname="dep_var",
