@@ -357,6 +357,12 @@ def _did2s_estimate(
     _second_stage_full = f"{yname}_hat {_second_stage} + 0"
 
     if treatment is not None:
+
+        if treatment not in data.columns:
+            raise ValueError(f"The variable {treatment} is not in the data.")
+        # check that treatment is boolean
+        if data[treatment].dtype is not "bool":
+            raise ValueError(f"The variable {treatment} must be boolean.")
         _not_yet_treated_data = data[data[treatment] == False]
     else:
         _not_yet_treated_data = data[data["ATT"] == False]
