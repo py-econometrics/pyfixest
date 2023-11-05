@@ -16,7 +16,7 @@ from pyfixest.visualize import iplot
 import pandas as pd
 import numpy as np
 
-df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
 
 fit = did2s(
     df_het,
