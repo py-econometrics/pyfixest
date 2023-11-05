@@ -1,12 +1,15 @@
-from formulaic import model_matrix
-import pandas as pd
 import re
-from typing import Optional, Tuple, List
+import warnings
+import pandas as pd
 import numpy as np
+
+from formulaic import model_matrix
+from typing import Optional, Tuple, List, Union
+from pyfixest.exceptions import InvalidReferenceLevelError
 
 
 def model_matrix_fixest(
-    fml: str, data: pd.DataFrame, weights: Optional[str] = None
+    fml: str, data: pd.DataFrame, weights: Optional[str] = None, i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None
 ) -> Tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -29,6 +32,9 @@ def model_matrix_fixest(
     Args:
         fml (str): A two-sided formula string using fixest formula syntax.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
+        data (pd.DataFrame): The input DataFrame containing the data.
+        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
+        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
 
     Returns:
         Tuple[
@@ -64,9 +70,7 @@ def model_matrix_fixest(
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
-    _ivars = _find_ivars(fml)
-    _ivars = _deparse_ivars(_ivars)
-    _ivars, _drop_ref = _clean_ivars(_ivars, data)
+    _ivars = _find_ivars(fml)[0]
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -76,8 +80,19 @@ def model_matrix_fixest(
     for x in covar.split("+"):
         is_ivar = _find_ivars(x)
         if is_ivar[1]:
-            covar = covar.replace(x, f"C({is_ivar[0][0]}):{is_ivar[0][1]}")
+            if len(_ivars) == 2:
+                interact_vars = f"C({_ivars[0]}):{_ivars[1]}"
+            elif len(_ivars) == 1:
+                interact_vars = f"C({_ivars[0]})"
+            else:
+                raise ValueError("Something went wrong with the i() syntax. Please report this issue to the package author via github.")
+            covar = covar.replace(x, interact_vars)
             break
+
+    # should any variables be dropped from the model matrix
+    # (e.g., reference level dummies, if specified)
+    _check_i_refs(_ivars, i_ref1, i_ref2, data)
+    _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
@@ -164,25 +179,25 @@ def model_matrix_fixest(
     else:
         na_index = na_index_stage2
 
-    # drop variables before collecting variable names
-
+    # now drop variables before collecting variable names
     if _ivars is not None:
-        if _drop_ref is not None:
+
+        if _drop_ref:
+
+            if len(_drop_ref) == 1:
+                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col]
+            else:
+                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col or _drop_ref[1] in col]
+
             if not X_is_empty:
-                X.drop(_drop_ref, axis=1, inplace = True)
-            if _is_iv:
-                Z.drop(_drop_ref, axis=1, inplace = True)
+                X.drop(columns_to_drop, axis=1, inplace = True)
+                if _is_iv:
+                    Z.drop(columns_to_drop, axis=1, inplace = True)
 
     # drop reference level, if specified
-    if _ivars is not None:
-        x_names = X.columns.tolist()
-        _icovars = [
-            s
-            for s in x_names
-            if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
-        ]
-    else:
-        _icovars = None
+    # ivars are needed for plotting of all interacted variables via iplot()
+
+    _icovars = _get_icovars(_ivars, X)
 
     if fe is not None:
         fe.drop(na_index, axis=0, inplace = True)
@@ -222,89 +237,11 @@ def _find_ivars(x):
     """
 
     i_match = re.findall(r"i\((.*?)\)", x)
+
     if i_match:
-        return [x.replace(" ", "") for x in i_match[0].split(",")], "i"
+        return i_match[0].split(","), "i"
     else:
-        return x, None
-
-
-def _deparse_ivars(x):
-    """
-    Deparse the result of _find_ivars() into a dictionary.
-    Args:
-        x (list): A list of interaction variables.
-    Returns:
-        dict: A dictionary of interaction variables. Keys are the reference variables, values are the interaction variables.
-              If no reference variable is provided, the key is None.
-    """
-
-    if x[1] is not None:
-        ivars = dict()
-        # check for reference by searching for "="
-        i_split = x[0][-1].split("=")
-        if len(i_split) > 1:
-            ref = x[0][-1].split("=")[1]
-            _ivars_list = x[0][:-1]
-        else:
-            ref = None
-            _ivars_list = x[0]
-        ivars[ref] = _ivars_list
-    else:
-        ivars = None
-
-    return ivars
-
-
-def _clean_ivars(ivars, data):
-    """
-    Clean variables interacted via i(X1, X2, ref = a) syntax.
-
-    Args:
-        ivars (list): The list of variables specified in the i() syntax.
-        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-    Returns:
-        ivars (list): The list of variables specified in the i() syntax minus the reference level
-        drop_ref (str): The dropped reference level specified in the i() syntax. None if no level is dropped
-    """
-
-    if ivars is not None:
-        if list(ivars.keys())[0] is not None:
-            ref = list(ivars.keys())[0]
-            ivars = ivars[ref]
-            drop_ref = f"C({ivars[0]})[T.{ref}]:{ivars[1]}"
-        else:
-            ivars = ivars[None]
-            drop_ref = None
-
-        # type checking for ivars variable
-        _check_ivars(data, ivars)
-
-    else:
-        ivars = None
-        drop_ref = None
-
-    return ivars, drop_ref
-
-
-def _check_ivars(data, ivars):
-    """
-    Checks if the variables in the i() syntax are of the correct type.
-    Args:
-        data (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        ivars (list): The list of variables specified in the i() syntax.
-    Returns:
-        None
-    """
-
-    i0_type = data[ivars[0]].dtype
-    i1_type = data[ivars[1]].dtype
-    if not i0_type in ["category", "O"]:
-        raise ValueError(
-            f"""
-            Column {ivars[0]} is not of type 'O' or 'category', which is required in the first position of i(). Instead it is of type "
-            {i0_type.name} If a reference level is set, it is required that the variable in the first position of 'i()' is of type 'O' or 'category'.
-            """
-        )
+        return None, None
 
 
 def _check_is_iv(fml):
@@ -372,3 +309,121 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     fe_na = fe_na[fe_na].index.tolist()
 
     return fe, fe_na
+
+
+def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
+    """
+    Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
+    Args:
+        _ivars (list): A list of interaction variables.
+        X (pd.DataFrame): The DataFrame containing the covariates.
+    Returns:
+        list: A list of interacted variables or None.
+    """
+    if _ivars is not None:
+        x_names = X.columns.tolist()
+        if len(_ivars) == 2:
+            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])]
+        else:
+            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")]
+    else:
+        _icovars = None
+
+    return _icovars
+
+
+def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None) -> Optional[List[str]]:
+
+    """
+    Get the name of reference level dummies to be dropped from the model matrix.
+    Args:
+        _ivars (list): A list of interaction variables.
+        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
+        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
+    Returns:
+        _drop_ref (list): A list of reference level dummies to be dropped from the model matrix. If no reference level is specified, None is returned.
+    Examples:
+        >>> _get_drop_ref(_ivars = ["f2", "X1"], i_ref1 = [1.0, 2.0])
+        >>> ['C(f2)[T.1.0]:', 'C(f2)[T.2.0]:']
+    """
+
+    _drop_ref = None    # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
+    if _ivars:
+
+        _ivar1 = _ivars[0]
+        if i_ref1 is not None:
+            len_i_ref1 = len(i_ref1)
+            if len_i_ref1 not in [1, 2]:
+                raise ValueError(f"i_ref1 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref1}.")
+            if len(_ivars) == 2:
+                _drop_ref = [f"C({_ivar1})[T.{x}]:" for x in i_ref1]
+            else: #len(_ivars) == 1:
+                _drop_ref = [f"C({_ivar1})[T.{x}]" for x in i_ref1]
+
+        if len(_ivars) == 2:
+
+            if i_ref2 is not None:
+                _ivar2 = _ivars[1]
+                len_i_ref2 = len(i_ref2)
+                if len_i_ref2 not in [1, 2]:
+                    raise ValueError(f"i_ref2 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref2}.")
+                if len(_ivars) == 2:
+                    _drop_ref += [f":{_ivar2}[T.{x}]" for x in i_ref2]
+                else: #len(_ivars) == 1:
+                    _drop_ref += [f"{_ivar2}[T.{x}]" for x in i_ref2]
+
+        else:
+
+            if i_ref2 is not None:
+                warnings.warn(f"i_ref2 is not used because there is only one variable in the i() syntax, i({_ivar1}).")
+
+    else:
+
+        if i_ref1 is not None:
+            warnings.warn(f"i_ref1 is not used because i() syntax is not used.")
+        if i_ref2 is not None:
+            warnings.warn(f"i_ref2 is not used because i() syntax is not used.")
+
+    return _drop_ref
+
+
+def _check_i_refs(ivars, i_ref1, i_ref2, data):
+
+    if ivars:
+
+        ivar1 = ivars[0]
+        type_ivar1 = data[ivar1].to_numpy().dtype
+        unique_ivar1 = data[ivar1].unique()
+
+        if i_ref1:
+
+            type_i_ref1 = type(i_ref1[0])
+
+            if len(i_ref1) == 1:
+                if not i_ref1[0] in unique_ivar1 or type_i_ref1 != type_ivar1:
+                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+            else:
+                if not i_ref1[0] and i_ref1[1] in unique_ivar1 or type_i_ref1 != type_ivar1:
+                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+
+
+        if len(ivars) == 2:
+
+            ivar2 = ivars[1]
+            type_ivar2 = data[ivar2].to_numpy().dtype
+            unique_ivar2 = data[ivar2].unique()
+
+            if i_ref2:
+
+                type_i_ref2 = type(i_ref2[0])
+
+                if data[ivar2].dtype not in ["category", "int"]:
+                    raise InvalidReferenceLevelError(f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}.")
+
+                if len(i_ref2) == 1:
+                    if not i_ref2[0] in unique_ivar2 or type_i_ref2 != type_ivar2:
+                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+                else:
+                    if not i_ref2[0] and i_ref2[1] in unique_ivar2 or type_i_ref2 != type_ivar2:
+                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+

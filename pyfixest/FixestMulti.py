@@ -56,6 +56,8 @@ class FixestMulti:
         vcov: Union[None, str, Dict[str, str]] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
+        i_ref1: Optional[Union[List, str]] = None,
+        i_ref2: Optional[Union[List, str]] = None,
     ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
@@ -68,6 +70,8 @@ class FixestMulti:
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+            i_ref1 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the first interaction variable.
+            i_ref2 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the second interaction variable.
 
         Returns:
             None
@@ -81,6 +85,14 @@ class FixestMulti:
         self._drop_singletons = None
         self._fixef_keys = None
         self._is_multiple_estimation = None
+
+        # set i_ref1 and i_ref2 to list if not None
+        if i_ref1 is not None:
+            if not isinstance(i_ref1, list):
+                i_ref1 = [i_ref1]
+        if i_ref2 is not None:
+            if not isinstance(i_ref2, list):
+                i_ref2 = [i_ref2]
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -98,6 +110,8 @@ class FixestMulti:
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
+        self._i_ref1 = i_ref1
+        self._i_ref2 = i_ref2
 
     def _estimate_all_models(
         self,
@@ -133,6 +147,8 @@ class FixestMulti:
         _method = self._method
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
+        _i_ref1 = self._i_ref1
+        _i_ref2 = self._i_ref2
 
         for _, fval in enumerate(fixef_keys):
             dict2fe = _fml_dict.get(fval)
@@ -167,7 +183,7 @@ class FixestMulti:
                         na_index_str,
                         _icovars,
                         X_is_empty
-                    ) = model_matrix_fixest(fml=fml, data=_data)
+                    ) = model_matrix_fixest(fml=fml, data=_data, i_ref1 = _i_ref1, i_ref2 = _i_ref2)
 
                     weights = np.ones((Y.shape[0], 1))
 
@@ -623,6 +639,7 @@ def get_fml(
     Returns:
         str: The formula string for the regression.
     """
+
 
     fml = f"{depvar} ~ {covar}"
 

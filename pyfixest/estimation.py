@@ -13,6 +13,8 @@ def feols(
     ssc=ssc(),
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
+    i_ref1: Optional[Union[list, str]] = None,
+    i_ref2: Optional[Union[list, str]] = None
 ) -> Union[Feols, FixestMulti]:
     """
 
@@ -45,7 +47,9 @@ def feols(
             Other special syntax includes:
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot().
+              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
+              will always be treated as a categorical.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
@@ -65,6 +69,9 @@ def feols(
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables.
                             If the tolerance is higher, more variables will be dropped.
+
+        i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
+        i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
 
     Returns:
         An instance of the `Feols` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
@@ -123,10 +130,12 @@ def feols(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
+
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
-    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm)
+    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, i_ref1, i_ref2)
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
@@ -146,6 +155,8 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
+    i_ref1: Optional[Union[list, str]] = None,
+    i_ref2: Optional[Union[list, str]] = None
 ) -> Union[Fepois, FixestMulti]:
     """
     # fepois
@@ -174,7 +185,9 @@ def fepois(
             Other special syntax includes:
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot().
+              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
+              will always be treated as a categorical.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
@@ -197,6 +210,8 @@ def fepois(
 
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables. If the tolerance is higher, more variables will be dropped.
+        i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
+        i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
 
     Returns:
         An instance of the `Fepois` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
@@ -243,14 +258,13 @@ def fepois(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
+
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
 
-    fixest._prepare_estimation(
-        estimation="fepois", fml=fml, vcov=vcov, ssc=ssc, fixef_rm=fixef_rm
-    )
-
+    fixest._prepare_estimation("fepois", fml, vcov, ssc, fixef_rm, i_ref1, i_ref2)
     if fixest._is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Poisson Regression"
@@ -270,7 +284,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
+def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -288,3 +302,9 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
         raise ValueError("collin_tol must be greater than zero")
     if not collin_tol < 1:
         raise ValueError("collin_tol must be less than one")
+
+    assert i_ref1 is None or isinstance(i_ref1, (list, str, int, bool, float)), "i_ref1 must be either None, a list, string, int, bool, or float"
+    # check that if i_ref1 is a list, all elements are of the same type
+    if isinstance(i_ref1, list):
+        assert len(i_ref1) > 0, "i_ref1 must not be an empty list"
+        assert all(isinstance(x, type(i_ref1[0])) for x in i_ref1), "i_ref1 must be a list of elements of the same type"
