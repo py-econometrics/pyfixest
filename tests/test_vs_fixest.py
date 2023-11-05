@@ -366,7 +366,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         ("Y ~ X1 | csw0(f1,f2)"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),
-        # ("Y ~ X3 + csw0(, X2, X3)"),
+        # ("Y ~ X2 + csw0(, X2, X2)"),
         ("Y ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
         ("Y + Y2 ~X1"),
@@ -565,3 +565,72 @@ def get_data_r(fml, data):
 
     return data_r
 
+
+
+def test_i_interaction():
+
+    """
+    Test that interaction syntax via the `i()` operator works as in fixest
+    """
+
+    data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
+
+    fit1 = feols("Y ~ i(f1, X2)", data=data)
+    fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
+    fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1 = 1.0)
+    fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1 = [2.0])
+    fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1 = [2.0, 3.0])
+
+
+    fit1_r = fixest.feols(
+        ro.Formula("Y ~ i(f1, X2)"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    fit2_r = fixest.feols(
+        ro.Formula("Y ~ X1 + i(f1, X2) | f2"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    fit3_r = fixest.feols(
+        ro.Formula("Y ~ X1 + i(f1, X2, ref = 1.0) | f2"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    fit4_r = fixest.feols(
+        ro.Formula("Y ~ X1 + i(f1, X2, ref = 2.0) | f2"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    fit5_r = fixest.feols(
+        ro.Formula("Y ~ X1 + i(f1, X2, ref = c(2.0, 3.0)) | f2"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    # create tuples: (pyfixest, fixest)
+    fits = [(fit1, fit1_r), (fit2, fit2_r), (fit3, fit3_r), (fit4, fit4_r), (fit5, fit5_r)]
+
+    for fit in fits:
+
+        # test that coefficients match
+        coef_py = fit[0].coef().values
+        coef_r = stats.coef(fit[1])
+        np.testing.assert_allclose(
+            coef_py,
+            coef_r,
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg="Coefficients do not match."
+        )
+
+        # test that standard errors match
+        se_py = fit[0].se().values
+        se_r = fixest.se(fit[1])
+        np.testing.assert_allclose(
+            se_py,
+            se_r,
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg="Standard errors do not match."
+        )

@@ -55,3 +55,6 @@ class MatrixNotFullRankError(Exception):
 
 class EmptyDesignMatrixError(Exception):
     pass
+
+class InvalidReferenceLevelError(Exception):
+    pass

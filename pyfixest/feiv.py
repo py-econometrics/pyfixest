@@ -38,8 +38,6 @@ class Feiv(Feols):
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
 
-        # import pdb; pdb.set_trace()
-
         if self._collin_index is not None:
             self._Z = Z[:, ~self._collin_index]
         else:
