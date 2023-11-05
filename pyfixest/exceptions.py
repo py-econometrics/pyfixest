@@ -53,8 +53,10 @@ class NonConvergenceError(Exception):
 class MatrixNotFullRankError(Exception):
     pass
 
+
 class EmptyDesignMatrixError(Exception):
     pass
+
 
 class InvalidReferenceLevelError(Exception):
     pass

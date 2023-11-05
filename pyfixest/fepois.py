@@ -128,13 +128,10 @@ class Fepois(Feols):
 
         # initiate demeaning algo (if needed)
         if _fe is not None:
-
             if _drop_singletons:
-
                 dropped_singleton_indices = _detect_singletons(fe)
 
                 if np.any(dropped_singleton_indices == True):
-
                     print(
                         np.sum(dropped_singleton_indices),
                         "observations are dropped due to singleton fixed effects.",
@@ -186,8 +183,8 @@ class Fepois(Feols):
             ZX = np.concatenate([reg_Z, _X], axis=1)
 
             if _fe is not None:
-                #ZX_resid = algorithm.residualize(ZX, mu)
-                ZX_resid, success = demean(x = ZX, flist = _fe, weights = mu.flatten())
+                # ZX_resid = algorithm.residualize(ZX, mu)
+                ZX_resid, success = demean(x=ZX, flist=_fe, weights=mu.flatten())
                 if success == False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
             else:

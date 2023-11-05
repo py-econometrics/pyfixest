@@ -182,8 +182,10 @@ class FixestMulti:
                         na_index,
                         na_index_str,
                         _icovars,
-                        X_is_empty
-                    ) = model_matrix_fixest(fml=fml, data=_data, i_ref1 = _i_ref1, i_ref2 = _i_ref2)
+                        X_is_empty,
+                    ) = model_matrix_fixest(
+                        fml=fml, data=_data, i_ref1=_i_ref1, i_ref2=_i_ref2
+                    )
 
                     weights = np.ones((Y.shape[0], 1))
 
@@ -250,7 +252,7 @@ class FixestMulti:
                                 X=Xd,
                                 weights=weights,
                                 coefnames=coefnames,
-                                collin_tol=collin_tol
+                                collin_tol=collin_tol,
                             )
 
                         # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
@@ -310,7 +312,6 @@ class FixestMulti:
                     # FEOLS.split_log = x
 
                     if not FIT._X_is_empty:
-
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
                         FIT.vcov(vcov=vcov_type)
@@ -639,7 +640,6 @@ def get_fml(
     Returns:
         str: The formula string for the regression.
     """
-
 
     fml = f"{depvar} ~ {covar}"
 

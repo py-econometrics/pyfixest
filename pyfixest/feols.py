@@ -15,7 +15,7 @@ from pyfixest.utils import get_ssc
 from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
-    EmptyDesignMatrixError
+    EmptyDesignMatrixError,
 )
 
 
@@ -60,7 +60,6 @@ class Feols:
 
         _feols_input_checks(Y, X, weights)
 
-
         if self._X.shape[1] == 0:
             self._X_is_empty = True
         else:
@@ -95,7 +94,7 @@ class Feols:
 
         # set in get_fit()
         self._tZX = None
-        #self._tZXinv = None
+        # self._tZXinv = None
         self._tXZ = None
         self._tZy = None
         self._tZZinv = None
@@ -153,9 +152,9 @@ class Feols:
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        #self._tZXinv = np.linalg.inv(self._tZX)
+        # self._tZXinv = np.linalg.inv(self._tZX)
         self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        #self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
+        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
 
         # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
 
@@ -185,7 +184,6 @@ class Feols:
             An instance of class `Feols` with updated inference.
         """
 
-
         _data = self._data
         _fml = self._fml
         _has_fixef = self._has_fixef
@@ -201,7 +199,7 @@ class Feols:
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
-        #_tZXinv = self._tZXinv
+        # _tZXinv = self._tZXinv
         _hessian = self._hessian
         _scores = self._scores
 
@@ -220,7 +218,6 @@ class Feols:
             self._is_clustered,
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
-
 
         if _is_iv:
             bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
@@ -252,10 +249,9 @@ class Feols:
                     f"'iid' inference is not supported for {_method} regressions."
                 )
 
-            self._vcov =  self._ssc * bread * sigma2
+            self._vcov = self._ssc * bread * sigma2
 
         elif self._vcov_type == "hetero":
-
             self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
@@ -294,8 +290,6 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-
-
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -307,7 +301,9 @@ class Feols:
                 # paste both columns together
                 # set cluster_df to string
                 cluster_df = cluster_df.astype(str)
-                cluster_df['cluster_intersection'] = cluster_df.iloc[:,0].str.cat(cluster_df.iloc[:,1], sep='-')
+                cluster_df["cluster_intersection"] = cluster_df.iloc[:, 0].str.cat(
+                    cluster_df.iloc[:, 1], sep="-"
+                )
 
             G = []
             for col in cluster_df.columns:
@@ -315,8 +311,6 @@ class Feols:
 
             if _ssc_dict["cluster_df"] == "min":
                 G = [min(G)] * 3
-
-
 
             # all elements of cluster_df to pd.Categorical
 
@@ -328,8 +322,7 @@ class Feols:
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(cluster_df.columns):
-
-                cluster_col =  cluster_df[col]
+                cluster_col = cluster_df[col]
                 _, clustid = pd.factorize(cluster_col)
 
                 ssc = get_ssc(
@@ -358,7 +351,6 @@ class Feols:
                         _,
                         g,
                     ) in enumerate(clustid):
-
                         Zg = _Z[np.where(cluster_col == g)]
                         ug = weighted_uhat[np.where(cluster_col == g)]
                         score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
@@ -382,22 +374,25 @@ class Feols:
 
                     beta_jack = np.zeros((len(clustid), _k))
 
-                    if (self._has_fixef == False) and (self._method == "feols") and (_is_iv == False):
+                    if (
+                        (self._has_fixef == False)
+                        and (self._method == "feols")
+                        and (_is_iv == False)
+                    ):
                         # inverse hessian precomputed?
                         tXX = np.transpose(self._X) @ self._X
                         tXy = np.transpose(self._X) @ self._Y
 
                         # compute leave-one-out regression coefficients (aka clusterjacks')
                         for ixg, g in enumerate(clustid):
-
                             Xg = self._X[np.equal(g, cluster_col)]
                             Yg = self._Y[np.equal(g, cluster_col)]
                             tXgXg = np.transpose(Xg) @ Xg
                             # jackknife regression coefficient
                             beta_jack[ixg, :] = (
-                                np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+                                np.linalg.pinv(tXX - tXgXg)
+                                @ (tXy - np.transpose(Xg) @ Yg)
                             ).flatten()
-
 
                     else:
                         # lazy loading to avoid circular import
@@ -449,7 +444,7 @@ class Feols:
         _vcov_type = self._vcov_type
         _N = self._N
         _k = self._k
-        _G = np.min(np.array(self._G)) #fixest default
+        _G = np.min(np.array(self._G))  # fixest default
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(_vcov))
@@ -705,7 +700,9 @@ class Feols:
             inference = f"CRV({cluster})"
 
             if len(cluster) > 1:
-                raise ValueError("Multiway clustering is currently not supported with the wild cluster bootstrap.")
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the wild cluster bootstrap."
+                )
 
             cluster = _data[cluster[0]]
 
@@ -900,7 +897,7 @@ class Feols:
 
             if not self._X_is_empty:
                 # deal with linear part
-                _, X = model_matrix(fml_linear , newdata)
+                _, X = model_matrix(fml_linear, newdata)
                 X = X[self._coefnames]
                 X = X.to_numpy()
                 y_hat = X @ _beta_hat
@@ -1059,12 +1056,11 @@ def _check_vcov_input(vcov, data):
             list(vcov.values())[0], str
         ), "vcov dict value must be a string"
         deparse_vcov = list(vcov.values())[0].split("+")
-        assert all(col.replace(" ","") in data.columns for col in deparse_vcov), "vcov dict value must be a column in the data"
+        assert all(
+            col.replace(" ", "") in data.columns for col in deparse_vcov
+        ), "vcov dict value must be a column in the data"
 
-        assert (
-            len(deparse_vcov) <= 2
-        ), "not more than twoway clustering is supported"
-
+        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
@@ -1228,6 +1224,7 @@ def _drop_multicollinear_variables(
 
     return X, names, collin_vars, collin_index
 
+
 def _find_collinear_variables(X, tol=1e-10):
     """
     Detect multicollinear variables.
@@ -1242,7 +1239,6 @@ def _find_collinear_variables(X, tol=1e-10):
             n_excl (int): The number of collinear variables.
             all_removed (bool): True if all variables are collinear.
     """
-
 
     res = dict()
     K = X.shape[1]
