@@ -2,6 +2,7 @@ from pyfixest.experimental.did import event_study
 from pyfixest.experimental.did import did2s as did2s_pyfixest
 import pandas as pd
 import numpy as np
+import pytest
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -159,3 +160,46 @@ def test_did2s():
 
     np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
     np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
+
+    # binary non boolean treatment variable
+    df_het["treat"] = df_het["treat"].astype(int)
+    fit = did2s_pyfixest(
+        df_het,
+        yname="dep_var",
+        first_stage="~ X | state + year",
+        second_stage="~ X + i(rel_year)",
+        treatment="treat",
+        cluster="state",
+        i_ref1=[-1.0, np.inf],
+    )
+
+
+def test_errors():
+    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+
+    # test expected errors: treatment
+
+    # boolean strings cannot be converted
+    df_het["treat"] = df_het["treat"].astype(str)
+    with pytest.raises(ValueError):
+        fit = did2s_pyfixest(
+            df_het,
+            yname="dep_var",
+            first_stage="~ X | state + year",
+            second_stage="~ X + i(rel_year)",
+            treatment="treat",
+            cluster="state",
+            i_ref1=[-1.0, np.inf],
+        )
+
+    df_het["treat2"] = np.random.choice([0, 1, 2], size=len(df_het))
+    with pytest.raises(ValueError):
+        fit = did2s_pyfixest(
+            df_het,
+            yname="dep_var",
+            first_stage="~ X | state + year",
+            second_stage="~ X + i(rel_year)",
+            treatment="treat",
+            cluster="state",
+            i_ref1=[-1.0, np.inf],
+        )
