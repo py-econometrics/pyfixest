@@ -59,6 +59,7 @@ def test_did2s():
 
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
 
+    # ATT, no covariates
     fit_did2s = did2s_pyfixest(
         data = df_het,
         yname = "dep_var",
@@ -78,12 +79,70 @@ def test_did2s():
     did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
     did2s_df = pd.DataFrame(did2s_df).T
 
-    if True:
+
+    np.testing.assert_allclose(
+        fit_did2s.coef(), stats.coef(fit_did2s_r)
+    )
+    np.testing.assert_allclose(
+        fit_did2s.se(), float(did2s_df[2])
+    )
+
+    # ATT, event study
+
+    fit = did2s_pyfixest(
+        df_het,
+        yname = "dep_var",
+        first_stage = "~ 0 | state + year",
+        second_stage = "~i(rel_year)",
+        treatment = "treat",
+        cluster = "state",
+        i_ref1 = [-1.0],
+    )
+
+    fit_r = did2s.did2s(
+        data = df_het,
+        yname = "dep_var", first_stage = ro.Formula("~ 0 | state + year"),
+        second_stage = ro.Formula("~ i(rel_year, ref = c(-1))"), treatment = "treat",
+        cluster_var = "state"
+    )
+
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
+
+    np.testing.assert_allclose(
+        fit.coef(), stats.coef(fit_r)
+    )
+    np.testing.assert_allclose(
+        fit.se(), float(did2s_df[2])
+    )
+
+    # test event study with covariate
+    fit = did2s_pyfixest(
+        df_het,
+        yname = "dep_var",
+        first_stage = "~ X | state + year",
+        second_stage = "~i(rel_year)",
+        treatment = "treat",
+        cluster = "state",
+        i_ref1 = [-1.0, np.inf],
+    )
+
+    if False:
+        fit_r = did2s.did2s(
+            data = df_het,
+            yname = "dep_var", first_stage = ro.Formula("~ X | state + year"),
+            second_stage = ro.Formula("~ i(rel_year, ref = c(-1, Inf))"), treatment = "treat",
+            cluster_var = "state"
+        )
+
+        did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+        did2s_df = pd.DataFrame(did2s_df).T
+
         np.testing.assert_allclose(
-            fit_did2s.coef(), stats.coef(fit_did2s_r)
+            fit.coef(), stats.coef(fit_r)
         )
         np.testing.assert_allclose(
-            fit_did2s.se(), float(did2s_df[2])
+            fit.se(), float(did2s_df[2])
         )
 
 

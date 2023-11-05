@@ -1,8 +1,11 @@
-from formulaic import model_matrix
-import pandas as pd
 import re
-from typing import Optional, Tuple, List, Union
+import warnings
+import pandas as pd
 import numpy as np
+
+from formulaic import model_matrix
+from typing import Optional, Tuple, List, Union
+from pyfixest.exceptions import InvalidReferenceLevelError
 
 
 def model_matrix_fixest(
@@ -238,7 +241,7 @@ def _find_ivars(x):
     if i_match:
         return i_match[0].split(","), "i"
     else:
-        return x, None
+        return None, None
 
 
 def _check_is_iv(fml):
@@ -389,26 +392,38 @@ def _check_i_refs(ivars, i_ref1, i_ref2, data):
     if ivars:
 
         ivar1 = ivars[0]
+        type_ivar1 = data[ivar1].to_numpy().dtype
+        unique_ivar1 = data[ivar1].unique()
+
         if i_ref1:
+
+            type_i_ref1 = type(i_ref1[0])
+
             if len(i_ref1) == 1:
-                if not i_ref1[0] in data[ivar1].unique():
-                    raise ValueError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+                if not i_ref1[0] in unique_ivar1 or type_i_ref1 != type_ivar1:
+                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
             else:
-                if not i_ref1[0] and i_ref1[1] in data[ivar1].unique():
-                    raise ValueError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+                if not i_ref1[0] and i_ref1[1] in unique_ivar1 or type_i_ref1 != type_ivar1:
+                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
 
 
         if len(ivars) == 2:
+
             ivar2 = ivars[1]
+            type_ivar2 = data[ivar2].to_numpy().dtype
+            unique_ivar2 = data[ivar2].unique()
+
             if i_ref2:
 
+                type_i_ref2 = type(i_ref2[0])
+
                 if data[ivar2].dtype not in ["category", "int"]:
-                    raise ValueError(f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}.")
+                    raise InvalidReferenceLevelError(f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}.")
 
                 if len(i_ref2) == 1:
-                    if not i_ref2[0] in data[ivar2].unique():
-                        raise ValueError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+                    if not i_ref2[0] in unique_ivar2 or type_i_ref2 != type_ivar2:
+                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
                 else:
-                    if not i_ref2[0] and i_ref2[1] in data[ivar2].unique():
-                        raise ValueError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+                    if not i_ref2[0] and i_ref2[1] in unique_ivar2 or type_i_ref2 != type_ivar2:
+                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
 

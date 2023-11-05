@@ -47,7 +47,8 @@ def feols(
             Other special syntax includes:
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot().
+              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
@@ -128,7 +129,9 @@ def feols(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
+
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, i_ref1, i_ref2)
@@ -181,7 +184,8 @@ def fepois(
             Other special syntax includes:
 
             - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot().
+              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
+              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments.
             - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
 
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
@@ -252,7 +256,9 @@ def fepois(
 
     """
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol)
+    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
+
+    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
 
@@ -276,7 +282,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
+def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -294,3 +300,9 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol):
         raise ValueError("collin_tol must be greater than zero")
     if not collin_tol < 1:
         raise ValueError("collin_tol must be less than one")
+
+    assert i_ref1 is None or isinstance(i_ref1, (list, str, int, bool, float)), "i_ref1 must be either None, a list, string, int, bool, or float"
+    # check that if i_ref1 is a list, all elements are of the same type
+    if isinstance(i_ref1, list):
+        assert len(i_ref1) > 0, "i_ref1 must not be an empty list"
+        assert all(isinstance(x, type(i_ref1[0])) for x in i_ref1), "i_ref1 must be a list of elements of the same type"

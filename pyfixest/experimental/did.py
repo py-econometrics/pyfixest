@@ -13,8 +13,6 @@ from typing import Optional, Union, List
 
 
 
-
-
 def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twfe", att = True, cluster = "idname"):
 
     """
@@ -336,8 +334,7 @@ def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_
             _not_yet_treated_data = data[data["ATT"] == False]
 
         # estimate first stage
-        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data, vcov = "iid") # iid as it might be faster than CRV
-
+        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data, vcov = "iid", i_ref1 = None, i_ref2 = None) # iid as it might be faster than CRV
 
         # obtain estimated fixed effects
         fit1.fixef()
