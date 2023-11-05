@@ -7,7 +7,11 @@ import pandas as pd
 from typing import Union, List, Optional
 
 
-def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, type: Optional[str] = "md") -> Union[pd.DataFrame, str]:
+def etable(
+    models: Union[Feols, Fepois, Feiv, List],
+    digits: Optional[int] = 3,
+    type: Optional[str] = "md",
+) -> Union[pd.DataFrame, str]:
     """
     Create an esttab-like table from a list of models#
     Args:
@@ -18,7 +22,6 @@ def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, 
         A pandas DataFrame with the coefficients and standard errors of the models.
     """
 
-
     models = _post_processing_input_checks(models)
 
     assert digits >= 0, "digits must be a positive integer"
@@ -26,18 +29,32 @@ def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, 
 
     etable_list = []
     for i, model in enumerate(models):
-
         model = model.tidy().reset_index().round(digits)
-        model["stars"] = np.where(model["Pr(>|t|)"] < 0.001, "***", np.where(model["Pr(>|t|)"] < 0.01, "**", np.where(model["Pr(>|t|)"] < 0.05, "*", "")))
-        model['Estimate (Std. Error)'] = pd.Categorical(model.apply(lambda row: f"{row['Estimate']}{row['stars']} ({row['Std. Error']})", axis=1))
-        model = model[["Coefficient","Estimate (Std. Error)"]]
-        model = pd.melt(model, id_vars=["Coefficient"], var_name="Metric", value_name=f"est{i+1}")
-        model = model.drop("Metric", axis = 1).set_index("Coefficient")
+        model["stars"] = np.where(
+            model["Pr(>|t|)"] < 0.001,
+            "***",
+            np.where(
+                model["Pr(>|t|)"] < 0.01,
+                "**",
+                np.where(model["Pr(>|t|)"] < 0.05, "*", ""),
+            ),
+        )
+        model["Estimate (Std. Error)"] = pd.Categorical(
+            model.apply(
+                lambda row: f"{row['Estimate']}{row['stars']} ({row['Std. Error']})",
+                axis=1,
+            )
+        )
+        model = model[["Coefficient", "Estimate (Std. Error)"]]
+        model = pd.melt(
+            model, id_vars=["Coefficient"], var_name="Metric", value_name=f"est{i+1}"
+        )
+        model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis = 1).fillna("")
-    #separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
-    #res = pd.concat([res, separator_row], ignore_index=True)
+    res = pd.concat(etable_list, axis=1).fillna("")
+    # separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
+    # res = pd.concat([res, separator_row], ignore_index=True)
 
     if type == "tex":
         return res.to_latex()
@@ -47,6 +64,7 @@ def etable(models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3, 
         print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
     else:
         return res
+
 
 def summary(
     models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3

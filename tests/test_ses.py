@@ -96,9 +96,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         raise ValueError("HC3 and CRV3 t values are not the same.")
 
 
-
 def run_crv3_poisson():
-
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
     fit = fepois(
         fml="Y~X1 + C(f2)",

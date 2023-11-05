@@ -1,7 +1,7 @@
 import pandas as pd
 
-def load_df_het():
 
+def load_df_het():
     """
     Load the df_het.csv dataset.
 
@@ -13,5 +13,3 @@ def load_df_het():
 
     df_het = pd.read_csv("./pyfixest/experimental/data/df_het.csv")
     return df_het
-
-
