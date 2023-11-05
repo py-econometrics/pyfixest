@@ -346,7 +346,7 @@ def _did2s_estimate(
         yname (str): The name of the dependent variable.
         _first_stage (str): The formula for the first stage.
         _second_stage (str): The formula for the second stage.
-        treatment (str): The name of the treatment variable.
+        treatment (str): The name of the treatment variable. Must be boolean.
         i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
         i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
     Returns:
