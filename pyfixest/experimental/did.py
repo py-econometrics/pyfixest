@@ -12,9 +12,17 @@ from scipy.sparse.linalg import spsolve
 from typing import Optional, Union, List
 
 
-
-def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twfe", att = True, cluster = "idname"):
-
+def event_study(
+    data,
+    yname,
+    idname,
+    tname,
+    gname,
+    xfml=None,
+    estimator="twfe",
+    att=True,
+    cluster="idname",
+):
     """
     Estimate a treatment effect using an event study design. If estimator is "twfe", then
     the treatment effect is estimated using the two-way fixed effects estimator. If estimator
@@ -73,11 +81,21 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     if cluster == "idname":
         cluster = idname
     else:
-        raise NotImplementedError("Clustering by a variable of your choice is not yet supported.")
+        raise NotImplementedError(
+            "Clustering by a variable of your choice is not yet supported."
+        )
 
     if estimator == "did2s":
-
-        did2s = DID2S(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
+        did2s = DID2S(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
         fit._vcov = vcov
@@ -87,10 +105,18 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
         fit._method = "did2s"
 
     elif estimator == "twfe":
-
-        twfe = TWFE(data = data, yname = yname, idname=idname, tname = tname, gname = gname, xfml = xfml, att = att, cluster = cluster)
+        twfe = TWFE(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
         fit = twfe.estimate()
-        vcov = fit.vcov(vcov = {"CRV1": twfe._idname})
+        vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
 
     else:
@@ -102,12 +128,9 @@ def event_study(data, yname, idname, tname, gname, xfml = None, estimator = "twf
     return fit
 
 
-
 class DID(ABC):
-
     @abstractmethod
     def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
-
         """
         Args:
             data: The DataFrame containing all variables.
@@ -141,29 +164,36 @@ class DID(ABC):
         if self._xfml is not None:
             raise NotImplementedError("Covariates are not yet supported.")
         if self._att is False:
-            raise NotImplementedError("Event study design with leads and lags is not yet supported.")
+            raise NotImplementedError(
+                "Event study design with leads and lags is not yet supported."
+            )
 
         # check if idname, tname and gname are in data
-        #if self._idname not in self._data.columns:
+        # if self._idname not in self._data.columns:
         #    raise ValueError(f"The variable {self._idname} is not in the data.")
-        #if self._tname not in self._data.columns:
+        # if self._tname not in self._data.columns:
         #    raise ValueError(f"The variable {self._tname} is not in the data.")
-        #if self._gname not in self._data.columns:
+        # if self._gname not in self._data.columns:
         #    raise ValueError(f"The variable {self._gname} is not in the data.")
 
         # check if tname and gname are of type int (either int 64, 32, 8)
         if self._data[self._tname].dtype not in ["int64", "int32", "int8"]:
-            raise ValueError(f"The variable {self._tname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS.")
+            raise ValueError(
+                f"The variable {self._tname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
+            )
         if self._data[self._gname].dtype not in ["int64", "int32", "int8"]:
-            raise ValueError(f"The variable {self._gname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS.")
+            raise ValueError(
+                f"The variable {self._gname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
+            )
 
         # check if there is a never treated unit
         if 0 not in self._data[self._gname].unique():
             raise ValueError(f"There must be at least one unit that is never treated.")
 
         # create a treatment variable
-        self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (self._data[self._gname] > 0)
-
+        self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (
+            self._data[self._gname] > 0
+        )
 
     @abstractmethod
     def estimate(self):
@@ -173,8 +203,8 @@ class DID(ABC):
     def vcov(self):
         pass
 
-    #@abstractmethod
-    #def aggregate(self):
+    # @abstractmethod
+    # def aggregate(self):
     #    pass
 
 
@@ -185,7 +215,6 @@ class TWFE(DID):
     """
 
     def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
-
         """
         Args:
             data: The DataFrame containing all variables.
@@ -214,23 +243,20 @@ class TWFE(DID):
             self._fml = f"{yname} ~ ATT | {idname} + {tname}"
 
     def estimate(self):
+        _fml = self._fml
+        _data = self._data
 
-            _fml = self._fml
-            _data = self._data
+        fit = feols(fml=_fml, data=_data)
+        self._fit = fit
 
-            fit = feols(fml = _fml, data = _data)
-            self._fit = fit
-
-            return fit
+        return fit
 
     def vcov(self):
-
         """
         Method not needed. The vcov matrix is calculated via the `Feols` object.
         """
 
         pass
-
 
 
 class DID2S(DID):
@@ -243,7 +269,6 @@ class DID2S(DID):
     """
 
     def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
-
         """
         Args:
             data: The DataFrame containing all variables.
@@ -274,7 +299,6 @@ class DID2S(DID):
             self._fml2 = f" ~ 0 + ATT"
 
     def estimate(self):
-
         """
         Args:
             data (pd.DataFrame): The DataFrame containing all variables.
@@ -287,71 +311,93 @@ class DID2S(DID):
         """
 
         return _did2s_estimate(
-            data = self._data,
-            yname = self._yname,
-            _first_stage = self._fml1,
-            _second_stage = self._fml2,
-            treatment = "ATT"
-        ) # returns triple Feols, first_u, second_u
-
+            data=self._data,
+            yname=self._yname,
+            _first_stage=self._fml1,
+            _second_stage=self._fml2,
+            treatment="ATT",
+        )  # returns triple Feols, first_u, second_u
 
     def vcov(self):
-
         return _did2s_vcov(
-            data = self._data,
-            yname = self._yname,
-            first_stage = self._fml1,
-            second_stage = self._fml2,
-            treatment = "ATT",
-            first_u = self._first_u,
-            second_u = self._second_u,
-            cluster = self._cluster
+            data=self._data,
+            yname=self._yname,
+            first_stage=self._fml1,
+            second_stage=self._fml2,
+            treatment="ATT",
+            first_u=self._first_u,
+            second_u=self._second_u,
+            cluster=self._cluster,
         )
 
 
+def _did2s_estimate(
+    data: pd.DataFrame,
+    yname: str,
+    _first_stage: str,
+    _second_stage: str,
+    treatment: str,
+    i_ref1: Optional[Union[int, str, List]] = None,
+    i_ref2: Optional[Union[int, str, List]] = None,
+):
+    """
+    Args:
+        data (pd.DataFrame): The DataFrame containing all variables.
+        yname (str): The name of the dependent variable.
+        _first_stage (str): The formula for the first stage.
+        _second_stage (str): The formula for the second stage.
+        treatment (str): The name of the treatment variable.
+        i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
+        i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
+    Returns:
+        A fitted model object of class feols and the first and second stage residuals.
+    """
 
-def _did2s_estimate(data: pd.DataFrame, yname : str, _first_stage: str, _second_stage: str, treatment: str, i_ref1: Optional[Union[int, str, List]] = None, i_ref2: Optional[Union[int, str, List]] = None):
+    _first_stage_full = f"{yname} {_first_stage}"
+    _second_stage_full = f"{yname}_hat {_second_stage} + 0"
 
-        """
-        Args:
-            data (pd.DataFrame): The DataFrame containing all variables.
-            yname (str): The name of the dependent variable.
-            _first_stage (str): The formula for the first stage.
-            _second_stage (str): The formula for the second stage.
-            treatment (str): The name of the treatment variable.
-            i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
-            i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
-        Returns:
-            A fitted model object of class feols and the first and second stage residuals.
-        """
+    if treatment is not None:
+        _not_yet_treated_data = data[data[treatment] == False]
+    else:
+        _not_yet_treated_data = data[data["ATT"] == False]
 
-        _first_stage_full = f"{yname} {_first_stage}"
-        _second_stage_full = f"{yname}_hat {_second_stage} + 0"
+    # estimate first stage
+    fit1 = feols(
+        fml=_first_stage_full,
+        data=_not_yet_treated_data,
+        vcov="iid",
+        i_ref1=None,
+        i_ref2=None,
+    )  # iid as it might be faster than CRV
 
-        if treatment is not None:
-            _not_yet_treated_data = data[data[treatment] == False]
-        else:
-            _not_yet_treated_data = data[data["ATT"] == False]
+    # obtain estimated fixed effects
+    fit1.fixef()
 
-        # estimate first stage
-        fit1 = feols(fml = _first_stage_full, data = _not_yet_treated_data, vcov = "iid", i_ref1 = None, i_ref2 = None) # iid as it might be faster than CRV
+    # demean data
+    Y_hat = fit1.predict(newdata=data)
+    _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
+    data[f"{yname}_hat"] = _first_u
 
-        # obtain estimated fixed effects
-        fit1.fixef()
+    fit2 = feols(
+        _second_stage_full, data=data, vcov="iid", i_ref1=i_ref1, i_ref2=i_ref2
+    )
+    _second_u = fit2.resid()
 
-        # demean data
-        Y_hat = fit1.predict(newdata =data)
-        _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
-        data[f"{yname}_hat"] = _first_u
-
-        fit2 = feols(_second_stage_full, data =data, vcov = "iid", i_ref1=i_ref1, i_ref2=i_ref2)
-        _second_u = fit2.resid()
-
-        return fit2, _first_u, _second_u
+    return fit2, _first_u, _second_u
 
 
-def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str,  first_u: np.ndarray, second_u: np.ndarray, cluster : str, i_ref1: Optional[Union[int, str, List]] = None, i_ref2: Optional[Union[int, str, List]] = None):
-
+def _did2s_vcov(
+    data: pd.DataFrame,
+    yname: str,
+    first_stage: str,
+    second_stage: str,
+    treatment: str,
+    first_u: np.ndarray,
+    second_u: np.ndarray,
+    cluster: str,
+    i_ref1: Optional[Union[int, str, List]] = None,
+    i_ref2: Optional[Union[int, str, List]] = None,
+):
     """
     Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.
     Args:
@@ -369,11 +415,10 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
         A variance covariance matrix.
     """
 
-    cluster_col =  data[cluster]
+    cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
-    _G = clustid.nunique()                                      # actually not used here, neither in did2s
-
+    _G = clustid.nunique()  # actually not used here, neither in did2s
 
     # some formula parsing to get the correct formula for the first and second stage model matrix
     first_stage_x, first_stage_fe = first_stage.split("|")
@@ -384,17 +429,11 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
     second_stage = f"{second_stage} + 0"
 
     _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml = f"{yname} {first_stage}",
-        data = data,
-        i_ref1=i_ref1,
-        i_ref2 = i_ref2
+        fml=f"{yname} {first_stage}", data=data, i_ref1=i_ref1, i_ref2=i_ref2
     )
     _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml = f"{yname} {second_stage}",
-        data = data,
-        i_ref1 = i_ref1,
-        i_ref2 = i_ref2
-    ) # reference values not dropped, multicollinearity error
+        fml=f"{yname} {second_stage}", data=data, i_ref1=i_ref1, i_ref2=i_ref2
+    )  # reference values not dropped, multicollinearity error
 
     X1 = csr_matrix(X1.values)
     X2 = csr_matrix(X2.values)
@@ -415,8 +454,10 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
     X10 = X10.tocsr()
     X2 = X2.tocsr()
 
-    for (_,g,) in enumerate(clustid):
-
+    for (
+        _,
+        g,
+    ) in enumerate(clustid):
         X10g = X10[cluster_col == g, :]
         X2g = X2[cluster_col == g, :]
         first_u_g = first_u[cluster_col == g]
@@ -425,7 +466,7 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
         W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
         score = spsolve(X2X2, W_g)
         if score.ndim == 1:
-            score = score.reshape(-1,1)
+            score = score.reshape(-1, 1)
         cov_g = score.dot(score.T)
 
         vcov += cov_g
@@ -433,8 +474,16 @@ def _did2s_vcov(data: pd.DataFrame, yname : str, first_stage: str, second_stage:
     return vcov, _G
 
 
-def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, treatment: str, cluster: str, i_ref1 : Optional[Union[int, str, List]] = None, i_ref2 : Optional[Union[int, str, List]] = None):
-
+def did2s(
+    data: pd.DataFrame,
+    yname: str,
+    first_stage: str,
+    second_stage: str,
+    treatment: str,
+    cluster: str,
+    i_ref1: Optional[Union[int, str, List]] = None,
+    i_ref2: Optional[Union[int, str, List]] = None,
+):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
     Args:
@@ -471,46 +520,35 @@ def did2s(data: pd.DataFrame, yname : str, first_stage: str, second_stage: str, 
     assert second_stage[0] == "~", "Second stage must start with ~"
 
     fit, first_u, second_u = _did2s_estimate(
-        data = data,
-        yname = yname,
-        _first_stage = first_stage,
-        _second_stage = second_stage,
-        treatment = treatment,
-        i_ref1 = i_ref1,
-        i_ref2 = i_ref2
+        data=data,
+        yname=yname,
+        _first_stage=first_stage,
+        _second_stage=second_stage,
+        treatment=treatment,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
 
     vcov, _G = _did2s_vcov(
-        data = data,
-        yname = yname,
-        first_stage = first_stage,
-        second_stage = second_stage,
-        treatment = treatment,
-        first_u = first_u,
-        second_u = second_u,
-        cluster = cluster,
-        i_ref1 = i_ref1,
-        i_ref2 = i_ref2
+        data=data,
+        yname=yname,
+        first_stage=first_stage,
+        second_stage=second_stage,
+        treatment=treatment,
+        first_u=first_u,
+        second_u=second_u,
+        cluster=cluster,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
 
     fit._vcov = vcov
     fit._G = _G
-    fit.get_inference()     # update inference with correct vcov matrix
+    fit.get_inference()  # update inference with correct vcov matrix
 
     fit._vcov_type = "CRV1"
     fit._vcov_type_detail = "CRV1 (GMM)"
-    #fit._G = did2s._G
+    # fit._G = did2s._G
     fit._method = "did2s"
 
-
     return fit
-
-
-
-
-
-
-
-
-
-

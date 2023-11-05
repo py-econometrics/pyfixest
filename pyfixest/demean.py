@@ -5,7 +5,6 @@ import numba as nb
 from typing import Any, Sequence, Optional
 
 
-
 def demean_model(
     Y: pd.DataFrame,
     X: pd.DataFrame,
@@ -38,7 +37,6 @@ def demean_model(
             - Xd (pd.DataFrame): A DataFrame of the demeaned covariates.
             - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
     """
-
 
     YX = pd.concat([Y, X], axis=1)
 
@@ -91,11 +89,9 @@ def demean_model(
             # not data demeaned yet for NA combination
 
             if drop_singletons:
-
                 dropped_singleton_indices = _detect_singletons(fe)
 
                 if np.any(dropped_singleton_indices == True):
-
                     print(
                         np.sum(dropped_singleton_indices),
                         "observations are dropped due to singleton fixed effects.",
@@ -107,7 +103,7 @@ def demean_model(
 
             weights = np.ones(YX.shape[0])
 
-            YX_demeaned, success = demean(x = YX, flist = fe, weights = weights)
+            YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
             if success == False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -176,7 +172,7 @@ def demean(
     x: np.ndarray,
     flist: np.ndarray,
     weights: np.ndarray,
-    tol: float = 1e-08,             # note: fixest uses 1e-06, but potentially different tolerance criterion
+    tol: float = 1e-08,  # note: fixest uses 1e-06, but potentially different tolerance criterion
     maxiter: int = 100_000,
 ) -> Tuple[np.ndarray, bool]:
     n_samples, n_features = x.shape
@@ -228,9 +224,8 @@ def demean(
     return (res, success)
 
 
-#@nb.jit(nopython=False)
+# @nb.jit(nopython=False)
 def _detect_singletons(ids):
-
     """
     Detect singleton fixed effects
     Args:have a
@@ -249,7 +244,6 @@ def _detect_singletons(ids):
 
     while True:
         for x in range(k):
-
             col = ids[:, x]
             col_tmp = ids_tmp[:, x]
 
@@ -263,18 +257,14 @@ def _detect_singletons(ids):
                 singleton_idx[np.isin(col, idx)] = True
                 singleton_idx_tmp[np.isin(col_tmp, idx)] = True
 
-                ids_tmp = ids_tmp[~singleton_idx_tmp,:].astype(ids_tmp.dtype)
+                ids_tmp = ids_tmp[~singleton_idx_tmp, :].astype(ids_tmp.dtype)
                 singleton_idx_tmp = singleton_idx_tmp[~singleton_idx_tmp]
 
             break
-
 
         if np.array_equal(singleton_idx_tmp, singleton_idx_tmp_old):
             break
 
         singleton_idx_tmp_old = singleton_idx_tmp.copy()
-
-
-
 
     return singleton_idx

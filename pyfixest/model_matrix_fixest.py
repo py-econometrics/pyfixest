@@ -9,7 +9,11 @@ from pyfixest.exceptions import InvalidReferenceLevelError
 
 
 def model_matrix_fixest(
-    fml: str, data: pd.DataFrame, weights: Optional[str] = None, i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None
+    fml: str,
+    data: pd.DataFrame,
+    weights: Optional[str] = None,
+    i_ref1: Optional[Union[List, str, int]] = None,
+    i_ref2: Optional[Union[List, str, int]] = None,
 ) -> Tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -85,7 +89,9 @@ def model_matrix_fixest(
             elif len(_ivars) == 1:
                 interact_vars = f"C({_ivars[0]})"
             else:
-                raise ValueError("Something went wrong with the i() syntax. Please report this issue to the package author via github.")
+                raise ValueError(
+                    "Something went wrong with the i() syntax. Please report this issue to the package author via github."
+                )
             covar = covar.replace(x, interact_vars)
             break
 
@@ -125,7 +131,7 @@ def model_matrix_fixest(
 
     Y, X = model_matrix(fml_exog, data)
 
-    X_is_empty = False          # special case: sometimes it is useful to run models "Y ~ 0 | f1" to demean Y + to use the predict method
+    X_is_empty = False  # special case: sometimes it is useful to run models "Y ~ 0 | f1" to demean Y + to use the predict method
     if X.shape[1] == 0:
         X_is_empty = True
 
@@ -140,7 +146,6 @@ def model_matrix_fixest(
             pass
         else:
             X[x] = X[x].astype("float64")
-
 
     if _is_iv:
         endogvar, Z = model_matrix(fml_iv_full, data)
@@ -170,29 +175,31 @@ def model_matrix_fixest(
         diff1 = list(set(na_index_stage1) - set(na_index_stage2))
         diff2 = list(set(na_index_stage2) - set(na_index_stage1))
         if diff1:
-            Y.drop(diff1, axis=0, inplace = True)
-            X.drop(diff1, axis=0, inplace = True)
+            Y.drop(diff1, axis=0, inplace=True)
+            X.drop(diff1, axis=0, inplace=True)
         if diff2:
-            Z.drop(diff2, axis=0, inplace = True)
-            endogvar.drop(diff2, axis=0, inplace = True)
+            Z.drop(diff2, axis=0, inplace=True)
+            endogvar.drop(diff2, axis=0, inplace=True)
         na_index = list(set(na_index_stage1 + na_index_stage2))
     else:
         na_index = na_index_stage2
 
     # now drop variables before collecting variable names
     if _ivars is not None:
-
         if _drop_ref:
-
             if len(_drop_ref) == 1:
                 columns_to_drop = [col for col in X.columns if _drop_ref[0] in col]
             else:
-                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col or _drop_ref[1] in col]
+                columns_to_drop = [
+                    col
+                    for col in X.columns
+                    if _drop_ref[0] in col or _drop_ref[1] in col
+                ]
 
             if not X_is_empty:
-                X.drop(columns_to_drop, axis=1, inplace = True)
+                X.drop(columns_to_drop, axis=1, inplace=True)
                 if _is_iv:
-                    Z.drop(columns_to_drop, axis=1, inplace = True)
+                    Z.drop(columns_to_drop, axis=1, inplace=True)
 
     # drop reference level, if specified
     # ivars are needed for plotting of all interacted variables via iplot()
@@ -200,7 +207,7 @@ def model_matrix_fixest(
     _icovars = _get_icovars(_ivars, X)
 
     if fe is not None:
-        fe.drop(na_index, axis=0, inplace = True)
+        fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
         if not X_is_empty:
             X.drop("Intercept", axis=1, inplace=True)
@@ -212,13 +219,13 @@ def model_matrix_fixest(
         # drop NaNs in fixed effects (not yet dropped via na_index)
         fe_na_remaining = list(set(fe_na) - set(na_index))
         if fe_na_remaining:
-            Y.drop(fe_na_remaining, axis=0, inplace = True)
+            Y.drop(fe_na_remaining, axis=0, inplace=True)
             if not X_is_empty:
-                X.drop(fe_na_remaining, axis=0, inplace = True)
-            fe.drop(fe_na_remaining, axis=0, inplace = True)
+                X.drop(fe_na_remaining, axis=0, inplace=True)
+            fe.drop(fe_na_remaining, axis=0, inplace=True)
             if _is_iv:
-                Z.drop(fe_na_remaining, axis=0, inplace = True)
-                endogvar.drop(fe_na_remaining, axis=0, inplace = True)
+                Z.drop(fe_na_remaining, axis=0, inplace=True)
+                endogvar.drop(fe_na_remaining, axis=0, inplace=True)
             na_index += fe_na_remaining
             na_index = list(set(na_index))
 
@@ -323,17 +330,26 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
     if _ivars is not None:
         x_names = X.columns.tolist()
         if len(_ivars) == 2:
-            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])]
+            _icovars = [
+                s
+                for s in x_names
+                if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
+            ]
         else:
-            _icovars = [s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")]
+            _icovars = [
+                s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")
+            ]
     else:
         _icovars = None
 
     return _icovars
 
 
-def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = None, i_ref2: Optional[Union[List, str, int]] = None) -> Optional[List[str]]:
-
+def _get_drop_ref(
+    _ivars: List[str],
+    i_ref1: Optional[Union[List, str, int]] = None,
+    i_ref2: Optional[Union[List, str, int]] = None,
+) -> Optional[List[str]]:
     """
     Get the name of reference level dummies to be dropped from the model matrix.
     Args:
@@ -347,38 +363,42 @@ def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = N
         >>> ['C(f2)[T.1.0]:', 'C(f2)[T.2.0]:']
     """
 
-    _drop_ref = None    # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
+    _drop_ref = (
+        None  # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
+    )
     if _ivars:
-
         _ivar1 = _ivars[0]
         if i_ref1 is not None:
             len_i_ref1 = len(i_ref1)
             if len_i_ref1 not in [1, 2]:
-                raise ValueError(f"i_ref1 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref1}.")
+                raise ValueError(
+                    f"i_ref1 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref1}."
+                )
             if len(_ivars) == 2:
                 _drop_ref = [f"C({_ivar1})[T.{x}]:" for x in i_ref1]
-            else: #len(_ivars) == 1:
+            else:  # len(_ivars) == 1:
                 _drop_ref = [f"C({_ivar1})[T.{x}]" for x in i_ref1]
 
         if len(_ivars) == 2:
-
             if i_ref2 is not None:
                 _ivar2 = _ivars[1]
                 len_i_ref2 = len(i_ref2)
                 if len_i_ref2 not in [1, 2]:
-                    raise ValueError(f"i_ref2 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref2}.")
+                    raise ValueError(
+                        f"i_ref2 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref2}."
+                    )
                 if len(_ivars) == 2:
                     _drop_ref += [f":{_ivar2}[T.{x}]" for x in i_ref2]
-                else: #len(_ivars) == 1:
+                else:  # len(_ivars) == 1:
                     _drop_ref += [f"{_ivar2}[T.{x}]" for x in i_ref2]
 
         else:
-
             if i_ref2 is not None:
-                warnings.warn(f"i_ref2 is not used because there is only one variable in the i() syntax, i({_ivar1}).")
+                warnings.warn(
+                    f"i_ref2 is not used because there is only one variable in the i() syntax, i({_ivar1})."
+                )
 
     else:
-
         if i_ref1 is not None:
             warnings.warn(f"i_ref1 is not used because i() syntax is not used.")
         if i_ref2 is not None:
@@ -388,42 +408,53 @@ def _get_drop_ref(_ivars: List[str], i_ref1: Optional[Union[List, str, int]] = N
 
 
 def _check_i_refs(ivars, i_ref1, i_ref2, data):
-
     if ivars:
-
         ivar1 = ivars[0]
         type_ivar1 = data[ivar1].to_numpy().dtype
         unique_ivar1 = data[ivar1].unique()
 
         if i_ref1:
-
             type_i_ref1 = type(i_ref1[0])
 
             if len(i_ref1) == 1:
                 if not i_ref1[0] in unique_ivar1 or type_i_ref1 != type_ivar1:
-                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
+                    raise InvalidReferenceLevelError(
+                        f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
+                    )
             else:
-                if not i_ref1[0] and i_ref1[1] in unique_ivar1 or type_i_ref1 != type_ivar1:
-                    raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?")
-
+                if (
+                    not i_ref1[0]
+                    and i_ref1[1] in unique_ivar1
+                    or type_i_ref1 != type_ivar1
+                ):
+                    raise InvalidReferenceLevelError(
+                        f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
+                    )
 
         if len(ivars) == 2:
-
             ivar2 = ivars[1]
             type_ivar2 = data[ivar2].to_numpy().dtype
             unique_ivar2 = data[ivar2].unique()
 
             if i_ref2:
-
                 type_i_ref2 = type(i_ref2[0])
 
                 if data[ivar2].dtype not in ["category", "int"]:
-                    raise InvalidReferenceLevelError(f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}.")
+                    raise InvalidReferenceLevelError(
+                        f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}."
+                    )
 
                 if len(i_ref2) == 1:
                     if not i_ref2[0] in unique_ivar2 or type_i_ref2 != type_ivar2:
-                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
+                        raise InvalidReferenceLevelError(
+                            f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?"
+                        )
                 else:
-                    if not i_ref2[0] and i_ref2[1] in unique_ivar2 or type_i_ref2 != type_ivar2:
-                        raise InvalidReferenceLevelError(f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?")
-
+                    if (
+                        not i_ref2[0]
+                        and i_ref2[1] in unique_ivar2
+                        or type_i_ref2 != type_ivar2
+                    ):
+                        raise InvalidReferenceLevelError(
+                            f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?"
+                        )

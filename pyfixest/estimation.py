@@ -14,7 +14,7 @@ def feols(
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
     i_ref1: Optional[Union[list, str]] = None,
-    i_ref2: Optional[Union[list, str]] = None
+    i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
     """
 
@@ -156,7 +156,7 @@ def fepois(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     i_ref1: Optional[Union[list, str]] = None,
-    i_ref2: Optional[Union[list, str]] = None
+    i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Fepois, FixestMulti]:
     """
     # fepois
@@ -303,8 +303,12 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
     if not collin_tol < 1:
         raise ValueError("collin_tol must be less than one")
 
-    assert i_ref1 is None or isinstance(i_ref1, (list, str, int, bool, float)), "i_ref1 must be either None, a list, string, int, bool, or float"
+    assert i_ref1 is None or isinstance(
+        i_ref1, (list, str, int, bool, float)
+    ), "i_ref1 must be either None, a list, string, int, bool, or float"
     # check that if i_ref1 is a list, all elements are of the same type
     if isinstance(i_ref1, list):
         assert len(i_ref1) > 0, "i_ref1 must not be an empty list"
-        assert all(isinstance(x, type(i_ref1[0])) for x in i_ref1), "i_ref1 must be a list of elements of the same type"
+        assert all(
+            isinstance(x, type(i_ref1[0])) for x in i_ref1
+        ), "i_ref1 must be a list of elements of the same type"
