@@ -16,7 +16,7 @@ At the moment, `PyFixest` supports
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
-- Support for estimators of the "new" Difference-in-Difference literature is work in progress.
+- Difference-in-Difference Estimators:
   - Gardner's two-stage ("`Did2s`") estimator is available via the `pyfixest.experimental.did` module
 
 ## News
