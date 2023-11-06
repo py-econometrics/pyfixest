@@ -5,7 +5,7 @@ from pyfixest.feiv import Feiv
 import numpy as np
 import pandas as pd
 from typing import Union, List, Optional
-
+from tabulate import tabulate
 
 def etable(
     models: Union[Feols, Fepois, Feiv, List],
@@ -27,8 +27,38 @@ def etable(
     assert digits >= 0, "digits must be a positive integer"
     assert type in ["df", "tex", "md"], "type must be either 'df', 'md' or 'tex'"
 
+    dep_var_list = []
+    nobs_list = []
+    fixef_list = []
+    nobs_list = []
+    n_coefs = []
+    for i, model in enumerate(models):
+
+        dep_var_list.append(model._fml.split("~")[0])
+        n_coefs.append(len(model._coefnames))
+        nobs_list.append(model._N)
+        if model._fixef is not None:
+            fixef_list += model._fixef.split("+")
+
+    # find all fixef variables
+    fixef_list = list(set(fixef_list))
+    max_coefs = max(n_coefs)
+
+    # create a pd.dataframe with the depvar, nobs, and fixef as keys
+    df = pd.DataFrame({"nobs": nobs_list})
+    for i, fixef in enumerate(fixef_list):
+
+        if fixef in model._fixef.split("+"):
+            df[fixef] = "x"
+        else:
+            df[fixef] = "-"
+
+    df = df.T.reset_index()
+    #df.columns =
+
     etable_list = []
     for i, model in enumerate(models):
+
         model = model.tidy().reset_index().round(digits)
         model["stars"] = np.where(
             model["Pr(>|t|)"] < 0.001,
@@ -52,18 +82,28 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis=1).fillna("")
+
+    res = pd.concat(etable_list, axis=1).fillna("").reset_index()
+    res.rename(columns={"Coefficient": "index"}, inplace=True)
+
+    df.columns = res.columns
+
+    depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
+    depvars.columns = res.columns
+
+    res_all = pd.concat([depvars, res, df], ignore_index=True)
+    res_all.colums = ["", res_all.columns[1:]]
     # separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
     # res = pd.concat([res, separator_row], ignore_index=True)
 
     if type == "tex":
-        return res.to_latex()
+        return res_all.to_latex()
     elif type == "md":
-        res = res.to_markdown()
-        print(res)
+        res_all = _tabulate_etable(res_all, len(models), max_coefs)
+        print(res_all)
         print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
     else:
-        return res
+        return res_all
 
 
 def summary(
@@ -155,3 +195,22 @@ def _post_processing_input_checks(models):
                     )
 
     return models
+
+
+def _tabulate_etable(df, n_models, max_covariates):
+# Format the DataFrame for tabulate
+    table = tabulate(df, headers= 'keys', showindex=False, colalign= ["left"] + n_models * ["right"])
+
+    # Split the table into header and body
+    header, body = table.split('\n', 1)
+
+    # Add separating line after the third row
+    body_lines = body.split('\n')
+    body_lines.insert(2, '-' * len(body_lines[0]))
+    body_lines.insert(3 + max_covariates, '-' * len(body_lines[0]))
+
+    # Join the lines back together
+    formatted_table = '\n'.join([header, '\n'.join(body_lines)])
+
+    # Print the formatted table
+    print(formatted_table)
