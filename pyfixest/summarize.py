@@ -7,6 +7,7 @@ import pandas as pd
 from typing import Union, List, Optional
 from tabulate import tabulate
 
+
 def etable(
     models: Union[Feols, Fepois, Feiv, List],
     digits: Optional[int] = 3,
@@ -33,7 +34,6 @@ def etable(
     nobs_list = []
     n_coefs = []
     for i, model in enumerate(models):
-
         dep_var_list.append(model._fml.split("~")[0])
         n_coefs.append(len(model._coefnames))
         nobs_list.append(model._N)
@@ -45,28 +45,25 @@ def etable(
     max_coefs = max(n_coefs)
     print(max_coefs)
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
     df = pd.DataFrame({"nobs": nobs_list})
 
-    if fixef_list:      # only when at least one model has a fixed effect
+    if fixef_list:  # only when at least one model has a fixed effect
         for fixef in fixef_list:
-
             df[fixef] = "-"
 
             for i, model in enumerate(models):
-
                 if model._fixef is not None:
                     if fixef in model._fixef.split("+"):
                         df.loc[i, fixef] = "x"
 
     df = df.T.reset_index()
-    #df.columns =
+    # df.columns =
 
     etable_list = []
     for i, model in enumerate(models):
-
         model = model.tidy().reset_index().round(digits)
         model["stars"] = np.where(
             model["Pr(>|t|)"] < 0.001,
@@ -99,7 +96,7 @@ def etable(
     depvars.columns = res.columns
 
     res_all = pd.concat([depvars, res, df], ignore_index=True)
-    #res_all.colums = ["", res_all.columns[1:]]
+    # res_all.colums = ["", res_all.columns[1:]]
     # separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
     # res = pd.concat([res, separator_row], ignore_index=True)
 
@@ -205,19 +202,21 @@ def _post_processing_input_checks(models):
 
 
 def _tabulate_etable(df, n_models, max_covariates):
-# Format the DataFrame for tabulate
-    table = tabulate(df, headers= 'keys', showindex=False, colalign= ["left"] + n_models * ["center"])
+    # Format the DataFrame for tabulate
+    table = tabulate(
+        df, headers="keys", showindex=False, colalign=["left"] + n_models * ["center"]
+    )
 
     # Split the table into header and body
-    header, body = table.split('\n', 1)
+    header, body = table.split("\n", 1)
 
     # Add separating line after the third row
-    body_lines = body.split('\n')
-    body_lines.insert(2, '-' * len(body_lines[0]))
-    body_lines.insert(-3, '-' * len(body_lines[0]))
+    body_lines = body.split("\n")
+    body_lines.insert(2, "-" * len(body_lines[0]))
+    body_lines.insert(-3, "-" * len(body_lines[0]))
 
     # Join the lines back together
-    formatted_table = '\n'.join([header, '\n'.join(body_lines)])
+    formatted_table = "\n".join([header, "\n".join(body_lines)])
 
     # Print the formatted table
     return formatted_table
