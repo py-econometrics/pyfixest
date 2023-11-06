@@ -58,7 +58,7 @@ def etable(
 
                 if model._fixef is not None:
                     if fixef in model._fixef.split("+"):
-                        df[fixef][i] = "x"
+                        df.loc[i, fixef] = "x"
 
     df = df.T.reset_index()
     #df.columns =
@@ -89,8 +89,7 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-
-    res = pd.concat(etable_list, axis=1).fillna("").reset_index()
+    res = pd.concat(etable_list, axis=1, ignore_index=True).fillna("").reset_index()
     res.rename(columns={"Coefficient": "index"}, inplace=True)
 
     df.columns = res.columns
@@ -220,4 +219,4 @@ def _tabulate_etable(df, n_models, max_covariates):
     formatted_table = '\n'.join([header, '\n'.join(body_lines)])
 
     # Print the formatted table
-    print(formatted_table)
+    return formatted_table
