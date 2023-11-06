@@ -45,6 +45,7 @@ def etable(
     max_coefs = max(n_coefs)
 
     #import pdb; pdb.set_trace()
+
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
     df = pd.DataFrame({"nobs": nobs_list})
     for fixef in fixef_list:
@@ -53,8 +54,9 @@ def etable(
 
         for i, model in enumerate(models):
 
-            if fixef in model._fixef.split("+"):
-                df[fixef][i] = "x"
+            if model._fixef is not None:
+                if fixef in model._fixef.split("+"):
+                    df[fixef][i] = "x"
 
     df = df.T.reset_index()
     #df.columns =
