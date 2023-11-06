@@ -43,6 +43,7 @@ def etable(
     # find all fixef variables
     fixef_list = list(set(fixef_list))
     max_coefs = max(n_coefs)
+    print(max_coefs)
 
     #import pdb; pdb.set_trace()
 
@@ -89,7 +90,7 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis=1, ignore_index=True).fillna("").reset_index()
+    res = pd.concat(etable_list, axis=1).fillna("").reset_index()
     res.rename(columns={"Coefficient": "index"}, inplace=True)
 
     df.columns = res.columns
@@ -213,7 +214,7 @@ def _tabulate_etable(df, n_models, max_covariates):
     # Add separating line after the third row
     body_lines = body.split('\n')
     body_lines.insert(2, '-' * len(body_lines[0]))
-    body_lines.insert(3 + max_covariates, '-' * len(body_lines[0]))
+    body_lines.insert(-3, '-' * len(body_lines[0]))
 
     # Join the lines back together
     formatted_table = '\n'.join([header, '\n'.join(body_lines)])
