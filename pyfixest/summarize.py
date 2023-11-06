@@ -44,14 +44,17 @@ def etable(
     fixef_list = list(set(fixef_list))
     max_coefs = max(n_coefs)
 
+    #import pdb; pdb.set_trace()
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
     df = pd.DataFrame({"nobs": nobs_list})
-    for i, fixef in enumerate(fixef_list):
+    for fixef in fixef_list:
 
-        if fixef in model._fixef.split("+"):
-            df[fixef] = "x"
-        else:
-            df[fixef] = "-"
+        df[fixef] = "-"
+
+        for i, model in enumerate(models):
+
+            if fixef in model._fixef.split("+"):
+                df[fixef][i] = "x"
 
     df = df.T.reset_index()
     #df.columns =
@@ -92,7 +95,7 @@ def etable(
     depvars.columns = res.columns
 
     res_all = pd.concat([depvars, res, df], ignore_index=True)
-    res_all.colums = ["", res_all.columns[1:]]
+    #res_all.colums = ["", res_all.columns[1:]]
     # separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
     # res = pd.concat([res, separator_row], ignore_index=True)
 
@@ -199,7 +202,7 @@ def _post_processing_input_checks(models):
 
 def _tabulate_etable(df, n_models, max_covariates):
 # Format the DataFrame for tabulate
-    table = tabulate(df, headers= 'keys', showindex=False, colalign= ["left"] + n_models * ["right"])
+    table = tabulate(df, headers= 'keys', showindex=False, colalign= ["left"] + n_models * ["center"])
 
     # Split the table into header and body
     header, body = table.split('\n', 1)
