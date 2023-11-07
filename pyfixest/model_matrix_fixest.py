@@ -213,7 +213,8 @@ def model_matrix_fixest(
         fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
         if not X_is_empty:
-            if "Intercept" in X.columns:    # drop intercept. intercept is present unless there is i() interaction, in which case a "0" was added to the fml above
+            # drop intercept. intercept is present unless there is i() interaction AND a reference level is set, in which case a "0" was added to the fml above
+            if "Intercept" in X.columns:
                 X.drop("Intercept", axis=1, inplace=True)
         if _is_iv:
             if "Intercept" in Z.columns:
