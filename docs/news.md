@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.9`
+
+Makes `etable()` prettier and more informative.
+
 ## PyFixest `0.10.8`
 
 ### Breaking changes
