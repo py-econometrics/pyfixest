@@ -1895,7 +1895,7 @@ name = "tabulate"
 version = "0.9.0"
 description = "Pretty-print tabular data"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
@@ -2257,4 +2257,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "52542446e8e8d8399016a024e9a0f85a89da9ef090baa3420c8841c424dd2610"
+content-hash = "be3699ae4afb0680a4633b6c5f847156c123381120fccf29628f4710b2ade3d0"
