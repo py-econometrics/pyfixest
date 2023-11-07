@@ -41,7 +41,7 @@ def etable(
         nobs_list.append(model._N)
 
         if model._vcov_type == "CRV":
-            se_type_list.append("by:" + "+".join(model._clustervar))
+            se_type_list.append("by: " + "+".join(model._clustervar))
         else:
             se_type_list.append(model._vcov_type)
 
