@@ -10,7 +10,7 @@ def test_summary():
     df2 = get_data(model="Fepois")
 
     fit1 = feols("Y ~ X1 + X2 | f1", data=df1)
-    fit2 = fepois("Y ~ X1 + X2 + f2 | f1", data=df2, vcov = {'CRV1': "f1+f2"})
+    fit2 = fepois("Y ~ X1 + X2 + f2 | f1", data=df2, vcov={"CRV1": "f1+f2"})
     fit3 = feols("Y ~ X1", data=df1)
 
     summary(fit1)
