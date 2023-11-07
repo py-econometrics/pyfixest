@@ -33,10 +33,18 @@ def etable(
     fixef_list = []
     nobs_list = []
     n_coefs = []
+    se_type_list = []
+
     for i, model in enumerate(models):
         dep_var_list.append(model._fml.split("~")[0])
         n_coefs.append(len(model._coefnames))
         nobs_list.append(model._N)
+
+        if model._vcov_type == "CRV":
+            se_type_list.append("by:" + "+".join(model._clustervar))
+        else:
+            se_type_list.append(model._vcov_type)
+
         if model._fixef is not None:
             fixef_list += model._fixef.split("+")
 
@@ -44,10 +52,9 @@ def etable(
     fixef_list = list(set(fixef_list))
     n_fixef = len(fixef_list)
     max_coefs = max(n_coefs)
-    print(max_coefs)
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list})
+    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list, "S.E. type": se_type_list})
 
     if fixef_list:  # only when at least one model has a fixed effect
         for fixef in fixef_list:
@@ -59,7 +66,7 @@ def etable(
                         nobs_fixef_df.loc[i, fixef] = "x"
 
     colnames = nobs_fixef_df.columns.tolist()
-    colnames_reordered = colnames[1:] + [colnames[0]]
+    colnames_reordered = colnames[2:] + colnames[:2]
     nobs_fixef_df = nobs_fixef_df[colnames_reordered].T.reset_index()
 
     etable_list = []
@@ -211,8 +218,8 @@ def _tabulate_etable(df, n_models, max_covariates, n_fixef):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-1 - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-1, "-" * len(body_lines[0]))
+    body_lines.insert(-2 - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-2, "-" * len(body_lines[0]))
     body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
