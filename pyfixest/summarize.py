@@ -42,25 +42,25 @@ def etable(
 
     # find all fixef variables
     fixef_list = list(set(fixef_list))
+    n_fixef = len(fixef_list)
     max_coefs = max(n_coefs)
     print(max_coefs)
 
-    # import pdb; pdb.set_trace()
-
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    df = pd.DataFrame({"nobs": nobs_list})
+    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list})
 
     if fixef_list:  # only when at least one model has a fixed effect
         for fixef in fixef_list:
-            df[fixef] = "-"
+            nobs_fixef_df[fixef] = "-"
 
             for i, model in enumerate(models):
                 if model._fixef is not None:
                     if fixef in model._fixef.split("+"):
-                        df.loc[i, fixef] = "x"
+                        nobs_fixef_df.loc[i, fixef] = "x"
 
-    df = df.T.reset_index()
-    # df.columns =
+    colnames = nobs_fixef_df.columns.tolist()
+    colnames_reordered = colnames[1:] + [colnames[0]]
+    nobs_fixef_df = nobs_fixef_df[colnames_reordered].T.reset_index()
 
     etable_list = []
     for i, model in enumerate(models):
@@ -88,22 +88,20 @@ def etable(
         etable_list.append(model)
 
     res = pd.concat(etable_list, axis=1).fillna("").reset_index()
-    res.rename(columns={"Coefficient": "index"}, inplace=True)
 
-    df.columns = res.columns
+    res.rename(columns={"Coefficient": "index"}, inplace=True)
+    nobs_fixef_df.columns = res.columns
 
     depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
     depvars.columns = res.columns
 
-    res_all = pd.concat([depvars, res, df], ignore_index=True)
-    # res_all.colums = ["", res_all.columns[1:]]
-    # separator_row = pd.DataFrame(['_' * 15, '_' * 15, '_' * 15], columns=res.columns)
-    # res = pd.concat([res, separator_row], ignore_index=True)
+    res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
+    res_all.columns = [""] + list(res_all.columns[1:])
 
     if type == "tex":
         return res_all.to_latex()
     elif type == "md":
-        res_all = _tabulate_etable(res_all, len(models), max_coefs)
+        res_all = _tabulate_etable(res_all, len(models), max_coefs, n_fixef)
         print(res_all)
         print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
     else:
@@ -201,10 +199,10 @@ def _post_processing_input_checks(models):
     return models
 
 
-def _tabulate_etable(df, n_models, max_covariates):
+def _tabulate_etable(df, n_models, max_covariates, n_fixef):
     # Format the DataFrame for tabulate
     table = tabulate(
-        df, headers="keys", showindex=False, colalign=["left"] + n_models * ["center"]
+        df, headers="keys", showindex=False, colalign=["left"] + n_models * ["right"]
     )
 
     # Split the table into header and body
@@ -213,7 +211,9 @@ def _tabulate_etable(df, n_models, max_covariates):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-3, "-" * len(body_lines[0]))
+    body_lines.insert(-1 - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-1, "-" * len(body_lines[0]))
+    body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
     formatted_table = "\n".join([header, "\n".join(body_lines)])
