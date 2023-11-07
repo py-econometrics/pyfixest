@@ -100,8 +100,6 @@ def model_matrix_fixest(
     _check_i_refs(_ivars, i_ref1, i_ref2, data)
     _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
-    #import pdb; pdb.set_trace()
-
     if _drop_ref:
         covar += "+0"   # make sure no intercept is created via formulaic but all factor levels
 
