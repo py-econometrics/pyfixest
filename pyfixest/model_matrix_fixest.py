@@ -100,6 +100,11 @@ def model_matrix_fixest(
     _check_i_refs(_ivars, i_ref1, i_ref2, data)
     _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
+    #import pdb; pdb.set_trace()
+
+    if _drop_ref:
+        covar += "+0"   # make sure no intercept is created via formulaic but all factor levels
+
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
     elif len(fml_parts) == 2:
@@ -210,11 +215,11 @@ def model_matrix_fixest(
         fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
         if not X_is_empty:
-            X.drop("Intercept", axis=1, inplace=True)
-        # x_names.remove("Intercept")
+            if "Intercept" in X.columns:    # drop intercept. intercept is present unless there is i() interaction, in which case a "0" was added to the fml above
+                X.drop("Intercept", axis=1, inplace=True)
         if _is_iv:
-            Z.drop("Intercept", axis=1, inplace=True)
-        #    z_names.remove("Intercept")
+            if "Intercept" in Z.columns:
+                Z.drop("Intercept", axis=1, inplace=True)
 
         # drop NaNs in fixed effects (not yet dropped via na_index)
         fe_na_remaining = list(set(fe_na) - set(na_index))
