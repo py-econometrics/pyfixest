@@ -552,7 +552,7 @@ def did2s(
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage or "-1" in second_stage:
-        raise ValueError("Second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage.")
+        raise ValueError("The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage.")
 
     data = data.copy()
 

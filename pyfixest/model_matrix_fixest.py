@@ -78,6 +78,9 @@ def model_matrix_fixest(
 
     _ivars = _find_ivars(fml)[0]
 
+    if len(_ivars) == 2:
+        warnings.warn("The use of two interaction variables via i(var1, var2) is currently experimental. Please report any issues via github.")
+
     # step 1: deparse formula
     fml_parts = fml.split("|")
     depvar, covar = fml_parts[0].split("~")
