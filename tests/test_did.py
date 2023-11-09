@@ -61,7 +61,7 @@ def test_did2s():
         data=df_het,
         yname="dep_var",
         first_stage="~ 0 | state + year",
-        second_stage="~ 0 + treat",
+        second_stage="~ treat",
         treatment="treat",
         cluster="state",
     )
