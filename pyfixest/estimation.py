@@ -139,7 +139,9 @@ def feols(
     _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
-    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2)
+    fixest._prepare_estimation(
+        "feols", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+    )
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
@@ -273,7 +275,9 @@ def fepois(
 
     fixest = FixestMulti(data=data)
 
-    fixest._prepare_estimation("fepois", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2)
+    fixest._prepare_estimation(
+        "fepois", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+    )
     if fixest._is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Poisson Regression"

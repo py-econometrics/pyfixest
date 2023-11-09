@@ -192,7 +192,11 @@ class FixestMulti:
                         _icovars,
                         X_is_empty,
                     ) = model_matrix_fixest(
-                        fml=fml, data=_data, drop_intercept = _drop_intercept, i_ref1=_i_ref1, i_ref2=_i_ref2
+                        fml=fml,
+                        data=_data,
+                        drop_intercept=_drop_intercept,
+                        i_ref1=_i_ref1,
+                        i_ref2=_i_ref2,
                     )
 
                     weights = np.ones((Y.shape[0], 1))

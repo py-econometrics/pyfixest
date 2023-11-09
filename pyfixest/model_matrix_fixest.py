@@ -7,11 +7,12 @@ from formulaic import model_matrix
 from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
 
+
 def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
     weights: Optional[str] = None,
-    drop_intercept = False,
+    drop_intercept=False,
     i_ref1: Optional[Union[List, str, int]] = None,
     i_ref2: Optional[Union[List, str, int]] = None,
 ) -> Tuple[
@@ -79,7 +80,9 @@ def model_matrix_fixest(
     _ivars = _find_ivars(fml)[0]
 
     if len(_ivars) == 2:
-        warnings.warn("The use of two interaction variables via i(var1, var2) is currently experimental. Please report any issues via github.")
+        warnings.warn(
+            "The use of two interaction variables via i(var1, var2) is currently experimental. Please report any issues via github."
+        )
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -89,7 +92,6 @@ def model_matrix_fixest(
     for x in covar.split("+"):
         is_ivar = _find_ivars(x)
         if is_ivar[1]:
-
             if i_ref1:
                 inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
             else:
@@ -196,21 +198,21 @@ def model_matrix_fixest(
 
     # now drop variables before collecting variable names
     if _ivars is not None:
-
         if i_ref1 is not None:
             if len(i_ref1) > 1:
-
                 if len(_ivars) == 1:
-
-                    columns_to_drop = [col for col in X.columns if f"{inner_C}[T.{i_ref1[1]}]" in col]
+                    columns_to_drop = [
+                        col for col in X.columns if f"{inner_C}[T.{i_ref1[1]}]" in col
+                    ]
                     if not columns_to_drop:
                         raise ValueError(
                             f"The reference level {i_ref1[1]} is not present in the data. Maybe you are using an incorrect data type?"
                         )
 
                 else:
-
-                    raise ValueError("Currently, setting levels via the 'i_ref1' argument is only supported for one interaction variable, i.e. it fails for specifications like i(var1, var2).")
+                    raise ValueError(
+                        "Currently, setting levels via the 'i_ref1' argument is only supported for one interaction variable, i.e. it fails for specifications like i(var1, var2)."
+                    )
 
                 if not X_is_empty:
                     X.drop(columns_to_drop, axis=1, inplace=True)

@@ -408,7 +408,12 @@ def _did2s_estimate(
 
     # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage
     fit2 = feols(
-        _second_stage_full, data=data, vcov="iid", drop_intercept=True, i_ref1=i_ref1, i_ref2=i_ref2
+        _second_stage_full,
+        data=data,
+        vcov="iid",
+        drop_intercept=True,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
     _second_u = fit2.resid()
 
@@ -460,10 +465,18 @@ def _did2s_vcov(
     # note for future Alex: intercept needs to be dropped! it is not as fixed effects are converted to
     # dummies, hence has_fixed checks are False
     _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {first_stage}", data=data, drop_intercept = False, i_ref1=i_ref1, i_ref2=i_ref2
+        fml=f"{yname} {first_stage}",
+        data=data,
+        drop_intercept=False,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
     _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {second_stage}", data=data, drop_intercept = True, i_ref1=i_ref1, i_ref2=i_ref2
+        fml=f"{yname} {second_stage}",
+        data=data,
+        drop_intercept=True,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )  # reference values not dropped, multicollinearity error
 
     X1 = csr_matrix(X1.values)
@@ -552,7 +565,9 @@ def did2s(
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage or "-1" in second_stage:
-        raise ValueError("The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage.")
+        raise ValueError(
+            "The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage."
+        )
 
     data = data.copy()
 
