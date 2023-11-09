@@ -457,9 +457,10 @@ def _did2s_vcov(
 
     second_stage = f"{second_stage}"
 
-    # intercept should already be dropped due to the presence of fixed effects
+    # note for future Alex: intercept needs to be dropped! it is not as fixed effects are converted to
+    # dummies, hence has_fixed checks are False
     _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {first_stage}", data=data, drop_intercept = True, i_ref1=i_ref1, i_ref2=i_ref2
+        fml=f"{yname} {first_stage}", data=data, drop_intercept = False, i_ref1=i_ref1, i_ref2=i_ref2
     )
     _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml=f"{yname} {second_stage}", data=data, drop_intercept = True, i_ref1=i_ref1, i_ref2=i_ref2
