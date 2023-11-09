@@ -7,11 +7,11 @@ from formulaic import model_matrix
 from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
 
-
 def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
     weights: Optional[str] = None,
+    drop_intercept = False,
     i_ref1: Optional[Union[List, str, int]] = None,
     i_ref2: Optional[Union[List, str, int]] = None,
 ) -> Tuple[
@@ -37,6 +37,8 @@ def model_matrix_fixest(
         fml (str): A two-sided formula string using fixest formula syntax.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
         data (pd.DataFrame): The input DataFrame containing the data.
+        drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
+                               created by formulaic.
         i_ref1 (str or list): The reference level for the first variable in the i() syntax.
         i_ref2 (str or list): The reference level for the second variable in the i() syntax.
 
@@ -205,14 +207,7 @@ def model_matrix_fixest(
 
                 else:
 
-                    raise ValueError("Currently, interactions are not allowed with the i() syntax")
-
-                #else:
-                #    columns_to_drop = [
-                #        col
-                #        for col in X.columns
-                #        if _drop_ref[0] in col or _drop_ref[1] in col
-                #    ]
+                    raise ValueError("Currently, setting levels via the 'i_ref1' argument is only supported for one interaction variable, i.e. it fails for specifications like i(var1, var2).")
 
                 if not X_is_empty:
                     X.drop(columns_to_drop, axis=1, inplace=True)
@@ -247,6 +242,14 @@ def model_matrix_fixest(
                 endogvar.drop(fe_na_remaining, axis=0, inplace=True)
             na_index += fe_na_remaining
             na_index = list(set(na_index))
+
+    # drop intercept if specified in feols() call - mostly handy for did2s()
+    if drop_intercept:
+        if "Intercept" in X.columns:
+            X.drop("Intercept", axis=1, inplace=True)
+        if _is_iv:
+            if "Intercept" in Z.columns:
+                Z.drop("Intercept", axis=1, inplace=True)
 
     na_index_str = ",".join(str(x) for x in na_index)
 

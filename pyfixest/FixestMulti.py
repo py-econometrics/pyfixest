@@ -56,6 +56,7 @@ class FixestMulti:
         vcov: Union[None, str, Dict[str, str]] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
+        drop_intercept: bool = False,
         i_ref1: Optional[Union[List, str]] = None,
         i_ref2: Optional[Union[List, str]] = None,
     ) -> None:
@@ -70,6 +71,7 @@ class FixestMulti:
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+            drop_intercept (bool, optional): Whether to drop the intercept. Default is False.
             i_ref1 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the first interaction variable.
             i_ref2 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the second interaction variable.
 
@@ -85,6 +87,9 @@ class FixestMulti:
         self._drop_singletons = None
         self._fixef_keys = None
         self._is_multiple_estimation = None
+        self._i_ref1 = None
+        self._i_ref2 = None
+        self._drop_intercept = None
 
         # set i_ref1 and i_ref2 to list if not None
         if i_ref1 is not None:
@@ -110,8 +115,10 @@ class FixestMulti:
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
+
         self._i_ref1 = i_ref1
         self._i_ref2 = i_ref2
+        self._drop_intercept = drop_intercept
 
     def _estimate_all_models(
         self,
@@ -147,6 +154,7 @@ class FixestMulti:
         _method = self._method
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
+        _drop_intercept = self._drop_intercept
         _i_ref1 = self._i_ref1
         _i_ref2 = self._i_ref2
 
@@ -184,7 +192,7 @@ class FixestMulti:
                         _icovars,
                         X_is_empty,
                     ) = model_matrix_fixest(
-                        fml=fml, data=_data, i_ref1=_i_ref1, i_ref2=_i_ref2
+                        fml=fml, data=_data, drop_intercept = _drop_intercept, i_ref1=_i_ref1, i_ref2=_i_ref2
                     )
 
                     weights = np.ones((Y.shape[0], 1))

@@ -13,6 +13,7 @@ def feols(
     ssc=ssc(),
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
+    drop_intercept: bool = False,
     i_ref1: Optional[Union[list, str]] = None,
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
@@ -69,6 +70,9 @@ def feols(
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables.
                             If the tolerance is higher, more variables will be dropped.
+
+        drop_intercept (bool): Whether to drop the intercept from the model. False by default. If True, the intercept will be dropped **after** creating the model matrix via formulaic.
+                               This implies that reference levels for categorical variables will be dropped as well and are not recovered.
 
         i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
         i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
@@ -135,7 +139,7 @@ def feols(
     _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
-    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, i_ref1, i_ref2)
+    fixest._prepare_estimation("feols", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2)
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
@@ -155,6 +159,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
+    drop_intercept: bool = False,
     i_ref1: Optional[Union[list, str]] = None,
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Fepois, FixestMulti]:
@@ -210,6 +215,10 @@ def fepois(
 
         collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
                             via the diagonal cholesky decomposition of the correlation matrix of the variables. If the tolerance is higher, more variables will be dropped.
+
+        drop_intercept (bool): Whether to drop the intercept from the model. False by default. If True, the intercept will be dropped **after** creating the model matrix via formulaic.
+                               This implies that reference levels for categorical variables will be dropped as well and are not recovered.
+
         i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
         i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
 
@@ -264,7 +273,7 @@ def fepois(
 
     fixest = FixestMulti(data=data)
 
-    fixest._prepare_estimation("fepois", fml, vcov, ssc, fixef_rm, i_ref1, i_ref2)
+    fixest._prepare_estimation("fepois", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2)
     if fixest._is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Poisson Regression"
