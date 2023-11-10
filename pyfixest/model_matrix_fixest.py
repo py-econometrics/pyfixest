@@ -81,8 +81,8 @@ def model_matrix_fixest(
 
     if _ivars:
         if len(_ivars) == 2:
-            warnings.warn(
-                "The use of two interaction variables via i(var1, var2) is currently experimental. Please report any issues via github."
+            raise NotImplementedError(
+                "The use of two interaction variables via i(var1, var2) is currently not allowed. I will fix this with the next release."
             )
 
     # step 1: deparse formula

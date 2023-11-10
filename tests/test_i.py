@@ -159,3 +159,17 @@ def test_i_vs_fixest():
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
+
+
+
+def test_i_interacted():
+
+
+
+    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het["X"] = np.random.normal(df_het.shape[0])
+    # ---------------------------------------------------------------------------------------#
+    # no fixed effects
+
+    with pytest.raises(NotImplementedError):
+        fit_py = feols("dep_var~i(treat, X)", df_het)
