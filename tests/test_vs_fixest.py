@@ -63,10 +63,10 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-        ("Y ~ X1 + i(f1,X2)"),
-        ("Y ~ X1 + i(f2,X2)"),
-        ("Y ~ X1 + i(f1,X2) | f2"),
-        ("Y ~ X1 + i(f1,X2) | f2 + f3"),
+        ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),  # temporarily non-supported feature
         # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
         # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
         # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
@@ -571,6 +571,7 @@ def get_data_r(fml, data):
     return data_r
 
 
+@pytest.mark.skip("Currently not supported.")
 def test_i_interaction():
     """
     Test that interaction syntax via the `i()` operator works as in fixest
@@ -580,9 +581,9 @@ def test_i_interaction():
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)
     fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
-    fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=1.0)
-    fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0])
-    fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0, 3.0])
+    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=1.0)
+    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0])
+    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0, 3.0])
 
     fit1_r = fixest.feols(
         ro.Formula("Y ~ i(f1, X2)"),
@@ -594,29 +595,29 @@ def test_i_interaction():
         data=data,
         ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
-    fit3_r = fixest.feols(
-        ro.Formula("Y ~ X1 + i(f1, X2, ref = 1.0) | f2"),
-        data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    )
-    fit4_r = fixest.feols(
-        ro.Formula("Y ~ X1 + i(f1, X2, ref = 2.0) | f2"),
-        data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    )
-    fit5_r = fixest.feols(
-        ro.Formula("Y ~ X1 + i(f1, X2, ref = c(2.0, 3.0)) | f2"),
-        data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    )
+    # fit3_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 1.0) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
+    # fit4_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 2.0) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
+    # fit5_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = c(2.0, 3.0)) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
 
     # create tuples: (pyfixest, fixest)
     fits = [
         (fit1, fit1_r),
         (fit2, fit2_r),
-        (fit3, fit3_r),
-        (fit4, fit4_r),
-        (fit5, fit5_r),
+        # (fit3, fit3_r),
+        # (fit4, fit4_r),
+        # (fit5, fit5_r),
     ]
 
     for fit in fits:

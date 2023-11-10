@@ -12,6 +12,7 @@ def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
     weights: Optional[str] = None,
+    drop_intercept=False,
     i_ref1: Optional[Union[List, str, int]] = None,
     i_ref2: Optional[Union[List, str, int]] = None,
 ) -> Tuple[
@@ -37,6 +38,8 @@ def model_matrix_fixest(
         fml (str): A two-sided formula string using fixest formula syntax.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
         data (pd.DataFrame): The input DataFrame containing the data.
+        drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
+                               created by formulaic.
         i_ref1 (str or list): The reference level for the first variable in the i() syntax.
         i_ref2 (str or list): The reference level for the second variable in the i() syntax.
 
@@ -76,6 +79,12 @@ def model_matrix_fixest(
 
     _ivars = _find_ivars(fml)[0]
 
+    if _ivars:
+        if len(_ivars) == 2:
+            warnings.warn(
+                "The use of two interaction variables via i(var1, var2) is currently not allowed. I will fix this with the next release. Please just interact the two variables via `:` syntax."
+            )
+
     # step 1: deparse formula
     fml_parts = fml.split("|")
     depvar, covar = fml_parts[0].split("~")
@@ -84,10 +93,15 @@ def model_matrix_fixest(
     for x in covar.split("+"):
         is_ivar = _find_ivars(x)
         if is_ivar[1]:
+            if i_ref1:
+                inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
+            else:
+                inner_C = f"C({_ivars[0]})"
+
             if len(_ivars) == 2:
-                interact_vars = f"C({_ivars[0]}):{_ivars[1]}"
+                interact_vars = f"{inner_C}:{_ivars[1]}"
             elif len(_ivars) == 1:
-                interact_vars = f"C({_ivars[0]})"
+                interact_vars = f"{inner_C}"
             else:
                 raise ValueError(
                     "Something went wrong with the i() syntax. Please report this issue to the package author via github."
@@ -98,7 +112,6 @@ def model_matrix_fixest(
     # should any variables be dropped from the model matrix
     # (e.g., reference level dummies, if specified)
     _check_i_refs(_ivars, i_ref1, i_ref2, data)
-    _drop_ref = _get_drop_ref(_ivars, i_ref1, i_ref2)
 
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
@@ -186,20 +199,26 @@ def model_matrix_fixest(
 
     # now drop variables before collecting variable names
     if _ivars is not None:
-        if _drop_ref:
-            if len(_drop_ref) == 1:
-                columns_to_drop = [col for col in X.columns if _drop_ref[0] in col]
-            else:
-                columns_to_drop = [
-                    col
-                    for col in X.columns
-                    if _drop_ref[0] in col or _drop_ref[1] in col
-                ]
+        if i_ref1 is not None:
+            if len(i_ref1) > 1:
+                if len(_ivars) == 1:
+                    columns_to_drop = [
+                        col for col in X.columns if f"{inner_C}[T.{i_ref1[1]}]" in col
+                    ]
+                    if not columns_to_drop:
+                        raise ValueError(
+                            f"The reference level {i_ref1[1]} is not present in the data. Maybe you are using an incorrect data type?"
+                        )
 
-            if not X_is_empty:
-                X.drop(columns_to_drop, axis=1, inplace=True)
-                if _is_iv:
-                    Z.drop(columns_to_drop, axis=1, inplace=True)
+                else:
+                    raise ValueError(
+                        "Currently, setting levels via the 'i_ref1' argument is only supported for one interaction variable, i.e. it fails for specifications like i(var1, var2)."
+                    )
+
+                if not X_is_empty:
+                    X.drop(columns_to_drop, axis=1, inplace=True)
+                    if _is_iv:
+                        Z.drop(columns_to_drop, axis=1, inplace=True)
 
     # drop reference level, if specified
     # ivars are needed for plotting of all interacted variables via iplot()
@@ -210,11 +229,12 @@ def model_matrix_fixest(
         fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
         if not X_is_empty:
-            X.drop("Intercept", axis=1, inplace=True)
-        # x_names.remove("Intercept")
+            # drop intercept. intercept is present unless there is i() interaction AND a reference level is set, in which case a "0" was added to the fml above
+            if "Intercept" in X.columns:
+                X.drop("Intercept", axis=1, inplace=True)
         if _is_iv:
-            Z.drop("Intercept", axis=1, inplace=True)
-        #    z_names.remove("Intercept")
+            if "Intercept" in Z.columns:
+                Z.drop("Intercept", axis=1, inplace=True)
 
         # drop NaNs in fixed effects (not yet dropped via na_index)
         fe_na_remaining = list(set(fe_na) - set(na_index))
@@ -228,6 +248,14 @@ def model_matrix_fixest(
                 endogvar.drop(fe_na_remaining, axis=0, inplace=True)
             na_index += fe_na_remaining
             na_index = list(set(na_index))
+
+    # drop intercept if specified in feols() call - mostly handy for did2s()
+    if drop_intercept:
+        if "Intercept" in X.columns:
+            X.drop("Intercept", axis=1, inplace=True)
+        if _is_iv:
+            if "Intercept" in Z.columns:
+                Z.drop("Intercept", axis=1, inplace=True)
 
     na_index_str = ",".join(str(x) for x in na_index)
 
@@ -343,68 +371,6 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
         _icovars = None
 
     return _icovars
-
-
-def _get_drop_ref(
-    _ivars: List[str],
-    i_ref1: Optional[Union[List, str, int]] = None,
-    i_ref2: Optional[Union[List, str, int]] = None,
-) -> Optional[List[str]]:
-    """
-    Get the name of reference level dummies to be dropped from the model matrix.
-    Args:
-        _ivars (list): A list of interaction variables.
-        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
-        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
-    Returns:
-        _drop_ref (list): A list of reference level dummies to be dropped from the model matrix. If no reference level is specified, None is returned.
-    Examples:
-        >>> _get_drop_ref(_ivars = ["f2", "X1"], i_ref1 = [1.0, 2.0])
-        >>> ['C(f2)[T.1.0]:', 'C(f2)[T.2.0]:']
-    """
-
-    _drop_ref = (
-        None  # default: if no _ivar, or if _ivar but no i_ref1, i_ref2 specified
-    )
-    if _ivars:
-        _ivar1 = _ivars[0]
-        if i_ref1 is not None:
-            len_i_ref1 = len(i_ref1)
-            if len_i_ref1 not in [1, 2]:
-                raise ValueError(
-                    f"i_ref1 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref1}."
-                )
-            if len(_ivars) == 2:
-                _drop_ref = [f"C({_ivar1})[T.{x}]:" for x in i_ref1]
-            else:  # len(_ivars) == 1:
-                _drop_ref = [f"C({_ivar1})[T.{x}]" for x in i_ref1]
-
-        if len(_ivars) == 2:
-            if i_ref2 is not None:
-                _ivar2 = _ivars[1]
-                len_i_ref2 = len(i_ref2)
-                if len_i_ref2 not in [1, 2]:
-                    raise ValueError(
-                        f"i_ref2 must be a string or list of length 1 or 2, but it is a list of length {len_i_ref2}."
-                    )
-                if len(_ivars) == 2:
-                    _drop_ref += [f":{_ivar2}[T.{x}]" for x in i_ref2]
-                else:  # len(_ivars) == 1:
-                    _drop_ref += [f"{_ivar2}[T.{x}]" for x in i_ref2]
-
-        else:
-            if i_ref2 is not None:
-                warnings.warn(
-                    f"i_ref2 is not used because there is only one variable in the i() syntax, i({_ivar1})."
-                )
-
-    else:
-        if i_ref1 is not None:
-            warnings.warn(f"i_ref1 is not used because i() syntax is not used.")
-        if i_ref2 is not None:
-            warnings.warn(f"i_ref2 is not used because i() syntax is not used.")
-
-    return _drop_ref
 
 
 def _check_i_refs(ivars, i_ref1, i_ref2, data):
