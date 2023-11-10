@@ -24,11 +24,11 @@ At the moment, `PyFixest` supports
 `PyFixest` 0.10.8 adds experimental support for Gardner's two stage "DID2s" estimator:
 
 ```py
+import pandas as pd
+import numpy as np
 from pyfixest.experimental.did import did2s
 from pyfixest.estimation import feols
 from pyfixest.visualize import iplot
-import pandas as pd
-import numpy as np
 
 # download csv from this repo
 df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")

@@ -355,7 +355,7 @@ def _did2s_estimate(
     """
 
     _first_stage_full = f"{yname} {_first_stage}"
-    _second_stage_full = f"{yname}_hat {_second_stage} + 0"
+    _second_stage_full = f"{yname}_hat {_second_stage}"
 
     if treatment is not None:
         if treatment not in data.columns:
@@ -382,6 +382,13 @@ def _did2s_estimate(
     else:
         _not_yet_treated_data = data[data["ATT"] == False]
 
+    # check if first stage formulas has fixed effects
+    if "|" not in _first_stage:
+        raise ValueError("First stage formula must contain fixed effects.")
+    # check if second stage formulas has fixed effects
+    if "|" in _second_stage:
+        raise ValueError("Second stage formula must not contain fixed effects.")
+
     # estimate first stage
     fit1 = feols(
         fml=_first_stage_full,
@@ -399,8 +406,14 @@ def _did2s_estimate(
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 
+    # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage
     fit2 = feols(
-        _second_stage_full, data=data, vcov="iid", i_ref1=i_ref1, i_ref2=i_ref2
+        _second_stage_full,
+        data=data,
+        vcov="iid",
+        drop_intercept=True,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
     _second_u = fit2.resid()
 
@@ -447,13 +460,23 @@ def _did2s_vcov(
     first_stage_fe = "+".join(first_stage_fe)
     first_stage = f"{first_stage_x}+{first_stage_fe}"
 
-    second_stage = f"{second_stage} + 0"
+    second_stage = f"{second_stage}"
 
+    # note for future Alex: intercept needs to be dropped! it is not as fixed effects are converted to
+    # dummies, hence has_fixed checks are False
     _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {first_stage}", data=data, i_ref1=i_ref1, i_ref2=i_ref2
+        fml=f"{yname} {first_stage}",
+        data=data,
+        drop_intercept=False,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )
     _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {second_stage}", data=data, i_ref1=i_ref1, i_ref2=i_ref2
+        fml=f"{yname} {second_stage}",
+        data=data,
+        drop_intercept=True,
+        i_ref1=i_ref1,
+        i_ref2=i_ref2,
     )  # reference values not dropped, multicollinearity error
 
     X1 = csr_matrix(X1.values)
@@ -539,6 +562,12 @@ def did2s(
     second_stage = second_stage.replace(" ", "")
     assert first_stage[0] == "~", "First stage must start with ~"
     assert second_stage[0] == "~", "Second stage must start with ~"
+
+    # assert that there is no 0, -1 or - 1 in the second stage formula
+    if "0" in second_stage or "-1" in second_stage:
+        raise ValueError(
+            "The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage."
+        )
 
     data = data.copy()
 

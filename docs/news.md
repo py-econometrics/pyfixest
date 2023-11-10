@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.10`
+
+Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/s3alfisc/pyfixest/issues/211).
+
 ## PyFixest `0.10.9`
 
 Makes `etable()` prettier and more informative.
