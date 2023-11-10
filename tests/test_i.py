@@ -161,11 +161,7 @@ def test_i_vs_fixest():
     )
 
 
-
 def test_i_interacted():
-
-
-
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
     df_het["X"] = np.random.normal(df_het.shape[0])
     # ---------------------------------------------------------------------------------------#

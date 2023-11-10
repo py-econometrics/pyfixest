@@ -82,7 +82,7 @@ def model_matrix_fixest(
     if _ivars:
         if len(_ivars) == 2:
             raise NotImplementedError(
-                "The use of two interaction variables via i(var1, var2) is currently not allowed. I will fix this with the next release."
+                "The use of two interaction variables via i(var1, var2) is currently not allowed. I will fix this with the next release. Please just interact the two variables via `:` syntax."
             )
 
     # step 1: deparse formula
