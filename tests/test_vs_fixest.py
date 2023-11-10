@@ -63,10 +63,10 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-        # ("Y ~ X1 + i(f1,X2)"),                       # temporarily non-supported feature
-        # ("Y ~ X1 + i(f2,X2)"),                       # temporarily non-supported feature
-        # ("Y ~ X1 + i(f1,X2) | f2"),                  # temporarily non-supported feature
-        # ("Y ~ X1 + i(f1,X2) | f2 + f3"),             # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2)"),                       # temporarily non-supported feature
+        ("Y ~ X1 + i(f2,X2)"),                       # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2"),                  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),             # temporarily non-supported feature
         # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
         # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
         # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work

@@ -2,8 +2,7 @@
 
 ## PyFixest `0.10.10`
 
-- Fix bugs with variable interactions via `i(var)` syntax
-- For now, deprecates interacting two variables via `i(var1, var2)` syntax - I will bring this back in the next release.
+Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/s3alfisc/pyfixest/issues/211).
 
 ## PyFixest `0.10.9`
 
