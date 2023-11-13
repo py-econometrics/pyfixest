@@ -74,6 +74,7 @@ def model_matrix_fixest(
         list or None: icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
 
+
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
@@ -81,9 +82,11 @@ def model_matrix_fixest(
 
     if _ivars:
         if len(_ivars) == 2:
-            warnings.warn(
-                "The use of two interaction variables via i(var1, var2) is currently not allowed. I will fix this with the next release. Please just interact the two variables via `:` syntax."
-            )
+            # check if _ivars[1] is continuous, i.e. a float or int, if not, throw an error
+            if not _is_numeric(data[_ivars[1]]):
+                raise ValueError(
+                    f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+                )
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -91,13 +94,19 @@ def model_matrix_fixest(
 
     # covar to : interaction (as formulaic does not know about i() syntax
     for x in covar.split("+"):
+        # id there an i() interaction?
         is_ivar = _find_ivars(x)
+        # if yes:
         if is_ivar[1]:
+            # if a reference level i_ref1 is set: code contrast as C(var, contr.treatment(base=i_ref1[0]))
+            # if no reference level is set: code contrast as C(var)
             if i_ref1:
                 inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
             else:
                 inner_C = f"C({_ivars[0]})"
 
+            # if there is a second variable interacted via i() syntax, i.e. i(var1, var2),
+            # then code contrast as C(var1, contr.treatment(base=i_ref1[0])):var2, where var2 = i_ref2[1]
             if len(_ivars) == 2:
                 interact_vars = f"{inner_C}:{_ivars[1]}"
             elif len(_ivars) == 1:
@@ -108,6 +117,7 @@ def model_matrix_fixest(
                 )
             covar = covar.replace(x, interact_vars)
             break
+
 
     # should any variables be dropped from the model matrix
     # (e.g., reference level dummies, if specified)
@@ -197,28 +207,13 @@ def model_matrix_fixest(
     else:
         na_index = na_index_stage2
 
-    # now drop variables before collecting variable names
-    if _ivars is not None:
-        if i_ref1 is not None:
-            if len(i_ref1) > 1:
-                if len(_ivars) == 1:
-                    columns_to_drop = [
-                        col for col in X.columns if f"{inner_C}[T.{i_ref1[1]}]" in col
-                    ]
-                    if not columns_to_drop:
-                        raise ValueError(
-                            f"The reference level {i_ref1[1]} is not present in the data. Maybe you are using an incorrect data type?"
-                        )
+    columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
-                else:
-                    raise ValueError(
-                        "Currently, setting levels via the 'i_ref1' argument is only supported for one interaction variable, i.e. it fails for specifications like i(var1, var2)."
-                    )
-
-                if not X_is_empty:
-                    X.drop(columns_to_drop, axis=1, inplace=True)
-                    if _is_iv:
-                        Z.drop(columns_to_drop, axis=1, inplace=True)
+    if columns_to_drop:
+        if not X_is_empty:
+            X.drop(columns_to_drop, axis=1, inplace=True)
+            if _is_iv:
+                Z.drop(columns_to_drop, axis=1, inplace=True)
 
     # drop reference level, if specified
     # ivars are needed for plotting of all interacted variables via iplot()
@@ -383,7 +378,7 @@ def _check_i_refs(ivars, i_ref1, i_ref2, data):
             type_i_ref1 = type(i_ref1[0])
 
             if len(i_ref1) == 1:
-                if not i_ref1[0] in unique_ivar1 or type_i_ref1 != type_ivar1:
+                if not i_ref1[0] in unique_ivar1:
                     raise InvalidReferenceLevelError(
                         f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
                     )
@@ -391,7 +386,7 @@ def _check_i_refs(ivars, i_ref1, i_ref2, data):
                 if (
                     not i_ref1[0]
                     and i_ref1[1] in unique_ivar1
-                    or type_i_ref1 != type_ivar1
+                    #or type_i_ref1 != type_ivar1
                 ):
                     raise InvalidReferenceLevelError(
                         f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
@@ -424,3 +419,55 @@ def _check_i_refs(ivars, i_ref1, i_ref2, data):
                         raise InvalidReferenceLevelError(
                             f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?"
                         )
+
+
+def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
+
+    """
+    Collect all variables that (still) need to be dropped as reference levels from the model matrix.
+    Args:
+        _ivars (list): A list of interaction variables of maximum length 2.
+        i_ref1 (list): A list of reference levels for the first variable in the i() syntax.
+        i_ref2 (list): A list of reference levels for the second variable in the i() syntax.
+        X (pd.DataFrame): The DataFrame containing the covariates.
+    """
+
+    #import pdb; pdb.set_trace()
+    columns_to_drop = []
+
+    # now drop reference levels / variables before collecting variable names
+    if _ivars:
+        if i_ref1:
+            # different logic for one vs two interaction variables in i() due to how contr.treatment() works
+            if len(_ivars) == 1:
+                if len(i_ref1) == 1:
+                    pass # do nothing, reference level already dropped via contr.treatment()
+                else:
+                    i_ref_to_drop = i_ref1[1:]
+                    # collect all column names that contain the reference level
+                    for x in i_ref_to_drop:
+                        # decode formulaic naming conventions
+                        columns_to_drop += [s for s in X.columns if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]" in s]
+            elif len(_ivars) == 2:
+                    i_ref_to_drop = i_ref1
+                    for x in i_ref_to_drop:
+                        # decode formulaic naming conventions
+                        columns_to_drop += [s for s in X.columns if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]:{_ivars[1]}" in s]
+            else:
+                raise ValueError(
+                    "Something went wrong with the i() syntax. Please report this issue to the package author via github."
+                )
+        if i_ref2:
+            raise ValueError(
+                "The function argument `i_ref2` is not yet supported."
+            )
+
+    return columns_to_drop
+
+
+def _is_numeric(column):
+    try:
+        pd.to_numeric(column)
+        return True
+    except ValueError:
+        return False
