@@ -74,7 +74,6 @@ def model_matrix_fixest(
         list or None: icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
 
-
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
@@ -118,10 +117,10 @@ def model_matrix_fixest(
             covar = covar.replace(x, interact_vars)
             break
 
-
     # should any variables be dropped from the model matrix
     # (e.g., reference level dummies, if specified)
-    _check_i_refs(_ivars, i_ref1, i_ref2, data)
+    # _check_i_refs(_ivars, i_ref1, i_ref2, data)
+    _check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
@@ -368,61 +367,49 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
     return _icovars
 
 
-def _check_i_refs(ivars, i_ref1, i_ref2, data):
+def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
+    """
+    Check if the reference level have the same type as the variable (if not, string matching might fail).
+    Args:
+        ivars (list): A list of interaction variables of maximum length 2.
+        i_ref1 (list): A list of reference levels for the first variable in the i() syntax.
+        i_ref2 (list): A list of reference levels for the second variable in the i() syntax.
+        data (pd.DataFrame): The DataFrame containing the covariates.
+    Returns:
+        None
+    """
+
     if ivars:
         ivar1 = ivars[0]
-        type_ivar1 = data[ivar1].to_numpy().dtype
-        unique_ivar1 = data[ivar1].unique()
-
-        if i_ref1:
-            type_i_ref1 = type(i_ref1[0])
-
-            if len(i_ref1) == 1:
-                if not i_ref1[0] in unique_ivar1:
-                    raise InvalidReferenceLevelError(
-                        f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
-                    )
-            else:
-                if (
-                    not i_ref1[0]
-                    and i_ref1[1] in unique_ivar1
-                    #or type_i_ref1 != type_ivar1
-                ):
-                    raise InvalidReferenceLevelError(
-                        f"i_ref1 must be a value in {ivar1}, but it is {i_ref1}. Maybe you are using an incorrect data type?"
-                    )
-
         if len(ivars) == 2:
             ivar2 = ivars[1]
-            type_ivar2 = data[ivar2].to_numpy().dtype
-            unique_ivar2 = data[ivar2].unique()
 
-            if i_ref2:
-                type_i_ref2 = type(i_ref2[0])
-
-                if data[ivar2].dtype not in ["category", "int"]:
+        if i_ref1:
+            # check that the type of each value in i_ref1 is the same as the type of the variable
+            ivar1_col = data[ivar1]
+            for i in i_ref1:
+                if pd.api.types.is_integer_dtype(ivar1_col) and not isinstance(i, int):
                     raise InvalidReferenceLevelError(
-                        f"If you are using a reference level via the 'i_ref2' argument, the associated variable {ivar2} must be of type 'category' or 'int', but it is of type {data[ivar2].dtype}."
+                        f"If the first interacted variable via i() syntax, '{ivar1}', is of type 'int', the reference level {i} must also be of type 'int', but it is of type {type(i)}."
                     )
-
-                if len(i_ref2) == 1:
-                    if not i_ref2[0] in unique_ivar2 or type_i_ref2 != type_ivar2:
-                        raise InvalidReferenceLevelError(
-                            f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?"
-                        )
-                else:
-                    if (
-                        not i_ref2[0]
-                        and i_ref2[1] in unique_ivar2
-                        or type_i_ref2 != type_ivar2
-                    ):
-                        raise InvalidReferenceLevelError(
-                            f"i_ref1 must be a value in {ivar2}, but it is {i_ref2}. Maybe you are using an incorrect data type?"
-                        )
+                if pd.api.types.is_float_dtype(ivar1_col) and not isinstance(i, float):
+                    raise InvalidReferenceLevelError(
+                        f"If the first interacted variable via i() syntax, '{ivar1}', is of type 'float', the reference level {i} must also be of type 'float', but it is of type {type(i)}."
+                    )
+        if i_ref2:
+            ivar2_col = data[ivar2]
+            for i in i_ref2:
+                if pd.api.types.is_integer_dtype(ivar2_col) and not isinstance(i, int):
+                    raise InvalidReferenceLevelError(
+                        f"If the second interacted variable via i() syntax, '{ivar2}', is of type 'int', the reference level {i} must also be of type 'int', but it is of type {type(i)}."
+                    )
+                if pd.api.types.is_float_dtype(ivar2_col) and not isinstance(i, float):
+                    raise InvalidReferenceLevelError(
+                        f"If the second interacted variable via i() syntax, '{ivar2}', is of type 'float', the reference level {i} must also be of type 'float', but it is of type {type(i)}."
+                    )
 
 
 def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
-
     """
     Collect all variables that (still) need to be dropped as reference levels from the model matrix.
     Args:
@@ -432,7 +419,7 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
         X (pd.DataFrame): The DataFrame containing the covariates.
     """
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     columns_to_drop = []
 
     # now drop reference levels / variables before collecting variable names
@@ -441,26 +428,34 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
             # different logic for one vs two interaction variables in i() due to how contr.treatment() works
             if len(_ivars) == 1:
                 if len(i_ref1) == 1:
-                    pass # do nothing, reference level already dropped via contr.treatment()
+                    pass  # do nothing, reference level already dropped via contr.treatment()
                 else:
                     i_ref_to_drop = i_ref1[1:]
                     # collect all column names that contain the reference level
                     for x in i_ref_to_drop:
                         # decode formulaic naming conventions
-                        columns_to_drop += [s for s in X.columns if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]" in s]
+                        columns_to_drop += [
+                            s
+                            for s in X.columns
+                            if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]"
+                            in s
+                        ]
             elif len(_ivars) == 2:
-                    i_ref_to_drop = i_ref1
-                    for x in i_ref_to_drop:
-                        # decode formulaic naming conventions
-                        columns_to_drop += [s for s in X.columns if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]:{_ivars[1]}" in s]
+                i_ref_to_drop = i_ref1
+                for x in i_ref_to_drop:
+                    # decode formulaic naming conventions
+                    columns_to_drop += [
+                        s
+                        for s in X.columns
+                        if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]:{_ivars[1]}"
+                        in s
+                    ]
             else:
                 raise ValueError(
                     "Something went wrong with the i() syntax. Please report this issue to the package author via github."
                 )
         if i_ref2:
-            raise ValueError(
-                "The function argument `i_ref2` is not yet supported."
-            )
+            raise ValueError("The function argument `i_ref2` is not yet supported.")
 
     return columns_to_drop
 
