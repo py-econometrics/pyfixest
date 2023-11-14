@@ -290,6 +290,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -351,6 +352,7 @@ class Feols:
                         _,
                         g,
                     ) in enumerate(clustid):
+
                         Zg = _Z[np.where(cluster_col == g)]
                         ug = weighted_uhat[np.where(cluster_col == g)]
                         score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
@@ -848,7 +850,7 @@ class Feols:
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
-        # _fixef = "+".split(self._fixef) # name of the fixef effects variables
+        _depvar = self._depvar
 
         if _is_iv:
             raise NotImplementedError(
@@ -856,8 +858,7 @@ class Feols:
             )
 
         if newdata is None:
-            depvar = _fml.split("~")[0]
-            y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
+            y_hat = _data[_depvar].to_numpy() - _u_hat.flatten()
 
         else:
             if self._has_fixef:
@@ -937,21 +938,24 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
-        _Y = self._Y
-        _u_hat = self._u_hat
+        _Y_within = self._Y
+        _u_hat_within = self._u_hat
         _N = self._N
         _k = self._k
+        _depvar = self._depvar
 
-        Y_no_demean = _Y
+        _Y = self._data[_depvar].values
 
-        ssu = np.sum(_u_hat**2)
-        ssy_within = np.sum((_Y - np.mean(_Y)) ** 2)
-        ssy = np.sum((Y_no_demean - np.mean(Y_no_demean)) ** 2)
+        ssu_within = np.sum(_u_hat_within**2)
+        ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
 
-        self._rmse = np.sqrt(ssu / _N)
+        ssu = np.sum(_u_hat ** 2)
+        ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
-        self._r2_within = 1 - (ssu / ssy_within)
-        self._r2 = 1 - (ssu / ssy)
+        self._rmse = np.sqrt(ssu_within / _N)
+
+        self._r2_within = 1 - (ssu_within / ssy_within)
+        self._r2 = 1 - (ssu_within / ssy)
 
         self._adj_r2_within = 1 - (1 - self._r2_within) * (_N - 1) / (_N - _k - 1)
         self._adj_r2 = 1 - (1 - self._r2) * (_N - 1) / (_N - _k - 1)
