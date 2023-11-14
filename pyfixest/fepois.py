@@ -73,16 +73,8 @@ class Fepois(Feols):
                 "The dependent variable must be a weakly positive integer."
             )
 
-        self.separation_na = None
-        self._N_separation_na = None
-        self._check_for_separation()
-
         self._support_crv3_inference = True
         self._support_iid_inference = True
-
-        # attributes that are updated outside of the class (not optimal)
-        self._N_separation_na = None
-        self._Na_index = None
 
         self._Y_hat_response = None
         self.deviance = None
@@ -284,67 +276,47 @@ class Fepois(Feols):
 
         return y_hat
 
-    def _check_for_separation(self, check: str = "fe") -> None:
-        """
-        Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
-        separation checks. Currently, only the "fe" check is implemented.
 
-        Args:
-            type: type of separation check. Currently, only "fe" is supported.
-        Returns:
-            None
-        Updates the following attributes (if columns are dropped):
-            Y (np.array): dependent variable
-            X (np.array): independent variables
-            Z (np.array): independent variables
-            fe (np.array): fixed effects
-            N (int): number of observations
-        Creates the following attributes
-        separation_na (np.array): indices of dropped observations due to separation
-        """
-
-        if check == "fe":
-            if not self._has_fixef:
-                pass
-            elif (self._Y > 0).all():
-                pass
-            else:
-                Y_help = pd.Series(np.where(self._Y.flatten() > 0, 1, 0))
-                fe = pd.DataFrame(self.fe)
-
-                separation_na = set()
-                # loop over all elements of fe
-                for x in fe.columns:
-                    ctab = pd.crosstab(Y_help, fe[x])
-                    null_column = ctab.xs(0)
-                    # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
-                    sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
-                        null_column > 0
-                    ).values.flatten()
-                    droplist = ctab.xs(0)[sep_candidate].index.tolist()
-
-                    if len(droplist) > 0:
-                        dropset = set(np.where(fe[x].isin(droplist))[0])
-                        separation_na = separation_na.union(dropset)
-
-                self.separation_na = list(separation_na)
-
-                self._Y = np.delete(self._Y, self.separation_na, axis=0)
-                self._X = np.delete(self._X, self.separation_na, axis=0)
-                # self._Z = np.delete( self._Z, self.separation_na, axis = 0)
-                self.fe = np.delete(self.fe, self.separation_na, axis=0)
-
-                self._N = self._Y.shape[0]
-                if len(self.separation_na) > 0:
-                    warnings.warn(
-                        f"{str(len(self.separation_na))} observations removed because of separation."
-                    )
-
+def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> List:
+    """
+    Args:
+        Y (pd.DataFrame): dependent variable
+        fe (pd.DataFrame): fixed effects
+        check (str): separation check to be performed
+    Returns:
+        separation_na (list): list of indices of observations that are removed due to separation
+    Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
+    separation checks. Currently, only the "fe" check is implemented.
+    """
+    if check == "fe":
+        if (Y > 0).all().bool():
+            pass
         else:
-            raise NotImplementedError(
-                f"Separation check via {check} is not implemented yet."
-            )
+            Y_help = pd.Series(np.where(Y.values.flatten() > 0, 1, 0))
 
+            separation_na = set()
+            # loop over all elements of fe
+            for x in fe.columns:
+                ctab = pd.crosstab(Y_help, fe[x])
+                null_column = ctab.xs(0)
+                # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+                sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+                    null_column > 0
+                ).values.flatten()
+                droplist = ctab.xs(0)[sep_candidate].index.tolist()
+
+                if len(droplist) > 0:
+                    dropset = set(droplist)
+                    separation_na = separation_na.union(dropset)
+
+            separation_na = list(set(droplist))
+
+            return separation_na
+
+    else:
+        raise NotImplementedError(
+            f"Separation check via {check} is not implemented yet."
+        )
 
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
     # fe must be np.array of dimension 2 or None

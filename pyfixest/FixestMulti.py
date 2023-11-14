@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Union, Dict, Optional, List
 
 from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
+from pyfixest.fepois import Fepois, _check_for_separation
 from pyfixest.feiv import Feiv
 from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
@@ -275,7 +275,17 @@ class FixestMulti:
 
                     elif _method == "fepois":
                         # check for separation and drop separated variables
-                        # Y, X, fe, na_index = self._separation()
+
+                        if fe is not None:
+                            na_separation = _check_for_separation(Y=Y, fe=fe, check = "fe")
+                            if na_separation:
+                                warnings.warn(
+                                    f"{str(len(na_separation))} observations removed because of separation."
+                                )
+
+                                Y.drop(na_separation, axis = 0, inplace=True)
+                                X.drop(na_separation, axis = 0, inplace=True)
+                                fe.drop(na_separation, axis = 0, inplace=True)
 
                         Y, X = [x.to_numpy() for x in [Y, X]]
                         N = X.shape[0]
@@ -302,9 +312,9 @@ class FixestMulti:
 
                         FIT.na_index = na_index
                         FIT.n_separation_na = None
-                        if FIT.separation_na:
-                            FIT.na_index += FIT.separation_na
-                            FIT.n_separation_na = len(FIT.separation_na)
+                        if na_separation:
+                            FIT.na_index += na_separation
+                            FIT.n_separation_na = len(na_separation)
 
                     else:
                         raise ValueError(
@@ -324,6 +334,7 @@ class FixestMulti:
                         FIT._fixef = None
                     # FEOLS.split_log = x
 
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
