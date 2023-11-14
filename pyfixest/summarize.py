@@ -137,11 +137,8 @@ def summary(
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
-        fml = fxst._fml
-        split = fml.split("|")
 
-        depvar = split[0].split("~")[0]
-        # fxst = [x]
+        depvar = fxst._depvar
 
         df = fxst.tidy().round(digits)
 

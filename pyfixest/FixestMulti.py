@@ -313,6 +313,7 @@ class FixestMulti:
 
                     # some bookkeeping
                     FIT._fml = fml
+                    FIT._depvar = depvar
                     FIT._data = _data.iloc[~_data.index.isin(na_index)]
                     FIT._ssc_dict = _ssc_dict
                     if fval != "0":
