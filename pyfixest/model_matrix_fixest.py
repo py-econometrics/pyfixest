@@ -419,7 +419,6 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
         X (pd.DataFrame): The DataFrame containing the covariates.
     """
 
-    # import pdb; pdb.set_trace()
     columns_to_drop = []
 
     # now drop reference levels / variables before collecting variable names

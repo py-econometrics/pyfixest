@@ -848,7 +848,7 @@ class Feols:
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
-        # _fixef = "+".split(self._fixef) # name of the fixef effects variables
+        _depvar = self._depvar
 
         if _is_iv:
             raise NotImplementedError(
@@ -856,8 +856,7 @@ class Feols:
             )
 
         if newdata is None:
-            depvar = _fml.split("~")[0]
-            y_hat = _data[depvar].to_numpy() - _u_hat.flatten()
+            y_hat = _data[_depvar].to_numpy() - _u_hat.flatten()
 
         else:
             if self._has_fixef:
@@ -952,9 +951,6 @@ class Feols:
 
         self._r2_within = 1 - (ssu / ssy_within)
         self._r2 = 1 - (ssu / ssy)
-
-        self._adj_r2_within = 1 - (1 - self._r2_within) * (_N - 1) / (_N - _k - 1)
-        self._adj_r2 = 1 - (1 - self._r2) * (_N - 1) / (_N - _k - 1)
 
     def tidy(self) -> pd.DataFrame:
         """
