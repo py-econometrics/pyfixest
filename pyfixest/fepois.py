@@ -288,28 +288,33 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
     Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
     separation checks. Currently, only the "fe" check is implemented.
     """
+
     if check == "fe":
         if (Y > 0).all().bool():
             pass
         else:
-            Y_help = pd.Series(np.where(Y.values.flatten() > 0, 1, 0))
+            Y_help = (Y > 0).astype(int).squeeze()
 
             separation_na = set()
             # loop over all elements of fe
             for x in fe.columns:
                 ctab = pd.crosstab(Y_help, fe[x])
                 null_column = ctab.xs(0)
-                # fixed effect "nested" in Y == 0. cond 1: fixef combi only in nested in specific value of Y. cond 2: fixef combi only in nested in Y == 0
+                # sep_candidate if
+                # fixed effect level has only observations with Y > 0
                 sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
                     null_column > 0
                 ).values.flatten()
+                # droplist: list of levels to drop
                 droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
+                # dropset: list of indices to drop
                 if len(droplist) > 0:
-                    dropset = set(droplist)
+                    fe_in_droplist = fe[x].isin(droplist)
+                    dropset = set(fe[x][fe_in_droplist].index)
                     separation_na = separation_na.union(dropset)
 
-            separation_na = list(set(droplist))
+            separation_na = list(separation_na)
 
             return separation_na
 
@@ -317,6 +322,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
         raise NotImplementedError(
             f"Separation check via {check} is not implemented yet."
         )
+
 
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
     # fe must be np.array of dimension 2 or None

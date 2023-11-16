@@ -276,16 +276,19 @@ class FixestMulti:
                     elif _method == "fepois":
                         # check for separation and drop separated variables
 
+                        na_separation = []
                         if fe is not None:
-                            na_separation = _check_for_separation(Y=Y, fe=fe, check = "fe")
+                            na_separation = _check_for_separation(
+                                Y=Y, fe=fe, check="fe"
+                            )
                             if na_separation:
                                 warnings.warn(
                                     f"{str(len(na_separation))} observations removed because of separation."
                                 )
 
-                                Y.drop(na_separation, axis = 0, inplace=True)
-                                X.drop(na_separation, axis = 0, inplace=True)
-                                fe.drop(na_separation, axis = 0, inplace=True)
+                                Y.drop(na_separation, axis=0, inplace=True)
+                                X.drop(na_separation, axis=0, inplace=True)
+                                fe.drop(na_separation, axis=0, inplace=True)
 
                         Y, X = [x.to_numpy() for x in [Y, X]]
                         N = X.shape[0]
