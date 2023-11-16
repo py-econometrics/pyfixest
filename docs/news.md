@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.10.12`
+
+Fixes a small bug with the separation check for poisson regression #138.
+
 ## PyFixest `0.10.11`
 
 Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.
