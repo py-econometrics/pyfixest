@@ -292,7 +292,6 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -340,17 +339,18 @@ class Feols:
                 self._ssc.append(ssc)
 
                 if self._vcov_type_detail == "CRV1":
-
                     if _weights is not None:
-                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape((_N, 1))
+                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
+                            (_N, 1)
+                        )
                     else:
                         weighted_uhat = _u_hat
 
                     meat = _crv1_meat_loop(
-                        _Z = _Z,
+                        _Z=_Z,
                         weighted_uhat=weighted_uhat,
-                        clustid = clustid.values,
-                        cluster_col = cluster_col.values
+                        clustid=clustid.values,
+                        cluster_col=cluster_col.values,
                     )
 
                     if _is_iv == False:
@@ -933,8 +933,6 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
-
-
         _Y = self._Y
         _u_hat = self._u_hat
         _N = self._N
@@ -943,7 +941,6 @@ class Feols:
             _n_fe = len(self._fixef)
         else:
             _n_fe = 0
-
 
         # (n - nb_fe) / (n - nb_fe - K)
         adjustment_factor = (_N - _n_fe) / (_N - _n_fe - _k)
@@ -958,7 +955,7 @@ class Feols:
 
         self._r2_within = 1 - (ssu / ssy_within)
         self._r2_within_adjusted = adjustment_factor * self._r2_within
-        self._r2 = None #1 - (ssu / ssy)
+        self._r2 = None  # 1 - (ssu / ssy)
 
     def tidy(self) -> pd.DataFrame:
         """
@@ -1228,6 +1225,7 @@ def _drop_multicollinear_variables(
 
     return X, names, collin_vars, collin_index
 
+
 def _find_collinear_variables(X, tol=1e-10):
     """
     Detect multicollinear variables.
@@ -1289,8 +1287,12 @@ def _find_collinear_variables(X, tol=1e-10):
 
 
 @nb.njit(parallel=True)
-def _crv1_meat_loop(_Z: np.ndarray, weighted_uhat: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray) -> np.ndarray:
-
+def _crv1_meat_loop(
+    _Z: np.ndarray,
+    weighted_uhat: np.ndarray,
+    clustid: np.ndarray,
+    cluster_col: np.ndarray,
+) -> np.ndarray:
     """
     Compute the meat matrix for CRV1 inference.
     Args:
