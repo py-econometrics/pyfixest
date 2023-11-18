@@ -16,6 +16,7 @@ from pyfixest.utils import ssc
 from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
 
+import time
 
 class FixestMulti:
 
@@ -180,6 +181,7 @@ class FixestMulti:
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
 
+                    tic = time.time()
                     # get Y, X, Z, fe, NA indices for model
                     (
                         Y,
@@ -210,6 +212,7 @@ class FixestMulti:
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
 
+                        tic = time.time()
                         Yd, Xd = demean_model(
                             Y,
                             X,
@@ -219,6 +222,8 @@ class FixestMulti:
                             na_index_str,
                             self._drop_singletons,
                         )
+                        toc = time.time()
+                        print(f"demean_model: {toc-tic}")
 
                         if _is_iv:
                             endogvard, Zd = demean_model(
@@ -325,6 +330,8 @@ class FixestMulti:
                         )
 
                     # some bookkeeping
+
+                    tic = time.time()
                     FIT._fml = fml
                     FIT._depvar = depvar
                     FIT._data = _data.iloc[~_data.index.isin(na_index)]
@@ -336,6 +343,8 @@ class FixestMulti:
                         FIT._has_fixef = False
                         FIT._fixef = None
                     # FEOLS.split_log = x
+                    toc = time.time()
+                    print(f"bookkeeping: {toc-tic}")
 
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
@@ -343,6 +352,7 @@ class FixestMulti:
                         vcov_type = _get_vcov_type(vcov, fval)
                         FIT.vcov(vcov=vcov_type)
                         FIT.get_inference()
+
 
                         # other regression stats
                         if _method == "feols":
