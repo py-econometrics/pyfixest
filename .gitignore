@@ -11,5 +11,8 @@ dist
 .vscode
 *.pyc
 __pycache__/
+docs/figures
+docs/news_files
+readme_files
 *.Rdata
 *.csv

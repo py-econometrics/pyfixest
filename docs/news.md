@@ -1,5 +1,101 @@
 # News
 
+## PyFixest `0.10.12`
+
+Fixes a small bug with the separation check for poisson regression #138.
+
+## PyFixest `0.10.11`
+
+Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.
+
+## PyFixest `0.10.10`
+
+Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/s3alfisc/pyfixest/issues/211).
+
+## PyFixest `0.10.9`
+
+Makes `etable()` prettier and more informative.
+
+## PyFixest `0.10.8`
+
+### Breaking changes
+Reference levels for the `i()` formula syntax can no longer be set within the formula, but need to be added via the `i_ref1` function argument to either `feols()` and `fepois()`.
+
+### New feature
+
+A `dids2()` function is added, which implements the 2-stage difference-in-differences procedure à la Gardner and follows the syntax of @kylebutts [did2s](https://github.com/kylebutts/did2s) R package.
+
+```py
+from pyfixest.experimental.did import did2s
+from pyfixest.estimation import feols
+from pyfixest.visualize import iplot
+import pandas as pd
+import numpy as np
+
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
+
+fit = did2s(
+    df_het,
+    yname = "dep_var",
+    first_stage = "~ 0 | state + year",
+    second_stage = "~i(rel_year)",
+    treatment = "treat",
+    cluster = "state",
+    i_ref1 = [-1.0, np.inf],
+)
+
+fit_twfe = feols(
+    "dep_var ~ i(rel_year) | state + year",
+    df_het,
+    i_ref1 = [-1.0, np.inf]
+)
+
+iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
+```
+![](figures/event_study.svg)
+
+
+
+## PyFixest `0.10.7`
+
+- Adds basic support for event study estimation via two-way fixed effects and Gardner's two-stage "Did2s" approach.
+  This is a beta version and experimental. Further updates (i.e. proper event studies vs "only" ATTs) and a more flexible
+  did2s front end will follow in future releases.
+
+```python
+%load_ext autoreload
+%autoreload 2
+
+from pyfixest.experimental.did import event_study
+from pyfixest.summarize import etable
+import pandas as pd
+df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+
+fit_twfe = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "twfe"
+)
+
+fit_did2s = event_study(
+    data = df_het,
+    yname = "dep_var",
+    idname= "state",
+    tname = "year",
+    gname = "g",
+    estimator = "did2s"
+)
+
+etable([fit_twfe, fit_did2s])
+# | Coefficient   | est1             | est2             |
+# |:--------------|:-----------------|:-----------------|
+# | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |
+# Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
+```
+
 ## PyFixest `0.10.6`
 
 - Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.

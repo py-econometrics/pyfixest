@@ -5,7 +5,7 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-This is a draft package (no longer highly experimental) for a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as possible. Fixed effects are projected out via the [PyHDFE](https://github.com/jeffgortmaker/pyhdfe) package. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
+`PyFixest` is a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ## Functionality
 
@@ -16,40 +16,46 @@ At the moment, `PyFixest` supports
 - Multiple Estimation Syntax
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
+- Difference-in-Difference Estimators:
+  - Gardner's two-stage ("`Did2s`") estimator is available via the `pyfixest.experimental.did` module
+
+## News
+
+`PyFixest` 0.10.8 adds experimental support for Gardner's two stage "DID2s" estimator:
+
+```py
+import pandas as pd
+import numpy as np
+from pyfixest.experimental.did import did2s
+from pyfixest.estimation import feols
+from pyfixest.visualize import iplot
+
+# download csv from this repo
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
+
+fit = did2s(
+    df_het,
+    yname = "dep_var",
+    first_stage = "~ 0 | state + year",
+    second_stage = "~i(rel_year)",
+    treatment = "treat",
+    cluster = "state",
+    i_ref1 = [-1.0, np.inf],
+)
+
+fit_twfe = feols(
+    "dep_var ~ i(rel_year) | state + year",
+    df_het,
+    i_ref1 = [-1.0, np.inf]
+)
+
+iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
+```
+![](./figures/event_study.svg)
 
 ## Installation
 
 You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
-
-## News
-
-`PyFixest` now supports Poisson regression!
-
-```python
-from pyfixest.estimation import fepois
-from pyfixest.utils import get_data
-
-pdata = get_data(model = "Fepois")
-fitpois = fepois("Y~X1 | f1 + f2", vcov = {'CRV1':'group_id'}, data = pdata)
-
-fitpois.summary()
-
-# Model:  Y~X1|f1+f2
-# ###
-#
-# Model:  Poisson
-# Dep. var.:  Y
-# Fixed effects:  f1+f2
-# Inference:  CRV1
-# Observations:  997
-#
-# | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-# |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-# | X1            |     -0.019 |        0.050 |    -0.370 |      0.711 |  -0.117 |    0.080 |
-# ---
-# Deviance: 1067.853
-```
-
 
 ## Quickstart
 

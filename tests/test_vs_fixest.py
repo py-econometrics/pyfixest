@@ -34,7 +34,7 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type",["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("model", ["Fepois", "Feols"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -63,10 +63,10 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-        ("Y ~ X1 + i(f1,X2)"),
-        ("Y ~ X1 + i(f2,X2)"),
-        ("Y ~ X1 + i(f1,X2) | f2"),
-        ("Y ~ X1 + i(f1,X2) | f2 + f3"),
+        ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),  # temporarily non-supported feature
         # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
         # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
         # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
@@ -176,7 +176,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             warnings.filterwarnings("ignore", category=RuntimeWarning)
             iv_check = feols(fml=fml, data=data, vcov="iid")
 
-        #if inference == "iid":
+        # if inference == "iid":
         #    return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
@@ -366,7 +366,7 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         ("Y ~ X1 | csw0(f1,f2)"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),
-        # ("Y ~ X3 + csw0(, X2, X3)"),
+        # ("Y ~ X2 + csw0(, X2, X2)"),
         ("Y ~ sw(X1, X2) | csw0(f1,f2,f3)"),
         ("Y ~ C(f2):X2 + sw0(X1, f3)"),
         ("Y + Y2 ~X1"),
@@ -453,55 +453,60 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         )
 
 
-
 def test_twoway_clustering():
-
     data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
 
     cluster_adj_options = [True]
     cluster_df_options = ["min", "conventional"]
 
-
     for cluster_adj in cluster_adj_options:
         for cluster_df in cluster_df_options:
-
-            fit1 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV1":"f1 +f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
-            fit2 = feols("Y ~ X1 + X2 ", data=data, vcov = {"CRV3":" f1+f2"}, ssc = ssc(cluster_adj = cluster_adj, cluster_df = cluster_df))
+            fit1 = feols(
+                "Y ~ X1 + X2 ",
+                data=data,
+                vcov={"CRV1": "f1 +f2"},
+                ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
+            )
+            fit2 = feols(
+                "Y ~ X1 + X2 ",
+                data=data,
+                vcov={"CRV3": " f1+f2"},
+                ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
+            )
 
             feols_fit1 = fixest.feols(
                 ro.Formula("Y ~ X1 + X2"),
                 data=data,
-                cluster = ro.Formula("~f1+f2"),
-                ssc=fixest.ssc(True, "none", cluster_adj, cluster_df, "min", False)
+                cluster=ro.Formula("~f1+f2"),
+                ssc=fixest.ssc(True, "none", cluster_adj, cluster_df, "min", False),
             )
 
             # test vcov's
             np.testing.assert_allclose(
                 fit1._vcov,
                 stats.vcov(feols_fit1),
-                rtol = 1e-04,
-                atol = 1e-04,
-                err_msg = f"CRV1-vcov: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+                rtol=1e-04,
+                atol=1e-04,
+                err_msg=f"CRV1-vcov: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
             )
 
             # now test se's
             np.testing.assert_allclose(
                 fit1.se(),
                 fixest.se(feols_fit1),
-                rtol = 1e-04,
-                atol = 1e-04,
-                err_msg = f"CRV1-se: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+                rtol=1e-04,
+                atol=1e-04,
+                err_msg=f"CRV1-se: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
             )
 
             # now test pvalues
             np.testing.assert_allclose(
                 fit1.pvalue(),
                 fixest.pvalue(feols_fit1),
-                rtol = 1e-04,
-                atol = 1e-04,
-                err_msg = f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}"
+                rtol=1e-04,
+                atol=1e-04,
+                err_msg=f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
             )
-
 
 
 def _py_fml_to_r_fml(py_fml):
@@ -565,3 +570,71 @@ def get_data_r(fml, data):
 
     return data_r
 
+
+@pytest.mark.skip("Currently not supported.")
+def test_i_interaction():
+    """
+    Test that interaction syntax via the `i()` operator works as in fixest
+    """
+
+    data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
+
+    fit1 = feols("Y ~ i(f1, X2)", data=data)
+    fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
+    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=1.0)
+    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0])
+    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0, 3.0])
+
+    fit1_r = fixest.feols(
+        ro.Formula("Y ~ i(f1, X2)"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+    fit2_r = fixest.feols(
+        ro.Formula("Y ~ X1 + i(f1, X2) | f2"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+    # fit3_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 1.0) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
+    # fit4_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 2.0) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
+    # fit5_r = fixest.feols(
+    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = c(2.0, 3.0)) | f2"),
+    #    data=data,
+    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    # )
+
+    # create tuples: (pyfixest, fixest)
+    fits = [
+        (fit1, fit1_r),
+        (fit2, fit2_r),
+        # (fit3, fit3_r),
+        # (fit4, fit4_r),
+        # (fit5, fit5_r),
+    ]
+
+    for fit in fits:
+        # test that coefficients match
+        coef_py = fit[0].coef().values
+        coef_r = stats.coef(fit[1])
+        np.testing.assert_allclose(
+            coef_py,
+            coef_r,
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg="Coefficients do not match.",
+        )
+
+        # test that standard errors match
+        se_py = fit[0].se().values
+        se_r = fixest.se(fit[1])
+        np.testing.assert_allclose(
+            se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
+        )

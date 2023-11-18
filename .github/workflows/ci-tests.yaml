@@ -6,9 +6,6 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   test:
@@ -24,16 +21,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v2
 
-      - name: Setup R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.2.0'
-
-      - name: install fixest and broom for testing
-        run: Rscript -e 'install.packages(c("fixest", "broom"), repos="https://cloud.r-project.org")'
-        shell: bash
-
-
       - name: Setup python
         uses: actions/setup-python@v2
         with:
@@ -44,9 +31,20 @@ jobs:
         run: |
           pip install -e .
           pip install -r requirements_test_ci.txt
+
       - name: set numba parallel flags
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.2.0'
+
+      - name: install fixest and broom for testing
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"), repos="https://cloud.r-project.org")'
+        shell: bash
+
       - name: Run tests
         run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py
       - name: Upload coverage reports to Codecov

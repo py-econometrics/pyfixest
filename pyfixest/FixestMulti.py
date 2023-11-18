@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Union, Dict, Optional, List
 
 from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
+from pyfixest.fepois import Fepois, _check_for_separation
 from pyfixest.feiv import Feiv
 from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
@@ -57,6 +57,9 @@ class FixestMulti:
         vcov: Union[None, str, Dict[str, str]] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
+        drop_intercept: bool = False,
+        i_ref1: Optional[Union[List, str]] = None,
+        i_ref2: Optional[Union[List, str]] = None,
     ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
@@ -69,6 +72,9 @@ class FixestMulti:
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+            drop_intercept (bool, optional): Whether to drop the intercept. Default is False.
+            i_ref1 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the first interaction variable.
+            i_ref2 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the second interaction variable.
 
         Returns:
             None
@@ -82,6 +88,17 @@ class FixestMulti:
         self._drop_singletons = None
         self._fixef_keys = None
         self._is_multiple_estimation = None
+        self._i_ref1 = None
+        self._i_ref2 = None
+        self._drop_intercept = None
+
+        # set i_ref1 and i_ref2 to list if not None
+        if i_ref1 is not None:
+            if not isinstance(i_ref1, list):
+                i_ref1 = [i_ref1]
+        if i_ref2 is not None:
+            if not isinstance(i_ref2, list):
+                i_ref2 = [i_ref2]
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -99,6 +116,10 @@ class FixestMulti:
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
         self._fixef_keys = list(self._fml_dict.keys())
+
+        self._i_ref1 = i_ref1
+        self._i_ref2 = i_ref2
+        self._drop_intercept = drop_intercept
 
     def _estimate_all_models(
         self,
@@ -134,6 +155,9 @@ class FixestMulti:
         _method = self._method
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
+        _drop_intercept = self._drop_intercept
+        _i_ref1 = self._i_ref1
+        _i_ref2 = self._i_ref2
 
         for _, fval in enumerate(fixef_keys):
             dict2fe = _fml_dict.get(fval)
@@ -168,11 +192,20 @@ class FixestMulti:
                         na_index,
                         na_index_str,
                         _icovars,
-                    ) = model_matrix_fixest(fml=fml, data=_data)
-                    toc = time.time()
-                    print(f"model_matrix_fixest: {toc-tic}")
+                        X_is_empty,
+                    ) = model_matrix_fixest(
+                        fml=fml,
+                        data=_data,
+                        drop_intercept=_drop_intercept,
+                        i_ref1=_i_ref1,
+                        i_ref2=_i_ref2,
+                    )
 
                     weights = np.ones((Y.shape[0], 1))
+
+                    self._X_is_empty = False
+                    if X_is_empty:
+                        self._X_is_empty = True
 
                     coefnames = X.columns.tolist()
 
@@ -239,14 +272,28 @@ class FixestMulti:
                                 collin_tol=collin_tol,
                             )
 
-                        tic = time.time()
-                        FIT.get_fit()
-                        toc = time.time()
-                        print(f"get_fit: {toc-tic}")
+                        # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
+                        if FIT._X_is_empty:
+                            FIT._u_hat = Y.to_numpy() - Yd
+                        else:
+                            FIT.get_fit()
 
                     elif _method == "fepois":
                         # check for separation and drop separated variables
-                        # Y, X, fe, na_index = self._separation()
+
+                        na_separation = []
+                        if fe is not None:
+                            na_separation = _check_for_separation(
+                                Y=Y, fe=fe, check="fe"
+                            )
+                            if na_separation:
+                                warnings.warn(
+                                    f"{str(len(na_separation))} observations removed because of separation."
+                                )
+
+                                Y.drop(na_separation, axis=0, inplace=True)
+                                X.drop(na_separation, axis=0, inplace=True)
+                                fe.drop(na_separation, axis=0, inplace=True)
 
                         Y, X = [x.to_numpy() for x in [Y, X]]
                         N = X.shape[0]
@@ -273,9 +320,9 @@ class FixestMulti:
 
                         FIT.na_index = na_index
                         FIT.n_separation_na = None
-                        if FIT.separation_na:
-                            FIT.na_index += FIT.separation_na
-                            FIT.n_separation_na = len(FIT.separation_na)
+                        if na_separation:
+                            FIT.na_index += na_separation
+                            FIT.n_separation_na = len(na_separation)
 
                     else:
                         raise ValueError(
@@ -286,6 +333,7 @@ class FixestMulti:
 
                     tic = time.time()
                     FIT._fml = fml
+                    FIT._depvar = depvar
                     FIT._data = _data.iloc[~_data.index.isin(na_index)]
                     FIT._ssc_dict = _ssc_dict
                     if fval != "0":
@@ -298,22 +346,22 @@ class FixestMulti:
                     toc = time.time()
                     print(f"bookkeeping: {toc-tic}")
 
-                    tic = time.time()
-                    # inference
-                    vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type)
-                    FIT.get_inference()
-                    toc = time.time()
-                    print(f"inference: {toc-tic}")
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)
+                    if not FIT._X_is_empty:
+                        # inference
+                        vcov_type = _get_vcov_type(vcov, fval)
+                        FIT.vcov(vcov=vcov_type)
+                        FIT.get_inference()
 
-                    # other regression stats
-                    if _method == "feols":
-                        FIT.get_performance()
 
-                    if _icovars is not None:
-                        FIT._icovars = _icovars
-                    else:
-                        FIT._icovars = None
+                        # other regression stats
+                        if _method == "feols":
+                            FIT.get_performance()
+
+                        if _icovars is not None:
+                            FIT._icovars = _icovars
+                        else:
+                            FIT._icovars = None
 
                     # store fitted model
                     self.all_fitted_models[fml] = FIT

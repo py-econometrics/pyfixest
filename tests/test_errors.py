@@ -10,6 +10,7 @@ from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
+    InvalidReferenceLevelError,
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
@@ -132,3 +133,17 @@ def test_poisson_devpar_count():
     # under determined
     with pytest.raises(AssertionError):
         fepois(fml="Y ~ X1 | X4", data=data)
+
+
+def test_i_interaction_errors():
+    data = get_data()
+
+    with pytest.raises(InvalidReferenceLevelError):
+        # "a" not a level in f1
+        feols(fml="Y ~ i(f1, X1)", data=data, i_ref1="a")
+
+    with pytest.raises(
+        InvalidReferenceLevelError
+    ):  # incorrect type - int is provided but float required
+        # "a" not a level in f1
+        feols(fml="Y ~ i(f1, X1)", data=data, i_ref1=1)
