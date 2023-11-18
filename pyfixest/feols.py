@@ -1,7 +1,9 @@
 import re
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
+import numba as nb
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
@@ -290,6 +292,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -337,24 +340,18 @@ class Feols:
                 self._ssc.append(ssc)
 
                 if self._vcov_type_detail == "CRV1":
-                    k_instruments = _Z.shape[1]
-                    meat = np.zeros((k_instruments, k_instruments))
 
                     if _weights is not None:
-                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
-                            (_N, 1)
-                        )
+                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape((_N, 1))
                     else:
                         weighted_uhat = _u_hat
 
-                    for (
-                        _,
-                        g,
-                    ) in enumerate(clustid):
-                        Zg = _Z[np.where(cluster_col == g)]
-                        ug = weighted_uhat[np.where(cluster_col == g)]
-                        score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
-                        meat += np.dot(score_g, score_g.transpose())
+                    meat = _crv1_meat_loop(
+                        _Z = _Z,
+                        weighted_uhat=weighted_uhat,
+                        clustid = clustid.values,
+                        cluster_col = cluster_col.values
+                    )
 
                     if _is_iv == False:
                         self._vcov += self._ssc[x] * bread @ meat @ bread
@@ -936,10 +933,20 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
+
+
         _Y = self._Y
         _u_hat = self._u_hat
         _N = self._N
         _k = self._k
+        if self._fixef:
+            _n_fe = len(self._fixef)
+        else:
+            _n_fe = 0
+
+
+        # (n - nb_fe) / (n - nb_fe - K)
+        adjustment_factor = (_N - _n_fe) / (_N - _n_fe - _k)
 
         Y_no_demean = _Y
 
@@ -950,7 +957,8 @@ class Feols:
         self._rmse = np.sqrt(ssu / _N)
 
         self._r2_within = 1 - (ssu / ssy_within)
-        self._r2 = 1 - (ssu / ssy)
+        self._r2_within_adjusted = adjustment_factor * self._r2_within
+        self._r2 = None #1 - (ssu / ssy)
 
     def tidy(self) -> pd.DataFrame:
         """
@@ -1220,7 +1228,6 @@ def _drop_multicollinear_variables(
 
     return X, names, collin_vars, collin_index
 
-
 def _find_collinear_variables(X, tol=1e-10):
     """
     Detect multicollinear variables.
@@ -1279,3 +1286,30 @@ def _find_collinear_variables(X, tol=1e-10):
     res["all_removed"] = False
 
     return res
+
+
+@nb.njit(parallel=True)
+def _crv1_meat_loop(_Z: np.ndarray, weighted_uhat: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray) -> np.ndarray:
+
+    """
+    Compute the meat matrix for CRV1 inference.
+    Args:
+        _Z (np.ndarray): The design matrix.
+        weighted_uhat (np.ndarray): The (weighted) residuals.
+        clustid (np.ndarray): The cluster id.
+        cluster_col (np.ndarray): The cluster column.
+    Returns:
+        meat (np.ndarray): The meat matrix.
+    """
+
+    k_instruments = _Z.shape[1]
+    meat = np.zeros((k_instruments, k_instruments))
+
+    for i in nb.prange(len(clustid)):
+        g = clustid[i]
+        Zg = _Z[np.where(cluster_col == g)]
+        ug = weighted_uhat[np.where(cluster_col == g)]
+        score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
+        meat += np.dot(score_g, score_g.transpose())
+
+    return meat
