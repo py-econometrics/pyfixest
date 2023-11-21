@@ -2,6 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 import warnings
+import numba as nb
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
@@ -15,7 +16,6 @@ from pyfixest.utils import get_ssc
 from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
-    EmptyDesignMatrixError,
 )
 
 
@@ -347,14 +347,18 @@ class Feols:
                     else:
                         weighted_uhat = _u_hat
 
-                    for (
-                        _,
-                        g,
-                    ) in enumerate(clustid):
-                        Zg = _Z[np.where(cluster_col == g)]
-                        ug = weighted_uhat[np.where(cluster_col == g)]
-                        score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
-                        meat += np.dot(score_g, score_g.transpose())
+                    sorted_indices = np.argsort(cluster_col.values)
+                    sorted_values = cluster_col.values[sorted_indices]
+                    unique_values, first_occurrence_indices = np.unique(sorted_values, return_index=True)
+
+                    meat = _crv1_meat_loop(
+                        _Z = _Z,
+                        weighted_uhat = weighted_uhat,
+                        sorted_indices = sorted_indices,
+                        sorted_values = sorted_values,
+                        unique_values = unique_values,
+                        first_occurrence_indices = first_occurrence_indices,
+                    )
 
                     if _is_iv == False:
                         self._vcov += self._ssc[x] * bread @ meat @ bread
@@ -1279,3 +1283,29 @@ def _find_collinear_variables(X, tol=1e-10):
     res["all_removed"] = False
 
     return res
+
+
+@nb.njit(parallel=True)
+def _crv1_meat_loop(
+    _Z: np.ndarray,
+    weighted_uhat: np.ndarray,
+    sorted_indices: np.ndarray,
+    sorted_values: np.ndarray,
+    unique_values: np.ndarray,
+    first_occurrence_indices: np.ndarray,
+) -> np.ndarray:
+
+    k = _Z.shape[1]
+    meat = np.zeros((k, k), dtype=np.float64)
+
+
+    for i in nb.prange(len(unique_values)):
+        start_index = first_occurrence_indices[i]
+        end_index = first_occurrence_indices[i + 1] if i < len(unique_values) - 1 else len(sorted_indices)
+        g_index = sorted_indices[start_index:end_index]
+        Zg = _Z[g_index]
+        ug = weighted_uhat[g_index]
+        score_g = np.dot(Zg.T, ug)
+        meat +=np.outer(score_g, score_g)
+
+    return meat
