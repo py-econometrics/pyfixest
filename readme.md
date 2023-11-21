@@ -19,6 +19,18 @@ At the moment, `PyFixest` supports
 - Difference-in-Difference Estimators:
   - Gardner's two-stage ("`Did2s`") estimator is available via the `pyfixest.experimental.did` module
 
+## Installation
+
+You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
+
+## Benchmarks
+
+All benchmarks follow the [fixest benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK). All non-pyfixest timings are taken from the `fixest` benchmarks.
+
+![](./benchmarks/lets-plot-images/benchmarks_ols.svg)
+![](./benchmarks/lets-plot-images/benchmarks_poisson.svg)
+
+
 ## News
 
 `PyFixest` 0.10.8 adds experimental support for Gardner's two stage "DID2s" estimator:
@@ -52,10 +64,6 @@ fit_twfe = feols(
 iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
 ```
 ![](./figures/event_study.svg)
-
-## Installation
-
-You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
 
 ## Quickstart
 
