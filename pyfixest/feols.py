@@ -290,7 +290,6 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -321,7 +320,6 @@ class Feols:
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(cluster_df.columns):
-
                 cluster_col_pd = cluster_df[col]
                 cluster_col, _ = pd.factorize(cluster_col_pd)
                 clustid = np.unique(cluster_col)
@@ -349,10 +347,10 @@ class Feols:
                         weighted_uhat = _u_hat
 
                     meat = _crv1_meat_loop(
-                        _Z = _Z.astype(np.float64),
-                        weighted_uhat = weighted_uhat.astype(np.float64),
-                        clustid = clustid,
-                        cluster_col = cluster_col
+                        _Z=_Z.astype(np.float64),
+                        weighted_uhat=weighted_uhat.astype(np.float64),
+                        clustid=clustid,
+                        cluster_col=cluster_col,
                     )
 
                     if _is_iv == False:
@@ -1302,6 +1300,7 @@ def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
     return args, locs
 
+
 # CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
 def _crv1_meat_loop(
@@ -1310,14 +1309,13 @@ def _crv1_meat_loop(
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-
     k = _Z.shape[1]
     dtype = _Z.dtype
     meat = np.zeros((k, k), dtype=dtype)
 
     g_indices, g_locs = bucket_argsort(cluster_col)
 
-    score_g = np.empty((k,1), dtype=dtype)
+    score_g = np.empty((k, 1), dtype=dtype)
     meat_i = np.empty((k, k), dtype=dtype)
 
     for i in range(clustid.size):
@@ -1329,8 +1327,8 @@ def _crv1_meat_loop(
         Zg = _Z[g_index]
         ug = weighted_uhat[g_index]
 
-        np.dot(Zg.T, ug, out = score_g)
-        np.outer(score_g, score_g, out = meat_i)
+        np.dot(Zg.T, ug, out=score_g)
+        np.outer(score_g, score_g, out=meat_i)
         meat += meat_i
 
     return meat
