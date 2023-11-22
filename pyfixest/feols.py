@@ -290,6 +290,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -312,8 +313,6 @@ class Feols:
             if _ssc_dict["cluster_df"] == "min":
                 G = [min(G)] * 3
 
-            # all elements of cluster_df to pd.Categorical
-
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
             self._ssc = []
@@ -322,8 +321,10 @@ class Feols:
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(cluster_df.columns):
-                cluster_col = cluster_df[col]
-                _, clustid = pd.factorize(cluster_col)
+
+                cluster_col_pd = cluster_df[col]
+                cluster_col, _ = pd.factorize(cluster_col_pd)
+                clustid = np.unique(cluster_col)
 
                 ssc = get_ssc(
                     ssc_dict=_ssc_dict,
@@ -350,8 +351,8 @@ class Feols:
                     meat = _crv1_meat_loop(
                         _Z = _Z.astype(np.float64),
                         weighted_uhat = weighted_uhat.astype(np.float64),
-                        clustid = clustid.values.astype(np.int32),
-                        cluster_col = cluster_col.values.astype(np.int32)
+                        clustid = clustid,
+                        cluster_col = cluster_col
                     )
 
                     if _is_iv == False:
