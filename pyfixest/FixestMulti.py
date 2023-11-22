@@ -150,7 +150,7 @@ class FixestMulti:
 
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
-        _data = self._data
+        _data = self._data.copy()
         _method = self._method
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
