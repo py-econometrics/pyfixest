@@ -347,17 +347,11 @@ class Feols:
                     else:
                         weighted_uhat = _u_hat
 
-                    sorted_indices = np.argsort(cluster_col.values)
-                    sorted_values = cluster_col.values[sorted_indices]
-                    unique_values, first_occurrence_indices = np.unique(sorted_values, return_index=True)
-
                     meat = _crv1_meat_loop(
-                        _Z = _Z,
-                        weighted_uhat = weighted_uhat,
-                        sorted_indices = sorted_indices,
-                        sorted_values = sorted_values,
-                        unique_values = unique_values,
-                        first_occurrence_indices = first_occurrence_indices,
+                        _Z = _Z.astype(np.float64),
+                        weighted_uhat = weighted_uhat.astype(np.float64),
+                        clustid = clustid.values.astype(np.int32),
+                        cluster_col = cluster_col.values.astype(np.int32)
                     )
 
                     if _is_iv == False:
@@ -1285,27 +1279,56 @@ def _find_collinear_variables(X, tol=1e-10):
     return res
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=False)
+def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    counts = np.zeros(arr.max() + 1, dtype=np.uint32)
+    for i in range(arr.size):
+        counts[arr[i]] += 1
+
+    locs = np.empty(counts.size + 1, dtype=np.uint32)
+    locs[0] = 0
+    pos = np.empty(counts.size, dtype=np.uint32)
+    for i in range(counts.size):
+        locs[i + 1] = locs[i] + counts[i]
+        pos[i] = locs[i]
+
+    args = np.empty(arr.size, dtype=np.uint32)
+    for i in range(arr.size):
+        e = arr[i]
+        args[pos[e]] = i
+        pos[e] += 1
+
+    return args, locs
+
+
+@nb.njit(parallel=False)
 def _crv1_meat_loop(
     _Z: np.ndarray,
     weighted_uhat: np.ndarray,
-    sorted_indices: np.ndarray,
-    sorted_values: np.ndarray,
-    unique_values: np.ndarray,
-    first_occurrence_indices: np.ndarray,
+    clustid: np.ndarray,
+    cluster_col: np.ndarray,
 ) -> np.ndarray:
 
     k = _Z.shape[1]
-    meat = np.zeros((k, k), dtype=np.float64)
+    dtype = _Z.dtype
+    meat = np.zeros((k, k), dtype=dtype)
 
+    g_indices, g_locs = bucket_argsort(cluster_col)
 
-    for i in nb.prange(len(unique_values)):
-        start_index = first_occurrence_indices[i]
-        end_index = first_occurrence_indices[i + 1] if i < len(unique_values) - 1 else len(sorted_indices)
-        g_index = sorted_indices[start_index:end_index]
+    score_g = np.empty((k,1), dtype=dtype)
+    meat_i = np.empty((k, k), dtype=dtype)
+
+    for i in range(clustid.size):
+        g = clustid[i]
+        start = g_locs[g]
+        end = g_locs[g + 1]
+        g_index = g_indices[start:end]
+
         Zg = _Z[g_index]
         ug = weighted_uhat[g_index]
-        score_g = np.dot(Zg.T, ug)
-        meat +=np.outer(score_g, score_g)
+
+        np.dot(Zg.T, ug, out = score_g)
+        np.outer(score_g, score_g, out = meat_i)
+        meat += meat_i
 
     return meat
