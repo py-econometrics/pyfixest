@@ -43,7 +43,7 @@ class FixestMulti:
         if not isinstance(data, pd.DataFrame):
             raise TypeError("data must be a pd.DataFrame")
 
-        self._data = data.copy()
+        self._data = data#.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.index = range(data.shape[0])

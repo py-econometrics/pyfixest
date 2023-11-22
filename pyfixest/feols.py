@@ -1280,6 +1280,7 @@ def _find_collinear_variables(X, tol=1e-10):
     return res
 
 
+# CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
 def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     counts = np.zeros(arr.max() + 1, dtype=np.uint32)
@@ -1301,7 +1302,7 @@ def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
     return args, locs
 
-
+# CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
 def _crv1_meat_loop(
     _Z: np.ndarray,
