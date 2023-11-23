@@ -2,6 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 import warnings
+import numba as nb
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
@@ -15,7 +16,6 @@ from pyfixest.utils import get_ssc
 from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
-    EmptyDesignMatrixError,
 )
 
 
@@ -312,8 +312,6 @@ class Feols:
             if _ssc_dict["cluster_df"] == "min":
                 G = [min(G)] * 3
 
-            # all elements of cluster_df to pd.Categorical
-
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
             self._ssc = []
@@ -322,8 +320,9 @@ class Feols:
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(cluster_df.columns):
-                cluster_col = cluster_df[col]
-                _, clustid = pd.factorize(cluster_col)
+                cluster_col_pd = cluster_df[col]
+                cluster_col, _ = pd.factorize(cluster_col_pd)
+                clustid = np.unique(cluster_col)
 
                 ssc = get_ssc(
                     ssc_dict=_ssc_dict,
@@ -347,14 +346,12 @@ class Feols:
                     else:
                         weighted_uhat = _u_hat
 
-                    for (
-                        _,
-                        g,
-                    ) in enumerate(clustid):
-                        Zg = _Z[np.where(cluster_col == g)]
-                        ug = weighted_uhat[np.where(cluster_col == g)]
-                        score_g = (np.transpose(Zg) @ ug).reshape((k_instruments, 1))
-                        meat += np.dot(score_g, score_g.transpose())
+                    meat = _crv1_meat_loop(
+                        _Z=_Z.astype(np.float64),
+                        weighted_uhat=weighted_uhat.astype(np.float64),
+                        clustid=clustid,
+                        cluster_col=cluster_col,
+                    )
 
                     if _is_iv == False:
                         self._vcov += self._ssc[x] * bread @ meat @ bread
@@ -1279,3 +1276,59 @@ def _find_collinear_variables(X, tol=1e-10):
     res["all_removed"] = False
 
     return res
+
+
+# CODE from Styfen Schaer (@styfenschaer)
+@nb.njit(parallel=False)
+def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    counts = np.zeros(arr.max() + 1, dtype=np.uint32)
+    for i in range(arr.size):
+        counts[arr[i]] += 1
+
+    locs = np.empty(counts.size + 1, dtype=np.uint32)
+    locs[0] = 0
+    pos = np.empty(counts.size, dtype=np.uint32)
+    for i in range(counts.size):
+        locs[i + 1] = locs[i] + counts[i]
+        pos[i] = locs[i]
+
+    args = np.empty(arr.size, dtype=np.uint32)
+    for i in range(arr.size):
+        e = arr[i]
+        args[pos[e]] = i
+        pos[e] += 1
+
+    return args, locs
+
+
+# CODE from Styfen Schaer (@styfenschaer)
+@nb.njit(parallel=False)
+def _crv1_meat_loop(
+    _Z: np.ndarray,
+    weighted_uhat: np.ndarray,
+    clustid: np.ndarray,
+    cluster_col: np.ndarray,
+) -> np.ndarray:
+    k = _Z.shape[1]
+    dtype = _Z.dtype
+    meat = np.zeros((k, k), dtype=dtype)
+
+    g_indices, g_locs = bucket_argsort(cluster_col)
+
+    score_g = np.empty((k, 1), dtype=dtype)
+    meat_i = np.empty((k, k), dtype=dtype)
+
+    for i in range(clustid.size):
+        g = clustid[i]
+        start = g_locs[g]
+        end = g_locs[g + 1]
+        g_index = g_indices[start:end]
+
+        Zg = _Z[g_index]
+        ug = weighted_uhat[g_index]
+
+        np.dot(Zg.T, ug, out=score_g)
+        np.outer(score_g, score_g, out=meat_i)
+        meat += meat_i
+
+    return meat

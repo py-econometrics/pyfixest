@@ -1,5 +1,9 @@
 # News
 
+## PyFixest `0.11.0`
+
+- Significant speedups for CRV1 inference.
+
 ## PyFixest `0.10.12`
 
 Fixes a small bug with the separation check for poisson regression #138.
