@@ -2,7 +2,7 @@
 
 ## PyFixest 0.11.1
 
-- Fix some bugs around the computation of R-squared values.
+- Fix some bugs around the computation of R-squared values (see [issue #103](https://github.com/s3alfisc/pyfixest/issues/103)).
 - Reports R-squared values again when calling `.summary()`.
 
 ## PyFixest 0.11.0
