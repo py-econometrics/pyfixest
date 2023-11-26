@@ -171,11 +171,11 @@ def summary(
             if not fxst._is_iv:
                 if fxst._has_fixef:
                     print(
-                        f"RMSE: {np.round(fxst._rmse, digits)}    R2: {np.round(fxst._r2, digits)}  R2 Within: {np.round(fxst._r2_within, digits)}"
+                        f"RMSE: {np.round(fxst._rmse, digits)}   R2: {np.round(fxst._r2, digits)}   R2 Within: {np.round(fxst._r2_within, digits)}"
                     )
                 else:
                     print(
-                        f"RMSE: {np.round(fxst._rmse, digits)}    R2: {np.round(fxst._r2, digits)}"
+                        f"RMSE: {np.round(fxst._rmse, digits)}   R2: {np.round(fxst._r2, digits)}"
                     )
         elif fxst._method == "fepois":
             print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
