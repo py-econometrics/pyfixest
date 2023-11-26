@@ -2,6 +2,9 @@
 
 ## PyFixest 0.11.1
 
+- Fix some bugs around the computation of R-squared values.
+- Reports R-squared values again when calling `.summary()`.
+
 ## PyFixest 0.11.0
 
 - Significant speedups for CRV1 inference.
