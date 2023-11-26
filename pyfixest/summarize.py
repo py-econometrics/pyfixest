@@ -169,9 +169,14 @@ def summary(
         print("---")
         if fxst._method == "feols":
             if not fxst._is_iv:
-                print(
-                    f"RMSE: {np.round(fxst._rmse, digits)}"  #  Adj. R2: {np.round(fxst._adj_r2, digits)}  Adj. R2 Within: {np.round(fxst._adj_r2_within, digits)}"
-                )
+                if fxst._has_fixef:
+                    print(
+                        f"RMSE: {np.round(fxst._rmse, digits)}    R2: {np.round(fxst._r2, digits)}  R2 Within: {np.round(fxst._r2_within, digits)}"
+                    )
+                else:
+                    print(
+                        f"RMSE: {np.round(fxst._rmse, digits)}    R2: {np.round(fxst._r2, digits)}"
+                    )
         elif fxst._method == "fepois":
             print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
         else:

@@ -845,7 +845,8 @@ class Feols:
         _u_hat = self._u_hat
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
-        _depvar = self._depvar
+
+        _Y_untransformed = self._Y_untransformed.values.flatten()
 
         if _is_iv:
             raise NotImplementedError(
@@ -853,7 +854,7 @@ class Feols:
             )
 
         if newdata is None:
-            y_hat = _data[_depvar].to_numpy() - _u_hat.flatten()
+            y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
             if self._has_fixef:
@@ -933,21 +934,38 @@ class Feols:
             adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
-        _Y = self._Y
+        _Y_within = self._Y
+        _Y = self._Y_untransformed.values
         _u_hat = self._u_hat
         _N = self._N
         _k = self._k
+        _has_fixef = self._has_fixef
 
-        Y_no_demean = _Y
+        if _has_fixef:
+            _k_fe = np.sum(self._k_fe.values - 1) + 1
+            _adj_factor = (_N - _k_fe) / (_N - _k - _k_fe)
+        else:
+            _adj_factor = (_N) / (_N - 1)
 
         ssu = np.sum(_u_hat**2)
-        ssy_within = np.sum((_Y - np.mean(_Y)) ** 2)
-        ssy = np.sum((Y_no_demean - np.mean(Y_no_demean)) ** 2)
-
+        ssy = np.sum((_Y - np.mean(_Y)) ** 2)
         self._rmse = np.sqrt(ssu / _N)
-
-        self._r2_within = 1 - (ssu / ssy_within)
         self._r2 = 1 - (ssu / ssy)
+        self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
+
+        if _has_fixef:
+            ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
+            self._r2_within = 1 - (ssu / ssy_within)
+            self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
+        else:
+            self._r2_within = np.nan
+            self._adj_r2_within = np.nan
+
+        # overwrite self._adj_r2 and self._adj_r2_within
+        # reason: currently I cannot match fixest dof correction, so
+        # better not to report it
+        self._adj_r2 = None
+        self._adj_r2_within = None
 
     def tidy(self) -> pd.DataFrame:
         """
