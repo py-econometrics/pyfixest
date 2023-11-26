@@ -207,6 +207,11 @@ class FixestMulti:
 
                     coefnames = X.columns.tolist()
 
+                    if fe is not None:
+                        _k_fe = fe.nunique(axis=0)
+                    else:
+                        _k_fe = None
+
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
 
@@ -327,15 +332,16 @@ class FixestMulti:
                     # some bookkeeping
                     FIT._fml = fml
                     FIT._depvar = depvar
+                    FIT._Y_untransformed = Y
                     FIT._data = _data.iloc[~_data.index.isin(na_index)]
                     FIT._ssc_dict = _ssc_dict
+                    FIT._k_fe = _k_fe
                     if fval != "0":
                         FIT._has_fixef = True
                         FIT._fixef = fval
                     else:
                         FIT._has_fixef = False
                         FIT._fixef = None
-                    # FEOLS.split_log = x
 
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
@@ -346,7 +352,8 @@ class FixestMulti:
 
                         # other regression stats
                         if _method == "feols":
-                            FIT.get_performance()
+                            if not FIT._is_iv:
+                                FIT.get_performance()
 
                         if _icovars is not None:
                             FIT._icovars = _icovars
@@ -729,22 +736,6 @@ def _drop_singletons(fixef_rm: bool) -> bool:
         return True
     else:
         return False
-
-
-def _find_untransformed_depvar(transformed_depvar):
-    """
-    Args:
-        transformed_depvar (str): The transformed depvar
-
-    find untransformed depvar in a formula
-    i.e. if "a" is transormed to "log(a)", then "a" is returned
-    """
-
-    match = re.search(r"\((.*?)\)", transformed_depvar)
-    if match:
-        return match.group(1)
-    else:
-        return transformed_depvar
 
 
 def _get_endogvars_instruments(
