@@ -545,14 +545,14 @@ files = [
 
 [[package]]
 name = "idna"
-version = "3.4"
+version = "3.6"
 description = "Internationalized Domain Names in Applications (IDNA)"
 category = "main"
 optional = true
 python-versions = ">=3.5"
 files = [
-    {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
-    {file = "idna-3.4.tar.gz", hash = "sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4"},
+    {file = "idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f"},
+    {file = "idna-3.6.tar.gz", hash = "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca"},
 ]
 
 [[package]]
@@ -1246,14 +1246,14 @@ test = ["pytest", "pytest-cov", "scipy"]
 
 [[package]]
 name = "pexpect"
-version = "4.8.0"
+version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "pexpect-4.8.0-py2.py3-none-any.whl", hash = "sha256:0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"},
-    {file = "pexpect-4.8.0.tar.gz", hash = "sha256:fc65a43959d153d0114afe13997d439c22823a27cefceb5ff35c2178c6784c0c"},
+    {file = "pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523"},
+    {file = "pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f"},
 ]
 
 [package.dependencies]
@@ -1418,18 +1418,18 @@ tests = ["pytest", "pytest-xdist"]
 
 [[package]]
 name = "pymdown-extensions"
-version = "10.4"
+version = "10.5"
 description = "Extension pack for Python Markdown."
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pymdown_extensions-10.4-py3-none-any.whl", hash = "sha256:cfc28d6a09d19448bcbf8eee3ce098c7d17ff99f7bd3069db4819af181212037"},
-    {file = "pymdown_extensions-10.4.tar.gz", hash = "sha256:bc46f11749ecd4d6b71cf62396104b4a200bad3498cb0f5dad1b8502fe461a35"},
+    {file = "pymdown_extensions-10.5-py3-none-any.whl", hash = "sha256:1f0ca8bb5beff091315f793ee17683bc1390731f6ac4c5eb01e27464b80fe879"},
+    {file = "pymdown_extensions-10.5.tar.gz", hash = "sha256:1b60f1e462adbec5a1ed79dac91f666c9c0d241fa294de1989f29d20096cfd0b"},
 ]
 
 [package.dependencies]
-markdown = ">=3.2"
+markdown = ">=3.5"
 pyyaml = "*"
 
 [package.extras]
@@ -1921,14 +1921,14 @@ files = [
 
 [[package]]
 name = "trove-classifiers"
-version = "2023.11.14"
+version = "2023.11.22"
 description = "Canonical source for classifiers on PyPI (pypi.org)."
 category = "main"
 optional = true
 python-versions = "*"
 files = [
-    {file = "trove-classifiers-2023.11.14.tar.gz", hash = "sha256:64b5e78305a5de347f2cd7ec8c12d704a3ef0cb85cc10c0ca5f73488d1c201f8"},
-    {file = "trove_classifiers-2023.11.14-py3-none-any.whl", hash = "sha256:2893a80cf3c48645462dea97c72c02a9fb1f7bd3c65f9908d3ffb1a7ef0b3833"},
+    {file = "trove-classifiers-2023.11.22.tar.gz", hash = "sha256:c31a7e92f965f060a244b57d8ed5ee6f53fcb413ee17ce790e00577cb369ad99"},
+    {file = "trove_classifiers-2023.11.22-py3-none-any.whl", hash = "sha256:533df77e284fd645d90deeafd3ef710d290884efafe4f5009aa1663f95aec992"},
 ]
 
 [[package]]

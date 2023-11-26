@@ -1,26 +1,28 @@
 # News
 
-## PyFixest `0.11.0`
+## PyFixest 0.11.1
+
+## PyFixest 0.11.0
 
 - Significant speedups for CRV1 inference.
 
-## PyFixest `0.10.12`
+## PyFixest 0.10.12
 
 Fixes a small bug with the separation check for poisson regression #138.
 
-## PyFixest `0.10.11`
+## PyFixest 0.10.11
 
 Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.
 
-## PyFixest `0.10.10`
+## PyFixest 0.10.10
 
 Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/s3alfisc/pyfixest/issues/211).
 
-## PyFixest `0.10.9`
+## PyFixest 0.10.9
 
 Makes `etable()` prettier and more informative.
 
-## PyFixest `0.10.8`
+## PyFixest 0.10.8
 
 ### Breaking changes
 Reference levels for the `i()` formula syntax can no longer be set within the formula, but need to be added via the `i_ref1` function argument to either `feols()` and `fepois()`.
@@ -60,7 +62,7 @@ iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs 
 
 
 
-## PyFixest `0.10.7`
+## PyFixest 0.10.7
 
 - Adds basic support for event study estimation via two-way fixed effects and Gardner's two-stage "Did2s" approach.
   This is a beta version and experimental. Further updates (i.e. proper event studies vs "only" ATTs) and a more flexible
@@ -100,35 +102,35 @@ etable([fit_twfe, fit_did2s])
 # Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
 ```
 
-## PyFixest `0.10.6`
+## PyFixest 0.10.6
 
 - Adds an `etable()` function that outputs markdown, latex or a pd.DataFrame.
 
-## PyFixest `0.10.5`
+## PyFixest 0.10.5
 
 - Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/s3alfisc/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
 
-## PyFixest `0.10.4`
+## PyFixest 0.10.4
 
 - Implements a custom function to drop singleton fixed effects.
 - Additional small performance improvements.
 
-## PyFixest `0.10.3`
+## PyFixest 0.10.3
 
 - Allows for white space in the multiway clustering formula.
 - Adds documentation for multiway clustering.
 
-## PyFixest `0.10.2`
+## PyFixest 0.10.2
 
 - Adds support for two-way clustering.
 - Adds support for CRV3 inference for Poisson regression.
 
-## PyFixest `0.10.1`
+## PyFixest 0.10.1
 
-- Adapts the internal fixed effects demeaning criteron to match `PyHDFE`'s default.
+- Adapts the internal fixed effects demeaning criteron to match `PyHDFE's default.
 - Adds Styfen as coauthor.
 
-## PyFixest `0.10`
+## PyFixest 0.10
 
 - Multiple performance improvements.
 - Most importantly, implements a custom demeaning algorithm in `numba` - thanks to Styfen Schaer (@styfenschaer),
@@ -174,41 +176,41 @@ np.allclose(res_pyhdfe , res_pyfixest)
 
 
 
-## PyFixest `0.9.11`
+## PyFixest 0.9.11
 
 - Bump required `formulaic` version to `0.6.5`.
 - Stop copying the data frame in `fixef()`.
 
-## PyFixest `0.9.10`
+## PyFixest 0.9.10
 
 - Fixes a big in the `wildboottest` method (see [#158](https://github.com/s3alfisc/pyfixest/issues/158)).
 - Allows to run a wild bootstrap after fixed effect estimation.
 
-## PyFixest `0.9.9`
+## PyFixest 0.9.9
 
 - Adds support for `wildboottest` for Python `3.11`.
 
-## PyFixest `0.9.8`
+## PyFixest 0.9.8
 
 - Fixes a couple more bugs in the `predict()` and `fixef()` methods.
 - The `predict()` argument `data` is renamed to `newdata`.
 
-## PyFixest `0.9.7`
+## PyFixest 0.9.7
 
 Fixes a bug in `predict()` produced when multicollinear variables are dropped.
 
-## PyFixest `0.9.6`
+## PyFixest 0.9.6
 
 Improved Collinearity handling. See [#145](https://github.com/s3alfisc/pyfixest/issues/145)
 
-## PyFixest `0.9.5`
+## PyFixest 0.9.5
 
 
-- Moves plotting from `matplotlin` to `lets-plot`.
+- Moves plotting from `matplotlib` to `lets-plot`.
 - Fixes a few minor bugs in plotting and the `fixef()` method.
 
 
-## PyFixest `0.9.1`
+## PyFixest 0.9.1
 
 ### Breaking API changes
 

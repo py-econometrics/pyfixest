@@ -328,6 +328,45 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             py_nobs, r_nobs, rtol=rtol, atol=atol, err_msg="py_nobs != r_nobs"
         )
 
+        if model == "Feols":
+            # import pdb; pdb.set_trace()
+
+            if not mod._is_iv:
+                py_r2 = mod._r2
+                py_r2_within = mod._r2_within
+                py_adj_r2 = mod._adj_r2
+                py_adj_r2_within = mod._adj_r2_within
+
+                r_r = fixest.r2(r_fixest)
+                # unadjusted
+                np.testing.assert_allclose(
+                    py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
+                )
+                np.testing.assert_allclose(
+                    py_r2_within,
+                    r_r[5],
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="py_r2_within != r_r",
+                )
+
+                if False:
+                    # adjusted
+                    np.testing.assert_allclose(
+                        py_adj_r2,
+                        r_r[2],
+                        rtol=rtol,
+                        atol=atol,
+                        err_msg="py_adj_r2 != r_r",
+                    )
+                    np.testing.assert_allclose(
+                        py_adj_r2_within,
+                        r_r[6],
+                        rtol=rtol,
+                        atol=atol,
+                        err_msg="py_adj_r2_within != r_r",
+                    )
+
         if model == "Fepois":
             r_deviance = r_fixest.rx2("deviance")
             py_deviance = mod.deviance
