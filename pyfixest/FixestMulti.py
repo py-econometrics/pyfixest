@@ -46,7 +46,7 @@ class FixestMulti:
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
-        self._data.index = range(data.shape[0])
+        self._data.reset_index(drop=True, inplace=True)
         self.all_fitted_models = dict()
 
     def _prepare_estimation(
