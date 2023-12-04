@@ -5,7 +5,7 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ## Functionality
 
