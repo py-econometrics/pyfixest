@@ -463,6 +463,45 @@ class Feols:
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
 
+    def add_fixest_multi_context(
+        fml: str,
+        depvar: str,
+        Y: pd.Series,
+        _data: pd.DataFrame,
+        _ssc_dict: dict,
+        _k_fe: int,
+        fval: str,
+        na_index: np.ndarray,
+    ) -> None:
+        """
+        Enrich an instance of class `Feols` with additional attributes set in the `FixestMulti` class.
+        Args:
+            fml (str): The formula used for estimation.
+            depvar (str): The dependent variable of the regression model.
+            Y (pd.Series): The dependent variable of the regression model.
+            _data (pd.DataFrame): The data used for estimation.
+            _ssc_dict (dict): A dictionary with the sum of squares and cross products matrices.
+            _k_fe (int): The number of fixed effects.
+            fval (str): The fixed effects formula.
+            na_index (np.ndarray): An array with the indices of missing values.
+        Returns:
+            None
+        """
+
+        # some bookkeeping
+        self._fml = fml
+        self._depvar = depvar
+        self._Y_untransformed = Y
+        self._data = _data.iloc[~_data.index.isin(na_index)]
+        self._ssc_dict = _ssc_dict
+        self._k_fe = _k_fe
+        if fval != "0":
+            self._has_fixef = True
+            self._fixef = fval
+        else:
+            self._has_fixef = False
+            self._fixef = None
+
     def get_Ftest(self, vcov, is_iv=False):
         """
         compute an F-test statistic of the form H0: R*beta = q
@@ -637,11 +676,9 @@ class Feols:
         _data = self._data
         _clustervar = self._clustervar
 
-        _ssc = self._ssc
-
         if cluster is None:
-            if self._clustervar is not None:
-                cluster = self._clustervar
+            if _clustervar is not None:
+                cluster = _clustervar
 
         if isinstance(cluster, str):
             cluster = [cluster]
