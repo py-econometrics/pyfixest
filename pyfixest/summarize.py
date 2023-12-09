@@ -38,9 +38,13 @@ def etable(
     r2_within_list = []
 
     for i, model in enumerate(models):
-        dep_var_list.append(model._fml.split("~")[0])
+        dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
         nobs_list.append(model._N)
+        if model._method == "feols":
+            r2_list.append(np.round(model._r2, digits))
+        else:
+            r2_list.append("-")
 
         if model._vcov_type == "CRV":
             se_type_list.append("by: " + "+".join(model._clustervar))
@@ -53,12 +57,14 @@ def etable(
     # find all fixef variables
     fixef_list = list(set(fixef_list))
     n_fixef = len(fixef_list)
-    max_coefs = max(n_coefs)
+
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list, "S.E. type": se_type_list})
+    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list, "S.E. type": se_type_list, "R2": r2_list})
+
 
     if fixef_list:  # only when at least one model has a fixed effect
+
         for fixef in fixef_list:
             nobs_fixef_df[fixef] = "-"
 
@@ -68,8 +74,8 @@ def etable(
                         nobs_fixef_df.loc[i, fixef] = "x"
 
     colnames = nobs_fixef_df.columns.tolist()
-    colnames_reordered = colnames[2:] + colnames[:2]
-    nobs_fixef_df = nobs_fixef_df[colnames_reordered].T.reset_index()
+    colnames.reverse()
+    nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
 
     etable_list = []
     for i, model in enumerate(models):
@@ -110,7 +116,7 @@ def etable(
     if type == "tex":
         return res_all.to_latex()
     elif type == "md":
-        res_all = _tabulate_etable(res_all, len(models), max_coefs, n_fixef)
+        res_all = _tabulate_etable(res_all, len(models), n_fixef)
         print(res_all)
         print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
     else:
@@ -209,7 +215,7 @@ def _post_processing_input_checks(models):
     return models
 
 
-def _tabulate_etable(df, n_models, max_covariates, n_fixef):
+def _tabulate_etable(df, n_models, n_fixef):
     # Format the DataFrame for tabulate
     table = tabulate(
         df, headers="keys", showindex=False, colalign=["left"] + n_models * ["right"]
@@ -221,8 +227,8 @@ def _tabulate_etable(df, n_models, max_covariates, n_fixef):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-2 - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-2, "-" * len(body_lines[0]))
+    body_lines.insert(-3 - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-3, "-" * len(body_lines[0]))
     body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
