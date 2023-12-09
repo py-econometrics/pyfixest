@@ -688,47 +688,47 @@ def lpdid(
             data["reweight_0"] = 1
             data["reweight_use"] = 1
 
-        if h <= post_window:
-            data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
-            fml = f"Dy ~ treat_diff | {tname}"
 
-            sample_idx = (
-                ~data["Dy"].isna()
-                & ~data["treat_diff"].isna()
-                & ~data.groupby(idname)["treat"].shift(-h).isna()
-                & (
-                    (data["treat_diff"] == 1)
-                    | (data.groupby(idname)["treat"].shift(-h) == 0)
-                )
+        data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
+        fml = f"Dy ~ treat_diff | {tname}"
+
+        sample_idx = (
+            ~data["Dy"].isna()
+            & ~data["treat_diff"].isna()
+            & ~data.groupby(idname)["treat"].shift(-h).isna()
+            & (
+                (data["treat_diff"] == 1)
+                | (data.groupby(idname)["treat"].shift(-h) == 0)
             )
+        )
 
-            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+        fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
 
-            fit_tidy = fit.tidy().xs("treat_diff")
-            fit_tidy.name = h
-            fit_all.append(fit_tidy)
+        fit_tidy = fit.tidy().xs("treat_diff")
+        fit_tidy.name = h
+        fit_all.append(fit_tidy)
 
     for h in range(pre_window + 1):
 
-        if h <= pre_window:
 
-            if h <= 1:
-                continue
+        if h <= 1:
+            # skip the reference period
+            continue
 
-            data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
-            sample_idx = (
-                ~data["Dy"].isna()
-                & ~data["treat_diff"].isna()
-                & ~data["treat"].isna()
-                & ((data["treat_diff"] == 1) | (data["treat"] == 0))
-            )
+        data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
+        sample_idx = (
+            ~data["Dy"].isna()
+            & ~data["treat_diff"].isna()
+            & ~data["treat"].isna()
+            & ((data["treat_diff"] == 1) | (data["treat"] == 0))
+        )
 
-            fml = f"Dy ~ treat_diff | {tname}"
-            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+        fml = f"Dy ~ treat_diff | {tname}"
+        fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
 
-            fit_tidy = fit.tidy().xs("treat_diff")
-            fit_tidy.name = -h
-            fit_all.append(fit_tidy)
+        fit_tidy = fit.tidy().xs("treat_diff")
+        fit_tidy.name = -h
+        fit_all.append(fit_tidy)
 
 
     res = pd.DataFrame(fit_all).sort_index()
