@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 import warnings
 
 
@@ -607,16 +607,16 @@ def did2s(
 
 
 def lpdid(
-    data,
-    yname,
-    idname,
-    tname,
-    gname,
-    vcov=None,
-    pre_window=None,
-    post_window=None,
-    never_treated=0,
-):
+    data: pd.DataFrame,
+    yname: str,
+    idname: str,
+    tname: str,
+    gname: str,
+    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    pre_window: Optional[int] = None,
+    post_window: Optional[int] = None,
+    never_treated: int = 0,
+) -> pd.DataFrame:
     """ "
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
     Args:
