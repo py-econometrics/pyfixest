@@ -1,5 +1,5 @@
 from pyfixest.experimental.did import event_study
-from pyfixest.experimental.did import did2s as did2s_pyfixest
+from pyfixest.experimental.did import did2s as did2s_pyfixest, lpdid
 import pandas as pd
 import numpy as np
 import pytest
@@ -206,3 +206,39 @@ def test_errors():
             cluster="state",
             i_ref1=[-1.0, np.inf],
         )
+
+
+
+def test_lpdid():
+
+    """
+    test the lpdid estimator.
+    """
+
+    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het["X"] = np.random.normal(size=len(df_het))
+
+    df_het.drop("treat", axis = 1)
+    df_het.drop("rel_year", axis = 1)
+
+    fit = lpdid(data=df_het, yname="dep_var", idname="unit", tname="year", gname="g")
+    coefs = fit["Estimate"].values
+
+    # values obtained from R package lpdid
+    # library(lpdid)
+    # library(did2s)
+    # data(df_het)
+    # df_het$rel_year <- ifelse(df_het$rel_year == Inf, -9999, df_het$rel_year)
+    # fit <- lpdid(df_het, window = c(-20, 20), y = "dep_var",
+    #          unit_index = "unit", time_index = "year",
+    #          rel_time = "rel_year")
+    # fit$coeftable$Estimate
+
+    np.testing.assert_allclose(coefs[0], -0.073055295)
+    np.testing.assert_allclose(coefs[-1], 2.911501018)
+
+
+
+
+
+
