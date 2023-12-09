@@ -607,7 +607,15 @@ def did2s(
 
 
 def lpdid(
-    data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0
+    data,
+    yname,
+    idname,
+    tname,
+    gname,
+    vcov=None,
+    pre_window=None,
+    post_window=None,
+    never_treated=0,
 ):
     """ "
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -688,18 +696,11 @@ def lpdid(
             data["reweight_0"] = 1
             data["reweight_use"] = 1
 
-
         data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
         fml = f"Dy ~ treat_diff | {tname}"
 
-        sample_idx = (
-            ~data["Dy"].isna()
-            & ~data["treat_diff"].isna()
-            & ~data.groupby(idname)["treat"].shift(-h).isna()
-            & (
-                (data["treat_diff"] == 1)
-                | (data.groupby(idname)["treat"].shift(-h) == 0)
-            )
+        sample_idx = (data["treat_diff"] == 1) | (
+            data.groupby(idname)["treat"].shift(-h) == 0
         )
 
         fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
@@ -709,19 +710,12 @@ def lpdid(
         fit_all.append(fit_tidy)
 
     for h in range(pre_window + 1):
-
-
         if h <= 1:
             # skip the reference period
             continue
 
         data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
-        sample_idx = (
-            ~data["Dy"].isna()
-            & ~data["treat_diff"].isna()
-            & ~data["treat"].isna()
-            & ((data["treat_diff"] == 1) | (data["treat"] == 0))
-        )
+        sample_idx = (data["treat_diff"] == 1) | (data["treat"] == 0)
 
         fml = f"Dy ~ treat_diff | {tname}"
         fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
@@ -730,10 +724,8 @@ def lpdid(
         fit_tidy.name = -h
         fit_all.append(fit_tidy)
 
-
     res = pd.DataFrame(fit_all).sort_index()
     res.index.name = "Coefficient"
     res.index = res.index.map(lambda x: f"time_to_treatment::{x}")
 
     return res
-
