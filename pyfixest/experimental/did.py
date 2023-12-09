@@ -610,19 +610,27 @@ def lpdid(
     data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0
 ):
     """ "
-    Estimate a Linear Projections Difference-in-Differences Estimator.
+    Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
     Args:
         data: The DataFrame containing all variables.
         yname: The name of the dependent variable.
         idname: The name of the id variable.
         tname: Variable name for calendar period.
         gname: unit-specific time of initial treatment.
-        vcov: The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
+        vcov: The name of the cluster variable. If None, then defaults to {"CRV1": idname}. Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
+              {"CRV3": "idname"}. You can pass anything that is accepted by the vcov argument of feols.
+        pre_window: The number of periods before the treatment to include in the estimation. Default is None, which means that the pre_window is set to the minimum
+                    relative year in the data.
+        post_window: The number of periods after the treatment to include in the estimation. Default is None, which means that the post_window is set to the maximum
+                     relative year in the data.
         never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
                        have value gname = 0.
     Returns:
-        A fitted model object of class feols.
+        A data frame with the estimated coefficients.
     """
+
+    # the implementation here is highly influenced by Alex Cardazzi's R
+    # code for the lpdid package: https://github.com/alexCardazzi/lpdid
 
     # data needs to be a pd data frame
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
