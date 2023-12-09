@@ -34,6 +34,12 @@ def etable(
     nobs_list = []
     n_coefs = []
     se_type_list = []
+    r2_list = []
+    r2_within_list = []
+
+    import pdb
+
+    pdb.set_trace()
 
     for i, model in enumerate(models):
         dep_var_list.append(model._fml.split("~")[0])

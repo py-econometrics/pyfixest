@@ -604,3 +604,128 @@ def did2s(
     fit._method = "did2s"
 
     return fit
+
+
+def lpdid(
+    data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0
+):
+    """ "
+    Estimate a Linear Projections Difference-in-Differences Estimator.
+    Args:
+        data: The DataFrame containing all variables.
+        yname: The name of the dependent variable.
+        idname: The name of the id variable.
+        tname: Variable name for calendar period.
+        gname: unit-specific time of initial treatment.
+        vcov: The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
+        never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
+                       have value gname = 0.
+    Returns:
+        A fitted model object of class feols.
+    """
+
+    # data needs to be a pd data frame
+    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
+    # yname, idname, tname, gname need to be strings
+    assert isinstance(yname, str), "yname must be a string"
+    assert isinstance(idname, str), "idname must be a string"
+    assert isinstance(tname, str), "tname must be a string"
+    assert isinstance(gname, str), "gname must be a string"
+
+    # check if idname, tname and gname are in data
+    if idname not in data.columns:
+        raise ValueError(f"The variable {idname} is not in the data.")
+
+    # no checks for vcov - feols does this
+
+    data = data.copy()
+    data.sort_values([idname, tname], inplace=True)
+    data[f"{yname}_lag"] = data.groupby(idname)[yname].shift(1)
+
+    data["treat"] = np.where(data[gname] <= data[tname], 1, 0)
+    data["rel_year"] = data[tname] - data[gname]
+
+    # handle never treated units
+    data["treat"] = np.where(data[gname] == never_treated, 0, data["treat"])
+    data["rel_year"] = np.where(data[gname] == never_treated, np.inf, data["rel_year"])
+
+    data["treat_diff"] = data["treat"] - data.groupby(idname)["treat"].shift(1)
+    data["treat_diff"] = np.where(data["treat_diff"] < 0, 0, data["treat_diff"])
+
+    rel_years = np.unique(data["rel_year"])
+    rel_years = rel_years[np.isfinite(rel_years)]
+
+    if pre_window is None:
+        pre_window = int(np.min(rel_years))
+    if post_window is None:
+        post_window = int(np.max(rel_years))
+
+    # check that pre_window is in rel_years
+    if pre_window not in rel_years:
+        raise ValueError(f"pre_window must be in {rel_years}")
+    # check that post_window is in rel_years
+    if post_window not in rel_years:
+        raise ValueError(f"post_window must be in {rel_years}")
+
+    pre_window = np.abs(pre_window)
+
+    if vcov is None:
+        vcov = {"CRV1": idname}
+
+    fit_all = []
+    reweight = False
+
+    for h in range(post_window + 1):
+        if not reweight:
+            data["reweight_0"] = 1
+            data["reweight_use"] = 1
+
+        if h <= post_window:
+            data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
+            fml = f"Dy ~ treat_diff | {tname}"
+
+            sample_idx = (
+                ~data["Dy"].isna()
+                & ~data["treat_diff"].isna()
+                & ~data.groupby(idname)["treat"].shift(-h).isna()
+                & (
+                    (data["treat_diff"] == 1)
+                    | (data.groupby(idname)["treat"].shift(-h) == 0)
+                )
+            )
+
+            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+
+            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy.name = h
+            fit_all.append(fit_tidy)
+
+    for h in range(pre_window + 1):
+
+        if h <= pre_window:
+
+            if h <= 1:
+                continue
+
+            data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
+            sample_idx = (
+                ~data["Dy"].isna()
+                & ~data["treat_diff"].isna()
+                & ~data["treat"].isna()
+                & ((data["treat_diff"] == 1) | (data["treat"] == 0))
+            )
+
+            fml = f"Dy ~ treat_diff | {tname}"
+            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+
+            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy.name = -h
+            fit_all.append(fit_tidy)
+
+
+    res = pd.DataFrame(fit_all).sort_index()
+    res.index.name = "Coefficient"
+    res.index = res.index.map(lambda x: f"time_to_treatment::{x}")
+
+    return res
+

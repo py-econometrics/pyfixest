@@ -464,6 +464,7 @@ class Feols:
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
 
     def add_fixest_multi_context(
+        self,
         fml: str,
         depvar: str,
         Y: pd.Series,
@@ -471,7 +472,7 @@ class Feols:
         _ssc_dict: dict,
         _k_fe: int,
         fval: str,
-        na_index: np.ndarray,
+        na_index: np.ndarray
     ) -> None:
         """
         Enrich an instance of class `Feols` with additional attributes set in the `FixestMulti` class.
