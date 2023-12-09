@@ -337,7 +337,7 @@ class FixestMulti:
                         _ssc_dict=_ssc_dict,
                         _k_fe=_k_fe,
                         fval=fval,
-                        na_index = na_index
+                        na_index=na_index,
                     )
 
                     # if X is empty: no inference (empty X only as shorthand for demeaning)

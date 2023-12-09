@@ -472,7 +472,7 @@ class Feols:
         _ssc_dict: dict,
         _k_fe: int,
         fval: str,
-        na_index: np.ndarray
+        na_index: np.ndarray,
     ) -> None:
         """
         Enrich an instance of class `Feols` with additional attributes set in the `FixestMulti` class.

@@ -58,13 +58,12 @@ def etable(
     fixef_list = list(set(fixef_list))
     n_fixef = len(fixef_list)
 
-
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame({"Observations": nobs_list, "S.E. type": se_type_list, "R2": r2_list})
-
+    nobs_fixef_df = pd.DataFrame(
+        {"Observations": nobs_list, "S.E. type": se_type_list, "R2": r2_list}
+    )
 
     if fixef_list:  # only when at least one model has a fixed effect
-
         for fixef in fixef_list:
             nobs_fixef_df[fixef] = "-"
 

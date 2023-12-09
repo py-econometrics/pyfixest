@@ -208,9 +208,7 @@ def test_errors():
         )
 
 
-
 def test_lpdid():
-
     """
     test the lpdid estimator.
     """
@@ -218,8 +216,8 @@ def test_lpdid():
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
-    df_het.drop("treat", axis = 1)
-    df_het.drop("rel_year", axis = 1)
+    df_het.drop("treat", axis=1)
+    df_het.drop("rel_year", axis=1)
 
     fit = lpdid(data=df_het, yname="dep_var", idname="unit", tname="year", gname="g")
     coefs = fit["Estimate"].values
@@ -236,9 +234,3 @@ def test_lpdid():
 
     np.testing.assert_allclose(coefs[0], -0.073055295)
     np.testing.assert_allclose(coefs[-1], 2.911501018)
-
-
-
-
-
-
