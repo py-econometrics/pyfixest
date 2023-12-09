@@ -37,10 +37,6 @@ def etable(
     r2_list = []
     r2_within_list = []
 
-    import pdb
-
-    pdb.set_trace()
-
     for i, model in enumerate(models):
         dep_var_list.append(model._fml.split("~")[0])
         n_coefs.append(len(model._coefnames))

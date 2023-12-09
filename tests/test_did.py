@@ -227,7 +227,7 @@ def test_lpdid():
     # values obtained from R package lpdid
     # library(lpdid)
     # library(did2s)
-    # data(df_het)
+    # data(df_het) # could also just load df_het from pyfixest/experimental/data/df_het.csv
     # df_het$rel_year <- ifelse(df_het$rel_year == Inf, -9999, df_het$rel_year)
     # fit <- lpdid(df_het, window = c(-20, 20), y = "dep_var",
     #          unit_index = "unit", time_index = "year",
