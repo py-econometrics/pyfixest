@@ -677,3 +677,34 @@ def test_i_interaction():
         np.testing.assert_allclose(
             se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
         )
+
+
+@pytest.mark.parametrize("fml", [
+    ("dep_var ~ treat"),
+    ("dep_var ~ treat + unit"),
+    ("dep_var ~ treat | unit"),
+    ("dep_var ~ treat + unit | year"),
+    ("dep_var ~ treat | year + unit")
+])
+@pytest.mark.parametrize("data", [
+    (pd.read_csv("pyfixest/experimental/data/df_het.csv"))
+])
+
+def test_wald_test(fml, data):
+
+
+    fit1 = feols(fml, data)
+    fit1.wald_test()
+
+    fit_r = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+
+    wald_r = fixest.wald(fit_r)
+    wald_stat_r = wald_r[0]
+    wald_pval_r = wald_r[1]
+
+    np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
+    #np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)

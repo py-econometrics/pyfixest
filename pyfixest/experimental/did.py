@@ -616,6 +616,8 @@ def lpdid(
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,
+    att: bool = True,
+    xfml=None,
 ) -> pd.DataFrame:
     """ "
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -633,6 +635,8 @@ def lpdid(
                      relative year in the data.
         never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
                        have value gname = 0.
+        att: Whether to estimate the average treatment effect on the treated (ATT) or a canonical event study design with all leads and lags. Default is True.
+        xfml: Optional formula for the covariates. Not yet supported. E.g. "X1 + X2 + X3".
     Returns:
         A data frame with the estimated coefficients.
     """
@@ -647,6 +651,7 @@ def lpdid(
     assert isinstance(idname, str), "idname must be a string"
     assert isinstance(tname, str), "tname must be a string"
     assert isinstance(gname, str), "gname must be a string"
+    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
 
     # check if idname, tname and gname are in data
     if idname not in data.columns:
@@ -691,38 +696,43 @@ def lpdid(
     fit_all = []
     reweight = False
 
-    for h in range(post_window + 1):
-        if not reweight:
-            data["reweight_0"] = 1
-            data["reweight_use"] = 1
+    if att:
+        # data = data[data.treat > 0].groupby(idname)[yname].sum() / (post_window + 1)
+        pass
 
-        data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
-        fml = f"Dy ~ treat_diff | {tname}"
+    else:
+        for h in range(post_window + 1):
+            if not reweight:
+                data["reweight_0"] = 1
+                data["reweight_use"] = 1
 
-        sample_idx = (data["treat_diff"] == 1) | (
-            data.groupby(idname)["treat"].shift(-h) == 0
-        )
+            data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
+            fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
-        fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+            sample_idx = (data["treat_diff"] == 1) | (
+                data.groupby(idname)["treat"].shift(-h) == 0
+            )
 
-        fit_tidy = fit.tidy().xs("treat_diff")
-        fit_tidy.name = h
-        fit_all.append(fit_tidy)
+            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
 
-    for h in range(pre_window + 1):
-        if h <= 1:
-            # skip the reference period
-            continue
+            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy.name = h
+            fit_all.append(fit_tidy)
 
-        data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
-        sample_idx = (data["treat_diff"] == 1) | (data["treat"] == 0)
+        for h in range(pre_window + 1):
+            if h <= 1:
+                # skip the reference period
+                continue
 
-        fml = f"Dy ~ treat_diff | {tname}"
-        fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+            data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
+            sample_idx = (data["treat_diff"] == 1) | (data["treat"] == 0)
 
-        fit_tidy = fit.tidy().xs("treat_diff")
-        fit_tidy.name = -h
-        fit_all.append(fit_tidy)
+            fml = f"Dy ~ treat_diff + {xfml} | {tname}"
+            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+
+            fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy.name = -h
+            fit_all.append(fit_tidy)
 
     res = pd.DataFrame(fit_all).sort_index()
     res.index.name = "Coefficient"

@@ -7,7 +7,7 @@ import numba as nb
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
 
-from scipy.stats import norm, t
+from scipy.stats import norm, t, chi2, f
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 from formulaic import model_matrix
@@ -503,33 +503,65 @@ class Feols:
             self._has_fixef = False
             self._fixef = None
 
-    def get_Ftest(self, vcov, is_iv=False):
+    def wald_test(self, R = None, q = None, distribution = "F") -> None:
         """
-        compute an F-test statistic of the form H0: R*beta = q
-
+        Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.
         Args:
-            is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
+            R: The matrix R of the linear hypothesis. If None, defaults to an identity matrix.
+            q: The vector q of the linear hypothesis. If None, defaults to a vector of zeros.
+            distribution: The distribution to use for the p-value. Either "F" or "chi2". Defaults to "F".
         Returns:
-            None
+            A pd.Series with the Wald statistic and p-value.
         """
 
-        raise NotImplementedError("The F-test is currently not supported.")
+        # if R is not two dimensional, make it two dimensional
+        if R is not None:
+            if R.ndim == 1:
+                R = R.reshape((1, len(R)))
+            assert R.shape[1] == self._k, "R must have the same number of columns as the number of coefficients."
+        if q is not None:
+            assert isinstance(q, (int, float, np.ndarray)), "q must be a one-dimensional array or a scalar."
+            if isinstance(q, np.ndarray):
+                assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
+                assert q.shape[0] == R.shape[0], "q must have the same number of rows as R."
 
-        R = np.ones(self._k).reshape((1, self._k))
-        q = 0
-        beta = self._beta_hat
-        Rbetaq = R @ beta - q
-        # Rbetaq = self._beta_hat
+        assert distribution in ["F", "chi2"], "distribution must be either 'F' or 'chi2'."
 
-        if self._is_iv:
-            first_stage = Feols(self._Y, self._Z, self._Z)
-            first_stage.get_fit()
-            first_stage.vcov(vcov=vcov)
-            vcov = first_stage.vcov
+
+        _beta_hat = self._beta_hat
+        _vcov = self._vcov
+        _N = self._N
+        _k = self._k
+        if self._has_fixef:
+            _k_fe = np.sum(self._k_fe.values)
         else:
-            vcov = self._vcov
+            _k_fe = 0
 
-        self._F_stat = Rbetaq @ np.linalg.inv(R @ self._vcov @ np.transpose(R)) @ Rbetaq
+        dfn = _N  - _k_fe - _k
+        dfd = _k
+
+        if R is None:
+            R = np.eye(_k)
+        if q is None:
+            q = np.zeros(_k)
+
+        bread = R @ _beta_hat - q
+        meat =  np.linalg.inv(R @ _vcov @ R.T)
+        #W = bread.T @ meat @ bread
+        W = _beta_hat @ meat @ _beta_hat.T
+
+        # this is chi-squared(k) distributed, with k = number of coefficients
+        self._wald_statistic = W
+        self._f_statistic = W / dfd
+
+        if distribution == "F":
+            self._f_statistic_pvalue = 1 - f.cdf(self._f_statistic, dfn = dfn, dfd = dfd)
+            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue})
+        else:
+            raise NotImplementedError("chi2 distribution not yet implemented.")
+            #self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+
+        return res
 
     def coefplot(
         self,
