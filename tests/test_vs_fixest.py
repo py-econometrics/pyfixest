@@ -679,20 +679,20 @@ def test_i_interaction():
         )
 
 
-@pytest.mark.parametrize("fml", [
-    ("dep_var ~ treat"),
-    ("dep_var ~ treat + unit"),
-    ("dep_var ~ treat | unit"),
-    ("dep_var ~ treat + unit | year"),
-    ("dep_var ~ treat | year + unit")
-])
-@pytest.mark.parametrize("data", [
-    (pd.read_csv("pyfixest/experimental/data/df_het.csv"))
-])
-
+@pytest.mark.parametrize(
+    "fml",
+    [
+        ("dep_var ~ treat"),
+        ("dep_var ~ treat + unit"),
+        ("dep_var ~ treat | unit"),
+        ("dep_var ~ treat + unit | year"),
+        ("dep_var ~ treat | year + unit"),
+    ],
+)
+@pytest.mark.parametrize(
+    "data", [(pd.read_csv("pyfixest/experimental/data/df_het.csv"))]
+)
 def test_wald_test(fml, data):
-
-
     fit1 = feols(fml, data)
     fit1.wald_test()
 
@@ -707,4 +707,4 @@ def test_wald_test(fml, data):
     wald_pval_r = wald_r[1]
 
     np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
-    #np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+    # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)

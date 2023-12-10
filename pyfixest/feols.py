@@ -503,7 +503,7 @@ class Feols:
             self._has_fixef = False
             self._fixef = None
 
-    def wald_test(self, R = None, q = None, distribution = "F") -> None:
+    def wald_test(self, R=None, q=None, distribution="F") -> None:
         """
         Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.
         Args:
@@ -518,15 +518,23 @@ class Feols:
         if R is not None:
             if R.ndim == 1:
                 R = R.reshape((1, len(R)))
-            assert R.shape[1] == self._k, "R must have the same number of columns as the number of coefficients."
+            assert (
+                R.shape[1] == self._k
+            ), "R must have the same number of columns as the number of coefficients."
         if q is not None:
-            assert isinstance(q, (int, float, np.ndarray)), "q must be a one-dimensional array or a scalar."
+            assert isinstance(
+                q, (int, float, np.ndarray)
+            ), "q must be a one-dimensional array or a scalar."
             if isinstance(q, np.ndarray):
                 assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
-                assert q.shape[0] == R.shape[0], "q must have the same number of rows as R."
+                assert (
+                    q.shape[0] == R.shape[0]
+                ), "q must have the same number of rows as R."
 
-        assert distribution in ["F", "chi2"], "distribution must be either 'F' or 'chi2'."
-
+        assert distribution in [
+            "F",
+            "chi2",
+        ], "distribution must be either 'F' or 'chi2'."
 
         _beta_hat = self._beta_hat
         _vcov = self._vcov
@@ -537,7 +545,7 @@ class Feols:
         else:
             _k_fe = 0
 
-        dfn = _N  - _k_fe - _k
+        dfn = _N - _k_fe - _k
         dfd = _k
 
         if R is None:
@@ -546,8 +554,8 @@ class Feols:
             q = np.zeros(_k)
 
         bread = R @ _beta_hat - q
-        meat =  np.linalg.inv(R @ _vcov @ R.T)
-        #W = bread.T @ meat @ bread
+        meat = np.linalg.inv(R @ _vcov @ R.T)
+        # W = bread.T @ meat @ bread
         W = _beta_hat @ meat @ _beta_hat.T
 
         # this is chi-squared(k) distributed, with k = number of coefficients
@@ -555,11 +563,13 @@ class Feols:
         self._f_statistic = W / dfd
 
         if distribution == "F":
-            self._f_statistic_pvalue = 1 - f.cdf(self._f_statistic, dfn = dfn, dfd = dfd)
-            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue})
+            self._f_statistic_pvalue = 1 - f.cdf(self._f_statistic, dfn=dfn, dfd=dfd)
+            res = pd.Series(
+                {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
+            )
         else:
             raise NotImplementedError("chi2 distribution not yet implemented.")
-            #self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+            # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
 
         return res
 
