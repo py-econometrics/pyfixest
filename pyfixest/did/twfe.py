@@ -1,6 +1,6 @@
 from pyfixest.estimation import feols
 from pyfixest.exceptions import NotImplementedError
-from pyfixest.experimental.did import DID
+from pyfixest.did.did import DID
 
 
 class TWFE(DID):

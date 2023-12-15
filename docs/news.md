@@ -35,7 +35,7 @@ Reference levels for the `i()` formula syntax can no longer be set within the fo
 A `dids2()` function is added, which implements the 2-stage difference-in-differences procedure à la Gardner and follows the syntax of @kylebutts [did2s](https://github.com/kylebutts/did2s) R package.
 
 ```py
-from pyfixest.experimental.did import did2s
+from pyfixest.did.did import did2s
 from pyfixest.estimation import feols
 from pyfixest.visualize import iplot
 import pandas as pd
@@ -75,7 +75,7 @@ iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs 
 %load_ext autoreload
 %autoreload 2
 
-from pyfixest.experimental.did import event_study
+from pyfixest.did.did import event_study
 from pyfixest.summarize import etable
 import pandas as pd
 df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")

@@ -3,7 +3,7 @@ import numpy as np
 
 from pyfixest.estimation import feols
 from pyfixest.visualize import _coefplot
-from pyfixest.experimental.did import DID
+from pyfixest.did.did import DID
 
 from typing import Optional, Union, Dict
 

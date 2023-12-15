@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from pyfixest.experimental.did import DID
+from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.model_matrix_fixest import model_matrix_fixest
 
@@ -320,7 +320,7 @@ def did2s(
     Returns:
         A fitted model object of class feols.
     Examples:
-        >>> from pyfixest.experimental.did import event_study, did2s
+        >>> from pyfixest.did.did import event_study, did2s
         >>> from pyfixest.estimation import feols
         >>> from pyfixest.summarize import etable, summary
         >>> import pandas as pd

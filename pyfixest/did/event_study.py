@@ -1,7 +1,7 @@
 import pandas as pd
 from pyfixest.exceptions import NotImplementedError
-from pyfixest.experimental.did2s import DID2S
-from pyfixest.experimental.twfe import TWFE
+from pyfixest.did.did2s import DID2S
+from pyfixest.did.twfe import TWFE
 
 
 def event_study(
@@ -35,7 +35,7 @@ def event_study(
     Returns:
         A fitted model object of class feols.
     Examples:
-        >>> from pyfixest.experimental.did import event_study, did2s
+        >>> from pyfixest.did.did import event_study, did2s
         >>> from pyfixest.estimation import feols
         >>> from pyfixest.summarize import etable, summary
         >>> import pandas as pd

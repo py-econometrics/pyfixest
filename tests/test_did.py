@@ -1,6 +1,6 @@
-from pyfixest.experimental.event_study import event_study
-from pyfixest.experimental.did2s import did2s as did2s_pyfixest
-from pyfixest.experimental.lpdid import lpdid
+from pyfixest.did.event_study import event_study
+from pyfixest.did.did2s import did2s as did2s_pyfixest
+from pyfixest.did.lpdid import lpdid
 import pandas as pd
 import numpy as np
 import pytest
@@ -213,6 +213,22 @@ def test_lpdid():
     """
     test the lpdid estimator.
     """
+
+    # test vs stata
+    df_het = pd.read_stata("pyfixest/experimental/data/lpdidtestdata1.dta")
+    df_het = df_het.astype(np.float64)
+
+    fit = lpdid(df_het, yname = "Y", idname = "unit", tname = "time", gname = "event_date", att = False)
+    coefs = fit["Estimate"].values
+
+    # values obtained from Stata
+    #np.testing.assert_allclose(coefs[0], 0.000000000)
+    #np.testing.assert_allclose(coefs[-1], 0.000000000)
+
+
+
+
+    # test vs R
 
     df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
