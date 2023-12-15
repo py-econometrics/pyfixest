@@ -8,6 +8,7 @@ from pyfixest.model_matrix_fixest import model_matrix_fixest
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 import warnings
+from typing import Optional, Union, List
 
 
 class DID2S(DID):
