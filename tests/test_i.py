@@ -17,7 +17,7 @@ broom = importr("broom")
 
 
 def test_i():
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
     if (
@@ -85,7 +85,7 @@ def test_i():
 
 
 def test_i_vs_fixest():
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     # ---------------------------------------------------------------------------------------#
     # no fixed effects
@@ -159,7 +159,7 @@ def test_i_vs_fixest():
 
 
 def test_i_interacted_fixest():
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(df_het.shape[0])
 
     # ---------------------------------------------------------------------------------------#

@@ -32,8 +32,8 @@ class DID2S(DID):
                      possible to compare two dates via '>'. Date time variables are currently not accepted. Never treated units
                      must have a value of 0.
             xfml: The formula for the covariates.
-            att: Whether to estimate the average treatment effect on the treated (ATT) or the
-                canonical event study design with all leads and lags. Default is True.
+            att: Whether to estimate the pooled average treatment effect on the treated (ATT) or the
+                canonical event study design with all leads and lags / the ATT for each period. Default is True.
             cluster (str): The name of the cluster variable.
         Returns:
             None
@@ -325,7 +325,7 @@ def did2s(
         >>> from pyfixest.summarize import etable, summary
         >>> import pandas as pd
         >>> import numpy as np
-        >>> df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+        >>> df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
         >>> fit = did2s(
         >>>     yname = "dep_var",
         >>>     first_stage = "~ X | state + year",

@@ -153,7 +153,9 @@ def lpdid(
                      relative year in the data.
         never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
                        have value gname = 0.
-        att: Whether to estimate the average treatment effect on the treated (ATT) or a canonical event study design with all leads and lags. Default is True.
+        att: Whether to estimate the pooled average treatment effect on the treated (ATT) or the
+                canonical event study design with all leads and lags / the ATT for each period. Default is False.
+
         xfml: Optional formula for the covariates. Not yet supported. E.g. "X1 + X2 + X3".
     Returns:
         A data frame with the estimated coefficients.

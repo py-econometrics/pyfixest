@@ -21,7 +21,7 @@ def test_event_study():
     Test the event_study() function.
     """
 
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     fit_did2s = event_study(
         data=df_het,
@@ -54,7 +54,7 @@ def test_did2s():
     Test the did2s() function.
     """
 
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
     # ATT, no covariates
@@ -179,7 +179,7 @@ def test_did2s():
 
 
 def test_errors():
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     # test expected errors: treatment
 
@@ -241,7 +241,7 @@ def test_lpdid():
     # values obtained from R package lpdid
     # library(lpdid)
     # library(did2s)
-    # data(df_het) # could also just load df_het from pyfixest/experimental/data/df_het.csv
+    # data(df_het) # could also just load df_het from pyfixest/did/data/df_het.csv
     # df_het$rel_year <- ifelse(df_het$rel_year == Inf, -9999, df_het$rel_year)
     # fit <- lpdid(df_het, window = c(-20, 20), y = "dep_var",
     #          unit_index = "unit", time_index = "year",
@@ -250,3 +250,7 @@ def test_lpdid():
 
     np.testing.assert_allclose(coefs[0], -0.073055295)
     np.testing.assert_allclose(coefs[-1], 2.911501018)
+
+
+    fit.iplot()
+    fit.tidy()

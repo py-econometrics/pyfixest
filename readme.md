@@ -43,7 +43,7 @@ from pyfixest.estimation import feols
 from pyfixest.visualize import iplot
 
 # download csv from this repo
-df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv")
 
 fit = did2s(
     df_het,

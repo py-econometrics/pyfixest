@@ -514,6 +514,8 @@ class Feols:
             A pd.Series with the Wald statistic and p-value.
         """
 
+        raise NotImplementedError("Wald Tests will be available with the next release.")
+
         # if R is not two dimensional, make it two dimensional
         if R is not None:
             if R.ndim == 1:
@@ -555,8 +557,8 @@ class Feols:
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
-        # W = bread.T @ meat @ bread
-        W = _beta_hat @ meat @ _beta_hat.T
+        W = bread.T @ meat @ bread
+        #W = _beta_hat @ meat @ _beta_hat.T
 
         # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W

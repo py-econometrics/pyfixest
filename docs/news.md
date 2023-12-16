@@ -41,7 +41,7 @@ from pyfixest.visualize import iplot
 import pandas as pd
 import numpy as np
 
-df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv")
 
 fit = did2s(
     df_het,
@@ -78,7 +78,7 @@ iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs 
 from pyfixest.did.did import event_study
 from pyfixest.summarize import etable
 import pandas as pd
-df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
 fit_twfe = event_study(
     data = df_het,

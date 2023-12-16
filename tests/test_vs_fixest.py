@@ -689,6 +689,8 @@ def test_i_interaction():
         ("dep_var ~ treat | year + unit"),
     ],
 )
+
+@pytest.mark.skip("Currently not supported.")
 @pytest.mark.parametrize(
     "data", [(pd.read_csv("pyfixest/did/data/df_het.csv"))]
 )

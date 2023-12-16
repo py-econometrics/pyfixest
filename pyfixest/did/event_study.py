@@ -40,7 +40,7 @@ def event_study(
         >>> from pyfixest.summarize import etable, summary
         >>> import pandas as pd
         >>> import numpy as np
-        >>> df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+        >>> df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
         >>> fit_twfe = event_study(
         >>>     data = df_het,
         >>>     yname = "dep_var",

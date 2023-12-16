@@ -11,5 +11,5 @@ def load_df_het():
         The df_het dataset.
     """
 
-    df_het = pd.read_csv("./pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("./pyfixest/did/data/df_het.csv")
     return df_het
