@@ -215,29 +215,28 @@ def test_lpdid():
     """
 
     # test vs stata
-    df_het = pd.read_stata("pyfixest/experimental/data/lpdidtestdata1.dta")
+    df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
     df_het = df_het.astype(np.float64)
 
-    fit = lpdid(df_het, yname = "Y", idname = "unit", tname = "time", gname = "event_date", att = False)
-    coefs = fit["Estimate"].values
+    fit = lpdid(df_het, yname = "Y", idname = "unit", tname = "time", gname = "event_date", att = False, pre_window = 5, post_window=10)
+    coefs = fit._coeftable["Estimate"].values
 
     # values obtained from Stata
-    #np.testing.assert_allclose(coefs[0], 0.000000000)
-    #np.testing.assert_allclose(coefs[-1], 0.000000000)
-
+    np.testing.assert_allclose(coefs[0], -0.042566, rtol = 1e-05)
+    np.testing.assert_allclose(coefs[-1], 72.635834, rtol = 1e-05)
 
 
 
     # test vs R
 
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
     df_het.drop("treat", axis=1)
     df_het.drop("rel_year", axis=1)
 
-    fit = lpdid(data=df_het, yname="dep_var", idname="unit", tname="year", gname="g")
-    coefs = fit["Estimate"].values
+    fit = lpdid(data=df_het, yname="dep_var", idname="unit", tname="year", gname="g", att = False)
+    coefs = fit._coeftable["Estimate"].values
 
     # values obtained from R package lpdid
     # library(lpdid)
