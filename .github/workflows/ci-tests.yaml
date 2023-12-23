@@ -30,6 +30,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
 
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
       - name: Install
         run: |
           pip install -e .
