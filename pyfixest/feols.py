@@ -1,4 +1,5 @@
 import re
+import warnings
 import numpy as np
 import pandas as pd
 import warnings
@@ -514,7 +515,8 @@ class Feols:
             A pd.Series with the Wald statistic and p-value.
         """
 
-        raise NotImplementedError("Wald Tests will be available with the next release.")
+        #raise NotImplementedError("Wald Tests will be available with the next release.")
+        #import pdb; pdb.set_trace()
 
         # if R is not two dimensional, make it two dimensional
         if R is not None:
@@ -525,35 +527,37 @@ class Feols:
             ), "R must have the same number of columns as the number of coefficients."
         if q is not None:
             assert isinstance(
-                q, (int, float, np.ndarray)
-            ), "q must be a one-dimensional array or a scalar."
+                q, (int, float)
+            ), "q must be a numeric scalar."
             if isinstance(q, np.ndarray):
                 assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
                 assert (
                     q.shape[0] == R.shape[0]
                 ), "q must have the same number of rows as R."
 
+            warnings.warn("Note that the argument q is still experimental and not yet properly tested. Please use with caution / take a look at the source code.")
+
         assert distribution in [
             "F",
             "chi2",
         ], "distribution must be either 'F' or 'chi2'."
 
-        _beta_hat = self._beta_hat
         _vcov = self._vcov
         _N = self._N
         _k = self._k
+        _beta_hat = self._beta_hat
         if self._has_fixef:
             _k_fe = np.sum(self._k_fe.values)
         else:
             _k_fe = 0
 
         dfn = _N - _k_fe - _k
-        dfd = _k
+        dfd = _k - 1
 
         if R is None:
             R = np.eye(_k)
         if q is None:
-            q = np.zeros(_k)
+            q = np.zeros((R.shape[0]))
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
