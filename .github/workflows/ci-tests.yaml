@@ -12,9 +12,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    container:
-      image: rocker/r2u:22.04
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
