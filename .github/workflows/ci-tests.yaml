@@ -12,11 +12,11 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
+        os: ["windows-latest"]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
 
@@ -29,6 +29,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: Install
         run: |
