@@ -12,7 +12,9 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:22.04
     strategy:
       fail-fast: false
       matrix:
@@ -29,9 +31,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: Install
         run: |
