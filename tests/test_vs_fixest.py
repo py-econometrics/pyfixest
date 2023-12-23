@@ -682,19 +682,15 @@ def test_i_interaction():
 @pytest.mark.parametrize(
     "fml",
     [
-        #("dep_var ~ treat"),
-        #("dep_var ~ treat + unit"),
+        # ("dep_var ~ treat"),
+        # ("dep_var ~ treat + unit"),
         ("dep_var ~ treat | unit"),
         ("dep_var ~ treat + unit | year"),
         ("dep_var ~ treat | year + unit"),
     ],
 )
-
-@pytest.mark.parametrize(
-    "data", [(pd.read_csv("pyfixest/did/data/df_het.csv"))]
-)
+@pytest.mark.parametrize("data", [(pd.read_csv("pyfixest/did/data/df_het.csv"))])
 def test_wald_test(fml, data):
-
     fit1 = feols(fml, data)
     fit1.wald_test()
 

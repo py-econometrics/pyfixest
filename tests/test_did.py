@@ -218,14 +218,21 @@ def test_lpdid():
     df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
     df_het = df_het.astype(np.float64)
 
-    fit = lpdid(df_het, yname = "Y", idname = "unit", tname = "time", gname = "event_date", att = False, pre_window = 5, post_window=10)
+    fit = lpdid(
+        df_het,
+        yname="Y",
+        idname="unit",
+        tname="time",
+        gname="event_date",
+        att=False,
+        pre_window=5,
+        post_window=10,
+    )
     coefs = fit._coeftable["Estimate"].values
 
     # values obtained from Stata
-    np.testing.assert_allclose(coefs[0], -0.042566, rtol = 1e-05)
-    np.testing.assert_allclose(coefs[-1], 72.635834, rtol = 1e-05)
-
-
+    np.testing.assert_allclose(coefs[0], -0.042566, rtol=1e-05)
+    np.testing.assert_allclose(coefs[-1], 72.635834, rtol=1e-05)
 
     # test vs R
 
@@ -235,7 +242,9 @@ def test_lpdid():
     df_het.drop("treat", axis=1)
     df_het.drop("rel_year", axis=1)
 
-    fit = lpdid(data=df_het, yname="dep_var", idname="unit", tname="year", gname="g", att = False)
+    fit = lpdid(
+        data=df_het, yname="dep_var", idname="unit", tname="year", gname="g", att=False
+    )
     coefs = fit._coeftable["Estimate"].values
 
     # values obtained from R package lpdid
@@ -250,7 +259,6 @@ def test_lpdid():
 
     np.testing.assert_allclose(coefs[0], -0.073055295)
     np.testing.assert_allclose(coefs[-1], 2.911501018)
-
 
     fit.iplot()
     fit.tidy()

@@ -22,9 +22,8 @@ class LPDID(DID):
         vcov,
         pre_window,
         post_window,
-        never_treated
+        never_treated,
     ):
-
         if att:
             raise NotImplementedError("ATT is not yet supported.")
 
@@ -40,7 +39,9 @@ class LPDID(DID):
 
         # handle never treated units
         data["treat"] = np.where(data[gname] == never_treated, 0, data["treat"])
-        data["rel_year"] = np.where(data[gname] == never_treated, np.inf, data["rel_year"])
+        data["rel_year"] = np.where(
+            data[gname] == never_treated, np.inf, data["rel_year"]
+        )
 
         data["treat_diff"] = data["treat"] - data.groupby(idname)["treat"].shift(1)
         data["treat_diff"] = np.where(data["treat_diff"] < 0, 0, data["treat_diff"])
@@ -81,12 +82,12 @@ class LPDID(DID):
             idname=self._idname,
             tname=self._tname,
             gname=self._gname,
-            vcov = self._vcov,
+            vcov=self._vcov,
             pre_window=self._pre_window,
             post_window=self._post_window,
-            never_treated = self._never_treated,
-            att = self._att,
-            xfml=self._xfml
+            never_treated=self._never_treated,
+            att=self._att,
+            xfml=self._xfml,
         )
 
     def vcov(self):
@@ -102,7 +103,6 @@ class LPDID(DID):
         title="LPDID Event Study Estimate",
         coord_flip=False,
     ):
-
         df = self._coeftable
         df["fml"] = "lpdid"
 
@@ -167,13 +167,13 @@ def lpdid(
         idname=idname,
         tname=tname,
         gname=gname,
-        cluster={"CRV1": idname}, # just something to pass DID input checks
+        cluster={"CRV1": idname},  # just something to pass DID input checks
         vcov=vcov,
         pre_window=pre_window,
         post_window=post_window,
         never_treated=never_treated,
         att=att,
-        xfml=xfml
+        xfml=xfml,
     )
 
     FIT.estimate()
@@ -192,7 +192,7 @@ def _lpdid_estimate(
     post_window: Optional[int] = None,
     never_treated: int = 0,
     att: bool = True,
-    xfml=None
+    xfml=None,
 ) -> pd.DataFrame:
     """ "
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -219,7 +219,7 @@ def _lpdid_estimate(
     # the implementation here is highly influenced by Alex Cardazzi's R
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     fit_all = []
     reweight = False
@@ -229,7 +229,6 @@ def _lpdid_estimate(
         pass
 
     else:
-
         if xfml is None:
             fml = f"Dy ~ treat_diff | {tname}"
         else:

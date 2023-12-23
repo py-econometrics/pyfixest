@@ -515,8 +515,8 @@ class Feols:
             A pd.Series with the Wald statistic and p-value.
         """
 
-        #raise NotImplementedError("Wald Tests will be available with the next release.")
-        #import pdb; pdb.set_trace()
+        # raise NotImplementedError("Wald Tests will be available with the next release.")
+        # import pdb; pdb.set_trace()
 
         # if R is not two dimensional, make it two dimensional
         if R is not None:
@@ -526,16 +526,16 @@ class Feols:
                 R.shape[1] == self._k
             ), "R must have the same number of columns as the number of coefficients."
         if q is not None:
-            assert isinstance(
-                q, (int, float)
-            ), "q must be a numeric scalar."
+            assert isinstance(q, (int, float)), "q must be a numeric scalar."
             if isinstance(q, np.ndarray):
                 assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
                 assert (
                     q.shape[0] == R.shape[0]
                 ), "q must have the same number of rows as R."
 
-            warnings.warn("Note that the argument q is still experimental and not yet properly tested. Please use with caution / take a look at the source code.")
+            warnings.warn(
+                "Note that the argument q is still experimental and not yet properly tested. Please use with caution / take a look at the source code."
+            )
 
         assert distribution in [
             "F",
@@ -562,7 +562,7 @@ class Feols:
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
         W = bread.T @ meat @ bread
-        #W = _beta_hat @ meat @ _beta_hat.T
+        # W = _beta_hat @ meat @ _beta_hat.T
 
         # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W

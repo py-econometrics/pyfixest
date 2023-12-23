@@ -34,9 +34,9 @@ class DID(ABC):
         self._att = att
         self._cluster = cluster
 
-        #if self._xfml is not None:
+        # if self._xfml is not None:
         #    raise NotImplementedError("Covariates are not yet supported.")
-        #if self._att is False:
+        # if self._att is False:
         #    raise NotImplementedError(
         #        "Event study design with leads and lags is not yet supported."
         #    )
@@ -50,17 +50,29 @@ class DID(ABC):
         #    raise ValueError(f"The variable {self._gname} is not in the data.")
 
         # check if tname and gname are of type int (either int 64, 32, 8)
-        if self._data[self._tname].dtype not in ["int64", "int32", "int8", "float64", "float32"]:
+        if self._data[self._tname].dtype not in [
+            "int64",
+            "int32",
+            "int8",
+            "float64",
+            "float32",
+        ]:
             raise ValueError(
                 f"The variable {self._tname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
             )
-        if self._data[self._gname].dtype not in ["int64", "int32", "int8", "float64", "float32"]:
+        if self._data[self._gname].dtype not in [
+            "int64",
+            "int32",
+            "int8",
+            "float64",
+            "float32",
+        ]:
             raise ValueError(
                 f"The variable {self._gname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
             )
 
         # check if there is a never treated unit
-        #if 0 not in self._data[self._gname].unique():
+        # if 0 not in self._data[self._gname].unique():
         #    raise ValueError(f"There must be at least one unit that is never treated.")
 
         # create a treatment variable

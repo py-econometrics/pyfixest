@@ -109,7 +109,6 @@ class DID2S(DID):
         return self.summary()
 
 
-
 def _did2s_estimate(
     data: pd.DataFrame,
     yname: str,
