@@ -105,8 +105,37 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <section id="news" class="level1">
 <h1>News</h1>
+<section id="pyfixest-0.11.1" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.11.1">PyFixest 0.11.1</h2>
+<ul>
+<li>Fix some bugs around the computation of R-squared values (see <a href="https://github.com/s3alfisc/pyfixest/issues/103">issue #103</a>).</li>
+<li>Reports R-squared values again when calling <code>.summary()</code>.</li>
+</ul>
+</section>
+<section id="pyfixest-0.11.0" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.11.0">PyFixest 0.11.0</h2>
+<ul>
+<li>Significant speedups for CRV1 inference.</li>
+</ul>
+</section>
+<section id="pyfixest-0.10.12" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.12">PyFixest 0.10.12</h2>
+<p>Fixes a small bug with the separation check for poisson regression #138.</p>
+</section>
+<section id="pyfixest-0.10.11" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.11">PyFixest 0.10.11</h2>
+<p>Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.</p>
+</section>
+<section id="pyfixest-0.10.10" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.10">PyFixest 0.10.10</h2>
+<p>Fixes a bug with variable interactions via <code>i(var)</code> syntax. See <a href="https://github.com/s3alfisc/pyfixest/issues/211">issue #221</a>.</p>
+</section>
+<section id="pyfixest-0.10.9" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.9">PyFixest 0.10.9</h2>
+<p>Makes <code>etable()</code> prettier and more informative.</p>
+</section>
 <section id="pyfixest-0.10.8" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.8">PyFixest <code>0.10.8</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.8">PyFixest 0.10.8</h2>
 <section id="breaking-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-changes">Breaking changes</h3>
 <p>Reference levels for the <code>i()</code> formula syntax can no longer be set within the formula, but need to be added via the <code>i_ref1</code> function argument to either <code>feols()</code> and <code>fepois()</code>.</p>
@@ -143,7 +172,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 </section>
 <section id="pyfixest-0.10.7" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.7">PyFixest <code>0.10.7</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.7">PyFixest 0.10.7</h2>
 <ul>
 <li>Adds basic support for event study estimation via two-way fixed effects and Gardner’s two-stage “Did2s” approach. This is a beta version and experimental. Further updates (i.e.&nbsp;proper event studies vs “only” ATTs) and a more flexible did2s front end will follow in future releases.</li>
 </ul>
@@ -180,47 +209,47 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="pyfixest-0.10.6" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.6">PyFixest <code>0.10.6</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.6">PyFixest 0.10.6</h2>
 <ul>
 <li>Adds an <code>etable()</code> function that outputs markdown, latex or a pd.DataFrame.</li>
 </ul>
 </section>
 <section id="pyfixest-0.10.5" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.5">PyFixest <code>0.10.5</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.5">PyFixest 0.10.5</h2>
 <ul>
 <li>Fixes a big in IV estimation that would trigger an error. See <a href="https://github.com/s3alfisc/pyfixest/issues/197">here</a> for details. Thanks to <span class="citation" data-cites="aeturrell">@aeturrell</span> for reporting!</li>
 </ul>
 </section>
 <section id="pyfixest-0.10.4" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.4">PyFixest <code>0.10.4</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.4">PyFixest 0.10.4</h2>
 <ul>
 <li>Implements a custom function to drop singleton fixed effects.</li>
 <li>Additional small performance improvements.</li>
 </ul>
 </section>
 <section id="pyfixest-0.10.3" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.3">PyFixest <code>0.10.3</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.3">PyFixest 0.10.3</h2>
 <ul>
 <li>Allows for white space in the multiway clustering formula.</li>
 <li>Adds documentation for multiway clustering.</li>
 </ul>
 </section>
 <section id="pyfixest-0.10.2" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.2">PyFixest <code>0.10.2</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.2">PyFixest 0.10.2</h2>
 <ul>
 <li>Adds support for two-way clustering.</li>
 <li>Adds support for CRV3 inference for Poisson regression.</li>
 </ul>
 </section>
 <section id="pyfixest-0.10.1" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10.1">PyFixest <code>0.10.1</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10.1">PyFixest 0.10.1</h2>
 <ul>
-<li>Adapts the internal fixed effects demeaning criteron to match <code>PyHDFE</code>’s default.</li>
+<li>Adapts the internal fixed effects demeaning criteron to match `PyHDFE’s default.</li>
 <li>Adds Styfen as coauthor.</li>
 </ul>
 </section>
 <section id="pyfixest-0.10" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.10">PyFixest <code>0.10</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.10">PyFixest 0.10</h2>
 <ul>
 <li>Multiple performance improvements.</li>
 <li>Most importantly, implements a custom demeaning algorithm in <code>numba</code> - thanks to Styfen Schaer (<span class="citation" data-cites="styfenschaer">@styfenschaer</span>), which leads to performance improvements of 5x or more:</li>
@@ -262,49 +291,49 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co"># True</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="pyfixest-0.9.11" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.11">PyFixest <code>0.9.11</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.11">PyFixest 0.9.11</h2>
 <ul>
 <li>Bump required <code>formulaic</code> version to <code>0.6.5</code>.</li>
 <li>Stop copying the data frame in <code>fixef()</code>.</li>
 </ul>
 </section>
 <section id="pyfixest-0.9.10" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.10">PyFixest <code>0.9.10</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.10">PyFixest 0.9.10</h2>
 <ul>
 <li>Fixes a big in the <code>wildboottest</code> method (see <a href="https://github.com/s3alfisc/pyfixest/issues/158">#158</a>).</li>
 <li>Allows to run a wild bootstrap after fixed effect estimation.</li>
 </ul>
 </section>
 <section id="pyfixest-0.9.9" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.9">PyFixest <code>0.9.9</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.9">PyFixest 0.9.9</h2>
 <ul>
 <li>Adds support for <code>wildboottest</code> for Python <code>3.11</code>.</li>
 </ul>
 </section>
 <section id="pyfixest-0.9.8" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.8">PyFixest <code>0.9.8</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.8">PyFixest 0.9.8</h2>
 <ul>
 <li>Fixes a couple more bugs in the <code>predict()</code> and <code>fixef()</code> methods.</li>
 <li>The <code>predict()</code> argument <code>data</code> is renamed to <code>newdata</code>.</li>
 </ul>
 </section>
 <section id="pyfixest-0.9.7" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.7">PyFixest <code>0.9.7</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.7">PyFixest 0.9.7</h2>
 <p>Fixes a bug in <code>predict()</code> produced when multicollinear variables are dropped.</p>
 </section>
 <section id="pyfixest-0.9.6" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.6">PyFixest <code>0.9.6</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.6">PyFixest 0.9.6</h2>
 <p>Improved Collinearity handling. See <a href="https://github.com/s3alfisc/pyfixest/issues/145">#145</a></p>
 </section>
 <section id="pyfixest-0.9.5" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.5">PyFixest <code>0.9.5</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.5">PyFixest 0.9.5</h2>
 <ul>
-<li>Moves plotting from <code>matplotlin</code> to <code>lets-plot</code>.</li>
+<li>Moves plotting from <code>matplotlib</code> to <code>lets-plot</code>.</li>
 <li>Fixes a few minor bugs in plotting and the <code>fixef()</code> method.</li>
 </ul>
 </section>
 <section id="pyfixest-0.9.1" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.9.1">PyFixest <code>0.9.1</code></h2>
+<h2 class="anchored" data-anchor-id="pyfixest-0.9.1">PyFixest 0.9.1</h2>
 <section id="breaking-api-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-api-changes">Breaking API changes</h3>
 <p>It is no longer required to initiate an object of type <code>Fixest</code> prior to running <code>feols</code> or <code>fepois</code>. Instead, you can now simply use <code>feols()</code> and <code>fepois()</code> as functions, just as in <code>fixest</code>. Both function can be found in an <code>estimation</code> module and need to obtain a <code>pd.DataFrame</code> as a function argument:</p>
