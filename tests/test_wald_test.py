@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 import pandas as pd
 from pyfixest.estimation import feols
+from pyfixest.utils import ssc
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 
 pandas2ri.activate()
@@ -20,7 +20,7 @@ base = importr("base")
         np.array([0, 1]),
         np.array([1, 1]),
         np.array([-1, 2]),
-        # np.eye(2),
+        np.eye(2),
         # np.eye(2) * 2,
     ],
 )
@@ -28,7 +28,12 @@ def test_wald_test(R):
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
     fml = "dep_var ~ treat"
-    fit = feols(fml, data, vcov={"CRV1": "year"})
+    fit = feols(
+        fml,
+        data,
+        vcov={"CRV1": "year"},
+        ssc = ssc(adj = False)
+    )
     _k = fit._k
 
     # Wald test
