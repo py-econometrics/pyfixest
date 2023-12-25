@@ -28,12 +28,7 @@ def test_wald_test(R):
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
     fml = "dep_var ~ treat"
-    fit = feols(
-        fml,
-        data,
-        vcov={"CRV1": "year"},
-        ssc = ssc(adj = False)
-    )
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
     _k = fit._k
 
     # Wald test
