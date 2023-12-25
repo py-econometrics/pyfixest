@@ -515,8 +515,6 @@ class Feols:
             A pd.Series with the Wald statistic and p-value.
         """
 
-        # import pdb; pdb.set_trace()
-
         _vcov = self._vcov
         _N = self._N
         _k = self._k
@@ -552,7 +550,7 @@ class Feols:
                 "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
             )
         else:
-            q = np.zeros(_k)
+            q = np.zeros((R.shape[0]))
 
         assert distribution in [
             "F",
@@ -1304,6 +1302,13 @@ def _drop_multicollinear_variables(
 
     collin_vars = None
     collin_index = None
+
+    if res["all_removed"]:
+        raise ValueError(
+            """
+            All variables are collinear. Please check your model specification =).
+            """
+        )
 
     if res["n_excl"] > 0:
         names = np.array(names)
