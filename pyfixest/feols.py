@@ -1306,7 +1306,7 @@ def _drop_multicollinear_variables(
     if res["all_removed"]:
         raise ValueError(
             """
-            All variables are collinear. Please check your model specification =).
+            All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
             """
         )
 
