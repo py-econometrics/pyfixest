@@ -234,6 +234,20 @@ def test_lpdid():
     np.testing.assert_allclose(coefs[0], -0.042566, rtol=1e-05)
     np.testing.assert_allclose(coefs[-1], 72.635834, rtol=1e-05)
 
+    fit = lpdid(
+        df_het,
+        yname="Y",
+        idname="unit",
+        tname="time",
+        gname="event_date",
+        att=True,
+        pre_window=5,
+        post_window=10,
+    )
+
+    coefs = fit._coeftable["Estimate"].values
+    np.testing.assert_allclose(coefs[0], 31.79438, rtol=1e-05)
+
     # test vs R
 
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")

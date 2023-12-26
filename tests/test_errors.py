@@ -147,3 +147,11 @@ def test_i_interaction_errors():
     ):  # incorrect type - int is provided but float required
         # "a" not a level in f1
         feols(fml="Y ~ i(f1, X1)", data=data, i_ref1=1)
+
+
+def test_all_dropped_multicol_error():
+
+    data = get_data()
+
+    with pytest.raises(ValueError):
+        fit = feols("Y ~ f1 | f1", data = data)

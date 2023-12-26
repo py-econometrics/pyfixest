@@ -560,7 +560,6 @@ class Feols:
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
         W = bread.T @ meat @ bread
-        # W = _beta_hat @ meat @ _beta_hat.T
 
         # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W

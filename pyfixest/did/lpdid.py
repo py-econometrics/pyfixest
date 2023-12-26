@@ -24,8 +24,8 @@ class LPDID(DID):
         post_window,
         never_treated,
     ):
-        if att:
-            raise NotImplementedError("ATT is not yet supported.")
+        #if att:
+        #    raise NotImplementedError("ATT is not yet supported.")
 
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
         assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
@@ -219,25 +219,28 @@ def _lpdid_estimate(
     # the implementation here is highly influenced by Alex Cardazzi's R
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid
 
-    # import pdb; pdb.set_trace()
-
     fit_all = []
     reweight = False
 
+    if xfml is None:
+        fml = f"Dy ~ treat_diff | {tname}"
+    else:
+        fml = f"Dy ~ treat_diff + {xfml} | {tname}"
+
     if att:
-        # data = data[data.treat > 0].groupby(idname)[yname].sum() / (post_window + 1)
-        pass
+
+        # post window
+        data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
+        data["Dy"] =  data[f"{yname}_post"] - data[f"{yname}_lag"]
+        sample_idx_post = (data["treat_diff"] == 1) | (data.groupby(idname)["treat"].shift(-post_window) == 0)
+        fit_post = feols(fml=fml, data=data[sample_idx_post], vcov=vcov)
+        fit_tidy_post = fit_post.tidy().xs("treat_diff")
+
+        res = pd.DataFrame(fit_tidy_post).T
 
     else:
-        if xfml is None:
-            fml = f"Dy ~ treat_diff | {tname}"
-        else:
-            fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
         for h in range(post_window + 1):
-            if not reweight:
-                data["reweight_0"] = 1
-                data["reweight_use"] = 1
 
             data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
 
@@ -265,8 +268,34 @@ def _lpdid_estimate(
             fit_tidy.name = -h
             fit_all.append(fit_tidy)
 
-    res = pd.DataFrame(fit_all).sort_index()
-    res.index.name = "Coefficient"
-    res.index = res.index.map(lambda x: f"time_to_treatment::{x}")
+        res = pd.DataFrame(fit_all).sort_index()
+        res.index.name = "Coefficient"
+        res.index = res.index.map(lambda x: f"time_to_treatment::{x}")
 
     return res
+
+
+def _pooled_adjustment(df, y, pool_lead, idname):
+    """
+    Calculate post-treatment means rather than just using a single y value from t+h.
+
+    Parameters:
+    - df (pd.DataFrame): The dataset used in the analysis.
+    - y (str): The column name that denotes the outcome variable.
+    - pool_lead (int): The number of post-periods that should be used when calculating the post-treatment mean.
+    - idname (str): The name of the id variable.
+
+    Returns:
+    - pd.Series: The average of all future values in the analysis.
+    """
+    # Initialize lead variable
+    x = 0
+
+    # Calculate lead sum
+    for k in range(0, pool_lead + 1, 1):
+        x += df.groupby(idname)[y].shift(-k)
+
+    # Average the lead sum
+    x /= (pool_lead + 1)
+
+    return x
