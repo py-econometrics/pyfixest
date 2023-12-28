@@ -4,11 +4,12 @@ from pyfixest.FixestMulti import FixestMulti
 from pyfixest.fepois import Fepois
 from pyfixest.feols import Feols
 import pandas as pd
+import polars as pl
 
 
 def feols(
     fml: str,
-    data: pd.DataFrame,
+    data: Union[pd.DataFrame, pl.DataFrame],
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -154,7 +155,7 @@ def feols(
 
 def fepois(
     fml: str,
-    data: pd.DataFrame,
+    data: Union[pd.DataFrame, pl.DataFrame],
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -300,8 +301,9 @@ def fepois(
 def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
-    if not isinstance(data, pd.DataFrame):
-        raise ValueError("data must be a pandas dataframe")
+    # check if data is a pd.DataFrame or pl.DataFrame
+    if not isinstance(data, (pd.DataFrame, pl.DataFrame)):
+        raise ValueError("data must be a pandas or polars dataframe")
     if not isinstance(vcov, (str, dict, type(None))):
         raise ValueError("vcov must be a string, dictionary, or None")
     if not isinstance(fixef_rm, str):

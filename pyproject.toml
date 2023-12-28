@@ -13,6 +13,7 @@ repository = "https://github.com/s3alfisc/pyfixest"
 [tool.poetry.dependencies]
 python=">=3.8,<4.0"
 pandas=">=1.1.0"
+polars = ">0.20.1"
 numpy=">=1.19.0"
 PyHDFE=">=0.2"
 scipy=">=1.6"

@@ -3,6 +3,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from typing import Union, Dict, Optional, List
 
@@ -38,9 +39,7 @@ class FixestMulti:
         self._data = None
         self._all_fitted_models = None
 
-        # assert that data is a pd.DataFrame
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError("data must be a pd.DataFrame")
+        data = _polars_to_pandas(data)
 
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
@@ -772,3 +771,17 @@ def _get_endogvars_instruments(
     instruments = "+".join(instrument_list)
 
     return endogvars, instruments
+
+
+def _polars_to_pandas(data: Union[pd.DataFrame, pl.DataFrame]):
+
+    """
+    Convert polars dataframe to pandas dataframe.
+    Args: data (Union[pd.DataFrame, pl.DataFrame]): A pandas or polars dataframe.
+    Returns: data (pd.DataFrame): A pandas dataframe.
+    """
+
+
+    if isinstance(data, pl.DataFrame):
+        data = data.to_pandas()
+    return data
