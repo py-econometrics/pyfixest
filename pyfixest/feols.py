@@ -52,6 +52,8 @@ class Feols:
         """
 
         self._method = "feols"
+        self._is_iv = False
+
 
         self._Y = Y
         self._X = X
@@ -75,9 +77,8 @@ class Feols:
         self._Z = self._X
 
         self._weights = weights
-        self._is_iv = False
 
-        self._N, self._k = X.shape
+        self._N, self._k = self._X.shape
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -134,6 +135,7 @@ class Feols:
         self._r2_within = None
         self._adj_r2 = None
         self._adj_r2_within = None
+
 
     def get_fit(self) -> None:
         """

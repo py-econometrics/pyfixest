@@ -254,12 +254,14 @@ class FixestMulti:
                             Xd *= np.sqrt(w)
 
                         if _is_iv:
+                            coefnames_z = Z.columns.tolist()
                             FIT = Feiv(
                                 Y=Yd,
                                 X=Xd,
                                 Z=Zd,
                                 weights=weights,
-                                coefnames=coefnames,
+                                coefnames_x=coefnames,
+                                coefnames_z = coefnames_z,
                                 collin_tol=collin_tol,
                             )
                         else:
