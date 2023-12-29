@@ -302,7 +302,7 @@ def fepois(
 def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
-    if not isinstance(data, (pd.DataFrame, pl.DataFrame)):
+    if not isinstance(data, DataFrameType):
         raise ValueError("data must be a pandas or polars dataframe")
     if not isinstance(vcov, (str, dict, type(None))):
         raise ValueError("vcov must be a string, dictionary, or None")
