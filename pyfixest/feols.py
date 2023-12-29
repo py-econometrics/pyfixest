@@ -6,6 +6,7 @@ import numba as nb
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
+from pyfixest.dev_utils import DataFrameType
 
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
@@ -17,7 +18,7 @@ from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
 )
-
+from pyfixest.dev_utils import _polars_to_pandas
 
 class Feols:
 
@@ -825,14 +826,14 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[pd.DataFrame] = None) -> np.ndarray:
+    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
         will be set to NaN.
 
         Args:
-            newdata (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            newdata (Optional[DataFrameType], optional): A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
 
         Returns:
@@ -857,6 +858,9 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
+
+            newdata = _polars_to_pandas(newdata)
+
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
 
