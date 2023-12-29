@@ -54,7 +54,6 @@ class Feols:
         self._method = "feols"
         self._is_iv = False
 
-
         self._Y = Y
         self._X = X
 
@@ -135,7 +134,6 @@ class Feols:
         self._r2_within = None
         self._adj_r2 = None
         self._adj_r2_within = None
-
 
     def get_fit(self) -> None:
         """

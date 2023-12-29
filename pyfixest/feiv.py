@@ -1,6 +1,7 @@
 import numpy as np
 from pyfixest.feols import Feols, _drop_multicollinear_variables
 
+
 class Feiv(Feols):
 
     """
@@ -35,7 +36,7 @@ class Feiv(Feols):
             Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol
         )
 
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
@@ -65,7 +66,7 @@ class Feiv(Feols):
             u_hat (np.ndarray): The residuals of the regression model.
         """
 
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         _X = self._X
         _Z = self._Z

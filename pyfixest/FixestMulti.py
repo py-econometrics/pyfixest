@@ -261,7 +261,7 @@ class FixestMulti:
                                 Z=Zd,
                                 weights=weights,
                                 coefnames_x=coefnames,
-                                coefnames_z = coefnames_z,
+                                coefnames_z=coefnames_z,
                                 collin_tol=collin_tol,
                             )
                         else:
