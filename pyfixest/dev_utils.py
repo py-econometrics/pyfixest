@@ -10,10 +10,10 @@ except ImportError:
 
 
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
-
     if not isinstance(data, pd.DataFrame):
         try:
             import polars as pl
+
             data = data.to_pandas()
         except ImportError:
             raise ImportError(
