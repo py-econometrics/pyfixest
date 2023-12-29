@@ -54,8 +54,7 @@ jobs:
           path: |
             ${{ runner.workspace }}/R/library
             ${{ runner.workspace }}/venv
-          key: ${{ runner.os }}-r-${{ hashFiles('${{ runner.workspace }}/pyproject.toml') }}-${{ hashFiles('${{ runner.workspace }}/testing_dependencies_r.txt') }}-${{ hashFiles('${{ runner.workspace }}/R/library/**') }}-${{ hashFiles('${{ runner.workspace }}/requirements.txt') }}-${{ hashFiles('${{ runner.workspace }}/venv/**') }}
-          restore-keys: |
+            key: ${{ runner.os }}-r-${{ hashFiles('${{ runner.workspace }}/testing_dependencies_r.txt') }}          restore-keys: |
             ${{ runner.os }}-r-
 
       - name: Run tests
