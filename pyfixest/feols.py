@@ -1218,6 +1218,13 @@ def _drop_multicollinear_variables(
     collin_vars = None
     collin_index = None
 
+    if res["all_removed"]:
+        raise ValueError(
+            """
+            All variables are dropped because of multicollinearity. The model cannot be estimated.
+            """
+        )
+
     if res["n_excl"] > 0:
         names = np.array(names)
         collin_vars = names[res["id_excl"]]
