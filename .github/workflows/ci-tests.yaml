@@ -44,6 +44,10 @@ jobs:
         with:
           r-version: '4.2.0'
 
+      - name: install fixest and broom for testing
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"), repos="https://cloud.r-project.org")'
+        shell: bash
+
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
@@ -53,10 +57,6 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('${{ runner.workspace }}/pyproject.toml') }}-${{ hashFiles('${{ runner.workspace }}/testing_dependencies_r.txt') }}-${{ hashFiles('${{ runner.workspace }}/R/library/**') }}-${{ hashFiles('${{ runner.workspace }}/requirements.txt') }}-${{ hashFiles('${{ runner.workspace }}/venv/**') }}
           restore-keys: |
             ${{ runner.os }}-r-
-
-      - name: install fixest and broom for testing
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"), repos="https://cloud.r-project.org")'
-        shell: bash
 
       - name: Run tests
         run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py
