@@ -15,3 +15,13 @@ def test_multicol_overdetermined_iv():
         fit._beta_hat, np.array([-0.993607, -0.174227], dtype=float), rtol=1e-5
     )
     np.testing.assert_allclose(fit._se, np.array([0.104009, 0.018416]), rtol=1e-5)
+
+def test_polars_input():
+    data = get_data()
+    data_pl = pl.from_pandas(data)
+    fit = feols("Y ~ X1", data=data)
+    fit.predict(newdata=data_pl)
+
+    data = get_data(model="Fepois")
+    data_pl = pl.from_pandas(data)
+    fit = fepois("Y ~ X1", data=data_pl)
