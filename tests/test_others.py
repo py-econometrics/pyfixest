@@ -16,6 +16,7 @@ def test_multicol_overdetermined_iv():
     )
     np.testing.assert_allclose(fit._se, np.array([0.104009, 0.018416]), rtol=1e-5)
 
+
 def test_polars_input():
     data = get_data()
     data_pl = pl.from_pandas(data)
