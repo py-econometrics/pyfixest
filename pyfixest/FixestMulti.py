@@ -1,9 +1,7 @@
-import re
 import warnings
 
 import numpy as np
 import pandas as pd
-
 from typing import Union, Dict, Optional, List
 
 from pyfixest.feols import Feols
@@ -13,8 +11,9 @@ from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
-from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
+from pyfixest.exceptions import MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
+from pyfixest.dev_utils import DataFrameType
 
 
 class FixestMulti:
@@ -39,9 +38,7 @@ class FixestMulti:
         self._data = None
         self._all_fitted_models = None
 
-        # assert that data is a pd.DataFrame
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError("data must be a pd.DataFrame")
+        data = _polars_to_pandas(data)
 
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
@@ -762,3 +759,21 @@ def _get_endogvars_instruments(
     instruments = "+".join(instrument_list)
 
     return endogvars, instruments
+
+
+def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
+    if not isinstance(data, pd.DataFrame):
+        try:
+            # Try to import Polars
+            import polars as pl
+
+            # Convert user_input to a Polars DataFrame
+            data = data.to_pandas()
+
+        except ImportError:
+            # Polars is not available
+            raise ImportError(
+                "Polars is not installed. Please install Polars to use it as an alternative."
+            )
+
+    return data
