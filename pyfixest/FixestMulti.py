@@ -15,6 +15,7 @@ from pyfixest.exceptions import MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
 from pyfixest.dev_utils import DataFrameType
 
+
 class FixestMulti:
 
     """
@@ -761,7 +762,6 @@ def _get_endogvars_instruments(
 
 
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
-
     if not isinstance(data, pd.DataFrame):
         try:
             # Try to import Polars
@@ -772,6 +772,8 @@ def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
 
         except ImportError:
             # Polars is not available
-            raise ImportError("Polars is not installed. Please install Polars to use it as an alternative.")
+            raise ImportError(
+                "Polars is not installed. Please install Polars to use it as an alternative."
+            )
 
     return data
