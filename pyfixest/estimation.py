@@ -3,12 +3,14 @@ from pyfixest.utils import ssc
 from pyfixest.FixestMulti import FixestMulti
 from pyfixest.fepois import Fepois
 from pyfixest.feols import Feols
+from pyfixest.dev_utils import DataFrameType
+
 import pandas as pd
 
 
 def feols(
     fml: str,
-    data: pd.DataFrame,
+    data: DataFrameType,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -56,7 +58,7 @@ def feols(
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
             You can use formulaic tools such as "C", "I", ":", "*", "np.log", "np.power", etc.
 
-        data (pd.DataFrame): A pandas dataframe containing the variables in the formula.
+        data (DataFrameType): A pandas or polars dataframe containing the variables in the formula.
 
         vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
@@ -154,7 +156,7 @@ def feols(
 
 def fepois(
     fml: str,
-    data: pd.DataFrame,
+    data: DataFrameType,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -200,7 +202,7 @@ def fepois(
             All other parts of the formula must be compatible with formula parsing via the formulaic module.
             You can use formulaic tools such as "C", "I", ":", "*", "np.log", "np.power", etc.
 
-        data (pd.DataFrame): A pandas dataframe containing the variables in the formula.
+        data (DataFrameType): A pandas or polars dataframe containing the variables in the formula.
 
         vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
@@ -300,8 +302,8 @@ def fepois(
 def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
-    if not isinstance(data, pd.DataFrame):
-        raise ValueError("data must be a pandas dataframe")
+    if not isinstance(data, (pd.DataFrame, pl.DataFrame)):
+        raise ValueError("data must be a pandas or polars dataframe")
     if not isinstance(vcov, (str, dict, type(None))):
         raise ValueError("vcov must be a string, dictionary, or None")
     if not isinstance(fixef_rm, str):
