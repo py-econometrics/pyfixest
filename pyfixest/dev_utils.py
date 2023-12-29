@@ -8,6 +8,7 @@ try:
 except ImportError:
     DataFrameType = pd.DataFrame
 
+
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
     if not isinstance(data, pd.DataFrame):
         try:

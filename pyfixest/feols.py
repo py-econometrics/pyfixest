@@ -20,6 +20,7 @@ from pyfixest.exceptions import (
 )
 from pyfixest.dev_utils import _polars_to_pandas
 
+
 class Feols:
 
     """
@@ -858,7 +859,6 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
-
             newdata = _polars_to_pandas(newdata)
 
             if self._has_fixef:
