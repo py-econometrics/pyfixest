@@ -903,7 +903,8 @@ class Feols:
 
             if not self._X_is_empty:
                 # deal with linear part
-                _, X = model_matrix(fml_linear, newdata)
+                xfml = _fml.split("|")[0].split("~")[1]
+                X = model_matrix(xfml, newdata)
                 X_index = X.index
                 X = X[self._coefnames].to_numpy()
                 # fill y_hat with np.nans

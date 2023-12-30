@@ -166,9 +166,10 @@ def test_predict_nas():
     data = get_data()
 
     # test 1
-    fit = feols("Y ~ X1 + X2 | f1 ", data=data)
+    fml = "Y ~ X1 + X2 | f1"
+    fit = feols(fml, data=data)
     res = fit.predict(newdata = data)
-    fit_r = fixest.feols(ro.Formula("Y ~ X1 + X2 | f1"), data=data)
+    fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata = data)
     np.testing.assert_allclose(res, res_r)
     assert data.shape[0] == len(res)
@@ -176,18 +177,19 @@ def test_predict_nas():
 
     # test 2
     newdata = data.copy()[0:200]
-    newdata["f1"].iloc[200] = np.nan
+    newdata["f1"].iloc[199] = np.nan
 
-    fit = feols("Y ~ X1 + X2| f1 ", data=data)
+    fml = "Y ~ X1 + X2 | f1"
+    fit = feols(fml, data=data)
     res = fit.predict(newdata = newdata)
-    fit_r = fixest.feols(ro.Formula("Y ~ X1 + X2 | f1"), data=data)
+    fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata = newdata)
     np.testing.assert_allclose(res, res_r)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
 
-    newdata["Y"].iloc[199] = np.nan
+    newdata["Y"].iloc[198] = np.nan
     res = fit.predict(newdata = newdata)
     res_r = stats.predict(fit_r, newdata = newdata)
     np.testing.assert_allclose(res, res_r)
@@ -195,9 +197,10 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     # test 3
-    fit = feols("Y ~ X1 + X2 + f1| f1 ", data=data)
+    fml = "Y ~ X1 + X2 + f1| f1 "
+    fit = feols(fml, data=data)
     res = fit.predict(newdata = data)
-    fit_r = fixest.feols(ro.Formula("Y ~ X1 + X2 + f1 | f1"), data=data)
+    fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata = data)
     np.testing.assert_allclose(res, res_r)
     assert data.shape[0] == len(res)
