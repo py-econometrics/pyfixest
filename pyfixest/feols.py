@@ -859,7 +859,8 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
-            newdata = _polars_to_pandas(newdata)
+
+            newdata = _polars_to_pandas(newdata).reset_index(drop = False)
 
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
@@ -868,6 +869,10 @@ class Feols:
                     self.fixef()
 
                 fvals = self._fixef.split("+")
+                # find NaNs in fvals:
+                #fixef_nans = (newdata[fvals].isna()).any(axis = 1)
+                #fixef_nans_idx = np.where(fixef_nans)[0]
+                #newdata.drop(fixef_nans_idx, axis = 0, inplace = True)
                 df_fe = newdata[fvals].astype(str)
 
                 # populate matrix with fixed effects estimates
@@ -899,13 +904,17 @@ class Feols:
             if not self._X_is_empty:
                 # deal with linear part
                 _, X = model_matrix(fml_linear, newdata)
-                X = X[self._coefnames]
-                X = X.to_numpy()
-                y_hat = X @ _beta_hat
+                X_index = X.index
+                X = X[self._coefnames].to_numpy()
+                # fill y_hat with np.nans
+                y_hat = np.full(newdata.shape[0], np.nan)
+                y_hat[X_index] = X @ _beta_hat
+
             else:
                 y_hat = np.zeros(newdata.shape[0])
 
             if self._has_fixef:
+
                 y_hat += np.sum(fixef_mat, axis=1)
 
         return y_hat.flatten()
