@@ -12,7 +12,7 @@ repository = "https://github.com/s3alfisc/pyfixest"
 
 [tool.poetry.dependencies]
 python=">=3.8,<4.0"
-pandas=">=1.5.3"
+pandas="1.5.3"
 numpy=">=1.19.0"
 scipy=">=1.6"
 formulaic=">=1.0.0"
@@ -34,6 +34,7 @@ polars = ">0.20.1"
 rpy2 = "^3.3.2"
 pytest-xdist = "^3.5.0"
 pyhdfe = ">=0.2.0"
+pyarrow = "^14.0.2"
 
 [poetry-extras]
 wildboottest={ version = ">=0.2", optional = true}
