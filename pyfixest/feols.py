@@ -859,8 +859,7 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
-
-            newdata = _polars_to_pandas(newdata).reset_index(drop = False)
+            newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
@@ -911,7 +910,6 @@ class Feols:
                 y_hat = np.zeros(newdata.shape[0])
 
             if self._has_fixef:
-
                 y_hat += np.sum(fixef_mat, axis=1)
 
         return y_hat.flatten()

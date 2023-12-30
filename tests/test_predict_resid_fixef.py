@@ -137,7 +137,10 @@ def test_vs_fixest(data, fml):
     ):
         raise ValueError("Predictions for OLS are not equal")
 
-    if not np.allclose(len(feols_mod.predict(newdata=data2)), len(stats.predict(r_fixest_ols, newdata=data2))):
+    if not np.allclose(
+        len(feols_mod.predict(newdata=data2)),
+        len(stats.predict(r_fixest_ols, newdata=data2)),
+    ):
         raise ValueError("Predictions for OLS are not of the same length.")
 
     # test predict for Poisson
@@ -159,7 +162,6 @@ def test_vs_fixest(data, fml):
 
 
 def test_predict_nas():
-
     # tests to fix #246: https://github.com/s3alfisc/pyfixest/issues/246
 
     # NaNs in depvar, covar and fixed effects
@@ -168,9 +170,9 @@ def test_predict_nas():
     # test 1
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
-    res = fit.predict(newdata = data)
+    res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
-    res_r = stats.predict(fit_r, newdata = data)
+    res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
@@ -181,17 +183,16 @@ def test_predict_nas():
 
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
-    res = fit.predict(newdata = newdata)
+    res = fit.predict(newdata=newdata)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
-    res_r = stats.predict(fit_r, newdata = newdata)
+    res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
-
     newdata["Y"].iloc[198] = np.nan
-    res = fit.predict(newdata = newdata)
-    res_r = stats.predict(fit_r, newdata = newdata)
+    res = fit.predict(newdata=newdata)
+    res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
@@ -199,12 +200,13 @@ def test_predict_nas():
     # test 3
     fml = "Y ~ X1 + X2 + f1| f1 "
     fit = feols(fml, data=data)
-    res = fit.predict(newdata = data)
+    res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
-    res_r = stats.predict(fit_r, newdata = data)
+    res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
+
 
 @pytest.mark.parametrize(
     "fml",
