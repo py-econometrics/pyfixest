@@ -33,6 +33,7 @@ pytest="^7.0.0"
 polars = ">0.20.1"
 rpy2 = "^3.3.2"
 pytest-xdist = "^3.5.0"
+pyhdfe = ">=0.2.0"
 
 [poetry-extras]
 wildboottest={ version = ">=0.2", optional = true}
