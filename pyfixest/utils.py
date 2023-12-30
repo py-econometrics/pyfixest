@@ -115,7 +115,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     # create the covariates
     X = rng.normal(0, 3, N * 5).reshape((N, 5))
-    X[:, 0] = np.random.choice(range(3), N, True)
+    X[:, 0] = rng.choice(range(3), N, True)
     # X = pd.DataFrame(X)
     X[:, 2] = rng.choice(list(range(fe_dims[0])), N, True)
     X[:, 3] = rng.choice(list(range(fe_dims[1])), N, True)
@@ -179,8 +179,8 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     df.loc[2, "f1"] = np.nan
 
     # compute some instruments
-    df["Z1"] = df["X1"] + np.random.normal(0, 1, N)
-    df["Z2"] = df["X2"] + np.random.normal(0, 1, N)
+    df["Z1"] = df["X1"] + rng.normal(0, 1, N)
+    df["Z2"] = df["X2"] + rng.normal(0, 1, N)
 
     # change all variables in the data frame to float
     for col in df.columns:

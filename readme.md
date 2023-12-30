@@ -21,7 +21,8 @@ At the moment, `PyFixest` supports
 
 ## Installation
 
-You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github.
+You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github by running
+`pip install git+https://github.com/s3alfisc/pyfixest.git`.
 
 ## Benchmarks
 

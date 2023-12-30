@@ -1,5 +1,5 @@
 import numpy as np
-from pyfixest.feols import Feols
+from pyfixest.feols import Feols, _drop_multicollinear_variables
 
 
 class Feiv(Feols):
@@ -15,7 +15,8 @@ class Feiv(Feols):
         X: np.ndarray,
         Z: np.ndarray,
         weights: np.ndarray,
-        coefnames: list,
+        coefnames_x: list,
+        coefnames_z: list,
         collin_tol: float,
     ) -> None:
         """
@@ -24,24 +25,30 @@ class Feiv(Feols):
             X (np.array): independent variables. two-dimensional np.array
             Z (np.array): instruments. two-dimensional np.array
             weights (np.array): weights. one-dimensional np.array
-            coefnames (list): names of the coefficients
+            coefnames_x (list): names of the coefficients of X
+            coefnames_z (list): names of the coefficients of Z
             collin_tol (float): tolerance for collinearity check
         Returns:
             None
         """
 
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+            Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol
         )
+
+        # import pdb; pdb.set_trace()
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
 
-        if self._collin_index is not None:
-            self._Z = Z[:, ~self._collin_index]
-        else:
-            self._Z = Z
+        # handle multicollinearity in Z
+        (
+            self._Z,
+            self._coefnames_z,
+            self._collin_vars_z,
+            self._collin_index_z,
+        ) = _drop_multicollinear_variables(Z, coefnames_z, self._collin_tol)
 
         self._is_iv = True
 
@@ -58,6 +65,8 @@ class Feiv(Feols):
             Y_hat (np.ndarray): The predicted values of the regression model.
             u_hat (np.ndarray): The residuals of the regression model.
         """
+
+        # import pdb; pdb.set_trace()
 
         _X = self._X
         _Z = self._Z
