@@ -859,7 +859,7 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
-            newdata = _polars_to_pandas(newdata)
+            newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
@@ -898,10 +898,14 @@ class Feols:
 
             if not self._X_is_empty:
                 # deal with linear part
-                _, X = model_matrix(fml_linear, newdata)
-                X = X[self._coefnames]
-                X = X.to_numpy()
-                y_hat = X @ _beta_hat
+                xfml = _fml.split("|")[0].split("~")[1]
+                X = model_matrix(xfml, newdata)
+                X_index = X.index
+                X = X[self._coefnames].to_numpy()
+                # fill y_hat with np.nans
+                y_hat = np.full(newdata.shape[0], np.nan)
+                y_hat[X_index] = X @ _beta_hat
+
             else:
                 y_hat = np.zeros(newdata.shape[0])
 
