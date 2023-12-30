@@ -138,7 +138,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     elif beta_type == "2":
         beta = rng.normal(0, 5, k).reshape(k, 1)
     elif beta_type == "3":
-        beta = rng.exp(rng.normal(0, 1, k)).reshape(k, 1)
+        beta = np.exp(rng.normal(0, 1, k)).reshape(k, 1)
     else:
         raise ValueError("beta_type needs to be '1', '2' or '3'.")
 
@@ -148,7 +148,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     elif error_type == "2":
         u = rng.normal(0, 5, N).reshape(N, 1)
     elif error_type == "3":
-        u = rng.exp(rng.normal(0, 1, N)).reshape(N, 1)
+        u = np.exp(rng.normal(0, 1, N)).reshape(N, 1)
     else:
         raise ValueError("error_type needs to be '1', '2' or '3'.")
 
