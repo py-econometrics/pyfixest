@@ -869,10 +869,6 @@ class Feols:
                     self.fixef()
 
                 fvals = self._fixef.split("+")
-                # find NaNs in fvals:
-                #fixef_nans = (newdata[fvals].isna()).any(axis = 1)
-                #fixef_nans_idx = np.where(fixef_nans)[0]
-                #newdata.drop(fixef_nans_idx, axis = 0, inplace = True)
                 df_fe = newdata[fvals].astype(str)
 
                 # populate matrix with fixed effects estimates
