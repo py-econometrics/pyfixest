@@ -305,6 +305,7 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
     if not isinstance(data, pd.DataFrame):
         try:
             import polars as pl
+
             if not isinstance(data, pl.DataFrame):
                 raise ValueError("data must be a pandas or polars dataframe")
         except ImportError:
