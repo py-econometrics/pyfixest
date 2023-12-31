@@ -685,7 +685,7 @@ def test_singleton_dropping():
     data["f1"].iloc[data.shape[0] - 1] = 999999
 
     fit_py = feols("Y ~ X1 | f1", data=data, fixef_rm="singleton")
-    fit_py2 = feols("Y ~ X1 | f1", data = data, fixef_rm = "none")
+    fit_py2 = feols("Y ~ X1 | f1", data=data, fixef_rm="none")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1 | f1"),
         data=data,
@@ -698,7 +698,11 @@ def test_singleton_dropping():
     coef_py2 = fit_py2.coef().values
     coef_r = stats.coef(fit_r)
 
-    np.testing.assert_allclose(coef_py, coef_py2, error_msg = "singleton dropping leads to different coefficients")
+    np.testing.assert_allclose(
+        coef_py,
+        coef_py2,
+        error_msg="singleton dropping leads to different coefficients",
+    )
     np.testing.assert_allclose(
         coef_py,
         coef_r,
