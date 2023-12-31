@@ -8,6 +8,7 @@ from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
 from pyfixest.demean import _detect_singletons
 
+
 def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
@@ -256,13 +257,14 @@ def model_matrix_fixest(
 
     # handle singleton fixed effects
     if fe is not None:
-
         if drop_singletons:
             dropped_singleton_bool = _detect_singletons(fe.to_numpy())
             dropped_singleton_indices = np.where(dropped_singleton_bool)[0]
 
             if np.any(dropped_singleton_bool == True):
-                warnings.warn(f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model.")
+                warnings.warn(
+                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+                )
                 Y.drop(dropped_singleton_indices, axis=0, inplace=True)
                 if not X_is_empty:
                     X.drop(dropped_singleton_indices, axis=0, inplace=True)
@@ -272,8 +274,6 @@ def model_matrix_fixest(
                     endogvar.drop(dropped_singleton_indices, axis=0, inplace=True)
 
                 na_index += dropped_singleton_indices.tolist()
-
-
 
     na_index_str = ",".join(str(x) for x in na_index)
 

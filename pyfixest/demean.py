@@ -12,7 +12,7 @@ def demean_model(
     fe: Optional[pd.DataFrame],
     weights: Optional[np.ndarray],
     lookup_demeaned_data: Dict[str, Any],
-    na_index_str: str
+    na_index_str: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Demeans a single regression model.
@@ -86,7 +86,6 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-
             weights = np.ones(YX.shape[0])
 
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)

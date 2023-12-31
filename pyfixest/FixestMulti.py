@@ -217,12 +217,7 @@ class FixestMulti:
                         # demean Y, X, Z, if not already done in previous estimation
 
                         Yd, Xd = demean_model(
-                            Y,
-                            X,
-                            fe,
-                            weights,
-                            lookup_demeaned_data,
-                            na_index_str
+                            Y, X, fe, weights, lookup_demeaned_data, na_index_str
                         )
 
                         if _is_iv:
@@ -232,7 +227,7 @@ class FixestMulti:
                                 fe,
                                 weights,
                                 lookup_demeaned_data,
-                                na_index_str
+                                na_index_str,
                             )
                         else:
                             endogvard, Zd = None, None
