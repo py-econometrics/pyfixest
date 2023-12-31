@@ -1,9 +1,7 @@
-import re
 import warnings
 
 import numpy as np
 import pandas as pd
-
 from typing import Union, Dict, Optional, List
 
 from pyfixest.feols import Feols
@@ -13,8 +11,9 @@ from pyfixest.model_matrix_fixest import model_matrix_fixest
 from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.utils import ssc
-from pyfixest.exceptions import MatrixNotFullRankError, MultiEstNotSupportedError
+from pyfixest.exceptions import MultiEstNotSupportedError
 from pyfixest.visualize import iplot, coefplot
+from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 
 
 class FixestMulti:
@@ -39,9 +38,7 @@ class FixestMulti:
         self._data = None
         self._all_fitted_models = None
 
-        # assert that data is a pd.DataFrame
-        if not isinstance(data, pd.DataFrame):
-            raise TypeError("data must be a pd.DataFrame")
+        data = _polars_to_pandas(data)
 
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
@@ -248,12 +245,14 @@ class FixestMulti:
                             Xd *= np.sqrt(w)
 
                         if _is_iv:
+                            coefnames_z = Z.columns.tolist()
                             FIT = Feiv(
                                 Y=Yd,
                                 X=Xd,
                                 Z=Zd,
                                 weights=weights,
-                                coefnames=coefnames,
+                                coefnames_x=coefnames,
+                                coefnames_z=coefnames_z,
                                 collin_tol=collin_tol,
                             )
                         else:

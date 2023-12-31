@@ -6,6 +6,7 @@ import numba as nb
 
 from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
+from pyfixest.dev_utils import DataFrameType
 
 from scipy.stats import norm, t
 from scipy.sparse.linalg import spsolve
@@ -17,6 +18,7 @@ from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
 )
+from pyfixest.dev_utils import _polars_to_pandas
 
 
 class Feols:
@@ -52,6 +54,7 @@ class Feols:
         """
 
         self._method = "feols"
+        self._is_iv = False
 
         self._Y = Y
         self._X = X
@@ -75,9 +78,8 @@ class Feols:
         self._Z = self._X
 
         self._weights = weights
-        self._is_iv = False
 
-        self._N, self._k = X.shape
+        self._N, self._k = self._X.shape
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -825,14 +827,14 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[pd.DataFrame] = None) -> np.ndarray:
+    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
         """
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
         will be set to NaN.
 
         Args:
-            newdata (Optional[pd.DataFrame], optional): A pd.DataFrame with the data to be used for prediction.
+            newdata (Optional[DataFrameType], optional): A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
                 If None (default), uses the data used for fitting the model.
 
         Returns:
@@ -857,6 +859,8 @@ class Feols:
             y_hat = _Y_untransformed - _u_hat.flatten()
 
         else:
+            newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+
             if self._has_fixef:
                 fml_linear, _ = _fml.split("|")
 
@@ -894,10 +898,16 @@ class Feols:
 
             if not self._X_is_empty:
                 # deal with linear part
-                _, X = model_matrix(fml_linear, newdata)
-                X = X[self._coefnames]
+                xfml = _fml.split("|")[0].split("~")[1]
+                X = model_matrix(xfml, newdata)
+                X_index = X.index
+                coef_idx = np.isin(self._coefnames, X.columns)
+                X = X[np.array(self._coefnames)[coef_idx]]
                 X = X.to_numpy()
-                y_hat = X @ _beta_hat
+                # fill y_hat with np.nans
+                y_hat = np.full(newdata.shape[0], np.nan)
+                y_hat[X_index] = X @ _beta_hat[coef_idx]
+
             else:
                 y_hat = np.zeros(newdata.shape[0])
 
@@ -1217,6 +1227,13 @@ def _drop_multicollinear_variables(
 
     collin_vars = None
     collin_index = None
+
+    if res["all_removed"]:
+        raise ValueError(
+            """
+            All variables are dropped because of multicollinearity. The model cannot be estimated.
+            """
+        )
 
     if res["n_excl"] > 0:
         names = np.array(names)
