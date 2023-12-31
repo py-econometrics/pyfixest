@@ -701,7 +701,7 @@ def test_singleton_dropping():
     np.testing.assert_allclose(
         coef_py,
         coef_py2,
-        error_msg="singleton dropping leads to different coefficients",
+        err_msg="singleton dropping leads to different coefficients",
     )
     np.testing.assert_allclose(
         coef_py,
