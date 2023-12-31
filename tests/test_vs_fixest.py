@@ -680,17 +680,16 @@ def test_i_interaction():
 
 
 def test_singleton_dropping():
-
     data = get_data()
     # create a singleton fixed effect
     data["f1"].iloc[data.shape[0] - 1] = 999999
 
-    fit_py = feols("Y ~ X1 | f1", data = data, fixef_rm = "singleton")
+    fit_py = feols("Y ~ X1 | f1", data=data, fixef_rm="singleton")
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1 | f1"),
         data=data,
         ssc=fixest.ssc(True, "none", True, "min", "min", False),
-        fixef_rm = "singleton"
+        fixef_rm="singleton",
     )
 
     # test that coefficients match
@@ -716,7 +715,6 @@ def test_singleton_dropping():
     # test that standard errors match
     se_py = fit_py.se().values
     se_r = fixest.se(fit_r)
-    #np.testing.assert_allclose(
+    # np.testing.assert_allclose(
     #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
-    #)
-
+    # )

@@ -2,6 +2,7 @@ import numba as nb
 import numpy as np
 from numba.extending import overload
 
+
 def _prepare_fixed_effects(ary):
     pass
 
