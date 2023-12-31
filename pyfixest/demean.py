@@ -12,8 +12,7 @@ def demean_model(
     fe: Optional[pd.DataFrame],
     weights: Optional[np.ndarray],
     lookup_demeaned_data: Dict[str, Any],
-    na_index_str: str,
-    drop_singletons: bool,
+    na_index_str: str
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Demeans a single regression model.
@@ -87,20 +86,6 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            # not data demeaned yet for NA combination
-
-            if drop_singletons:
-                dropped_singleton_indices = _detect_singletons(fe)
-
-                if np.any(dropped_singleton_indices == True):
-                    print(
-                        np.sum(dropped_singleton_indices),
-                        "observations are dropped due to singleton fixed effects.",
-                    )
-                    na_index += dropped_singleton_indices.tolist()
-
-                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
-                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
 
             weights = np.ones(YX.shape[0])
 
