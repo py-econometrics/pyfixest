@@ -897,7 +897,6 @@ class Feols:
                 fml_fe = None
 
             if not self._X_is_empty:
-
                 # deal with linear part
                 xfml = _fml.split("|")[0].split("~")[1]
                 X = model_matrix(xfml, newdata)
