@@ -105,6 +105,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <section id="news" class="level1">
 <h1>News</h1>
+<section id="pyfixest-0.12.0" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.12.0">PyFixest 0.12.0</h2>
+<section id="enhancements" class="level3">
+<h3 class="anchored" data-anchor-id="enhancements">Enhancements:</h3>
+<ul>
+<li>Good performance improvements for singleton detection. Thanks to <a href="https://github.com/styfenschaer"><span class="citation" data-cites="styfenschaer">@styfenschaer</span></a> for the PR! See <a href="https://github.com/s3alfisc/pyfixest/issues/229">#229</a>.</li>
+</ul>
+</section>
+<section id="bug-fixes" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes">Bug Fixes:</h3>
+<ul>
+<li>Missing variables in features were not always handled correctly in <code>predict()</code> with <code>newdata</code> not <code>None</code> in the presence of missing data, which would lead to an error. See <a href="https://github.com/s3alfisc/pyfixest/issues/246">#246</a> for details.</li>
+<li>Categorical variables were not always handled correctly in <code>predict()</code> with <code>newdata</code> not <code>None</code>, because the number of fixed effects levels in <code>newdata</code> might be smaller than in <code>data</code>. In consequence, some levels were not found, which lead to an error. See <a href="https://github.com/s3alfisc/pyfixest/issues/245">#245</a> for details. Thanks to <a href="https://github.com/jiafengkevinchen"><span class="citation" data-cites="jiafengkevinchen">@jiafengkevinchen</span></a> for the pointer!</li>
+<li>Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See <a href="https://github.com/s3alfisc/pyfixest/issues/236">#236</a> for details. Thanks to <a href="https://github.com/jiafengkevinchen"><span class="citation" data-cites="jiafengkevinchen">@jiafengkevinchen</span></a> for the pointer!</li>
+<li>The number of degrees of freedom <code>k</code> was computed incorrectly if columns were dropped from the design matrix <code>X</code> in the presence of multicollinearity. See <a href="https://github.com/s3alfisc/pyfixest/issues/235">#235</a> for details. Thanks to <a href="https://github.com/jiafengkevinchen"><span class="citation" data-cites="jiafengkevinchen">@jiafengkevinchen</span></a> for the pointer!</li>
+<li>If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See <a href="https://github.com/s3alfisc/pyfixest/issues/228">#228</a> for details. Thanks to <a href="https://github.com/manferdinig"><span class="citation" data-cites="manferdinig">@manferdinig</span></a> for the pointer!</li>
+<li>If selection <code>fixef_rm = 'singleton'</code>, <code>feols()</code> and <code>fepois()</code> would fail. <a href="https://github.com/s3alfisc/pyfixest/issues/192">#192</a>.</li>
+</ul>
+</section>
+</section>
 <section id="pyfixest-0.11.1" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.11.1">PyFixest 0.11.1</h2>
 <ul>

@@ -677,3 +677,52 @@ def test_i_interaction():
         np.testing.assert_allclose(
             se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
         )
+
+
+def test_singleton_dropping():
+    data = get_data()
+    # create a singleton fixed effect
+    data["f1"].iloc[data.shape[0] - 1] = 999999
+
+    fit_py = feols("Y ~ X1 | f1", data=data, fixef_rm="singleton")
+    fit_py2 = feols("Y ~ X1 | f1", data=data, fixef_rm="none")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1 | f1"),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        fixef_rm="singleton",
+    )
+
+    # test that coefficients match
+    coef_py = fit_py.coef().values
+    coef_py2 = fit_py2.coef().values
+    coef_r = stats.coef(fit_r)
+
+    np.testing.assert_allclose(
+        coef_py,
+        coef_py2,
+        err_msg="singleton dropping leads to different coefficients",
+    )
+    np.testing.assert_allclose(
+        coef_py,
+        coef_r,
+        rtol=1e-06,
+        atol=1e-06,
+        err_msg="Coefficients do not match.",
+    )
+
+    # test that number of observations match
+    nobs_py = fit_py._N
+    nobs_r = stats.nobs(fit_r)
+    np.testing.assert_allclose(
+        nobs_py,
+        nobs_r,
+        err_msg="Number of observations do not match.",
+    )
+
+    # test that standard errors match
+    se_py = fit_py.se().values
+    se_r = fixest.se(fit_r)
+    # np.testing.assert_allclose(
+    #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
+    # )
