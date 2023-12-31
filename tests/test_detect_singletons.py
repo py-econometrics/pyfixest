@@ -1,7 +1,6 @@
 import numpy as np
-import pytest
 
-from pyfixest.demean import _detect_singletons
+from pyfixest.detect_singletons import detect_singletons
 
 input1 = np.array([[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]])
 solution1 = np.array([False, False, True, False, False])
@@ -14,6 +13,6 @@ solution3 = np.array([False, False, False, False, False])
 
 
 def test_correctness():
-    assert np.array_equal(_detect_singletons(input1), solution1)
-    assert np.array_equal(_detect_singletons(input2), solution2)
-    assert np.array_equal(_detect_singletons(input3), solution3)
+    assert np.array_equal(detect_singletons(input1), solution1)
+    assert np.array_equal(detect_singletons(input2), solution2)
+    assert np.array_equal(detect_singletons(input3), solution3)

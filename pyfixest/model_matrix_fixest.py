@@ -6,7 +6,7 @@ import numpy as np
 from formulaic import model_matrix
 from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
-from pyfixest.demean import _detect_singletons
+from pyfixest.detect_singletons import detect_singletons
 
 
 def model_matrix_fixest(
@@ -256,24 +256,26 @@ def model_matrix_fixest(
                 Z.drop("Intercept", axis=1, inplace=True)
 
     # handle singleton fixed effects
+
     if fe is not None:
         if drop_singletons:
-            dropped_singleton_bool = _detect_singletons(fe.to_numpy())
-            dropped_singleton_indices = np.where(dropped_singleton_bool)[0]
+            dropped_singleton_bool = detect_singletons(fe.to_numpy())
+            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+            drop_singleton_indices = np.where(dropped_singleton_bool)[0]
 
             if np.any(dropped_singleton_bool == True):
                 warnings.warn(
                     f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
                 )
-                Y.drop(dropped_singleton_indices, axis=0, inplace=True)
+                Y = Y.iloc[keep_singleton_indices]
                 if not X_is_empty:
-                    X.drop(dropped_singleton_indices, axis=0, inplace=True)
-                fe.drop(dropped_singleton_indices, axis=0, inplace=True)
+                    X = X.iloc[keep_singleton_indices]
+                fe = fe.iloc[keep_singleton_indices]
                 if _is_iv:
-                    Z.drop(dropped_singleton_indices, axis=0, inplace=True)
-                    endogvar.drop(dropped_singleton_indices, axis=0, inplace=True)
+                    Z = Z.iloc[keep_singleton_indices]
+                    endogvar = endogvar.iloc[keep_singleton_indices]
 
-                na_index += dropped_singleton_indices.tolist()
+                na_index += drop_singleton_indices.tolist()
 
     na_index_str = ",".join(str(x) for x in na_index)
 
