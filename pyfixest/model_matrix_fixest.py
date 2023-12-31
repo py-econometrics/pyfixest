@@ -261,7 +261,6 @@ def model_matrix_fixest(
         if drop_singletons:
             dropped_singleton_bool = detect_singletons(fe.to_numpy())
             keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
-            drop_singleton_indices = np.where(dropped_singleton_bool)[0]
 
             if np.any(dropped_singleton_bool == True):
                 warnings.warn(
@@ -275,7 +274,8 @@ def model_matrix_fixest(
                     Z = Z.iloc[keep_singleton_indices]
                     endogvar = endogvar.iloc[keep_singleton_indices]
 
-                na_index += drop_singleton_indices.tolist()
+                # overwrite na_index
+                na_index = list(set(range(data.shape[0])).difference(Y.index))
 
     na_index_str = ",".join(str(x) for x in na_index)
 
