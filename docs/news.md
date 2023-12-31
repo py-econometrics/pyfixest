@@ -2,9 +2,12 @@
 
 ## PyFixest 0.12.0
 
+
 ### Enhancements:
 
 - Good performance improvements for singleton fixed effects detection. Thanks to [@styfenschaer](https://github.com/styfenschaer) for the PR! See [#229](https://github.com/s3alfisc/pyfixest/issues/229).
+- Uses the [r2u project](https://github.com/eddelbuettel/r2u) for installing R and R packages on github actions, with great performance improvements.
+- Allows to pass `polars` data frames to `feols()`, `fepois()` and `predict()`. [#232](https://github.com/s3alfisc/pyfixest/issues/232). Thanks to [@vincentarelbundock](https://github.com/s3alfisc/pyfixest/issues/232) for the suggestion!
 
 ### Bug Fixes:
 
@@ -14,6 +17,11 @@
 - The number of degrees of freedom `k` was computed incorrectly if columns were dropped from the design matrix `X` in the presence of multicollinearity. See [#235](https://github.com/s3alfisc/pyfixest/issues/235) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
 - If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See [#228](https://github.com/s3alfisc/pyfixest/issues/228) for details. Thanks to [@manferdinig](https://github.com/manferdinig) for the pointer!
 - If selection `fixef_rm = 'singleton'`, `feols()` and `fepois()` would fail, which has been fixed. [#192](https://github.com/s3alfisc/pyfixest/issues/192)
+
+### Dependency Requirements
+
+- For now, sets `formulaic` versions to be `0.6.6` or lower as version `1.0.0` seems to have introduced a problem with the `i()` operator, See [#244](https://github.com/s3alfisc/pyfixest/issues/244) for details.
+- Drops dependency on `pyhdfe`.
 
 ## PyFixest 0.11.1
 
