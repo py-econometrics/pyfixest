@@ -6,11 +6,13 @@ import numpy as np
 from formulaic import model_matrix
 from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
+from pyfixest.demean import _detect_singletons
 
 
 def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
+    drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
     i_ref1: Optional[Union[List, str, int]] = None,
@@ -36,6 +38,8 @@ def model_matrix_fixest(
 
     Args:
         fml (str): A two-sided formula string using fixest formula syntax.
+        data (pd.DataFrame): The input DataFrame containing the data.
+        drop_singletons (bool): Whether to drop singleton fixed effects. Default is False.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
         data (pd.DataFrame): The input DataFrame containing the data.
         drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
@@ -250,6 +254,26 @@ def model_matrix_fixest(
         if _is_iv:
             if "Intercept" in Z.columns:
                 Z.drop("Intercept", axis=1, inplace=True)
+
+    # handle singleton fixed effects
+    if fe is not None:
+        if drop_singletons:
+            dropped_singleton_bool = _detect_singletons(fe.to_numpy())
+            dropped_singleton_indices = np.where(dropped_singleton_bool)[0]
+
+            if np.any(dropped_singleton_bool == True):
+                warnings.warn(
+                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+                )
+                Y.drop(dropped_singleton_indices, axis=0, inplace=True)
+                if not X_is_empty:
+                    X.drop(dropped_singleton_indices, axis=0, inplace=True)
+                fe.drop(dropped_singleton_indices, axis=0, inplace=True)
+                if _is_iv:
+                    Z.drop(dropped_singleton_indices, axis=0, inplace=True)
+                    endogvar.drop(dropped_singleton_indices, axis=0, inplace=True)
+
+                na_index += dropped_singleton_indices.tolist()
 
     na_index_str = ",".join(str(x) for x in na_index)
 

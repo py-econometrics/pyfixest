@@ -191,6 +191,7 @@ class FixestMulti:
                     ) = model_matrix_fixest(
                         fml=fml,
                         data=_data,
+                        drop_singletons=_drop_singletons,
                         drop_intercept=_drop_intercept,
                         i_ref1=_i_ref1,
                         i_ref2=_i_ref2,
@@ -213,13 +214,7 @@ class FixestMulti:
                         # demean Y, X, Z, if not already done in previous estimation
 
                         Yd, Xd = demean_model(
-                            Y,
-                            X,
-                            fe,
-                            weights,
-                            lookup_demeaned_data,
-                            na_index_str,
-                            self._drop_singletons,
+                            Y, X, fe, weights, lookup_demeaned_data, na_index_str
                         )
 
                         if _is_iv:
@@ -230,7 +225,6 @@ class FixestMulti:
                                 weights,
                                 lookup_demeaned_data,
                                 na_index_str,
-                                self._drop_singletons,
                             )
                         else:
                             endogvard, Zd = None, None
