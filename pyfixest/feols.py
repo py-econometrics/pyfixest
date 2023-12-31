@@ -901,10 +901,12 @@ class Feols:
                 xfml = _fml.split("|")[0].split("~")[1]
                 X = model_matrix(xfml, newdata)
                 X_index = X.index
-                X = X[self._coefnames].to_numpy()
+                coef_idx = np.isin(self._coefnames, X.columns)
+                X = X[np.array(self._coefnames)[coef_idx]]
+                X = X.to_numpy()
                 # fill y_hat with np.nans
                 y_hat = np.full(newdata.shape[0], np.nan)
-                y_hat[X_index] = X @ _beta_hat
+                y_hat[X_index] = X @ _beta_hat[coef_idx]
 
             else:
                 y_hat = np.zeros(newdata.shape[0])
