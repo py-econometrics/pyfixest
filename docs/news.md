@@ -1,5 +1,20 @@
 # News
 
+## PyFixest 0.12.0
+
+### Enhancements:
+
+- Good performance improvements for singleton fixed effects detection. Thanks to [@styfenschaer](https://github.com/styfenschaer) for the PR! See [#229](https://github.com/s3alfisc/pyfixest/issues/229).
+
+### Bug Fixes:
+
+- Missing variables in features were not always handled correctly in `predict()` with `newdata` not `None` in the presence of missing data, which would lead to an error. See [#246](https://github.com/s3alfisc/pyfixest/issues/246) for details.
+- Categorical variables were not always handled correctly in `predict()` with `newdata` not `None`, because the number of fixed effects levels in `newdata` might be smaller than in `data`. In consequence, some levels were not found, which lead to an error. See [#245](https://github.com/s3alfisc/pyfixest/issues/245) for details. Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See [#236](https://github.com/s3alfisc/pyfixest/issues/236) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- The number of degrees of freedom `k` was computed incorrectly if columns were dropped from the design matrix `X` in the presence of multicollinearity. See [#235](https://github.com/s3alfisc/pyfixest/issues/235) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See [#228](https://github.com/s3alfisc/pyfixest/issues/228) for details. Thanks to [@manferdinig](https://github.com/manferdinig) for the pointer!
+- If selection `fixef_rm = 'singleton'`, `feols()` and `fepois()` would fail, which has been fixed. [#192](https://github.com/s3alfisc/pyfixest/issues/192)
+
 ## PyFixest 0.11.1
 
 - Fix some bugs around the computation of R-squared values (see [issue #103](https://github.com/s3alfisc/pyfixest/issues/103)).
