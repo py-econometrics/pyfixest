@@ -81,11 +81,9 @@ class LPDID(DID):
             yname=self._yname,
             idname=self._idname,
             tname=self._tname,
-            gname=self._gname,
             vcov=self._vcov,
             pre_window=self._pre_window,
             post_window=self._post_window,
-            never_treated=self._never_treated,
             att=self._att,
             xfml=self._xfml,
         )
@@ -186,11 +184,9 @@ def _lpdid_estimate(
     yname: str,
     idname: str,
     tname: str,
-    gname: str,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
-    never_treated: int = 0,
     att: bool = True,
     xfml=None,
 ) -> pd.DataFrame:

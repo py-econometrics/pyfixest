@@ -226,7 +226,6 @@ def _did2s_vcov(
         A variance covariance matrix.
     """
 
-    #import pdb; pdb.set_trace()
 
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
