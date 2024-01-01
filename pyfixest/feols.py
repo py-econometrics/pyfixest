@@ -569,7 +569,7 @@ class Feols:
 
         if distribution == "F":
             self._f_statistic_pvalue = f.sf(self._f_statistic, dfn=dfn, dfd=dfd)
-            #self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
+            # self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
             res = pd.Series(
                 {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
             )

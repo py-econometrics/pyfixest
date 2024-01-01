@@ -24,7 +24,7 @@ class LPDID(DID):
         post_window,
         never_treated,
     ):
-        #if att:
+        # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
 
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
@@ -228,20 +228,19 @@ def _lpdid_estimate(
         fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
     if att:
-
         # post window
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
-        data["Dy"] =  data[f"{yname}_post"] - data[f"{yname}_lag"]
-        sample_idx_post = (data["treat_diff"] == 1) | (data.groupby(idname)["treat"].shift(-post_window) == 0)
+        data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
+        sample_idx_post = (data["treat_diff"] == 1) | (
+            data.groupby(idname)["treat"].shift(-post_window) == 0
+        )
         fit_post = feols(fml=fml, data=data[sample_idx_post], vcov=vcov)
         fit_tidy_post = fit_post.tidy().xs("treat_diff")
 
         res = pd.DataFrame(fit_tidy_post).T
 
     else:
-
         for h in range(post_window + 1):
-
             data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
 
             sample_idx = (data["treat_diff"] == 1) | (
@@ -296,6 +295,6 @@ def _pooled_adjustment(df, y, pool_lead, idname):
         x += df.groupby(idname)[y].shift(-k)
 
     # Average the lead sum
-    x /= (pool_lead + 1)
+    x /= pool_lead + 1
 
     return x

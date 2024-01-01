@@ -705,7 +705,8 @@ def test_wald_test(fml, data):
     wald_pval_r = wald_r[1]
 
     np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
-    #np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+    # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+
 
 def test_singleton_dropping():
     data = get_data()
