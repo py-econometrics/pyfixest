@@ -1,6 +1,7 @@
 print(
     """
-      You have loaded the 'pyfixest.did' module. Code in this module is not yet stable and
-      may change in the future. It may also not be sufficiently unit tested (if at all) or documented.
+      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+      the module is not yet as thoroughly tested as I would like. So please use it with caution and
+      provide feedback in case you stumble over any bugs!
       """
 )
