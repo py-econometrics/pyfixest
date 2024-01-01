@@ -6,11 +6,13 @@ import numpy as np
 from formulaic import model_matrix
 from typing import Optional, Tuple, List, Union
 from pyfixest.exceptions import InvalidReferenceLevelError
+from pyfixest.detect_singletons import detect_singletons
 
 
 def model_matrix_fixest(
     fml: str,
     data: pd.DataFrame,
+    drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
     i_ref1: Optional[Union[List, str, int]] = None,
@@ -36,6 +38,8 @@ def model_matrix_fixest(
 
     Args:
         fml (str): A two-sided formula string using fixest formula syntax.
+        data (pd.DataFrame): The input DataFrame containing the data.
+        drop_singletons (bool): Whether to drop singleton fixed effects. Default is False.
         weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
         data (pd.DataFrame): The input DataFrame containing the data.
         drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
@@ -250,6 +254,28 @@ def model_matrix_fixest(
         if _is_iv:
             if "Intercept" in Z.columns:
                 Z.drop("Intercept", axis=1, inplace=True)
+
+    # handle singleton fixed effects
+
+    if fe is not None:
+        if drop_singletons:
+            dropped_singleton_bool = detect_singletons(fe.to_numpy())
+            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+
+            if np.any(dropped_singleton_bool == True):
+                warnings.warn(
+                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+                )
+                Y = Y.iloc[keep_singleton_indices]
+                if not X_is_empty:
+                    X = X.iloc[keep_singleton_indices]
+                fe = fe.iloc[keep_singleton_indices]
+                if _is_iv:
+                    Z = Z.iloc[keep_singleton_indices]
+                    endogvar = endogvar.iloc[keep_singleton_indices]
+
+                # overwrite na_index
+                na_index = list(set(range(data.shape[0])).difference(Y.index))
 
     na_index_str = ",".join(str(x) for x in na_index)
 

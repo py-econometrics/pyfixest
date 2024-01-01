@@ -149,9 +149,7 @@ def test_i_interaction_errors():
         feols(fml="Y ~ i(f1, X1)", data=data, i_ref1=1)
 
 
-def test_all_dropped_multicol_error():
-
+def test_all_variables_multicollinear():
     data = get_data()
-
     with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data = data)
+        fit = feols("Y ~ f1 | f1", data=data)

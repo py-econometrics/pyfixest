@@ -39,16 +39,14 @@ jobs:
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: Setup R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.2.0'
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
 
-      - name: install fixest and broom for testing
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich"), repos="https://cloud.r-project.org")'
+      - name: install R packages
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"))'
         shell: bash
 
       - name: Run tests
-        run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py
+        run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py tests/test_others.py tests/test_did.py
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3

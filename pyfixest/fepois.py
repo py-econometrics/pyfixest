@@ -1,4 +1,3 @@
-import pyhdfe
 import numpy as np
 import pandas as pd
 import warnings
@@ -117,21 +116,6 @@ class Fepois(Feols):
                     2 * np.sum(np.where(_Y == 0, 0, _Y * np.log(_Y / mu)) - (_Y - mu))
                 ).flatten()
             return deviance
-
-        # initiate demeaning algo (if needed)
-        if _fe is not None:
-            if _drop_singletons:
-                dropped_singleton_indices = _detect_singletons(fe)
-
-                if np.any(dropped_singleton_indices == True):
-                    print(
-                        np.sum(dropped_singleton_indices),
-                        "observations are dropped due to singleton fixed effects.",
-                    )
-                    na_index += dropped_singleton_indices.tolist()
-
-                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
-                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
 
         accelerate = True
         # inner_tol = 1e-04

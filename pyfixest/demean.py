@@ -1,8 +1,9 @@
+from typing import Any, Dict, Optional, Sequence, Tuple
+
+import numba as nb
 import numpy as np
 import pandas as pd
-from typing import Any, Dict, Optional, Tuple
-import numba as nb
-from typing import Any, Sequence, Optional
+from numba.extending import overload
 
 
 def demean_model(
@@ -12,7 +13,6 @@ def demean_model(
     weights: Optional[np.ndarray],
     lookup_demeaned_data: Dict[str, Any],
     na_index_str: str,
-    drop_singletons: bool,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Demeans a single regression model.
@@ -86,21 +86,6 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            # not data demeaned yet for NA combination
-
-            if drop_singletons:
-                dropped_singleton_indices = _detect_singletons(fe)
-
-                if np.any(dropped_singleton_indices == True):
-                    print(
-                        np.sum(dropped_singleton_indices),
-                        "observations are dropped due to singleton fixed effects.",
-                    )
-                    na_index += dropped_singleton_indices.tolist()
-
-                    YX = np.delete(YX, dropped_singleton_indices, axis=0)
-                    fe = np.delete(fe, dropped_singleton_indices, axis=0)
-
             weights = np.ones(YX.shape[0])
 
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
@@ -222,49 +207,3 @@ def demean(
 
     success = not not_converged
     return (res, success)
-
-
-# @nb.jit(nopython=False)
-def _detect_singletons(ids):
-    """
-    Detect singleton fixed effects
-    Args:have a
-        ids (np.ndarray): A numpy array of fixed effects.
-    Returns:
-        An array of booleans indicating which observations have a singleton fixed effect.
-    """
-
-    N, k = ids.shape
-
-    singleton_idx = np.full(N, False, dtype=bool)
-    singleton_idx_tmp = np.full(N, False, dtype=bool)
-    singleton_idx_tmp_old = singleton_idx.copy()
-
-    ids_tmp = ids.copy()
-
-    while True:
-        for x in range(k):
-            col = ids[:, x]
-            col_tmp = ids_tmp[:, x]
-
-            # note that this only "works" as fixed effects are integers from 0, 1, ..., n_fixef -1
-            # and np.bincount orders results in ascending (integer) order
-            counts = np.bincount(col_tmp)
-
-            if np.any(counts == 1):
-                idx = np.where(counts == 1)
-
-                singleton_idx[np.isin(col, idx)] = True
-                singleton_idx_tmp[np.isin(col_tmp, idx)] = True
-
-                ids_tmp = ids_tmp[~singleton_idx_tmp, :].astype(ids_tmp.dtype)
-                singleton_idx_tmp = singleton_idx_tmp[~singleton_idx_tmp]
-
-            break
-
-        if np.array_equal(singleton_idx_tmp, singleton_idx_tmp_old):
-            break
-
-        singleton_idx_tmp_old = singleton_idx_tmp.copy()
-
-    return singleton_idx
