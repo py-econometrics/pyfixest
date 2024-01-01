@@ -24,6 +24,8 @@ base = importr("base")
         # np.eye(2) * 2,
     ],
 )
+
+@pytest.mark.skip("Wald tests will be released with pyfixest 0.14.0.")
 def test_wald_test(R):
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]

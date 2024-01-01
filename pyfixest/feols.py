@@ -517,6 +517,8 @@ class Feols:
             A pd.Series with the Wald statistic and p-value.
         """
 
+        raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
+
         _vcov = self._vcov
         _N = self._N
         _k = self._k
