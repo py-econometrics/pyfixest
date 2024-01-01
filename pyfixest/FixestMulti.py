@@ -43,7 +43,7 @@ class FixestMulti:
         self._data = data.copy()
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
-        self._data.index = range(data.shape[0])
+        self._data.reset_index(drop=True, inplace=True)
         self.all_fitted_models = dict()
 
     def _prepare_estimation(
@@ -322,19 +322,17 @@ class FixestMulti:
                             "Estimation method not supported. Please use 'feols' or 'fepois'."
                         )
 
-                    # some bookkeeping
-                    FIT._fml = fml
-                    FIT._depvar = depvar
-                    FIT._Y_untransformed = Y
-                    FIT._data = _data.iloc[~_data.index.isin(na_index)]
-                    FIT._ssc_dict = _ssc_dict
-                    FIT._k_fe = _k_fe
-                    if fval != "0":
-                        FIT._has_fixef = True
-                        FIT._fixef = fval
-                    else:
-                        FIT._has_fixef = False
-                        FIT._fixef = None
+                    # enrich FIT with model info obtained outside of the model class
+                    FIT.add_fixest_multi_context(
+                        fml=fml,
+                        depvar=depvar,
+                        Y=Y,
+                        _data=_data,
+                        _ssc_dict=_ssc_dict,
+                        _k_fe=_k_fe,
+                        fval=fval,
+                        na_index=na_index,
+                    )
 
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
@@ -355,6 +353,19 @@ class FixestMulti:
 
                     # store fitted model
                     self.all_fitted_models[fml] = FIT
+
+        self.set_fixest_multi_flag()
+
+    def set_fixest_multi_flag(self):
+        """
+        Set a flag to indicate whether multiple estimations are being performed or not.
+        Simple check if `all_fitted_models` has more than one key.
+        Throws an error if multiple estimations are being performed with IV estimation.
+        Args:
+            None
+        Returns:
+            None
+        """
 
         if len(self.all_fitted_models) > 1:
             self._is_multiple_estimation = True

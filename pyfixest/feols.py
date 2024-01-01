@@ -1,4 +1,5 @@
 import re
+import warnings
 import numpy as np
 import pandas as pd
 import warnings
@@ -8,7 +9,7 @@ from importlib import import_module
 from typing import Optional, Union, List, Dict, Tuple
 from pyfixest.dev_utils import DataFrameType
 
-from scipy.stats import norm, t
+from scipy.stats import norm, t, chi2, f
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 from formulaic import model_matrix
@@ -465,33 +466,120 @@ class Feols:
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
 
-    def get_Ftest(self, vcov, is_iv=False):
+    def add_fixest_multi_context(
+        self,
+        fml: str,
+        depvar: str,
+        Y: pd.Series,
+        _data: pd.DataFrame,
+        _ssc_dict: dict,
+        _k_fe: int,
+        fval: str,
+        na_index: np.ndarray,
+    ) -> None:
         """
-        compute an F-test statistic of the form H0: R*beta = q
-
+        Enrich an instance of class `Feols` with additional attributes set in the `FixestMulti` class.
         Args:
-            is_iv (bool): If True, the F-test is computed for the first stage regression of an IV model. Default is False.
+            fml (str): The formula used for estimation.
+            depvar (str): The dependent variable of the regression model.
+            Y (pd.Series): The dependent variable of the regression model.
+            _data (pd.DataFrame): The data used for estimation.
+            _ssc_dict (dict): A dictionary with the sum of squares and cross products matrices.
+            _k_fe (int): The number of fixed effects.
+            fval (str): The fixed effects formula.
+            na_index (np.ndarray): An array with the indices of missing values.
         Returns:
             None
         """
 
-        raise NotImplementedError("The F-test is currently not supported.")
-
-        R = np.ones(self._k).reshape((1, self._k))
-        q = 0
-        beta = self._beta_hat
-        Rbetaq = R @ beta - q
-        # Rbetaq = self._beta_hat
-
-        if self._is_iv:
-            first_stage = Feols(self._Y, self._Z, self._Z)
-            first_stage.get_fit()
-            first_stage.vcov(vcov=vcov)
-            vcov = first_stage.vcov
+        # some bookkeeping
+        self._fml = fml
+        self._depvar = depvar
+        self._Y_untransformed = Y
+        self._data = _data.iloc[~_data.index.isin(na_index)]
+        self._ssc_dict = _ssc_dict
+        self._k_fe = _k_fe
+        if fval != "0":
+            self._has_fixef = True
+            self._fixef = fval
         else:
-            vcov = self._vcov
+            self._has_fixef = False
+            self._fixef = None
 
-        self._F_stat = Rbetaq @ np.linalg.inv(R @ self._vcov @ np.transpose(R)) @ Rbetaq
+    def wald_test(self, R=None, q=None, distribution="F") -> None:
+        """
+        Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.
+        Args:
+            R: The matrix R of the linear hypothesis. If None, defaults to an identity matrix.
+            q: The vector q of the linear hypothesis. If None, defaults to a vector of zeros.
+            distribution: The distribution to use for the p-value. Either "F" or "chi2". Defaults to "F".
+        Returns:
+            A pd.Series with the Wald statistic and p-value.
+        """
+
+        raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
+
+        _vcov = self._vcov
+        _N = self._N
+        _k = self._k
+        _beta_hat = self._beta_hat
+        if self._has_fixef:
+            _k_fe = np.sum(self._k_fe.values)
+        else:
+            _k_fe = 0
+
+        dfn = _N - _k_fe - _k
+        dfd = _k
+
+        # if R is not two dimensional, make it two dimensional
+        if R is not None:
+            if R.ndim == 1:
+                R = R.reshape((1, len(R)))
+            assert (
+                R.shape[1] == _k
+            ), "R must have the same number of columns as the number of coefficients."
+        else:
+            R = np.eye(_k)
+
+        if q is not None:
+            assert isinstance(
+                q, (int, float, np.ndarray)
+            ), "q must be a numeric scalar."
+            if isinstance(q, np.ndarray):
+                assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
+                assert (
+                    q.shape[0] == R.shape[0]
+                ), "q must have the same number of rows as R."
+            warnings.warn(
+                "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
+            )
+        else:
+            q = np.zeros((R.shape[0]))
+
+        assert distribution in [
+            "F",
+            "chi2",
+        ], "distribution must be either 'F' or 'chi2'."
+
+        bread = R @ _beta_hat - q
+        meat = np.linalg.inv(R @ _vcov @ R.T)
+        W = bread.T @ meat @ bread
+
+        # this is chi-squared(k) distributed, with k = number of coefficients
+        self._wald_statistic = W
+        self._f_statistic = W / dfd
+
+        if distribution == "F":
+            self._f_statistic_pvalue = f.sf(self._f_statistic, dfn=dfn, dfd=dfd)
+            # self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
+            res = pd.Series(
+                {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
+            )
+        else:
+            raise NotImplementedError("chi2 distribution not yet implemented.")
+            # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+
+        return res
 
     def coefplot(
         self,
@@ -639,11 +727,9 @@ class Feols:
         _data = self._data
         _clustervar = self._clustervar
 
-        _ssc = self._ssc
-
         if cluster is None:
-            if self._clustervar is not None:
-                cluster = self._clustervar
+            if _clustervar is not None:
+                cluster = _clustervar
 
         if isinstance(cluster, str):
             cluster = [cluster]
@@ -1231,7 +1317,11 @@ def _drop_multicollinear_variables(
     if res["all_removed"]:
         raise ValueError(
             """
+<<<<<<< HEAD
+            All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
+=======
             All variables are dropped because of multicollinearity. The model cannot be estimated.
+>>>>>>> master
             """
         )
 
