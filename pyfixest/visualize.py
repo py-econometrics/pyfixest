@@ -190,9 +190,9 @@ def _coefplot(
     if flip_coord:
         plot += coord_flip()
     if yintercept is not None:
-        plot += geom_hline(yintercept=yintercept, linetype="dashed", color="red")
+        plot += geom_hline(yintercept=yintercept, linetype="dashed", color="black")
     if xintercept is not None:
-        plot += geom_vline(xintercept=xintercept, linetype="dashed")
+        plot += geom_vline(xintercept=xintercept, linetype="dashed", color = "black")
     if figsize is not None:
         plot += ggsize(figsize[0], figsize[1])
     if rotate_xticks is not None:
