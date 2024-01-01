@@ -5,7 +5,7 @@
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python clone of the excellent [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ## Functionality
 
@@ -17,12 +17,66 @@ At the moment, `PyFixest` supports
 - Several Robust and Cluster Robust Variance-Covariance Types
 - Wild Cluster Bootstrap Inference (via [wildboottest](https://github.com/s3alfisc/wildboottest))
 - Difference-in-Difference Estimators:
-  - Gardner's two-stage ("`Did2s`") estimator is available via the `pyfixest.experimental.did` module
+  - The canonical Two-Way Fixed Effects Estimator
+  - [Gardner's two-stage ("`Did2s`")](https://jrgcmu.github.io/2sdd_current.pdf) estimator is available via the `pyfixest.did.did` module
+  - Basic Versions of the Local Projections estimator following [Dube et al (2023)](https://www.nber.org/papers/w31184)
 
 ## Installation
 
-You can install the release version from `PyPi` by running `pip install pyfixest` or the development version from github by running
-`pip install git+https://github.com/s3alfisc/pyfixest.git`.
+You can install the release version from `PyPi` by running
+
+```py
+pip install pyfixest
+```
+or the development version from github by running
+```py
+pip install git+https://github.com/s3alfisc/pyfixest.git
+```
+
+## News
+
+`PyFixest` `0.14` adds support for the local projections "DID2s" estimator:
+
+```py
+import pandas as pd
+import numpy as np
+from pyfixest.did.lpdid import lpdid
+
+df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
+df_het = df_het.astype(np.float64)
+
+fit_lpdid = lpdid(
+    df_het,
+    yname="Y",
+    idname="unit",
+    tname="time",
+    gname="event_date",
+    att=True,
+    pre_window=5,
+    post_window=10,
+)
+
+fit_lpdid.tidy()
+#            Estimate	Std. Error	t value	   Pr(>|t|)	    2.5 %	97.5 %	      N
+#treat_diff	 31.794381	0.755459	42.086191	0.0	    30.312812	33.27595	28709.0
+```
+
+```py
+fit_lpdid = lpdid(
+    df_het,
+    yname="Y",
+    idname="unit",
+    tname="time",
+    gname="event_date",
+    att=False,
+    pre_window=5,
+    post_window=10,
+)
+
+fit_lpdid.iplot(figsize = [1000, 400], xintercept = 5.5, yintercept = 0)
+```
+![](./figures/lpdid_event_study.png)
+
 
 ## Benchmarks
 
@@ -32,41 +86,9 @@ All benchmarks follow the [fixest benchmarks](https://github.com/lrberge/fixest/
 ![](./benchmarks/lets-plot-images/benchmarks_poisson.svg)
 
 
-## News
-
-`PyFixest` 0.10.8 adds experimental support for Gardner's two stage "DID2s" estimator:
-
-```py
-import pandas as pd
-import numpy as np
-from pyfixest.experimental.did import did2s
-from pyfixest.estimation import feols
-from pyfixest.visualize import iplot
-
-# download csv from this repo
-df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
-
-fit = did2s(
-    df_het,
-    yname = "dep_var",
-    first_stage = "~ 0 | state + year",
-    second_stage = "~i(rel_year)",
-    treatment = "treat",
-    cluster = "state",
-    i_ref1 = [-1.0, np.inf],
-)
-
-fit_twfe = feols(
-    "dep_var ~ i(rel_year) | state + year",
-    df_het,
-    i_ref1 = [-1.0, np.inf]
-)
-
-iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs DID2S")
-```
-![](./figures/event_study.svg)
-
 ## Quickstart
+
+For more details, take a look at the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/).
 
 ```python
 from pyfixest.estimation import feols

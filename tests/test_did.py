@@ -1,5 +1,6 @@
-from pyfixest.experimental.did import event_study
-from pyfixest.experimental.did import did2s as did2s_pyfixest
+from pyfixest.did.event_study import event_study
+from pyfixest.did.did2s import did2s as did2s_pyfixest
+from pyfixest.did.lpdid import lpdid
 import pandas as pd
 import numpy as np
 import pytest
@@ -20,7 +21,7 @@ def test_event_study():
     Test the event_study() function.
     """
 
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     fit_did2s = event_study(
         data=df_het,
@@ -53,7 +54,7 @@ def test_did2s():
     Test the did2s() function.
     """
 
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
     # ATT, no covariates
@@ -178,7 +179,7 @@ def test_did2s():
 
 
 def test_errors():
-    df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     # test expected errors: treatment
 
@@ -206,3 +207,77 @@ def test_errors():
             cluster="state",
             i_ref1=[-1.0, np.inf],
         )
+
+
+def test_lpdid():
+    """
+    test the lpdid estimator.
+    """
+
+    # test vs stata
+    df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
+    df_het = df_het.astype(np.float64)
+
+    fit = lpdid(
+        df_het,
+        yname="Y",
+        idname="unit",
+        tname="time",
+        gname="event_date",
+        att=False,
+        pre_window=5,
+        post_window=10,
+    )
+    coefs = fit._coeftable["Estimate"].values
+    N = fit._coeftable["N"].values
+
+    # values obtained from Stata
+    np.testing.assert_allclose(coefs[0], -0.042566, rtol=1e-05)
+    np.testing.assert_allclose(coefs[-1], 72.635834, rtol=1e-05)
+    np.testing.assert_allclose(N[0], 40662)
+    np.testing.assert_allclose(N[-1], 28709)
+
+    fit = lpdid(
+        df_het,
+        yname="Y",
+        idname="unit",
+        tname="time",
+        gname="event_date",
+        att=True,
+        pre_window=5,
+        post_window=10,
+    )
+
+    coefs = fit._coeftable["Estimate"].values
+    N = fit._coeftable["N"].values
+    np.testing.assert_allclose(coefs[0], 31.79438, rtol=1e-05)
+    np.testing.assert_allclose(N, 28709)
+
+    # test vs R
+
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_het["X"] = np.random.normal(size=len(df_het))
+
+    df_het.drop("treat", axis=1)
+    df_het.drop("rel_year", axis=1)
+
+    fit = lpdid(
+        data=df_het, yname="dep_var", idname="unit", tname="year", gname="g", att=False
+    )
+    coefs = fit._coeftable["Estimate"].values
+
+    # values obtained from R package lpdid
+    # library(lpdid)
+    # library(did2s)
+    # data(df_het) # could also just load df_het from pyfixest/did/data/df_het.csv
+    # df_het$rel_year <- ifelse(df_het$rel_year == Inf, -9999, df_het$rel_year)
+    # fit <- lpdid(df_het, window = c(-20, 20), y = "dep_var",
+    #          unit_index = "unit", time_index = "year",
+    #          rel_time = "rel_year")
+    # fit$coeftable$Estimate
+
+    np.testing.assert_allclose(coefs[0], -0.073055295)
+    np.testing.assert_allclose(coefs[-1], 2.911501018)
+
+    fit.iplot()
+    fit.tidy()

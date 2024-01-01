@@ -1,5 +1,15 @@
 # News
 
+## PyFixest 0.13.0
+
+### New Features
+
+- Introduces a new `pyfixest.did` module which contains routines for Difference-in-Differences estimation.
+- Introduces support for basic versions of the local projections DiD estimator following [Dube et al (2023)](https://www.nber.org/papers/w31184)
+- Adds a new vignette for Difference-in-Differences estimation.
+- Introdues support for hypothesis testing via a new `waldtest()` method.
+
+
 ## PyFixest 0.12.0
 
 
@@ -25,7 +35,7 @@
 
 ## PyFixest 0.11.1
 
-- Fix some bugs around the computation of R-squared values (see [issue #103](https://github.com/s3alfisc/pyfixest/issues/103)).
+- Fixes some bugs around the computation of R-squared values (see [issue #103](https://github.com/s3alfisc/pyfixest/issues/103)).
 - Reports R-squared values again when calling `.summary()`.
 
 ## PyFixest 0.11.0
@@ -58,13 +68,13 @@ Reference levels for the `i()` formula syntax can no longer be set within the fo
 A `dids2()` function is added, which implements the 2-stage difference-in-differences procedure à la Gardner and follows the syntax of @kylebutts [did2s](https://github.com/kylebutts/did2s) R package.
 
 ```py
-from pyfixest.experimental.did import did2s
+from pyfixest.did.did import did2s
 from pyfixest.estimation import feols
 from pyfixest.visualize import iplot
 import pandas as pd
 import numpy as np
 
-df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv")
 
 fit = did2s(
     df_het,
@@ -98,10 +108,10 @@ iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs 
 %load_ext autoreload
 %autoreload 2
 
-from pyfixest.experimental.did import event_study
+from pyfixest.did.did import event_study
 from pyfixest.summarize import etable
 import pandas as pd
-df_het = pd.read_csv("pyfixest/experimental/data/df_het.csv")
+df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
 fit_twfe = event_study(
     data = df_het,
