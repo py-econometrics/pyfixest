@@ -228,6 +228,7 @@ def _lpdid_estimate(
         fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
     if att:
+
         # post window
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
         data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
@@ -236,10 +237,12 @@ def _lpdid_estimate(
         )
         fit_post = feols(fml=fml, data=data[sample_idx_post], vcov=vcov)
         fit_tidy_post = fit_post.tidy().xs("treat_diff")
+        fit_tidy_post["N"] = int(fit_post._N)
 
         res = pd.DataFrame(fit_tidy_post).T
 
     else:
+
         for h in range(post_window + 1):
             data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
 
@@ -250,6 +253,7 @@ def _lpdid_estimate(
             fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
 
             fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy["N"] = int(fit._N)
             fit_tidy.name = h
             fit_all.append(fit_tidy)
 
@@ -264,6 +268,7 @@ def _lpdid_estimate(
             fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
 
             fit_tidy = fit.tidy().xs("treat_diff")
+            fit_tidy["N"] = int(fit._N)
             fit_tidy.name = -h
             fit_all.append(fit_tidy)
 

@@ -229,10 +229,14 @@ def test_lpdid():
         post_window=10,
     )
     coefs = fit._coeftable["Estimate"].values
+    N = fit._coeftable["N"].values
 
     # values obtained from Stata
     np.testing.assert_allclose(coefs[0], -0.042566, rtol=1e-05)
     np.testing.assert_allclose(coefs[-1], 72.635834, rtol=1e-05)
+    np.testing.assert_allclose(N[0], 40662)
+    np.testing.assert_allclose(N[-1], 28709)
+
 
     fit = lpdid(
         df_het,
@@ -246,7 +250,9 @@ def test_lpdid():
     )
 
     coefs = fit._coeftable["Estimate"].values
+    N = fit._coeftable["N"].values
     np.testing.assert_allclose(coefs[0], 31.79438, rtol=1e-05)
+    np.testing.assert_allclose(N, 28709)
 
     # test vs R
 
