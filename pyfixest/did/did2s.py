@@ -226,6 +226,8 @@ def _did2s_vcov(
         A variance covariance matrix.
     """
 
+    #import pdb; pdb.set_trace()
+
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
@@ -267,9 +269,9 @@ def _did2s_vcov(
 
     X10X10 = X10.T.dot(X10)
     X2X1 = X2.T.dot(X1)
-    X2X2 = X2.T.dot(X2)
+    X2X2 = X2.T.dot(X2)# tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10, X2X1.T).T
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))

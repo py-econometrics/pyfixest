@@ -237,7 +237,6 @@ def test_lpdid():
     np.testing.assert_allclose(N[0], 40662)
     np.testing.assert_allclose(N[-1], 28709)
 
-
     fit = lpdid(
         df_het,
         yname="Y",

@@ -228,7 +228,6 @@ def _lpdid_estimate(
         fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
     if att:
-
         # post window
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
         data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
@@ -242,7 +241,6 @@ def _lpdid_estimate(
         res = pd.DataFrame(fit_tidy_post).T
 
     else:
-
         for h in range(post_window + 1):
             data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
 

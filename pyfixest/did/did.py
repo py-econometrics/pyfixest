@@ -58,7 +58,7 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"The variable {self._tname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
+                f"The variable {self._tname} must be of a numeric type, and more specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013, etc or 201201, 201202, 201203 etc."
             )
         if self._data[self._gname].dtype not in [
             "int64",
@@ -68,12 +68,8 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"The variable {self._gname} must be of type int64, and more specifically, in the format YYYYMMDDHHMMSS."
+                f"The variable {self._tname} must be of a numeric type, and more specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013, etc or 201201, 201202, 201203 etc."
             )
-
-        # check if there is a never treated unit
-        # if 0 not in self._data[self._gname].unique():
-        #    raise ValueError(f"There must be at least one unit that is never treated.")
 
         # create a treatment variable
         self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (
