@@ -139,112 +139,112 @@ text {
    font-family: Lucida Grande, sans-serif;
    font-size: 16.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .plot-subtitle {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .plot-caption {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .legend-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .legend-item {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .axis-title-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .axis-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dlAOMCI .axis-tooltip-text-x {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .axis-title-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .axis-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dlAOMCI .axis-tooltip-text-y {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .facet-strip-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #p9mx0pm .facet-strip-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dlAOMCI .tooltip-text {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dlAOMCI .tooltip-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: bold;
-   font-style: normal;   
+   font-style: normal;
 }
 #dlAOMCI .tooltip-label {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: bold;
-   font-style: normal;   
+   font-style: normal;
 }
 
   </style>
@@ -721,7 +721,7 @@ etable([fit.fetch_model(i) for i in range(3)])
     Observations               998                997                997
     --------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
-    
+
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
@@ -732,7 +732,7 @@ fit1.vcov("hetero").tidy()
 ```
 
     Model:  Y~X1
-    
+
 
 
 
@@ -878,14 +878,14 @@ fit_iv.summary()
 ```
 
     ###
-    
+
     Estimation:  IV
     Dep. var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
     ---
-    
+
