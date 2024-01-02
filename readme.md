@@ -55,7 +55,7 @@ fit_lpdid = lpdid(
     post_window=10,
 )
 
-fit_lpdid.tidy().to_markdown()
+fit_lpdid.tidy().to_html()
 ```
 
 
@@ -78,7 +78,7 @@ fit_lpdid = lpdid(
     post_window=10,
 )
 
-fit_lpdid.iplot(figsize = [800, 350], xintercept = 5.5, yintercept = 0).show()
+fit_lpdid.iplot()
 ```
 
 
