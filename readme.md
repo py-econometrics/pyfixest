@@ -55,53 +55,13 @@ fit_lpdid = lpdid(
     post_window=10,
 )
 
-fit_lpdid.tidy()
+fit_lpdid.tidy().to_markdown()
 ```
 
 
 
 
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-      <th>N</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>treat_diff</th>
-      <td>31.794381</td>
-      <td>0.755459</td>
-      <td>42.086191</td>
-      <td>0.0</td>
-      <td>30.312812</td>
-      <td>33.27595</td>
-      <td>28709.0</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+    '|            |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |     N |\n|:-----------|-----------:|-------------:|----------:|-----------:|--------:|---------:|------:|\n| treat_diff |    31.7944 |     0.755459 |   42.0862 |          0 | 30.3128 |  33.2759 | 28709 |'
 
 
 
@@ -134,112 +94,112 @@ fit_lpdid.iplot(figsize = [800, 350], xintercept = 5.5, yintercept = 0).show()
 text {
    text-rendering: optimizeLegibility;
 }
-#p9mx0pm .plot-title {
+#p6pce8V .plot-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 16.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .plot-subtitle {
+#p6pce8V .plot-subtitle {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .plot-caption {
+#p6pce8V .plot-caption {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .legend-title {
+#p6pce8V .legend-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .legend-item {
+#p6pce8V .legend-item {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .axis-title-x {
+#p6pce8V .axis-title-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .axis-text-x {
+#p6pce8V .axis-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#dlAOMCI .axis-tooltip-text-x {
+#dhXPums .axis-tooltip-text-x {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .axis-title-y {
+#p6pce8V .axis-title-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .axis-text-y {
+#p6pce8V .axis-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#dlAOMCI .axis-tooltip-text-y {
+#dhXPums .axis-tooltip-text-y {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .facet-strip-text-x {
+#p6pce8V .facet-strip-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#p9mx0pm .facet-strip-text-y {
+#p6pce8V .facet-strip-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#dlAOMCI .tooltip-text {
+#dhXPums .tooltip-text {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
    font-style: normal;   
 }
-#dlAOMCI .tooltip-title {
+#dhXPums .tooltip-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: bold;
    font-style: normal;   
 }
-#dlAOMCI .tooltip-label {
+#dhXPums .tooltip-label {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
@@ -248,7 +208,7 @@ text {
 }
 
   </style>
-  <g id="p9mx0pm">
+  <g id="p6pce8V">
     <path fill-rule="evenodd" fill="rgb(255,255,255)" fill-opacity="1.0" d="M0.0 0.0 L0.0 350.0 L800.0 350.0 L800.0 0.0 Z">
     </path>
     <g transform="translate(23.0 34.0 ) ">
@@ -378,9 +338,9 @@ text {
           </g>
         </g>
       </g>
-      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cXPw7DS)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
+      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#c6E00iv)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
         <defs>
-          <clipPath id="cXPw7DS">
+          <clipPath id="c6E00iv">
             <rect x="0.0" y="0.0" width="663.9596893762349" height="270.0">
             </rect>
           </clipPath>
@@ -405,9 +365,9 @@ text {
           </g>
         </g>
       </g>
-      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#c4BtR6H)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
+      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cKKK0cj)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
         <defs>
-          <clipPath id="c4BtR6H">
+          <clipPath id="cKKK0cj">
             <rect x="0.0" y="0.0" width="663.9596893762349" height="270.0">
             </rect>
           </clipPath>
@@ -533,9 +493,9 @@ text {
           </line>
         </g>
       </g>
-      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cScWQ63)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
+      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cgGvfJ1)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
         <defs>
-          <clipPath id="cScWQ63">
+          <clipPath id="cgGvfJ1">
             <rect x="0.0" y="0.0" width="663.9596893762349" height="270.0">
             </rect>
           </clipPath>
@@ -543,9 +503,9 @@ text {
         <line x1="0.0" y1="251.6564348931656" x2="663.959689376235" y2="251.6564348931656" stroke="rgb(0,0,0)" stroke-opacity="1.0" fill="rgb(17,142,216)" fill-opacity="1.0" stroke-width="1.6500000000000001" stroke-dasharray="7.095000000000001,7.095000000000001">
         </line>
       </g>
-      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cSx0YOo)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
+      <g transform="translate(21.961210910936405 0.0 ) " clip-path="url(#cWUc5R5)" clip-bounds-jfx="[rect (0.0, 0.0), (663.9596893762349, 270.0)]">
         <defs>
-          <clipPath id="cSx0YOo">
+          <clipPath id="cWUc5R5">
             <rect x="0.0" y="0.0" width="663.9596893762349" height="270.0">
             </rect>
           </clipPath>
@@ -613,7 +573,7 @@ text {
     <path fill="rgb(0,0,0)" fill-opacity="0.0" stroke="rgb(71,71,71)" stroke-opacity="1.0" stroke-width="0.0" d="M0.0 0.0 L0.0 350.0 L800.0 350.0 L800.0 0.0 Z">
     </path>
   </g>
-  <g id="dlAOMCI">
+  <g id="dhXPums">
   </g>
 </svg>
 
