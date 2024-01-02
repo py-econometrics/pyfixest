@@ -103,14 +103,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
+<section id="readme" class="level1">
+<h1>Readme</h1>
 <section id="pyfixest" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest">PyFixest</h2>
 <p><a href="https://pypi.org/project/pyfixest/"><img src="https://img.shields.io/pypi/v/pyfixest.svg" class="img-fluid" alt="PyPI - Version"></a> <img src="https://img.shields.io/pypi/pyversions/pyfixest.svg" class="img-fluid" alt="PyPI - Python Version"> <img src="https://img.shields.io/pypi/dm/pyfixest.png" class="img-fluid" alt="PyPI - Downloads"> <a href="https://codecov.io/gh/s3alfisc/pyfixest"><img src="https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg" class="img-fluid" alt="image"></a></p>
-<p><code>PyFixest</code> is a Python implementation of the formidable <a href="https://github.com/lrberge/fixest">fixest</a> package. The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows. For a quick introduction, see the <a href="https://s3alfisc.github.io/pyfixest/tutorial/">tutorial</a>.</p>
-</section>
-<section id="functionality" class="level2">
-<h2 class="anchored" data-anchor-id="functionality">Functionality</h2>
-<p>At the moment, <code>PyFixest</code> supports</p>
+<p><code>PyFixest</code> is a Python implementation of the formidable <a href="https://github.com/lrberge/fixest">fixest</a> package. The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows. For a quick introduction, see the <a href="https://s3alfisc.github.io/pyfixest/tutorial/">tutorial</a> or take a look at the regression chapter of <a href="https://github.com/aeturrell">Arthur Turrell’s</a> book on <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>.</p>
+<p><code>PyFixest</code> supports</p>
 <ul>
 <li>OLS and IV Regression</li>
 <li>Poisson Regression</li>
@@ -120,7 +119,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Difference-in-Difference Estimators:
 <ul>
 <li>The canonical Two-Way Fixed Effects Estimator</li>
-<li><a href="https://jrgcmu.github.io/2sdd_current.pdf">Gardner’s two-stage (“<code>Did2s</code>”)</a> estimator is available via the <code>pyfixest.did.did</code> module</li>
+<li><a href="https://jrgcmu.github.io/2sdd_current.pdf">Gardner’s two-stage (“<code>Did2s</code>”)</a> estimator</li>
 <li>Basic Versions of the Local Projections estimator following <a href="https://www.nber.org/papers/w31184">Dube et al (2023)</a></li>
 </ul></li>
 </ul>
@@ -134,41 +133,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="news" class="level2">
 <h2 class="anchored" data-anchor-id="news">News</h2>
-<p><code>PyFixest</code> <code>0.14</code> adds support for the local projections “DID2s” estimator:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.lpdid <span class="im">import</span> lpdid</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_stata(<span class="st">"pyfixest/did/data/lpdidtestdata1.dta"</span>)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> df_het.astype(np.float64)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> lpdid(</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"Y"</span>,</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"time"</span>,</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"event_date"</span>,</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=</span><span class="dv">5</span>,</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>fit_lpdid.tidy()</span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">#            Estimate   Std. Error  t value    Pr(&gt;|t|)     2.5 %   97.5 %        N</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co">#treat_diff  31.794381  0.755459    42.086191   0.0     30.312812   33.27595    28709.0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="sourceCode" id="cb4"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> lpdid(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"Y"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"time"</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"event_date"</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=</span><span class="dv">5</span>,</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(figsize <span class="op">=</span> [<span class="dv">1000</span>, <span class="dv">400</span>], xintercept <span class="op">=</span> <span class="fl">5.5</span>, yintercept <span class="op">=</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><img src="./figures/lpdid_event_study.png" class="img-fluid"></p>
+<p><code>PyFixest</code> <code>0.13</code> adds support for the <a href="https://s3alfisc.github.io/pyfixest/difference-in-differences-estimation/">local projections Difference-in-Differences Estimator</a>.</p>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
@@ -177,87 +142,100 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="quickstart" class="level2">
 <h2 class="anchored" data-anchor-id="quickstart">Quickstart</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>fit.summary()</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">###</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  OLS</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dep. var.:  Y</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Inference:  CRV1</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Observations:  998</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co"># | Intercept     |      2.206 |        0.078 |    28.304 |      0.000 |   2.043 |    2.370 |</span></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># | X1            |      0.358 |        0.051 |     6.962 |      0.000 |   0.250 |    0.466 |</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE: 1.765  Adj. R2: 0.024  Adj. R2 Within: 0.024</span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">###</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  OLS</span></span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Dep. var.:  Y</span></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Fixed effects:  f1</span></span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Inference:  CRV1</span></span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Observations:  997</span></span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |</span></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|</span></span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co"># | X1            |      0.411 |        0.040 |    10.188 |      0.000 |   0.326 |    0.495 |</span></span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE: 1.421  Adj. R2: 0.048  Adj. R2 Within: 0.048</span></span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">###</span></span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  OLS</span></span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Dep. var.:  Y</span></span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Fixed effects:  f1+f2</span></span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Inference:  CRV1</span></span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Observations:  997</span></span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |</span></span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|</span></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="co"># | X1            |      0.431 |        0.035 |    12.319 |      0.000 |   0.358 |    0.505 |</span></span>
-<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
-<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE: 1.2  Adj. R2: 0.07  Adj. R2 Within: 0.07</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can estimate a linear regression models just as you would in <code>fixest</code> - via <code>feols()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols, fepois</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
+---
+RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
+<p>You can estimate multiple models at once by using <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models">multiple estimation syntax</a>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation: estimate multiple models at once</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y + Y2 ~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the results</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>etable([fit.fetch_model(i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">6</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>Model:  Y~X1
+Model:  Y2~X1
+Model:  Y~X1|f1
+Model:  Y2~X1|f1
+Model:  Y~X1|f1+f2
+Model:  Y2~X1|f1+f2
+
+                          est1               est2               est3               est4               est5               est6
+------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------
+depvar                       Y                 Y2                  Y                 Y2                  Y                 Y2
+-----------------------------------------------------------------------------------------------------------------------------
+Intercept     0.919*** (0.121)   1.064*** (0.232)
+X1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)
+-----------------------------------------------------------------------------------------------------------------------------
+f1                           -                  -                  x                  x                  x                  x
+f2                           -                  -                  -                  -                  x                  x
+-----------------------------------------------------------------------------------------------------------------------------
+R2                       0.123              0.037              0.437              0.115              0.609              0.168
+S.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id
+Observations               998                999                997                998                997                998
+-----------------------------------------------------------------------------------------------------------------------------
+Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre>
 <p>Standard Errors can be adjusted after estimation, “on-the-fly”:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).tidy()</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  Y~X1</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">###</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  OLS</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Dep. var.:  Y</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Inference:  hetero</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Observations:  998</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co"># | Intercept     |      2.206 |        0.088 |    25.180 |      0.000 |   2.034 |    2.378 |</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># | X1            |      0.358 |        0.068 |     5.254 |      0.000 |   0.224 |    0.491 |</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE: 1.765  Adj. R2: 0.024  Adj. R2 Within: 0.024</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>Model:  Y~X1
+###
+
+Estimation:  OLS
+Dep. var.: Y
+Inference:  hetero
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |
+| X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |
+---
+RMSE: 2.158   R2: 0.123</code></pre>
+<p>You can estimate Poisson Regressions via the <code>fepois()</code> function:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>poisson_data <span class="op">=</span> get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> poisson_data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>###
+
+Estimation:  Poisson
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |
+| X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
+---
+Deviance: 1068.836</code></pre>
 <p>Last, <code>PyFixest</code> also supports IV estimation via three part formula syntax:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">###</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Model:  IV</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Dep. var.:  Y</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Fixed effects:  f1</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Inference:  CRV1</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Observations:  997</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># | X1            |      0.479 |        0.096 |     4.979 |      0.000 |   0.282 |    0.676 |</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ---</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<pre><code>###
+
+Estimation:  IV
+Dep. var.: Y, Fixed effects: f1
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
+---</code></pre>
+</section>
 </section>
 
 </main>
