@@ -7,7 +7,7 @@
 - Introduces a new `pyfixest.did` module which contains routines for Difference-in-Differences estimation.
 - Introduces support for basic versions of the local projections DiD estimator following [Dube et al (2023)](https://www.nber.org/papers/w31184)
 - Adds a new vignette for Difference-in-Differences estimation.
-- Introdues support for hypothesis testing via a new `waldtest()` method.
+- Reports R2 values in `etable()`.
 
 
 ## PyFixest 0.12.0
