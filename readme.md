@@ -76,43 +76,6 @@ fit_lpdid = lpdid(
 fit_lpdid.tidy()
 ```
 
-
-          You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-          the module is not yet as thoroughly tested as I would like. So please use it with caution and
-          provide feedback in case you stumble over any bugs!
-
-
-            <div id="hjyggM"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                };
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("hjyggM").appendChild(div);
-                    };
-                    var e = document.getElementById("hjyggM");
-                    e.appendChild(script);
-                })()
-            </script>
-
 <div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -207,6 +170,7 @@ etable([fit.fetch_model(i) for i in range(6)])
     Model:  Y2~X1|f1
     Model:  Y~X1|f1+f2
     Model:  Y2~X1|f1+f2
+
                               est1               est2               est3               est4               est5               est6
     ------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------
     depvar                       Y                 Y2                  Y                 Y2                  Y                 Y2

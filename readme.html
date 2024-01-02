@@ -153,41 +153,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>fit_lpdid.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<pre><code>      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-
-
-        &lt;div id="hjyggM"&gt;&lt;/div&gt;
-        &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
-            if(!window.letsPlotCallQueue) {
-                window.letsPlotCallQueue = [];
-            };
-            window.letsPlotCall = function(f) {
-                window.letsPlotCallQueue.push(f);
-            };
-            (function() {
-                var script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
-                script.onload = function() {
-                    window.letsPlotCall = function(f) {f();};
-                    window.letsPlotCallQueue.forEach(function(f) {f();});
-                    window.letsPlotCallQueue = [];
-
-                };
-                script.onerror = function(event) {
-                    window.letsPlotCall = function(f) {};    // noop
-                    window.letsPlotCallQueue = [];
-                    var div = document.createElement("div");
-                    div.style.color = 'darkred';
-                    div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("hjyggM").appendChild(div);
-                };
-                var e = document.getElementById("hjyggM");
-                e.appendChild(script);
-            })()
-        &lt;/script&gt;</code></pre>
 <div>
 
 
@@ -259,12 +224,12 @@ treat_diff
 <section id="quickstart" class="level2">
 <h2 class="anchored" data-anchor-id="quickstart">Quickstart</h2>
 <p>You can estimate a linear regression models just as you would in <code>fixest</code> - via <code>feols()</code>:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols, fepois</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols, fepois</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre><code>###
 
 Estimation:  OLS
@@ -278,16 +243,17 @@ Observations:  997
 ---
 RMSE: 1.441   R2: 0.609   R2 Within: 0.2</code></pre>
 <p>You can estimate multiple models at once by using <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models">multiple estimation syntax</a>:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation: estimate multiple models at once</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y + Y2 ~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the results</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>etable([fit.fetch_model(i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">6</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># OLS Estimation: estimate multiple models at once</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y + Y2 ~X1 | csw0(f1, f2)"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> {<span class="st">'CRV1'</span>:<span class="st">'group_id'</span>})</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the results</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>etable([fit.fetch_model(i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">6</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre><code>Model:  Y~X1
 Model:  Y2~X1
 Model:  Y~X1|f1
 Model:  Y2~X1|f1
 Model:  Y~X1|f1+f2
 Model:  Y2~X1|f1+f2
+
                           est1               est2               est3               est4               est5               est6
 ------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------
 depvar                       Y                 Y2                  Y                 Y2                  Y                 Y2
@@ -304,8 +270,8 @@ Observations               998                999                997            
 -----------------------------------------------------------------------------------------------------------------------------
 Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre>
 <p>Standard Errors can be adjusted after estimation, “on-the-fly”:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> fit.fetch_model(<span class="dv">0</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>fit1.vcov(<span class="st">"hetero"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre><code>Model:  Y~X1
 ###
 
@@ -321,8 +287,8 @@ Observations:  998
 ---
 RMSE: 2.158   R2: 0.123</code></pre>
 <p>You can estimate Poisson Regressions via the <code>fepois()</code> function:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>poisson_data <span class="op">=</span> get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> poisson_data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>poisson_data <span class="op">=</span> get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> poisson_data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre><code>###
 
 Estimation:  Poisson
@@ -337,8 +303,8 @@ Observations:  997
 ---
 Deviance: 1068.836</code></pre>
 <p>Last, <code>PyFixest</code> also supports IV estimation via three part formula syntax:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit_iv <span class="op">=</span> feols(<span class="st">"Y ~ 1 | f1 | X1 ~ Z1"</span>, data <span class="op">=</span> data)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>fit_iv.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <pre><code>###
 
 Estimation:  IV
