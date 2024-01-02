@@ -51,72 +51,9 @@ pip install git+https://github.com/s3alfisc/pyfixest.git
 
 ## News
 
-`PyFixest` `0.13` adds support for the local projections “DID2s”
-estimator:
-
-``` python
-import pandas as pd
-import numpy as np
-from pyfixest.did.lpdid import lpdid
-
-df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
-df_het = df_het.astype(np.float64)
-
-fit_lpdid = lpdid(
-    df_het,
-    yname="Y",
-    idname="unit",
-    tname="time",
-    gname="event_date",
-    att=True,
-    pre_window=5,
-    post_window=10,
-)
-
-fit_lpdid.tidy()
-```
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-      <th>N</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>treat_diff</th>
-      <td>31.794381</td>
-      <td>0.755459</td>
-      <td>42.086191</td>
-      <td>0.0</td>
-      <td>30.312812</td>
-      <td>33.27595</td>
-      <td>28709.0</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+`PyFixest` `0.13` adds support for the [local projections
+Difference-in-Differences
+Estimator](https://s3alfisc.github.io/pyfixest/difference-in-differences-estimation/).
 
 ## Benchmarks
 
@@ -170,7 +107,6 @@ etable([fit.fetch_model(i) for i in range(6)])
     Model:  Y2~X1|f1
     Model:  Y~X1|f1+f2
     Model:  Y2~X1|f1+f2
-
                               est1               est2               est3               est4               est5               est6
     ------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------
     depvar                       Y                 Y2                  Y                 Y2                  Y                 Y2
