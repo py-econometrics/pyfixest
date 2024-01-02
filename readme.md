@@ -40,6 +40,8 @@ pip install git+https://github.com/s3alfisc/pyfixest.git
 import pandas as pd
 import numpy as np
 from pyfixest.did.lpdid import lpdid
+from IPython.display import display, Markdown
+import pandas as pd
 
 df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
 df_het = df_het.astype(np.float64)
@@ -54,7 +56,16 @@ fit_lpdid = lpdid(
     pre_window=5,
     post_window=10,
 )
+
+fit_lpdid_md = fit_lpdid.tidy().to_markdown(index=False)
+display(Markdown(fit_lpdid_md))
 ```
+
+
+|   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |     N |
+|-----------:|-------------:|----------:|-----------:|--------:|---------:|------:|
+|    31.7944 |     0.755459 |   42.0862 |          0 | 30.3128 |  33.2759 | 28709 |
+
 
 |           | Estimate | Std. Error | t value | Pr(>|t|) | 2.5% | 97.5% |   N   |
 |:---------:|:--------:|:----------:|:-------:|:-------:|:----:|:-----:|:-----:|
