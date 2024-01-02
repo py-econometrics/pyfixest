@@ -141,112 +141,112 @@ text {
    font-family: Lucida Grande, sans-serif;
    font-size: 16.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .plot-subtitle {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .plot-caption {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .legend-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .legend-item {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .axis-title-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .axis-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dMP4Xhp .axis-tooltip-text-x {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .axis-title-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 15.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .axis-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dMP4Xhp .axis-tooltip-text-y {
    fill: #ffffff;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .facet-strip-text-x {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #peQKOGG .facet-strip-text-y {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dMP4Xhp .tooltip-text {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: normal;
-   font-style: normal;   
+   font-style: normal;
 }
 #dMP4Xhp .tooltip-title {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: bold;
-   font-style: normal;   
+   font-style: normal;
 }
 #dMP4Xhp .tooltip-label {
    fill: #474747;
    font-family: Lucida Grande, sans-serif;
    font-size: 13.0px;
    font-weight: bold;
-   font-style: normal;   
+   font-style: normal;
 }
 
   </style>
@@ -574,18 +574,18 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-    
+
 
 You can estimate multiple models at once by using [multiple estimation syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
 
@@ -615,7 +615,7 @@ etable([fit.fetch_model(i) for i in range(3)])
     Observations               998                997                997
     --------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
-    
+
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
@@ -627,26 +627,26 @@ fit1.vcov("hetero").summary()
 
     Model:  Y~X1
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y
     Inference:  hetero
     Observations:  998
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |
     | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
-    
+
 
 You can estimate Poisson Regressions via the `fepois()` function:
 
 
 ```python
 poisson_data = get_data(model = "Fepois")
-fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).tidy().to_html()
+fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
 
@@ -666,14 +666,14 @@ fit_iv.summary()
 ```
 
     ###
-    
+
     Estimation:  IV
     Dep. var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
     ---
-    
+
