@@ -184,7 +184,7 @@ def _coefplot(
         + geom_errorbar(
             aes(ymin="2.5 %", ymax="97.5 %"), width=0.05, position=position_dodge(0.5)
         )
-        + ylab("Estimate and 95% Confidence Interval")
+        + ylab("Estimate and 95% CI")
     )
 
     if flip_coord:
