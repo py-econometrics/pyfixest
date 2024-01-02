@@ -56,9 +56,9 @@ fit_lpdid = lpdid(
 )
 ```
 
-|            | Estimate | Std. Error |  t value | Pr(>|t|) |  2.5%  | 97.5%  |   N   |
-|:----------:|:--------:|:----------:|:--------:|:--------:|:------:|:------:|:-----:|
-| treat_diff | 31.7944  |  0.755459  | 42.0862  |    0     | 30.3128| 33.2759| 28709 |
+|           | Estimate | Std. Error | t value | Pr(>|t|) | 2.5% | 97.5% |   N   |
+|:---------:|:--------:|:----------:|:-------:|:-------:|:----:|:-----:|:-----:|
+|treat_diff |  31.7944 |  0.755459  | 42.0862 |    0    |30.3128|33.2759| 28709 |
 
 ## Benchmarks
 
@@ -82,18 +82,18 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
     ###
-
+    
     Estimation:  OLS
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-
+    
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-
+    
 
 You can estimate multiple models at once by using [multiple estimation syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
 
@@ -123,7 +123,7 @@ etable([fit.fetch_model(i) for i in range(3)])
     Observations               998                997                997
     --------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
-
+    
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
@@ -135,19 +135,19 @@ fit1.vcov("hetero").summary()
 
     Model:  Y~X1
     ###
-
+    
     Estimation:  OLS
     Dep. var.: Y
     Inference:  hetero
     Observations:  998
-
+    
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |
     | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
-
+    
 
 You can estimate Poisson Regressions via the `fepois()` function:
 
@@ -158,19 +158,19 @@ fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
     ###
-
+    
     Estimation:  Poisson
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-
-    | Coefficient   |   Estimate |   Std. Error |   t value |   `Pr(>|t|)` |   2.5 % |   97.5 % |
+    
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |
     | X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
     ---
     Deviance: 1068.836
-
+    
 
 Last, `PyFixest` also supports IV estimation via three part formula syntax:
 
@@ -182,14 +182,14 @@ fit_iv.summary()
 ```
 
     ###
-
+    
     Estimation:  IV
     Dep. var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
-
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>t|) |   2.5 % |   97.5 % |
+    
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
     ---
-
+    
