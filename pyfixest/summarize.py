@@ -110,8 +110,8 @@ def etable(
             if "" not in res[column].cat.categories:
                 res[column] = res[column].cat.add_categories([""])
 
-            # Replace NA values with the empty string
-            res[column] = res[column].fillna("")
+        # Replace NA values with the empty string
+        res[column] = res[column].fillna("")
 
     res.rename(columns={"Coefficient": "index"}, inplace=True)
     nobs_fixef_df.columns = res.columns
