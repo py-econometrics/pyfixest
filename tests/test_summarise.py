@@ -23,3 +23,6 @@ def test_summary():
 
     etable([fit3])
     etable([fit1, fit2, fit3])
+
+    fit_iv = feols("Y ~ X2 | f1 | X1 ~ Z1", data=df1)
+    etable([fit_iv, fit1])
