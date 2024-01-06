@@ -11,23 +11,21 @@
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
 `PyFixest` is a Python implementation of the formidable
-[fixest](https://github.com/lrberge/fixest) package. The package aims to
-mimic `fixest` syntax and functionality as closely as Python allows. For
-a quick introduction, see the
-[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or take a look
-at the regression chapter of [Arthur
-Turrell’s](https://github.com/aeturrell) book on [Coding for
-Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+[fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression. The package aims to
+mimic `fixest` syntax and functionality as closely as Python allows: if you are used to `fixest`, the goal is that you won't have to
+read the docs to get started! Nevertheless, for a quick introduction, you can take a look at the
+[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or the regression chapter of [Arthur
+Turrell’s](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-`PyFixest` supports
+## Features
 
--   OLS and IV Regression
+-   Fast Estimation of OLS and IV Regression with High-Dimensional Fixed Effects
 -   Poisson Regression
 -   Multiple Estimation Syntax
--   Several Robust and Cluster Robust Variance-Covariance Types
+-   Several Robust and Cluster Robust Variance-Covariance Types (HC1-3, CRV1 & CRV3)
 -   Wild Cluster Bootstrap Inference (via
     [wildboottest](https://github.com/s3alfisc/wildboottest))
--   Difference-in-Difference Estimators:
+-   Difference-in-Difference Estimators for staggered treatment adaption:
     -   The canonical Two-Way Fixed Effects Estimator
     -   [Gardner’s two-stage
         (“`Did2s`”)](https://jrgcmu.github.io/2sdd_current.pdf)
