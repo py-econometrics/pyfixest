@@ -25,10 +25,6 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-mkdocs-material = "^8.5.10"
-mkdocstrings = "^0.19.0"
-mkdocs-jupyter = "^0.20.0"
-mkdocstrings-python-legacy = "^0.2.3"
 pytest="^7.0.0"
 polars = ">0.20.1"
 rpy2 = "^3.3.2"

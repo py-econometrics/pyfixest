@@ -4,6 +4,12 @@ website:
     - reference/index.qmd
     - contents:
       - reference/estimation.feols.qmd
+      - reference/estimation.fepois.qmd
+      - reference/did.estimation.lpdid.qmd
+      - reference/did.estimation.event_study.qmd
       section: For Users
+    - contents:
+      - reference/detect_singletons.detect_singletons.qmd
+      section: For Developers
     id: reference
   - id: dummy-sidebar

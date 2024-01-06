@@ -55,10 +55,10 @@ def event_study(
     from pyfixest.did.estimation import event_study
 
     url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df = pd.read_csv(url)
+    df_het = pd.read_csv(url)
 
     fit_twfe = event_study(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
@@ -70,7 +70,7 @@ def event_study(
     fit_twfe.tidy()
 
     fit_did2s = event_study(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
@@ -84,7 +84,7 @@ def event_study(
     # event studies:
 
     fit_twfe_dynamic = event_study(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
@@ -96,7 +96,7 @@ def event_study(
     fit_twfe_dynamic.iplot()
 
     fit_did2s_dynamic = event_study(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
@@ -222,8 +222,8 @@ def did2s(
     from pyfixest.did.estimation import did2s
 
     url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df = pd.read_csv(url)
-    df.head()
+    df_het = pd.read_csv(url)
+    df_het.head()
     ```
 
     In a first step, we estimate a classical event study model:
@@ -368,10 +368,10 @@ def lpdid(
     from pyfixest.did.estimation import lpdid
 
     url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df = pd.read_csv(url)
+    df_het = pd.read_csv(url)
 
     fit = lpdid(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
@@ -390,7 +390,7 @@ def lpdid(
 
     ```{python}
     fit = lpdid(
-        df,
+        df_het,
         yname="dep_var",
         idname="unit",
         tname="year",

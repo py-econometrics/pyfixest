@@ -153,9 +153,6 @@ def _calc_group_weights(sample_weights, group_ids, n_groups):
 
 
 @nb.njit(parallel=True)
-import numpy as np
-from typing import Tuple
-
 def demean(
     x: np.ndarray,
     flist: np.ndarray,

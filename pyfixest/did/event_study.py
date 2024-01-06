@@ -16,49 +16,45 @@ def event_study(
     cluster="idname",
 ):
     """
-    Estimate a treatment effect using an event study design. If estimator is "twfe", then
-    the treatment effect is estimated using the two-way fixed effects estimator. If estimator
-    is "did2s", then the treatment effect is estimated using Gardner's two-step DID2S estimator.
-    Other estimators are work in progress, please contact the package author if you are interested
-    / need other estimators (i.e. Mundlak, Sunab, Imputation DID or Projections).
+    Estimate a treatment effect using an event study design.
 
-    Args:
-        data: The DataFrame containing all variables.
-        yname: The name of the dependent variable.
-        idname: The name of the id variable.
-        tname: Variable name for calendar period.
-        gname: unit-specific time of initial treatment.
-        xfml: The formula for the covariates.
-        estimator: The estimator to use. Options are "did2s" and "twfe".
-        att: Whether to estimate the average treatment effect on the treated (ATT) or the
-            canonical event study design with all leads and lags. Default is True.
-    Returns:
-        A fitted model object of class feols.
-    Examples:
-        >>> from pyfixest.did.did import event_study, did2s
-        >>> from pyfixest.estimation import feols
-        >>> from pyfixest.summarize import etable, summary
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
-        >>> fit_twfe = event_study(
-        >>>     data = df_het,
-        >>>     yname = "dep_var",
-        >>>     idname= "state",
-        >>>     tname = "year",
-        >>>     gname = "g",
-        >>>     estimator = "twfe"
-        >>> )
-        >>> fit_did2s = event_study(
-        >>>     data = df_het,
-        >>>     yname = "dep_var",
-        >>>     idname= "state",
-        >>>     tname = "year",
-        >>>     gname = "g",
-        >>>     estimator = "did2s"
-        >>> )
+    This function allows for the estimation of treatment effects using different estimators.
+    Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
+    Other estimators are in development.
+
+    Parameters
+    ----------
+    data : DataFrame
+        The DataFrame containing all variables.
+    yname : str
+        The name of the dependent variable.
+    idname : str
+        The name of the id variable.
+    tname : str
+        Variable name for calendar period.
+    gname : str
+        Unit-specific time of initial treatment.
+    xfml : str
+        The formula for the covariates.
+    estimator : str
+        The estimator to use. Options are "did2s" and "twfe".
+    att : bool, optional
+        If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.
+
+    Returns
+    -------
+    object
+        A fitted model object of class `feols`.
+
+    Examples
+
+    ```{python}
+    import pandas as pd
+
+    --------
+
+
     """
-
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
     assert isinstance(yname, str), "yname must be a string"
     assert isinstance(idname, str), "idname must be a string"
