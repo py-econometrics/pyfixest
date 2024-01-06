@@ -101,7 +101,7 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis=1).fillna("").reset_index()
+    res = pd.concat(etable_list, axis=1).astype(str).fillna("").reset_index()
 
     res.rename(columns={"Coefficient": "index"}, inplace=True)
     nobs_fixef_df.columns = res.columns
