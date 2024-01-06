@@ -1,5 +1,9 @@
 # News
 
+# PyFixest 0.13.4
+
+- Fixes a bug in `etable()` with IV's that occurred because `feols()` does not report R2 statistics for IVs.
+
 ## PyFixest 0.13.2
 
 - Fixes a bug in `etable()` and a warning in `fixest_model_matrix` that arose with higher `pandas` versions. Thanks to @aeturrell for reporting!
