@@ -64,6 +64,8 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ## Quickstart
 
+### Fast HDFE Regression via `feols()`
+
 You can estimate a linear regression models just as you would in
 `fixest` - via `feols()`:
 
@@ -88,6 +90,8 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
+
+### Multiple Estimation Syntax
 
 You can estimate multiple models at once by using [multiple estimation
 syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
@@ -122,6 +126,8 @@ etable([fit.fetch_model(i) for i in range(6)])
     -----------------------------------------------------------------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
 
+### On-the-fly Standard Error Adjustments
+
 Standard Errors can be adjusted after estimation, “on-the-fly”:
 
 ``` python
@@ -144,6 +150,8 @@ fit1.vcov("hetero").summary()
     ---
     RMSE: 2.158   R2: 0.123
 
+### Poisson Regression (`pplmhdfe`) via `fepois()`
+
 You can estimate Poisson Regressions via the `fepois()` function:
 
 ``` python
@@ -164,6 +172,8 @@ fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
     | X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
     ---
     Deviance: 1068.836
+
+### IV via three-part formula syntax
 
 Last, `PyFixest` also supports IV estimation via three part formula
 syntax:
