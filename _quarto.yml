@@ -8,12 +8,12 @@ website:
   navbar:
     search: true
     left:
-      - text: "Home"
-        file: docs/index.ipynb
-      - text: "Tutorial"
-        file: docs/tutorial.ipynb
-      - text: "Difference-in-Differences Estimation"
-        file: docs/difference-in-differences-estimation.ipynb
+      #- text: "Home"
+      #  file: docs/index.ipynb
+      #- text: "Tutorial"
+      #  file: docs/tutorial.ipynb
+      #- text: "Difference-in-Differences Estimation"
+      #  file: docs/difference-in-differences-estimation.ipynb
       - text: "News"
         file: docs/news.md
       - text: "Reference"
@@ -29,12 +29,12 @@ quartodoc:
       desc: User facing estimation functions
       contents:
         - estimation.feols
-        # - estimation.fepois
+        - estimation.fepois
         #- did.estimation.did2s
-        # - did.estimation.lpdid
+        #- did.estimation.lpdid
         #- did.estimation.event_study
-    	- title: For Developers
-        desc: PyFixest internals and utilities
-        contents:
-          - demean
-          - detect_singletons.detect_singletons
+    - title: For Developers
+      desc: PyFixest internals and utilities
+      contents:
+        #- demean.demean
+        - detect_singletons.detect_singletons
