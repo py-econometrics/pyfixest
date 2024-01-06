@@ -101,7 +101,17 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis=1).astype(str).fillna("").reset_index()
+    res = pd.concat(etable_list, axis=1).reset_index()
+    # a lot of work to replace the NaNs with empty strings
+    # reason: "" not a level of the category, might lead to a pandas error
+    for column in res.columns:
+        if pd.api.types.is_categorical_dtype(res[column]):
+            # Add an empty string level to the category if it's not already there
+            if "" not in res[column].cat.categories:
+                res[column] = res[column].cat.add_categories([""])
+
+        # Replace NA values with the empty string
+        res[column] = res[column].fillna("")
 
     res.rename(columns={"Coefficient": "index"}, inplace=True)
     nobs_fixef_df.columns = res.columns
