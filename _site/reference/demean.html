@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>index</title>
+<title>demean</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -109,7 +109,7 @@ ul.task-list{list-style: none;}
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link active">Function reference</a>
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">Function reference</a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -122,7 +122,7 @@ ul.task-list{list-style: none;}
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demean.html" class="sidebar-item-text sidebar-link">demean</a>
+  <a href="../reference/demean.html" class="sidebar-item-text sidebar-link active">demean</a>
   </div>
 </li>
       </ul>
@@ -137,21 +137,35 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="function-reference" class="level1 doc doc-index">
-<h1 class="doc doc-index">Function reference</h1>
-<section id="for-developers" class="level2">
-<h2 class="anchored" data-anchor-id="for-developers">For Developers</h2>
-<p>PyFixest internals and utilities</p>
+<section id="pyfixest.demean" class="level1">
+<h1>demean</h1>
+<p><code>demean</code></p>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
 <table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
 <tbody>
 <tr class="odd">
-<td><a href="../reference/demean.html#pyfixest.demean">demean</a></td>
-<td></td>
+<td><a href="#pyfixest.demean.demean_model">demean_model</a></td>
+<td>Demeans a single regression model.</td>
 </tr>
 </tbody>
 </table>
+<section id="pyfixest.demean.demean_model" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.demean.demean_model">demean_model</h3>
+<p><code>demean.demean_model(Y, X, fe, weights, lookup_demeaned_data, na_index_str)</code></p>
+<p>Demeans a single regression model.</p>
+<p>If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package. Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache <code>lookup_demeaned_data</code> if possible. If the model has no fixed effects, the function does not demean the data.</p>
+<p>Args: Y (pd.DataFrame): A DataFrame of the dependent variable. X (pd.DataFrame): A DataFrame of the covariates. fe (pd.DataFrame or None): A DataFrame of the fixed effects. None if no fixed effects specified. weights (np.ndarray or None): A numpy array of weights. None if no weights. lookup_demeaned_data (Dict[str, Any]): A dictionary with keys for each fixed effects combination and potentially values of demeaned data frames. The function checks this dictionary to see if some of the variables have already been demeaned. na_index_str (str): A string with indices of dropped columns. Used for caching of demeaned variables.</p>
+<p>Returns: Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]: A tuple of the following elements: - Yd (pd.DataFrame): A DataFrame of the demeaned dependent variable. - Xd (pd.DataFrame): A DataFrame of the demeaned covariates. - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.</p>
 
 
+</section>
 </section>
 </section>
 

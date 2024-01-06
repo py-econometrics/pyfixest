@@ -219,6 +219,7 @@ def did2s(
 
     ```{python}
     import pandas as pd
+    import numpy as np
     from pyfixest.did.estimation import did2s
 
     url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
