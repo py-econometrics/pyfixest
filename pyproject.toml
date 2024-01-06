@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.13.1"
+version = "0.13.2"
 
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
@@ -11,8 +11,8 @@ homepage = "https://s3alfisc.github.io/pyfixest/"
 repository = "https://github.com/s3alfisc/pyfixest"
 
 [tool.poetry.dependencies]
-python=">=3.8,<4.0"
-pandas=">=1.1.0"
+python=">=3.9,<4.0"
+pandas="2.1.4"
 numpy=">=1.19.0"
 scipy=">=1.6"
 formulaic = ">=0.6.6,<1.0.0"

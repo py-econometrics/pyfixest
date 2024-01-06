@@ -162,8 +162,7 @@ def model_matrix_fixest(
         X_is_empty = True
 
     # if int, turn, Y into int64, else float64
-    # if Y is int
-    if Y.dtypes[0] == "int64":
+    if pd.api.types.is_integer_dtype(Y.iloc[:, 0]):
         pass
     else:
         Y = Y.astype("float64")
