@@ -3,7 +3,7 @@ website:
   - contents:
     - reference/index.qmd
     - contents:
-      - reference/demean.qmd
-      section: For Developers
+      - reference/estimation.fepois.qmd
+      section: For Users
     id: reference
   - id: dummy-sidebar

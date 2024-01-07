@@ -5,8 +5,9 @@ from pyfixest.feols import Feols, _drop_multicollinear_variables
 class Feiv(Feols):
 
     """
-    # Feiv
     A class to estimate a single model with instrumental variables.
+
+    Inherits from Feols. Overwrites the `get_fit` method.
     """
 
     def __init__(
@@ -20,16 +21,28 @@ class Feiv(Feols):
         collin_tol: float,
     ) -> None:
         """
-        Args:
-            Y (np.array): dependent variable. two-dimensional np.array
-            X (np.array): independent variables. two-dimensional np.array
-            Z (np.array): instruments. two-dimensional np.array
-            weights (np.array): weights. one-dimensional np.array
-            coefnames_x (list): names of the coefficients of X
-            coefnames_z (list): names of the coefficients of Z
-            collin_tol (float): tolerance for collinearity check
-        Returns:
-            None
+        Initialize the Feiv class.
+
+        Parameters
+        ----------
+        Y : np.ndarray
+            Dependent variable. Two-dimensional np.ndarray.
+        X : np.ndarray
+            Independent variables. Two-dimensional np.ndarray.
+        Z : np.ndarray
+            Instruments. Two-dimensional np.ndarray.
+        weights : np.ndarray
+            Weights. One-dimensional np.ndarray.
+        coefnames_x : list
+            Names of the coefficients of X.
+        coefnames_z : list
+            Names of the coefficients of Z.
+        collin_tol : float
+            Tolerance for collinearity check.
+
+        Returns
+        -------
+        None
         """
 
         super().__init__(
@@ -57,13 +70,20 @@ class Feiv(Feols):
 
     def get_fit(self) -> None:
         """
-        IV  estimation for a single model, via 2SLS.
-        Returns:
-            None
-        Attributes:
-            beta_hat (np.ndarray): The estimated regression coefficients.
-            Y_hat (np.ndarray): The predicted values of the regression model.
-            u_hat (np.ndarray): The residuals of the regression model.
+        IV estimation for a single model, via 2SLS.
+
+        Returns
+        -------
+        None
+
+        Attributes
+        ----------
+        beta_hat : np.ndarray
+            The estimated regression coefficients.
+        Y_hat : np.ndarray
+            The predicted values of the regression model.
+        u_hat : np.ndarray
+            The residuals of the regression model.
         """
 
         # import pdb; pdb.set_trace()

@@ -15,9 +15,41 @@ from pyfixest.exceptions import (
 class Fepois(Feols):
 
     """
-    # Fepois
-
     Class to estimate Poisson Regressions. Inherits from Feols. The following methods are overwritten: `get_fit()`.
+
+    Attributes
+    ----------
+    fe : np.ndarray
+        Fixed effects as a numpy array.
+    maxiter : Optional[int]
+        Maximum number of iterations for the Iteratively Reweighted Least Squares (IRLS) algorithm.
+    tol : Optional[float]
+        Tolerance level for the convergence of the IRLS algorithm.
+    _drop_singletons : bool
+        Indicates whether to drop singleton fixed effects.
+    _method : str
+        The method used for estimation, set to "fepois".
+    convergence : bool
+        Indicates whether the model has converged.
+    _support_crv3_inference : bool
+        Support for crv3 inference.
+    _support_iid_inference : bool
+        Support for iid inference.
+    _Y_hat_response : np.ndarray or None
+        The estimated dependent variable at the response level.
+    deviance : np.ndarray or None
+        The deviance of the model.
+    _Xbeta : np.ndarray or None
+        The linear predictor X @ beta.
+
+    Methods
+    -------
+    __init__(Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08)
+        Initialize the Fepois class with given parameters.
+    get_fit()
+        Fit a Poisson Regression Model via Iteratively Reweighted Least Squares.
+    predict(newdata=None, type="link")
+        Return predicted values of the regression model.
     """
 
     def __init__(
@@ -32,17 +64,30 @@ class Fepois(Feols):
         maxiter: Optional[int] = 25,
         tol: Optional[float] = 1e-08,
     ):
+
         """
-        Args:
-            Y (np.array): dependent variable. two-dimensional np.array
-            Z (np.array): independent variables. two-dimensional np.array
-            fe (np.array): fixed effects. two dimensional np.array or None
-            weights (np.array): weights. one dimensional np.array or None
-            coefnames (list): names of the coefficients in the design matrix X.
-            drop_singletons (bool): whether to drop singleton fixed effects
-            collin_tol (float): tolerance level for the detection of collinearity
-            maxiter (int): maximum number of iterations for the IRLS algorithm
-            tol (float): tolerance level for the convergence of the IRLS algorithm
+        Initialize the Fepois class with given parameters.
+
+        Parameters
+        ----------
+        Y : np.ndarray
+            Dependent variable, a two-dimensional numpy array.
+        X : np.ndarray
+            Independent variables, a two-dimensional numpy array.
+        fe : np.ndarray
+            Fixed effects, a two-dimensional numpy array or None.
+        weights : np.ndarray
+            Weights, a one-dimensional numpy array or None.
+        coefnames : List[str]
+            Names of the coefficients in the design matrix X.
+        drop_singletons : bool
+            Whether to drop singleton fixed effects.
+        collin_tol : float
+            Tolerance level for the detection of collinearity.
+        maxiter : Optional[int], default 25
+            Maximum number of iterations for the IRLS algorithm.
+        tol : Optional[float], default 1e-08
+            Tolerance level for the convergence of the IRLS algorithm.
         """
 
         super().__init__(
@@ -81,22 +126,11 @@ class Fepois(Feols):
 
     def get_fit(self) -> None:
         """
-        Fit a Poisson Regression Model via Iterated Weighted Least Squares
+        Fit a Poisson Regression Model via Iterated Weighted Least Squares.
 
-        Args:
-            tol (float): tolerance level for the convergence of the IRLS algorithm
-            maxiter (int): maximum number of iterations for the IRLS algorithm. 25 by default.
-        Returns:
-            None
-        Attributes:
-            beta_hat (np.array): estimated coefficients
-            Y_hat (np.array): estimated dependent variable
-            u_hat (np.array): estimated residuals
-            weights (np.array): weights (from the last iteration of the IRLS algorithm)
-            X (np.array): demeaned independent variables (from the last iteration of the IRLS algorithm)
-            Z (np.array): demeaned independent variables (from the last iteration of the IRLS algorithm)
-            Y (np.array): demeaned dependent variable (from the last iteration of the IRLS algorithm)
-
+        Returns
+        -------
+        None
         """
 
         _Y = self._Y
@@ -226,17 +260,20 @@ class Fepois(Feols):
         self, newdata: Optional[pd.DataFrame] = None, type="link"
     ) -> np.ndarray:
         """
-        Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values for such observations
-        will be set to NaN.
+        Return a flat numpy array with predicted values of the regression model.
 
-        Args:
-            newdata (Union[None, pd.DataFrame], optional): A pd.DataFrame with the new data, to be used for prediction.
-                If None (default), uses the data used for fitting the model.
-            type (str, optional): The type of prediction to be computed. Either "response" (default) or "link".
-                If type="response", then the output is at the level of the response variable, i.e. it is the expected predictor E(Y|X).
-                If "link", then the output is at the level of the explanatory variables, i.e. the linear predictor X @ beta.
+        Parameters
+        ----------
+        newdata : Optional[pd.DataFrame], default None
+            A pandas DataFrame with the new data, to be used for prediction.
+            If None, uses the data used for fitting the model.
+        type : str, default "link"
+            The type of prediction to be computed. Either "response" or "link".
 
+        Returns
+        -------
+        np.ndarray
+            Predicted values of the regression model.
         """
 
         _Xbeta = self._Xbeta
@@ -263,14 +300,24 @@ class Fepois(Feols):
 
 def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> List:
     """
-    Args:
-        Y (pd.DataFrame): dependent variable
-        fe (pd.DataFrame): fixed effects
-        check (str): separation check to be performed
-    Returns:
-        separation_na (list): list of indices of observations that are removed due to separation
-    Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
-    separation checks. Currently, only the "fe" check is implemented.
+    Check for separation in Poisson Regression.
+
+    For details on separation checks, refer to the pplmhdfe documentation.
+    Currently, only the "fe" check is implemented.
+
+    Parameters
+    ----------
+    Y : pd.DataFrame
+        Dependent variable.
+    fe : pd.DataFrame
+        Fixed effects.
+    check : str
+        Separation check to be performed.
+
+    Returns
+    -------
+    list
+        List of indices of observations that are removed due to separation.
     """
 
     if check == "fe":

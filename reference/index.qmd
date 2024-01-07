@@ -1,9 +1,9 @@
 # Function reference {.doc .doc-index}
 
-## For Developers
+## For Users
 
-PyFixest internals and utilities
+User facing estimation functions
 
 | | |
 | --- | --- |
-| [demean](demean.qmd#pyfixest.demean) |  |
+| [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
