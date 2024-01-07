@@ -21,8 +21,8 @@ Post-Processing of Estimation Results
 | --- | --- |
 | [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | Summary |
 | [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models. |
-| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | # coefplot |
-| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | # iplot |
+| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | Plot model coefficients with confidence intervals. |
+| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals. |
 
 ## For Developers
 
