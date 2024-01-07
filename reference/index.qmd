@@ -19,8 +19,8 @@ Post-Processing of Estimation Results
 
 | | |
 | --- | --- |
-| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | # Summary |
-| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models# |
+| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | Summary |
+| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models. |
 | [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | # coefplot |
 | [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | # iplot |
 
