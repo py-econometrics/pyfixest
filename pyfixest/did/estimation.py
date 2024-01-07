@@ -1,8 +1,8 @@
 import pandas as pd
 from typing import Optional, Union, List, Dict
 from pyfixest.did.did2s import _did2s_estimate, _did2s_vcov, DID2S
-from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
+from pyfixest.did.lpdid import LPDID
 from pyfixest.exceptions import NotImplementedError
 
 
@@ -49,6 +49,7 @@ def event_study(
         A fitted model object of class `feols`.
 
     Examples
+    --------
 
     ```{python}
     import pandas as pd
@@ -62,7 +63,7 @@ def event_study(
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         estimator="twfe",
         att=True,
     )
@@ -74,7 +75,7 @@ def event_study(
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         estimator="did2s",
         att=True,
     )
@@ -88,27 +89,25 @@ def event_study(
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         estimator="twfe",
         att=False,
     )
 
-    fit_twfe_dynamic.iplot()
+    fit_twfe_dynamic.iplot().show()
 
     fit_did2s_dynamic = event_study(
         df_het,
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         estimator="did2s",
         att=False,
     )
 
-    fit_did2s_dynamic.iplot()
-    --------
-
-
+    fit_did2s_dynamic.iplot().show()
+    ```
     """
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
     assert isinstance(yname, str), "yname must be a string"
@@ -171,7 +170,6 @@ def event_study(
     return fit
 
 
-
 def did2s(
     data: pd.DataFrame,
     yname: str,
@@ -182,7 +180,6 @@ def did2s(
     i_ref1: Optional[Union[int, str, List]] = None,
     i_ref2: Optional[Union[int, str, List]] = None,
 ):
-
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
 
@@ -231,7 +228,7 @@ def did2s(
 
     ```{python}
     # estimate the model
-    fit_did2s = did2s(
+    fit = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -247,10 +244,13 @@ def did2s(
     We can also inspect the model visually:
 
     ```{python}
-    fit.iplot()
+    fit.iplot().show()
     ```
 
-    To estimate a pooled effect, set the argument `att=True`:
+    To estimate a pooled effect, we need to slightly update the second stage formula:
+
+    ```{python}
+    fit = did2s(
 
     ```{python}
     fit_did2s = did2s(
@@ -259,9 +259,9 @@ def did2s(
         first_stage="~ 0 | unit + year",
         second_stage="~i(rel_year)",
         treatment="treat",
-        cluster="state",
-        att=True,
+        cluster="state"
     )
+    fit.tidy()
     ```
     """
 
@@ -313,7 +313,6 @@ def did2s(
     return fit
 
 
-
 def lpdid(
     data: pd.DataFrame,
     yname: str,
@@ -327,7 +326,6 @@ def lpdid(
     att: bool = True,
     xfml=None,
 ) -> pd.DataFrame:
-
     """
     Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.
 
@@ -376,7 +374,7 @@ def lpdid(
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         vcov={"CRV1": "state"},
         pre_window=-20,
         post_window=20,
@@ -384,7 +382,7 @@ def lpdid(
     )
 
     fit.tidy()
-    fit.iplot()
+    fit.iplot().show()
     ```
 
     To get the ATT, set `att=True`:
@@ -395,7 +393,7 @@ def lpdid(
         yname="dep_var",
         idname="unit",
         tname="year",
-        gname="treat_year",
+        gname="g",
         vcov={"CRV1": "state"},
         pre_window=-20,
         post_window=20,
