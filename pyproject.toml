@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.13.4"
+version = "0.14.0"
 
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
@@ -31,8 +31,6 @@ rpy2 = "^3.3.2"
 pytest-xdist = "^3.5.0"
 pyhdfe = ">=0.2.0"
 pyarrow = "^14.0.2"
-jupyter = "^1.0.0"
-nbformat = "^5.9.2"
 
 [poetry-extras]
 wildboottest={ version = ">=0.2", optional = true}

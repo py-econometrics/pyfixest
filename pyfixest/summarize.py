@@ -48,7 +48,6 @@ def etable(
     ```
     """
 
-
     models = _post_processing_input_checks(models)
 
     assert digits >= 0, "digits must be a positive integer"
@@ -161,7 +160,6 @@ def etable(
 def summary(
     models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
 ) -> None:
-
     """
     Summary
 
@@ -196,7 +194,6 @@ def summary(
     summary([fit1, fit2, fit3])
     ```
     """
-
 
     models = _post_processing_input_checks(models)
 

@@ -76,7 +76,6 @@ def iplot(
     ```
     """
 
-
     models = _post_processing_input_checks(models)
 
     df_all = []
@@ -174,7 +173,6 @@ def coefplot(
     ```
     """
 
-
     models = _post_processing_input_checks(models)
     df_all = []
     for x, _ in enumerate(models):
@@ -213,7 +211,6 @@ def _coefplot(
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
 ):
-
     """
     Plot model coefficients with confidence intervals.
 
@@ -243,7 +240,6 @@ def _coefplot(
     object
         A lets-plot figure.
     """
-
 
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
