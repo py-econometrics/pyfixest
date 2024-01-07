@@ -69,44 +69,6 @@ def event_study(
     )
 
     fit_twfe.tidy()
-
-    fit_did2s = event_study(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
-        estimator="did2s",
-        att=True,
-    )
-
-    fit_did2s.tidy()
-
-    # event studies:
-
-    fit_twfe_dynamic = event_study(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
-        estimator="twfe",
-        att=False,
-    )
-
-    fit_twfe_dynamic.iplot().show()
-
-    fit_did2s_dynamic = event_study(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
-        estimator="did2s",
-        att=False,
-    )
-
-    fit_did2s_dynamic.iplot().show()
     ```
     """
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"

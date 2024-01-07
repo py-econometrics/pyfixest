@@ -18,17 +18,17 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "PyFixest"
-        file: readme.qmd
-      - text: "Introduction"
-        file: tutorial.ipynb
-      #- text: "Difference-in-Differences Estimation"
-      #  file: difference-in-differences-estimation.ipynb
-      #- text "Replicating 'The Effect' with PyFixest"
-      #  file: docs/Replicating-the-Effect.ipynb
+        file: ./readme.qmd
+      - text: "Quickstart"
+        file: ./vignettes/tutorial.ipynb
+      - text: "Difference-in-Differences Estimation"
+        file: ./vignettes/difference-in-differences.ipynb
+      - text: "Replicating 'The Effect' with PyFixest"
+        file: ./vignettes/Replicating-the-Effect.ipynb
       - text: "Function Reference"
         file: reference/index.qmd
-      #- text: "Changelog"
-      #  file: news.qmd
+      - text: "Changelog"
+        file: ./vignettes/news.qmd
 
 quartodoc:
   package: pyfixest
@@ -44,7 +44,7 @@ quartodoc:
         - estimation.fepois
         - did.estimation.did2s
         - did.estimation.lpdid
-        #- did.estimation.event_study
+        - did.estimation.event_study
     - title: Summarize and Visualize
       desc: |
         Post-Processing of Estimation Results

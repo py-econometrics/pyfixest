@@ -138,7 +138,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <a class="nav-link active" href="./readme.html" aria-current="page">PyFixest</a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./vignettes/tutorial.html">Quickstart</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./vignettes/difference-in-differences.html">Difference-in-Differences Estimation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./vignettes/Replicating-the-Effect.html">Replicating ‘The Effect’ with PyFixest</a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./reference/index.html">Function Reference</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./vignettes/news.html">Changelog</a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
@@ -168,7 +180,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="pyfixest-fast-high-dimensional-fixed-effects-regression-in-python" class="level1">
 <h1>PyFixest: Fast High-Dimensional Fixed Effects Regression in Python</h1>
 <p><a href="https://pypi.org/project/pyfixest/"><img src="https://img.shields.io/pypi/v/pyfixest.svg" class="img-fluid" alt="PyPI - Version"></a> <img src="https://img.shields.io/pypi/pyversions/pyfixest.svg" class="img-fluid" alt="PyPI - Python Version"> <img src="https://img.shields.io/pypi/dm/pyfixest.png" class="img-fluid" alt="PyPI - Downloads"> <a href="https://codecov.io/gh/s3alfisc/pyfixest"><img src="https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg" class="img-fluid" alt="image"></a></p>
-<p><code>PyFixest</code> is a Python implementation of the formidable <a href="https://github.com/lrberge/fixest">fixest</a> package for fast high-dimensional fixed effects regression. The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows: if you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this also implies that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code> - currently with only <a href="https://github.com/s3alfisc/pyfixest/issues/260">one small exception</a>. Nevertheless, for a quick introduction, you can take a look at the <a href="https://s3alfisc.github.io/pyfixest/tutorial/">tutorial</a> or the regression chapter of <a href="https://github.com/aeturrell">Arthur Turrell’s</a> book on <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>.</p>
+<p><code>PyFixest</code> is a Python implementation of the formidable <a href="https://github.com/lrberge/fixest">fixest</a> package for fast high-dimensional fixed effects regression. The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows: if you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this means that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code> - currently with only <a href="https://github.com/s3alfisc/pyfixest/issues/260">one small exception</a>. Nevertheless, for a quick introduction, you can take a look at the <a href="https://s3alfisc.github.io/pyfixest/tutorial/">tutorial</a> or the regression chapter of <a href="https://github.com/aeturrell">Arthur Turrell’s</a> book on <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>.</p>
 <section id="features" class="level2">
 <h2 class="anchored" data-anchor-id="features">Features</h2>
 <ul>
@@ -215,7 +227,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data<span class="op">=</span>data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="AUNqDY"></div>
+            <div id="WTILIQ"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -239,9 +251,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("AUNqDY").appendChild(div);
+                        document.getElementById("WTILIQ").appendChild(div);
                     };
-                    var e = document.getElementById("AUNqDY");
+                    var e = document.getElementById("WTILIQ");
                     e.appendChild(script);
                 })()
             </script>
@@ -285,8 +297,8 @@ depvar                       Y                 Y2                  Y            
 Intercept     0.919*** (0.121)   1.064*** (0.232)
 X1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)
 -----------------------------------------------------------------------------------------------------------------------------
-f2                           -                  -                  -                  -                  x                  x
 f1                           -                  -                  x                  x                  x                  x
+f2                           -                  -                  -                  -                  x                  x
 -----------------------------------------------------------------------------------------------------------------------------
 R2                       0.123              0.037              0.437              0.115              0.609              0.168
 S.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id

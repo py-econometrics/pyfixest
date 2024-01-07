@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>visualize.coefplot</title>
+<title>did.estimation.event_study</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -215,7 +215,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link active">did.estimation.event_study</a>
   </div>
 </li>
       </ul>
@@ -240,7 +240,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link active">visualize.coefplot</a>
+  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link">visualize.coefplot</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -285,18 +285,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="pyfixest.visualize.coefplot" class="level1">
-<h1>visualize.coefplot</h1>
-<p><code>visualize.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)</code></p>
-<p>Plot model coefficients with confidence intervals.</p>
+<section id="pyfixest.did.estimation.event_study" class="level1">
+<h1>did.estimation.event_study</h1>
+<p><code>did.estimation.event_study(data, yname, idname, tname, gname, xfml=None, estimator='twfe', att=True, cluster='idname')</code></p>
+<p>Estimate a treatment effect using an event study design.</p>
+<p>This function allows for the estimation of treatment effects using different estimators. Currently, it supports “twfe” for the two-way fixed effects estimator and “did2s” for Gardner’s two-step DID2S estimator. Other estimators are in development.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 13%">
-<col style="width: 12%">
-<col style="width: 62%">
-<col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 5%">
+<col style="width: 82%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -308,57 +309,51 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>models</code></td>
-<td>list or object</td>
-<td>A list of fitted models of type <code>Feols</code> or <code>Fepois</code>, or just a single model.</td>
+<td><code>data</code></td>
+<td>DataFrame</td>
+<td>The DataFrame containing all variables.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>figsize</code></td>
-<td>tuple</td>
-<td>The size of the figure.</td>
-<td><code>(500, 300)</code></td>
-</tr>
-<tr class="odd">
-<td><code>alpha</code></td>
-<td>float</td>
-<td>The significance level for the confidence intervals.</td>
-<td><code>0.05</code></td>
-</tr>
-<tr class="even">
-<td><code>yintercept</code></td>
-<td>float or None</td>
-<td>The value at which to draw a horizontal line on the plot. Default is 0.</td>
-<td><code>0</code></td>
-</tr>
-<tr class="odd">
-<td><code>xintercept</code></td>
-<td>float or None</td>
-<td>The value at which to draw a vertical line on the plot. Default is None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>rotate_xticks</code></td>
-<td>float</td>
-<td>The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).</td>
-<td><code>0</code></td>
-</tr>
-<tr class="odd">
-<td><code>coefficients</code></td>
-<td>list</td>
-<td>A list of coefficients to plot. If None, all coefficients are plotted.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>title</code></td>
+<td><code>yname</code></td>
 <td>str</td>
-<td>The title of the plot.</td>
+<td>The name of the dependent variable.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>idname</code></td>
+<td>str</td>
+<td>The name of the id variable.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>tname</code></td>
+<td>str</td>
+<td>Variable name for calendar period.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>gname</code></td>
+<td>str</td>
+<td>Unit-specific time of initial treatment.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>xfml</code></td>
+<td>str</td>
+<td>The formula for the covariates.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>coord_flip</code></td>
+<td><code>estimator</code></td>
+<td>str</td>
+<td>The estimator to use. Options are “did2s” and “twfe”.</td>
+<td><code>'twfe'</code></td>
+</tr>
+<tr class="even">
+<td><code>att</code></td>
 <td>bool</td>
-<td>Whether to flip the coordinates of the plot. Default is True.</td>
+<td>If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.</td>
 <td><code>True</code></td>
 </tr>
 </tbody>
@@ -376,7 +371,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <tbody>
 <tr class="odd">
 <td>object</td>
-<td>A lets-plot figure.</td>
+<td>A fitted model object of class <code>feols</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -384,19 +379,33 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <div class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> event_study</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit_twfe.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+      the module is not yet as thoroughly tested as I would like. So please use it with caution and
+      provide feedback in case you stumble over any bugs!
+      </code></pre>
+</div>
 <div class="cell-output cell-output-display">
 
-            <div id="WQAT1e"></div>
+            <div id="zGy2Z5"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -420,99 +429,52 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("WQAT1e").appendChild(div);
+                        document.getElementById("zGy2Z5").appendChild(div);
                     };
-                    var e = document.getElementById("WQAT1e");
+                    var e = document.getElementById("zGy2Z5");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="lqzKVk"></div>
-   <script type="text/javascript" data-lets-plot-script="plot">
-       (function() {
-           var plotSpec={
-"data":{
-"Model":["Y~X1","Y~X1","Y~X1+X2","Y~X1+X2","Y~X1+X2","Y~X1+X2|f1","Y~X1+X2|f1"],
-"Coefficient":["Intercept","X1","Intercept","X1","X2","X1","X2"],
-"Estimate":[0.9185177588356426,-1.000085840074156,0.888779148933936,-0.9929357698186859,-0.17634236659778282,-0.949525571419159,-0.1742252748945439],
-"2.5 %":[0.6990856170653885,-1.1663660739416457,0.67601628367764,-1.1540790755856782,-0.21905485705638184,-1.085581857547282,-0.2118570044389387],
-"97.5 %":[1.1379499006058966,-0.8338056062066661,1.101542014190232,-0.8317924640516935,-0.1336298761391838,-0.813469285291036,-0.1365935453501491]
-},
-"mapping":{
-"x":"Coefficient",
-"y":"Estimate",
-"color":"Model"
-},
-"data_meta":{
-},
-"coord":{
-"name":"flip",
-"flip":true
-},
-"ggsize":{
-"width":500.0,
-"height":300.0
-},
-"theme":{
-"axis_text_x":{
-"angle":0.0,
-"blank":false
-}
-},
-"kind":"plot",
-"scales":[{
-"name":"Estimate and 95% Confidence Interval",
-"aesthetic":"y"
-}],
-"layers":[{
-"geom":"point",
-"mapping":{
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"data":{
-}
-},{
-"geom":"errorbar",
-"mapping":{
-"ymin":"2.5 %",
-"ymax":"97.5 %"
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"width":0.05,
-"data":{
-}
-},{
-"geom":"hline",
-"mapping":{
-},
-"data_meta":{
-},
-"yintercept":0.0,
-"linetype":"dashed",
-"color":"black",
-"data":{
-}
-}],
-"metainfo_list":[]
-};
-           var plotContainer = document.getElementById("lqzKVk");
-           window.letsPlotCall(function() {{
-               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
-           }});
-       })();    
-   </script>
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5 %</th>
+      <th>97.5 %</th>
+    </tr>
+    <tr>
+      <th>Coefficient</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>ATT</th>
+      <td>1.98254</td>
+      <td>0.019093</td>
+      <td>103.83491</td>
+      <td>0.0</td>
+      <td>1.945118</td>
+      <td>2.019962</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 </div>
 </div>
 

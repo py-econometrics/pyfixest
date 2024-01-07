@@ -11,6 +11,7 @@ User facing estimation functions
 | [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
 | [did.estimation.did2s](did.estimation.did2s.qmd#pyfixest.did.estimation.did2s) | Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator. |
 | [did.estimation.lpdid](did.estimation.lpdid.qmd#pyfixest.did.estimation.lpdid) | Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach. |
+| [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Estimate a treatment effect using an event study design. |
 
 ## Summarize and Visualize
 
