@@ -19,8 +19,6 @@ def feols(
     i_ref1: Optional[Union[list, str]] = None,
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
-
-
     """
     Estimate linear regression models with fixed effects using fixest formula syntax.
 
@@ -206,7 +204,6 @@ def feols(
 
     """
 
-
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
     _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
@@ -238,7 +235,6 @@ def fepois(
     i_ref1: Optional[Union[list, str]] = None,
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Fepois, FixestMulti]:
-
     """
     Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm.
 

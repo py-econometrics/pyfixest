@@ -89,7 +89,6 @@ def model_matrix_fixest(
         icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
 
-
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
@@ -294,7 +293,6 @@ def model_matrix_fixest(
 
 
 def _find_ivars(x):
-
     """
     Find interaction variables in i() syntax.
 
@@ -308,7 +306,6 @@ def _find_ivars(x):
     list
         A list of interaction variables or None
     """
-
 
     i_match = re.findall(r"i\((.*?)\)", x)
 
@@ -367,7 +364,6 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
         present in this DataFrame.
         - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
     """
-
 
     fval_list = fval.split("+")
 
