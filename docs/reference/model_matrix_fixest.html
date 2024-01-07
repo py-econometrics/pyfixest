@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>detect_singletons.detect_singletons</title>
+<title>model_matrix_fixest</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -59,6 +59,7 @@ ul.task-list{list-style: none;}
 
 <body class="nav-sidebar floating nav-fixed fullcontent">
 
+
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg navbar-dark ">
@@ -69,10 +70,17 @@ ul.task-list{list-style: none;}
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../docs/news.html">News</a>
+    <a class="nav-link" href="../readme.html">PyFixest</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page">Reference</a>
+    <a class="nav-link active" href="../reference/index.html" aria-current="page">Function Reference</a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"><i class="bi bi-github" role="img">
+</i> 
+ </a>
   </li>  
 </ul>
               <div id="quarto-search" class="" title="Search"></div>
@@ -119,19 +127,19 @@ ul.task-list{list-style: none;}
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">did.estimation.did2s</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">For Developers</a>
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">Summarize and Visualize</a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -139,7 +147,47 @@ ul.task-list{list-style: none;}
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link active">detect_singletons.detect_singletons</a>
+  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link">summarize.summary</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/summarize.etable.html" class="sidebar-item-text sidebar-link">summarize.etable</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link">visualize.coefplot</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/visualize.iplot.html" class="sidebar-item-text sidebar-link">visualize.iplot</a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">For Developers</a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/demean.html" class="sidebar-item-text sidebar-link">demean</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/detect_singletons.html" class="sidebar-item-text sidebar-link">detect_singletons</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/model_matrix_fixest.html" class="sidebar-item-text sidebar-link active">model_matrix_fixest</a>
   </div>
 </li>
       </ul>
@@ -154,18 +202,37 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="pyfixest.detect_singletons.detect_singletons" class="level1">
-<h1>detect_singletons.detect_singletons</h1>
-<p><code>detect_singletons.detect_singletons(ids)</code></p>
-<p>Detect singleton fixed effects in a dataset.</p>
-<p>This function iterates over the columns of a 2D numpy array representing fixed effects to identify singleton fixed effects. An observation is considered a singleton if it is the only one in its group (fixed effect identifier).</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="pyfixest.model_matrix_fixest" class="level1">
+<h1>model_matrix_fixest</h1>
+<p><code>model_matrix_fixest</code></p>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.model_matrix_fixest.model_matrix_fixest">model_matrix_fixest</a></td>
+<td>Create model matrices for fixed effects estimation.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.model_matrix_fixest.model_matrix_fixest" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.model_matrix_fixest.model_matrix_fixest">model_matrix_fixest</h3>
+<p><code>model_matrix_fixest.model_matrix_fixest(fml, data, drop_singletons=False, weights=None, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
+<p>Create model matrices for fixed effects estimation.</p>
+<p>This function preprocesses the data and then calls <code>formulaic.model_matrix()</code> to create the model matrices.</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 3%">
-<col style="width: 10%">
-<col style="width: 80%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 73%">
 <col style="width: 5%">
 </colgroup>
 <thead>
@@ -178,20 +245,62 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>ids</code></td>
-<td>numpy.numpy.ndarray</td>
-<td>A 2D numpy array representing fixed effects, with a shape of (n_samples, n_features). Elements should be non-negative integers representing fixed effect identifiers.</td>
+<td><code>fml</code></td>
+<td>str</td>
+<td>A two-sided formula string using fixest formula syntax.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>data</code></td>
+<td>pandas.pandas.DataFrame</td>
+<td>The input DataFrame containing the data.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>drop_singletons</code></td>
+<td>bool</td>
+<td>Whether to drop singleton fixed effects. Default is False.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>weights</code></td>
+<td>str or None</td>
+<td>Weights as a string if provided, or None if no weights, e.g., “weights”.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>data</code></td>
+<td>pandas.pandas.DataFrame</td>
+<td>The input DataFrame containing the data.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>drop_intercept</code></td>
+<td>bool</td>
+<td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>i_ref1</code></td>
+<td>str or list</td>
+<td>The reference level for the first variable in the i() syntax.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>i_ref2</code></td>
+<td>str or list</td>
+<td>The reference level for the second variable in the i() syntax.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
 <table class="table">
 <colgroup>
-<col style="width: 17%">
-<col style="width: 82%">
+<col style="width: 0%">
+<col style="width: 99%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -201,18 +310,39 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td>numpy.numpy.ndarray</td>
-<td>A boolean array of shape (n_samples,), indicating which observations have a singleton fixed effect.</td>
+<td>tuple</td>
+<td>A tuple of the following elements: - Y : pd.DataFrame A DataFrame of the dependent variable. - X : pd.DataFrame A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I : Optional[pd.DataFrame] A DataFrame of the Instruments, None if no IV. - fe : Optional[pd.DataFrame] A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index : np.array An array with indices of dropped columns. - fe_na : np.array An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str : str na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names : Optional[List[str]] Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights : Optional[str] Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights : bool A boolean indicating whether weights are used. - icovars : Optional[List[str]] A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="notes" class="level2">
-<h2 class="anchored" data-anchor-id="notes">Notes</h2>
-<p>The algorithm iterates over columns to identify fixed effects. After each column is processed, it updates the record of non-singleton rows. This approach accounts for the possibility that removing an observation in one column can lead to the emergence of new singletons in subsequent columns.</p>
-<p>For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to significant performance losses.</p>
+<section id="attributes" class="level4">
+<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
+<table class="table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 81%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>list or None</td>
+<td></td>
+<td>icovars - A list of interaction variables. None if no interaction variables via <code>i()</code> provided.</td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
+</section>
 </section>
 </section>
 

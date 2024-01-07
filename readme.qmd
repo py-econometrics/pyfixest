@@ -2,16 +2,16 @@
 
 -----------------
 
-## PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
+# PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyfixest)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package. The package aims to mimic `fixest` syntax and functionality as closely as Python allows. For a quick introduction, see the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or take a look at the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression. The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won’t have to read the docs to get started! In particular, this also implies that all of `fixest's` defaults are mirrored by `PyFixest` - currently with only [one small exception](https://github.com/s3alfisc/pyfixest/issues/260).  Nevertheless, for a quick introduction, you can take a look at the [tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-`PyFixest` supports
+## Features
 
 - OLS and IV Regression
 - Poisson Regression

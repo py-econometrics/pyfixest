@@ -19,8 +19,8 @@ website:
     left:
       - text: "PyFixest"
         file: readme.qmd
-      #- text: "Tutorial"
-      #  file: docs/notebooks/tutorial.qmd
+      - text: "Introduction"
+        file: tutorial.ipynb
       #- text: "Difference-in-Differences Estimation"
       #  file: difference-in-differences-estimation.ipynb
       #- text "Replicating 'The Effect' with PyFixest"
@@ -69,3 +69,4 @@ quartodoc:
       contents:
         - demean
         - detect_singletons
+        - model_matrix_fixest

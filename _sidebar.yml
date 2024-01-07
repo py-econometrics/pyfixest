@@ -17,6 +17,7 @@ website:
     - contents:
       - reference/demean.qmd
       - reference/detect_singletons.qmd
+      - reference/model_matrix_fixest.qmd
       section: For Developers
     id: reference
   - id: dummy-sidebar
