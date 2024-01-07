@@ -1,0 +1,29 @@
+# did.twfe { #pyfixest.did.twfe }
+
+`did.twfe`
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [TWFE](#pyfixest.did.twfe.TWFE) | Estimate a Difference-in-Differences model using the two-way fixed effects estimator. |
+
+### TWFE { #pyfixest.did.twfe.TWFE }
+
+`did.twfe.TWFE(self, data, yname, idname, tname, gname, xfml, att, cluster)`
+
+Estimate a Difference-in-Differences model using the two-way fixed effects estimator.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [vcov](#pyfixest.did.twfe.TWFE.vcov) | Method not needed. The vcov matrix is calculated via the `Feols` object. |
+
+##### vcov { #pyfixest.did.twfe.TWFE.vcov }
+
+`did.twfe.TWFE.vcov()`
+
+Method not needed. The vcov matrix is calculated via the `Feols` object.

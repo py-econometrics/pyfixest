@@ -166,43 +166,36 @@ def _calc_group_weights(sample_weights, group_ids, n_groups):
 
 @nb.njit(parallel=True)
 def demean(
-    x: np.ndarray,
-    flist: np.ndarray,
-    weights: np.ndarray,
-    tol: float = 1e-08,  # note: fixest uses 1e-06, but potentially different tolerance criterion
-    maxiter: int = 100_000,
-) -> Tuple[np.ndarray, bool]:
-    def demean(
         x: np.ndarray,
         flist: np.ndarray,
         weights: np.ndarray,
         tol: float = 1e-08,
         maxiter: int = 100_000,
     ) -> Tuple[np.ndarray, bool]:
-        """
-        Demeans the input array `x` based on the specified factors and weights. This is
-        where the fixed effect demeaning happens.
+    """
+    Demeans the input array `x` based on the specified factors and weights. This is
+    where the fixed effect demeaning happens.
 
-        Parameters
-        ----------
-        x : np.ndarray
-            Input array of shape (n_samples, n_features). Needs to be of type float.
-        flist : np.ndarray
-            Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be
-            converted to integers.
-        weights : np.ndarray
-            Array of shape (n_samples,) specifying the weights.
-        tol : float, optional
-            Tolerance criterion for convergence. Defaults to 1e-08.
-        maxiter : int, optional
-            Maximum number of iterations. Defaults to 100_000.
+    Parameters
+    ----------
+    x : np.ndarray
+        Input array of shape (n_samples, n_features). Needs to be of type float.
+    flist : np.ndarray
+        Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be
+        converted to integers.
+    weights : np.ndarray
+        Array of shape (n_samples,) specifying the weights.
+    tol : float, optional
+        Tolerance criterion for convergence. Defaults to 1e-08.
+    maxiter : int, optional
+        Maximum number of iterations. Defaults to 100_000.
 
-        Returns
-        -------
-        Tuple[np.ndarray, bool]
-            A tuple containing the demeaned array of shape (n_samples, n_features)
-            and a boolean indicating whether the algorithm converged successfully.
-        """
+    Returns
+    -------
+    Tuple[np.ndarray, bool]
+        A tuple containing the demeaned array of shape (n_samples, n_features)
+        and a boolean indicating whether the algorithm converged successfully.
+    """
 
     n_samples, n_features = x.shape
     n_factors = flist.shape[1]

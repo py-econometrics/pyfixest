@@ -1,10 +1,9 @@
 import pandas as pd
 from typing import Optional, Union, List, Dict
 from pyfixest.did.did2s import _did2s_estimate, _did2s_vcov, DID2S
-from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
+from pyfixest.did.lpdid import LPDID
 from pyfixest.exceptions import NotImplementedError
-
 
 def event_study(
     data,
@@ -231,7 +230,7 @@ def did2s(
 
     ```{python}
     # estimate the model
-    fit_did2s = did2s(
+    fit = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -250,18 +249,18 @@ def did2s(
     fit.iplot()
     ```
 
-    To estimate a pooled effect, set the argument `att=True`:
+    To estimate a pooled effect, we need to slightly update the second stage formula:
 
     ```{python}
-    fit_did2s = did2s(
+    fit = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
         second_stage="~i(rel_year)",
         treatment="treat",
-        cluster="state",
-        att=True,
+        cluster="state"
     )
+    fit.tidy()
     ```
     """
 

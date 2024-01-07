@@ -1,0 +1,19 @@
+# summarize.etable { #pyfixest.summarize.etable }
+
+`summarize.etable(models, digits=3, type='md')`
+
+Create an esttab-like table from a list of models.
+
+## Parameters
+
+| Name     | Type   | Description                                                                                                           | Default    |
+|----------|--------|-----------------------------------------------------------------------------------------------------------------------|------------|
+| `models` | list   | A list of models of type Feols, Feiv, Fepois.                                                                         | _required_ |
+| `digits` | int    | Number of digits to round to.                                                                                         | `3`        |
+| `type`   | str    | Type of output. Options are "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. Defaults to "md". | `'md'`     |
+
+## Returns
+
+| Type      | Description                                              |
+|-----------|----------------------------------------------------------|
+| DataFrame | A regression table with estimates and model information. |

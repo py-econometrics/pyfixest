@@ -1,0 +1,39 @@
+# did.did2s { #pyfixest.did.did2s }
+
+`did.did2s`
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [DID2S](#pyfixest.did.did2s.DID2S) | Difference-in-Differences estimation using Gardner's two-step DID2S estimator (2021). |
+
+### DID2S { #pyfixest.did.did2s.DID2S }
+
+`did.did2s.DID2S(self, data, yname, idname, tname, gname, xfml, att, cluster)`
+
+Difference-in-Differences estimation using Gardner's two-step DID2S estimator (2021).
+
+Multiple parts of this code are direct translations of Kyle Butt's R code `did2s`, published
+under MIT license: https://github.com/kylebutts/did2s/tree/main.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [estimate](#pyfixest.did.did2s.DID2S.estimate) | Args: |
+
+##### estimate { #pyfixest.did.did2s.DID2S.estimate }
+
+`did.did2s.DID2S.estimate()`
+
+Args:
+    data (pd.DataFrame): The DataFrame containing all variables.
+    yname (str): The name of the dependent variable.
+    _first_stage (str): The formula for the first stage.
+    _second_stage (str): The formula for the second stage.
+    treatment (str): The name of the treatment variable.
+Returns:
+    tba

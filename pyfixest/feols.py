@@ -986,7 +986,7 @@ class Feols:
         """
         Compute the coefficients of (sweeped out) fixed effects for a regression model.
 
-        This method computes and stores the coefficients of fixed effects as attributes of the class.
+        This method computes and stores the coefficients of fixed effects as attributes of the class instance.
 
         Attributes Created
         ------------------
@@ -994,10 +994,6 @@ class Feols:
             A DataFrame containing the estimated fixed effects.
         sumFE : np.array
             An array with the sum of fixed effects for each observation (i = 1, ..., N).
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -1162,14 +1158,14 @@ class Feols:
 
         return y_hat.flatten()
 
-    def get_nobs(self):
+    def get_nobs(self) -> int:
         """
         Fetch the number of observations used in fitting the regression model.
 
-        Params:
-            None
-        Returns:
-            None
+        Returns
+        -------
+        int
+            The number of observations used in fitting the regression model.
         """
         self._N = len(self._Y)
 

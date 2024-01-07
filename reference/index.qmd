@@ -4,6 +4,42 @@
 
 User facing estimation functions
 
+
 | | |
 | --- | --- |
 | [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
+
+## Summarize and Visualize
+
+Post-Processing of Estimation Results
+
+
+| | |
+| --- | --- |
+| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | Prints a summary of the estimation results for each estimated model. |
+| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models. |
+| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | Plot model coefficients with confidence intervals. |
+| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals. |
+
+## Estimation Classes
+
+Details on Methods and Attributes
+
+
+| | |
+| --- | --- |
+| [did.did](did.did.qmd#pyfixest.did.did) |  |
+| [did.did2s](did.did2s.qmd#pyfixest.did.did2s) |  |
+| [did.lpdid](did.lpdid.qmd#pyfixest.did.lpdid) |  |
+| [did.twfe](did.twfe.qmd#pyfixest.did.twfe) |  |
+
+## For Developers
+
+PyFixest internals and utilities
+
+
+| | |
+| --- | --- |
+| [demean.demean](demean.demean.qmd#pyfixest.demean.demean) | Demeans the input array `x` based on the specified factors and weights. This is |
+| [detect_singletons.detect_singletons](detect_singletons.detect_singletons.qmd#pyfixest.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
+| [model_matrix_fixest](model_matrix_fixest.qmd#pyfixest.model_matrix_fixest) |  |

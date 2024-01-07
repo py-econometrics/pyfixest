@@ -1,6 +1,6 @@
 import pandas as pd
 from pyfixest.exceptions import NotImplementedError
-from pyfixest.did.did2s import DID2S
+from pyfixest.did.estimation import did2s
 from pyfixest.did.twfe import TWFE
 
 

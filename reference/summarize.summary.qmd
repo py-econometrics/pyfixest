@@ -1,0 +1,20 @@
+# summarize.summary { #pyfixest.summarize.summary }
+
+`summarize.summary(models, digits=3)`
+
+Prints a summary of the estimation results for each estimated model.
+
+For each model, this method prints a header indicating the fixed-effects and the dependent variable,
+followed by a table of coefficient estimates with standard errors, t-values, and p-values.
+
+## Parameters
+
+| Name     | Type   | Description                                                                    | Default   |
+|----------|--------|--------------------------------------------------------------------------------|-----------|
+| `digits` | int    | The number of decimal places to round the summary statistics to. Default is 3. | `3`       |
+
+## Returns
+
+| Type   | Description   |
+|--------|---------------|
+| None   |               |

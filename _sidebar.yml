@@ -5,5 +5,22 @@ website:
     - contents:
       - reference/estimation.fepois.qmd
       section: For Users
+    - contents:
+      - reference/summarize.summary.qmd
+      - reference/summarize.etable.qmd
+      - reference/visualize.coefplot.qmd
+      - reference/visualize.iplot.qmd
+      section: Summarize and Visualize
+    - contents:
+      - reference/did.did.qmd
+      - reference/did.did2s.qmd
+      - reference/did.lpdid.qmd
+      - reference/did.twfe.qmd
+      section: Estimation Classes
+    - contents:
+      - reference/demean.demean.qmd
+      - reference/detect_singletons.detect_singletons.qmd
+      - reference/model_matrix_fixest.qmd
+      section: For Developers
     id: reference
   - id: dummy-sidebar
