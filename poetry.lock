@@ -110,6 +110,120 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
 
 [[package]]
+name = "anyio"
+version = "4.2.0"
+description = "High level compatibility layer for multiple asynchronous event loop implementations"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "anyio-4.2.0-py3-none-any.whl", hash = "sha256:745843b39e829e108e518c489b31dc757de7d2131d53fac32bd8df268227bfee"},
+    {file = "anyio-4.2.0.tar.gz", hash = "sha256:e1875bb4b4e2de1669f4bc7869b6d3f54231cdced71605e6e64c9be77e3be50f"},
+]
+
+[package.dependencies]
+exceptiongroup = {version = ">=1.0.2", markers = "python_version < \"3.11\""}
+idna = ">=2.8"
+sniffio = ">=1.1"
+typing-extensions = {version = ">=4.1", markers = "python_version < \"3.11\""}
+
+[package.extras]
+doc = ["Sphinx (>=7)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme"]
+test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "pytest-mock (>=3.6.1)", "trustme", "uvloop (>=0.17)"]
+trio = ["trio (>=0.23)"]
+
+[[package]]
+name = "appnope"
+version = "0.1.3"
+description = "Disable App Nap on macOS >= 10.9"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "appnope-0.1.3-py2.py3-none-any.whl", hash = "sha256:265a455292d0bd8a72453494fa24df5a11eb18373a60c7c0430889f22548605e"},
+    {file = "appnope-0.1.3.tar.gz", hash = "sha256:02bd91c4de869fbb1e1c50aafc4098827a7a54ab2f39d9dcba6c9547ed920e24"},
+]
+
+[[package]]
+name = "argon2-cffi"
+version = "23.1.0"
+description = "Argon2 for Python"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "argon2_cffi-23.1.0-py3-none-any.whl", hash = "sha256:c670642b78ba29641818ab2e68bd4e6a78ba53b7eff7b4c3815ae16abf91c7ea"},
+    {file = "argon2_cffi-23.1.0.tar.gz", hash = "sha256:879c3e79a2729ce768ebb7d36d4609e3a78a4ca2ec3a9f12286ca057e3d0db08"},
+]
+
+[package.dependencies]
+argon2-cffi-bindings = "*"
+
+[package.extras]
+dev = ["argon2-cffi[tests,typing]", "tox (>4)"]
+docs = ["furo", "myst-parser", "sphinx", "sphinx-copybutton", "sphinx-notfound-page"]
+tests = ["hypothesis", "pytest"]
+typing = ["mypy"]
+
+[[package]]
+name = "argon2-cffi-bindings"
+version = "21.2.0"
+description = "Low-level CFFI bindings for Argon2"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "argon2-cffi-bindings-21.2.0.tar.gz", hash = "sha256:bb89ceffa6c791807d1305ceb77dbfacc5aa499891d2c55661c6459651fc39e3"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:ccb949252cb2ab3a08c02024acb77cfb179492d5701c7cbdbfd776124d4d2367"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9524464572e12979364b7d600abf96181d3541da11e23ddf565a32e70bd4dc0d"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b746dba803a79238e925d9046a63aa26bf86ab2a2fe74ce6b009a1c3f5c8f2ae"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:58ed19212051f49a523abb1dbe954337dc82d947fb6e5a0da60f7c8471a8476c"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:bd46088725ef7f58b5a1ef7ca06647ebaf0eb4baff7d1d0d177c6cc8744abd86"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-musllinux_1_1_i686.whl", hash = "sha256:8cd69c07dd875537a824deec19f978e0f2078fdda07fd5c42ac29668dda5f40f"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:f1152ac548bd5b8bcecfb0b0371f082037e47128653df2e8ba6e914d384f3c3e"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-win32.whl", hash = "sha256:603ca0aba86b1349b147cab91ae970c63118a0f30444d4bc80355937c950c082"},
+    {file = "argon2_cffi_bindings-21.2.0-cp36-abi3-win_amd64.whl", hash = "sha256:b2ef1c30440dbbcba7a5dc3e319408b59676e2e039e2ae11a8775ecf482b192f"},
+    {file = "argon2_cffi_bindings-21.2.0-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:e415e3f62c8d124ee16018e491a009937f8cf7ebf5eb430ffc5de21b900dad93"},
+    {file = "argon2_cffi_bindings-21.2.0-pp37-pypy37_pp73-macosx_10_9_x86_64.whl", hash = "sha256:3e385d1c39c520c08b53d63300c3ecc28622f076f4c2b0e6d7e796e9f6502194"},
+    {file = "argon2_cffi_bindings-21.2.0-pp37-pypy37_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2c3e3cc67fdb7d82c4718f19b4e7a87123caf8a93fde7e23cf66ac0337d3cb3f"},
+    {file = "argon2_cffi_bindings-21.2.0-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6a22ad9800121b71099d0fb0a65323810a15f2e292f2ba450810a7316e128ee5"},
+    {file = "argon2_cffi_bindings-21.2.0-pp37-pypy37_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:f9f8b450ed0547e3d473fdc8612083fd08dd2120d6ac8f73828df9b7d45bb351"},
+    {file = "argon2_cffi_bindings-21.2.0-pp37-pypy37_pp73-win_amd64.whl", hash = "sha256:93f9bf70084f97245ba10ee36575f0c3f1e7d7724d67d8e5b08e61787c320ed7"},
+    {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-macosx_10_9_x86_64.whl", hash = "sha256:3b9ef65804859d335dc6b31582cad2c5166f0c3e7975f324d9ffaa34ee7e6583"},
+    {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d4966ef5848d820776f5f562a7d45fdd70c2f330c961d0d745b784034bd9f48d"},
+    {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:20ef543a89dee4db46a1a6e206cd015360e5a75822f76df533845c3cbaf72670"},
+    {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ed2937d286e2ad0cc79a7087d3c272832865f779430e0cc2b4f3718d3159b0cb"},
+    {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:5e00316dabdaea0b2dd82d141cc66889ced0cdcbfa599e8b471cf22c620c329a"},
+]
+
+[package.dependencies]
+cffi = ">=1.0.1"
+
+[package.extras]
+dev = ["cogapp", "pre-commit", "pytest", "wheel"]
+tests = ["pytest"]
+
+[[package]]
+name = "arrow"
+version = "1.3.0"
+description = "Better dates & times for Python"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "arrow-1.3.0-py3-none-any.whl", hash = "sha256:c728b120ebc00eb84e01882a6f5e7927a53960aa990ce7dd2b10f39005a67f80"},
+    {file = "arrow-1.3.0.tar.gz", hash = "sha256:d4540617648cb5f895730f1ad8c82a65f2dad0166f57b75f3ca54759c4d67a85"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.7.0"
+types-python-dateutil = ">=2.8.10"
+
+[package.extras]
+doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints", "sphinx_rtd_theme (>=1.3.0)"]
+test = ["dateparser (>=1.0.0,<2.0.0)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (>=3.0.0,<4.0.0)"]
+
+[[package]]
 name = "astor"
 version = "0.8.1"
 description = "Read/rewrite/write Python ASTs"
@@ -124,11 +238,16 @@ files = [
 name = "asttokens"
 version = "2.4.1"
 description = "Annotate AST trees with source code positions"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
     {file = "asttokens-2.4.1-py2.py3-none-any.whl", hash = "sha256:051ed49c3dcae8913ea7cd08e46a606dba30b79993209636c4875bc1d637bc24"},
     {file = "asttokens-2.4.1.tar.gz", hash = "sha256:b03869718ba9a6eb027e134bfdf69f38a236d681c83c160d510768af11254ba0"},
+<<<<<<< HEAD
 ]
 
 [package.dependencies]
@@ -150,6 +269,30 @@ files = [
 ]
 
 [package.dependencies]
+=======
+]
+
+[package.dependencies]
+six = ">=1.12.0"
+
+[package.extras]
+astroid = ["astroid (>=1,<2)", "astroid (>=2,<4)"]
+test = ["astroid (>=1,<2)", "astroid (>=2,<4)", "pytest"]
+
+[[package]]
+name = "async-lru"
+version = "2.0.4"
+description = "Simple LRU cache for asyncio"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "async-lru-2.0.4.tar.gz", hash = "sha256:b8a59a5df60805ff63220b2a0c5b5393da5521b113cd5465a44eb037d81a5627"},
+    {file = "async_lru-2.0.4-py3-none-any.whl", hash = "sha256:ff02944ce3c288c5be660c42dbcca0742b32c3b279d6dceda655190240b99224"},
+]
+
+[package.dependencies]
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.11\""}
 
 [[package]]
@@ -175,6 +318,10 @@ tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "p
 name = "babel"
 version = "2.14.0"
 description = "Internationalization utilities"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -192,6 +339,10 @@ dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
 name = "backcall"
 version = "0.2.0"
 description = "Specifications for callback functions passed in to an API"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -441,6 +592,7 @@ files = [
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
+<<<<<<< HEAD
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
@@ -455,6 +607,24 @@ description = "Jupyter Python Comm implementation, for usage in ipykernel, xeus-
 optional = false
 python-versions = ">=3.8"
 files = [
+=======
+category = "dev"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
+files = [
+    {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
+    {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
+]
+
+[[package]]
+name = "comm"
+version = "0.2.1"
+description = "Jupyter Python Comm implementation, for usage in ipykernel, xeus-python etc."
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
     {file = "comm-0.2.1-py3-none-any.whl", hash = "sha256:87928485c0dfc0e7976fd89fc1e187023cf587e7c353e4a9b417555b44adf021"},
     {file = "comm-0.2.1.tar.gz", hash = "sha256:0bc91edae1344d39d3661dcbc36937181fdaddb304790458f8b044dbc064b89a"},
 ]
@@ -469,6 +639,10 @@ test = ["pytest"]
 name = "debugpy"
 version = "1.8.0"
 description = "An implementation of the Debug Adapter Protocol for Python"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -490,6 +664,7 @@ files = [
     {file = "debugpy-1.8.0-cp39-cp39-win_amd64.whl", hash = "sha256:e3412f9faa9ade82aa64a50b602544efcba848c91384e9f93497a458767e6926"},
     {file = "debugpy-1.8.0-py2.py3-none-any.whl", hash = "sha256:9c9b0ac1ce2a42888199df1a1906e45e6f3c9555497643a85e0bf2406e3ffbc4"},
     {file = "debugpy-1.8.0.zip", hash = "sha256:12af2c55b419521e33d5fb21bd022df0b5eb267c3e178f1d374a63a2a6bdccd0"},
+<<<<<<< HEAD
 ]
 
 [[package]]
@@ -507,6 +682,29 @@ files = [
 name = "defusedxml"
 version = "0.7.1"
 description = "XML bomb protection for Python stdlib modules"
+=======
+]
+
+[[package]]
+name = "decorator"
+version = "5.1.1"
+description = "Decorators for Humans"
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
+    {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
+]
+
+[[package]]
+<<<<<<< HEAD
+=======
+name = "defusedxml"
+version = "0.7.1"
+description = "XML bomb protection for Python stdlib modules"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
@@ -515,6 +713,7 @@ files = [
 ]
 
 [[package]]
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 name = "exceptiongroup"
 version = "1.2.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -546,6 +745,10 @@ testing = ["hatch", "pre-commit", "pytest", "tox"]
 name = "executing"
 version = "2.0.1"
 description = "Get the currently executing AST node of a frame, and other information"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -599,6 +802,10 @@ calculus = ["sympy (>=1.3,!=1.10)"]
 name = "fqdn"
 version = "1.5.1"
 description = "Validates fully-qualified domain names against RFC 1123, so that they are acceptable to modern bowsers"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=2.7, !=3.0, !=3.1, !=3.2, !=3.3, !=3.4, <4"
 files = [
@@ -691,6 +898,10 @@ files = [
 name = "ipykernel"
 version = "6.28.0"
 description = "IPython Kernel for Jupyter"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -704,7 +915,11 @@ comm = ">=0.1.1"
 debugpy = ">=1.6.5"
 ipython = ">=7.23.1"
 jupyter-client = ">=6.1.12"
+<<<<<<< HEAD
 jupyter-core = ">=4.12,<5.0.dev0 || >=5.1.dev0"
+=======
+jupyter-core = ">=4.12,<5.0.0 || >=5.1.0"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 matplotlib-inline = ">=0.1"
 nest-asyncio = "*"
 packaging = "*"
@@ -724,6 +939,10 @@ test = ["flaky", "ipyparallel", "pre-commit", "pytest (>=7.0)", "pytest-asyncio"
 name = "ipython"
 version = "8.12.3"
 description = "IPython: Productive Interactive Computing"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -763,6 +982,10 @@ test-extra = ["curio", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.21)", "pa
 name = "ipywidgets"
 version = "8.1.1"
 description = "Jupyter interactive widgets"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -784,6 +1007,10 @@ test = ["ipykernel", "jsonschema", "pytest (>=3.6.0)", "pytest-cov", "pytz"]
 name = "isoduration"
 version = "20.11.0"
 description = "Operations with ISO 8601 durations"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -798,6 +1025,10 @@ arrow = ">=0.15.0"
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -834,6 +1065,10 @@ i18n = ["Babel (>=2.7)"]
 name = "json5"
 version = "0.9.14"
 description = "A Python implementation of the JSON5 data format."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -848,6 +1083,10 @@ dev = ["hypothesis"]
 name = "jsonpointer"
 version = "2.4"
 description = "Identify specific nodes in a JSON document (RFC 6901)"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*"
 files = [
@@ -905,6 +1144,10 @@ referencing = ">=0.31.0"
 name = "jupyter"
 version = "1.0.0"
 description = "Jupyter metapackage. Install all the Jupyter components in one go."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -948,6 +1191,10 @@ test = ["coverage", "ipykernel (>=6.14)", "mypy", "paramiko", "pre-commit", "pyt
 name = "jupyter-console"
 version = "6.6.3"
 description = "Jupyter terminal console"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -959,7 +1206,11 @@ files = [
 ipykernel = ">=6.14"
 ipython = "*"
 jupyter-client = ">=7.0.0"
+<<<<<<< HEAD
 jupyter-core = ">=4.12,<5.0.dev0 || >=5.1.dev0"
+=======
+jupyter-core = ">=4.12,<5.0.0 || >=5.1.0"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 prompt-toolkit = ">=3.0.30"
 pygments = "*"
 pyzmq = ">=17"
@@ -992,6 +1243,10 @@ test = ["ipykernel", "pre-commit", "pytest", "pytest-cov", "pytest-timeout"]
 name = "jupyter-events"
 version = "0.9.0"
 description = "Jupyter Event System library"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1017,6 +1272,10 @@ test = ["click", "pre-commit", "pytest (>=7.0)", "pytest-asyncio (>=0.19.0)", "p
 name = "jupyter-lsp"
 version = "2.2.1"
 description = "Multi-Language Server WebSocket proxy for Jupyter Notebook/Lab server"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1032,6 +1291,10 @@ jupyter-server = ">=1.1.2"
 name = "jupyter-server"
 version = "2.12.2"
 description = "The backend—i.e. core services, APIs, and REST endpoints—to Jupyter web applications."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1044,7 +1307,11 @@ anyio = ">=3.1.0"
 argon2-cffi = "*"
 jinja2 = "*"
 jupyter-client = ">=7.4.4"
+<<<<<<< HEAD
 jupyter-core = ">=4.12,<5.0.dev0 || >=5.1.dev0"
+=======
+jupyter-core = ">=4.12,<5.0.0 || >=5.1.0"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 jupyter-events = ">=0.9.0"
 jupyter-server-terminals = "*"
 nbconvert = ">=6.4.4"
@@ -1068,6 +1335,10 @@ test = ["flaky", "ipykernel", "pre-commit", "pytest (>=7.0)", "pytest-console-sc
 name = "jupyter-server-terminals"
 version = "0.5.1"
 description = "A Jupyter Server Extension Providing Terminals."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1087,6 +1358,10 @@ test = ["jupyter-server (>=2.0.0)", "pytest (>=7.0)", "pytest-jupyter[server] (>
 name = "jupyterlab"
 version = "4.0.10"
 description = "JupyterLab computational environment"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1131,6 +1406,10 @@ files = [
 name = "jupyterlab-server"
 version = "2.25.2"
 description = "A set of server components for JupyterLab and JupyterLab like applications."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1157,6 +1436,10 @@ test = ["hatch", "ipykernel", "openapi-core (>=0.18.0,<0.19.0)", "openapi-spec-v
 name = "jupyterlab-widgets"
 version = "3.0.9"
 description = "Jupyter interactive widgets for JupyterLab"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1312,6 +1595,10 @@ files = [
 name = "matplotlib-inline"
 version = "0.1.6"
 description = "Inline Matplotlib backend for Jupyter"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -1326,6 +1613,10 @@ traitlets = "*"
 name = "mistune"
 version = "3.0.2"
 description = "A sane and fast Markdown parser with useful plugins and renderers"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1418,6 +1709,10 @@ test = ["pep440", "pre-commit", "pytest", "testpath"]
 name = "nest-asyncio"
 version = "1.5.8"
 description = "Patch asyncio to allow nested event loops"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.5"
 files = [
@@ -1429,6 +1724,10 @@ files = [
 name = "notebook"
 version = "7.0.6"
 description = "Jupyter Notebook - A web-based notebook environment for interactive computing"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1452,6 +1751,10 @@ test = ["importlib-resources (>=5.0)", "ipykernel", "jupyter-server[test] (>=2.4
 name = "notebook-shim"
 version = "0.2.3"
 description = "A shim layer for notebook traits and config"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1652,6 +1955,10 @@ files = [
 name = "parso"
 version = "0.8.3"
 description = "A Python Parser"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -1667,6 +1974,10 @@ testing = ["docopt", "pytest (<6.0.0)"]
 name = "pexpect"
 version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -1681,6 +1992,7 @@ ptyprocess = ">=0.5"
 name = "pickleshare"
 version = "0.7.5"
 description = "Tiny 'shelve'-like database with concurrency support"
+<<<<<<< HEAD
 optional = false
 python-versions = "*"
 files = [
@@ -1697,6 +2009,14 @@ python-versions = ">=3.7"
 files = [
     {file = "pip-23.3.2-py3-none-any.whl", hash = "sha256:5052d7889c1f9d05224cd41741acb7c5d6fa735ab34e339624a614eaaa7e7d76"},
     {file = "pip-23.3.2.tar.gz", hash = "sha256:7fd9972f96db22c8077a1ee2691b172c8089b17a5652a44494a9ecb0d78f9149"},
+=======
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pickleshare-0.7.5-py2.py3-none-any.whl", hash = "sha256:9649af414d74d4df115d5d718f82acb59c9d418196b7b4290ed47a12ce62df56"},
+    {file = "pickleshare-0.7.5.tar.gz", hash = "sha256:87683d47965c1da65cdacaf31c8441d12b8044cdec9aca500cd78fc2c683afca"},
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 ]
 
 [[package]]
@@ -2067,6 +2387,10 @@ files = [
 name = "pywinpty"
 version = "2.0.12"
 description = "Pseudo terminal support for Windows from Python."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -2246,6 +2570,10 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 name = "qtconsole"
 version = "5.5.1"
 description = "Jupyter Qt console"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">= 3.8"
 files = [
@@ -2271,6 +2599,10 @@ test = ["flaky", "pytest", "pytest-qt"]
 name = "qtpy"
 version = "2.4.1"
 description = "Provides an abstraction layer on top of the various Qt bindings (PyQt5/6 and PySide2/6)."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2324,6 +2656,10 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "rfc3339-validator"
 version = "0.1.4"
 description = "A pure python RFC3339 validator"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
@@ -2338,6 +2674,10 @@ six = "*"
 name = "rfc3986-validator"
 version = "0.1.1"
 description = "Pure python rfc3986 validator"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
@@ -2523,6 +2863,10 @@ test = ["asv", "gmpy2", "mpmath", "pytest", "pytest-cov", "pytest-xdist", "sciki
 name = "send2trash"
 version = "1.8.2"
 description = "Send file to trash natively under Mac OS X, Windows and Linux"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 files = [
@@ -2550,6 +2894,10 @@ files = [
 name = "sniffio"
 version = "1.3.0"
 description = "Sniff out which async library your code is running under"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2572,6 +2920,10 @@ files = [
 name = "stack-data"
 version = "0.6.3"
 description = "Extract data from python stack frames and tracebacks for informative displays"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -2605,6 +2957,10 @@ widechars = ["wcwidth"]
 name = "terminado"
 version = "0.18.0"
 description = "Tornado websocket backend for the Xterm.js Javascript terminal emulator library."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -2690,6 +3046,10 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 name = "types-python-dateutil"
 version = "2.8.19.20240106"
 description = "Typing stubs for python-dateutil"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -2741,6 +3101,10 @@ devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)
 name = "uri-template"
 version = "1.3.0"
 description = "RFC 6570 URI Template Processor"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2771,6 +3135,10 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "wcwidth"
 version = "0.2.13"
 description = "Measures the displayed width of unicode strings in a terminal"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = "*"
 files = [
@@ -2782,6 +3150,10 @@ files = [
 name = "webcolors"
 version = "1.13"
 description = "A library for working with the color formats defined by HTML and CSS."
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2808,6 +3180,10 @@ files = [
 name = "websocket-client"
 version = "1.7.0"
 description = "WebSocket client for Python with low level API options"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -2824,6 +3200,10 @@ test = ["websockets"]
 name = "widgetsnbextension"
 version = "4.0.9"
 description = "Jupyter interactive widgets for Jupyter Notebook"
+<<<<<<< HEAD
+=======
+category = "dev"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2928,4 +3308,8 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
+<<<<<<< HEAD
 content-hash = "51faac9e4dcfd0757cbeed619f9328f355f280f52ea7d32686723737ad357044"
+=======
+content-hash = "028b537a91059d85d122d82abfbe1dcacfbf41829aacd465a868a2c9bb0cce6d"
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee

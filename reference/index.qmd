@@ -1,5 +1,6 @@
 # Function reference {.doc .doc-index}
 
+<<<<<<< HEAD
 ## For Users
 
 User facing estimation functions
@@ -33,13 +34,21 @@ Details on Methods and Attributes
 | [did.lpdid](did.lpdid.qmd#pyfixest.did.lpdid) |  |
 | [did.twfe](did.twfe.qmd#pyfixest.did.twfe) |  |
 
+=======
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
 ## For Developers
 
 PyFixest internals and utilities
 
+<<<<<<< HEAD
 
 | | |
 | --- | --- |
 | [demean.demean](demean.demean.qmd#pyfixest.demean.demean) | Demeans the input array `x` based on the specified factors and weights. This is |
 | [detect_singletons.detect_singletons](detect_singletons.detect_singletons.qmd#pyfixest.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
 | [model_matrix_fixest](model_matrix_fixest.qmd#pyfixest.model_matrix_fixest) |  |
+=======
+| | |
+| --- | --- |
+| [demean](demean.qmd#pyfixest.demean) |  |
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee

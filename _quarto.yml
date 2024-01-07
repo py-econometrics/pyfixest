@@ -6,7 +6,11 @@ metadata-files:
 
 website:
   navbar:
+<<<<<<< HEAD
     #page_navigation: true
+=======
+    page_navigation: true
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
     #favicon: "figures/pyfixest-logo.png"
     #page-footer:
       #center: |
@@ -18,6 +22,7 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "Home"
+<<<<<<< HEAD
         file: readme.md
       #- text: "Tutorial"
       #  file: docs/tutorial.ipynb
@@ -25,6 +30,15 @@ website:
       #  file: docs/difference-in-differences-estimation.ipynb
       #- text: "News"
       #  file: docs/news.md
+=======
+        file: docs/index.ipynb
+      - text: "Tutorial"
+        file: docs/tutorial.ipynb
+      - text: "Difference-in-Differences Estimation"
+        file: docs/difference-in-differences-estimation.ipynb
+      - text: "News"
+        file: docs/news.md
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
       - text: "Reference"
         file: reference/index.qmd
 
@@ -34,6 +48,7 @@ quartodoc:
   sidebar: _sidebar.yml
 
   sections:
+<<<<<<< HEAD
     - title: For Users
       desc: |
         User facing estimation functions
@@ -68,3 +83,18 @@ quartodoc:
         - demean.demean
         - detect_singletons.detect_singletons
         - model_matrix_fixest
+=======
+    #- title: For Users
+    #  desc: User facing estimation functions
+    #  contents:
+      #  - estimation.feols
+      #  - estimation.fepois
+      # - did.estimation.did2s
+        #- did.estimation.lpdid
+        #- did.estimation.event_study
+    - title: For Developers
+      desc: PyFixest internals and utilities
+      contents:
+        - demean
+    #    #- detect_singletons.detect_singletons
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee

@@ -3,6 +3,7 @@ website:
   - contents:
     - reference/index.qmd
     - contents:
+<<<<<<< HEAD
       - reference/estimation.fepois.qmd
       section: For Users
     - contents:
@@ -21,6 +22,9 @@ website:
       - reference/demean.demean.qmd
       - reference/detect_singletons.detect_singletons.qmd
       - reference/model_matrix_fixest.qmd
+=======
+      - reference/demean.qmd
+>>>>>>> 2161d2b204a69c8ae5ddfd8697ace7a24fe872ee
       section: For Developers
     id: reference
   - id: dummy-sidebar
