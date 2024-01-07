@@ -1,9 +1,35 @@
 # Function reference {.doc .doc-index}
 
+## For Users
+
+User facing estimation functions
+
+
+| | |
+| --- | --- |
+| [estimation.feols](estimation.feols.qmd#pyfixest.estimation.feols) | Estimate linear regression models with fixed effects using fixest formula syntax. |
+| [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
+| [did.estimation.did2s](did.estimation.did2s.qmd#pyfixest.did.estimation.did2s) | Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator. |
+| [did.estimation.lpdid](did.estimation.lpdid.qmd#pyfixest.did.estimation.lpdid) | Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach. |
+
+## Summarize and Visualize
+
+Post-Processing of Estimation Results
+
+
+| | |
+| --- | --- |
+| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | # Summary |
+| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models# |
+| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | # coefplot |
+| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | # iplot |
+
 ## For Developers
 
 PyFixest internals and utilities
 
+
 | | |
 | --- | --- |
 | [demean](demean.qmd#pyfixest.demean) |  |
+| [detect_singletons](detect_singletons.qmd#pyfixest.detect_singletons) |  |

@@ -1,0 +1,17 @@
+# summarize.summary { #pyfixest.summarize.summary }
+
+`summarize.summary(models, digits=3)`
+
+# Summary
+
+Prints a summary of the feols() estimation results for each estimated model.
+
+For each model, the method prints a header indicating the fixed-effects and the
+dependent variable, followed by a table of coefficient estimates with standard
+errors, t-values, and p-values.
+
+Args:
+    digits (int, optional): The number of decimal places to round the summary statistics to. Default is 3.
+
+Returns:
+    None

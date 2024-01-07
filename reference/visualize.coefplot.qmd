@@ -1,0 +1,20 @@
+# visualize.coefplot { #pyfixest.visualize.coefplot }
+
+`visualize.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)`
+
+# coefplot
+
+Plot model coefficients with confidence intervals.
+
+Args:
+    models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
+    figsize (tuple): The size of the figure.
+    alpha (float): The significance level for the confidence intervals.
+    yintercept (float or None): The value at which to draw a horizontal line on the plot. Default is 0.
+    xintercept (float or None): The value at which to draw a vertical line on the plot. Default is None.
+    rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    coefficients (list): A list of coefficients to plot. If None, all coefficients are plotted.
+    title (str): The title of the plot.
+    coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
+Returns:
+    A lets-plot figure.

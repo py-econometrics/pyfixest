@@ -238,30 +238,27 @@ def did2s(
         i_ref1=[-1.0, np.inf],
     )
 
-    fit.tidy()
+    fit.tidy().head()
     ```
 
     We can also inspect the model visually:
 
     ```{python}
-    fit.iplot().show()
+    fit.iplot(figsize= [1200, 400], coord_flip=False).show()
     ```
 
     To estimate a pooled effect, we need to slightly update the second stage formula:
 
     ```{python}
     fit = did2s(
-
-    ```{python}
-    fit_did2s = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
-        second_stage="~i(rel_year)",
+        second_stage="~i(treat)",
         treatment="treat",
         cluster="state"
     )
-    fit.tidy()
+    fit.tidy().head()
     ```
     """
 
@@ -381,8 +378,8 @@ def lpdid(
         att=False
     )
 
-    fit.tidy()
-    fit.iplot().show()
+    fit.tidy().head()
+    fit.iplot(figsize= [1200, 400], coord_flip=False).show()
     ```
 
     To get the ATT, set `att=True`:
@@ -400,6 +397,7 @@ def lpdid(
         att=True
     )
     fit.tidy()
+    ```
     """
 
     FIT = LPDID(

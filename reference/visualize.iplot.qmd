@@ -1,0 +1,18 @@
+# visualize.iplot { #pyfixest.visualize.iplot }
+
+`visualize.iplot(models, alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)`
+
+# iplot
+
+Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals.
+Args:
+    models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
+    figsize (tuple): The size of the figure.
+    alpha (float): The significance level for the confidence intervals.
+    yintercept (int or None): The value at which to draw a horizontal line on the plot.
+    xintercept (int or None): The value at which to draw a vertical line on the plot.
+    rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    title (str): The title of the plot.
+    coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
+Returns:
+    A lets-plot figure.
