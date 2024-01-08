@@ -6,9 +6,9 @@
 - Changes all docstrings to `numpy` format.
 - Difference-in-differences estimation functions now need to be imported via the `pyfixest.did.estimation` module:
 
-   ```{python}
-   from pyfixest.did.estimation import did2s, lpdid, event_study
-   ```
+```{python}
+from pyfixest.did.estimation import did2s, lpdid, event_study
+```
 
 ## PyFixest 0.13.4
 

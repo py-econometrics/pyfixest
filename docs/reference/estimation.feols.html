@@ -425,7 +425,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="RyLuh2"></div>
+            <div id="TPICWs"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -449,9 +449,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("RyLuh2").appendChild(div);
+                        document.getElementById("TPICWs").appendChild(div);
                     };
-                    var e = document.getElementById("RyLuh2");
+                    var e = document.getElementById("TPICWs");
                     e.appendChild(script);
                 })()
             </script>
@@ -592,8 +592,8 @@ depvar                        Y                  Y
 X1             -0.95*** (0.067)  -0.979*** (0.077)
 X2            -0.174*** (0.018)  -0.175*** (0.022)
 --------------------------------------------------
-f1                            x                  -
 f2                            -                  x
+f1                            x                  -
 --------------------------------------------------
 R2                        0.489              0.354
 S.E. type                by: f1             by: f2
@@ -616,8 +616,8 @@ depvar                        Y                  Y
 X1             -0.95*** (0.067)  -0.924*** (0.061)
 X2            -0.174*** (0.018)  -0.174*** (0.015)
 --------------------------------------------------
-f1                            x                  x
 f2                            -                  x
+f1                            x                  x
 --------------------------------------------------
 R2                        0.489              0.659
 S.E. type                by: f1             by: f1
@@ -642,8 +642,8 @@ Intercept      0.889*** (0.108)
 X1            -0.993*** (0.082)   -0.95*** (0.067)  -0.979*** (0.077)
 X2            -0.176*** (0.022)  -0.174*** (0.018)  -0.175*** (0.022)
 ---------------------------------------------------------------------
-f1                            -                  x                  -
 f2                            -                  -                  x
+f1                            -                  x                  -
 ---------------------------------------------------------------------
 R2                        0.177              0.489              0.354
 S.E. type                   iid             by: f1             by: f2
@@ -665,8 +665,8 @@ depvar                        Y                 Y2
 --------------------------------------------------
 X1            -0.919*** (0.065)  -1.228*** (0.195)
 --------------------------------------------------
-f1                            x                  x
 f2                            x                  x
+f1                            x                  x
 --------------------------------------------------
 R2                        0.609              0.168
 S.E. type                by: f1             by: f1
@@ -690,8 +690,8 @@ depvar                        Y                 Y2                  Y           
 ----------------------------------------------------------------------------------------
 X1            -0.949*** (0.069)  -1.266*** (0.176)  -0.982*** (0.081)  -1.301*** (0.205)
 ----------------------------------------------------------------------------------------
-f1                            x                  x                  -                  -
 f2                            -                  -                  x                  x
+f1                            x                  x                  -                  -
 ----------------------------------------------------------------------------------------
 R2                        0.437              0.115              0.302               0.09
 S.E. type                by: f1             by: f1             by: f2             by: f2
@@ -838,7 +838,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>fit.coefplot()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
-   <div id="gUydvd"></div>
+   <div id="raUl8g"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -916,7 +916,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("gUydvd");
+           var plotContainer = document.getElementById("raUl8g");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});

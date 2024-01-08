@@ -136,29 +136,29 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
     <a class="nav-link" href="../readme.html">PyFixest</a>
-  </li>
+  </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/tutorial.html">Quickstart</a>
-  </li>
+  </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/difference-in-differences.html">Difference-in-Differences Estimation</a>
-  </li>
+  </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/Replicating-the-Effect.html">Replicating ‘The Effect’ with PyFixest</a>
-  </li>
+  </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../reference/index.html">Function Reference</a>
-  </li>
+    <a class="nav-link" href="../reference/index.html">Documentation</a>
+  </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../vignettes/news.html" aria-current="page">Changelog</a>
-  </li>
+  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
     <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"><i class="bi bi-github" role="img">
-</i>
+</i> 
  </a>
-  </li>
+  </li>  
 </ul>
               <div id="quarto-search" class="" title="Search"></div>
           </div> <!-- /navcollapse -->
@@ -169,7 +169,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-
+    
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -180,25 +180,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="pyfixest-0.14.0" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.14.0">PyFixest 0.14.0</h2>
 <ul>
-<li><p>Moves the documentation to <a href="https://github.com/machow/quartodoc">quartodoc</a>.</p></li>
-<li><p>Changes all docstrings to <code>numpy</code> format.</p></li>
-<li><p>Difference-in-differences estimation functions now need to be imported via the <code>pyfixest.did.estimation</code> module:</p>
-<p>::: {.cell execution_count=1} <code>{.python .cell-code}  from pyfixest.did.estimation import did2s, lpdid, event_study</code></p>
-<p>::: {.cell-output .cell-output-stdout} ```</p>
-<pre><code>   You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-   the module is not yet as thoroughly tested as I would like. So please use it with caution and
-   provide feedback in case you stumble over any bugs!</code></pre>
-<pre><code>:::
+<li>Moves the documentation to <a href="https://github.com/machow/quartodoc">quartodoc</a>.</li>
+<li>Changes all docstrings to <code>numpy</code> format.</li>
+<li>Difference-in-differences estimation functions now need to be imported via the <code>pyfixest.did.estimation</code> module:</li>
+</ul>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s, lpdid, event_study</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+      the module is not yet as thoroughly tested as I would like. So please use it with caution and
+      provide feedback in case you stumble over any bugs!
+      </code></pre>
+</div>
+<div class="cell-output cell-output-display">
 
-::: {.cell-output .cell-output-display}
-
-```{=html}
-
-            &lt;div id="ht5cC6"&gt;&lt;/div&gt;
-            &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
+            <div id="6HIwkf"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                };
+                }; 
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -210,7 +211,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-
+                        
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -218,15 +219,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ht5cC6").appendChild(div);
+                        document.getElementById("6HIwkf").appendChild(div);
                     };
-                    var e = document.getElementById("ht5cC6");
+                    var e = document.getElementById("6HIwkf");
                     e.appendChild(script);
                 })()
-            &lt;/script&gt;
-</code></pre>
-<p>::: :::</p></li>
-</ul>
+            </script>
+            
+</div>
+</div>
 </section>
 <section id="pyfixest-0.13.4" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.13.4">PyFixest 0.13.4</h2>
@@ -557,7 +558,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       toggleBodyColorMode(bsSheetEl);
     }
   }
-  toggleBodyColorPrimary();
+  toggleBodyColorPrimary();  
   const icon = "";
   const anchorJS = new window.AnchorJS();
   anchorJS.options = {
@@ -601,7 +602,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       theme: 'quarto',
       placement: 'bottom-start'
     };
-    window.tippy(el, config);
+    window.tippy(el, config); 
   }
   const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
   for (var i=0; i<noterefs.length; i++) {
