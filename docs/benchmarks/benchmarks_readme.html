@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>readme</title>
+<title>benchmarks_readme</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -111,11 +111,8 @@ ul.task-list{list-style: none;}
 
 <section id="readme" class="level2">
 <h2 class="anchored" data-anchor-id="readme">Readme</h2>
-<ul>
-<li><a href="https://github.com/s3alfisc/pyfixest/tree/master/tests/check-crv-diffs-fixest-pyfixest-glm.qmd">Check How close <code>PyFixest</code> reproduces standard errors produced via <code>fixest</code> and <code>stats::glm</code></a></li>
-<li><a href="https://github.com/s3alfisc/pyfixest/tree/master/tests/test_vs_fixest.py">Test <code>PyFixest</code> against <code>fixest</code></a></li>
-<li><code>pandas</code> needs to be a version lower than <code>1.5.3</code> to be compatible with <code>rpy2</code>, else you’ll run into <a href="https://stackoverflow.com/questions/76404811/attributeerror-dataframe-object-has-no-attribute-iteritems">this error</a>. The github actions for testing ensures that <code>pandas</code> is of a version lower than <code>1.5.3</code>.</li>
-</ul>
+<p>All benchmarks follow <code>fixest</code>’s benchmarks, which you can find <a href="https://github.com/lrberge/fixest/tree/master/_BENCHMARK">here</a>. <code>PyFixest</code> benchmarks were run on a Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz, 2304Mhz, 4 Core(s), 8 Logical Processor(s). Timings for <code>R</code>, <code>Stata</code> and <code>Julia</code> programs are taken from the <code>fixest</code>’s benchmarks.</p>
+<p>To run the python benchmarks, you need to install the following packages: - <code>pyfixest</code> - <code>pandas</code> - <code>numpy</code> - <code>tqdm</code> First, you need to create the data by running the <code>data_generation.R</code> files. This will populate the <code>_STATA</code> and <code>data</code> folders. Then, you can run the <code>run_benchmarks.ipynb</code> notebook to run the benchmarks. This will populate the <code>results_py.csv</code> file. Finally, you can run the <code>plot_benchmarks.ipynb</code> notebook to generate the plots.</p>
 
 
 </section>

@@ -8,10 +8,10 @@ metadata-files:
 website:
   navbar:
     page_navigation: true
-    favicon: "figures/pyfixest-logo.png"
-    page-footer:
-      center: |
-        Developed by [Alexander Fischer](https://github.com/s3alfisc) and [Styfen Schär](https://github.com/styfenschaer)
+    #favicon: "figures/pyfixest-logo.png"
+    #page-footer:
+    #  center: |
+    #    Developed by [Alexander Fischer](https://github.com/s3alfisc) and [Styfen Schär](https://github.com/styfenschaer)
     search: true
     right:
       - icon: github
