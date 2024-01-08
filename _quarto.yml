@@ -18,17 +18,17 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "PyFixest"
-        file: ./readme.md
+        file: ./readme2.md
       - text: "Quickstart"
-        file: ./vignettes/quickstart.ipynb
+        file: ./vignettes/quickstart2.ipynb
       - text: "Difference-in-Differences Estimation"
-        file: ./vignettes/difference-in-differences.ipynb
+        file: ./vignettes/difference-in-differences2.ipynb
       - text: "Replicating 'The Effect' with PyFixest"
-        file: ./vignettes/replicating-the-effect.ipynb
+        file: ./vignettes/replicating-the-effect2.ipynb
       - text: "Documentation"
         file: reference/index.qmd
       - text: "Changelog"
-        file: ./vignettes/news.qmd
+        file: ./vignettes/news2.qmd
 
 quartodoc:
   package: pyfixest
