@@ -15,10 +15,10 @@ from pyfixest.exceptions import (
 class Fepois(Feols):
 
     """
-    Class to estimate Poisson Regressions, inheriting from [Feols(/docs/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/docs/reference/Feols.qmd)
+    Class to estimate Poisson Regressions, inheriting from [Feols(/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/reference/Feols.qmd)
     to cater to the specifics of Poisson regression models.
 
-    Users should not directly instantiate this class, but rather use the [fepois()](/docs/reference/estimation.fepois.qmd) function.
+    Users should not directly instantiate this class, but rather use the [fepois()](/reference/estimation.fepois.qmd) function.
 
     Parameters
     ----------

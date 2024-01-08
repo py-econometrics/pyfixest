@@ -26,10 +26,10 @@ class Feols:
 
     """
     A class for estimating regression models via ordinary least squares. Note that in the logic of this package,
-    fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/docs/reference/Feols.qmd).
+    fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/reference/Feols.qmd).
     See the `FixestMulti` class for details.
 
-    Users should not directly instantiate this class, but rather use the [feols()](/docs/reference/estimation.feols.qmd) function.
+    Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
 
     Parameters
     ----------
@@ -283,7 +283,7 @@ class Feols:
         Returns
         -------
         Feols
-            An instance of class [Feols(/docs/reference/Feols.qmd) with updated inference.
+            An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
 
         _data = self._data
@@ -578,7 +578,7 @@ class Feols:
         na_index: np.ndarray,
     ) -> None:
         """
-        Enrich an instance of class [Feols(/docs/reference/Feols.qmd) with additional attributes set in the `FixestMulti` class.
+        Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the `FixestMulti` class.
 
         Parameters
         ----------

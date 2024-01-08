@@ -8,7 +8,7 @@ class Feiv(Feols):
     A class to estimate an IV model using a 2SLS estimator. Inherits from the Feols class.
     Users should not call this class directly, but rather use the feols() function.
 
-    Users should not directly instantiate this class, but rather use the [feols()](/docs/reference/estimation.feols.qmd) function.
+    Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
 
     Parameters
     ----------

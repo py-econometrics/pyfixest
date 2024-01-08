@@ -82,7 +82,7 @@ ul.task-list{list-style: none;}
     <a class="nav-link" href="../vignettes/Replicating-the-Effect.html">Replicating ‘The Effect’ with PyFixest</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page">Function Reference</a>
+    <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/news.html">Changelog</a>
@@ -121,7 +121,7 @@ ul.task-list{list-style: none;}
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">For Users</a>
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">Estimation Functions</a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -156,12 +156,37 @@ ul.task-list{list-style: none;}
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">Summarize and Visualize</a>
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">Estimation Classes</a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/feols.html" class="sidebar-item-text sidebar-link active">feols</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/fepois.html" class="sidebar-item-text sidebar-link">fepois</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/feiv.html" class="sidebar-item-text sidebar-link">feiv</a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">Summarize and Visualize</a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link">summarize.summary</a>
@@ -186,32 +211,7 @@ ul.task-list{list-style: none;}
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">Estimation Classes</a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/feols.html" class="sidebar-item-text sidebar-link active">feols</a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.html" class="sidebar-item-text sidebar-link">fepois</a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.html" class="sidebar-item-text sidebar-link">feiv</a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">For Developers</a>
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">Misc / Utilities</a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -266,8 +266,8 @@ ul.task-list{list-style: none;}
 <section id="pyfixest.feols.Feols" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols">Feols</h3>
 <p><code>feols.Feols(self, Y, X, weights, collin_tol, coefnames)</code></p>
-<p>A class for estimating regression models via ordinary least squares. Note that in the logic of this package, fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/docs/reference/Feols.qmd). See the <code>FixestMulti</code> class for details.</p>
-<p>Users should not directly instantiate this class, but rather use the <a href="../docs/reference/estimation.feols.qmd">feols()</a> function.</p>
+<p>A class for estimating regression models via ordinary least squares. Note that in the logic of this package, fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/reference/Feols.qmd). See the <code>FixestMulti</code> class for details.</p>
+<p>Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
@@ -605,7 +605,7 @@ ul.task-list{list-style: none;}
 <tbody>
 <tr class="odd">
 <td><a href="#pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</a></td>
-<td>Enrich an instance of class [Feols(/docs/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</td>
+<td>Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</td>
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.feols.Feols.coef">coef</a></td>
@@ -684,7 +684,7 @@ ul.task-list{list-style: none;}
 <section id="pyfixest.feols.Feols.add_fixest_multi_context" class="level5">
 <h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</h5>
 <p><code>feols.Feols.add_fixest_multi_context(fml, depvar, Y, _data, _ssc_dict, _k_fe, fval, na_index)</code></p>
-<p>Enrich an instance of class [Feols(/docs/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</p>
+<p>Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</p>
 <section id="parameters-1" class="level6">
 <h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
 <table class="table">
@@ -1408,8 +1408,8 @@ ul.task-list{list-style: none;}
 <h6 class="anchored" data-anchor-id="returns-16">Returns</h6>
 <table class="table">
 <colgroup>
-<col style="width: 21%">
-<col style="width: 78%">
+<col style="width: 22%">
+<col style="width: 77%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1420,7 +1420,7 @@ ul.task-list{list-style: none;}
 <tbody>
 <tr class="odd">
 <td>pyfixest.feols.Feols</td>
-<td>An instance of class [Feols(/docs/reference/Feols.qmd) with updated inference.</td>
+<td>An instance of class [Feols(/reference/Feols.qmd) with updated inference.</td>
 </tr>
 </tbody>
 </table>

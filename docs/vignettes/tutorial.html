@@ -136,29 +136,29 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
     <a class="nav-link" href="../readme.html">PyFixest</a>
-  </li>  
+  </li>
   <li class="nav-item">
     <a class="nav-link active" href="../vignettes/tutorial.html" aria-current="page">Quickstart</a>
-  </li>  
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/difference-in-differences.html">Difference-in-Differences Estimation</a>
-  </li>  
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/Replicating-the-Effect.html">Replicating ‘The Effect’ with PyFixest</a>
-  </li>  
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../reference/index.html">Function Reference</a>
-  </li>  
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/news.html">Changelog</a>
-  </li>  
+  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
     <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"><i class="bi bi-github" role="img">
-</i> 
+</i>
  </a>
-  </li>  
+  </li>
 </ul>
               <div id="quarto-search" class="" title="Search"></div>
           </div> <!-- /navcollapse -->
@@ -169,7 +169,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -192,7 +192,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                }; 
+                };
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -204,7 +204,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-                        
+
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -218,7 +218,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                     e.appendChild(script);
                 })()
             </script>
-            
+
 </div>
 </div>
 <div class="cell" data-execution_count="2">
@@ -497,7 +497,7 @@ Deviance: 1070.729</code></pre>
 </section>
 <section id="multiple-estimation" class="level2">
 <h2 class="anchored" data-anchor-id="multiple-estimation">Multiple Estimation</h2>
-<p><code>PyFixest</code> supports a range of multiple estimation functionality: <code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, and multiple dependent variables. If multiple regression syntax is used, <code>feols()</code> and <code>fepois</code> returns an instance of a <code>FixestMulti</code> object, which essentially consists of a dicionary of <code>Fepois</code> or [Feols(/docs/reference/Feols.qmd) instances.</p>
+<p><code>PyFixest</code> supports a range of multiple estimation functionality: <code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, and multiple dependent variables. If multiple regression syntax is used, <code>feols()</code> and <code>fepois</code> returns an instance of a <code>FixestMulti</code> object, which essentially consists of a dicionary of <code>Fepois</code> or [Feols(/reference/Feols.qmd) instances.</p>
 <div class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>multi_fit <span class="op">=</span> feols(fml<span class="op">=</span><span class="st">"Y~X1 | csw0(f1, f2)"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>multi_fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -865,7 +865,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                }; 
+                };
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -877,7 +877,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-                        
+
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -891,7 +891,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
                     e.appendChild(script);
                 })()
             </script>
-            
+
 </div>
 <div class="cell-output cell-output-display">
    <div id="rACZPz"></div>
@@ -976,7 +976,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
-       })();    
+       })();
    </script>
 </div>
 </div>
@@ -1199,7 +1199,7 @@ Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</code></pre
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
-       })();    
+       })();
    </script>
 </div>
 </div>
@@ -1269,7 +1269,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       toggleBodyColorMode(bsSheetEl);
     }
   }
-  toggleBodyColorPrimary();  
+  toggleBodyColorPrimary();
   const icon = "";
   const anchorJS = new window.AnchorJS();
   anchorJS.options = {
@@ -1313,7 +1313,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       theme: 'quarto',
       placement: 'bottom-start'
     };
-    window.tippy(el, config); 
+    window.tippy(el, config);
   }
   const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
   for (var i=0; i<noterefs.length; i++) {

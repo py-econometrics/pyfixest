@@ -8,16 +8,16 @@
 
 | Name | Description |
 | --- | --- |
-| [Fepois](#pyfixest.fepois.Fepois) | Class to estimate Poisson Regressions, inheriting from [Feols(/docs/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/docs/reference/Feols.qmd) |
+| [Fepois](#pyfixest.fepois.Fepois) | Class to estimate Poisson Regressions, inheriting from [Feols(/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/reference/Feols.qmd) |
 
 ### Fepois { #pyfixest.fepois.Fepois }
 
 `fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08)`
 
-Class to estimate Poisson Regressions, inheriting from [Feols(/docs/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/docs/reference/Feols.qmd)
+Class to estimate Poisson Regressions, inheriting from [Feols(/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/reference/Feols.qmd)
 to cater to the specifics of Poisson regression models.
 
-Users should not directly instantiate this class, but rather use the [fepois()](/docs/reference/estimation.fepois.qmd) function.
+Users should not directly instantiate this class, but rather use the [fepois()](/reference/estimation.fepois.qmd) function.
 
 #### Parameters
 
