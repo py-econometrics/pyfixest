@@ -44,7 +44,7 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class `feols`.
+        A fitted model object of class [Feols(/docs/reference/Feols.qmd).
 
     Examples
 

@@ -25,11 +25,131 @@ from pyfixest.dev_utils import _polars_to_pandas
 class Feols:
 
     """
+    A class for estimating regression models via ordinary least squares. Note that in the logic of this package,
+    fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/docs/reference/Feols.qmd).
+    See the `FixestMulti` class for details.
 
-    # Feols
+    Users should not directly instantiate this class, but rather use the [feols()](/docs/reference/estimation.feols.qmd) function.
 
-    A class for estimating regression models with high-dimensional fixed effects via
-    ordinary least squares.
+    Parameters
+    ----------
+    Y : np.ndarray
+        Dependent variable, a two-dimensional numpy array.
+    X : np.ndarray
+        Independent variables, a two-dimensional numpy array.
+    weights : np.ndarray
+        Weights, a one-dimensional numpy array.
+    collin_tol : float
+        Tolerance level for collinearity checks.
+    coefnames : List[str]
+        Names of the coefficients (of the design matrix X).
+
+    Attributes
+    ----------
+    _method : str
+        Specifies the method used for regression, set to "feols".
+    _is_iv : bool
+        Indicates whether instrumental variables are used, initialized as False.
+
+    _Y : np.ndarray
+        The dependent variable array.
+    _X : np.ndarray
+        The independent variables array.
+    _X_is_empty : bool
+        Indicates whether the X array is empty.
+    _collin_tol : float
+        Tolerance level for collinearity checks.
+    _coefnames : list
+        Names of the coefficients (of the design matrix X).
+    _collin_vars : list
+        Variables identified as collinear.
+    _collin_index : list
+        Indices of collinear variables.
+    _Z : np.ndarray
+        Alias for the _X array, used for calculations.
+    _weights : np.ndarray
+        Array of weights for each observation.
+    _N : int
+        Number of observations.
+    _k : int
+        Number of independent variables (or features).
+    _support_crv3_inference : bool
+        Indicates support for CRV3 inference.
+    _support_iid_inference : bool
+        Indicates support for IID inference.
+    _data : Any
+        Data used in the regression, to be enriched outside of the class.
+    _fml : Any
+        Formula used in the regression, to be enriched outside of the class.
+    _has_fixef : bool
+        Indicates whether fixed effects are used.
+    _fixef : Any
+        Fixed effects used in the regression.
+    _icovars : Any
+        Internal covariates, to be enriched outside of the class.
+    _ssc_dict : dict
+        Dictionary for sum of squares and cross products matrices.
+    _tZX : np.ndarray
+        Transpose of Z multiplied by X, set in get_fit().
+    _tXZ : np.ndarray
+        Transpose of X multiplied by Z, set in get_fit().
+    _tZy : np.ndarray
+        Transpose of Z multiplied by Y, set in get_fit().
+    _tZZinv : np.ndarray
+        Inverse of the transpose of Z multiplied by Z, set in get_fit().
+    _beta_hat : np.ndarray
+        Estimated regression coefficients.
+    _Y_hat_link : np.ndarray
+        Predicted values of the dependent variable.
+    _Y_hat_response : np.ndarray
+        Response predictions of the model.
+    _u_hat : np.ndarray
+        Residuals of the regression model.
+    _scores : np.ndarray
+        Scores used in the regression analysis.
+    _hessian : np.ndarray
+        Hessian matrix used in the regression.
+    _bread : np.ndarray
+        Bread matrix, used in calculating the variance-covariance matrix.
+    _vcov_type : Any
+        Type of variance-covariance matrix used.
+    _vcov_type_detail : Any
+        Detailed specification of the variance-covariance matrix type.
+    _is_clustered : bool
+        Indicates if clustering is used in the variance-covariance calculation.
+    _clustervar : Any
+        Variable used for clustering in the variance-covariance calculation.
+    _G : Any
+        Group information used in clustering.
+    _ssc : Any
+        Sum of squares and cross products matrix.
+    _vcov : np.ndarray
+        Variance-covariance matrix of the estimated coefficients.
+    _se : np.ndarray
+        Standard errors of the estimated coefficients.
+    _tstat : np.ndarray
+        T-statistics of the estimated coefficients.
+    _pvalue : np.ndarray
+        P-values associated with the t-statistics.
+    _conf_int : np.ndarray
+        Confidence intervals for the estimated coefficients.
+    _F_stat : Any
+        F-statistic for the model, set in get_Ftest().
+    _fixef_dict : dict
+        Dictionary containing fixed effects estimates.
+    _sumFE : np.ndarray
+        Sum of all fixed effects for each observation.
+    _rmse : float
+        Root mean squared error of the model.
+    _r2 : float
+        R-squared value of the model.
+    _r2_within : float
+        R-squared value computed on demeaned dependent variable.
+    _adj_r2 : float
+        Adjusted R-squared value of the model.
+    _adj_r2_within : float
+        Adjusted R-squared value computed on demeaned dependent variable.
+
     """
 
     def __init__(
@@ -40,19 +160,6 @@ class Feols:
         collin_tol: float,
         coefnames: List[str],
     ) -> None:
-        """
-        Initiate an instance of class `Feols`.
-
-        Args:
-            Y (np.array): dependent variable. two-dimensional np.array
-            X (np.array): independent variables. two-dimensional np.array
-            weights (np.array): weights. one-dimensional np.array
-            collin_tol (float): tolerance level for collinearity checks
-            coefnames (List[str]): names of the coefficients (of the design matrix X)
-        Returns:
-            None
-
-        """
 
         self._method = "feols"
         self._is_iv = False
@@ -139,14 +246,6 @@ class Feols:
         self._adj_r2_within = None
 
     def get_fit(self) -> None:
-        """
-        Fit a single regression model, via ordinary least squares (OLS).
-
-        Args:
-            None
-        Returns:
-            None
-        """
 
         _X = self._X
         _Y = self._Y
@@ -175,16 +274,18 @@ class Feols:
         """
         Compute covariance matrices for an estimated regression model.
 
-        Args:
-            vcov : Union[str, Dict[str, str]
-                A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-                If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                If a dictionary, it should have the format {"CRV1":"clustervar"} for CRV1 inference
-                or {"CRV3":"clustervar"} for CRV3 inference.
-                Note that CRV3 inference is currently not supported with arbitrary fixed effects and IV estimation.
+        Parameters
+        ----------
+        vcov : Union[str, Dict[str, str]]
+            A string or dictionary specifying the type of variance-covariance matrix to use for inference.
+            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3". If a dictionary,
+            it should have the format {"CRV1": "clustervar"} for CRV1 inference or {"CRV3": "clustervar"}
+            for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation.
 
-        Returns:
-            An instance of class `Feols` with updated inference.
+        Returns
+        -------
+        Feols
+            An instance of class [Feols(/docs/reference/Feols.qmd) with updated inference.
         """
 
         _data = self._data
@@ -429,16 +530,17 @@ class Feols:
 
     def get_inference(self, alpha: float = 0.95) -> None:
         """
-        Compute standard errors, t-statistics and p-values for the regression model.
+        Compute standard errors, t-statistics, and p-values for the regression model.
 
-        Args:
-            alpha (float): The significance level for confidence intervals. Defaults to 0.95.
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for confidence intervals. Defaults to 0.95.
 
-        Returns:
-            None
-
+        Returns
+        -------
+        None
         """
-
         _vcov = self._vcov
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
@@ -478,19 +580,32 @@ class Feols:
         na_index: np.ndarray,
     ) -> None:
         """
-        Enrich an instance of class `Feols` with additional attributes set in the `FixestMulti` class.
-        Args:
-            fml (str): The formula used for estimation.
-            depvar (str): The dependent variable of the regression model.
-            Y (pd.Series): The dependent variable of the regression model.
-            _data (pd.DataFrame): The data used for estimation.
-            _ssc_dict (dict): A dictionary with the sum of squares and cross products matrices.
-            _k_fe (int): The number of fixed effects.
-            fval (str): The fixed effects formula.
-            na_index (np.ndarray): An array with the indices of missing values.
-        Returns:
-            None
+        Enrich an instance of class [Feols(/docs/reference/Feols.qmd) with additional attributes set in the `FixestMulti` class.
+
+        Parameters
+        ----------
+        fml : str
+            The formula used for estimation.
+        depvar : str
+            The dependent variable of the regression model.
+        Y : pd.Series
+            The dependent variable of the regression model.
+        _data : pd.DataFrame
+            The data used for estimation.
+        _ssc_dict : dict
+            A dictionary with the sum of squares and cross products matrices.
+        _k_fe : int
+            The number of fixed effects.
+        fval : str
+            The fixed effects formula.
+        na_index : np.ndarray
+            An array with the indices of missing values.
+
+        Returns
+        -------
+        None
         """
+
 
         # some bookkeeping
         self._fml = fml
@@ -508,12 +623,21 @@ class Feols:
 
     def wald_test(self, R=None, q=None, distribution="F") -> None:
         """
-        Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.
-        Args:
-            R: The matrix R of the linear hypothesis. If None, defaults to an identity matrix.
-            q: The vector q of the linear hypothesis. If None, defaults to a vector of zeros.
-            distribution: The distribution to use for the p-value. Either "F" or "chi2". Defaults to "F".
-        Returns:
+        Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null
+        hypothesis that all coefficients are zero.
+
+        Parameters
+        ----------
+        R : array-like, optional
+            The matrix R of the linear hypothesis. If None, defaults to an identity matrix.
+        q : array-like, optional
+            The vector q of the linear hypothesis. If None, defaults to a vector of zeros.
+        distribution : str, optional
+            The distribution to use for the p-value. Can be either "F" or "chi2". Defaults to "F".
+
+        Returns
+        -------
+        pd.Series
             A pd.Series with the Wald statistic and p-value.
         """
 
@@ -595,20 +719,29 @@ class Feols:
         """
         Create a coefficient plot to visualize model coefficients.
 
-        Args:
-            alpha (float, optional): Significance level for highlighting significant coefficients.
-            figsize (Tuple[int, int], optional): Size of the plot (width, height) in inches.
-            yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
-            xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
-            rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
-            coefficients (List[str], optional): List of coefficients to include in the plot.
-                If None, all coefficients are included.
-            title (str, optional): Title of the plot.
-            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for highlighting significant coefficients. Defaults to None.
+        figsize : Tuple[int, int], optional
+            Size of the plot (width, height) in inches. Defaults to None.
+        yintercept : float, optional
+            Value to set as the y-axis intercept (vertical line). Defaults to None.
+        xintercept : float, optional
+            Value to set as the x-axis intercept (horizontal line). Defaults to None.
+        rotate_xticks : int, optional
+            Rotation angle for x-axis tick labels. Defaults to None.
+        coefficients : List[str], optional
+            List of coefficients to include in the plot. If None, all coefficients are included.
+        title : str, optional
+            Title of the plot. Defaults to None.
+        coord_flip : bool, optional
+            Whether to flip the coordinates of the plot. Defaults to None.
 
-        Returns:
+        Returns
+        -------
+        lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
-
         """
 
         # lazy loading to avoid circular import
@@ -640,20 +773,29 @@ class Feols:
         coord_flip: Optional[bool] = True,
     ):
         """
-        Create a coefficient plots for variables interaceted via `i()` syntax.
+        Create coefficient plots for variables interacted via `i()` syntax.
 
-        Args:
-            alpha (float, optional): Significance level for visualization options.
-            figsize (Tuple[int, int], optional): Size of the plot (width, height) in inches.
-            yintercept (float, optional): Value to set as the y-axis intercept (vertical line).
-            xintercept (float, optional): Value to set as the x-axis intercept (horizontal line).
-            rotate_xticks (int, optional): Rotation angle for x-axis tick labels.
-            title (str, optional): Title of the plot.
-            coord_flip (bool, optional): Whether to flip the coordinates of the plot.
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for visualization options. Defaults to None.
+        figsize : Tuple[int, int], optional
+            Size of the plot (width, height) in inches. Defaults to None.
+        yintercept : float, optional
+            Value to set as the y-axis intercept (vertical line). Defaults to None.
+        xintercept : float, optional
+            Value to set as the x-axis intercept (horizontal line). Defaults to None.
+        rotate_xticks : int, optional
+            Rotation angle for x-axis tick labels. Defaults to None.
+        title : str, optional
+            Title of the plot. Defaults to None.
+        coord_flip : bool, optional
+            Whether to flip the coordinates of the plot. Defaults to None.
 
-        Returns:
+        Returns
+        -------
+        lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
-
         """
 
         visualize_module = import_module("pyfixest.visualize")
@@ -685,38 +827,43 @@ class Feols:
         cluster_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
     ):
+
         """
-        Run a wild cluster bootstrap based on an object of type "Feols"
+        Run a wild cluster bootstrap based on an object of type "Feols".
 
-        Args:
+        Parameters
+        ----------
+        B : int
+            The number of bootstrap iterations to run.
+        cluster : Union[None, np.ndarray, pd.Series, pd.DataFrame], optional
+            If None (default), checks if the model's vcov type was CRV. If yes, uses `self._clustervar`
+            as cluster. If None and no clustering was employed in the initial model, runs a heteroskedastic
+            wild bootstrap. If an argument is supplied, it is used as the cluster variable for the wild cluster
+            bootstrap. Requires a numpy array of dimension one, a pandas Series, or DataFrame, containing the clustering variable.
+        param : Union[str, None], optional
+            A string of length one, containing the test parameter of interest. Defaults to None.
+        weights_type : str, optional
+            The type of bootstrap weights. Options are 'rademacher', 'mammen', 'webb', or 'normal'. Defaults to 'rademacher'.
+        impose_null : bool, optional
+            Indicates whether to impose the null hypothesis on the bootstrap DGP. Defaults to True.
+        bootstrap_type : str, optional
+            A string of length one to choose the bootstrap type. Options are '11', '31', '13', or '33'. Defaults to '11'.
+        seed : Union[int, None], optional
+            An option to provide a random seed. Defaults to None.
+        adj : bool, optional
+            Indicates whether to apply a small sample adjustment for the number of observations and covariates. Defaults to True.
+        cluster_adj : bool, optional
+            Indicates whether to apply a small sample adjustment for the number of clusters. Defaults to True.
+        parallel : bool, optional
+            Indicates whether to run the bootstrap in parallel. Defaults to False.
+        seed : Union[str, None], optional
+            An option to provide a random seed. Defaults to None.
 
-        B (int): The number of bootstrap iterations to run
-        cluster (Union[None, np.ndarray, pd.Series, pd.DataFrame], optional): If None (default), checks if the model's vcov type was CRV. If yes, uses
-                            `self._clustervar` as cluster. If None and no clustering was employed in the initial model, runs a heteroskedastic wild bootstrap.
-                            If an argument is supplied, uses the argument as cluster variable for the wild cluster bootstrap.
-                            Requires a numpy array of dimension one,a  pandas Series or DataFrame, containing the clustering variable.
-        param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Defaults to None.
-        weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb' or 'normal'.
-                            'rademacher' by default. Defaults to 'rademacher'.
-        impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not? Defaults to True.
-        bootstrap_type (str, optional):A string of length one. Allows to choose the bootstrap type
-                            to be run. Either '11', '31', '13' or '33'. '11' by default. Defaults to '11'.
-        seed (Union[int, None], optional): Option to provide a random seed. Defaults to None.
-        adj (bool, optional): Should a small sample adjustment be applied for number of observations and covariates? Defaults to True.
-                              Note that the small sample adjustment in the bootstrap might differ from the one in the original model.
-                              This will only affect the returned non-bootstrapped t-statistic, but not the bootstrapped p-value.
-                              For exact matches, set `adj = False` and `cluster_adj = False` in `wildboottest()` and via the
-                              `ssc(adj = False, cluster_adj = False)` option in `feols()`.
-        cluster_adj (bool, optional): Should a small sample adjustment be applied for the number of clusters? Defaults to True.
-                                Note that the small sample adjustment in the bootstrap might differ from the one in the original model.
-                                This will only affect the returned non-bootstrapped t-statistic, but not the bootstrapped p-value.
-                                For exact matches, set `adj = False` and `cluster_adj = False` in `wildboottest()` and via the
-                                `ssc(adj = False, cluster_adj = False)` option in `feols()`.
-        parallel (bool, optional): Should the bootstrap be run in parallel? Defaults to False.
-        seed (Union[str, None], optional): Option to provide a random seed. Defaults to None.
-
-        Returns: a pd.DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value as well as
-                the bootstrap type, inference type (HC vs CRV) and whether the null hypothesis was imposed on the bootstrap dgp.
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value, along with
+            the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP.
         """
 
         _is_iv = self._is_iv
@@ -833,18 +980,15 @@ class Feols:
 
     def fixef(self) -> None:
         """
-        Compute the coefficients of (sweeped out) fixed effects for a regression model.
+        Compute the coefficients of (swept out) fixed effects for a regression model.
 
         This method creates the following attributes:
-
         - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
         - `sumFE` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
 
-        Args:
-            None
-
-        Returns:
-            None
+        Returns
+        -------
+        None
         """
 
         _has_fixef = self._has_fixef
@@ -919,13 +1063,16 @@ class Feols:
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
         will be set to NaN.
 
-        Args:
-            newdata (Optional[DataFrameType], optional): A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
-                If None (default), uses the data used for fitting the model.
+        Parameters
+        ----------
+        newdata : Optional[DataFrameType], optional
+            A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
+            If None (default), the data used for fitting the model is used.
 
-        Returns:
-            y_hat (np.ndarray): A flat np.array with predicted values of the regression model.
-
+        Returns
+        -------
+        y_hat : np.ndarray
+            A flat np.array with predicted values of the regression model.
         """
 
         _fml = self._fml
@@ -1006,28 +1153,28 @@ class Feols:
         """
         Fetch the number of observations used in fitting the regression model.
 
-        Params:
-            None
-        Returns:
-            None
+        Returns
+        -------
+        None
         """
         self._N = len(self._Y)
 
     def get_performance(self) -> None:
         """
         Compute multiple additional measures commonly reported with linear regression output,
-        including R-squared and adjusted R-squared. Not that variables with suffix _within
-        use demeand dependent variables Y, while variables without do not or are invariat to
+        including R-squared and adjusted R-squared. Note that variables with the suffix _within
+        use demeaned dependent variables Y, while variables without do not or are invariant to
         demeaning.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
 
         Creates the following instances:
-            r2 (float): R-squared of the regression model.
-            adj_r2 (float): Adjusted R-squared of the regression model.
-            r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.
-            adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
+        - r2 (float): R-squared of the regression model.
+        - adj_r2 (float): Adjusted R-squared of the regression model.
+        - r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.
+        - adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
 
         _Y_within = self._Y
@@ -1065,9 +1212,13 @@ class Feols:
 
     def tidy(self) -> pd.DataFrame:
         """
-        Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics and p-values.
-        Returns:
-            tidy_df (pd.DataFrame): A tidy pd.DataFrame with the regression results.
+        Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics, and p-values.
+
+        Returns
+        -------
+        tidy_df : pd.DataFrame
+            A tidy pd.DataFrame containing the regression results, including point estimates, standard errors,
+            t statistics, and p-values.
         """
 
         _coefnames = self._coefnames
@@ -1093,47 +1244,69 @@ class Feols:
 
     def coef(self) -> pd.Series:
         """
-        Return a pd.Series with estimated regression coefficients.
+        Returns
+        -------
+        pd.Series
+            A pd.Series with the estimated coefficients of the regression model.
         """
+
         return self.tidy()["Estimate"]
 
     def se(self) -> pd.Series:
         """
-        Return a pd.Series with standard errors of the estimated regression model.
+        Returns
+        -------
+        pd.Series
+            A pd.Series with the standard errors of the estimated regression model.
         """
         return self.tidy()["Std. Error"]
 
     def tstat(self) -> pd.Series:
         """
-        Return a pd.Series with t-statistics of the estimated regression model.
+        Returns
+        -------
+        pd.Series
+            A pd.Series with t-statistics of the estimated regression model.
         """
         return self.tidy()["t value"]
 
     def pvalue(self) -> pd.Series:
         """
-        Return a pd.Series with p-values of the estimated regression model.
+        Returns
+        -------
+        pd.Series
+            A pd.Series with p-values of the estimated regression model.
         """
         return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.DataFrame:
         """
-        Return a pd.DataFrame with confidence intervals for the estimated regression model.
+        Returns
+        -------
+        pd.DataFrame
+            A pd.DataFrame with confidence intervals of the estimated regression model.
         """
         return self.tidy()[["2.5 %", "97.5 %"]]
 
     def resid(self) -> np.ndarray:
         """
-        Returns a one dimensional np.array with the residuals of the estimated regression model.
+        Returns
+        -------
+        np.ndarray
+            A np.ndarray with the residuals of the estimated regression model.
         """
         return self._u_hat
 
     def summary(self, digits=3) -> None:
         """
-        Print a summary of the estimated regression model.
-        Args:
-            digits (int, optional): Number of digits to be printed. Defaults to 3.
-        Returns:
-            None
+        Parameters
+        ----------
+        digits : int, optional
+            The number of digits to be displayed. Defaults to 3.
+
+        Returns
+        -------
+        None
         """
 
         # lazy loading to avoid circular import
@@ -1144,13 +1317,20 @@ class Feols:
 
 
 def _check_vcov_input(vcov, data):
+
     """
     Check the input for the vcov argument in the Feols class.
-    Args:
-        vcov (dict, str, list): The vcov argument passed to the Feols class.
-        data (pd.DataFrame): The data passed to the Feols class.
-    Returns:
-        None
+
+    Parameters
+    ----------
+    vcov : dict, str, list
+        The vcov argument passed to the Feols class.
+    data : pd.DataFrame
+        The data passed to the Feols class.
+
+    Returns
+    -------
+    None
     """
 
     assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
@@ -1185,19 +1365,31 @@ def _check_vcov_input(vcov, data):
 
 
 def _deparse_vcov_input(vcov, has_fixef, is_iv):
+
     """
     Deparse the vcov argument passed to the Feols class.
 
-    Args:
-        vcov (dict, str, list): The vcov argument passed to the Feols class.
-        has_fixef (bool): Whether the regression has fixed effects.
-        is_iv (bool): Whether the regression is an IV regression.
-    Returns:
-        vcov_type (str): The type of vcov to be used. Either "iid", "hetero", or "CRV"
-        vcov_type_detail (str, list): The type of vcov to be used, with more detail. Either "iid", "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3"
-        is_clustered (bool): Whether the vcov is clustered.
-        clustervar (str): The name of the cluster variable.
+    Parameters
+    ----------
+    vcov : dict, str, list
+        The vcov argument passed to the Feols class.
+    has_fixef : bool
+        Whether the regression has fixed effects.
+    is_iv : bool
+        Whether the regression is an IV regression.
+
+    Returns
+    -------
+    vcov_type : str
+        The type of vcov to be used. Either "iid", "hetero", or "CRV".
+    vcov_type_detail : str or list
+        The type of vcov to be used, with more detail. Options include "iid", "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3".
+    is_clustered : bool
+        Indicates whether the vcov is clustered.
+    clustervar : str
+        The name of the cluster variable.
     """
+
     if isinstance(vcov, dict):
         vcov_type_detail = list(vcov.keys())[0]
         deparse_vcov = list(vcov.values())[0].split("+")
@@ -1239,14 +1431,22 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
 
 
 def _feols_input_checks(Y, X, weights):
+
     """
-    Some basic checks on the input matrices Y, X, and Z.
-    Args:
-        Y (np.ndarray): FEOLS input matrix Y
-        X (np.ndarray): FEOLS input matrix X
-    Returns:
-        None
+    Perform basic checks on the input matrices Y and X for the FEOLS.
+
+    Parameters
+    ----------
+    Y : np.ndarray
+        FEOLS input matrix Y.
+    X : np.ndarray
+        FEOLS input matrix X.
+
+    Returns
+    -------
+    None
     """
+
 
     if not isinstance(Y, (np.ndarray)):
         raise TypeError("Y must be a numpy array.")
@@ -1264,15 +1464,24 @@ def _feols_input_checks(Y, X, weights):
 
 
 def _get_vcov_type(vcov, fval):
+
     """
-    Passes the specified vcov type. If no vcov type specified, sets the default vcov type as iid if no fixed effect
-    is included in the model, and CRV1 clustered by the first fixed effect if a fixed effect is included in the model.
-    Args:
-        vcov (str): The specified vcov type.
-        fval (str): The specified fixed effects. (i.e. "X1+X2")
-    Returns:
-        vcov_type (str): The specified vcov type.
+    Passes the specified vcov type and sets the default vcov type based on the inclusion of fixed effects in the model.
+
+    Parameters
+    ----------
+    vcov : str
+        The specified vcov type.
+    fval : str
+        The specified fixed effects, formatted as a string (e.g., "X1+X2").
+
+    Returns
+    -------
+    vcov_type : str
+        The specified or default vcov type. Defaults to 'iid' if no fixed effect is included in the model,
+        and 'CRV1' clustered by the first fixed effect if a fixed effect is included.
     """
+
 
     if vcov is None:
         # iid if no fixed effects
@@ -1291,20 +1500,31 @@ def _get_vcov_type(vcov, fval):
 def _drop_multicollinear_variables(
     X: np.ndarray, names: List[str], collin_tol: float
 ) -> None:
+
     """
     Checks for multicollinearity in the design matrices X and Z.
 
-    Args:
-        X (numpy.ndarray): The design matrix X.
-        names (List[str]): The names of the coefficients.
-        collin_tol (float): The tolerance level for the multicollinearity check.
+    Parameters
+    ----------
+    X : numpy.ndarray
+        The design matrix X.
+    names : List[str]
+        The names of the coefficients.
+    collin_tol : float
+        The tolerance level for the multicollinearity check.
 
-    Returns:
-        Xd (numpy.ndarray): The design matrix X.
-        names (List[str]): The names of the coefficients.
-        collin_vars (List[str]): The collinear variables.
-        collin_index (numpy.ndarray): Logical array, True if the variable is collinear.
+    Returns
+    -------
+    Xd : numpy.ndarray
+        The design matrix X after checking for multicollinearity.
+    names : List[str]
+        The names of the coefficients, excluding those identified as collinear.
+    collin_vars : List[str]
+        The collinear variables identified during the check.
+    collin_index : numpy.ndarray
+        Logical array, where True indicates that the variable is collinear.
     """
+
 
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
@@ -1317,11 +1537,7 @@ def _drop_multicollinear_variables(
     if res["all_removed"]:
         raise ValueError(
             """
-<<<<<<< HEAD
             All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
-=======
-            All variables are dropped because of multicollinearity. The model cannot be estimated.
->>>>>>> master
             """
         )
 
@@ -1345,17 +1561,23 @@ def _drop_multicollinear_variables(
 
 def _find_collinear_variables(X, tol=1e-10):
     """
-    Detect multicollinear variables.
-    Brute force copy of Laurent's c++ implementation.
-    See the fixest repo here: https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130
-    Args:
-        X (numpy.ndarray): A symmetrix matrix X.
-        tol (float): The tolerance level for the multicollinearity check.
-    Returns:
-        res (dict): A dictionary with the following keys:
-            id_excl (numpy.ndarray): A boolean array, True if the variable is collinear.
-            n_excl (int): The number of collinear variables.
-            all_removed (bool): True if all variables are collinear.
+    Detect multicollinear variables, replicating Laurent Berge's C++ implementation from the fixest package.
+    See the fixest repo [here](https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130)
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        A symmetric matrix X used to check for multicollinearity.
+    tol : float
+        The tolerance level for the multicollinearity check.
+
+    Returns
+    -------
+    res : dict
+        A dictionary containing:
+        - id_excl (numpy.ndarray): A boolean array, where True indicates a collinear variable.
+        - n_excl (int): The number of collinear variables.
+        - all_removed (bool): True if all variables are identified as collinear.
     """
 
     res = dict()

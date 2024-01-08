@@ -48,7 +48,7 @@ class TWFE(DID):
 
     def vcov(self):
         """
-        Method not needed. The vcov matrix is calculated via the `Feols` object.
+        Method not needed. The vcov matrix is calculated via the [Feols(/docs/reference/Feols.qmd) object.
         """
 
         pass

@@ -1,0 +1,86 @@
+# fepois { #pyfixest.fepois }
+
+`fepois`
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [Fepois](#pyfixest.fepois.Fepois) | Class to estimate Poisson Regressions, inheriting from [Feols(/docs/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/docs/reference/Feols.qmd) |
+
+### Fepois { #pyfixest.fepois.Fepois }
+
+`fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08)`
+
+Class to estimate Poisson Regressions, inheriting from [Feols(/docs/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/docs/reference/Feols.qmd)
+to cater to the specifics of Poisson regression models.
+
+Users should not directly instantiate this class, but rather use the [fepois()](/docs/reference/estimation.fepois.qmd) function.
+
+#### Parameters
+
+| Name              | Type                     | Description                                                | Default    |
+|-------------------|--------------------------|------------------------------------------------------------|------------|
+| `Y`               | numpy.numpy.ndarray      | Dependent variable, a two-dimensional numpy array.         | _required_ |
+| `X`               | numpy.numpy.ndarray      | Independent variables, a two-dimensional numpy array.      | _required_ |
+| `fe`              | numpy.numpy.ndarray      | Fixed effects, a two-dimensional numpy array or None.      | _required_ |
+| `weights`         | numpy.numpy.ndarray      | Weights, a one-dimensional numpy array or None.            | _required_ |
+| `coefnames`       | typing.List\[str\]       | Names of the coefficients in the design matrix X.          | _required_ |
+| `drop_singletons` | bool                     | Whether to drop singleton fixed effects.                   | _required_ |
+| `collin_tol`      | float                    | Tolerance level for the detection of collinearity.         | _required_ |
+| `maxiter`         | typing.Optional\[int\]   | Maximum number of iterations for the IRLS algorithm.       | `25`       |
+| `tol`             | typing.Optional\[float\] | Tolerance level for the convergence of the IRLS algorithm. | `1e-08`    |
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [get_fit](#pyfixest.fepois.Fepois.get_fit) | Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS). |
+| [predict](#pyfixest.fepois.Fepois.predict) | Return a flat np.array with predicted values of the regression model. |
+
+##### get_fit { #pyfixest.fepois.Fepois.get_fit }
+
+`fepois.Fepois.get_fit()`
+
+Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
+
+###### Returns
+
+| Type   | Description   |
+|--------|---------------|
+| None   |               |
+
+###### Attributes
+
+| Name     | Type                | Description                                                                     |
+|----------|---------------------|---------------------------------------------------------------------------------|
+| beta_hat | numpy.numpy.ndarray | Estimated coefficients.                                                         |
+| Y_hat    | numpy.numpy.ndarray | Estimated dependent variable.                                                   |
+| u_hat    | numpy.numpy.ndarray | Estimated residuals.                                                            |
+| weights  | numpy.numpy.ndarray | Weights (from the last iteration of the IRLS algorithm).                        |
+| X        | numpy.numpy.ndarray | Demeaned independent variables (from the last iteration of the IRLS algorithm). |
+| Z        | numpy.numpy.ndarray | Demeaned independent variables (from the last iteration of the IRLS algorithm). |
+| Y        | numpy.numpy.ndarray | Demeaned dependent variable (from the last iteration of the IRLS algorithm).    |
+
+##### predict { #pyfixest.fepois.Fepois.predict }
+
+`fepois.Fepois.predict(newdata=None, type='link')`
+
+Return a flat np.array with predicted values of the regression model.
+If new fixed effect levels are introduced in `newdata`, predicted values for such observations
+will be set to NaN.
+
+###### Parameters
+
+| Name      | Type                                          | Description                                                                                                                                                                                                                                                                                                        | Default   |
+|-----------|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `newdata` | typing.Union\[None, pandas.pandas.DataFrame\] | A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.                                                                                                                                                                                          | `None`    |
+| `type`    | str                                           | The type of prediction to be computed. Can be either "response" (default) or "link". If type="response", the output is at the level of the response variable, i.e., it is the expected predictor E(Y\|X). If "link", the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta. | `'link'`  |
+
+###### Returns
+
+| Type                | Description                                                     |
+|---------------------|-----------------------------------------------------------------|
+| numpy.numpy.ndarray | A flat array with the predicted values of the regression model. |

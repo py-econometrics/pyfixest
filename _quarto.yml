@@ -25,7 +25,7 @@ website:
         file: ./vignettes/difference-in-differences.ipynb
       - text: "Replicating 'The Effect' with PyFixest"
         file: ./vignettes/Replicating-the-Effect.ipynb
-      - text: "Function Reference"
+      - text: "Documentation"
         file: reference/index.qmd
       - text: "Changelog"
         file: ./vignettes/news.qmd
@@ -36,7 +36,7 @@ quartodoc:
   sidebar: _sidebar.yml
 
   sections:
-    - title: For Users
+    - title: Estimation Functions
       desc: |
         User facing estimation functions
       contents:
@@ -45,6 +45,17 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
+    - title: Estimation Classes
+      desc: |
+        Details on Methods and Attributes
+      contents:
+        - feols
+        - fepois
+        - feiv
+        #- did.DID
+        #- did.did2s
+        #- did.lpdid
+        #- did.twfe
     - title: Summarize and Visualize
       desc: |
         Post-Processing of Estimation Results
@@ -53,17 +64,7 @@ quartodoc:
         - summarize.etable
         - visualize.coefplot
         - visualize.iplot
-    #- title: Estimation Classes
-      #desc: |
-      #  Details on Methods and Attributes
-      #contents:
-        #- feols
-        #- fepois
-        #- did.DID
-        #- did.did2s
-        #- did.lpdid
-        #- did.twfe
-    - title: For Developers
+    - title: Misc / Utilities
       desc: |
         PyFixest internals and utilities
       contents:

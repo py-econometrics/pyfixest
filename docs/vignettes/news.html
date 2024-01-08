@@ -194,7 +194,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 ```{=html}
 
-            &lt;div id="LjwOml"&gt;&lt;/div&gt;
+            &lt;div id="ht5cC6"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -218,9 +218,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("LjwOml").appendChild(div);
+                        document.getElementById("ht5cC6").appendChild(div);
                     };
-                    var e = document.getElementById("LjwOml");
+                    var e = document.getElementById("ht5cC6");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -512,13 +512,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2 class="anchored" data-anchor-id="pyfixest-0.9.1">PyFixest 0.9.1</h2>
 <section id="breaking-api-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-api-changes">Breaking API changes</h3>
-<p>It is no longer required to initiate an object of type <code>Fixest</code> prior to running <code>feols</code> or <code>fepois</code>. Instead, you can now simply use <code>feols()</code> and <code>fepois()</code> as functions, just as in <code>fixest</code>. Both function can be found in an <code>estimation</code> module and need to obtain a <code>pd.DataFrame</code> as a function argument:</p>
+<p>It is no longer required to initiate an object of type <code>Fixest</code> prior to running [Feols(/docs/reference/Feols.qmd) or <code>fepois</code>. Instead, you can now simply use <code>feols()</code> and <code>fepois()</code> as functions, just as in <code>fixest</code>. Both function can be found in an <code>estimation</code> module and need to obtain a <code>pd.DataFrame</code> as a function argument:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> fixest, fepois</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ X1 | f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Calling <code>feols()</code> will return an instance of class <code>Feols</code>, while calling <code>fepois()</code> will return an instance of class <code>Fepois</code>. Multiple estimation syntax will return an instance of class <code>FixestMulti</code>.</p>
+<p>Calling <code>feols()</code> will return an instance of class [Feols(/docs/reference/Feols.qmd), while calling <code>fepois()</code> will return an instance of class <code>Fepois</code>. Multiple estimation syntax will return an instance of class <code>FixestMulti</code>.</p>
 <p>Post processing works as before via <code>.summary()</code>, <code>.tidy()</code> and other methods.</p>
 </section>
 <section id="new-features-1" class="level3">
@@ -527,7 +527,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="sourceCode" id="cb7"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2| f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>summary([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Visualization is possible via custom methods (<code>.iplot()</code> &amp; <code>.coefplot()</code>), but a new module allows to visualize a list of <code>Feols</code> and/or <code>Fepois</code> instances:</p>
+<p>Visualization is possible via custom methods (<code>.iplot()</code> &amp; <code>.coefplot()</code>), but a new module allows to visualize a list of [Feols(/docs/reference/Feols.qmd) and/or <code>Fepois</code> instances:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot, iplot</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>coefplot([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The documentation has been improved (though there is still room for progress), and the code has been cleaned up a bit (also lots of room for improvements).</p>

@@ -6,17 +6,17 @@ Plot model coefficients with confidence intervals.
 
 ## Parameters
 
-| Name            | Type           | Description                                                                   | Default      |
-|-----------------|----------------|-------------------------------------------------------------------------------|--------------|
-| `models`        | list or object | A list of fitted models of type `Feols` or `Fepois`, or just a single model.  | _required_   |
-| `figsize`       | tuple          | The size of the figure.                                                       | `(500, 300)` |
-| `alpha`         | float          | The significance level for the confidence intervals.                          | `0.05`       |
-| `yintercept`    | float or None  | The value at which to draw a horizontal line on the plot. Default is 0.       | `0`          |
-| `xintercept`    | float or None  | The value at which to draw a vertical line on the plot. Default is None.      | `None`       |
-| `rotate_xticks` | float          | The angle in degrees to rotate the xticks labels. Default is 0 (no rotation). | `0`          |
-| `coefficients`  | list           | A list of coefficients to plot. If None, all coefficients are plotted.        | `None`       |
-| `title`         | str            | The title of the plot.                                                        | `None`       |
-| `coord_flip`    | bool           | Whether to flip the coordinates of the plot. Default is True.                 | `True`       |
+| Name            | Type           | Description                                                                                            | Default      |
+|-----------------|----------------|--------------------------------------------------------------------------------------------------------|--------------|
+| `models`        | list or object | A list of fitted models of type [Feols(/docs/reference/Feols.qmd) or `Fepois`, or just a single model. | _required_   |
+| `figsize`       | tuple          | The size of the figure.                                                                                | `(500, 300)` |
+| `alpha`         | float          | The significance level for the confidence intervals.                                                   | `0.05`       |
+| `yintercept`    | float or None  | The value at which to draw a horizontal line on the plot. Default is 0.                                | `0`          |
+| `xintercept`    | float or None  | The value at which to draw a vertical line on the plot. Default is None.                               | `None`       |
+| `rotate_xticks` | float          | The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).                          | `0`          |
+| `coefficients`  | list           | A list of coefficients to plot. If None, all coefficients are plotted.                                 | `None`       |
+| `title`         | str            | The title of the plot.                                                                                 | `None`       |
+| `coord_flip`    | bool           | Whether to flip the coordinates of the plot. Default is True.                                          | `True`       |
 
 ## Returns
 

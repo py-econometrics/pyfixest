@@ -59,12 +59,12 @@ def feols(
     Returns
     -------
     object
-        An instance of the `Feols` class or `FixestMulti` class for multiple models specified via `fml`.
+        An instance of the [Feols(/docs/reference/Feols.qmd) class or `FixestMulti` class for multiple models specified via `fml`.
 
     Examples
     --------
 
-    As in `fixest`, the `feols` function can be used to estimate a simple linear regression model with fixed effects.
+    As in `fixest`, the [Feols(/docs/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects.
     The following example regresses `Y` on `X1` and `X2` with fixed effects for `f1` and `f2`: fixed effects are specified
     after the `|` symbol.
 
@@ -79,7 +79,7 @@ def feols(
     fit.summary()
     ```
 
-    Calling `feols()` returns an instance of the `Feols` class. The `summary()` method can be used to print the results.
+    Calling `feols()` returns an instance of the [Feols(/docs/reference/Feols.qmd) class. The `summary()` method can be used to print the results.
 
     An alternative way to retrieve model results is via the `tidy()` method, which returns a pandas dataframe with the
     estimated coefficients, standard errors, t-statistics, and p-values.

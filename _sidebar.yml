@@ -8,7 +8,12 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
-      section: For Users
+      section: Estimation Functions
+    - contents:
+      - reference/feols.qmd
+      - reference/fepois.qmd
+      - reference/feiv.qmd
+      section: Estimation Classes
     - contents:
       - reference/summarize.summary.qmd
       - reference/summarize.etable.qmd
@@ -19,6 +24,6 @@ website:
       - reference/demean.qmd
       - reference/detect_singletons.qmd
       - reference/model_matrix_fixest.qmd
-      section: For Developers
+      section: Misc / Utilities
     id: reference
   - id: dummy-sidebar
