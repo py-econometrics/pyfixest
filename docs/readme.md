@@ -182,43 +182,6 @@ data = get_data()
 feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
-::: {.cell-output .cell-output-display}
-```{=html}
-
-            <div id="QL9rAO"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("QL9rAO").appendChild(div);
-                    };
-                    var e = document.getElementById("QL9rAO");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-```
-:::
-
 ::: {.cell-output .cell-output-stdout}
     ###
 
