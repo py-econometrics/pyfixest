@@ -1,0 +1,35 @@
+# summarize.etable { #pyfixest.summarize.etable }
+
+`summarize.etable(models, digits=3, type='md')`
+
+Create an esttab-like table from a list of models.
+
+## Parameters
+
+| Name     | Type   | Description                                                                                                     | Default    |
+|----------|--------|-----------------------------------------------------------------------------------------------------------------|------------|
+| `models` | list   | A list of models of type Feols, Feiv, Fepois.                                                                   | _required_ |
+| `digits` | int    | Number of digits to round to.                                                                                   | `3`        |
+| `type`   | str    | Type of output. Either "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. Default is "md". | `'md'`     |
+
+## Returns
+
+| Type                    | Description                                                          |
+|-------------------------|----------------------------------------------------------------------|
+| pandas.pandas.DataFrame | A DataFrame with the coefficients and standard errors of the models. |
+
+## Examples
+
+```{python}
+from pyfixest.estimation import feols
+from pyfixest.utils import get_data
+from pyfixest.summarize import etable
+
+# load data
+df = get_data()
+fit1 = feols("Y~X1 + X2 | f1", df)
+fit2 = feols("Y~X1 + X2 | f1 + f2", df)
+fit3 = feols("Y~X1 + X2 | f1 + f2 + f3", df)
+
+etable([fit1, fit2, fit3])
+```
