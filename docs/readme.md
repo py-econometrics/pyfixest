@@ -1,5 +1,5 @@
 ---
-pagetitle: readme
+jupyter: python3
 quartodoc:
   package: pyfixest
   sections:
@@ -35,6 +35,7 @@ quartodoc:
       PyFixest internals and utilities
     title: Misc / Utilities
   sidebar: \_sidebar.yml
+title: Readme
 toc-title: Table of contents
 website:
   navbar:
@@ -93,11 +94,7 @@ website:
     style: floating
 ---
 
-![](figures/pyfixest-logo.png)
-
-------------------------------------------------------------------------
-
-# PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
+## PyFixest
 
 [![PyPI -
 Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
@@ -107,20 +104,15 @@ Downloads](https://img.shields.io/pypi/dm/pyfixest.png)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
 `PyFixest` is a Python implementation of the formidable
-[fixest](https://github.com/lrberge/fixest) package for fast
-high-dimensional fixed effects regression. The package aims to mimic
-`fixest` syntax and functionality as closely as Python allows: if you
-know `fixest` well, the goal is that you won't have to read the docs to
-get started! In particular, this means that all of `fixest's` defaults
-are mirrored by `PyFixest` - currently with only [one small
-exception](https://github.com/s3alfisc/pyfixest/issues/260).
-Nevertheless, for a quick introduction, you can take a look at the
-[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or the
-regression chapter of [Arthur Turrell's](https://github.com/aeturrell)
-book on [Coding for
+[fixest](https://github.com/lrberge/fixest) package. The package aims to
+mimic `fixest` syntax and functionality as closely as Python allows. For
+a quick introduction, see the
+[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or take a look
+at the regression chapter of [Arthur
+Turrell's](https://github.com/aeturrell) book on [Coding for
 Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-## Features
+`PyFixest` supports
 
 -   OLS and IV Regression
 -   Poisson Regression
@@ -167,8 +159,6 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ## Quickstart
 
-### Fixed Effects Regression via `feols()`
-
 You can estimate a linear regression models just as you would in
 `fixest` - via `feols()`:
 
@@ -198,8 +188,6 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
 :::
 :::
 
-### Multiple Estimation
-
 You can estimate multiple models at once by using [multiple estimation
 syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
 
@@ -225,8 +213,8 @@ etable([fit.fetch_model(i) for i in range(6)])
     Intercept     0.919*** (0.121)   1.064*** (0.232)
     X1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)
     -----------------------------------------------------------------------------------------------------------------------------
-    f1                           -                  -                  x                  x                  x                  x
     f2                           -                  -                  -                  -                  x                  x
+    f1                           -                  -                  x                  x                  x                  x
     -----------------------------------------------------------------------------------------------------------------------------
     R2                       0.123              0.037              0.437              0.115              0.609              0.168
     S.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id
@@ -235,8 +223,6 @@ etable([fit.fetch_model(i) for i in range(6)])
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
 :::
 :::
-
-### Adjust Standard Errors "on-the-fly"
 
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
@@ -264,8 +250,6 @@ fit1.vcov("hetero").summary()
 :::
 :::
 
-### Poisson Regression via `fepois()`
-
 You can estimate Poisson Regressions via the `fepois()` function:
 
 ::: {.cell execution_count="4"}
@@ -290,8 +274,6 @@ fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
     Deviance: 1068.836
 :::
 :::
-
-### IV Estimation via three-part formulas
 
 Last, `PyFixest` also supports IV estimation via three part formula
 syntax:
