@@ -54,7 +54,6 @@ class Fepois(Feols):
         maxiter: Optional[int] = 25,
         tol: Optional[float] = 1e-08,
     ):
-
         super().__init__(
             Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
         )
@@ -241,7 +240,6 @@ class Fepois(Feols):
     def predict(
         self, newdata: Optional[pd.DataFrame] = None, type="link"
     ) -> np.ndarray:
-
         """
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
@@ -286,7 +284,6 @@ class Fepois(Feols):
 
 
 def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> List:
-
     """
     Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
     separation checks. Currently, only the "fe" check is implemented.
@@ -342,7 +339,6 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
 
 
 def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
-
     """
     Perform input checks for Fepois constructor arguments.
 

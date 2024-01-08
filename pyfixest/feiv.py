@@ -70,8 +70,8 @@ class Feiv(Feols):
         If Z is not a two-dimensional array.
 
     """
-    # Constructor and methods implementation...
 
+    # Constructor and methods implementation...
 
     def __init__(
         self,
@@ -83,7 +83,6 @@ class Feiv(Feols):
         coefnames_z: list,
         collin_tol: float,
     ) -> None:
-
         super().__init__(
             Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol
         )
@@ -108,7 +107,6 @@ class Feiv(Feols):
         self._support_iid_inference = True
 
     def get_fit(self) -> None:
-
         _X = self._X
         _Z = self._Z
         _Y = self._Y

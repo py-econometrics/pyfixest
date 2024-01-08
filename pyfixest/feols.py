@@ -160,7 +160,6 @@ class Feols:
         collin_tol: float,
         coefnames: List[str],
     ) -> None:
-
         self._method = "feols"
         self._is_iv = False
 
@@ -246,7 +245,6 @@ class Feols:
         self._adj_r2_within = None
 
     def get_fit(self) -> None:
-
         _X = self._X
         _Y = self._Y
         _Z = self._Z
@@ -606,7 +604,6 @@ class Feols:
         None
         """
 
-
         # some bookkeeping
         self._fml = fml
         self._depvar = depvar
@@ -827,7 +824,6 @@ class Feols:
         cluster_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
     ):
-
         """
         Run a wild cluster bootstrap based on an object of type "Feols".
 
@@ -1317,7 +1313,6 @@ class Feols:
 
 
 def _check_vcov_input(vcov, data):
-
     """
     Check the input for the vcov argument in the Feols class.
 
@@ -1365,7 +1360,6 @@ def _check_vcov_input(vcov, data):
 
 
 def _deparse_vcov_input(vcov, has_fixef, is_iv):
-
     """
     Deparse the vcov argument passed to the Feols class.
 
@@ -1431,7 +1425,6 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
 
 
 def _feols_input_checks(Y, X, weights):
-
     """
     Perform basic checks on the input matrices Y and X for the FEOLS.
 
@@ -1446,7 +1439,6 @@ def _feols_input_checks(Y, X, weights):
     -------
     None
     """
-
 
     if not isinstance(Y, (np.ndarray)):
         raise TypeError("Y must be a numpy array.")
@@ -1464,7 +1456,6 @@ def _feols_input_checks(Y, X, weights):
 
 
 def _get_vcov_type(vcov, fval):
-
     """
     Passes the specified vcov type and sets the default vcov type based on the inclusion of fixed effects in the model.
 
@@ -1481,7 +1472,6 @@ def _get_vcov_type(vcov, fval):
         The specified or default vcov type. Defaults to 'iid' if no fixed effect is included in the model,
         and 'CRV1' clustered by the first fixed effect if a fixed effect is included.
     """
-
 
     if vcov is None:
         # iid if no fixed effects
@@ -1500,7 +1490,6 @@ def _get_vcov_type(vcov, fval):
 def _drop_multicollinear_variables(
     X: np.ndarray, names: List[str], collin_tol: float
 ) -> None:
-
     """
     Checks for multicollinearity in the design matrices X and Z.
 
@@ -1524,7 +1513,6 @@ def _drop_multicollinear_variables(
     collin_index : numpy.ndarray
         Logical array, where True indicates that the variable is collinear.
     """
-
 
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
