@@ -18,7 +18,7 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "PyFixest"
-        file: ./readme.qmd
+        file: ./readme.md
       - text: "Quickstart"
         file: ./vignettes/tutorial.ipynb
       - text: "Difference-in-Differences Estimation"

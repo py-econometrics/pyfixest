@@ -1,100 +1,8 @@
----
-jupyter: python3
-quartodoc:
-  package: pyfixest
-  sections:
-  - contents:
-    - estimation.feols
-    - estimation.fepois
-    - did.estimation.did2s
-    - did.estimation.lpdid
-    - did.estimation.event_study
-    desc: |
-      User facing estimation functions
-    title: Estimation Functions
-  - contents:
-    - feols
-    - fepois
-    - feiv
-    desc: |
-      Details on Methods and Attributes
-    title: Estimation Classes
-  - contents:
-    - summarize.summary
-    - summarize.etable
-    - visualize.coefplot
-    - visualize.iplot
-    desc: |
-      Post-Processing of Estimation Results
-    title: Summarize and Visualize
-  - contents:
-    - demean
-    - detect_singletons
-    - model_matrix_fixest
-    desc: |
-      PyFixest internals and utilities
-    title: Misc / Utilities
-  sidebar: \_sidebar.yml
-title: Readme
-toc-title: Table of contents
-website:
-  navbar:
-    favicon: figures/pyfixest-logo.png
-    left:
-    - file: readme.qmd
-      text: PyFixest
-    - file: vignettes/tutorial.ipynb
-      text: Quickstart
-    - file: vignettes/difference-in-differences.ipynb
-      text: Difference-in-Differences Estimation
-    - file: vignettes/Replicating-the-Effect.ipynb
-      text: Replicating 'The Effect' with PyFixest
-    - file: reference/index.qmd
-      text: Documentation
-    - file: vignettes/news.qmd
-      text: Changelog
-    page-footer:
-      center: |
-        Developed by [Alexander Fischer](https://github.com/s3alfisc)
-        and [Styfen Schär](https://github.com/styfenschaer)
-    page_navigation: true
-    right:
-    - href: "https://github.com/s3alfisc/pyfixest/"
-      icon: github
-    search: true
-  sidebar:
-  - contents:
-    - reference/index.qmd
-    - contents:
-      - reference/estimation.feols.qmd
-      - reference/estimation.fepois.qmd
-      - reference/did.estimation.did2s.qmd
-      - reference/did.estimation.lpdid.qmd
-      - reference/did.estimation.event_study.qmd
-      section: Estimation Functions
-    - contents:
-      - reference/feols.qmd
-      - reference/fepois.qmd
-      - reference/feiv.qmd
-      section: Estimation Classes
-    - contents:
-      - reference/summarize.summary.qmd
-      - reference/summarize.etable.qmd
-      - reference/visualize.coefplot.qmd
-      - reference/visualize.iplot.qmd
-      section: Summarize and Visualize
-    - contents:
-      - reference/demean.qmd
-      - reference/detect_singletons.qmd
-      - reference/model_matrix_fixest.qmd
-      section: Misc / Utilities
-    id: reference
-    style: floating
-  - id: dummy-sidebar
-    style: floating
----
+![](figures/pyfixest-logo.png)
 
-## PyFixest
+------------------------------------------------------------------------
+
+# PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![PyPI -
 Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
@@ -104,15 +12,20 @@ Downloads](https://img.shields.io/pypi/dm/pyfixest.png)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
 `PyFixest` is a Python implementation of the formidable
-[fixest](https://github.com/lrberge/fixest) package. The package aims to
-mimic `fixest` syntax and functionality as closely as Python allows. For
-a quick introduction, see the
-[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or take a look
-at the regression chapter of [Arthur
-Turrell's](https://github.com/aeturrell) book on [Coding for
+[fixest](https://github.com/lrberge/fixest) package for fast
+high-dimensional fixed effects regression. The package aims to mimic
+`fixest` syntax and functionality as closely as Python allows: if you
+know `fixest` well, the goal is that you won't have to read the docs to
+get started! In particular, this means that all of `fixest's` defaults
+are mirrored by `PyFixest` - currently with only [one small
+exception](https://github.com/s3alfisc/pyfixest/issues/260).
+Nevertheless, for a quick introduction, you can take a look at the
+[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or the
+regression chapter of [Arthur Turrell's](https://github.com/aeturrell)
+book on [Coding for
 Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-`PyFixest` supports
+## Features
 
 -   OLS and IV Regression
 -   Poisson Regression
@@ -159,6 +72,8 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ## Quickstart
 
+### Fixed Effects Regression via `feols()`
+
 You can estimate a linear regression models just as you would in
 `fixest` - via `feols()`:
 
@@ -167,10 +82,45 @@ You can estimate a linear regression models just as you would in
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils import get_data
 from pyfixest.summarize import etable
-
 data = get_data()
 feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
+
+::: {.cell-output .cell-output-display}
+```{=html}
+            <div id="QL9rAO"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                };
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("QL9rAO").appendChild(div);
+                    };
+                    var e = document.getElementById("QL9rAO");
+                    e.appendChild(script);
+                })()
+            </script>
+
+```
+:::
 
 ::: {.cell-output .cell-output-stdout}
     ###
@@ -187,6 +137,8 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
 :::
 :::
+
+### Multiple Estimation
 
 You can estimate multiple models at once by using [multiple estimation
 syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#multiple-regression-models):
@@ -224,6 +176,8 @@ etable([fit.fetch_model(i) for i in range(6)])
 :::
 :::
 
+### Adjust Standard Errors "on-the-fly"
+
 Standard Errors can be adjusted after estimation, "on-the-fly":
 
 ::: {.cell execution_count="3"}
@@ -250,6 +204,8 @@ fit1.vcov("hetero").summary()
 :::
 :::
 
+### Poisson Regression via `fepois()`
+
 You can estimate Poisson Regressions via the `fepois()` function:
 
 ::: {.cell execution_count="4"}
@@ -274,6 +230,8 @@ fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
     Deviance: 1068.836
 :::
 :::
+
+### IV Estimation via three-part formulas
 
 Last, `PyFixest` also supports IV estimation via three part formula
 syntax:
