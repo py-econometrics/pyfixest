@@ -43,6 +43,9 @@ def demean_model(
     yx_names = YX.columns
     YX = YX.to_numpy()
 
+    if YX.dtype != np.dtype("float64"):
+        YX = YX.astype(np.float64)
+
     if fe is not None:
         fe = fe.to_numpy()
 
