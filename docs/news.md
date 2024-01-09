@@ -1,6 +1,10 @@
 # News
 
-# PyFixest 0.13.4
+## PyFixest 0.13.5
+
+- Fixes a bug that lead to incorrect results when the dependent variable and **all covariates** (excluding the fixed effects) where integers.
+
+## PyFixest 0.13.4
 
 - Fixes a bug in `etable()` with IV's that occurred because `feols()` does not report R2 statistics for IVs.
 
