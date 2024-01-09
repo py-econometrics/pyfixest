@@ -33,12 +33,11 @@ rng = np.random.default_rng(8760985)
 
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["1"])
-@pytest.mark.parametrize("error_type", ["1"])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [True, False])
-@pytest.mark.parametrize("model", ["Feols"])
-@pytest.mark.parametrize("inference", ["iid"])
-@pytest.mark.parametrize("have_int", [True, False])
+@pytest.mark.parametrize("model", ["Fepois", "Feols"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -107,7 +106,7 @@ rng = np.random.default_rng(8760985)
         "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
-def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, have_int, fml):
+def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
     """
     test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
 
@@ -121,11 +120,11 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, ha
 
     if model == "Feols":
         data = get_data(
-            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols", have_int = have_int
+            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
         )
     else:
         data = get_data(
-            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois", have_int = have_int
+            N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
         )
 
     # long story, but categories need to be strings to be converted to R factors,
