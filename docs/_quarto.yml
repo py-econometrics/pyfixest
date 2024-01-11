@@ -19,15 +19,15 @@ website:
       - text: "PyFixest"
         file: readme.md
       - text: "Quickstart"
-        file: vignettes/quickstart.ipynb
+        file: quickstart.ipynb
       - text: "Difference-in-Differences Estimation"
-        file: vignettes/difference-in-differences.ipynb
+        file: difference-in-differences.ipynb
       - text: "Replicating 'The Effect' with PyFixest"
-        file: vignettes/replicating-the-effect.ipynb
+        file: replicating-the-effect.ipynb
       - text: "Documentation"
         file: reference/index.qmd
       - text: "Changelog"
-        file: vignettes/news.qmd
+        file: news.qmd
 
 quartodoc:
   package: pyfixest
