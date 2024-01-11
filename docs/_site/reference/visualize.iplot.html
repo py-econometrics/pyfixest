@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>did.estimation.event_study</title>
+<title>visualize.iplot</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -136,7 +136,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href=".././readme.md">PyFixest</a>
+    <a class="nav-link" href="../readme.html">PyFixest</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/quickstart.html">Quickstart</a>
@@ -215,7 +215,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link active">did.estimation.event_study</a>
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
   </div>
 </li>
       </ul>
@@ -270,7 +270,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.iplot.html" class="sidebar-item-text sidebar-link">visualize.iplot</a>
+  <a href="../reference/visualize.iplot.html" class="sidebar-item-text sidebar-link active">visualize.iplot</a>
   </div>
 </li>
       </ul>
@@ -310,19 +310,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="pyfixest.did.estimation.event_study" class="level1">
-<h1>did.estimation.event_study</h1>
-<p><code>did.estimation.event_study(data, yname, idname, tname, gname, xfml=None, estimator='twfe', att=True, cluster='idname')</code></p>
-<p>Estimate a treatment effect using an event study design.</p>
-<p>This function allows for the estimation of treatment effects using different estimators. Currently, it supports “twfe” for the two-way fixed effects estimator and “did2s” for Gardner’s two-step DID2S estimator. Other estimators are in development.</p>
+<section id="pyfixest.visualize.iplot" class="level1">
+<h1>visualize.iplot</h1>
+<p><code>visualize.iplot(models, alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)</code></p>
+<p>Plot model coefficients for variables interacted via “i()” syntax, with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 6%">
-<col style="width: 5%">
-<col style="width: 82%">
-<col style="width: 5%">
+<col style="width: 11%">
+<col style="width: 10%">
+<col style="width: 67%">
+<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -334,51 +333,51 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
-<td>DataFrame</td>
-<td>The DataFrame containing all variables.</td>
+<td><code>models</code></td>
+<td>list or object</td>
+<td>A list of fitted models of type [Feols(/reference/Feols.qmd) or <code>Fepois</code>, or just a single model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>yname</code></td>
-<td>str</td>
-<td>The name of the dependent variable.</td>
-<td><em>required</em></td>
+<td><code>figsize</code></td>
+<td>tuple</td>
+<td>The size of the figure.</td>
+<td><code>(500, 300)</code></td>
 </tr>
 <tr class="odd">
-<td><code>idname</code></td>
-<td>str</td>
-<td>The name of the id variable.</td>
-<td><em>required</em></td>
+<td><code>alpha</code></td>
+<td>float</td>
+<td>The significance level for the confidence intervals.</td>
+<td><code>0.05</code></td>
 </tr>
 <tr class="even">
-<td><code>tname</code></td>
-<td>str</td>
-<td>Variable name for calendar period.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>gname</code></td>
-<td>str</td>
-<td>Unit-specific time of initial treatment.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>xfml</code></td>
-<td>str</td>
-<td>The formula for the covariates.</td>
+<td><code>yintercept</code></td>
+<td>int or None</td>
+<td>The value at which to draw a horizontal line on the plot.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>estimator</code></td>
-<td>str</td>
-<td>The estimator to use. Options are “did2s” and “twfe”.</td>
-<td><code>'twfe'</code></td>
+<td><code>xintercept</code></td>
+<td>int or None</td>
+<td>The value at which to draw a vertical line on the plot.</td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>att</code></td>
+<td><code>rotate_xticks</code></td>
+<td>float</td>
+<td>The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).</td>
+<td><code>0</code></td>
+</tr>
+<tr class="odd">
+<td><code>title</code></td>
+<td>str</td>
+<td>The title of the plot.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>coord_flip</code></td>
 <td>bool</td>
-<td>If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.</td>
+<td>Whether to flip the coordinates of the plot. Default is True.</td>
 <td><code>True</code></td>
 </tr>
 </tbody>
@@ -387,10 +386,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="returns" class="level2">
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
-<colgroup>
-<col style="width: 11%">
-<col style="width: 88%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -400,7 +395,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <tbody>
 <tr class="odd">
 <td>object</td>
-<td>A fitted model object of class [Feols(/reference/Feols.qmd).</td>
+<td>A lets-plot figure.</td>
 </tr>
 </tbody>
 </table>
@@ -408,33 +403,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <div class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> event_study</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit_twfe.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-      </code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> iplot</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y ~ i(f1)"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ i(f1) + X2"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y ~ i(f1) + X2 | f2"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>iplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="7kBbUl"></div>
+            <div id="mL9gwB"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -458,52 +439,88 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("7kBbUl").appendChild(div);
+                        document.getElementById("mL9gwB").appendChild(div);
                     };
-                    var e = document.getElementById("7kBbUl");
+                    var e = document.getElementById("mL9gwB");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-
-<div>
-
-<table class="dataframe table table-sm table-striped">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-    </tr>
-    <tr>
-      <th>Coefficient</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>ATT</th>
-      <td>1.98254</td>
-      <td>0.019093</td>
-      <td>103.83491</td>
-      <td>0.0</td>
-      <td>1.945118</td>
-      <td>2.019962</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+   <div id="fb21l0"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+       (function() {
+           var plotSpec={
+"data":{
+"Model":["Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2","Y~i(f1)+X2|f2"],
+"Coefficient":["C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]"],
+"Estimate":[2.5442879837380556,-1.6346807837677444,-0.46398054159364766,-1.7627122198272638,1.4348086119364798,-0.8992225420858181,0.8901916963536635,-0.4708119794251315,0.08392895661938181,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995928,-0.21656684189387726,1.390369881952681,2.2404780654367857,-0.3263697830683051,1.652082354120209,0.5883570616384417,2.7916074868998453,-1.4464082114876387,-1.0659170994410565,-0.5480905346838362,-0.9775601740834312,-1.7019175178822936,1.075012754109473,-0.48200420903080204,1.5173786526283055,0.21151214409505373,2.5440205540818743,-1.6313072409907468,-0.30486368707800493,-1.8258087634824902,1.2965998350248105,-0.8760374775396912,0.6714436818413512,-0.5135342321951281,0.15704200653888292,0.19113560261629262,1.3032446780387168,0.5847361345389969,1.7098143375776045,-0.2993324289617357,1.398025793801213,2.299378908219587,-0.34924905337211826,1.641909897744199,0.6653948237381127,2.7673089730677787,-1.4967680507219479,-1.0023735868260697,-0.6755145431290847,-0.9750743353345283,-1.6048933207963851,1.0470245742693616,-0.5239910055069106,1.487552476150844,0.23705847861687634,2.3228425155709083,-1.8675285881251937,-0.5753048895683803,-1.947402290620167,1.2857267818152782,-0.9990202459764058,0.4036044167975181,-0.5985576628833837,-0.1202276950086066,0.31732365447494165,1.2446476524449448,0.41528814347370696,1.7926305048307414,-0.4409449678580153,1.067927470137317,2.0026312010181497,-0.4650063947082729,1.3364027085682173,0.6489881183738592,2.7546408749758595,-1.8670452658534138,-1.133466934731492,-0.7465956955225911,-1.219168659318836,-1.708277909777105,0.5485296361077173,-0.5138155960178787,1.2386569324523806,0.17248560396529178],
+"2.5 %":[1.6988810797044178,-2.521351025022358,-1.3779393065398144,-2.6556933609461773,0.4770952921754976,-1.8291701365228201,-0.00942332074152552,-1.3574822206797454,-0.7967298916533312,-0.59788849744613,0.3885489093136827,-0.24263952288615875,0.8825710451114391,-1.1552192837893143,0.46042228751567926,1.353807824182172,-1.2742601424462932,0.7591012130012956,-0.3415905327985601,1.9622034224441056,-2.339389352606552,-1.9301363487581435,-1.5394180012195635,-1.8771751911786203,-2.70609209657718,0.11729943434849077,-1.411951803467804,0.667559621130842,-0.7363782152829343,1.7314126090479651,-2.4835779601699204,-1.1840511099690374,-2.684255856366746,0.3755477466919801,-1.7699205598535546,-0.19458829319241044,-1.3658557164549558,-0.6896008463001762,-0.6614016242784896,0.4385254416945593,-0.309413326301361,0.8236041077030065,-1.201749386853906,0.5041554924049557,1.4470114108379053,-1.2603781410172017,0.78357056326003,-0.22863227836666977,1.970065347096067,-2.3551749879806123,-1.8331799598559346,-1.6287882070330157,-1.8397874682647704,-2.5703419034885266,0.12644703082174147,-1.4179067867165267,0.6706776032707262,-0.674073990389507,1.6281356166732248,-2.5263861031808696,-1.3142847749436872,-2.56081058045818,0.41274196531172613,-1.6833070063123694,-0.31909671045836757,-1.4881223539227288,-0.7426171242063361,-0.5303710431948025,0.40594059438729446,-0.2783764952315257,0.9172660486955159,-1.3237694446257828,0.20389891836919427,1.3388983363852947,-1.45134021715457,0.4021295773907768,-0.28782191608038843,2.203916876798687,-2.5983541698982817,-1.7014255955170625,-1.8081602017365457,-2.0947967445279385,-2.434054816973444,-0.3590821541404102,-1.4000812338051187,0.4568924019757451,-0.7146301621755841],
+"97.5 %":[3.3896948877716935,-0.7480105425131306,0.449978223352519,-0.8697310787083504,2.3925219316974617,0.030725052351183835,1.7898067134488524,0.41585826182948243,0.9645878048920948,1.1754519850630978,2.187778943504061,1.617255665987845,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066913994,0.6215205763096829,2.5450634952391225,1.5183046560754434,3.621011551355585,-0.5534270703687251,-0.20169785012396946,0.44323693185189117,-0.07794515698824211,-0.6977429391874073,2.032726073870455,0.4479433854062,2.367197684125769,1.1594025034730417,3.3566284991157835,-0.7790365218115731,0.5743237358130275,-0.9673616705982349,2.217651923357641,0.017845604774172297,1.5374756568751127,0.33878725206469973,1.003684859377942,1.0436728295110749,2.167963914382874,1.4788855953793547,2.5960245674522024,0.6030845289304347,2.2918960951974703,3.1517464056012687,0.5618800342729651,2.5002492322283683,1.5594219258428952,3.5645525990394904,-0.6383611134632834,-0.17156721379620476,0.27775912077484644,-0.11036120240428626,-0.6394447381042436,1.9676021177169818,0.36992477570270554,2.304427349030962,1.1481909476232597,3.0175494144685917,-1.208671073069518,0.16367499580692668,-1.3339940007821536,2.1587115983188303,-0.31473348564044223,1.1263055440534038,0.29100702815596136,0.5021617341891228,1.165018352144686,2.0833547105025954,1.1089527821789396,2.667994960965967,0.44187950890975225,1.9319560219054397,2.666364065651005,0.5213274277380242,2.2706758397456577,1.5857981528281067,3.305364873153032,-1.1357363618085459,-0.5655082739459216,0.3149688106913636,-0.34354057410973327,-0.9825010025807661,1.456141426355845,0.37245004176936125,2.0204214629290163,1.0596013701061677]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+},
+"coord":{
+"name":"flip",
+"flip":true
+},
+"ggsize":{
+"width":500.0,
+"height":300.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"kind":"plot",
+"scales":[{
+"name":"Estimate and 95% Confidence Interval",
+"aesthetic":"y"
+}],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5 %",
+"ymax":"97.5 %"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+}],
+"metainfo_list":[]
+};
+           var plotContainer = document.getElementById("fb21l0");
+           window.letsPlotCall(function() {{
+               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
+           }});
+       })();    
+   </script>
 </div>
 </div>
 

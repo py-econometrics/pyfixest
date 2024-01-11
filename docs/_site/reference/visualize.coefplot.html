@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>did.estimation.did2s</title>
+<title>visualize.coefplot</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -136,7 +136,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href=".././readme.md">PyFixest</a>
+    <a class="nav-link" href="../readme.html">PyFixest</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/quickstart.html">Quickstart</a>
@@ -205,7 +205,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link active">did.estimation.did2s</a>
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">did.estimation.did2s</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -265,7 +265,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link">visualize.coefplot</a>
+  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link active">visualize.coefplot</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -310,19 +310,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="pyfixest.did.estimation.did2s" class="level1">
-<h1>did.estimation.did2s</h1>
-<p><code>did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster, i_ref1=None, i_ref2=None)</code></p>
-<p>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</p>
-<p>This function estimates the effects of treatments in panel data using a two-stage approach. It requires specification of both the first and second stage formulas and supports interaction references for the second stage.</p>
+<section id="pyfixest.visualize.coefplot" class="level1">
+<h1>visualize.coefplot</h1>
+<p><code>visualize.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)</code></p>
+<p>Plot model coefficients with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
+<col style="width: 11%">
+<col style="width: 10%">
+<col style="width: 67%">
 <col style="width: 9%">
-<col style="width: 14%">
-<col style="width: 68%">
-<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -334,52 +333,58 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
-<td>pandas.pandas.DataFrame</td>
-<td>The DataFrame containing all variables.</td>
+<td><code>models</code></td>
+<td>list or object</td>
+<td>A list of fitted models of type [Feols(/reference/Feols.qmd) or <code>Fepois</code>, or just a single model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>yname</code></td>
-<td>str</td>
-<td>The name of the dependent variable.</td>
-<td><em>required</em></td>
+<td><code>figsize</code></td>
+<td>tuple</td>
+<td>The size of the figure.</td>
+<td><code>(500, 300)</code></td>
 </tr>
 <tr class="odd">
-<td><code>first_stage</code></td>
-<td>str</td>
-<td>The formula for the first stage, starting with ‘~’.</td>
-<td><em>required</em></td>
+<td><code>alpha</code></td>
+<td>float</td>
+<td>The significance level for the confidence intervals.</td>
+<td><code>0.05</code></td>
 </tr>
 <tr class="even">
-<td><code>second_stage</code></td>
-<td>str</td>
-<td>The formula for the second stage, starting with ‘~’.</td>
-<td><em>required</em></td>
+<td><code>yintercept</code></td>
+<td>float or None</td>
+<td>The value at which to draw a horizontal line on the plot. Default is 0.</td>
+<td><code>0</code></td>
 </tr>
 <tr class="odd">
-<td><code>treatment</code></td>
-<td>str</td>
-<td>The name of the treatment variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>cluster</code></td>
-<td>str</td>
-<td>The name of the cluster variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>i_ref1</code></td>
-<td>(int, str, list)</td>
-<td>The reference value(s) for the first variable used with “i()” syntax in the second stage formula. Default is None.</td>
+<td><code>xintercept</code></td>
+<td>float or None</td>
+<td>The value at which to draw a vertical line on the plot. Default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>i_ref2</code></td>
-<td>(int, str, list)</td>
-<td>The reference value(s) for the second variable used with “i()” syntax in the second stage formula. Default is None.</td>
+<td><code>rotate_xticks</code></td>
+<td>float</td>
+<td>The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).</td>
+<td><code>0</code></td>
+</tr>
+<tr class="odd">
+<td><code>coefficients</code></td>
+<td>list</td>
+<td>A list of coefficients to plot. If None, all coefficients are plotted.</td>
 <td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>title</code></td>
+<td>str</td>
+<td>The title of the plot.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>coord_flip</code></td>
+<td>bool</td>
+<td>Whether to flip the coordinates of the plot. Default is True.</td>
+<td><code>True</code></td>
 </tr>
 </tbody>
 </table>
@@ -387,10 +392,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="returns" class="level2">
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
-<colgroup>
-<col style="width: 11%">
-<col style="width: 88%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -400,7 +401,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <tbody>
 <tr class="odd">
 <td>object</td>
-<td>A fitted model object of class [Feols(/reference/Feols.qmd).</td>
+<td>A lets-plot figure.</td>
 </tr>
 </tbody>
 </table>
@@ -408,23 +409,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <div class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s</span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-      </code></pre>
-</div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="dKrHqC"></div>
+            <div id="QEr7Xl"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -448,233 +445,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("dKrHqC").appendChild(div);
+                        document.getElementById("QEr7Xl").appendChild(div);
                     };
-                    var e = document.getElementById("dKrHqC");
+                    var e = document.getElementById("QEr7Xl");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-
-<div>
-
-<table class="dataframe table table-sm table-striped">
-  <thead>
-    <tr>
-      <th></th>
-      <th>unit</th>
-      <th>state</th>
-      <th>group</th>
-      <th>unit_fe</th>
-      <th>g</th>
-      <th>year</th>
-      <th>year_fe</th>
-      <th>treat</th>
-      <th>rel_year</th>
-      <th>rel_year_binned</th>
-      <th>error</th>
-      <th>te</th>
-      <th>te_dynamic</th>
-      <th>dep_var</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1</td>
-      <td>33</td>
-      <td>Group 2</td>
-      <td>7.043016</td>
-      <td>2010</td>
-      <td>1990</td>
-      <td>0.066159</td>
-      <td>False</td>
-      <td>-20.0</td>
-      <td>-6</td>
-      <td>-0.086466</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>7.022709</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>1</td>
-      <td>33</td>
-      <td>Group 2</td>
-      <td>7.043016</td>
-      <td>2010</td>
-      <td>1991</td>
-      <td>-0.030980</td>
-      <td>False</td>
-      <td>-19.0</td>
-      <td>-6</td>
-      <td>0.766593</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>7.778628</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>1</td>
-      <td>33</td>
-      <td>Group 2</td>
-      <td>7.043016</td>
-      <td>2010</td>
-      <td>1992</td>
-      <td>-0.119607</td>
-      <td>False</td>
-      <td>-18.0</td>
-      <td>-6</td>
-      <td>1.512968</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>8.436377</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>1</td>
-      <td>33</td>
-      <td>Group 2</td>
-      <td>7.043016</td>
-      <td>2010</td>
-      <td>1993</td>
-      <td>0.126321</td>
-      <td>False</td>
-      <td>-17.0</td>
-      <td>-6</td>
-      <td>0.021870</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>7.191207</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>1</td>
-      <td>33</td>
-      <td>Group 2</td>
-      <td>7.043016</td>
-      <td>2010</td>
-      <td>1994</td>
-      <td>-0.106921</td>
-      <td>False</td>
-      <td>-16.0</td>
-      <td>-6</td>
-      <td>-0.017603</td>
-      <td>0</td>
-      <td>0.0</td>
-      <td>6.918492</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-</div>
-<p>In a first step, we estimate a classical event study model:</p>
-<div class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year)"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span>[<span class="op">-</span><span class="fl">1.0</span>, np.inf],</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-
-<div>
-
-<table class="dataframe table table-sm table-striped">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-    </tr>
-    <tr>
-      <th>Coefficient</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>C(rel_year,contr.treatment(base=-1.0))[T.-20.0]</th>
-      <td>-0.058226</td>
-      <td>0.035809</td>
-      <td>-1.626011</td>
-      <td>0.103954</td>
-      <td>-0.128412</td>
-      <td>0.011960</td>
-    </tr>
-    <tr>
-      <th>C(rel_year,contr.treatment(base=-1.0))[T.-19.0]</th>
-      <td>-0.006032</td>
-      <td>0.030341</td>
-      <td>-0.198816</td>
-      <td>0.842408</td>
-      <td>-0.065500</td>
-      <td>0.053436</td>
-    </tr>
-    <tr>
-      <th>C(rel_year,contr.treatment(base=-1.0))[T.-18.0]</th>
-      <td>-0.006152</td>
-      <td>0.035094</td>
-      <td>-0.175310</td>
-      <td>0.860837</td>
-      <td>-0.074937</td>
-      <td>0.062632</td>
-    </tr>
-    <tr>
-      <th>C(rel_year,contr.treatment(base=-1.0))[T.-17.0]</th>
-      <td>-0.012533</td>
-      <td>0.024834</td>
-      <td>-0.504689</td>
-      <td>0.613780</td>
-      <td>-0.061208</td>
-      <td>0.036141</td>
-    </tr>
-    <tr>
-      <th>C(rel_year,contr.treatment(base=-1.0))[T.-16.0]</th>
-      <td>-0.034698</td>
-      <td>0.029806</td>
-      <td>-1.164128</td>
-      <td>0.244378</td>
-      <td>-0.093117</td>
-      <td>0.023722</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-</div>
-<p>We can also inspect the model visually:</p>
-<div class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-   <div id="WaaJOM"></div>
+   <div id="pHmI5y"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
 "data":{
-"Model":["dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)"],
-"Coefficient":["C(rel_year,contr.treatment(base=-1.0))[T.-20.0]","C(rel_year,contr.treatment(base=-1.0))[T.-19.0]","C(rel_year,contr.treatment(base=-1.0))[T.-18.0]","C(rel_year,contr.treatment(base=-1.0))[T.-17.0]","C(rel_year,contr.treatment(base=-1.0))[T.-16.0]","C(rel_year,contr.treatment(base=-1.0))[T.-15.0]","C(rel_year,contr.treatment(base=-1.0))[T.-14.0]","C(rel_year,contr.treatment(base=-1.0))[T.-13.0]","C(rel_year,contr.treatment(base=-1.0))[T.-12.0]","C(rel_year,contr.treatment(base=-1.0))[T.-11.0]","C(rel_year,contr.treatment(base=-1.0))[T.-10.0]","C(rel_year,contr.treatment(base=-1.0))[T.-9.0]","C(rel_year,contr.treatment(base=-1.0))[T.-8.0]","C(rel_year,contr.treatment(base=-1.0))[T.-7.0]","C(rel_year,contr.treatment(base=-1.0))[T.-6.0]","C(rel_year,contr.treatment(base=-1.0))[T.-5.0]","C(rel_year,contr.treatment(base=-1.0))[T.-4.0]","C(rel_year,contr.treatment(base=-1.0))[T.-3.0]","C(rel_year,contr.treatment(base=-1.0))[T.-2.0]","C(rel_year,contr.treatment(base=-1.0))[T.0.0]","C(rel_year,contr.treatment(base=-1.0))[T.1.0]","C(rel_year,contr.treatment(base=-1.0))[T.2.0]","C(rel_year,contr.treatment(base=-1.0))[T.3.0]","C(rel_year,contr.treatment(base=-1.0))[T.4.0]","C(rel_year,contr.treatment(base=-1.0))[T.5.0]","C(rel_year,contr.treatment(base=-1.0))[T.6.0]","C(rel_year,contr.treatment(base=-1.0))[T.7.0]","C(rel_year,contr.treatment(base=-1.0))[T.8.0]","C(rel_year,contr.treatment(base=-1.0))[T.9.0]","C(rel_year,contr.treatment(base=-1.0))[T.10.0]","C(rel_year,contr.treatment(base=-1.0))[T.11.0]","C(rel_year,contr.treatment(base=-1.0))[T.12.0]","C(rel_year,contr.treatment(base=-1.0))[T.13.0]","C(rel_year,contr.treatment(base=-1.0))[T.14.0]","C(rel_year,contr.treatment(base=-1.0))[T.15.0]","C(rel_year,contr.treatment(base=-1.0))[T.16.0]","C(rel_year,contr.treatment(base=-1.0))[T.17.0]","C(rel_year,contr.treatment(base=-1.0))[T.18.0]","C(rel_year,contr.treatment(base=-1.0))[T.19.0]","C(rel_year,contr.treatment(base=-1.0))[T.20.0]"],
-"Estimate":[-0.05822583123898875,-0.006032217320664622,-0.006152342798185015,-0.012533281423174216,-0.034697595758360525,0.03782822911703903,2.1315510802099588E-4,-0.001126732136253315,0.02653016582736427,-0.026841656196111056,0.007378430125945822,0.0023397668281729,0.009000046824511474,0.03275229921072289,2.5898768544314627E-4,-0.039326096639362165,0.005630436048088473,0.024642896748835408,0.0011694580442922957,1.3730783362807681,1.6021020992153696,1.6657197999639823,1.7874633607018466,1.914912758134074,2.059203329407789,2.1474989516932395,2.234015617658863,2.3275664995343055,2.346379127927936,2.501338353651901,2.5534424406919083,2.6044029557262025,2.5785087342838526,2.7234332919385387,2.909739171978041,2.8597896010903017,2.9084076146429685,2.8741426256232203,2.883271696700972,2.911965464450451],
-"2.5 %":[-0.12841200873871722,-0.06550049115087478,-0.07493711298021989,-0.061207685176083285,-0.09311711156334102,-0.02549539010190565,-0.07125403467904308,-0.05398936876466874,-0.037414956449746906,-0.10584306963206383,-0.03825645738357823,-0.041167964852497727,-0.036431190048842904,-0.015536976741417435,-0.03908668686029019,-0.08535189821302291,-0.03330702681856721,-0.01710956913171579,-0.04801602014025713,1.2955886226740698,1.503099526418637,1.576957926476668,1.688414734146724,1.8394048260870555,1.9763795867308926,2.053168865643504,2.1467006075103456,2.24498409965218,2.2635821134549694,2.4173363772202223,2.4298809748013555,2.465801310129235,2.4348096215638173,2.598272845073053,2.7733306413896455,2.72922498907896,2.7939655261353074,2.7193726339614464,2.7402493355336057,2.7768018404603096],
-"97.5 %":[0.011960346260739704,0.05343605650954554,0.06263242738384987,0.03614112232973485,0.023721920046619965,0.1011518483359837,0.07168034489508508,0.051735904492162116,0.09047528810447544,0.05215975723984171,0.053013317635469875,0.04584749850884352,0.05443128369786586,0.08104157516286321,0.039604662231176486,0.006699704934298591,0.04456789891474416,0.06639536262938661,0.050354936228841726,1.4505680498874665,1.7011046720121021,1.7544816734512967,1.8865119872569693,1.9904206901810924,2.1420270720846855,2.241829037742975,2.3213306278073804,2.410148899416431,2.4291761424009026,2.58534033008358,2.677003906582461,2.74300460132317,2.722207847003888,2.8485937388040243,3.046147702566437,2.9903542131016434,3.0228497031506296,3.0289126172849943,3.0262940578683386,3.047129088440592]
+"Model":["Y~X1","Y~X1","Y~X1+X2","Y~X1+X2","Y~X1+X2","Y~X1+X2|f1","Y~X1+X2|f1"],
+"Coefficient":["Intercept","X1","Intercept","X1","X2","X1","X2"],
+"Estimate":[0.9185177588356426,-1.000085840074156,0.888779148933936,-0.9929357698186859,-0.17634236659778282,-0.949525571419159,-0.1742252748945439],
+"2.5 %":[0.6990856170653885,-1.1663660739416457,0.67601628367764,-1.1540790755856782,-0.21905485705638184,-1.085581857547282,-0.2118570044389387],
+"97.5 %":[1.1379499006058966,-0.8338056062066661,1.101542014190232,-0.8317924640516935,-0.1336298761391838,-0.813469285291036,-0.1365935453501491]
 },
 "mapping":{
 "x":"Coefficient",
@@ -683,9 +472,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 },
 "data_meta":{
 },
+"coord":{
+"name":"flip",
+"flip":true
+},
 "ggsize":{
-"width":1200.0,
-"height":400.0
+"width":500.0,
+"height":300.0
 },
 "theme":{
 "axis_text_x":{
@@ -725,66 +518,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 "width":0.05,
 "data":{
 }
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("WaaJOM");
+           var plotContainer = document.getElementById("pHmI5y");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
        })();    
    </script>
-</div>
-</div>
-<p>To estimate a pooled effect, we need to slightly update the second stage formula:</p>
-<div class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="4">
-
-<div>
-
-<table class="dataframe table table-sm table-striped">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-    </tr>
-    <tr>
-      <th>Coefficient</th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>C(treat)[T.True]</th>
-      <td>2.230482</td>
-      <td>0.024709</td>
-      <td>90.271437</td>
-      <td>0.0</td>
-      <td>2.182052</td>
-      <td>2.278911</td>
-    </tr>
-  </tbody>
-</table>
-</div>
 </div>
 </div>
 

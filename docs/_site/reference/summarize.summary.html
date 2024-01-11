@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.fepois</title>
+<title>summarize.summary</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -136,7 +136,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href=".././readme.md">PyFixest</a>
+    <a class="nav-link" href="../readme.html">PyFixest</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/quickstart.html">Quickstart</a>
@@ -200,7 +200,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link active">estimation.fepois</a>
+  <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">estimation.fepois</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -255,7 +255,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link">summarize.summary</a>
+  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link active">summarize.summary</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -310,19 +310,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="pyfixest.estimation.fepois" class="level1">
-<h1>estimation.fepois</h1>
-<p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
-<p>Estimate Poisson regression models with fixed effects using the <code>pplmhdfe</code> algorithm.</p>
-<p>This method is based on the Stata package of the same name and supports various features like stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables, and interacted fixed effects.</p>
+<section id="pyfixest.summarize.summary" class="level1">
+<h1>summarize.summary</h1>
+<p><code>summarize.summary(models, digits=3)</code></p>
+<p>Summary</p>
+<p>Prints a summary of the feols() estimation results for each estimated model.</p>
+<p>For each model, this method prints a header indicating the fixed-effects and the dependent variable, followed by a table of coefficient estimates with standard errors, t-values, and p-values.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 3%">
 <col style="width: 9%">
-<col style="width: 84%">
-<col style="width: 2%">
+<col style="width: 7%">
+<col style="width: 73%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -334,70 +335,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>fml</code></td>
-<td>str</td>
-<td>A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2”. “|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>data</code></td>
-<td>pyfixest.dev_utils.DataFrameType</td>
-<td>A pandas or polars dataframe containing the variables in the formula.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>vcov</code></td>
-<td>typing.Union[str, dict[str, str]]</td>
-<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>ssc</code></td>
-<td>str</td>
-<td>A ssc object specifying the small sample correction for inference.</td>
-<td><code>ssc()</code></td>
-</tr>
-<tr class="odd">
-<td><code>fixef_rm</code></td>
-<td>str</td>
-<td>Specifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.</td>
-<td><code>'none'</code></td>
-</tr>
-<tr class="even">
-<td><code>iwls_tol</code></td>
-<td>typing.Optional[float]</td>
-<td>Tolerance for IWLS convergence, by default 1e-08.</td>
-<td><code>1e-08</code></td>
-</tr>
-<tr class="odd">
-<td><code>iwls_maxiter</code></td>
-<td>typing.Optional[float]</td>
-<td>Maximum number of iterations for IWLS convergence, by default 25.</td>
-<td><code>25</code></td>
-</tr>
-<tr class="even">
-<td><code>collin_tol</code></td>
-<td>float</td>
-<td>Tolerance for collinearity check, by default 1e-06.</td>
-<td><code>1e-10</code></td>
-</tr>
-<tr class="odd">
-<td><code>drop_intercept</code></td>
-<td>bool</td>
-<td>Whether to drop the intercept from the model, by default False.</td>
-<td><code>False</code></td>
-</tr>
-<tr class="even">
-<td><code>i_ref1</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
-<td>Reference category for the first set of categorical variables interacted via “i()”, by default None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>i_ref2</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
-<td>Reference category for the second set of categorical variables interacted via “i()”, by default None.</td>
-<td><code>None</code></td>
+<td><code>digits</code></td>
+<td>int</td>
+<td>The number of decimal places to round the summary statistics to. Default is 3.</td>
+<td><code>3</code></td>
 </tr>
 </tbody>
 </table>
@@ -405,10 +346,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="returns" class="level2">
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
-<colgroup>
-<col style="width: 6%">
-<col style="width: 93%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -417,26 +354,29 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td>object</td>
-<td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
+<td>None</td>
+<td></td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
 <div class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> fepois</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1"</span>, df)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2"</span>, df)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2 + f3"</span>, df)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>summary([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="4VH0LI"></div>
+            <div id="xelDT5"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -460,9 +400,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("4VH0LI").appendChild(div);
+                        document.getElementById("xelDT5").appendChild(div);
                     };
-                    var e = document.getElementById("4VH0LI");
+                    var e = document.getElementById("xelDT5");
                     e.appendChild(script);
                 })()
             </script>
@@ -471,20 +411,45 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
-Estimation:  Poisson
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.950 |        0.067 |   -14.273 |      0.000 |  -1.086 |   -0.813 |
+| X2            |     -0.174 |        0.018 |    -9.469 |      0.000 |  -0.212 |   -0.137 |
+---
+RMSE: 1.648   R2: 0.489   R2 Within: 0.239
+###
+
+Estimation:  OLS
 Dep. var.: Y, Fixed effects: f1+f2
 Inference:  CRV1
 Observations:  997
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
 |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-| X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |
-| X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
+| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |
+| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |
 ---
-Deviance: 1068.836</code></pre>
+RMSE: 1.346   R2: 0.659   R2 Within: 0.303
+###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2+f3
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.957 |        0.039 |   -24.645 |      0.000 |  -1.037 |   -0.878 |
+| X2            |     -0.194 |        0.009 |   -21.730 |      0.000 |  -0.212 |   -0.176 |
+---
+RMSE: 0.97   R2: 0.823   R2 Within: 0.481</code></pre>
 </div>
 </div>
-<p>For more examples, please take a look at the documentation of the <code>feols()</code> function.</p>
 
 
 </section>
