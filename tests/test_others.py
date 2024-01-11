@@ -1,6 +1,7 @@
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils import get_data, ssc
 import polars as pl
+import pandas as pd
 import numpy as np
 
 
@@ -26,3 +27,22 @@ def test_polars_input():
     data = get_data(model="Fepois")
     data_pl = pl.from_pandas(data)
     fit = fepois("Y ~ X1", data=data_pl)
+
+
+def test_integer_XY():
+    # Create a random number generator
+    rng = np.random.default_rng()
+
+    N = 1000
+    X = rng.normal(0, 1, N)
+    f = rng.choice([0, 1], N)
+    Y = 2 * X + rng.normal(0, 1, N) + f * 2
+    Y = np.round(Y).astype(np.int64)
+    X = np.round(X).astype(np.int64)
+
+    df = pd.DataFrame({"Y": Y, "X": X, "f": f})
+
+    fit1 = feols("Y ~ X | f", data=df, vcov="iid")
+    fit2 = feols("Y ~ X + C(f)", data=df)
+
+    np.testing.assert_allclose(fit1.coef().xs("X"), fit2.coef().xs("X"))

@@ -9,6 +9,9 @@
 ```{python}
 from pyfixest.did.estimation import did2s, lpdid, event_study
 ```
+## PyFixest 0.13.5
+
+- Fixes a bug that lead to incorrect results when the dependent variable and **all covariates** (excluding the fixed effects) where integers.
 
 ## PyFixest 0.13.4
 
