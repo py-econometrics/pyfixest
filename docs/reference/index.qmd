@@ -7,11 +7,8 @@ User facing estimation functions
 
 | | |
 | --- | --- |
-| [estimation.feols](estimation.feols.qmd#pyfixest.estimation.feols) | Estimate linear regression models with fixed effects using fixest formula syntax. |
-| [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
-| [did.estimation.did2s](did.estimation.did2s.qmd#pyfixest.did.estimation.did2s) | Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator. |
-| [did.estimation.lpdid](did.estimation.lpdid.qmd#pyfixest.did.estimation.lpdid) | Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach. |
-| [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Estimate a treatment effect using an event study design. |
+| [estimation.feols](estimation.feols.qmd#pyfixest.estimation.feols) | # feols |
+| [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | # fepois |
 
 ## Estimation Classes
 
@@ -31,10 +28,10 @@ Post-Processing of Estimation Results
 
 | | |
 | --- | --- |
-| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | Summary |
-| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models. |
-| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | Plot model coefficients with confidence intervals. |
-| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals. |
+| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | # Summary |
+| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models# |
+| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | # coefplot |
+| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | # iplot |
 
 ## Misc / Utilities
 
