@@ -1,0 +1,29 @@
+website:
+  sidebar:
+  - contents:
+    - reference/index.qmd
+    - contents:
+      - reference/estimation.feols.qmd
+      - reference/estimation.fepois.qmd
+      - reference/did.estimation.did2s.qmd
+      - reference/did.estimation.lpdid.qmd
+      - reference/did.estimation.event_study.qmd
+      section: Estimation Functions
+    - contents:
+      - reference/feols.qmd
+      - reference/fepois.qmd
+      - reference/feiv.qmd
+      section: Estimation Classes
+    - contents:
+      - reference/summarize.summary.qmd
+      - reference/summarize.etable.qmd
+      - reference/visualize.coefplot.qmd
+      - reference/visualize.iplot.qmd
+      section: Summarize and Visualize
+    - contents:
+      - reference/demean.qmd
+      - reference/detect_singletons.qmd
+      - reference/model_matrix_fixest.qmd
+      section: Misc / Utilities
+    id: reference
+  - id: dummy-sidebar
