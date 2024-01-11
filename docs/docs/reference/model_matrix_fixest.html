@@ -70,22 +70,22 @@ ul.task-list{list-style: none;}
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href=".././readme2.md">PyFixest</a>
+    <a class="nav-link" href=".././readme.md">PyFixest</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../vignettes/quickstart2.html">Quickstart</a>
+    <a class="nav-link" href="../vignettes/quickstart.html">Quickstart</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../vignettes/difference-in-differences2.html">Difference-in-Differences Estimation</a>
+    <a class="nav-link" href="../vignettes/difference-in-differences.html">Difference-in-Differences Estimation</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../vignettes/replicating-the-effect2.html">Replicating ‘The Effect’ with PyFixest</a>
+    <a class="nav-link" href="../vignettes/replicating-the-effect.html">Replicating ‘The Effect’ with PyFixest</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../vignettes/news2.html">Changelog</a>
+    <a class="nav-link" href="../vignettes/news.html">Changelog</a>
   </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
@@ -135,21 +135,6 @@ ul.task-list{list-style: none;}
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">estimation.fepois</a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">did.estimation.did2s</a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
   </div>
 </li>
       </ul>
@@ -268,122 +253,11 @@ ul.task-list{list-style: none;}
 <p><code>model_matrix_fixest.model_matrix_fixest(fml, data, drop_singletons=False, weights=None, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
 <p>Create model matrices for fixed effects estimation.</p>
 <p>This function preprocesses the data and then calls <code>formulaic.model_matrix()</code> to create the model matrices.</p>
-<section id="parameters" class="level4">
-<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
-<table class="table">
-<colgroup>
-<col style="width: 8%">
-<col style="width: 11%">
-<col style="width: 73%">
-<col style="width: 5%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>fml</code></td>
-<td>str</td>
-<td>A two-sided formula string using fixest formula syntax.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>data</code></td>
-<td>pandas.pandas.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>drop_singletons</code></td>
-<td>bool</td>
-<td>Whether to drop singleton fixed effects. Default is False.</td>
-<td><code>False</code></td>
-</tr>
-<tr class="even">
-<td><code>weights</code></td>
-<td>str or None</td>
-<td>Weights as a string if provided, or None if no weights, e.g., “weights”.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>data</code></td>
-<td>pandas.pandas.DataFrame</td>
-<td>The input DataFrame containing the data.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>drop_intercept</code></td>
-<td>bool</td>
-<td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
-<td><code>False</code></td>
-</tr>
-<tr class="odd">
-<td><code>i_ref1</code></td>
-<td>str or list</td>
-<td>The reference level for the first variable in the i() syntax.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>i_ref2</code></td>
-<td>str or list</td>
-<td>The reference level for the second variable in the i() syntax.</td>
-<td><code>None</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns" class="level4">
-<h4 class="anchored" data-anchor-id="returns">Returns</h4>
-<table class="table">
-<colgroup>
-<col style="width: 0%">
-<col style="width: 99%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>tuple</td>
-<td>A tuple of the following elements: - Y : pd.DataFrame A DataFrame of the dependent variable. - X : pd.DataFrame A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I : Optional[pd.DataFrame] A DataFrame of the Instruments, None if no IV. - fe : Optional[pd.DataFrame] A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index : np.array An array with indices of dropped columns. - fe_na : np.array An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str : str na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names : Optional[List[str]] Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights : Optional[str] Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights : bool A boolean indicating whether weights are used. - icovars : Optional[List[str]] A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="attributes" class="level4">
-<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
-<table class="table">
-<colgroup>
-<col style="width: 11%">
-<col style="width: 6%">
-<col style="width: 81%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>list or None</td>
-<td></td>
-<td>icovars - A list of interaction variables. None if no interaction variables via <code>i()</code> provided.</td>
-</tr>
-</tbody>
-</table>
+<p>Args: fml (str): A two-sided formula string using fixest formula syntax. data (pd.DataFrame): The input DataFrame containing the data. drop_singletons (bool): Whether to drop singleton fixed effects. Default is False. weights (str or None): Weights as a string if provided, or None if no weights, e.g., “weights”. data (pd.DataFrame): The input DataFrame containing the data. drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic. i_ref1 (str or list): The reference level for the first variable in the i() syntax. i_ref2 (str or list): The reference level for the second variable in the i() syntax.</p>
+<p>Returns: Tuple[ pd.DataFrame, # Y pd.DataFrame, # X Optional[pd.DataFrame], # I Optional[pd.DataFrame], # fe np.array, # na_index np.array, # fe_na str, # na_index_str Optional[List[str]], # z_names Optional[str], # weights bool # has_weights Optional[List[str]]]: A tuple of the following elements: - Y: A DataFrame of the dependent variable. - X: A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I: A DataFrame of the Instruments, None if no IV. - fe: A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index: An array with indices of dropped columns. - fe_na: An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str: na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names: Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights: Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights: A boolean indicating whether weights are used. - icovars: A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</p>
+<p>Attributes: list or None: icovars - A list of interaction variables. None if no interaction variables via <code>i()</code> provided.</p>
 
 
-</section>
 </section>
 </section>
 </section>
