@@ -137,6 +137,21 @@ ul.task-list{list-style: none;}
   <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">estimation.fepois</a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">did.estimation.did2s</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -252,14 +267,62 @@ ul.task-list{list-style: none;}
 <h3 class="anchored" data-anchor-id="pyfixest.detect_singletons.detect_singletons">detect_singletons</h3>
 <p><code>detect_singletons.detect_singletons(ids)</code></p>
 <p>Detect singleton fixed effects in a dataset.</p>
-<p>Args: ids (np.ndarray): A 2D numpy array representing fixed effects, with a shape of (n_samples, n_features). Elements should be non-negative integers representing fixed effect identifiers.</p>
-<p>Returns: np.ndarray: A boolean array of shape (n_samples,), indicating which observations have a singleton fixed effect.</p>
-<p>Note: The algorithm iterates over columns to identify fixed effects. After completing each column traversal, it updates the record of non-singleton rows. This approach is preferred as removing an observation in column ‘i’ may lead to the emergence of new singletons in subsequent columns (i.e., columns &gt; i).</p>
-<pre><code>Since we are operating on columns, we enforce column-major order for
-the input array. Working on a row-major array leads to considerable
-performance losses.</code></pre>
+<p>This function iterates over the columns of a 2D numpy array representing fixed effects to identify singleton fixed effects. An observation is considered a singleton if it is the only one in its group (fixed effect identifier).</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 10%">
+<col style="width: 80%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ids</code></td>
+<td>numpy.numpy.ndarray</td>
+<td>A 2D numpy array representing fixed effects, with a shape of (n_samples, n_features). Elements should be non-negative integers representing fixed effect identifiers.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
+<table class="table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 82%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>numpy.numpy.ndarray</td>
+<td>A boolean array of shape (n_samples,), indicating which observations have a singleton fixed effect.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level4">
+<h4 class="anchored" data-anchor-id="notes">Notes</h4>
+<p>The algorithm iterates over columns to identify fixed effects. After each column is processed, it updates the record of non-singleton rows. This approach accounts for the possibility that removing an observation in one column can lead to the emergence of new singletons in subsequent columns.</p>
+<p>For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to significant performance losses.</p>
 
 
+</section>
 </section>
 </section>
 </section>

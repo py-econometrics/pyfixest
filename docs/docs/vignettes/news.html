@@ -195,7 +195,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="2cCfPX"></div>
+            <div id="Jkxlqt"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -206,7 +206,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.0.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -219,15 +219,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("2cCfPX").appendChild(div);
+                        document.getElementById("Jkxlqt").appendChild(div);
                     };
-                    var e = document.getElementById("2cCfPX");
+                    var e = document.getElementById("Jkxlqt");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 </div>
+</section>
+<section id="pyfixest-0.13.5" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.13.5">PyFixest 0.13.5</h2>
+<ul>
+<li>Fixes a bug that lead to incorrect results when the dependent variable and <strong>all covariates</strong> (excluding the fixed effects) where integers.</li>
+</ul>
 </section>
 <section id="pyfixest-0.13.4" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.13.4">PyFixest 0.13.4</h2>

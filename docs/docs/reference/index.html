@@ -70,7 +70,7 @@ ul.task-list{list-style: none;}
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href=".././readme.md">PyFixest</a>
+    <a class="nav-link" href="../readme.html">PyFixest</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../vignettes/quickstart.html">Quickstart</a>
@@ -135,6 +135,21 @@ ul.task-list{list-style: none;}
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">estimation.fepois</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">did.estimation.did2s</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
   </div>
 </li>
       </ul>
@@ -238,11 +253,23 @@ ul.task-list{list-style: none;}
 <tbody>
 <tr class="odd">
 <td><a href="../reference/estimation.feols.html#pyfixest.estimation.feols">estimation.feols</a></td>
-<td># feols</td>
+<td>Estimate linear regression models with fixed effects using fixest formula syntax.</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/estimation.fepois.html#pyfixest.estimation.fepois">estimation.fepois</a></td>
-<td># fepois</td>
+<td>Estimate Poisson regression models with fixed effects using the <code>pplmhdfe</code> algorithm.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/did.estimation.did2s.html#pyfixest.did.estimation.did2s">did.estimation.did2s</a></td>
+<td>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</td>
+</tr>
+<tr class="even">
+<td><a href="../reference/did.estimation.lpdid.html#pyfixest.did.estimation.lpdid">did.estimation.lpdid</a></td>
+<td>Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.</td>
+</tr>
+<tr class="odd">
+<td><a href="../reference/did.estimation.event_study.html#pyfixest.did.estimation.event_study">did.estimation.event_study</a></td>
+<td>Estimate a treatment effect using an event study design.</td>
 </tr>
 </tbody>
 </table>
@@ -274,19 +301,19 @@ ul.task-list{list-style: none;}
 <tbody>
 <tr class="odd">
 <td><a href="../reference/summarize.summary.html#pyfixest.summarize.summary">summarize.summary</a></td>
-<td># Summary</td>
+<td>Summary</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/summarize.etable.html#pyfixest.summarize.etable">summarize.etable</a></td>
-<td>Create an esttab-like table from a list of models#</td>
+<td>Create an esttab-like table from a list of models.</td>
 </tr>
 <tr class="odd">
 <td><a href="../reference/visualize.coefplot.html#pyfixest.visualize.coefplot">visualize.coefplot</a></td>
-<td># coefplot</td>
+<td>Plot model coefficients with confidence intervals.</td>
 </tr>
 <tr class="even">
 <td><a href="../reference/visualize.iplot.html#pyfixest.visualize.iplot">visualize.iplot</a></td>
-<td># iplot</td>
+<td>Plot model coefficients for variables interacted via “i()” syntax, with confidence intervals.</td>
 </tr>
 </tbody>
 </table>

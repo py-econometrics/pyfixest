@@ -18,7 +18,7 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "PyFixest"
-        file: ./readme.md
+        file: readme.qmd
       - text: "Quickstart"
         file: vignettes/quickstart.ipynb
       - text: "Difference-in-Differences Estimation"
@@ -42,9 +42,9 @@ quartodoc:
       contents:
         - estimation.feols
         - estimation.fepois
-        # - did.estimation.did2s
-        #- did.estimation.lpdid
-        # - did.estimation.event_study
+        - did.estimation.did2s
+        - did.estimation.lpdid
+        - did.estimation.event_study
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
