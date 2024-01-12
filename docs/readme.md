@@ -20,7 +20,7 @@ get started! In particular, this means that all of `fixest's` defaults
 are mirrored by `PyFixest` - currently with only [one small
 exception](https://github.com/s3alfisc/pyfixest/issues/260).
 Nevertheless, for a quick introduction, you can take a look at the
-[tutorial](https://s3alfisc.github.io/pyfixest/tutorial/) or the
+[tutorial](https://s3alfisc.github.io/pyfixest/quickstart/) or the
 regression chapter of [Arthur Turrell's](https://github.com/aeturrell)
 book on [Coding for
 Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
