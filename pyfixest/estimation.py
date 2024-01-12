@@ -20,10 +20,7 @@ def feols(
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
     """
-    Estimate linear regression models with fixed effects using fixest formula syntax.
-
-    This method accommodates complex models with stepwise regressions, multiple dependent variables, interaction of variables,
-    interacted fixed effects, and instruments. It's compatible with various syntax elements from the formulaic module.
+    Estimate a linear regression models with fixed effects using fixest formula syntax.
 
     Parameters
     ----------
@@ -237,9 +234,6 @@ def fepois(
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm.
-
-    This method is based on the Stata package of the same name and supports various features like stepwise regressions,
-    cumulative stepwise regression, multiple dependent variables, interaction of variables, and interacted fixed effects.
 
     Parameters
     ----------

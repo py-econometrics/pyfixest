@@ -18,7 +18,7 @@ def event_study(
     cluster="idname",
 ):
     """
-    Estimate a treatment effect using an event study design.
+    Function for Event Study Estimation.
 
     This function allows for the estimation of treatment effects using different estimators.
     Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
@@ -144,9 +144,6 @@ def did2s(
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
-
-    This function estimates the effects of treatments in panel data using a two-stage approach. It requires specification of
-    both the first and second stage formulas and supports interaction references for the second stage.
 
     Parameters
     ----------
