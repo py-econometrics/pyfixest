@@ -14,13 +14,38 @@ def etable(
     type: Optional[str] = "md",
 ) -> Union[pd.DataFrame, str]:
     """
-    Create an esttab-like table from a list of models#
-    Args:
-        models: A list of models of type Feols, Feiv, Fepois.
-        digits: Number of digits to round to.
-        type: Type of output. Either "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. "md" by default.
-    Returns:
-        A pandas DataFrame with the coefficients and standard errors of the models.
+    Create an esttab-like table from a list of models.
+
+    Parameters
+    ----------
+    models : list
+        A list of models of type Feols, Feiv, Fepois.
+    digits : int
+        Number of digits to round to.
+    type : str, optional
+        Type of output. Either "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. Default is "md".
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame with the coefficients and standard errors of the models.
+
+    Examples
+    --------
+
+    ```{python}
+    from pyfixest.estimation import feols
+    from pyfixest.utils import get_data
+    from pyfixest.summarize import etable
+
+    # load data
+    df = get_data()
+    fit1 = feols("Y~X1 + X2 | f1", df)
+    fit2 = feols("Y~X1 + X2 | f1 + f2", df)
+    fit3 = feols("Y~X1 + X2 | f1 + f2 + f3", df)
+
+    etable([fit1, fit2, fit3])
+    ```
     """
 
     models = _post_processing_input_checks(models)
@@ -136,19 +161,36 @@ def summary(
     models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
 ) -> None:
     """
-    # Summary
+    Prints a summary of estimation results for each estimated model.
 
-    Prints a summary of the feols() estimation results for each estimated model.
-
-    For each model, the method prints a header indicating the fixed-effects and the
+    For each model, this method prints a header indicating the fixed-effects and the
     dependent variable, followed by a table of coefficient estimates with standard
     errors, t-values, and p-values.
 
-    Args:
-        digits (int, optional): The number of decimal places to round the summary statistics to. Default is 3.
+    Parameters
+    ----------
+    digits : int, optional
+        The number of decimal places to round the summary statistics to. Default is 3.
 
-    Returns:
-        None
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    ```{python}
+    from pyfixest.utils import get_data
+    from pyfixest.estimation import feols
+    from pyfixest.summarize import summary
+
+    # load data
+    df = get_data()
+    fit1 = feols("Y~X1 + X2 | f1", df)
+    fit2 = feols("Y~X1 + X2 | f1 + f2", df)
+    fit3 = feols("Y~X1 + X2 | f1 + f2 + f3", df)
+
+    summary([fit1, fit2, fit3])
+    ```
     """
 
     models = _post_processing_input_checks(models)
@@ -201,6 +243,20 @@ def summary(
 
 
 def _post_processing_input_checks(models):
+    """
+    Perform input checks for post-processing models.
+
+    Parameters:
+        models (Feols, Fepois, list, dict): The models to be checked.
+
+    Returns:
+        models (Feols, Fepois, list, dict): The checked models.
+
+    Raises:
+        TypeError: If the models argument is not of the expected type.
+
+    """
+
     # check if models instance of Feols or Fepois
     if isinstance(models, (Feols, Fepois)):
         models = [models]
@@ -225,6 +281,17 @@ def _post_processing_input_checks(models):
 
 
 def _tabulate_etable(df, n_models, n_fixef):
+    """
+    Format and tabulate a DataFrame.
+
+    Parameters:
+    - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
+    - n_models (int): The number of models.
+    - n_fixef (int): The number of fixed effects.
+
+    Returns:
+    - formatted_table (str): The formatted table as a string.
+    """
     # Format the DataFrame for tabulate
     table = tabulate(
         df, headers="keys", showindex=False, colalign=["left"] + n_models * ["right"]

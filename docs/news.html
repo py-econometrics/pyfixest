@@ -81,36 +81,192 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </style>
 
 
-<script src="news_files/libs/clipboard/clipboard.min.js"></script>
-<script src="news_files/libs/quarto-html/quarto.js"></script>
-<script src="news_files/libs/quarto-html/popper.min.js"></script>
-<script src="news_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="news_files/libs/quarto-html/anchor.min.js"></script>
-<link href="news_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="news_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="news_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="news_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="news_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
 
-<body class="fullcontent">
+<body class="nav-fixed fullcontent">
 
-<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
-
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./readme.html">PyFixest</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./quickstart.html">Quickstart</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./difference-in-differences.html">Difference-in-Differences Estimation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./replicating-the-effect.html">Replicating ‘The Effect’ with PyFixest</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./reference/index.html">Documentation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./news.html" aria-current="page">Changelog</a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"><i class="bi bi-github" role="img">
+</i> 
+ </a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
 <main class="content" id="quarto-document-content">
 
 
 
 <section id="news" class="level1">
 <h1>News</h1>
+<section id="pyfixest-0.14.0" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.14.0">PyFixest 0.14.0</h2>
+<ul>
+<li>Moves the documentation to <a href="https://github.com/machow/quartodoc">quartodoc</a>.</li>
+<li>Changes all docstrings to <code>numpy</code> format.</li>
+<li>Difference-in-differences estimation functions now need to be imported via the <code>pyfixest.did.estimation</code> module:</li>
+</ul>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s, lpdid, event_study</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+      the module is not yet as thoroughly tested as I would like. So please use it with caution and
+      provide feedback in case you stumble over any bugs!
+      </code></pre>
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="LxCHXR"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("LxCHXR").appendChild(div);
+                    };
+                    var e = document.getElementById("LxCHXR");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+</div>
+</section>
+<section id="pyfixest-0.13.5" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.13.5">PyFixest 0.13.5</h2>
+<ul>
+<li>Fixes a bug that lead to incorrect results when the dependent variable and <strong>all covariates</strong> (excluding the fixed effects) where integers.</li>
+</ul>
+</section>
+<section id="pyfixest-0.13.4" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.13.4">PyFixest 0.13.4</h2>
+<ul>
+<li>Fixes a bug in <code>etable()</code> with IV’s that occurred because <code>feols()</code> does not report R2 statistics for IVs.</li>
+</ul>
+</section>
+<section id="pyfixest-0.13.2" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.13.2">PyFixest 0.13.2</h2>
+<ul>
+<li>Fixes a bug in <code>etable()</code> and a warning in <code>fixest_model_matrix</code> that arose with higher <code>pandas</code> versions. Thanks to <span class="citation" data-cites="aeturrell">@aeturrell</span> for reporting!</li>
+</ul>
+</section>
+<section id="pyfixest-0.13.0" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.13.0">PyFixest 0.13.0</h2>
+<section id="new-features" class="level3">
+<h3 class="anchored" data-anchor-id="new-features">New Features</h3>
+<ul>
+<li>Introduces a new <code>pyfixest.did</code> module which contains routines for Difference-in-Differences estimation.</li>
+<li>Introduces support for basic versions of the local projections DiD estimator following <a href="https://www.nber.org/papers/w31184">Dube et al (2023)</a></li>
+<li>Adds a new vignette for Difference-in-Differences estimation.</li>
+<li>Reports R2 values in <code>etable()</code>.</li>
+</ul>
+</section>
+</section>
 <section id="pyfixest-0.12.0" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.12.0">PyFixest 0.12.0</h2>
 <section id="enhancements" class="level3">
 <h3 class="anchored" data-anchor-id="enhancements">Enhancements:</h3>
 <ul>
-<li>Good performance improvements for singleton detection. Thanks to <a href="https://github.com/styfenschaer"><span class="citation" data-cites="styfenschaer">@styfenschaer</span></a> for the PR! See <a href="https://github.com/s3alfisc/pyfixest/issues/229">#229</a>.</li>
+<li>Good performance improvements for singleton fixed effects detection. Thanks to <a href="https://github.com/styfenschaer"><span class="citation" data-cites="styfenschaer">@styfenschaer</span></a> for the PR! See <a href="https://github.com/s3alfisc/pyfixest/issues/229">#229</a>.</li>
+<li>Uses the <a href="https://github.com/eddelbuettel/r2u">r2u project</a> for installing R and R packages on github actions, with great performance improvements.</li>
+<li>Allows to pass <code>polars</code> data frames to <code>feols()</code>, <code>fepois()</code> and <code>predict()</code>. <a href="https://github.com/s3alfisc/pyfixest/issues/232">#232</a>. Thanks to <a href="https://github.com/s3alfisc/pyfixest/issues/232"><span class="citation" data-cites="vincentarelbundock">@vincentarelbundock</span></a> for the suggestion!</li>
 </ul>
 </section>
 <section id="bug-fixes" class="level3">
@@ -121,14 +277,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See <a href="https://github.com/s3alfisc/pyfixest/issues/236">#236</a> for details. Thanks to <a href="https://github.com/jiafengkevinchen"><span class="citation" data-cites="jiafengkevinchen">@jiafengkevinchen</span></a> for the pointer!</li>
 <li>The number of degrees of freedom <code>k</code> was computed incorrectly if columns were dropped from the design matrix <code>X</code> in the presence of multicollinearity. See <a href="https://github.com/s3alfisc/pyfixest/issues/235">#235</a> for details. Thanks to <a href="https://github.com/jiafengkevinchen"><span class="citation" data-cites="jiafengkevinchen">@jiafengkevinchen</span></a> for the pointer!</li>
 <li>If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See <a href="https://github.com/s3alfisc/pyfixest/issues/228">#228</a> for details. Thanks to <a href="https://github.com/manferdinig"><span class="citation" data-cites="manferdinig">@manferdinig</span></a> for the pointer!</li>
-<li>If selection <code>fixef_rm = 'singleton'</code>, <code>feols()</code> and <code>fepois()</code> would fail. <a href="https://github.com/s3alfisc/pyfixest/issues/192">#192</a>.</li>
+<li>If selection <code>fixef_rm = 'singleton'</code>, <code>feols()</code> and <code>fepois()</code> would fail, which has been fixed. <a href="https://github.com/s3alfisc/pyfixest/issues/192">#192</a></li>
+</ul>
+</section>
+<section id="dependency-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="dependency-requirements">Dependency Requirements</h3>
+<ul>
+<li>For now, sets <code>formulaic</code> versions to be <code>0.6.6</code> or lower as version <code>1.0.0</code> seems to have introduced a problem with the <code>i()</code> operator, See <a href="https://github.com/s3alfisc/pyfixest/issues/244">#244</a> for details.</li>
+<li>Drops dependency on <code>pyhdfe</code>.</li>
 </ul>
 </section>
 </section>
 <section id="pyfixest-0.11.1" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.11.1">PyFixest 0.11.1</h2>
 <ul>
-<li>Fix some bugs around the computation of R-squared values (see <a href="https://github.com/s3alfisc/pyfixest/issues/103">issue #103</a>).</li>
+<li>Fixes some bugs around the computation of R-squared values (see <a href="https://github.com/s3alfisc/pyfixest/issues/103">issue #103</a>).</li>
 <li>Reports R-squared values again when calling <code>.summary()</code>.</li>
 </ul>
 </section>
@@ -163,31 +326,31 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="new-feature" class="level3">
 <h3 class="anchored" data-anchor-id="new-feature">New feature</h3>
 <p>A <code>dids2()</code> function is added, which implements the 2-stage difference-in-differences procedure à la Gardner and follows the syntax of <span class="citation" data-cites="kylebutts">@kylebutts</span> <a href="https://github.com/kylebutts/did2s">did2s</a> R package.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.did <span class="im">import</span> did2s</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> iplot</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"pyfixest/did/data/df_het.csv"</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    first_stage <span class="op">=</span> <span class="st">"~ 0 | state + year"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    second_stage <span class="op">=</span> <span class="st">"~i(rel_year)"</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    treatment <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    cluster <span class="op">=</span> <span class="st">"state"</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    i_ref1 <span class="op">=</span> [<span class="op">-</span><span class="fl">1.0</span>, np.inf],</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> feols(</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year) | state + year"</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    i_ref1 <span class="op">=</span> [<span class="op">-</span><span class="fl">1.0</span>, np.inf]</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>iplot([fit, fit_twfe], coord_flip<span class="op">=</span><span class="va">False</span>, figsize <span class="op">=</span> (<span class="dv">900</span>, <span class="dv">400</span>), title <span class="op">=</span> <span class="st">"TWFE vs DID2S"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.did <span class="im">import</span> did2s</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> iplot</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    first_stage <span class="op">=</span> <span class="st">"~ 0 | state + year"</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    second_stage <span class="op">=</span> <span class="st">"~i(rel_year)"</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    treatment <span class="op">=</span> <span class="st">"treat"</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    cluster <span class="op">=</span> <span class="st">"state"</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    i_ref1 <span class="op">=</span> [<span class="op">-</span><span class="fl">1.0</span>, np.inf],</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> feols(</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year) | state + year"</span>,</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    i_ref1 <span class="op">=</span> [<span class="op">-</span><span class="fl">1.0</span>, np.inf]</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>iplot([fit, fit_twfe], coord_flip<span class="op">=</span><span class="va">False</span>, figsize <span class="op">=</span> (<span class="dv">900</span>, <span class="dv">400</span>), title <span class="op">=</span> <span class="st">"TWFE vs DID2S"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><img src="figures/event_study.svg" class="img-fluid"></p>
 </section>
 </section>
@@ -196,37 +359,37 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li>Adds basic support for event study estimation via two-way fixed effects and Gardner’s two-stage “Did2s” approach. This is a beta version and experimental. Further updates (i.e.&nbsp;proper event studies vs “only” ATTs) and a more flexible did2s front end will follow in future releases.</li>
 </ul>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.did <span class="im">import</span> event_study</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"pyfixest/did/data/df_het.csv"</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span> <span class="st">"state"</span>,</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    tname <span class="op">=</span> <span class="st">"year"</span>,</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    gname <span class="op">=</span> <span class="st">"g"</span>,</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    estimator <span class="op">=</span> <span class="st">"twfe"</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> event_study(</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span> <span class="st">"state"</span>,</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    tname <span class="op">=</span> <span class="st">"year"</span>,</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    gname <span class="op">=</span> <span class="st">"g"</span>,</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    estimator <span class="op">=</span> <span class="st">"did2s"</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>etable([fit_twfe, fit_did2s])</span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   | est1             | est2             |</span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|:-----------------|:-----------------|</span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co"># | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |</span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.did <span class="im">import</span> event_study</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"pyfixest/did/data/df_het.csv"</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span> <span class="st">"state"</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    tname <span class="op">=</span> <span class="st">"year"</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    gname <span class="op">=</span> <span class="st">"g"</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    estimator <span class="op">=</span> <span class="st">"twfe"</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> event_study(</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    yname <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span> <span class="st">"state"</span>,</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    tname <span class="op">=</span> <span class="st">"year"</span>,</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    gname <span class="op">=</span> <span class="st">"g"</span>,</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    estimator <span class="op">=</span> <span class="st">"did2s"</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>etable([fit_twfe, fit_did2s])</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co"># | Coefficient   | est1             | est2             |</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co"># |:--------------|:-----------------|:-----------------|</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co"># | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="pyfixest-0.10.6" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.10.6">PyFixest 0.10.6</h2>
@@ -274,41 +437,41 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>Multiple performance improvements.</li>
 <li>Most importantly, implements a custom demeaning algorithm in <code>numba</code> - thanks to Styfen Schaer (<span class="citation" data-cites="styfenschaer">@styfenschaer</span>), which leads to performance improvements of 5x or more:</li>
 </ul>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyhdfe</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.demean <span class="im">import</span> demean</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">1238</span>)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">10_000_000</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.random.normal(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">10</span><span class="op">*</span>N).reshape((N,<span class="dv">10</span>))</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>f1 <span class="op">=</span> np.random.choice(<span class="bu">list</span>(<span class="bu">range</span>(<span class="dv">1000</span>)), N).reshape((N,<span class="dv">1</span>))</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>f2 <span class="op">=</span> np.random.choice(<span class="bu">list</span>(<span class="bu">range</span>(<span class="dv">1000</span>)), N).reshape((N,<span class="dv">1</span>))</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>flist <span class="op">=</span> np.concatenate((f1, f2), axis <span class="op">=</span> <span class="dv">1</span>)</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>weights <span class="op">=</span> np.ones(N)</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>algorithm <span class="op">=</span> pyhdfe.create(flist)</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>start_time <span class="op">=</span> time.time()</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>res_pyhdfe <span class="op">=</span> algorithm.residualize(x)</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>end_time <span class="op">=</span> time.time()</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(end_time <span class="op">-</span> start_time)</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 26.04527711868286</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>start_time <span class="op">=</span> time.time()</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>res_pyfixest, success <span class="op">=</span> demean(x, flist, weights, tol <span class="op">=</span> <span class="fl">1e-10</span>)</span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the execution time</span></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>end_time <span class="op">=</span> time.time()</span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(end_time <span class="op">-</span> start_time)</span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">#4.334428071975708</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>np.allclose(res_pyhdfe , res_pyfixest)</span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co"># True</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyhdfe</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.demean <span class="im">import</span> demean</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">1238</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">10_000_000</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> np.random.normal(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">10</span><span class="op">*</span>N).reshape((N,<span class="dv">10</span>))</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>f1 <span class="op">=</span> np.random.choice(<span class="bu">list</span>(<span class="bu">range</span>(<span class="dv">1000</span>)), N).reshape((N,<span class="dv">1</span>))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>f2 <span class="op">=</span> np.random.choice(<span class="bu">list</span>(<span class="bu">range</span>(<span class="dv">1000</span>)), N).reshape((N,<span class="dv">1</span>))</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>flist <span class="op">=</span> np.concatenate((f1, f2), axis <span class="op">=</span> <span class="dv">1</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>weights <span class="op">=</span> np.ones(N)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>algorithm <span class="op">=</span> pyhdfe.create(flist)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>start_time <span class="op">=</span> time.time()</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>res_pyhdfe <span class="op">=</span> algorithm.residualize(x)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>end_time <span class="op">=</span> time.time()</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(end_time <span class="op">-</span> start_time)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 26.04527711868286</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>start_time <span class="op">=</span> time.time()</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>res_pyfixest, success <span class="op">=</span> demean(x, flist, weights, tol <span class="op">=</span> <span class="fl">1e-10</span>)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the execution time</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>end_time <span class="op">=</span> time.time()</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(end_time <span class="op">-</span> start_time)</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">#4.334428071975708</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>np.allclose(res_pyhdfe , res_pyfixest)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co"># True</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="pyfixest-0.9.11" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-0.9.11">PyFixest 0.9.11</h2>
@@ -356,31 +519,32 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2 class="anchored" data-anchor-id="pyfixest-0.9.1">PyFixest 0.9.1</h2>
 <section id="breaking-api-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-api-changes">Breaking API changes</h3>
-<p>It is no longer required to initiate an object of type <code>Fixest</code> prior to running <code>feols</code> or <code>fepois</code>. Instead, you can now simply use <code>feols()</code> and <code>fepois()</code> as functions, just as in <code>fixest</code>. Both function can be found in an <code>estimation</code> module and need to obtain a <code>pd.DataFrame</code> as a function argument:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> fixest, fepois</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ X1 | f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Calling <code>feols()</code> will return an instance of class <code>Feols</code>, while calling <code>fepois()</code> will return an instance of class <code>Fepois</code>. Multiple estimation syntax will return an instance of class <code>FixestMulti</code>.</p>
+<p>It is no longer required to initiate an object of type <code>Fixest</code> prior to running [Feols(/reference/Feols.qmd) or <code>fepois</code>. Instead, you can now simply use <code>feols()</code> and <code>fepois()</code> as functions, just as in <code>fixest</code>. Both function can be found in an <code>estimation</code> module and need to obtain a <code>pd.DataFrame</code> as a function argument:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> fixest, fepois</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ X1 | f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Calling <code>feols()</code> will return an instance of class [Feols(/reference/Feols.qmd), while calling <code>fepois()</code> will return an instance of class <code>Fepois</code>. Multiple estimation syntax will return an instance of class <code>FixestMulti</code>.</p>
 <p>Post processing works as before via <code>.summary()</code>, <code>.tidy()</code> and other methods.</p>
 </section>
-<section id="new-features" class="level3">
-<h3 class="anchored" data-anchor-id="new-features">New Features</h3>
+<section id="new-features-1" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-1">New Features</h3>
 <p>A summary function allows to compare multiple models:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2| f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>summary([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Visualization is possible via custom methods (<code>.iplot()</code> &amp; <code>.coefplot()</code>), but a new module allows to visualize a list of <code>Feols</code> and/or <code>Fepois</code> instances:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot, iplot</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>coefplot([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2| f1"</span>, data <span class="op">=</span> data, vcov <span class="op">=</span> <span class="st">"iid"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>summary([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Visualization is possible via custom methods (<code>.iplot()</code> &amp; <code>.coefplot()</code>), but a new module allows to visualize a list of [Feols(/reference/Feols.qmd) and/or <code>Fepois</code> instances:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot, iplot</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>coefplot([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The documentation has been improved (though there is still room for progress), and the code has been cleaned up a bit (also lots of room for improvements).</p>
+
+
 </section>
 </section>
 </section>
 
-</main>
-<!-- /main column -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
@@ -400,7 +564,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       toggleBodyColorMode(bsSheetEl);
     }
   }
-  toggleBodyColorPrimary();
+  toggleBodyColorPrimary();  
   const icon = "";
   const anchorJS = new window.AnchorJS();
   anchorJS.options = {
@@ -444,7 +608,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       theme: 'quarto',
       placement: 'bottom-start'
     };
-    window.tippy(el, config);
+    window.tippy(el, config); 
   }
   const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
   for (var i=0; i<noterefs.length; i++) {

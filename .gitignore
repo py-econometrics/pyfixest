@@ -11,9 +11,14 @@ dist
 .vscode
 *.pyc
 __pycache__/
-docs/figures
+#docs/figures
 docs/news_files
 readme_files
 benchmarks/data/_STATA/*
 benchmarks/data/data/*
 readme.ipynb
+/.quarto/
+#objects.json
+#docs/site_libs
+#site_libs
+

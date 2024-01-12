@@ -1,0 +1,73 @@
+project:
+  type: website
+  output-dir: _site
+
+metadata-files:
+  - _sidebar.yml
+
+website:
+  navbar:
+    page_navigation: true
+    favicon: "figures/pyfixest-logo.png"
+    #page-footer:
+    #  center: |
+    #    Developed by [Alexander Fischer](https://github.com/s3alfisc) and [Styfen Schär](https://github.com/styfenschaer)
+    search: true
+    right:
+      - icon: github
+        href: https://github.com/s3alfisc/pyfixest/
+    left:
+      - text: "PyFixest"
+        file: readme.md
+      - text: "Quickstart"
+        file: quickstart.ipynb
+      - text: "Difference-in-Differences Estimation"
+        file: difference-in-differences.ipynb
+      - text: "Replicating 'The Effect' with PyFixest"
+        file: replicating-the-effect.ipynb
+      - text: "Documentation"
+        file: reference/index.qmd
+      - text: "Changelog"
+        file: news.qmd
+
+quartodoc:
+  package: pyfixest
+
+  sidebar: _sidebar.yml
+
+  sections:
+    - title: Estimation Functions
+      desc: |
+        User facing estimation functions
+      contents:
+        - estimation.feols
+        - estimation.fepois
+        - did.estimation.did2s
+        - did.estimation.lpdid
+        - did.estimation.event_study
+    - title: Estimation Classes
+      desc: |
+        Details on Methods and Attributes
+      contents:
+        - feols.Feols
+        - fepois.Fepois
+        - feiv.Feiv
+        #- did.DID
+        #- did.did2s
+        #- did.lpdid
+        #- did.twfe
+    - title: Summarize and Visualize
+      desc: |
+        Post-Processing of Estimation Results
+      contents:
+        - summarize.summary
+        - summarize.etable
+        - visualize.coefplot
+        - visualize.iplot
+    - title: Misc / Utilities
+      desc: |
+        PyFixest internals and utilities
+      contents:
+        - demean.demean
+        - detect_singletons.detect_singletons
+        - model_matrix_fixest.model_matrix_fixest

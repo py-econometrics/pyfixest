@@ -20,119 +20,184 @@ def feols(
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
     """
+    Estimate a linear regression models with fixed effects using fixest formula syntax.
 
-    # feols
+    Parameters
+    ----------
+    fml : str
+        A three-sided formula string using fixest formula syntax. Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
+        fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables,
+        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2).
 
-    Method for estimating linear regression models with fixed effects.
+    data : DataFrameType
+        A pandas or polars dataframe containing the variables in the formula.
 
-    Args:
-        fml (str): A three-sided formula string using fixest formula syntax.
+    vcov : Union[str, dict[str, str]]
+        Type of variance-covariance matrix for inference. Options include "iid", "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
-            The syntax is as follows: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1" where:
+    ssc : str
+        A ssc object specifying the small sample correction for inference.
 
-            - Y: Dependent variable
-            - X1, X2: Independent variables
-            - FE1, FE2: Fixed effects
-            - Z1, Z2: Instruments
+    fixef_rm : str
+        Specifies whether to drop singleton fixed effects. Options: "none" (default), "singleton".
 
-            In short, "|" separates left-hand side, fixed effects, and instruments
+    collin_tol : float, optional
+        Tolerance for collinearity check, by default 1e-06.
 
-            - If no fixed effects and instruments are specified, the formula can be simplified to "Y ~ X1 + X2".
-            - If no instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | FE1 + FE2".
-            - If no fixed effects are specified but instruments are specified, the formula can be simplified to "Y ~ X1 + X2 | X1 ~ Z1".
+    drop_intercept : bool, optional
+        Whether to drop the intercept from the model, by default False.
 
-            Supported multiple estimation syntax includes:
+    i_ref1 : Optional[Union[list, str]], optional
+        Reference category for the first set of categorical variables interacted via "i()", by default None.
 
-            - Stepwise regressions (sw, sw0)
-            - Cumulative stepwise regression (csw, csw0)
-            - Multiple dependent variables (Y1 + Y2 ~ X)
+    i_ref2 : Optional[Union[list, str]], optional
+        Reference category for the second set of categorical variables interacted via "i()", by default None.
 
-            Other special syntax includes:
+    Returns
+    -------
+    object
+        An instance of the [Feols(/reference/Feols.qmd) class or `FixestMulti` class for multiple models specified via `fml`.
 
-            - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
-              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
-              will always be treated as a categorical.
-            - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
+    Examples
+    --------
 
-            All other parts of the formula must be compatible with formula parsing via the formulaic module.
-            You can use formulaic tools such as "C", "I", ":", "*", "np.log", "np.power", etc.
+    As in `fixest`, the [Feols(/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects.
+    The following example regresses `Y` on `X1` and `X2` with fixed effects for `f1` and `f2`: fixed effects are specified
+    after the `|` symbol.
 
-        data (DataFrameType): A pandas or polars dataframe containing the variables in the formula.
+    ```{python}
+    from pyfixest.estimation import feols
+    from pyfixest.utils import get_data
+    from pyfixest.summarize import etable
 
-        vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            For twoway clustering, combine the cluster variables via a "+", i.e. dict(".CRV1":"clustervar1+clustervar2").
+    data = get_data()
 
-        ssc (str): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
+    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit.summary()
+    ```
 
-        fixef_rm (str): A string to specify whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+    Calling `feols()` returns an instance of the [Feols(/reference/Feols.qmd) class. The `summary()` method can be used to print the results.
 
-        collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
-                            via the diagonal cholesky decomposition of the correlation matrix of the variables.
-                            If the tolerance is higher, more variables will be dropped.
+    An alternative way to retrieve model results is via the `tidy()` method, which returns a pandas dataframe with the
+    estimated coefficients, standard errors, t-statistics, and p-values.
 
-        drop_intercept (bool): Whether to drop the intercept from the model. False by default. If True, the intercept will be dropped **after** creating the model matrix via formulaic.
-                               This implies that reference levels for categorical variables will be dropped as well and are not recovered.
+    ```{python}
+    fit.tidy()
+    ```
 
-        i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
-        i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
+    You can also access all elements in the tidy data frame by dedicated methods, e.g. `fit.coef()` for the coefficients, `fit.se()` for the standard errors,
+    `fit.tstat()` for the t-statistics, and `fit.pval()` for the p-values, and `fit.confint()` for the confidence intervals.
 
-    Returns:
-        An instance of the `Feols` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
+    The employed type of inference can be specified via the `vcov` argument. If vcov is not provided, `PyFixest` employs the `fixest` default of iid inference,
+    unless there are fixed effects in the model, in which case `feols()` clusters the standard error by the first fixed effect (CRV1 inference).
 
-    Examples:
-        >>> from pyfixest.estimation import feols
-        >>> from pyfixest.utils import get_data, ssc
-        >>> from pyfixest.summarize import summary
-        >>> import pandas as pd
-        >>> data = get_data()
-        >>> data["f1"] = pd.Categorical(data["f1"])
+    ```{python}
+    fit1 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
+    fit2 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov="hetero")
+    fit3 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+    ```
 
-        >>> ## basic usage
-        >>> fit = feols("Y ~ X1 + X2 | f1 + f2", data=data)
+    Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary, e.g. `{"CRV1": "f1"}`
+    for CRV1 inference with clustering by `f1` or `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way clustering, you can provide a formula string, e.g.
+    `{"CRV1": "f1 + f2"}` for CRV1 inference with clustering by `f1`.
 
-        >>> ## Inference
-        >>> fit2 = feols("Y ~ X1 + X2 | f1 + f2", data=data, vcov = "hetero")
-        >>> fit3 = feols("Y ~ X1 + X2 | f1 + f2", data=data, vcov = {"CRV1":"group_id"})
-        >>> fit4 = feols("Y ~ X1 + X2", data=data, vcov = {"CRV3":"group_id"}) # currently only for models without fixed effects
-        >>> fit5 = feols("Y ~ X1 + X2", data=data, vcov = {"CRV3":"group_id"}).wildboottest(param = "X1", B = 999) # wild bootstrap currently only for models without fixed effects
+    ```{python}
+    fit4 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
+    ```
 
+    Inference can be adjusted post estimation via the `vcov` method:
 
-        >>> ## iv estimation
-        >>> fit6 = feols("Y ~  X2 | f1 + f2 | X1 ~ Z1", data=data)
-        >>> fit7 = feols("Y ~ X2 | f1 + f2 | X1 ~ Z1 + Z2", data=data, vcov = "hetero")
-        >>> fit8 = feols("Y ~ 1 | f1 + f2 | X1 ~ Z1 + Z2", data=data, vcov = {"CRV1":"group_id"})
+    ```{python}
+    fit.summary()
+    fit.vcov("iid").summary()
+    ```
 
-        >>> ## multiple estimation
-        >>> fit9 = feols("Y + Y2 ~ X1 + X2 | f1 + f2", data=data)
-        >>> fit10 = feols("Y ~ X1 + X2 | sw(f1, f2)", data=data, fixef_rm = "singleton")
-        >>> fit11 = feols("Y ~ sw(X1, X2) | csw(f1, f2)", data=data, ssc = ssc(adj = False))
+    The `ssc` argument specifies the small sample correction for inference. In general, `feols()` uses all of `fixest::feols()` defaults, but sets the
+    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`. See here for more details: [link to github](https://github.com/s3alfisc/pyfixest/issues/260).
 
-        >>> ## `i()` syntax
-        >>> fit12 = feols("Y ~ i(f1, X1) | f1 + f2", data = data)
+    `feols()` supports a range of multiple estimation syntax, i.e. you can estimate multiple models in one call. The following example estimates two models, one with
+    fixed effects for `f1` and one with fixed effects for `f2` using the `sw()` syntax.
 
-        >>> ## interact fixed effects
-        >>> fit13 = feols("Y ~ X1 + X2 | f1^f2", data = data)
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | sw(f1, f2)", data)
+    type(fit)
+    ```
 
-        >>> ## Fetching results
-        >>> fit.summary()
-        >>> fit.tidy()
-        >>> fit.coef()
-        >>> fit.se()
-        >>> fit.confint()
-        >>> mod = fit9.fetch_model(0)
-        >>> summary(fit)
-        >>> summary([fit, fit2, mod])
+    The returned object is an instance of the `FixestMulti` class. You can access the results of the first model via `fit.fetch_model(0)` and the results of the second model
+    via `fit.fetch_model(1)`. You can compare the model results via the `etable()` function:
 
-        >>> ## Plotting
-        >>> fit.coefplot(yintercept=0, figsize = (3,3))
-        >>> fit12.iplot(yintercept=0, figsize = (14,4))
+    ```{python}
+    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    ```
 
-        >>> # Update inference post estimation
-        >>> fit.vcov({"CRV1":"group_id"}).summary()
+    Other supported multiple estimation syntax include `sw0()`, `csw()` and `csw0()`. While `sw()` adds variables in a "stepwise" fashinon, `csw()`
+    does so cumulatively.
 
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | csw(f1, f2)", data)
+    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    ```
+
+    The `sw0()` and `csw0()` syntax are similar to `sw()` and `csw()`, but start with a model that exludes the variables specified in `sw()` and `csw()`:
+
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | sw0(f1, f2)", data)
+    etable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])
+    ```
+
+    The `feols()` function also supports multiple dependent variables. The following example estimates two models, one with `Y1` as the dependent variable and one with `Y2` as the dependent variable.
+
+    ```{python}
+    fit = feols("Y + Y2 ~ X1 | f1 + f2", data)
+    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    ```
+
+    It is possible to combine different multiple estimation operators:
+
+    ```{python}
+    fit = feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+    etable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2), fit.fetch_model(3)])
+    ```
+
+    In general, using muliple estimation syntax can improve the estimation time as covariates that are demeaned in one model and are used
+    in another model do not need to be demeaned again: `feols()` implements a caching mechanism that stores the demeaned covariates.
+
+    Besides OLS, `feols()` also supports IV estimation via three part formulas:
+
+    ```{python}
+    fit = feols("Y ~  X2 | f1 + f2 | X1 ~ Z1", data)
+    fit.tidy()
+    ```
+    Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2` are the fixed effects, as before. To estimate
+    IV models without fixed effects, simply omit the fixed effects part of the formula:
+
+    ```{python}
+    fit = feols("Y ~  X2 | X1 ~ Z1", data)
+    fit.tidy()
+    ```
+
+    Last, `feols()` supports interaction of variables via the `i()` syntax. Documentation on this is tba.
+
+    After fitting a model via `feols()`, you can use the `predict()` method to get the predicted values:
+
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit.predict()[0:5]
+    ```
+
+    The `predict()` method also supports a `newdata` argument to predict on new data, which returns a numpy array of the predicted values:
+
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit.predict(newdata=data)[0:5]
+    ```
+
+    Last, you can plot the results of a model via the `coefplot()` method:
+
+    ```{python}
+    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit.coefplot()
+    ```
 
     """
 
@@ -168,107 +233,71 @@ def fepois(
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Fepois, FixestMulti]:
     """
-    # fepois
+    Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm.
 
-    Method for estimating Poisson regression models with fixed effects. Implements the `pplmhdfe` algorithm from the
-    Stata package of the same name.
+    Parameters
+    ----------
+    fml : str
+        A two-sided formula string using fixest formula syntax. Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed effects.
+        Special syntax includes:
+        - Stepwise regressions (sw, sw0)
+        - Cumulative stepwise regression (csw, csw0)
+        - Multiple dependent variables (Y1 + Y2 ~ X)
+        - Interaction of variables (i(X1,X2))
+        - Interacted fixed effects (fe1^fe2)
+        Compatible with formula parsing via the formulaic module.
 
-    Args:
-        fml (str): A two-sided formula string using fixest formula syntax.
+    data : DataFrameType
+        A pandas or polars dataframe containing the variables in the formula.
 
-            The syntax is as follows: "Y ~ X1 + X2 | FE1 + FE2" where:
+    vcov : Union[str, dict[str, str]]
+        Type of variance-covariance matrix for inference. Options include "iid", "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
-            - Y: Dependent variable
-            - X1, X2: Independent variables
-            - FE1, FE2: Fixed effects
+    ssc : str
+        A ssc object specifying the small sample correction for inference.
 
-            In short, "|" separates left-hand side and fixed effects. If no fixed effects are specified,
-            the formula can be simplified to "Y ~ X1 + X2".
+    fixef_rm : str
+        Specifies whether to drop singleton fixed effects. Options: "none" (default), "singleton".
 
-            Supported multiple estimation syntax includes:
+    iwls_tol : Optional[float], optional
+        Tolerance for IWLS convergence, by default 1e-08.
 
-            - Stepwise regressions (sw, sw0)
-            - Cumulative stepwise regression (csw, csw0)
-            - Multiple dependent variables (Y1 + Y2 ~ X)
+    iwls_maxiter : Optional[float], optional
+        Maximum number of iterations for IWLS convergence, by default 25.
 
-            Other special syntax includes:
+    collin_tol : float, optional
+        Tolerance for collinearity check, by default 1e-06.
 
-            - i() for interaction of a categorical and non-categorical variable (e.g. "i(X1,X2)" for interaction between X1 and X2).
-              Using i() is required to use with some custom methods, e.g. iplot(). In contrast to r-fixest, reference levels cannot be
-              set in the formula, but must be specified via the i_ref1 and i_ref2 arguments. The first variable - in the example, X1 -
-              will always be treated as a categorical.
-            - ^ for interacted fixed effects (e.g. "fe1^fe2" for interaction between fe1 and fe2)
+    drop_intercept : bool, optional
+        Whether to drop the intercept from the model, by default False.
 
-            All other parts of the formula must be compatible with formula parsing via the formulaic module.
-            You can use formulaic tools such as "C", "I", ":", "*", "np.log", "np.power", etc.
+    i_ref1 : Optional[Union[list, str]], optional
+        Reference category for the first set of categorical variables interacted via "i()", by default None.
 
-        data (DataFrameType): A pandas or polars dataframe containing the variables in the formula.
+    i_ref2 : Optional[Union[list, str]], optional
+        Reference category for the second set of categorical variables interacted via "i()", by default None.
 
-        vcov (Union(str, dict[str, str])): A string or dictionary specifying the type of variance-covariance matrix to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            If a dictionary, it should have the format dict("CRV1":"clustervar") for CRV1 inference or dict(CRV3":"clustervar") for CRV3 inference.
-            For twoway clustering, combine the cluster variables via a "+", i.e. dict(".CRV1":"clustervar1+clustervar2").
+    Returns
+    -------
+    object
+        An instance of the `Fepois` class or an instance of class `FixestMulti` for multiple models specified via `fml`.
 
-        ssc (string): A ssc object specifying the small sample correction to use for inference. See the documentation for sscc() for more information.
+    Examples
+    --------
+    The `fepois()` function can be used to estimate a simple Poisson regression model with fixed effects.
+    The following example regresses `Y` on `X1` and `X2` with fixed effects for `f1` and `f2`: fixed effects are specified
+    after the `|` symbol.
 
-        fixef_rm (string): A string specifying whether singleton fixed effects should be dropped. Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
+    ```{python}
+    from pyfixest.estimation import fepois
+    from pyfixest.utils import get_data
+    from pyfixest.summarize import etable
 
-        iwls_tol (Optional[float]): tolerance for IWLS convergence. 1e-08 by default.
-
-        iwls_maxiter (Optional[float]): maximum number of iterations for IWLS convergence. 25 by default.
-
-        collin_tol (float): tolerance for collinearity check. 1e-06 by default. If collinear variables are detected, they will be dropped from the model. The performed check is
-                            via the diagonal cholesky decomposition of the correlation matrix of the variables. If the tolerance is higher, more variables will be dropped.
-
-        drop_intercept (bool): Whether to drop the intercept from the model. False by default. If True, the intercept will be dropped **after** creating the model matrix via formulaic.
-                               This implies that reference levels for categorical variables will be dropped as well and are not recovered.
-
-        i_ref1 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the first set of categorical variables in the formula, interacted via "i()".
-        i_ref2 (Optional[Union[list, str]]): A list of strings or a string specifying the reference category for the second set of categorical variables in the formula, interacted via "i()".
-
-    Returns:
-        An instance of the `Fepois` class or an instance of class `FixestMulti` if multiple models are specified via the `fml` argument.
-
-    Examples:
-        >>> from pyfixest.estimation import fepois
-        >>> from pyfixest.utils import get_data, ssc
-        >>> from pyfixest.summarize import summary
-        >>> import pandas as pd
-        >>> data = get_data(model = "Fepois")
-        >>> data["f1"] = pd.Categorical(data["f1"])
-
-        >>> ## basic usage
-        >>> fit = fepois("Y ~ X1 + X2 | f1 + f2", data=data)
-        >>> fit2 = fepois("Y ~ X1 + X2 | f1 + f2", data=data, vcov = "hetero")
-        >>> fit3 = fepois("Y ~ X1 + X2 | f1 + f2", data=data, vcov = {"CRV1":"group_id"})
-
-        >>> ## multiple estimation
-        >>> fit4 = fepois("Y + Y2 ~ X1 + X2 | f1 + f2", data=data)
-        >>> fit5 = fepois("Y ~ X1 + X2 | sw(f1, f2)", data=data, fixef_rm = "singleton")
-        >>> fit6 = fepois("Y ~ X1 | sw(f1, f2)", data=data, ssc = ssc(adj = False))
-
-        >>> ## `i()` syntax
-        >>> fit7 = fepois("Y ~ i(f1, X1) | f1 + f2", data = data)
-
-        >>> ## interact fixed effects
-        >>> fit8 = fepois("Y ~ X1 + X2 | f1^f2", data = data)
-
-        >>> ## Fetching results
-        >>> fit.summary()
-        >>> fit.tidy()
-        >>> fit.coef()
-        >>> fit.se()
-        >>> fit.confint()
-        >>> summary(fit)
-        >>> summary([fit, fit2])
-
-        >>> ## Plotting
-        >>> fit.coefplot(yintercept=0, figsize=(3, 3))
-        >>> fit7.iplot(yintercept=0, figsize=(14, 4))
-
-        >>> # Update inference post estimation
-        >>> fit.vcov({"CRV1":"group_id"}).summary()
-
+    data = get_data(model = "Fepois")
+    fit = fepois("Y ~ X1 + X2 | f1 + f2", data)
+    fit.summary()
+    ```
+    For more examples, please take a look at the documentation of the `feols()` function.
     """
 
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."

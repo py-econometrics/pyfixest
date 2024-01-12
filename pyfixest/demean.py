@@ -15,27 +15,34 @@ def demean_model(
     na_index_str: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
-    Demeans a single regression model.
+    Demeans a single regression model via the alterating projections algorithm (see `demean` function). Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
 
-    If the model has fixed effects, the fixed effects are demeaned using the PyHDFE package.
-    Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values
-    from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
+    Parameters
+    ----------
+    Y : pd.DataFrame
+        A DataFrame of the dependent variable.
+    X : pd.DataFrame
+        A DataFrame of the covariates.
+    fe : pd.DataFrame or None
+        A DataFrame of the fixed effects. None if no fixed effects specified.
+    weights : np.ndarray or None
+        A numpy array of weights. None if no weights.
+    lookup_demeaned_data : Dict[str, Any]
+        A dictionary with keys for each fixed effects combination and potentially values of demeaned data frames.
+        The function checks this dictionary to see if some of the variables have already been demeaned.
+    na_index_str : str
+        A string with indices of dropped columns. Used for caching of demeaned variables.
 
-    Args:
-        Y (pd.DataFrame): A DataFrame of the dependent variable.
-        X (pd.DataFrame): A DataFrame of the covariates.
-        fe (pd.DataFrame or None): A DataFrame of the fixed effects. None if no fixed effects specified.
-        weights (np.ndarray or None): A numpy array of weights. None if no weights.
-        lookup_demeaned_data (Dict[str, Any]): A dictionary with keys for each fixed effects combination and
-            potentially values of demeaned data frames. The function checks this dictionary to see if some of
-            the variables have already been demeaned.
-        na_index_str (str): A string with indices of dropped columns. Used for caching of demeaned variables.
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]: A tuple of the following elements:
-            - Yd (pd.DataFrame): A DataFrame of the demeaned dependent variable.
-            - Xd (pd.DataFrame): A DataFrame of the demeaned covariates.
-            - Id (pd.DataFrame or None): A DataFrame of the demeaned Instruments. None if no IV.
+    Returns
+    -------
+    Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
+        A tuple of the following elements:
+        - Yd : pd.DataFrame
+            A DataFrame of the demeaned dependent variable.
+        - Xd : pd.DataFrame
+            A DataFrame of the demeaned covariates.
+        - Id : pd.DataFrame or None
+            A DataFrame of the demeaned Instruments. None if no IV.
     """
 
     YX = pd.concat([Y, X], axis=1)
@@ -160,9 +167,33 @@ def demean(
     x: np.ndarray,
     flist: np.ndarray,
     weights: np.ndarray,
-    tol: float = 1e-08,  # note: fixest uses 1e-06, but potentially different tolerance criterion
+    tol: float = 1e-08,
     maxiter: int = 100_000,
 ) -> Tuple[np.ndarray, bool]:
+    """
+    Workhorse for demeaning an input array `x` based on the specified fixed effects and weights
+    via the alternating projections algorithm.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Input array of shape (n_samples, n_features). Needs to be of type float.
+    flist : np.ndarray
+        Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be
+        converted to integers.
+    weights : np.ndarray
+        Array of shape (n_samples,) specifying the weights.
+    tol : float, optional
+        Tolerance criterion for convergence. Defaults to 1e-08.
+    maxiter : int, optional
+        Maximum number of iterations. Defaults to 100_000.
+
+    Returns
+    -------
+    Tuple[np.ndarray, bool]
+        A tuple containing the demeaned array of shape (n_samples, n_features)
+        and a boolean indicating whether the algorithm converged successfully.
+    """
     n_samples, n_features = x.shape
     n_factors = flist.shape[1]
 

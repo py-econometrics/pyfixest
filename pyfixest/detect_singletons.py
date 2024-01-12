@@ -35,27 +35,30 @@ def detect_singletons(ids):
     """
     Detect singleton fixed effects in a dataset.
 
-    Args:
-        ids (np.ndarray): A 2D numpy array representing fixed effects, with a
-                          shape of (n_samples, n_features).
-                          Elements should be non-negative integers representing
-                          fixed effect identifiers.
+    This function iterates over the columns of a 2D numpy array representing fixed effects to identify singleton fixed effects.
+    An observation is considered a singleton if it is the only one in its group (fixed effect identifier).
 
-    Returns:
-        np.ndarray: A boolean array of shape (n_samples,), indicating which
-                    observations have a singleton fixed effect.
+    Parameters
+    ----------
+    ids : np.ndarray
+        A 2D numpy array representing fixed effects, with a shape of (n_samples, n_features).
+        Elements should be non-negative integers representing fixed effect identifiers.
 
-    Note:
-        The algorithm iterates over columns to identify fixed effects.
-        After completing each column traversal, it updates the record of
-        non-singleton rows. This approach is preferred as removing an
-        observation in column 'i' may lead to the emergence of new singletons
-        in subsequent columns (i.e., columns > i).
+    Returns
+    -------
+    np.ndarray
+        A boolean array of shape (n_samples,), indicating which observations have a singleton fixed effect.
 
-        Since we are operating on columns, we enforce column-major order for
-        the input array. Working on a row-major array leads to considerable
-        performance losses.
+    Notes
+    -----
+    The algorithm iterates over columns to identify fixed effects. After each column is processed, it updates the record of
+    non-singleton rows. This approach accounts for the possibility that removing an observation in one column can lead to the
+    emergence of new singletons in subsequent columns.
+
+    For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to
+    significant performance losses.
     """
+
     ids = _prepare_fixed_effects(ids)
     n_samples, n_features = ids.shape
 
