@@ -25,11 +25,13 @@ from pyfixest.dev_utils import _polars_to_pandas
 class Feols:
 
     """
-    A class for estimating regression models via ordinary least squares. Note that in the logic of this package,
-    fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/reference/Feols.qmd).
-    See the `FixestMulti` class for details.
+    Non user-facing class to estimate an IV model using a 2SLS estimator.
 
-    Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
+    Inherits from the Feols class. Users should not directly instantiate this class,
+    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    no demeaning is performed in this class: demeaning is performed in the
+    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    of demeaned variables for multiple estimation).
 
     Parameters
     ----------

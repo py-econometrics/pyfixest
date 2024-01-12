@@ -5,10 +5,13 @@ from pyfixest.feols import Feols, _drop_multicollinear_variables
 class Feiv(Feols):
 
     """
-    A class to estimate an IV model using a 2SLS estimator. Inherits from the Feols class.
-    Users should not call this class directly, but rather use the feols() function.
+    Non user-facing class to estimate an IV model using a 2SLS estimator.
 
-    Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
+    Inherits from the Feols class. Users should not directly instantiate this class,
+    but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+    no demeaning is performed in this class: demeaning is performed in the
+    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    of demeaned variables for multiple estimation).
 
     Parameters
     ----------

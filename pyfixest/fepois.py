@@ -15,10 +15,16 @@ from pyfixest.exceptions import (
 class Fepois(Feols):
 
     """
-    Class to estimate Poisson Regressions, inheriting from [Feols(/reference/Feols.qmd). This class overwrites the `get_fit()` method from [Feols(/reference/Feols.qmd)
-    to cater to the specifics of Poisson regression models.
+    Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).
 
-    Users should not directly instantiate this class, but rather use the [fepois()](/reference/estimation.fepois.qmd) function.
+    Inherits from the Feols class. Users should not directly instantiate this class,
+    but rather use the [fepois()](/reference/estimation.fepois.qmd) function. Note that
+    no demeaning is performed in this class: demeaning is performed in the
+    [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+    of demeaned variables for multiple estimation).
+
+    The method implements the algorithm from Stata's `pplmhdfe` module.
+
 
     Parameters
     ----------

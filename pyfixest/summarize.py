@@ -161,9 +161,7 @@ def summary(
     models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
 ) -> None:
     """
-    Summary
-
-    Prints a summary of the feols() estimation results for each estimated model.
+    Prints a summary of estimation results for each estimated model.
 
     For each model, this method prints a header indicating the fixed-effects and the
     dependent variable, followed by a table of coefficient estimates with standard

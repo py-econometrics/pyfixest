@@ -15,9 +15,7 @@ def demean_model(
     na_index_str: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
-    Demeans a single regression model via the alterating projections algorithm (see `demean` function).
-    Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values
-    from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
+    Demeans a single regression model via the alterating projections algorithm (see `demean` function). Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
 
     Parameters
     ----------
