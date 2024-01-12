@@ -122,63 +122,6 @@ class LPDID(DID):
         return self._coeftable
 
 
-def lpdid(
-    data: pd.DataFrame,
-    yname: str,
-    idname: str,
-    tname: str,
-    gname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
-    pre_window: Optional[int] = None,
-    post_window: Optional[int] = None,
-    never_treated: int = 0,
-    att: bool = True,
-    xfml=None,
-) -> pd.DataFrame:
-    """
-    Estimate a  Difference-in-Differences / Event Study Model via Local Projections.
-    Args:
-        data: The DataFrame containing all variables.
-        yname: The name of the dependent variable.
-        idname: The name of the id variable.
-        tname: Variable name for calendar period.
-        gname: unit-specific time of initial treatment.
-        vcov: The name of the cluster variable. If None, then defaults to {"CRV1": idname}. Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
-              {"CRV3": "idname"}. You can pass anything that is accepted by the vcov argument of feols.
-        pre_window: The number of periods before the treatment to include in the estimation. Default is None, which means that the pre_window is set to the minimum
-                    relative year in the data.
-        post_window: The number of periods after the treatment to include in the estimation. Default is None, which means that the post_window is set to the maximum
-                     relative year in the data.
-        never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
-                       have value gname = 0.
-        att: Whether to estimate the pooled average treatment effect on the treated (ATT) or the
-                canonical event study design with all leads and lags / the ATT for each period. Default is False.
-
-        xfml: Optional formula for the covariates. Not yet supported. E.g. "X1 + X2 + X3".
-    Returns:
-        A data frame with the estimated coefficients.
-    """
-
-    FIT = LPDID(
-        data=data,
-        yname=yname,
-        idname=idname,
-        tname=tname,
-        gname=gname,
-        cluster={"CRV1": idname},  # just something to pass DID input checks
-        vcov=vcov,
-        pre_window=pre_window,
-        post_window=post_window,
-        never_treated=never_treated,
-        att=att,
-        xfml=xfml,
-    )
-
-    FIT.estimate()
-
-    return FIT
-
-
 def _lpdid_estimate(
     data: pd.DataFrame,
     yname: str,

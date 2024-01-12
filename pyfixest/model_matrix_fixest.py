@@ -36,46 +36,57 @@ def model_matrix_fixest(
     This function preprocesses the data and then calls `formulaic.model_matrix()`
     to create the model matrices.
 
-    Args:
-        fml (str): A two-sided formula string using fixest formula syntax.
-        data (pd.DataFrame): The input DataFrame containing the data.
-        drop_singletons (bool): Whether to drop singleton fixed effects. Default is False.
-        weights (str or None): Weights as a string if provided, or None if no weights, e.g., "weights".
-        data (pd.DataFrame): The input DataFrame containing the data.
-        drop_intercept (bool): Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
-                               created by formulaic.
-        i_ref1 (str or list): The reference level for the first variable in the i() syntax.
-        i_ref2 (str or list): The reference level for the second variable in the i() syntax.
+    Parameters
+    ----------
+    fml : str
+        A two-sided formula string using fixest formula syntax.
+    data : pd.DataFrame
+        The input DataFrame containing the data.
+    drop_singletons : bool
+        Whether to drop singleton fixed effects. Default is False.
+    weights : str or None
+        Weights as a string if provided, or None if no weights, e.g., "weights".
+    data : pd.DataFrame
+        The input DataFrame containing the data.
+    drop_intercept : bool
+        Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
+        created by formulaic.
+    i_ref1 : str or list
+        The reference level for the first variable in the i() syntax.
+    i_ref2 : str or list
+        The reference level for the second variable in the i() syntax.
 
-    Returns:
-        Tuple[
-            pd.DataFrame,  # Y
-            pd.DataFrame,  # X
-            Optional[pd.DataFrame],  # I
-            Optional[pd.DataFrame],  # fe
-            np.array,  # na_index
-            np.array,  # fe_na
-            str,  # na_index_str
-            Optional[List[str]],  # z_names
-            Optional[str],  # weights
-            bool  # has_weights
-            Optional[List[str]]
+    Returns
+    -------
+    tuple
+        A tuple of the following elements:
+        - Y : pd.DataFrame
+            A DataFrame of the dependent variable.
+        - X : pd.DataFrame
+            A DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
+        - I : Optional[pd.DataFrame]
+            A DataFrame of the Instruments, None if no IV.
+        - fe : Optional[pd.DataFrame]
+            A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if `combine = False`.
+        - na_index : np.array
+            An array with indices of dropped columns.
+        - fe_na : np.array
+            An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
+        - na_index_str : str
+            na_index, but as a comma-separated string. Used for caching of demeaned variables.
+        - z_names : Optional[List[str]]
+            Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
+        - weights : Optional[str]
+            Weights as a string if provided, or None if no weights, e.g., "weights".
+        - has_weights : bool
+            A boolean indicating whether weights are used.
+        - icovars : Optional[List[str]]
+            A list of interaction variables provided via `i()`. None if no interaction variables via `i()` provided.
 
-        ]: A tuple of the following elements:
-            - Y: A DataFrame of the dependent variable.
-            - X: A DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
-            - I: A DataFrame of the Instruments, None if no IV.
-            - fe: A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if `combine = False`.
-            - na_index: An array with indices of dropped columns.
-            - fe_na: An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
-            - na_index_str: na_index, but as a comma-separated string. Used for caching of demeaned variables.
-            - z_names: Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
-            - weights: Weights as a string if provided, or None if no weights, e.g., "weights".
-            - has_weights: A boolean indicating whether weights are used.
-            - icovars: A list of interaction variables provided via `i()`. None if no interaction variables via `i()` provided.
-
-    Attributes:
-        list or None: icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
+    Attributes
+    ----------
+    list or None
+        icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
 
     fml = fml.replace(" ", "")
@@ -284,10 +295,16 @@ def model_matrix_fixest(
 def _find_ivars(x):
     """
     Find interaction variables in i() syntax.
-    Args:
-        x (str): A string containing the interaction variables in i() syntax.
-    Returns:
-        list: A list of interaction variables or None
+
+    Parameters
+    ----------
+    x : str
+        A string containing the interaction variables in i() syntax.
+
+    Returns
+    -------
+    list
+        A list of interaction variables or None
     """
 
     i_match = re.findall(r"i\((.*?)\)", x)
@@ -301,12 +318,18 @@ def _find_ivars(x):
 def _check_is_iv(fml):
     """
     Check if the formula contains an IV.
-    Args:
-        fml (str): The formula string.
-    Returns:
-        bool: True if the formula contains an IV, False otherwise.
 
+    Parameters
+    ----------
+    fml : str
+        The formula string.
+
+    Returns
+    -------
+    bool
+        True if the formula contains an IV, False otherwise.
     """
+
     # check if ~ contained twice in fml
     if fml.count("~") == 1:
         _is_iv = False
@@ -326,15 +349,20 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     the fixed effects to integers and marks fixed effects with NaNs. It's important
     to note that NaNs are not removed at this stage; this is done in `_model_matrix_fixest()`.
 
-    Args:
-        data (pd.DataFrame): The input DataFrame containing the data.
-        fval (str): A string describing the fixed effects, e.g., "fe1 + fe2".
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The input DataFrame containing the data.
+    fval : str
+        A string describing the fixed effects, e.g., "fe1 + fe2".
 
-    Returns:
-        Tuple[pd.DataFrame, List[int]]: A tuple containing two items:
-            - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
-            present in this DataFrame.
-            - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
+    Returns
+    -------
+    Tuple[pd.DataFrame, List[int]]
+        A tuple containing two items:
+        - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
+        present in this DataFrame.
+        - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
     """
 
     fval_list = fval.split("+")
@@ -368,12 +396,20 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
 def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
     """
     Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
-    Args:
-        _ivars (list): A list of interaction variables.
-        X (pd.DataFrame): The DataFrame containing the covariates.
-    Returns:
-        list: A list of interacted variables or None.
+
+    Parameters
+    ----------
+    _ivars : list
+        A list of interaction variables.
+    X : pd.DataFrame
+        The DataFrame containing the covariates.
+
+    Returns
+    -------
+    list
+        A list of interacted variables or None.
     """
+
     if _ivars is not None:
         x_names = X.columns.tolist()
         if len(_ivars) == 2:
@@ -395,13 +431,21 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
 def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
     """
     Check if the reference level have the same type as the variable (if not, string matching might fail).
-    Args:
-        ivars (list): A list of interaction variables of maximum length 2.
-        i_ref1 (list): A list of reference levels for the first variable in the i() syntax.
-        i_ref2 (list): A list of reference levels for the second variable in the i() syntax.
-        data (pd.DataFrame): The DataFrame containing the covariates.
-    Returns:
-        None
+
+    Parameters
+    ----------
+    ivars : list
+        A list of interaction variables of maximum length 2.
+    i_ref1 : list
+        A list of reference levels for the first variable in the i() syntax.
+    i_ref2 : list
+        A list of reference levels for the second variable in the i() syntax.
+    data : pd.DataFrame
+        The DataFrame containing the covariates.
+
+    Returns
+    -------
+    None
     """
 
     if ivars:
@@ -437,11 +481,17 @@ def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
 def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
     """
     Collect all variables that (still) need to be dropped as reference levels from the model matrix.
-    Args:
-        _ivars (list): A list of interaction variables of maximum length 2.
-        i_ref1 (list): A list of reference levels for the first variable in the i() syntax.
-        i_ref2 (list): A list of reference levels for the second variable in the i() syntax.
-        X (pd.DataFrame): The DataFrame containing the covariates.
+
+    Parameters
+    ----------
+    _ivars : list
+        A list of interaction variables of maximum length 2.
+    i_ref1 : list
+        A list of reference levels for the first variable in the i() syntax.
+    i_ref2 : list
+        A list of reference levels for the second variable in the i() syntax.
+    X : pd.DataFrame
+        The DataFrame containing the covariates.
     """
 
     columns_to_drop = []

@@ -1,6 +1,5 @@
-from pyfixest.did.event_study import event_study
-from pyfixest.did.did2s import did2s as did2s_pyfixest
-from pyfixest.did.lpdid import lpdid
+from pyfixest.did.estimation import did2s as did2s_pyfixest
+from pyfixest.did.estimation import lpdid, event_study
 import pandas as pd
 import numpy as np
 import pytest

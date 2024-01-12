@@ -33,21 +33,47 @@ def iplot(
     coord_flip: Optional[bool] = True,
 ):
     """
-
-    # iplot
-
     Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals.
-    Args:
-        models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
-        figsize (tuple): The size of the figure.
-        alpha (float): The significance level for the confidence intervals.
-        yintercept (int or None): The value at which to draw a horizontal line on the plot.
-        xintercept (int or None): The value at which to draw a vertical line on the plot.
-        rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-        title (str): The title of the plot.
-        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
-    Returns:
+
+    Parameters
+    ----------
+    models : list or object
+        A list of fitted models of type [Feols(/reference/Feols.qmd) or `Fepois`, or just a single model.
+    figsize : tuple
+        The size of the figure.
+    alpha : float
+        The significance level for the confidence intervals.
+    yintercept : int or None, optional
+        The value at which to draw a horizontal line on the plot.
+    xintercept : int or None, optional
+        The value at which to draw a vertical line on the plot.
+    rotate_xticks : float, optional
+        The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    title : str, optional
+        The title of the plot.
+    coord_flip : bool, optional
+        Whether to flip the coordinates of the plot. Default is True.
+
+    Returns
+    -------
+    object
         A lets-plot figure.
+
+    Examples
+    --------
+
+    ```{python}
+    from pyfixest.utils import get_data
+    from pyfixest.estimation import feols
+    from pyfixest.visualize import iplot
+
+    df = get_data()
+    fit1 = feols("Y ~ i(f1)", data = df)
+    fit2 = feols("Y ~ i(f1) + X2", data = df)
+    fit3 = feols("Y ~ i(f1) + X2 | f2", data = df)
+
+    iplot([fit1, fit2, fit3])
+    ```
     """
 
     models = _post_processing_input_checks(models)
@@ -102,23 +128,49 @@ def coefplot(
     coord_flip: Optional[bool] = True,
 ):
     """
-
-    # coefplot
-
     Plot model coefficients with confidence intervals.
 
-    Args:
-        models (list): A list of fitted models of type `Feols` or `Fepois`, or just a single model.
-        figsize (tuple): The size of the figure.
-        alpha (float): The significance level for the confidence intervals.
-        yintercept (float or None): The value at which to draw a horizontal line on the plot. Default is 0.
-        xintercept (float or None): The value at which to draw a vertical line on the plot. Default is None.
-        rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-        coefficients (list): A list of coefficients to plot. If None, all coefficients are plotted.
-        title (str): The title of the plot.
-        coord_flip (bool): Whether to flip the coordinates of the plot. Default is True.
-    Returns:
+    Parameters
+    ----------
+    models : list or object
+        A list of fitted models of type [Feols(/reference/Feols.qmd) or `Fepois`, or just a single model.
+    figsize : tuple
+        The size of the figure.
+    alpha : float
+        The significance level for the confidence intervals.
+    yintercept : float or None, optional
+        The value at which to draw a horizontal line on the plot. Default is 0.
+    xintercept : float or None, optional
+        The value at which to draw a vertical line on the plot. Default is None.
+    rotate_xticks : float, optional
+        The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    coefficients : list, optional
+        A list of coefficients to plot. If None, all coefficients are plotted.
+    title : str, optional
+        The title of the plot.
+    coord_flip : bool, optional
+        Whether to flip the coordinates of the plot. Default is True.
+
+    Returns
+    -------
+    object
         A lets-plot figure.
+
+    Examples
+    --------
+
+    ```{python}
+    from pyfixest.utils import get_data
+    from pyfixest.estimation import feols
+    from pyfixest.visualize import coefplot
+
+    df = get_data()
+    fit1 = feols("Y ~ X1", data = df)
+    fit2 = feols("Y ~ X1 + X2", data = df)
+    fit3 = feols("Y ~ X1 + X2 | f1", data = df)
+
+    coefplot([fit1, fit2, fit3])
+    ```
     """
 
     models = _post_processing_input_checks(models)
@@ -161,17 +213,31 @@ def _coefplot(
 ):
     """
     Plot model coefficients with confidence intervals.
-    Args:
-        models (list): A list of fitted models indices.
-        figsize (tuple): The size of the figure.
-        alpha (float): The significance level for the confidence intervals.
-        yintercept (int or None): The value at which to draw a horizontal line on the plot.
-        xintercept (int or None): The value at which to draw a vertical line on the plot.
-        df (pandas.DataFrame): The dataframe containing the data used for the model fitting.
-        rotate_xticks (float): The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-        title (str): The title of the plot.
-        flip_coord (bool): Whether to flip the coordinates of the plot. Default is True.
-    Returns:
+
+    Parameters
+    ----------
+    models : list
+        A list of fitted models indices.
+    figsize : tuple
+        The size of the figure.
+    alpha : float
+        The significance level for the confidence intervals.
+    yintercept : int or None, optional
+        The value at which to draw a horizontal line on the plot.
+    xintercept : int or None, optional
+        The value at which to draw a vertical line on the plot.
+    df : pandas.DataFrame
+        The dataframe containing the data used for the model fitting.
+    rotate_xticks : float, optional
+        The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    title : str, optional
+        The title of the plot.
+    flip_coord : bool, optional
+        Whether to flip the coordinates of the plot. Default is True.
+
+    Returns
+    -------
+    object
         A lets-plot figure.
     """
 
