@@ -6,11 +6,9 @@ metadata-files:
   - _sidebar.yml
 
 website:
-  #title: PyFixest
-  #description: Fast Fixed Effects Regression in Python
   navbar:
     page_navigation: true
-    #favicon: "figures/pyfixest-logo.png"
+    favicon: "figures/pyfixest-logo.png"
     #page-footer:
     #  center: |
     #    Developed by [Alexander Fischer](https://github.com/s3alfisc) and [Styfen Schär](https://github.com/styfenschaer)
@@ -51,9 +49,9 @@ quartodoc:
       desc: |
         Details on Methods and Attributes
       contents:
-        - feols
-        - fepois
-        - feiv
+        - feols.Feols
+        - fepois.Fepois
+        - feiv.Feiv
         #- did.DID
         #- did.did2s
         #- did.lpdid
@@ -70,6 +68,6 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - demean
-        - detect_singletons
-        - model_matrix_fixest
+        - demean.demean
+        - detect_singletons.detect_singletons
+        - model_matrix_fixest.model_matrix_fixest

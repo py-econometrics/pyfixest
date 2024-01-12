@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>feols</title>
+<title>feols.feols</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -164,17 +164,17 @@ ul.task-list{list-style: none;}
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feols.html" class="sidebar-item-text sidebar-link active">feols</a>
+  <a href="../reference/feols.Feols.html" class="sidebar-item-text sidebar-link active">feols.Feols</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.html" class="sidebar-item-text sidebar-link">fepois</a>
+  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link">fepois.Fepois</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.html" class="sidebar-item-text sidebar-link">feiv</a>
+  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link">feiv.Feiv</a>
   </div>
 </li>
       </ul>
@@ -219,17 +219,17 @@ ul.task-list{list-style: none;}
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demean.html" class="sidebar-item-text sidebar-link">demean</a>
+  <a href="../reference/demean.demean.html" class="sidebar-item-text sidebar-link">demean.demean</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/detect_singletons.html" class="sidebar-item-text sidebar-link">detect_singletons</a>
+  <a href="../reference/detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">detect_singletons.detect_singletons</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/model_matrix_fixest.html" class="sidebar-item-text sidebar-link">model_matrix_fixest</a>
+  <a href="../reference/model_matrix_fixest.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">model_matrix_fixest.model_matrix_fixest</a>
   </div>
 </li>
       </ul>
@@ -244,32 +244,13 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="pyfixest.feols" class="level1">
-<h1>feols</h1>
-<p><code>feols</code></p>
-<section id="classes" class="level2">
-<h2 class="anchored" data-anchor-id="classes">Classes</h2>
-<table class="table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="#pyfixest.feols.Feols">Feols</a></td>
-<td>A class for estimating regression models via ordinary least squares. Note that in the logic of this package,</td>
-</tr>
-</tbody>
-</table>
-<section id="pyfixest.feols.Feols" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols">Feols</h3>
+<section id="pyfixest.feols.Feols" class="level1">
+<h1>feols.Feols</h1>
 <p><code>feols.Feols(self, Y, X, weights, collin_tol, coefnames)</code></p>
 <p>A class for estimating regression models via ordinary least squares. Note that in the logic of this package, fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/reference/Feols.qmd). See the <code>FixestMulti</code> class for details.</p>
 <p>Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function.</p>
-<section id="parameters" class="level4">
-<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<section id="parameters" class="level2">
+<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
 <col style="width: 13%">
@@ -319,8 +300,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="attributes" class="level4">
-<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
 <colgroup>
 <col style="width: 20%">
@@ -593,8 +574,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="methods" class="level4">
-<h4 class="anchored" data-anchor-id="methods">Methods</h4>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
 <table class="table">
 <thead>
 <tr class="header">
@@ -681,12 +662,12 @@ ul.task-list{list-style: none;}
 </tr>
 </tbody>
 </table>
-<section id="pyfixest.feols.Feols.add_fixest_multi_context" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</h5>
+<section id="pyfixest.feols.Feols.add_fixest_multi_context" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</h3>
 <p><code>feols.Feols.add_fixest_multi_context(fml, depvar, Y, _data, _ssc_dict, _k_fe, fval, na_index)</code></p>
 <p>Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</p>
-<section id="parameters-1" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 11%">
@@ -754,8 +735,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns" class="level6">
-<h6 class="anchored" data-anchor-id="returns">Returns</h6>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -772,11 +753,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.coef" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.coef">coef</h5>
+<section id="pyfixest.feols.Feols.coef" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.coef">coef</h3>
 <p><code>feols.Feols.coef()</code></p>
-<section id="returns-1" class="level6">
-<h6 class="anchored" data-anchor-id="returns-1">Returns</h6>
+<section id="returns-1" class="level4">
+<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 23%">
@@ -797,12 +778,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.coefplot" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.coefplot">coefplot</h5>
+<section id="pyfixest.feols.Feols.coefplot" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.coefplot">coefplot</h3>
 <p><code>feols.Feols.coefplot(alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)</code></p>
 <p>Create a coefficient plot to visualize model coefficients.</p>
-<section id="parameters-2" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-2">Parameters</h6>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 11%">
@@ -870,8 +851,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-2" class="level6">
-<h6 class="anchored" data-anchor-id="returns-2">Returns</h6>
+<section id="returns-2" class="level4">
+<h4 class="anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 19%">
@@ -892,11 +873,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.confint" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.confint">confint</h5>
+<section id="pyfixest.feols.Feols.confint" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.confint">confint</h3>
 <p><code>feols.Feols.confint()</code></p>
-<section id="returns-3" class="level6">
-<h6 class="anchored" data-anchor-id="returns-3">Returns</h6>
+<section id="returns-3" class="level4">
+<h4 class="anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 24%">
@@ -917,13 +898,13 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.fixef" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.fixef">fixef</h5>
+<section id="pyfixest.feols.Feols.fixef" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.fixef">fixef</h3>
 <p><code>feols.Feols.fixef()</code></p>
 <p>Compute the coefficients of (swept out) fixed effects for a regression model.</p>
 <p>This method creates the following attributes: - <code>alphaDF</code> (pd.DataFrame): A DataFrame with the estimated fixed effects. - <code>sumFE</code> (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).</p>
-<section id="returns-4" class="level6">
-<h6 class="anchored" data-anchor-id="returns-4">Returns</h6>
+<section id="returns-4" class="level4">
+<h4 class="anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -940,12 +921,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.get_inference" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_inference">get_inference</h5>
+<section id="pyfixest.feols.Feols.get_inference" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_inference">get_inference</h3>
 <p><code>feols.Feols.get_inference(alpha=0.95)</code></p>
 <p>Compute standard errors, t-statistics, and p-values for the regression model.</p>
-<section id="parameters-3" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-3">Parameters</h6>
+<section id="parameters-3" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 9%">
@@ -971,8 +952,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-5" class="level6">
-<h6 class="anchored" data-anchor-id="returns-5">Returns</h6>
+<section id="returns-5" class="level4">
+<h4 class="anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -989,12 +970,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.get_nobs" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_nobs">get_nobs</h5>
+<section id="pyfixest.feols.Feols.get_nobs" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_nobs">get_nobs</h3>
 <p><code>feols.Feols.get_nobs()</code></p>
 <p>Fetch the number of observations used in fitting the regression model.</p>
-<section id="returns-6" class="level6">
-<h6 class="anchored" data-anchor-id="returns-6">Returns</h6>
+<section id="returns-6" class="level4">
+<h4 class="anchored" data-anchor-id="returns-6">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1011,12 +992,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.get_performance" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_performance">get_performance</h5>
+<section id="pyfixest.feols.Feols.get_performance" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_performance">get_performance</h3>
 <p><code>feols.Feols.get_performance()</code></p>
 <p>Compute multiple additional measures commonly reported with linear regression output, including R-squared and adjusted R-squared. Note that variables with the suffix _within use demeaned dependent variables Y, while variables without do not or are invariant to demeaning.</p>
-<section id="returns-7" class="level6">
-<h6 class="anchored" data-anchor-id="returns-7">Returns</h6>
+<section id="returns-7" class="level4">
+<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 88%">
@@ -1057,12 +1038,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.iplot" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.iplot">iplot</h5>
+<section id="pyfixest.feols.Feols.iplot" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.iplot">iplot</h3>
 <p><code>feols.Feols.iplot(alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)</code></p>
 <p>Create coefficient plots for variables interacted via <code>i()</code> syntax.</p>
-<section id="parameters-4" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-4">Parameters</h6>
+<section id="parameters-4" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 12%">
@@ -1124,8 +1105,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-8" class="level6">
-<h6 class="anchored" data-anchor-id="returns-8">Returns</h6>
+<section id="returns-8" class="level4">
+<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 19%">
@@ -1146,12 +1127,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.predict" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.predict">predict</h5>
+<section id="pyfixest.feols.Feols.predict" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.predict">predict</h3>
 <p><code>feols.Feols.predict(newdata=None)</code></p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters-5" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-5">Parameters</h6>
+<section id="parameters-5" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 5%">
@@ -1177,8 +1158,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-9" class="level6">
-<h6 class="anchored" data-anchor-id="returns-9">Returns</h6>
+<section id="returns-9" class="level4">
+<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 24%">
@@ -1199,11 +1180,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.pvalue" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.pvalue">pvalue</h5>
+<section id="pyfixest.feols.Feols.pvalue" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.pvalue">pvalue</h3>
 <p><code>feols.Feols.pvalue()</code></p>
-<section id="returns-10" class="level6">
-<h6 class="anchored" data-anchor-id="returns-10">Returns</h6>
+<section id="returns-10" class="level4">
+<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 26%">
@@ -1224,11 +1205,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.resid" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.resid">resid</h5>
+<section id="pyfixest.feols.Feols.resid" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.resid">resid</h3>
 <p><code>feols.Feols.resid()</code></p>
-<section id="returns-11" class="level6">
-<h6 class="anchored" data-anchor-id="returns-11">Returns</h6>
+<section id="returns-11" class="level4">
+<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 23%">
@@ -1249,11 +1230,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.se" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.se">se</h5>
+<section id="pyfixest.feols.Feols.se" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.se">se</h3>
 <p><code>feols.Feols.se()</code></p>
-<section id="returns-12" class="level6">
-<h6 class="anchored" data-anchor-id="returns-12">Returns</h6>
+<section id="returns-12" class="level4">
+<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 23%">
@@ -1274,11 +1255,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.summary" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.summary">summary</h5>
+<section id="pyfixest.feols.Feols.summary" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.summary">summary</h3>
 <p><code>feols.Feols.summary(digits=3)</code></p>
-<section id="parameters-6" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-6">Parameters</h6>
+<section id="parameters-6" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 12%">
@@ -1304,8 +1285,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-13" class="level6">
-<h6 class="anchored" data-anchor-id="returns-13">Returns</h6>
+<section id="returns-13" class="level4">
+<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1322,12 +1303,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.tidy" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.tidy">tidy</h5>
+<section id="pyfixest.feols.Feols.tidy" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.tidy">tidy</h3>
 <p><code>feols.Feols.tidy()</code></p>
 <p>Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics, and p-values.</p>
-<section id="returns-14" class="level6">
-<h6 class="anchored" data-anchor-id="returns-14">Returns</h6>
+<section id="returns-14" class="level4">
+<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 16%">
@@ -1348,11 +1329,11 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.tstat" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.tstat">tstat</h5>
+<section id="pyfixest.feols.Feols.tstat" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.tstat">tstat</h3>
 <p><code>feols.Feols.tstat()</code></p>
-<section id="returns-15" class="level6">
-<h6 class="anchored" data-anchor-id="returns-15">Returns</h6>
+<section id="returns-15" class="level4">
+<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 25%">
@@ -1373,12 +1354,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.vcov" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.vcov">vcov</h5>
+<section id="pyfixest.feols.Feols.vcov" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.vcov">vcov</h3>
 <p><code>feols.Feols.vcov(vcov)</code></p>
 <p>Compute covariance matrices for an estimated regression model.</p>
-<section id="parameters-7" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-7">Parameters</h6>
+<section id="parameters-7" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 1%">
@@ -1404,8 +1385,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-16" class="level6">
-<h6 class="anchored" data-anchor-id="returns-16">Returns</h6>
+<section id="returns-16" class="level4">
+<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 22%">
@@ -1426,12 +1407,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.wald_test" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.wald_test">wald_test</h5>
+<section id="pyfixest.feols.Feols.wald_test" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.wald_test">wald_test</h3>
 <p><code>feols.Feols.wald_test(R=None, q=None, distribution='F')</code></p>
 <p>Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.</p>
-<section id="parameters-8" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-8">Parameters</h6>
+<section id="parameters-8" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 12%">
@@ -1469,8 +1450,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-17" class="level6">
-<h6 class="anchored" data-anchor-id="returns-17">Returns</h6>
+<section id="returns-17" class="level4">
+<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 30%">
@@ -1491,12 +1472,12 @@ ul.task-list{list-style: none;}
 </table>
 </section>
 </section>
-<section id="pyfixest.feols.Feols.wildboottest" class="level5">
-<h5 class="anchored" data-anchor-id="pyfixest.feols.Feols.wildboottest">wildboottest</h5>
+<section id="pyfixest.feols.Feols.wildboottest" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.wildboottest">wildboottest</h3>
 <p><code>feols.Feols.wildboottest(B, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False)</code></p>
 <p>Run a wild cluster bootstrap based on an object of type “Feols”.</p>
-<section id="parameters-9" class="level6">
-<h6 class="anchored" data-anchor-id="parameters-9">Parameters</h6>
+<section id="parameters-9" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 3%">
@@ -1582,8 +1563,8 @@ ul.task-list{list-style: none;}
 </tbody>
 </table>
 </section>
-<section id="returns-18" class="level6">
-<h6 class="anchored" data-anchor-id="returns-18">Returns</h6>
+<section id="returns-18" class="level4">
+<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 10%">
@@ -1604,8 +1585,6 @@ ul.task-list{list-style: none;}
 </table>
 
 
-</section>
-</section>
 </section>
 </section>
 </section>

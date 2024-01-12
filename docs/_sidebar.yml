@@ -10,9 +10,9 @@ website:
       - reference/did.estimation.event_study.qmd
       section: Estimation Functions
     - contents:
-      - reference/feols.qmd
-      - reference/fepois.qmd
-      - reference/feiv.qmd
+      - reference/feols.Feols.qmd
+      - reference/fepois.Fepois.qmd
+      - reference/feiv.Feiv.qmd
       section: Estimation Classes
     - contents:
       - reference/summarize.summary.qmd
@@ -21,9 +21,9 @@ website:
       - reference/visualize.iplot.qmd
       section: Summarize and Visualize
     - contents:
-      - reference/demean.qmd
-      - reference/detect_singletons.qmd
-      - reference/model_matrix_fixest.qmd
+      - reference/demean.demean.qmd
+      - reference/detect_singletons.detect_singletons.qmd
+      - reference/model_matrix_fixest.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference
   - id: dummy-sidebar
