@@ -6,6 +6,8 @@ metadata-files:
   - _sidebar.yml
 
 website:
+  #title: PyFixest
+  #description: Fast Fixed Effects Regression in Python
   navbar:
     page_navigation: true
     #favicon: "figures/pyfixest-logo.png"
