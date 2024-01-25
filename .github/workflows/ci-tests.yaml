@@ -44,7 +44,7 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"))'
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich"))'
         shell: bash
 
       - name: Run tests
