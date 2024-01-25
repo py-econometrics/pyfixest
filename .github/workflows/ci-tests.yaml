@@ -47,6 +47,6 @@ jobs:
         shell: bash
 
       - name: Run tests
-        run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py tests/test_others.py tests/test_did.py
+        run: pytest --cov tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py tests/test_others.py tests/test_did.py
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
