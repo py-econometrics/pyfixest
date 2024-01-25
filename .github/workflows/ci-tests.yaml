@@ -48,6 +48,8 @@ jobs:
         shell: bash
 
       - name: Run tests
-        run: pytest --cov=pyfixest.pyfixest --cov-report=xml tests/test_errors.py
+        run: pytest --cov=pyfixest.pyfixest --cov-report=--cov-report=xml:reports/coverage.xml tests/test_errors.py
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
+        with:
+          files: ./reports/coverage.xml
