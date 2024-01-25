@@ -33,6 +33,7 @@ jobs:
       - name: Install
         run: |
           pip install -e .
+          pip install pytest-cov
           pip install -r requirements_test_ci.txt
 
       - name: set numba parallel flags
