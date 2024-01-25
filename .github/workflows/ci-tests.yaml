@@ -33,6 +33,7 @@ jobs:
       - name: Install
         run: |
           pip install -e .
+          pip install pytest-cov wildboottest
           pip install -r requirements_test_ci.txt
 
       - name: set numba parallel flags
@@ -43,10 +44,11 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s"))'
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich"))'
         shell: bash
 
       - name: Run tests
-        run: pytest tests/test_errors.py tests/test_formulas.py tests/test_plots.py tests/test_poisson.py tests/test_predict_resid_fixef.py tests/test_ses.py tests/test_ssc.py tests/test_vs_fixest.py tests/test_others.py tests/test_did.py
-      - name: Upload coverage reports to Codecov
+        run: |
+          pytest tests --cov=./ --cov-report=xml
+      - name: Upload to Codecov
         uses: codecov/codecov-action@v3
