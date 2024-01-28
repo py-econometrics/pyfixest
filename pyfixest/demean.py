@@ -53,10 +53,13 @@ def demean_model(
     if YX.dtype != np.dtype("float64"):
         YX = YX.astype(np.float64)
 
-    if fe is not None:
-        fe = fe.to_numpy()
+    if weights is not None:
+        if weights.ndim > 1:
+            weights = weights.flatten()
 
     if fe is not None:
+
+        fe = fe.to_numpy()
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index_str) is not None:
             # get data out of lookup table: list of [algo, data]
@@ -76,7 +79,6 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                weights = np.ones(YX.shape[0])
                 YX_demean_new, success = demean(var_diff, fe, weights)
                 if success == False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -96,7 +98,6 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            weights = np.ones(YX.shape[0])
 
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
             if success == False:
