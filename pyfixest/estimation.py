@@ -6,12 +6,13 @@ from pyfixest.feols import Feols
 from pyfixest.dev_utils import DataFrameType
 
 import pandas as pd
-
+import numpy as np
 
 def feols(
     fml: str,
     data: DataFrameType,
     vcov: Optional[Union[str, Dict[str, str]]] = None,
+    weights: Union[None, str] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
@@ -34,6 +35,8 @@ def feols(
 
     vcov : Union[str, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid", "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+
+    weights : Union[None, str], optional. Default is None. Weights for WLS estimation. If None, all observations are weighted equally. If a string, the name of the column in `data` that contains the weights.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -203,11 +206,11 @@ def feols(
 
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
+    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation(
-        "feols", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+        "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
@@ -302,12 +305,14 @@ def fepois(
 
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
-    _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
+    weights = None
+
+    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1)
 
     fixest = FixestMulti(data=data)
 
     fixest._prepare_estimation(
-        "fepois", fml, vcov, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -328,7 +333,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1):
+def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -362,3 +367,12 @@ def _estimation_input_checks(fml, data, vcov, ssc, fixef_rm, collin_tol, i_ref1)
         assert all(
             isinstance(x, type(i_ref1[0])) for x in i_ref1
         ), "i_ref1 must be a list of elements of the same type"
+
+    # check that weights is either None or an np.array of length nrow(data) x 1
+    assert isinstance(weights, str) or weights is None
+
+    # assert that weights is a column in data
+    if weights is not None:
+        assert weights in data.columns, "weights must be a column in data"
+
+

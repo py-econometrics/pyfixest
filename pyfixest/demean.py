@@ -46,6 +46,7 @@ def demean_model(
     """
 
     YX = pd.concat([Y, X], axis=1)
+    weights = weights.to_numpy()
 
     yx_names = YX.columns
     YX = YX.to_numpy()

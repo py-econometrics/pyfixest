@@ -45,7 +45,7 @@ def model_matrix_fixest(
     drop_singletons : bool
         Whether to drop singleton fixed effects. Default is False.
     weights : str or None
-        Weights as a string if provided, or None if no weights, e.g., "weights".
+        A string specifying the name of the weights column in `data`. Default is None.
     data : pd.DataFrame
         The input DataFrame containing the data.
     drop_intercept : bool
@@ -88,6 +88,9 @@ def model_matrix_fixest(
     list or None
         icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
+
+    # check if weights are valid
+    _check_weights(weights, data)
 
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
@@ -208,7 +211,9 @@ def model_matrix_fixest(
 
     if _is_iv:
         na_index_stage1 = data.index.difference(Z.index).tolist()
+        # NaNs in stage 1 not in stage 2
         diff1 = list(set(na_index_stage1) - set(na_index_stage2))
+        # NaNs in stage 2 not in stage 1
         diff2 = list(set(na_index_stage2) - set(na_index_stage1))
         if diff1:
             Y.drop(diff1, axis=0, inplace=True)
@@ -233,6 +238,28 @@ def model_matrix_fixest(
 
     _icovars = _get_icovars(_ivars, X)
 
+    # drop NaNs from weights
+    if weights is not None:
+
+        weights_df = data[weights]
+        weights_na = np.where(weights_df.isna())[0].tolist()
+
+        # check if there are any NaN in weights not yet in na_index
+        weights_na_remaining = list(set(weights_na) - set(na_index))
+
+        if weights_na_remaining:
+            X.drop(weights_na_remaining, axis=0, inplace=True)
+            Y.drop(weights_na_remaining, axis=0, inplace=True)
+            if _is_iv:
+                Z.drop(weights_na_remaining, axis=0, inplace=True)
+                endogvar.drop(weights_na_remaining, axis=0, inplace=True)
+            na_index += weights_na_remaining
+            weights_df = weights_df.drop(na_index, axis=0)
+
+    else:
+        weights_df = None
+
+
     if fe is not None:
         fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
@@ -256,6 +283,8 @@ def model_matrix_fixest(
                 endogvar.drop(fe_na_remaining, axis=0, inplace=True)
             na_index += fe_na_remaining
             na_index = list(set(na_index))
+            if weights_df is not None:
+                weights_df = weights_df.drop(fe_na_remaining, axis=0)
 
     # drop intercept if specified in feols() call - mostly handy for did2s()
     if drop_intercept:
@@ -283,13 +312,15 @@ def model_matrix_fixest(
                 if _is_iv:
                     Z = Z.iloc[keep_singleton_indices]
                     endogvar = endogvar.iloc[keep_singleton_indices]
+                if weights_df is not None:
+                    weights_df = weights_df.iloc[keep_singleton_indices]
 
                 # overwrite na_index
                 na_index = list(set(range(data.shape[0])).difference(Y.index))
 
     na_index_str = ",".join(str(x) for x in na_index)
 
-    return Y, X, fe, endogvar, Z, na_index, na_index_str, _icovars, X_is_empty
+    return Y, X, fe, endogvar, Z, weights_df, na_index, na_index_str, _icovars, X_is_empty
 
 
 def _find_ivars(x):
@@ -535,8 +566,65 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
 
 
 def _is_numeric(column):
+
+    """
+    Check if a column is numeric.
+    Args:
+        column: pd.Series
+            A pandas Series.
+    Returns:
+        bool
+            True if the column is numeric, False otherwise.
+    """
+
     try:
         pd.to_numeric(column)
         return True
     except ValueError:
         return False
+
+
+def _check_weights(weights, data):
+
+    """
+    Args:
+        weights: str or None
+            A string specifying the name of the weights column in `data`. Default is None.
+        data: pd.DataFrame
+            The input DataFrame containing the data.
+    Returns:
+        None
+    """
+
+    if weights is not None:
+        if weights not in data.columns:
+            raise ValueError(
+                f"The weights column '{weights}' is not a column in the data."
+            )
+        # assert that weights is numeric and has only non-negative values
+        if not _is_numeric(data[weights]):
+            raise ValueError(
+                f"The weights column '{weights}' must be numeric, but it is of type {type(data[weights][0])}."
+            )
+
+        if not _is_finite_positive(data[weights]):
+
+            raise ValueError(
+                f"The weights column '{weights}' must have only non-negative values."
+            )
+
+
+def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
+
+    """
+    Check if a column is finite and positive.
+    """
+    if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
+        x = x.to_numpy()
+
+    if x.any() in [np.inf, -np.inf]:
+        return False
+    else:
+        if x[~np.isnan(x)].all() > 0:
+            return True
+

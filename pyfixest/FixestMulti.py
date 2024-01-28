@@ -51,6 +51,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, Dict[str, str]] = None,
+        weights: Union[None, np.ndarray] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
@@ -65,6 +66,7 @@ class FixestMulti:
             estimation (str): Type of estimation. Either "feols" or "fepois".
             fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
             vcov (Union[None, str, Dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            weights (Union[None, np.ndarray], optional): An array of weights. Either None or a 1D array of length N. Default is None.
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
@@ -87,6 +89,7 @@ class FixestMulti:
         self._i_ref1 = None
         self._i_ref2 = None
         self._drop_intercept = None
+        self._weights = weights
 
         # set i_ref1 and i_ref2 to list if not None
         if i_ref1 is not None:
@@ -154,6 +157,7 @@ class FixestMulti:
         _drop_intercept = self._drop_intercept
         _i_ref1 = self._i_ref1
         _i_ref2 = self._i_ref2
+        _weights = self._weights
 
         for _, fval in enumerate(fixef_keys):
             dict2fe = _fml_dict.get(fval)
@@ -184,6 +188,7 @@ class FixestMulti:
                         fe,
                         endogvar,
                         Z,
+                        weights_df,
                         na_index,
                         na_index_str,
                         _icovars,
@@ -195,9 +200,8 @@ class FixestMulti:
                         drop_intercept=_drop_intercept,
                         i_ref1=_i_ref1,
                         i_ref2=_i_ref2,
+                        weights=_weights,
                     )
-
-                    weights = np.ones((Y.shape[0], 1))
 
                     self._X_is_empty = False
                     if X_is_empty:
@@ -213,8 +217,9 @@ class FixestMulti:
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
 
+                        import pdb; pdb.set_trace()
                         Yd, Xd = demean_model(
-                            Y, X, fe, weights, lookup_demeaned_data, na_index_str
+                            Y, X, fe, weights_df, lookup_demeaned_data, na_index_str
                         )
 
                         if _is_iv:
