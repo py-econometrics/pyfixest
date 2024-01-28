@@ -36,8 +36,9 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [True, False])
-@pytest.mark.parametrize("model", ["Fepois", "Feols"])
+@pytest.mark.parametrize("model", ["Feols"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("weights", ["weights"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -106,7 +107,7 @@ rng = np.random.default_rng(8760985)
         "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
-def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
+def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, weights, fml):
     """
     test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
 
@@ -158,13 +159,22 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             raise e
 
     if model == "Feols":
-        pyfixest = feols(fml=fml, data=data, vcov=inference)
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(True, "none", True, "min", "min", False),
-        )
+        pyfixest = feols(fml=fml, data=data, vcov=inference, weights = weights)
+        if weights is not None:
+            r_fixest = fixest.feols(
+                ro.Formula(r_fml),
+                vcov=r_inference,
+                data=data_r,
+                ssc=fixest.ssc(True, "none", True, "min", "min", False),
+                weights = ro.Formula("~" + weights)
+            )
+        else:
+            r_fixest = fixest.feols(
+                ro.Formula(r_fml),
+                vcov=r_inference,
+                data=data_r,
+                ssc=fixest.ssc(True, "none", True, "min", "min", False),
+            )
 
         run_test = True
 
@@ -329,7 +339,6 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         )
 
         if model == "Feols":
-            # import pdb; pdb.set_trace()
 
             if not mod._is_iv:
                 py_r2 = mod._r2

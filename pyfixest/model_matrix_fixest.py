@@ -239,6 +239,7 @@ def model_matrix_fixest(
     _icovars = _get_icovars(_ivars, X)
 
     # drop NaNs from weights
+    weights_df = None
     if weights is not None:
 
         weights_df = data[weights]
@@ -256,8 +257,8 @@ def model_matrix_fixest(
             na_index += weights_na_remaining
             weights_df = weights_df.drop(na_index, axis=0)
 
-    else:
-        weights_df = None
+        else:
+            weights_df.drop(na_index, axis=0, inplace=True)
 
 
     if fe is not None:

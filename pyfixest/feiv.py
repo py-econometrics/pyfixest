@@ -90,8 +90,6 @@ class Feiv(Feols):
             Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol
         )
 
-        # import pdb; pdb.set_trace()
-
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")

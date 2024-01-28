@@ -203,6 +203,13 @@ class FixestMulti:
                         weights=_weights,
                     )
 
+                    if _weights is not None:
+                        weights = weights_df.to_numpy()
+                    else:
+                        weights = np.ones(Y.shape[0])
+
+                    weights = weights.reshape((weights.shape[0], 1))
+
                     self._X_is_empty = False
                     if X_is_empty:
                         self._X_is_empty = True
@@ -217,9 +224,8 @@ class FixestMulti:
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
 
-                        import pdb; pdb.set_trace()
                         Yd, Xd = demean_model(
-                            Y, X, fe, weights_df, lookup_demeaned_data, na_index_str
+                            Y, X, fe, weights, lookup_demeaned_data, na_index_str
                         )
 
                         if _is_iv:
@@ -242,12 +248,17 @@ class FixestMulti:
                             for x in [Yd, Xd, Zd, endogvard]
                         ]
 
-                        has_weights = False
-                        if has_weights:
-                            w = np.sqrt(weights.to_numpy())
-                            Yd *= np.sqrt(w)
-                            Zd *= np.sqrt(w)
-                            Xd *= np.sqrt(w)
+                        #import pdb; pdb.set_trace()
+
+                        #has_weights = False
+                        if _weights is not None:
+                            #import pdb; pdb.set_trace()
+                            w = np.sqrt(weights)
+                            Yd = Yd * w
+                            Xd = Xd * w
+                            if _is_iv:
+                                Zd = Zd * w
+                                endogvard = endogvard * w
 
                         if _is_iv:
                             coefnames_z = Z.columns.tolist()
