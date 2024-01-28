@@ -58,7 +58,6 @@ def demean_model(
             weights = weights.flatten()
 
     if fe is not None:
-
         fe = fe.to_numpy()
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index_str) is not None:
@@ -98,7 +97,6 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
             if success == False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")

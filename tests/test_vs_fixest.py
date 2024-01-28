@@ -36,9 +36,9 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols"])
-@pytest.mark.parametrize("inference", ["iid", "hetero"])
-@pytest.mark.parametrize("weights", ["weights"])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -107,7 +107,9 @@ rng = np.random.default_rng(8760985)
         "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
-def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, weights, fml):
+def test_single_fit(
+    N, seed, beta_type, error_type, dropna, model, inference, weights, fml
+):
     """
     test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
 
@@ -159,14 +161,14 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, we
             raise e
 
     if model == "Feols":
-        pyfixest = feols(fml=fml, data=data, vcov=inference, weights = weights)
+        pyfixest = feols(fml=fml, data=data, vcov=inference, weights=weights)
         if weights is not None:
             r_fixest = fixest.feols(
                 ro.Formula(r_fml),
                 vcov=r_inference,
                 data=data_r,
                 ssc=fixest.ssc(True, "none", True, "min", "min", False),
-                weights = ro.Formula("~" + weights)
+                weights=ro.Formula("~" + weights),
             )
         else:
             r_fixest = fixest.feols(
@@ -340,7 +342,6 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, we
         )
 
         if model == "Feols":
-
             if not mod._is_iv:
                 py_r2 = mod._r2
                 py_r2_within = mod._r2_within

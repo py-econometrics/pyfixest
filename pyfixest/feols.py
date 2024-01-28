@@ -263,7 +263,7 @@ class Feols:
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self._scores = self._Z * self._u_hat[:, None]
+        self._scores = self._u_hat[:, None] * _X
         self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
@@ -443,16 +443,16 @@ class Feols:
                     k_instruments = _Z.shape[1]
                     meat = np.zeros((k_instruments, k_instruments))
 
-                    if _weights is not None:
-                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
-                            (_N, 1)
-                        )
+                    # import pdb; pdb.set_trace()
+                    # deviance uniquely for Poisson
+                    if hasattr(self, "deviance"):
+                        weighted_uhat = _weights.flatten() * _u_hat.flatten()
                     else:
                         weighted_uhat = _u_hat
 
                     meat = _crv1_meat_loop(
                         _Z=_Z.astype(np.float64),
-                        weighted_uhat=weighted_uhat.astype(np.float64),
+                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((_N, 1)),
                         clustid=clustid,
                         cluster_col=cluster_col,
                     )

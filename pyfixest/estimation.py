@@ -8,6 +8,7 @@ from pyfixest.dev_utils import DataFrameType
 import pandas as pd
 import numpy as np
 
+
 def feols(
     fml: str,
     data: DataFrameType,
@@ -206,7 +207,9 @@ def feols(
 
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1)
+    _estimation_input_checks(
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+    )
 
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation(
@@ -307,7 +310,9 @@ def fepois(
 
     weights = None
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1)
+    _estimation_input_checks(
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+    )
 
     fixest = FixestMulti(data=data)
 
@@ -333,7 +338,9 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1):
+def _estimation_input_checks(
+    fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+):
     if not isinstance(fml, str):
         raise ValueError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -374,5 +381,3 @@ def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol
     # assert that weights is a column in data
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
-
-

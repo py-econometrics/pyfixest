@@ -241,7 +241,6 @@ def model_matrix_fixest(
     # drop NaNs from weights
     weights_df = None
     if weights is not None:
-
         weights_df = data[weights]
         weights_na = np.where(weights_df.isna())[0].tolist()
 
@@ -259,7 +258,6 @@ def model_matrix_fixest(
 
         else:
             weights_df.drop(na_index, axis=0, inplace=True)
-
 
     if fe is not None:
         fe.drop(na_index, axis=0, inplace=True)
@@ -321,7 +319,18 @@ def model_matrix_fixest(
 
     na_index_str = ",".join(str(x) for x in na_index)
 
-    return Y, X, fe, endogvar, Z, weights_df, na_index, na_index_str, _icovars, X_is_empty
+    return (
+        Y,
+        X,
+        fe,
+        endogvar,
+        Z,
+        weights_df,
+        na_index,
+        na_index_str,
+        _icovars,
+        X_is_empty,
+    )
 
 
 def _find_ivars(x):
@@ -567,7 +576,6 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
 
 
 def _is_numeric(column):
-
     """
     Check if a column is numeric.
     Args:
@@ -586,7 +594,6 @@ def _is_numeric(column):
 
 
 def _check_weights(weights, data):
-
     """
     Args:
         weights: str or None
@@ -609,14 +616,12 @@ def _check_weights(weights, data):
             )
 
         if not _is_finite_positive(data[weights]):
-
             raise ValueError(
                 f"The weights column '{weights}' must have only non-negative values."
             )
 
 
 def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
-
     """
     Check if a column is finite and positive.
     """
@@ -628,4 +633,3 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
     else:
         if x[~np.isnan(x)].all() > 0:
             return True
-

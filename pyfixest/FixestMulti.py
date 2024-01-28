@@ -248,11 +248,11 @@ class FixestMulti:
                             for x in [Yd, Xd, Zd, endogvard]
                         ]
 
-                        #import pdb; pdb.set_trace()
+                        # import pdb; pdb.set_trace()
 
-                        #has_weights = False
+                        # has_weights = False
                         if _weights is not None:
-                            #import pdb; pdb.set_trace()
+                            # import pdb; pdb.set_trace()
                             w = np.sqrt(weights)
                             Yd = Yd * w
                             Xd = Xd * w
