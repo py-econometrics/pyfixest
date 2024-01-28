@@ -184,7 +184,7 @@ def model_matrix_fixest(
         if X[x].dtype == "int64":
             pass
         else:
-            X[x] = X[x].astype("float64")
+            X.loc[:, x] = X[x].astype("float64")
 
     if _is_iv:
         endogvar, Z = model_matrix(fml_iv_full, data)
