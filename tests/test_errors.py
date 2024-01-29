@@ -153,3 +153,28 @@ def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
         fit = feols("Y ~ f1 | f1", data=data)
+
+
+def test_wls_errors():
+
+    data = get_data()
+
+    with pytest.raises(AssertionError):
+        feols(fml="Y ~ X1", data=data, weights="weights2")
+
+    with pytest.raises(AssertionError):
+        feols("Y ~ X1", data=data, weights=[1, 2])
+
+    data["weights"].iloc[0] = np.nan
+    with pytest.raises(VcovTypeNotSupportedError):
+        feols("Y ~ X1", data=data, weights="weights", vcov={"CRV3":"group_id"})
+
+    # test for ValueError when weights are not positive
+    data["weights"].iloc[10] = -1
+    with pytest.raises(ValueError):
+        feols("Y ~ X1", data=data, weights="weights", vcov="iid")
+
+    # test for ValueError when weights are not numeric
+    data["weights"].iloc[10] = "a"
+    with pytest.raises(ValueError):
+        feols("Y ~ X1", data=data, weights="weights", vcov="iid")

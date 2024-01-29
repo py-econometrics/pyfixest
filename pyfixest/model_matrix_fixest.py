@@ -625,11 +625,12 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
     """
     Check if a column is finite and positive.
     """
+
     if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
         x = x.to_numpy()
 
     if x.any() in [np.inf, -np.inf]:
         return False
     else:
-        if x[~np.isnan(x)].all() > 0:
+        if (x[~np.isnan(x)] > 0).all():
             return True
