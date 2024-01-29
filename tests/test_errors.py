@@ -156,7 +156,6 @@ def test_all_variables_multicollinear():
 
 
 def test_wls_errors():
-
     data = get_data()
 
     with pytest.raises(AssertionError):
@@ -167,7 +166,7 @@ def test_wls_errors():
 
     data["weights"].iloc[0] = np.nan
     with pytest.raises(VcovTypeNotSupportedError):
-        feols("Y ~ X1", data=data, weights="weights", vcov={"CRV3":"group_id"})
+        feols("Y ~ X1", data=data, weights="weights", vcov={"CRV3": "group_id"})
 
     # test for ValueError when weights are not positive
     data["weights"].iloc[10] = -1
