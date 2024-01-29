@@ -161,12 +161,21 @@ class Feols:
         weights: np.ndarray,
         collin_tol: float,
         coefnames: List[str],
+        weights_name: Optional[str],
     ) -> None:
         self._method = "feols"
         self._is_iv = False
 
-        self._Y = Y
-        self._X = X
+        self._weights = weights
+        self._weights_name = weights_name
+
+        if weights_name is not None:
+            w = np.sqrt(weights)
+            self._Y = Y * w
+            self._X = X * w
+        else:
+            self._Y = Y
+            self._X = X
 
         self.get_nobs()
 
@@ -186,11 +195,11 @@ class Feols:
 
         self._Z = self._X
 
-        self._weights = weights
-
         self._N, self._k = self._X.shape
 
         self._support_crv3_inference = True
+        if self._weights_name is not None:
+            self._support_crv3_inference = False
         self._support_iid_inference = True
 
         # attributes that have to be enriched outside of the class - not really optimal code
@@ -470,7 +479,7 @@ class Feols:
 
                     if not _support_crv3_inference:
                         raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV regression."
+                            "CRV3 inference is not supported with IV regression or WLS."
                         )
 
                     beta_jack = np.zeros((len(clustid), _k))

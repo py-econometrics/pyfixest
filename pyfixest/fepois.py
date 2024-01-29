@@ -46,6 +46,8 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
+    weights_name : Optional[str]
+        Name of the weights variable.
     """
 
     def __init__(
@@ -59,9 +61,10 @@ class Fepois(Feols):
         collin_tol: float,
         maxiter: Optional[int] = 25,
         tol: Optional[float] = 1e-08,
+        weights_name: Optional[str] = None,
     ):
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol
+            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol, weights_name=weights_name
         )
 
         # input checks

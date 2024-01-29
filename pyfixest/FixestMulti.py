@@ -90,6 +90,9 @@ class FixestMulti:
         self._i_ref2 = None
         self._drop_intercept = None
         self._weights = weights
+        self._has_weights = False
+        if weights is not None:
+            self._has_weights = True
 
         # set i_ref1 and i_ref2 to list if not None
         if i_ref1 is not None:
@@ -248,18 +251,6 @@ class FixestMulti:
                             for x in [Yd, Xd, Zd, endogvard]
                         ]
 
-                        # import pdb; pdb.set_trace()
-
-                        # has_weights = False
-                        if _weights is not None:
-                            # import pdb; pdb.set_trace()
-                            w = np.sqrt(weights)
-                            Yd = Yd * w
-                            Xd = Xd * w
-                            if _is_iv:
-                                Zd = Zd * w
-                                endogvard = endogvard * w
-
                         if _is_iv:
                             coefnames_z = Z.columns.tolist()
                             FIT = Feiv(
@@ -270,6 +261,7 @@ class FixestMulti:
                                 coefnames_x=coefnames,
                                 coefnames_z=coefnames_z,
                                 collin_tol=collin_tol,
+                                weights_name = _weights
                             )
                         else:
                             # initiate OLS class
@@ -279,6 +271,7 @@ class FixestMulti:
                                 weights=weights,
                                 coefnames=coefnames,
                                 collin_tol=collin_tol,
+                                weights_name = _weights
                             )
 
                         # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
@@ -323,6 +316,7 @@ class FixestMulti:
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
                             collin_tol=collin_tol,
+                            weights_name = None
                         )
 
                         FIT.get_fit()
