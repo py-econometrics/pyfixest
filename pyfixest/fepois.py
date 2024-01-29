@@ -64,7 +64,12 @@ class Fepois(Feols):
         weights_name: Optional[str] = None,
     ):
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames, collin_tol=collin_tol, weights_name=weights_name
+            Y=Y,
+            X=X,
+            weights=weights,
+            coefnames=coefnames,
+            collin_tol=collin_tol,
+            weights_name=weights_name,
         )
 
         # input checks

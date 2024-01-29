@@ -91,7 +91,12 @@ class Feiv(Feols):
         weights_name: Optional[str],
     ) -> None:
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol, weights_name=weights_name
+            Y=Y,
+            X=X,
+            weights=weights,
+            coefnames=coefnames_x,
+            collin_tol=collin_tol,
+            weights_name=weights_name,
         )
 
         if weights_name is not None:

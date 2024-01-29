@@ -261,7 +261,7 @@ class FixestMulti:
                                 coefnames_x=coefnames,
                                 coefnames_z=coefnames_z,
                                 collin_tol=collin_tol,
-                                weights_name = _weights
+                                weights_name=_weights,
                             )
                         else:
                             # initiate OLS class
@@ -271,7 +271,7 @@ class FixestMulti:
                                 weights=weights,
                                 coefnames=coefnames,
                                 collin_tol=collin_tol,
-                                weights_name = _weights
+                                weights_name=_weights,
                             )
 
                         # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
@@ -316,7 +316,7 @@ class FixestMulti:
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
                             collin_tol=collin_tol,
-                            weights_name = None
+                            weights_name=None,
                         )
 
                         FIT.get_fit()
