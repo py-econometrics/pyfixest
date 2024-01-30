@@ -4,9 +4,6 @@
 
 Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
 
-This function estimates the effects of treatments in panel data using a two-stage approach. It requires specification of
-both the first and second stage formulas and supports interaction references for the second stage.
-
 ## Parameters
 
 | Name           | Type                    | Description                                                                                                         | Default    |
