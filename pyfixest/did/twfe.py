@@ -4,7 +4,6 @@ from pyfixest.did.did import DID
 
 
 class TWFE(DID):
-
     """
     Estimate a Difference-in-Differences model using the two-way fixed effects estimator.
     """

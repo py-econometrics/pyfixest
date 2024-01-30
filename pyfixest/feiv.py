@@ -4,7 +4,6 @@ from pyfixest.feols import Feols, _drop_multicollinear_variables
 
 
 class Feiv(Feols):
-
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 

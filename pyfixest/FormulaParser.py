@@ -9,7 +9,6 @@ from pyfixest.exceptions import (
 
 
 class FixestFormulaParser:
-
     """
     A class for deparsing formulas with multiple estimation syntax.
 
@@ -120,9 +119,9 @@ class FixestFormulaParser:
             self._is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
             first_stage_covars_list = covars.split("+")
-            first_stage_covars_list[
-                first_stage_covars_list.index(endogvars)
-            ] = instruments
+            first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
+                instruments
+            )
             self.first_stage_covars_list = "+".join(first_stage_covars_list)
             self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
             self.depvars_first_stage = endogvars

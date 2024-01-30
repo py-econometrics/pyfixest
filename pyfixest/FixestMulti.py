@@ -17,7 +17,6 @@ from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 
 
 class FixestMulti:
-
     """
     # FixestMulti:
 

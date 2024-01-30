@@ -352,7 +352,6 @@ def test_single_fit(
                 # unadjusted
 
                 if True:
-
                     if not mod._has_weights:
                         # R2 currently not computed for WLS
                         np.testing.assert_allclose(

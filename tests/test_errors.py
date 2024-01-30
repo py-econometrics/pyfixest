@@ -180,4 +180,4 @@ def test_wls_errors():
 
     data = get_data()
     with pytest.raises(NotImplementedError):
-        feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B = 999)
+        feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)

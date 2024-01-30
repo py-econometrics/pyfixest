@@ -13,7 +13,6 @@ from pyfixest.exceptions import (
 
 
 class Fepois(Feols):
-
     """
     Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).
 

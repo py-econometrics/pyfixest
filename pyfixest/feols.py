@@ -24,7 +24,6 @@ from pyfixest.dev_utils import _polars_to_pandas
 
 
 class Feols:
-
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
