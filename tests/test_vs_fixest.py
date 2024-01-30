@@ -351,17 +351,20 @@ def test_single_fit(
                 r_r = fixest.r2(r_fixest)
                 # unadjusted
 
-                if False:
-                    np.testing.assert_allclose(
-                        py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
-                    )
-                    np.testing.assert_allclose(
-                        py_r2_within,
-                        r_r[5],
-                        rtol=rtol,
-                        atol=atol,
-                        err_msg="py_r2_within != r_r",
-                    )
+                if True:
+
+                    if not mod._has_weights:
+                        # R2 currently not computed for WLS
+                        np.testing.assert_allclose(
+                            py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
+                        )
+                        np.testing.assert_allclose(
+                            py_r2_within,
+                            r_r[5],
+                            rtol=rtol,
+                            atol=atol,
+                            err_msg="py_r2_within != r_r",
+                        )
 
                 if False:
                     # adjusted

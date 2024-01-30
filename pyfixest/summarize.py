@@ -66,7 +66,7 @@ def etable(
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
         nobs_list.append(model._N)
-        if model._method == "feols" and not model._is_iv:
+        if model._method == "feols" and not model._is_iv and not model._has_weights:
             r2_list.append(np.round(model._r2, digits))
         else:
             r2_list.append("-")

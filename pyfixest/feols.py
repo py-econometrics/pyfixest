@@ -1,4 +1,5 @@
 import re
+from tkinter import Y
 import warnings
 import numpy as np
 import pandas as pd
@@ -1207,6 +1208,8 @@ class Feols:
         _N = self._N
         _k = self._k
         _has_fixef = self._has_fixef
+        _weights = self._weights
+        _has_weights = self._has_weights
 
         if _has_fixef:
             _k_fe = np.sum(self._k_fe.values - 1) + 1
@@ -1216,9 +1219,15 @@ class Feols:
 
         ssu = np.sum(_u_hat**2)
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-        self._rmse = np.sqrt(ssu / _N)
-        self._r2 = 1 - (ssu / ssy)
-        self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
+
+        if _has_weights:
+            self._rmse = None
+            self._r2 = None
+            self._adj_r2 = None
+        else:
+            self._rmse = np.sqrt(ssu / _N)
+            self._r2 = 1 - (ssu / ssy)
+            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
         if _has_fixef:
             ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
