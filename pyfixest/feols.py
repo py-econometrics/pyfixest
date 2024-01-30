@@ -168,8 +168,11 @@ class Feols:
 
         self._weights = weights
         self._weights_name = weights_name
-
+        self._has_weights = False
         if weights_name is not None:
+            self._has_weights = True
+
+        if self._has_weights:
             w = np.sqrt(weights)
             self._Y = Y * w
             self._X = X * w
@@ -201,6 +204,9 @@ class Feols:
         if self._weights_name is not None:
             self._support_crv3_inference = False
         self._support_iid_inference = True
+        self._supports_wildboottest = True
+        if self._has_weights or self._is_iv:
+            self._supports_wildboottest = False
 
         # attributes that have to be enriched outside of the class - not really optimal code
         # change later
@@ -880,6 +886,17 @@ class Feols:
         _xnames = self._coefnames
         _data = self._data
         _clustervar = self._clustervar
+        _supports_wildboottest = self._supports_wildboottest
+
+        if not _supports_wildboottest:
+            if self._is_iv:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for IV estimation."
+                )
+            if self._has_weights:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for WLS estimation."
+                )
 
         if cluster is None:
             if _clustervar is not None:

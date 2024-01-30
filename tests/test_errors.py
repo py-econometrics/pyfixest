@@ -177,3 +177,7 @@ def test_wls_errors():
     data["weights"].iloc[10] = "a"
     with pytest.raises(ValueError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid")
+
+    data = get_data()
+    with pytest.raises(NotImplementedError):
+        feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B = 999)
