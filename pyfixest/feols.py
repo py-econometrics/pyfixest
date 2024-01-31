@@ -23,7 +23,6 @@ from pyfixest.dev_utils import _polars_to_pandas
 
 
 class Feols:
-
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
@@ -161,12 +160,24 @@ class Feols:
         weights: np.ndarray,
         collin_tol: float,
         coefnames: List[str],
+        weights_name: Optional[str],
     ) -> None:
         self._method = "feols"
         self._is_iv = False
 
-        self._Y = Y
-        self._X = X
+        self._weights = weights
+        self._weights_name = weights_name
+        self._has_weights = False
+        if weights_name is not None:
+            self._has_weights = True
+
+        if self._has_weights:
+            w = np.sqrt(weights)
+            self._Y = Y * w
+            self._X = X * w
+        else:
+            self._Y = Y
+            self._X = X
 
         self.get_nobs()
 
@@ -186,12 +197,15 @@ class Feols:
 
         self._Z = self._X
 
-        self._weights = weights
-
         self._N, self._k = self._X.shape
 
         self._support_crv3_inference = True
+        if self._weights_name is not None:
+            self._support_crv3_inference = False
         self._support_iid_inference = True
+        self._supports_wildboottest = True
+        if self._has_weights or self._is_iv:
+            self._supports_wildboottest = False
 
         # attributes that have to be enriched outside of the class - not really optimal code
         # change later
@@ -263,7 +277,7 @@ class Feols:
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self._scores = self._Z * self._u_hat[:, None]
+        self._scores = self._u_hat[:, None] * _X
         self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
@@ -443,16 +457,16 @@ class Feols:
                     k_instruments = _Z.shape[1]
                     meat = np.zeros((k_instruments, k_instruments))
 
-                    if _weights is not None:
-                        weighted_uhat = (_weights.flatten() * _u_hat.flatten()).reshape(
-                            (_N, 1)
-                        )
+                    # import pdb; pdb.set_trace()
+                    # deviance uniquely for Poisson
+                    if hasattr(self, "deviance"):
+                        weighted_uhat = _weights.flatten() * _u_hat.flatten()
                     else:
                         weighted_uhat = _u_hat
 
                     meat = _crv1_meat_loop(
                         _Z=_Z.astype(np.float64),
-                        weighted_uhat=weighted_uhat.astype(np.float64),
+                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((_N, 1)),
                         clustid=clustid,
                         cluster_col=cluster_col,
                     )
@@ -470,7 +484,7 @@ class Feols:
 
                     if not _support_crv3_inference:
                         raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV regression."
+                            "CRV3 inference is not supported with IV regression or WLS."
                         )
 
                     beta_jack = np.zeros((len(clustid), _k))
@@ -871,6 +885,17 @@ class Feols:
         _xnames = self._coefnames
         _data = self._data
         _clustervar = self._clustervar
+        _supports_wildboottest = self._supports_wildboottest
+
+        if not _supports_wildboottest:
+            if self._is_iv:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for IV estimation."
+                )
+            if self._has_weights:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for WLS estimation."
+                )
 
         if cluster is None:
             if _clustervar is not None:
@@ -1181,6 +1206,8 @@ class Feols:
         _N = self._N
         _k = self._k
         _has_fixef = self._has_fixef
+        _weights = self._weights
+        _has_weights = self._has_weights
 
         if _has_fixef:
             _k_fe = np.sum(self._k_fe.values - 1) + 1
@@ -1190,9 +1217,15 @@ class Feols:
 
         ssu = np.sum(_u_hat**2)
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-        self._rmse = np.sqrt(ssu / _N)
-        self._r2 = 1 - (ssu / ssy)
-        self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
+
+        if _has_weights:
+            self._rmse = None
+            self._r2 = None
+            self._adj_r2 = None
+        else:
+            self._rmse = np.sqrt(ssu / _N)
+            self._r2 = 1 - (ssu / ssy)
+            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
         if _has_fixef:
             ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)

@@ -188,6 +188,9 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     df[df == "nan"] = np.nan
 
+    df["weights"] = rng.uniform(0, 1, N)
+    # df["weights"].iloc[]
+
     return df
 
 

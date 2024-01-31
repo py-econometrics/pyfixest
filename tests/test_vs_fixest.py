@@ -33,11 +33,12 @@ rng = np.random.default_rng(8760985)
 
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
-@pytest.mark.parametrize("dropna", [True, False])
-@pytest.mark.parametrize("model", ["Fepois", "Feols"])
+@pytest.mark.parametrize("beta_type", ["2"])
+@pytest.mark.parametrize("error_type", ["2"])
+@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -106,7 +107,9 @@ rng = np.random.default_rng(8760985)
         "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
     ],
 )
-def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fml):
+def test_single_fit(
+    N, seed, beta_type, error_type, dropna, model, inference, weights, fml
+):
     """
     test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
 
@@ -158,13 +161,22 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
             raise e
 
     if model == "Feols":
-        pyfixest = feols(fml=fml, data=data, vcov=inference)
-        r_fixest = fixest.feols(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(True, "none", True, "min", "min", False),
-        )
+        pyfixest = feols(fml=fml, data=data, vcov=inference, weights=weights)
+        if weights is not None:
+            r_fixest = fixest.feols(
+                ro.Formula(r_fml),
+                vcov=r_inference,
+                data=data_r,
+                ssc=fixest.ssc(True, "none", True, "min", "min", False),
+                weights=ro.Formula("~" + weights),
+            )
+        else:
+            r_fixest = fixest.feols(
+                ro.Formula(r_fml),
+                vcov=r_inference,
+                data=data_r,
+                ssc=fixest.ssc(True, "none", True, "min", "min", False),
+            )
 
         run_test = True
 
@@ -292,45 +304,44 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
         #    err_msg = "py_resid != r_resid"
         # )
 
-        np.testing.assert_allclose(
-            py_se,
-            r_se,
-            rtol=rtol * inference_inflation_factor,
-            atol=atol * inference_inflation_factor,
-            err_msg=f"py_se != r_se for {inference} errors.",
-        )
+        if True:
+            np.testing.assert_allclose(
+                py_se,
+                r_se,
+                rtol=rtol * inference_inflation_factor,
+                atol=atol * inference_inflation_factor,
+                err_msg=f"py_se != r_se for {inference} errors.",
+            )
 
-        np.testing.assert_allclose(
-            py_pval,
-            r_pval,
-            rtol=rtol * inference_inflation_factor,
-            atol=atol * inference_inflation_factor,
-            err_msg=f"py_pval != r_pval for {inference} errors.",
-        )
+            np.testing.assert_allclose(
+                py_pval,
+                r_pval,
+                rtol=rtol * inference_inflation_factor,
+                atol=atol * inference_inflation_factor,
+                err_msg=f"py_pval != r_pval for {inference} errors.",
+            )
 
-        np.testing.assert_allclose(
-            py_tstat,
-            r_tstat,
-            rtol=rtol * inference_inflation_factor,
-            atol=atol * inference_inflation_factor,
-            err_msg=f"py_tstat != r_tstat for {inference} errors",
-        )
+            np.testing.assert_allclose(
+                py_tstat,
+                r_tstat,
+                rtol=rtol * inference_inflation_factor,
+                atol=atol * inference_inflation_factor,
+                err_msg=f"py_tstat != r_tstat for {inference} errors",
+            )
 
-        np.testing.assert_allclose(
-            py_confint,
-            r_confint,
-            rtol=rtol * inference_inflation_factor,
-            atol=atol * inference_inflation_factor,
-            err_msg=f"py_confint != r_confint for {inference} errors",
-        )
+            np.testing.assert_allclose(
+                py_confint,
+                r_confint,
+                rtol=rtol * inference_inflation_factor,
+                atol=atol * inference_inflation_factor,
+                err_msg=f"py_confint != r_confint for {inference} errors",
+            )
 
         np.testing.assert_allclose(
             py_nobs, r_nobs, rtol=rtol, atol=atol, err_msg="py_nobs != r_nobs"
         )
 
         if model == "Feols":
-            # import pdb; pdb.set_trace()
-
             if not mod._is_iv:
                 py_r2 = mod._r2
                 py_r2_within = mod._r2_within
@@ -339,16 +350,20 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
                 r_r = fixest.r2(r_fixest)
                 # unadjusted
-                np.testing.assert_allclose(
-                    py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
-                )
-                np.testing.assert_allclose(
-                    py_r2_within,
-                    r_r[5],
-                    rtol=rtol,
-                    atol=atol,
-                    err_msg="py_r2_within != r_r",
-                )
+
+                if True:
+                    if not mod._has_weights:
+                        # R2 currently not computed for WLS
+                        np.testing.assert_allclose(
+                            py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
+                        )
+                        np.testing.assert_allclose(
+                            py_r2_within,
+                            r_r[5],
+                            rtol=rtol,
+                            atol=atol,
+                            err_msg="py_r2_within != r_r",
+                        )
 
                 if False:
                     # adjusted
@@ -381,8 +396,8 @@ def test_single_fit(N, seed, beta_type, error_type, dropna, model, inference, fm
 
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
+@pytest.mark.parametrize("beta_type", ["1"])
+@pytest.mark.parametrize("error_type", ["3"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
@@ -546,6 +561,68 @@ def test_twoway_clustering():
                 atol=1e-04,
                 err_msg=f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
             )
+
+
+def test_wls_na():
+    """
+    Special tests for WLS and NA values
+    """
+
+    data = get_data()
+    data = data.dropna()
+
+    # case 1: NA in weights
+    data["weights"].iloc[0] = np.nan
+
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal.",
+    )
+
+    # case 2: NA in weights and X1
+    data["X1"].iloc[0] = np.nan
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal.",
+    )
+
+    # case 3: more NAs in X1:
+    data["X1"].iloc[0:10] = np.nan
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+    )
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal.",
+    )
 
 
 def _py_fml_to_r_fml(py_fml):

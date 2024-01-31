@@ -66,7 +66,7 @@ def etable(
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
         nobs_list.append(model._N)
-        if model._method == "feols" and not model._is_iv:
+        if model._method == "feols" and not model._is_iv and not model._has_weights:
             r2_list.append(np.round(model._r2, digits))
         else:
             r2_list.append("-")
@@ -130,7 +130,7 @@ def etable(
     # a lot of work to replace the NaNs with empty strings
     # reason: "" not a level of the category, might lead to a pandas error
     for column in res.columns:
-        if pd.api.types.is_categorical_dtype(res[column]):
+        if isinstance(res[column].dtype, pd.CategoricalDtype):
             # Add an empty string level to the category if it's not already there
             if "" not in res[column].cat.categories:
                 res[column] = res[column].cat.add_categories([""])

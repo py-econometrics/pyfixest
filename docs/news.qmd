@@ -1,5 +1,12 @@
 # News
 
+## PyFixest 0.15.0
+
+- Adds support for weighted least squares for `feols()`.
+- Reduces testing time drastically by running tests on fewer random data samples. Qualitatively,
+  the set of test remains identical.
+- Some updates for future `pandas` compatibility.
+
 ## PyFixest 0.14.0
 
 - Moves the documentation to [quartodoc](https://github.com/machow/quartodoc).

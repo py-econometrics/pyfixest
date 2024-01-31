@@ -1,0 +1,48 @@
+# Function reference {.doc .doc-index}
+
+## Estimation Functions
+
+User facing estimation functions
+
+
+| | |
+| --- | --- |
+| [estimation.feols](estimation.feols.qmd#pyfixest.estimation.feols) | Estimate a linear regression models with fixed effects using fixest formula syntax. |
+| [estimation.fepois](estimation.fepois.qmd#pyfixest.estimation.fepois) | Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm. |
+| [did.estimation.did2s](did.estimation.did2s.qmd#pyfixest.did.estimation.did2s) | Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator. |
+| [did.estimation.lpdid](did.estimation.lpdid.qmd#pyfixest.did.estimation.lpdid) | Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach. |
+| [did.estimation.event_study](did.estimation.event_study.qmd#pyfixest.did.estimation.event_study) | Function for Event Study Estimation. |
+
+## Estimation Classes
+
+Details on Methods and Attributes
+
+
+| | |
+| --- | --- |
+| [feols.Feols](feols.Feols.qmd#pyfixest.feols.Feols) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
+| [fepois.Fepois](fepois.Fepois.qmd#pyfixest.fepois.Fepois) | Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS). |
+| [feiv.Feiv](feiv.Feiv.qmd#pyfixest.feiv.Feiv) | Non user-facing class to estimate an IV model using a 2SLS estimator. |
+
+## Summarize and Visualize
+
+Post-Processing of Estimation Results
+
+
+| | |
+| --- | --- |
+| [summarize.summary](summarize.summary.qmd#pyfixest.summarize.summary) | Prints a summary of estimation results for each estimated model. |
+| [summarize.etable](summarize.etable.qmd#pyfixest.summarize.etable) | Create an esttab-like table from a list of models. |
+| [visualize.coefplot](visualize.coefplot.qmd#pyfixest.visualize.coefplot) | Plot model coefficients with confidence intervals. |
+| [visualize.iplot](visualize.iplot.qmd#pyfixest.visualize.iplot) | Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals. |
+
+## Misc / Utilities
+
+PyFixest internals and utilities
+
+
+| | |
+| --- | --- |
+| [demean.demean](demean.demean.qmd#pyfixest.demean.demean) | Workhorse for demeaning an input array `x` based on the specified fixed effects and weights |
+| [detect_singletons.detect_singletons](detect_singletons.detect_singletons.qmd#pyfixest.detect_singletons.detect_singletons) | Detect singleton fixed effects in a dataset. |
+| [model_matrix_fixest.model_matrix_fixest](model_matrix_fixest.model_matrix_fixest.qmd#pyfixest.model_matrix_fixest.model_matrix_fixest) | Create model matrices for fixed effects estimation. |

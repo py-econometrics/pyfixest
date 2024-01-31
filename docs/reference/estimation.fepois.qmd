@@ -4,9 +4,6 @@
 
 Estimate Poisson regression models with fixed effects using the `pplmhdfe` algorithm.
 
-This method is based on the Stata package of the same name and supports various features like stepwise regressions,
-cumulative stepwise regression, multiple dependent variables, interaction of variables, and interacted fixed effects.
-
 ## Parameters
 
 | Name             | Type                                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                           | Default    |
