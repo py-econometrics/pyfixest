@@ -317,7 +317,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
     """
 
     if check == "fe":
-        if (Y > 0).all().bool():
+        if (Y > 0).all(axis = 0).all():
             pass
         else:
             Y_help = (Y > 0).astype(int).squeeze()

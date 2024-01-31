@@ -98,9 +98,9 @@ class Feiv(Feols):
             weights_name=weights_name,
         )
 
-        if weights_name is not None:
+        if self._has_weights:
             w = np.sqrt(weights)
-            self._Z = Z * w
+            Z = Z * w
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:

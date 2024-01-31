@@ -240,17 +240,19 @@ def _did2s_vcov(
 
     # note for future Alex: intercept needs to be dropped! it is not as fixed effects are converted to
     # dummies, hence has_fixed checks are False
-    _, X1, _, _, _, _, _, _, _ = model_matrix_fixest(
+    _, X1, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml=f"{yname} {first_stage}",
         data=data,
+        weights = None,
         drop_singletons=False,
         drop_intercept=False,
         i_ref1=i_ref1,
         i_ref2=i_ref2,
     )
-    _, X2, _, _, _, _, _, _, _ = model_matrix_fixest(
+    _, X2, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml=f"{yname} {second_stage}",
         data=data,
+        weights = None,
         drop_singletons=False,
         drop_intercept=True,
         i_ref1=i_ref1,

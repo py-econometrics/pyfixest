@@ -164,17 +164,18 @@ def test_wls_errors():
     with pytest.raises(AssertionError):
         feols("Y ~ X1", data=data, weights=[1, 2])
 
-    data["weights"].iloc[0] = np.nan
+    data.loc[0,"weights"] = np.nan
     with pytest.raises(VcovTypeNotSupportedError):
         feols("Y ~ X1", data=data, weights="weights", vcov={"CRV3": "group_id"})
 
     # test for ValueError when weights are not positive
-    data["weights"].iloc[10] = -1
+    data.loc[10,"weights"] = -1
     with pytest.raises(ValueError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid")
 
     # test for ValueError when weights are not numeric
-    data["weights"].iloc[10] = "a"
+    data["weights"] = data["weights"].astype("str")
+    data.loc[10, "weights"] = "a"
     with pytest.raises(ValueError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid")
 
