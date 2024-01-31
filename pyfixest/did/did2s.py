@@ -243,7 +243,7 @@ def _did2s_vcov(
     _, X1, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml=f"{yname} {first_stage}",
         data=data,
-        weights = None,
+        weights=None,
         drop_singletons=False,
         drop_intercept=False,
         i_ref1=i_ref1,
@@ -252,7 +252,7 @@ def _did2s_vcov(
     _, X2, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         fml=f"{yname} {second_stage}",
         data=data,
-        weights = None,
+        weights=None,
         drop_singletons=False,
         drop_intercept=True,
         i_ref1=i_ref1,
