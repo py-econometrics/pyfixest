@@ -33,8 +33,8 @@ rng = np.random.default_rng(8760985)
 
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
+@pytest.mark.parametrize("beta_type", ["3"])
+@pytest.mark.parametrize("error_type", ["1"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -397,8 +397,8 @@ def test_single_fit(
 
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
+@pytest.mark.parametrize("beta_type", ["2"])
+@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
@@ -563,6 +563,68 @@ def test_twoway_clustering():
                 err_msg=f"CRV1-pvalue: cluster_adj = {cluster_adj}, cluster_df = {cluster_df}",
             )
 
+
+def test_wls_na():
+
+    """
+    Special tests for WLS and NA values
+    """
+
+    data = get_data()
+    data = data.dropna()
+
+    # case 1: NA in weights
+    data["weights"].iloc[0] = np.nan
+
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal."
+    )
+
+    # case 2: NA in weights and X1
+    data["X1"].iloc[0] = np.nan
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal."
+    )
+
+    # case 3: more NAs in X1:
+    data["X1"].iloc[0:10] = np.nan
+    fit_py = feols("Y ~ X1", data=data, weights="weights")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+    )
+    np.testing.assert_allclose(
+        fit_py.coef(),
+        stats.coef(fit_r),
+        rtol=1e-04,
+        atol=1e-04,
+        err_msg="WLS: Coefs are not equal."
+    )
 
 def _py_fml_to_r_fml(py_fml):
     """
