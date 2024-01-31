@@ -1,0 +1,22 @@
+# demean.demean { #pyfixest.demean.demean }
+
+`demean.demean(x, flist, weights, tol=1e-08, maxiter=100000)`
+
+Workhorse for demeaning an input array `x` based on the specified fixed effects and weights
+via the alternating projections algorithm.
+
+## Parameters
+
+| Name      | Type                | Description                                                                                                    | Default    |
+|-----------|---------------------|----------------------------------------------------------------------------------------------------------------|------------|
+| `x`       | numpy.numpy.ndarray | Input array of shape (n_samples, n_features). Needs to be of type float.                                       | _required_ |
+| `flist`   | numpy.numpy.ndarray | Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be converted to integers. | _required_ |
+| `weights` | numpy.numpy.ndarray | Array of shape (n_samples,) specifying the weights.                                                            | _required_ |
+| `tol`     | float               | Tolerance criterion for convergence. Defaults to 1e-08.                                                        | `1e-08`    |
+| `maxiter` | int                 | Maximum number of iterations. Defaults to 100_000.                                                             | `100000`   |
+
+## Returns
+
+| Type                                      | Description                                                                                                                                   |
+|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| typing.Tuple\[numpy.numpy.ndarray, bool\] | A tuple containing the demeaned array of shape (n_samples, n_features) and a boolean indicating whether the algorithm converged successfully. |

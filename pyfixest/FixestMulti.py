@@ -17,7 +17,6 @@ from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 
 
 class FixestMulti:
-
     """
     # FixestMulti:
 
@@ -51,6 +50,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, Dict[str, str]] = None,
+        weights: Union[None, np.ndarray] = None,
         ssc: Dict[str, str] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
@@ -65,6 +65,7 @@ class FixestMulti:
             estimation (str): Type of estimation. Either "feols" or "fepois".
             fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
             vcov (Union[None, str, Dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            weights (Union[None, np.ndarray], optional): An array of weights. Either None or a 1D array of length N. Default is None.
             ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
@@ -87,6 +88,10 @@ class FixestMulti:
         self._i_ref1 = None
         self._i_ref2 = None
         self._drop_intercept = None
+        self._weights = weights
+        self._has_weights = False
+        if weights is not None:
+            self._has_weights = True
 
         # set i_ref1 and i_ref2 to list if not None
         if i_ref1 is not None:
@@ -154,6 +159,7 @@ class FixestMulti:
         _drop_intercept = self._drop_intercept
         _i_ref1 = self._i_ref1
         _i_ref2 = self._i_ref2
+        _weights = self._weights
 
         for _, fval in enumerate(fixef_keys):
             dict2fe = _fml_dict.get(fval)
@@ -184,6 +190,7 @@ class FixestMulti:
                         fe,
                         endogvar,
                         Z,
+                        weights_df,
                         na_index,
                         na_index_str,
                         _icovars,
@@ -195,9 +202,15 @@ class FixestMulti:
                         drop_intercept=_drop_intercept,
                         i_ref1=_i_ref1,
                         i_ref2=_i_ref2,
+                        weights=_weights,
                     )
 
-                    weights = np.ones((Y.shape[0], 1))
+                    if _weights is not None:
+                        weights = weights_df.to_numpy()
+                    else:
+                        weights = np.ones(Y.shape[0])
+
+                    weights = weights.reshape((weights.shape[0], 1))
 
                     self._X_is_empty = False
                     if X_is_empty:
@@ -237,13 +250,6 @@ class FixestMulti:
                             for x in [Yd, Xd, Zd, endogvard]
                         ]
 
-                        has_weights = False
-                        if has_weights:
-                            w = np.sqrt(weights.to_numpy())
-                            Yd *= np.sqrt(w)
-                            Zd *= np.sqrt(w)
-                            Xd *= np.sqrt(w)
-
                         if _is_iv:
                             coefnames_z = Z.columns.tolist()
                             FIT = Feiv(
@@ -254,6 +260,7 @@ class FixestMulti:
                                 coefnames_x=coefnames,
                                 coefnames_z=coefnames_z,
                                 collin_tol=collin_tol,
+                                weights_name=_weights,
                             )
                         else:
                             # initiate OLS class
@@ -263,6 +270,7 @@ class FixestMulti:
                                 weights=weights,
                                 coefnames=coefnames,
                                 collin_tol=collin_tol,
+                                weights_name=_weights,
                             )
 
                         # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
@@ -307,6 +315,7 @@ class FixestMulti:
                             maxiter=iwls_maxiter,
                             tol=iwls_tol,
                             collin_tol=collin_tol,
+                            weights_name=None,
                         )
 
                         FIT.get_fit()

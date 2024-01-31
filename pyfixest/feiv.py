@@ -1,9 +1,9 @@
 import numpy as np
+from typing import Optional
 from pyfixest.feols import Feols, _drop_multicollinear_variables
 
 
 class Feiv(Feols):
-
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
@@ -29,6 +29,8 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
+    weights_name : Optional[str]
+        Name of the weights variable.
 
     Attributes
     ----------
@@ -85,12 +87,20 @@ class Feiv(Feols):
         coefnames_x: list,
         coefnames_z: list,
         collin_tol: float,
+        weights_name: Optional[str],
     ) -> None:
         super().__init__(
-            Y=Y, X=X, weights=weights, coefnames=coefnames_x, collin_tol=collin_tol
+            Y=Y,
+            X=X,
+            weights=weights,
+            coefnames=coefnames_x,
+            collin_tol=collin_tol,
+            weights_name=weights_name,
         )
 
-        # import pdb; pdb.set_trace()
+        if self._has_weights:
+            w = np.sqrt(weights)
+            Z = Z * w
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:

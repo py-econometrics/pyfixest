@@ -1,37 +1,29 @@
-# feiv { #pyfixest.feiv }
+# feiv.Feiv { #pyfixest.feiv.Feiv }
 
-`feiv`
+`feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)`
 
+Non user-facing class to estimate an IV model using a 2SLS estimator.
 
+Inherits from the Feols class. Users should not directly instantiate this class,
+but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+no demeaning is performed in this class: demeaning is performed in the
+[FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+of demeaned variables for multiple estimation).
 
-## Classes
+## Parameters
 
-| Name | Description |
-| --- | --- |
-| [Feiv](#pyfixest.feiv.Feiv) | A class to estimate an IV model using a 2SLS estimator. Inherits from the Feols class. |
+| Name           | Type                   | Description                                        | Default    |
+|----------------|------------------------|----------------------------------------------------|------------|
+| `Y`            | numpy.numpy.ndarray    | Dependent variable, a two-dimensional np.array.    | _required_ |
+| `X`            | numpy.numpy.ndarray    | Independent variables, a two-dimensional np.array. | _required_ |
+| `Z`            | numpy.numpy.ndarray    | Instruments, a two-dimensional np.array.           | _required_ |
+| `weights`      | numpy.numpy.ndarray    | Weights, a one-dimensional np.array.               | _required_ |
+| `coefnames_x`  | list                   | Names of the coefficients of X.                    | _required_ |
+| `coefnames_z`  | list                   | Names of the coefficients of Z.                    | _required_ |
+| `collin_tol`   | float                  | Tolerance for collinearity check.                  | _required_ |
+| `weights_name` | typing.Optional\[str\] | Name of the weights variable.                      | _required_ |
 
-### Feiv { #pyfixest.feiv.Feiv }
-
-`feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol)`
-
-A class to estimate an IV model using a 2SLS estimator. Inherits from the Feols class.
-Users should not call this class directly, but rather use the feols() function.
-
-Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
-
-#### Parameters
-
-| Name          | Type                | Description                                        | Default    |
-|---------------|---------------------|----------------------------------------------------|------------|
-| `Y`           | numpy.numpy.ndarray | Dependent variable, a two-dimensional np.array.    | _required_ |
-| `X`           | numpy.numpy.ndarray | Independent variables, a two-dimensional np.array. | _required_ |
-| `Z`           | numpy.numpy.ndarray | Instruments, a two-dimensional np.array.           | _required_ |
-| `weights`     | numpy.numpy.ndarray | Weights, a one-dimensional np.array.               | _required_ |
-| `coefnames_x` | list                | Names of the coefficients of X.                    | _required_ |
-| `coefnames_z` | list                | Names of the coefficients of Z.                    | _required_ |
-| `collin_tol`  | float               | Tolerance for collinearity check.                  | _required_ |
-
-#### Attributes
+## Attributes
 
 | Name                    | Type                | Description                                                   |
 |-------------------------|---------------------|---------------------------------------------------------------|
@@ -53,7 +45,7 @@ Users should not directly instantiate this class, but rather use the [feols()](/
 | _hessian                | numpy.numpy.ndarray | Hessian matrix used in the regression.                        |
 | _bread                  | numpy.numpy.ndarray | Bread matrix used in the regression.                          |
 
-#### Raises
+## Raises
 
 | Type       | Description                          |
 |------------|--------------------------------------|
