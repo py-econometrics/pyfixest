@@ -33,8 +33,8 @@ rng = np.random.default_rng(8760985)
 
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["3"])
-@pytest.mark.parametrize("error_type", ["1"])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -397,8 +397,8 @@ def test_single_fit(
 
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
-@pytest.mark.parametrize("beta_type", ["2"])
-@pytest.mark.parametrize("error_type", ["2"])
+@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
+@pytest.mark.parametrize("error_type", ["1", "2", "3"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
