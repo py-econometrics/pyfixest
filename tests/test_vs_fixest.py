@@ -564,7 +564,6 @@ def test_twoway_clustering():
 
 
 def test_wls_na():
-
     """
     Special tests for WLS and NA values
     """
@@ -580,7 +579,7 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
 
     np.testing.assert_allclose(
@@ -588,7 +587,7 @@ def test_wls_na():
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
-        err_msg="WLS: Coefs are not equal."
+        err_msg="WLS: Coefs are not equal.",
     )
 
     # case 2: NA in weights and X1
@@ -598,14 +597,14 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
     np.testing.assert_allclose(
         fit_py.coef(),
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
-        err_msg="WLS: Coefs are not equal."
+        err_msg="WLS: Coefs are not equal.",
     )
 
     # case 3: more NAs in X1:
@@ -615,14 +614,14 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False)
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
     np.testing.assert_allclose(
         fit_py.coef(),
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
-        err_msg="WLS: Coefs are not equal."
+        err_msg="WLS: Coefs are not equal.",
     )
 
 
