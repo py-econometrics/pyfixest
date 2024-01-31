@@ -179,7 +179,7 @@ def test_predict_nas():
 
     # test 2
     newdata = data.copy()[0:200]
-    newdata["f1"].iloc[199] = np.nan
+    newdata.loc[199,"f1"] = np.nan
 
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
@@ -190,7 +190,7 @@ def test_predict_nas():
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
-    newdata["Y"].iloc[198] = np.nan
+    newdata.loc[198,"Y"] = np.nan
     res = fit.predict(newdata=newdata)
     res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r)
