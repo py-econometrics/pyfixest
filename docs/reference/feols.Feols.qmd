@@ -1,26 +1,16 @@
-# feols { #pyfixest.feols }
+# feols.Feols { #pyfixest.feols.Feols }
 
-`feols`
+`feols.Feols(self, Y, X, weights, collin_tol, coefnames, weights_name)`
 
+Non user-facing class to estimate an IV model using a 2SLS estimator.
 
+Inherits from the Feols class. Users should not directly instantiate this class,
+but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
+no demeaning is performed in this class: demeaning is performed in the
+[FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
+of demeaned variables for multiple estimation).
 
-## Classes
-
-| Name | Description |
-| --- | --- |
-| [Feols](#pyfixest.feols.Feols) | A class for estimating regression models via ordinary least squares. Note that in the logic of this package, |
-
-### Feols { #pyfixest.feols.Feols }
-
-`feols.Feols(self, Y, X, weights, collin_tol, coefnames)`
-
-A class for estimating regression models via ordinary least squares. Note that in the logic of this package,
-fixed effects are not projected out within this class, but prior: Y and X are assumed demeaned when passed to [Feols(/reference/Feols.qmd).
-See the `FixestMulti` class for details.
-
-Users should not directly instantiate this class, but rather use the [feols()](/reference/estimation.feols.qmd) function.
-
-#### Parameters
+## Parameters
 
 | Name         | Type                | Description                                           | Default    |
 |--------------|---------------------|-------------------------------------------------------|------------|
@@ -30,7 +20,7 @@ Users should not directly instantiate this class, but rather use the [feols()](/
 | `collin_tol` | float               | Tolerance level for collinearity checks.              | _required_ |
 | `coefnames`  | typing.List\[str\]  | Names of the coefficients (of the design matrix X).   | _required_ |
 
-#### Attributes
+## Attributes
 
 | Name                    | Type                | Description                                                              |
 |-------------------------|---------------------|--------------------------------------------------------------------------|
@@ -86,7 +76,7 @@ Users should not directly instantiate this class, but rather use the [feols()](/
 | _adj_r2                 | float               | Adjusted R-squared value of the model.                                   |
 | _adj_r2_within          | float               | Adjusted R-squared value computed on demeaned dependent variable.        |
 
-#### Methods
+## Methods
 
 | Name | Description |
 | --- | --- |
@@ -110,13 +100,13 @@ Users should not directly instantiate this class, but rather use the [feols()](/
 | [wald_test](#pyfixest.feols.Feols.wald_test) | Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null |
 | [wildboottest](#pyfixest.feols.Feols.wildboottest) | Run a wild cluster bootstrap based on an object of type "Feols". |
 
-##### add_fixest_multi_context { #pyfixest.feols.Feols.add_fixest_multi_context }
+### add_fixest_multi_context { #pyfixest.feols.Feols.add_fixest_multi_context }
 
 `feols.Feols.add_fixest_multi_context(fml, depvar, Y, _data, _ssc_dict, _k_fe, fval, na_index)`
 
 Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the `FixestMulti` class.
 
-###### Parameters
+#### Parameters
 
 | Name        | Type                    | Description                                                       | Default    |
 |-------------|-------------------------|-------------------------------------------------------------------|------------|
@@ -129,29 +119,29 @@ Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attribu
 | `fval`      | str                     | The fixed effects formula.                                        | _required_ |
 | `na_index`  | numpy.numpy.ndarray     | An array with the indices of missing values.                      | _required_ |
 
-###### Returns
+#### Returns
 
 | Type   | Description   |
 |--------|---------------|
 | None   |               |
 
-##### coef { #pyfixest.feols.Feols.coef }
+### coef { #pyfixest.feols.Feols.coef }
 
 `feols.Feols.coef()`
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                                          |
 |----------------------|----------------------------------------------------------------------|
 | pandas.pandas.Series | A pd.Series with the estimated coefficients of the regression model. |
 
-##### coefplot { #pyfixest.feols.Feols.coefplot }
+### coefplot { #pyfixest.feols.Feols.coefplot }
 
 `feols.Feols.coefplot(alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)`
 
 Create a coefficient plot to visualize model coefficients.
 
-###### Parameters
+#### Parameters
 
 | Name            | Type                     | Description                                                                          | Default      |
 |-----------------|--------------------------|--------------------------------------------------------------------------------------|--------------|
@@ -164,23 +154,23 @@ Create a coefficient plot to visualize model coefficients.
 | `title`         | str                      | Title of the plot. Defaults to None.                                                 | `None`       |
 | `coord_flip`    | bool                     | Whether to flip the coordinates of the plot. Defaults to None.                       | `True`       |
 
-###### Returns
+#### Returns
 
 | Type             | Description                                                             |
 |------------------|-------------------------------------------------------------------------|
 | lets-plot figure | A lets-plot figure with coefficient estimates and confidence intervals. |
 
-##### confint { #pyfixest.feols.Feols.confint }
+### confint { #pyfixest.feols.Feols.confint }
 
 `feols.Feols.confint()`
 
-###### Returns
+#### Returns
 
 | Type                    | Description                                                                 |
 |-------------------------|-----------------------------------------------------------------------------|
 | pandas.pandas.DataFrame | A pd.DataFrame with confidence intervals of the estimated regression model. |
 
-##### fixef { #pyfixest.feols.Feols.fixef }
+### fixef { #pyfixest.feols.Feols.fixef }
 
 `feols.Feols.fixef()`
 
@@ -190,43 +180,43 @@ This method creates the following attributes:
 - `alphaDF` (pd.DataFrame): A DataFrame with the estimated fixed effects.
 - `sumFE` (np.array): An array with the sum of fixed effects for each observation (i = 1, ..., N).
 
-###### Returns
+#### Returns
 
 | Type   | Description   |
 |--------|---------------|
 | None   |               |
 
-##### get_inference { #pyfixest.feols.Feols.get_inference }
+### get_inference { #pyfixest.feols.Feols.get_inference }
 
 `feols.Feols.get_inference(alpha=0.95)`
 
 Compute standard errors, t-statistics, and p-values for the regression model.
 
-###### Parameters
+#### Parameters
 
 | Name    | Type   | Description                                                        | Default   |
 |---------|--------|--------------------------------------------------------------------|-----------|
 | `alpha` | float  | The significance level for confidence intervals. Defaults to 0.95. | `0.95`    |
 
-###### Returns
+#### Returns
 
 | Type   | Description   |
 |--------|---------------|
 | None   |               |
 
-##### get_nobs { #pyfixest.feols.Feols.get_nobs }
+### get_nobs { #pyfixest.feols.Feols.get_nobs }
 
 `feols.Feols.get_nobs()`
 
 Fetch the number of observations used in fitting the regression model.
 
-###### Returns
+#### Returns
 
 | Type   | Description   |
 |--------|---------------|
 | None   |               |
 
-##### get_performance { #pyfixest.feols.Feols.get_performance }
+### get_performance { #pyfixest.feols.Feols.get_performance }
 
 `feols.Feols.get_performance()`
 
@@ -235,7 +225,7 @@ including R-squared and adjusted R-squared. Note that variables with the suffix 
 use demeaned dependent variables Y, while variables without do not or are invariant to
 demeaning.
 
-###### Returns
+#### Returns
 
 | Type                                                                                                          | Description   |
 |---------------------------------------------------------------------------------------------------------------|---------------|
@@ -246,13 +236,13 @@ demeaning.
 | - r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.              |               |
 | - adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable. |               |
 
-##### iplot { #pyfixest.feols.Feols.iplot }
+### iplot { #pyfixest.feols.Feols.iplot }
 
 `feols.Feols.iplot(alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)`
 
 Create coefficient plots for variables interacted via `i()` syntax.
 
-###### Parameters
+#### Parameters
 
 | Name            | Type                     | Description                                                               | Default      |
 |-----------------|--------------------------|---------------------------------------------------------------------------|--------------|
@@ -264,13 +254,13 @@ Create coefficient plots for variables interacted via `i()` syntax.
 | `title`         | str                      | Title of the plot. Defaults to None.                                      | `None`       |
 | `coord_flip`    | bool                     | Whether to flip the coordinates of the plot. Defaults to None.            | `True`       |
 
-###### Returns
+#### Returns
 
 | Type             | Description                                                             |
 |------------------|-------------------------------------------------------------------------|
 | lets-plot figure | A lets-plot figure with coefficient estimates and confidence intervals. |
 
-##### predict { #pyfixest.feols.Feols.predict }
+### predict { #pyfixest.feols.Feols.predict }
 
 `feols.Feols.predict(newdata=None)`
 
@@ -278,112 +268,112 @@ Return a flat np.array with predicted values of the regression model.
 If new fixed effect levels are introduced in `newdata`, predicted values for such observations
 will be set to NaN.
 
-###### Parameters
+#### Parameters
 
 | Name      | Type                                                | Description                                                                                                                             | Default   |
 |-----------|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | `newdata` | typing.Optional\[pyfixest.dev_utils.DataFrameType\] | A pd.DataFrame or pl.DataFrame with the data to be used for prediction. If None (default), the data used for fitting the model is used. | `None`    |
 
-###### Returns
+#### Returns
 
 | Type                | Description                                                    |
 |---------------------|----------------------------------------------------------------|
 | numpy.numpy.ndarray | A flat np.array with predicted values of the regression model. |
 
-##### pvalue { #pyfixest.feols.Feols.pvalue }
+### pvalue { #pyfixest.feols.Feols.pvalue }
 
 `feols.Feols.pvalue()`
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                                  |
 |----------------------|--------------------------------------------------------------|
 | pandas.pandas.Series | A pd.Series with p-values of the estimated regression model. |
 
-##### resid { #pyfixest.feols.Feols.resid }
+### resid { #pyfixest.feols.Feols.resid }
 
 `feols.Feols.resid()`
 
-###### Returns
+#### Returns
 
 | Type                | Description                                                        |
 |---------------------|--------------------------------------------------------------------|
 | numpy.numpy.ndarray | A np.ndarray with the residuals of the estimated regression model. |
 
-##### se { #pyfixest.feols.Feols.se }
+### se { #pyfixest.feols.Feols.se }
 
 `feols.Feols.se()`
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                                             |
 |----------------------|-------------------------------------------------------------------------|
 | pandas.pandas.Series | A pd.Series with the standard errors of the estimated regression model. |
 
-##### summary { #pyfixest.feols.Feols.summary }
+### summary { #pyfixest.feols.Feols.summary }
 
 `feols.Feols.summary(digits=3)`
 
-###### Parameters
+#### Parameters
 
 | Name     | Type   | Description                                          | Default   |
 |----------|--------|------------------------------------------------------|-----------|
 | `digits` | int    | The number of digits to be displayed. Defaults to 3. | `3`       |
 
-###### Returns
+#### Returns
 
 | Type   | Description   |
 |--------|---------------|
 | None   |               |
 
-##### tidy { #pyfixest.feols.Feols.tidy }
+### tidy { #pyfixest.feols.Feols.tidy }
 
 `feols.Feols.tidy()`
 
 Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics, and p-values.
 
-###### Returns
+#### Returns
 
 | Type                    | Description                                                                                                                    |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | pandas.pandas.DataFrame | A tidy pd.DataFrame containing the regression results, including point estimates, standard errors, t statistics, and p-values. |
 
-##### tstat { #pyfixest.feols.Feols.tstat }
+### tstat { #pyfixest.feols.Feols.tstat }
 
 `feols.Feols.tstat()`
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                                      |
 |----------------------|------------------------------------------------------------------|
 | pandas.pandas.Series | A pd.Series with t-statistics of the estimated regression model. |
 
-##### vcov { #pyfixest.feols.Feols.vcov }
+### vcov { #pyfixest.feols.Feols.vcov }
 
 `feols.Feols.vcov(vcov)`
 
 Compute covariance matrices for an estimated regression model.
 
-###### Parameters
+#### Parameters
 
 | Name   | Type                                         | Description                                                                                                                                                                                                                                                                                                                                                                  | Default    |
 |--------|----------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
 | `vcov` | typing.Union\[str, typing.Dict\[str, str\]\] | A string or dictionary specifying the type of variance-covariance matrix to use for inference. If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3". If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation. | _required_ |
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                                               |
 |----------------------|---------------------------------------------------------------------------|
 | pyfixest.feols.Feols | An instance of class [Feols(/reference/Feols.qmd) with updated inference. |
 
-##### wald_test { #pyfixest.feols.Feols.wald_test }
+### wald_test { #pyfixest.feols.Feols.wald_test }
 
 `feols.Feols.wald_test(R=None, q=None, distribution='F')`
 
 Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null
 hypothesis that all coefficients are zero.
 
-###### Parameters
+#### Parameters
 
 | Name           | Type         | Description                                                                            | Default   |
 |----------------|--------------|----------------------------------------------------------------------------------------|-----------|
@@ -391,19 +381,19 @@ hypothesis that all coefficients are zero.
 | `q`            | array - like | The vector q of the linear hypothesis. If None, defaults to a vector of zeros.         | `None`    |
 | `distribution` | str          | The distribution to use for the p-value. Can be either "F" or "chi2". Defaults to "F". | `'F'`     |
 
-###### Returns
+#### Returns
 
 | Type                 | Description                                      |
 |----------------------|--------------------------------------------------|
 | pandas.pandas.Series | A pd.Series with the Wald statistic and p-value. |
 
-##### wildboottest { #pyfixest.feols.Feols.wildboottest }
+### wildboottest { #pyfixest.feols.Feols.wildboottest }
 
 `feols.Feols.wildboottest(B, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False)`
 
 Run a wild cluster bootstrap based on an object of type "Feols".
 
-###### Parameters
+#### Parameters
 
 | Name             | Type                                                                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                            | Default        |
 |------------------|------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
@@ -419,7 +409,7 @@ Run a wild cluster bootstrap based on an object of type "Feols".
 | `parallel`       | bool                                                                                     | Indicates whether to run the bootstrap in parallel. Defaults to False.                                                                                                                                                                                                                                                                                                                                                 | `False`        |
 | `seed`           | typing.Union\[str, None\]                                                                | An option to provide a random seed. Defaults to None.                                                                                                                                                                                                                                                                                                                                                                  | `None`         |
 
-###### Returns
+#### Returns
 
 | Type                    | Description                                                                                                                                                                                                        |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

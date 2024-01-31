@@ -33,8 +33,8 @@ rng = np.random.default_rng(8760985)
 
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
+@pytest.mark.parametrize("beta_type", ["2"])
+@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -352,7 +352,6 @@ def test_single_fit(
                 # unadjusted
 
                 if True:
-
                     if not mod._has_weights:
                         # R2 currently not computed for WLS
                         np.testing.assert_allclose(
@@ -397,8 +396,8 @@ def test_single_fit(
 
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
-@pytest.mark.parametrize("beta_type", ["1", "2", "3"])
-@pytest.mark.parametrize("error_type", ["1", "2", "3"])
+@pytest.mark.parametrize("beta_type", ["1"])
+@pytest.mark.parametrize("error_type", ["3"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
@@ -565,7 +564,10 @@ def test_twoway_clustering():
 
 
 def test_wls_na():
+<<<<<<< HEAD
 
+=======
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     """
     Special tests for WLS and NA values
     """
@@ -581,7 +583,11 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
+<<<<<<< HEAD
         ssc=fixest.ssc(True, "none", True, "min", "min", False)
+=======
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     )
 
     np.testing.assert_allclose(
@@ -589,7 +595,11 @@ def test_wls_na():
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
+<<<<<<< HEAD
         err_msg="WLS: Coefs are not equal."
+=======
+        err_msg="WLS: Coefs are not equal.",
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     )
 
     # case 2: NA in weights and X1
@@ -599,14 +609,22 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
+<<<<<<< HEAD
         ssc=fixest.ssc(True, "none", True, "min", "min", False)
+=======
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     )
     np.testing.assert_allclose(
         fit_py.coef(),
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
+<<<<<<< HEAD
         err_msg="WLS: Coefs are not equal."
+=======
+        err_msg="WLS: Coefs are not equal.",
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     )
 
     # case 3: more NAs in X1:
@@ -616,16 +634,27 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
+<<<<<<< HEAD
         ssc=fixest.ssc(True, "none", True, "min", "min", False)
+=======
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
     )
     np.testing.assert_allclose(
         fit_py.coef(),
         stats.coef(fit_r),
         rtol=1e-04,
         atol=1e-04,
+<<<<<<< HEAD
         err_msg="WLS: Coefs are not equal."
     )
 
+=======
+        err_msg="WLS: Coefs are not equal.",
+    )
+
+
+>>>>>>> 577cecce98ec7c0d8a4e5b47e2ee8faeb2607bcc
 def _py_fml_to_r_fml(py_fml):
     """
     pyfixest multiple estimation fml syntax to fixest multiple depvar

@@ -12,7 +12,6 @@ from typing import Optional, Union, List
 
 
 class DID2S(DID):
-
     """
     Difference-in-Differences estimation using Gardner's two-step DID2S estimator (2021).
 
