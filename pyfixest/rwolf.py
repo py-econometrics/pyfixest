@@ -6,8 +6,9 @@ from pyfixest.feols import Feols
 from pyfixest.FixestMulti import FixestMulti
 
 
-def rwolf(models: Union[List[Feols], FixestMulti], param: str, B: int, seed:int) -> pd.DataFrame:
-
+def rwolf(
+    models: Union[List[Feols], FixestMulti], param: str, B: int, seed: int
+) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
@@ -49,10 +50,10 @@ def rwolf(models: Union[List[Feols], FixestMulti], param: str, B: int, seed:int)
     for i, model in enumerate(models):
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-            param = param,
-            B = B,
-            return_bootstrapped_t_stats = True,
-            seed = seed # all S iterations require the same bootstrap samples, hence seed needs to be reset
+            param=param,
+            B=B,
+            return_bootstrapped_t_stats=True,
+            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
         )
         t_stats[i] = wildboot_res_df["t value"]
         boot_t_stats[:, i] = bootstrapped_t_stats
@@ -62,9 +63,6 @@ def rwolf(models: Union[List[Feols], FixestMulti], param: str, B: int, seed:int)
     all_model_stats.loc["RW Pr(>|t|)"] = pval
 
     return all_model_stats
-
-
-
 
 
 def _get_rwolf_pval(t_stats, boot_t_stats):
@@ -95,17 +93,23 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     for s in range(S):
         if s == 0:
             max_stat = np.max(boot_t_stats, axis=1)
-            pinit[s] = min(1, (np.sum(max_stat >= np.abs(t_stats[stepdown_index[s]])) + 1) / (B + 1))
+            pinit[s] = min(
+                1,
+                (np.sum(max_stat >= np.abs(t_stats[stepdown_index[s]])) + 1) / (B + 1),
+            )
         else:
             boot_t_stat_udp = np.delete(boot_t_stats, stepdown_index[:s], axis=1)
             max_stat = np.max(boot_t_stat_udp, axis=1)
-            pinit[s] = min(1, (np.sum(max_stat >= np.abs(t_stats[stepdown_index[s]])) + 1) / (B + 1))
+            pinit[s] = min(
+                1,
+                (np.sum(max_stat >= np.abs(t_stats[stepdown_index[s]])) + 1) / (B + 1),
+            )
 
     for j in range(S):
         if j == 0:
             corr_padj[j] = pinit[j]
         else:
-            corr_padj[j] = max(pinit[j], corr_padj[j-1])
+            corr_padj[j] = max(pinit[j], corr_padj[j - 1])
 
     # Collect the results
     pval = corr_padj[ro]

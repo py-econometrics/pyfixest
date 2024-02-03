@@ -839,7 +839,7 @@ class Feols:
         adj: Optional[bool] = True,
         cluster_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
-        return_bootstrapped_t_stats = False
+        return_bootstrapped_t_stats=False,
     ):
         """
         Run a wild cluster bootstrap based on an object of type "Feols".
