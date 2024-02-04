@@ -19,6 +19,8 @@ def test_visualize():
     fit3 = feols("Y + Y2 ~ X1 + X2 | f1", data=data)
     coefplot(fit3.to_list())
 
+    fit3.coefplot()
+
     # iplot
     fit5 = feols("Y ~ i(f1)", data=data)
     iplot(fit5)
