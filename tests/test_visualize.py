@@ -24,4 +24,3 @@ def test_visualize():
     # iplot
     fit5 = feols("Y ~ i(f1)", data=data)
     iplot(fit5)
-

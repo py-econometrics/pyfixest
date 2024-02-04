@@ -13,7 +13,6 @@ def etable(
     digits: Optional[int] = 3,
     type: Optional[str] = "md",
 ) -> Union[pd.DataFrame, str]:
-
     """
     Create an esttab-like table from a list of models.
 
@@ -52,7 +51,12 @@ def etable(
     models = _post_processing_input_checks(models)
 
     assert digits >= 0, "digits must be a positive integer"
-    assert type in ["df", "tex", "md", "html"], "type must be either 'df', 'md', 'html' or 'tex'"
+    assert type in [
+        "df",
+        "tex",
+        "md",
+        "html",
+    ], "type must be either 'df', 'md', 'html' or 'tex'"
 
     dep_var_list = []
     nobs_list = []
@@ -194,7 +198,9 @@ def summary(
     ```
     """
 
-    import pdb; pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):

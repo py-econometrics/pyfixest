@@ -387,7 +387,6 @@ class FixestMulti:
                 )
 
     def to_list(self):
-
         """
         Returns a list of all fitted models.
         Args:
