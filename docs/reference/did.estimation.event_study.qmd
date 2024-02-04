@@ -1,0 +1,50 @@
+# did.estimation.event_study { #pyfixest.did.estimation.event_study }
+
+`did.estimation.event_study(data, yname, idname, tname, gname, xfml=None, estimator='twfe', att=True, cluster='idname')`
+
+Function for Event Study Estimation.
+
+This function allows for the estimation of treatment effects using different estimators.
+Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
+Other estimators are in development.
+
+## Parameters
+
+| Name        | Type      | Description                                                                                                                                                          | Default    |
+|-------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `data`      | DataFrame | The DataFrame containing all variables.                                                                                                                              | _required_ |
+| `yname`     | str       | The name of the dependent variable.                                                                                                                                  | _required_ |
+| `idname`    | str       | The name of the id variable.                                                                                                                                         | _required_ |
+| `tname`     | str       | Variable name for calendar period.                                                                                                                                   | _required_ |
+| `gname`     | str       | Unit-specific time of initial treatment.                                                                                                                             | _required_ |
+| `xfml`      | str       | The formula for the covariates.                                                                                                                                      | `None`     |
+| `estimator` | str       | The estimator to use. Options are "did2s" and "twfe".                                                                                                                | `'twfe'`   |
+| `att`       | bool      | If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True. | `True`     |
+
+## Returns
+
+| Type   | Description                                                  |
+|--------|--------------------------------------------------------------|
+| object | A fitted model object of class [Feols(/reference/Feols.qmd). |
+
+## Examples
+
+```{python}
+import pandas as pd
+from pyfixest.did.estimation import event_study
+
+url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
+df_het = pd.read_csv(url)
+
+fit_twfe = event_study(
+    df_het,
+    yname="dep_var",
+    idname="unit",
+    tname="year",
+    gname="g",
+    estimator="twfe",
+    att=True,
+)
+
+fit_twfe.tidy()
+```
