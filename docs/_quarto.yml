@@ -27,6 +27,8 @@ website:
         file: replicating-the-effect.ipynb
       - text: "Documentation"
         file: reference/index.qmd
+      - text: "Contributing"
+        file: contributing.qmd
       - text: "Changelog"
         file: news.qmd
 

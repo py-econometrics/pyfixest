@@ -1,0 +1,136 @@
+---
+title: Contributing
+---
+
+# Overview
+
+Thanks for showing interest in contributing to `pyfixest`! We appreciate all
+contributions and constructive feedback, whether that be reporting bugs, requesting
+new features, or suggesting improvements to documentation.
+
+
+## Reporting bugs
+
+We use [GitHub issues](https://github.com/s3alfisc/pyfixest/issues) to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if
+related to the bug you are reporting.
+
+Before creating a bug report, please check that your bug has not already been reported, and that your bug exists on the latest version of pyfixest. If you find a closed issue that seems to report the same bug you're experiencing, open a new issue and include a link to the original issue in your issue description.
+
+Please include as many details as possible in your bug report. The information helps the maintainers resolve the issue faster.
+
+## Suggesting enhancements
+
+We use [GitHub issues](https://github.com/s3alfisc/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) to track bugs and suggested enhancements. You can suggest an enhancement by opening a new feature request. Before creating an enhancement suggestion, please check that a similar issue does not already exist.
+
+Please describe the behavior you want and why, and provide examples of how pyfixest would be used if your feature were added.
+
+## Contributing to the codebase
+
+### Setting up your local environment
+
+`pyfixest` development flow relies on Python. Testing statistical and econometric
+models is implement using Python and R. Documents are written with Quarto and
+Jupyter.
+
+Start by forking the pyfixest GitHub repository, then clone your forked repository
+using `git`:
+
+```{bash}
+git clone https://github.com/<username>/pyfixest.git
+cd pyfixest
+```
+
+In order to work of `pyfixest`, you will need Python and R installed. If working
+on documentation, you will need Quarto installed.
+
+There are multiple ways of installing Python and R, but if you need to install
+them prior to development the following are potential options:
+
+#### Installing Python
+
+On Mac/Linux via [Hombrew](https://brew.sh/):
+
+```{bash}
+brew install python@3.11 # specify the version of python you prefer
+```
+
+On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
+```{bash}
+winget install -e --id Python.Python.3.11
+```
+
+### Installing R
+
+On Mac/Linux:
+```{bash}
+brew install r
+```
+
+Depending on your local set up, you may need to install additional libraries, for
+example:
+
+```{bash}
+sudo apt install gcc-11 cmake
+```
+
+On Windows using [Winget](https://winget.run/pkg/RProject/R):
+
+```{bash}
+winget install -e --id RProject.R
+```
+
+Tests run with R require the following packages:
+- base
+- broom
+- clubSandwich
+- did2s
+- fixest
+- stats
+
+```{bash}
+Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest"), repos="https://cran.rstudio.com")'
+```
+
+Documentation for `pyfixest` is written, compiled, and published using Quarto.
+
+To install Quarto, run:
+
+On MacOS via [Homebrew](https://formulae.brew.sh/cask/quarto#default):
+
+```{bash}
+brew install --cask quarto
+```
+
+On Linux (Ubuntu using `gdebi`):
+
+```{bash}
+sudo curl -o quarto-linux-amd64.deb -L <https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb>
+sudo gdebi quarto-linux-amd64.deb
+```
+
+On Windows:
+
+```{bash}
+scoop bucket add extras
+scoop install extras/quarto
+```
+
+
+### Justfile
+
+There are several command line targets that assist with development included in the
+`justfile`. [Just](https://just.systems/) can be installed to help run these
+command line targets.
+
+On Mac/Linux via [Homebrew](https://formulae.brew.sh/formula/just#default):
+
+```{bash}
+brew install just
+```
+
+On Windows:
+
+```{bash}
+scoop bucket add main
+scoop install main/just
+```
