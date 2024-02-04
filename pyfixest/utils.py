@@ -230,3 +230,24 @@ def absolute_diff(x, y, tol=1e-03):
         res = absolute_diff
 
     return res
+
+def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
+    """Generate critical value for simultaneous inference on linear model parameters using the Multiplier bootstrap.
+
+    Args:
+        C (np.ndarray): Covariance matrix. Symmetric, and contains as many rows/columns as parameters of interest.
+        S (int): Number of replications
+        alpha (float): Significance level. Defaults to 0.05
+
+    Returns:
+        float: Critical value, larger than 1.96 (which is the crit-value for pointwise intervals)
+    """
+
+    def msqrt(C: np.ndarray) -> np.ndarray:
+        eig_vals, eig_vecs = np.linalg.eigh(C)
+        return eig_vecs @ np.diag(np.sqrt(eig_vals)) @ np.linalg.inv(eig_vecs)
+
+    p = C.shape[0]
+    tmaxs = np.max(np.abs(msqrt(C) @ np.random.randn(p, S).reshape(p, S)), axis=0)
+    return np.quantile(tmaxs, 1 - alpha)
+

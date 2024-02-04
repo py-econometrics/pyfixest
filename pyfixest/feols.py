@@ -14,7 +14,7 @@ from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 from formulaic import model_matrix
 
-from pyfixest.utils import get_ssc
+from pyfixest.utils import get_ssc, simultaneous_crit_val
 from pyfixest.exceptions import (
     VcovTypeNotSupportedError,
     NanInClusterVarError,
@@ -1310,14 +1310,30 @@ class Feols:
         """
         return self.tidy()["Pr(>|t|)"]
 
-    def confint(self) -> pd.DataFrame:
+    def confint(
+        self, joint_indices: np.array = None, nboot: int = 10_000, alpha: float = 0.05
+    ) -> pd.DataFrame:
         """
         Returns
         -------
         pd.DataFrame
             A pd.DataFrame with confidence intervals of the estimated regression model.
+        Simultaneous confidence interval for joint null.
         """
-        return self.tidy()[["2.5 %", "97.5 %"]]
+        if not joint_indices:
+            return self.tidy()[["2.5 %", "97.5 %"]]
+        else:
+            C_coefs = (
+                1
+                / self._se[joint_indices]
+                @ self._vcov[joint_indices, joint_indices]
+                @ 1
+                / self._se[joint_indices]
+            )
+            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
+            ub = pd.Series(self._beta_hat[joint_indices] + crit_val * self._se[joint_indices])
+            lb = pd.Series(self._beta_hat[joint_indices] - crit_val * self._se[joint_indices])
+            return pd.DataFrame({"2.5 %": lb, "97.5 %": ub})
 
     def resid(self) -> np.ndarray:
         """
