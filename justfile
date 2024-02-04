@@ -17,6 +17,10 @@ install-dev:
 	poetry config virtualenvs.in-project true
 	poetry install
 
+# Install R dependencies
+install-r:
+	Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest"), repos="https://cran.rstudio.com")'
+
 # Run pytest
 tests:
 	poetry run pytest
