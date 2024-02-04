@@ -36,9 +36,14 @@ def rwolf(
     """
 
     models = _post_processing_input_checks(models)
+    all_model_stats = pd.DataFrame()
 
     S = 0
     for model in models:
+
+        if param not in model._coefnames:
+            raise ValueError(f"Parameter '{param}' not found in the model {model._fml}.")
+
         model_tidy = model.tidy().xs(param)
         all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
         S += 1

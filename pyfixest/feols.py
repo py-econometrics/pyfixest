@@ -891,6 +891,10 @@ class Feols:
         _clustervar = self._clustervar
         _supports_wildboottest = self._supports_wildboottest
 
+        if param is not None:
+            if param not in _xnames:
+                raise ValueError(f"Parameter {param} not found in the model's coefficients.")
+
         if not _supports_wildboottest:
             if self._is_iv:
                 raise NotImplementedError(

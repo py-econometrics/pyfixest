@@ -1,3 +1,4 @@
+from typing import Type
 import pytest
 import numpy as np
 import pandas as pd
@@ -14,6 +15,8 @@ from pyfixest.exceptions import (
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
+from pyfixest.multcomp import rwolf
+from pyfixest.summarize import etable, summary
 
 
 def test_formula_parser2():
@@ -182,3 +185,35 @@ def test_wls_errors():
     data = get_data()
     with pytest.raises(NotImplementedError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)
+
+
+def test_multcomp_errors():
+
+    data = get_data().dropna()
+
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    with pytest.raises(ValueError):
+        rwolf(fit1.to_list(), param="X2", B=999, seed=92)
+
+
+def test_wildboottest_errors():
+
+    data = get_data()
+    fit = feols("Y ~ X1", data=data)
+    with pytest.raises(ValueError):
+        fit.wildboottest(param="X2", B=999, seed=213)
+
+def test_summary_errors():
+
+    data = get_data()
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    with pytest.raises(TypeError):
+        etable(fit1)
+    with pytest.raises(TypeError):
+        etable([fit1, fit2])
+    with pytest.raises(TypeError):
+        summary(fit1)
+    with pytest.raises(TypeError):
+        summary([fit1, fit2])

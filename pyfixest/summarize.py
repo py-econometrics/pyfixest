@@ -198,9 +198,6 @@ def summary(
     ```
     """
 
-    import pdb
-
-    pdb.set_trace()
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
@@ -277,13 +274,23 @@ def _post_processing_input_checks(models):
             for model in models:
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
-                        """
-                        The models argument must be either a list of Feols or Fepois instances, or
-                        simply a single Feols or Fepois instance. The methods do not accept instances
-                        of type FixestMulti - please use FixestMulti.to_list() to convert the FixestMulti
-                        instance to a list of Feols or Fepois instances.
+                        f"""
+                            Each element of the passed list needs to be of type Feols or Fepois, but {type(model)} was passed.
+                            If you want to summarize a FixestMulti object, please use FixestMulti.to_list() to convert it to a list of Feols or Fepois instances.
                         """
                     )
+
+
+        else:
+
+            raise TypeError(
+                """
+                The models argument must be either a list of Feols or Fepois instances, or
+                simply a single Feols or Fepois instance. The models argument does not accept instances
+                of type FixestMulti - please use models.to_list() to convert the FixestMulti
+                instance to a list of Feols or Fepois instances.
+                """
+            )
 
     return models
 
