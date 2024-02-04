@@ -13,20 +13,13 @@ poetry-update:
 
 # Install development dependencies
 install-dev:
+	poetry env use 3.11
 	poetry config virtualenvs.in-project true
 	poetry install
-
-# Install pre-commit hooks
-install-hooks:
-	poetry run pre-commit install --install-hooks
 
 # Run pytest
 tests:
 	poetry run pytest
-
-# Run pytest with coverage
-tests-cov:
-	poetry run pytest --cov-report term --cov=pyfixest
 
 # Build the package
 build: tests
