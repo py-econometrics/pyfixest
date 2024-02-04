@@ -203,6 +203,7 @@ def test_wildboottest_errors():
     with pytest.raises(ValueError):
         fit.wildboottest(param="X2", B=999, seed=213)
 
+
 def test_summary_errors():
 
     data = get_data()

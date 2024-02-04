@@ -280,7 +280,6 @@ def _post_processing_input_checks(models):
                         """
                     )
 
-
         else:
 
             raise TypeError(

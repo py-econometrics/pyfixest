@@ -893,7 +893,9 @@ class Feols:
 
         if param is not None:
             if param not in _xnames:
-                raise ValueError(f"Parameter {param} not found in the model's coefficients.")
+                raise ValueError(
+                    f"Parameter {param} not found in the model's coefficients."
+                )
 
         if not _supports_wildboottest:
             if self._is_iv:
