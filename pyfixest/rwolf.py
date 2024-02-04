@@ -37,11 +37,11 @@ def rwolf(
 
     models = _post_processing_input_checks(models)
 
-    S = len(models)
-    all_model_stats = pd.DataFrame()
+    S = 0
     for model in models:
         model_tidy = model.tidy().xs(param)
         all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
+        S += 1
 
     t_stats = all_model_stats.xs("t value").values
     t_stats = np.zeros(S)

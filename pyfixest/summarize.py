@@ -13,6 +13,7 @@ def etable(
     digits: Optional[int] = 3,
     type: Optional[str] = "md",
 ) -> Union[pd.DataFrame, str]:
+
     """
     Create an esttab-like table from a list of models.
 
@@ -51,7 +52,7 @@ def etable(
     models = _post_processing_input_checks(models)
 
     assert digits >= 0, "digits must be a positive integer"
-    assert type in ["df", "tex", "md"], "type must be either 'df', 'md' or 'tex'"
+    assert type in ["df", "tex", "md", "html"], "type must be either 'df', 'md', 'html' or 'tex'"
 
     dep_var_list = []
     nobs_list = []
@@ -193,6 +194,7 @@ def summary(
     ```
     """
 
+    import pdb; pdb.set_trace()
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
@@ -259,22 +261,22 @@ def _post_processing_input_checks(models):
 
     # check if models instance of Feols or Fepois
     if isinstance(models, (Feols, Fepois)):
+
         models = [models]
+
     else:
+
         if isinstance(models, list):
+
             for model in models:
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
                         """
-                        The models argument must be either a list of Feols or Fepois instances,
-                        a dict of Feols or Fepois instances, or simply a Feols or Fepois instance.
+                        The models argument must be either a list of Feols or Fepois instances, or
+                        simply a single Feols or Fepois instance. The methods do not accept instances
+                        of type FixestMulti - please use FixestMulti.to_list() to convert the FixestMulti
+                        instance to a list of Feols or Fepois instances.
                         """
-                    )
-        elif isinstance(models, dict):
-            for model in models.keys():
-                if not isinstance(models[model], (Feols, Fepois)):
-                    raise TypeError(
-                        "The models argument must be a list of Feols or Fepois instances."
                     )
 
     return models
