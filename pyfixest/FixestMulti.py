@@ -386,6 +386,18 @@ class FixestMulti:
                         """
                 )
 
+    def to_list(self):
+
+        """
+        Returns a list of all fitted models.
+        Args:
+            None
+        Returns:
+            A list of all fitted models of types Feols or Fepois.
+        """
+
+        return list(self.all_fitted_models.values())
+
     def vcov(self, vcov: Union[str, Dict[str, str]]):
         """
         Update regression inference "on the fly".
