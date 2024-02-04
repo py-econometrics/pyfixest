@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>demean.demean</title>
+<title>feiv.feiv</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -83,6 +83,9 @@ ul.task-list{list-style: none;}
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">Contributing</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../news.html">Changelog</a>
@@ -174,7 +177,7 @@ ul.task-list{list-style: none;}
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link">feiv.Feiv</a>
+  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link active">feiv.Feiv</a>
   </div>
 </li>
       </ul>
@@ -219,7 +222,7 @@ ul.task-list{list-style: none;}
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demean.demean.html" class="sidebar-item-text sidebar-link active">demean.demean</a>
+  <a href="../reference/demean.demean.html" class="sidebar-item-text sidebar-link">demean.demean</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -244,18 +247,19 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="pyfixest.demean.demean" class="level1">
-<h1>demean.demean</h1>
-<p><code>demean.demean(x, flist, weights, tol=1e-08, maxiter=100000)</code></p>
-<p>Workhorse for demeaning an input array <code>x</code> based on the specified fixed effects and weights via the alternating projections algorithm.</p>
+<section id="pyfixest.feiv.Feiv" class="level1">
+<h1>feiv.Feiv</h1>
+<p><code>feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)</code></p>
+<p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 13%">
-<col style="width: 71%">
-<col style="width: 7%">
+<col style="width: 15%">
+<col style="width: 23%">
+<col style="width: 50%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -267,45 +271,163 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>x</code></td>
+<td><code>Y</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Input array of shape (n_samples, n_features). Needs to be of type float.</td>
+<td>Dependent variable, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>flist</code></td>
+<td><code>X</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be converted to integers.</td>
+<td>Independent variables, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
+<td><code>Z</code></td>
+<td>numpy.numpy.ndarray</td>
+<td>Instruments, a two-dimensional np.array.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
 <td><code>weights</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Array of shape (n_samples,) specifying the weights.</td>
+<td>Weights, a one-dimensional np.array.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>coefnames_x</code></td>
+<td>list</td>
+<td>Names of the coefficients of X.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>tol</code></td>
-<td>float</td>
-<td>Tolerance criterion for convergence. Defaults to 1e-08.</td>
-<td><code>1e-08</code></td>
+<td><code>coefnames_z</code></td>
+<td>list</td>
+<td>Names of the coefficients of Z.</td>
+<td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>maxiter</code></td>
-<td>int</td>
-<td>Maximum number of iterations. Defaults to 100_000.</td>
-<td><code>100000</code></td>
+<td><code>collin_tol</code></td>
+<td>float</td>
+<td>Tolerance for collinearity check.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>weights_name</code></td>
+<td>typing.Optional[str]</td>
+<td>Name of the weights variable.</td>
+<td><em>required</em></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
 <colgroup>
-<col style="width: 23%">
-<col style="width: 76%">
+<col style="width: 22%">
+<col style="width: 19%">
+<col style="width: 57%">
 </colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>_Z</td>
+<td>numpy.numpy.ndarray</td>
+<td>Processed instruments after handling multicollinearity.</td>
+</tr>
+<tr class="even">
+<td>_coefnames_z</td>
+<td>list</td>
+<td>Names of coefficients for Z after handling multicollinearity.</td>
+</tr>
+<tr class="odd">
+<td>_collin_vars_z</td>
+<td>list</td>
+<td>Variables identified as collinear in Z.</td>
+</tr>
+<tr class="even">
+<td>_collin_index_z</td>
+<td>list</td>
+<td>Indices of collinear variables in Z.</td>
+</tr>
+<tr class="odd">
+<td>_is_iv</td>
+<td>bool</td>
+<td>Indicator if instrumental variables are used.</td>
+</tr>
+<tr class="even">
+<td>_support_crv3_inference</td>
+<td>bool</td>
+<td>Indicator for supporting CRV3 inference.</td>
+</tr>
+<tr class="odd">
+<td>_support_iid_inference</td>
+<td>bool</td>
+<td>Indicator for supporting IID inference.</td>
+</tr>
+<tr class="even">
+<td>_tZX</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of Z times X.</td>
+</tr>
+<tr class="odd">
+<td>_tXZ</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of X times Z.</td>
+</tr>
+<tr class="even">
+<td>_tZy</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of Z times Y.</td>
+</tr>
+<tr class="odd">
+<td>_tZZinv</td>
+<td>numpy.numpy.ndarray</td>
+<td>Inverse of transpose of Z times Z.</td>
+</tr>
+<tr class="even">
+<td>_beta_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Estimated regression coefficients.</td>
+</tr>
+<tr class="odd">
+<td>_Y_hat_link</td>
+<td>numpy.numpy.ndarray</td>
+<td>Predicted values of the regression model.</td>
+</tr>
+<tr class="even">
+<td>_u_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Residuals of the regression model.</td>
+</tr>
+<tr class="odd">
+<td>_scores</td>
+<td>numpy.numpy.ndarray</td>
+<td>Scores used in the regression.</td>
+</tr>
+<tr class="even">
+<td>_hessian</td>
+<td>numpy.numpy.ndarray</td>
+<td>Hessian matrix used in the regression.</td>
+</tr>
+<tr class="odd">
+<td>_bread</td>
+<td>numpy.numpy.ndarray</td>
+<td>Bread matrix used in the regression.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level2">
+<h2 class="anchored" data-anchor-id="raises">Raises</h2>
+<table class="table">
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -314,8 +436,8 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td>typing.Tuple[numpy.numpy.ndarray, bool]</td>
-<td>A tuple containing the demeaned array of shape (n_samples, n_features) and a boolean indicating whether the algorithm converged successfully.</td>
+<td>ValueError</td>
+<td>If Z is not a two-dimensional array.</td>
 </tr>
 </tbody>
 </table>

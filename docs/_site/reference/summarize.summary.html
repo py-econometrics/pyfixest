@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>did.estimation.lpdid</title>
+<title>summarize.summary</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -151,6 +151,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">Contributing</a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../news.html">Changelog</a>
   </li>  
 </ul>
@@ -210,7 +213,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link active">did.estimation.lpdid</a>
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">did.estimation.lpdid</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -255,7 +258,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link">summarize.summary</a>
+  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link active">summarize.summary</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -310,18 +313,19 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
-<section id="pyfixest.did.estimation.lpdid" class="level1">
-<h1>did.estimation.lpdid</h1>
-<p><code>did.estimation.lpdid(data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0, att=True, xfml=None)</code></p>
-<p>Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.</p>
+<section id="pyfixest.summarize.summary" class="level1">
+<h1>summarize.summary</h1>
+<p><code>summarize.summary(models, digits=3)</code></p>
+<p>Prints a summary of estimation results for each estimated model.</p>
+<p>For each model, this method prints a header indicating the fixed-effects and the dependent variable, followed by a table of coefficient estimates with standard errors, t-values, and p-values.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
 <col style="width: 9%">
 <col style="width: 7%">
-<col style="width: 76%">
-<col style="width: 6%">
+<col style="width: 73%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -333,70 +337,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
-<td>DataFrame</td>
-<td>The DataFrame containing all variables.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>yname</code></td>
-<td>str</td>
-<td>The name of the dependent variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>idname</code></td>
-<td>str</td>
-<td>The name of the id variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>tname</code></td>
-<td>str</td>
-<td>Variable name for calendar period.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>gname</code></td>
-<td>str</td>
-<td>Unit-specific time of initial treatment.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>vcov</code></td>
-<td>(str, dict)</td>
-<td>The type of inference to employ. Defaults to {“CRV1”: idname}. Options include “iid”, “hetero”, or a dictionary like {“CRV1”: idname}.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>pre_window</code></td>
+<td><code>digits</code></td>
 <td>int</td>
-<td>The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>post_window</code></td>
-<td>int</td>
-<td>The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>never_treated</code></td>
-<td>int</td>
-<td>Value in gname indicating units never treated. Default is 0.</td>
-<td><code>0</code></td>
-</tr>
-<tr class="even">
-<td><code>att</code></td>
-<td>bool</td>
-<td>If True, estimates the pooled average treatment effect on the treated (ATT). Default is False.</td>
-<td><code>True</code></td>
-</tr>
-<tr class="odd">
-<td><code>xfml</code></td>
-<td>str</td>
-<td>Formula for the covariates. Not yet supported.</td>
-<td><code>None</code></td>
+<td>The number of decimal places to round the summary statistics to. Default is 3.</td>
+<td><code>3</code></td>
 </tr>
 </tbody>
 </table>
@@ -412,8 +356,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td>DataFrame</td>
-<td>A DataFrame with the estimated coefficients.</td>
+<td>None</td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -421,36 +365,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <div class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> lpdid</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> lpdid(</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-      </code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1"</span>, df)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2"</span>, df)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2 + f3"</span>, df)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>summary([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="eyBtl9"></div>
+            <div id="Yc7REd"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -474,134 +402,54 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("eyBtl9").appendChild(div);
+                        document.getElementById("Yc7REd").appendChild(div);
                     };
-                    var e = document.getElementById("eyBtl9");
+                    var e = document.getElementById("Yc7REd");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
-<div class="cell-output cell-output-display">
-   <div id="RtdLZi"></div>
-   <script type="text/javascript" data-lets-plot-script="plot">
-       (function() {
-           var plotSpec={
-"data":{
-"Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
-"Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.07556131947831908,-0.051277562684252126,0.04789121634978959,0.03006102440123136,0.039869683844842636,0.0484578972898468,-0.012820133350277516,0.01368536104092389,0.005199898128597271,0.01641627746483729,0.05641673885681887,0.0016957198969680851,-0.06496834258802509,0.010741616233677906,0.04275993550129887,0.0032290159332871316,1.4520234748273073,1.66762205650255,1.733699704558005,1.843611819985164,1.962093749379402,2.0880835635857604,2.1819660437275705,2.2546784046421315,2.348473587127565,2.360384864306779,2.5161139333617535,2.55297799431009,2.6039385093443834,2.5780442879020353,2.7229688455567262,2.9092747255962257,2.859325154708493,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
-"2.5 %":[-0.22708269547764282,-0.16693825848108668,-0.1709996023235547,-0.09826170451362413,-0.22455341767455642,-0.114894509577157,-0.13002612112869932,-0.13437295200650684,-0.11730100483137766,-0.17771607617046253,-0.1156689274207777,-0.11001240491647318,-0.10769379328464965,-0.06859048722022629,-0.12148536042306597,-0.18961678689455755,-0.09887320365939939,-0.0774383551703583,-0.11859018504785593,1.3363996532592992,1.524945763042297,1.6253408304072403,1.7294961757918565,1.8189783255217127,1.9623105681403328,2.0419614203843444,2.1171577130822494,2.227411117482518,2.220744686573316,2.397598360655549,2.371302379450786,2.4123591065901238,2.4020113977464623,2.516892060141281,2.7211465268866513,2.6740882873860987,2.7278981041076427,2.6590374453797154,2.6721657516726136,2.7127030719766267],
-"97.5 %":[0.08097210637560169,0.15544317967957927,0.21072479412071787,0.24938434347026228,0.12199829230605216,0.2106769422767362,0.19014816993116201,0.2141123196961921,0.21421679941107125,0.1520758094699075,0.14303964950262546,0.12041220117366772,0.14052634821432422,0.181423964933864,0.12487680021700213,0.05968010171850738,0.1203564361267552,0.16295822617295605,0.1250482169144302,1.5676472963953154,1.810298349962803,1.8420585787087695,1.9577274641784717,2.1052091732370912,2.213856559031188,2.3219706670707967,2.3921990962020137,2.469536056772612,2.500025042040242,2.634629506067958,2.7346536091693943,2.795517912098643,2.7540771780576083,2.9290456309721713,3.0974029243058,3.044562022030887,3.0879882324146757,3.0883189131030977,3.0934487489657094,3.110298964160643],
-"Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
-},
-"mapping":{
-"x":"Coefficient",
-"y":"Estimate",
-"color":"Model"
-},
-"data_meta":{
-},
-"ggsize":{
-"width":1200.0,
-"height":400.0
-},
-"theme":{
-"axis_text_x":{
-"angle":0.0,
-"blank":false
-}
-},
-"ggtitle":{
-"text":"LPDID Event Study Estimate"
-},
-"kind":"plot",
-"scales":[{
-"name":"Estimate and 95% Confidence Interval",
-"aesthetic":"y"
-}],
-"layers":[{
-"geom":"point",
-"mapping":{
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"data":{
-}
-},{
-"geom":"errorbar",
-"mapping":{
-"ymin":"2.5 %",
-"ymax":"97.5 %"
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"width":0.05,
-"data":{
-}
-}],
-"metainfo_list":[]
-};
-           var plotContainer = document.getElementById("RtdLZi");
-           window.letsPlotCall(function() {{
-               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
-           }});
-       })();    
-   </script>
-</div>
-</div>
-<p>To get the ATT, set <code>att=True</code>:</p>
-<div class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> lpdid(</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<div class="cell-output cell-output-stdout">
+<pre><code>###
 
-<div>
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1
+Inference:  CRV1
+Observations:  997
 
-<table class="dataframe table table-sm table-striped">
-  <thead>
-    <tr>
-      <th></th>
-      <th>Estimate</th>
-      <th>Std. Error</th>
-      <th>t value</th>
-      <th>Pr(&gt;|t|)</th>
-      <th>2.5 %</th>
-      <th>97.5 %</th>
-      <th>N</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>treat_diff</th>
-      <td>2.506746</td>
-      <td>0.071357</td>
-      <td>35.129648</td>
-      <td>0.0</td>
-      <td>2.362413</td>
-      <td>2.65108</td>
-      <td>5716.0</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.950 |        0.067 |   -14.273 |      0.000 |  -1.086 |   -0.813 |
+| X2            |     -0.174 |        0.018 |    -9.469 |      0.000 |  -0.212 |   -0.137 |
+---
+RMSE: 1.648   R2: 0.489   R2 Within: 0.239
+###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |
+| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |
+---
+RMSE: 1.346   R2: 0.659   R2 Within: 0.303
+###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2+f3
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |
+|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
+| X1            |     -0.957 |        0.039 |   -24.645 |      0.000 |  -1.037 |   -0.878 |
+| X2            |     -0.194 |        0.009 |   -21.730 |      0.000 |  -0.212 |   -0.176 |
+---
+RMSE: 0.97   R2: 0.823   R2 Within: 0.481</code></pre>
 </div>
 </div>
 

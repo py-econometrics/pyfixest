@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>feiv.feiv</title>
+<title>fepois.fepois</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -83,6 +83,9 @@ ul.task-list{list-style: none;}
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">Contributing</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../news.html">Changelog</a>
@@ -169,12 +172,12 @@ ul.task-list{list-style: none;}
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link">fepois.Fepois</a>
+  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link active">fepois.Fepois</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link active">feiv.Feiv</a>
+  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link">feiv.Feiv</a>
   </div>
 </li>
       </ul>
@@ -244,19 +247,20 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="pyfixest.feiv.Feiv" class="level1">
-<h1>feiv.Feiv</h1>
-<p><code>feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)</code></p>
-<p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
+<section id="pyfixest.fepois.Fepois" class="level1">
+<h1>fepois.Fepois</h1>
+<p><code>fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)</code></p>
+<p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>The method implements the algorithm from Stata’s <code>pplmhdfe</code> module.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 23%">
-<col style="width: 50%">
-<col style="width: 11%">
+<col style="width: 16%">
+<col style="width: 22%">
+<col style="width: 51%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -270,61 +274,114 @@ ul.task-list{list-style: none;}
 <tr class="odd">
 <td><code>Y</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Dependent variable, a two-dimensional np.array.</td>
+<td>Dependent variable, a two-dimensional numpy array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>X</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Independent variables, a two-dimensional np.array.</td>
+<td>Independent variables, a two-dimensional numpy array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>Z</code></td>
+<td><code>fe</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Instruments, a two-dimensional np.array.</td>
+<td>Fixed effects, a two-dimensional numpy array or None.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>weights</code></td>
 <td>numpy.numpy.ndarray</td>
-<td>Weights, a one-dimensional np.array.</td>
+<td>Weights, a one-dimensional numpy array or None.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>coefnames_x</code></td>
-<td>list</td>
-<td>Names of the coefficients of X.</td>
+<td><code>coefnames</code></td>
+<td>typing.List[str]</td>
+<td>Names of the coefficients in the design matrix X.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>coefnames_z</code></td>
-<td>list</td>
-<td>Names of the coefficients of Z.</td>
+<td><code>drop_singletons</code></td>
+<td>bool</td>
+<td>Whether to drop singleton fixed effects.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td><code>collin_tol</code></td>
 <td>float</td>
-<td>Tolerance for collinearity check.</td>
+<td>Tolerance level for the detection of collinearity.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>maxiter</code></td>
+<td>typing.Optional[int]</td>
+<td>Maximum number of iterations for the IRLS algorithm.</td>
+<td><code>25</code></td>
+</tr>
+<tr class="odd">
+<td><code>tol</code></td>
+<td>typing.Optional[float]</td>
+<td>Tolerance level for the convergence of the IRLS algorithm.</td>
+<td><code>1e-08</code></td>
 </tr>
 <tr class="even">
 <td><code>weights_name</code></td>
 <td>typing.Optional[str]</td>
 <td>Name of the weights variable.</td>
-<td><em>required</em></td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="attributes" class="level2">
-<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.fepois.Fepois.get_fit">get_fit</a></td>
+<td>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.fepois.Fepois.predict">predict</a></td>
+<td>Return a flat np.array with predicted values of the regression model.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.fepois.Fepois.get_fit" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.fepois.Fepois.get_fit">get_fit</h3>
+<p><code>fepois.Fepois.get_fit()</code></p>
+<p>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</p>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="attributes" class="level4">
+<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
 <table class="table">
 <colgroup>
-<col style="width: 22%">
-<col style="width: 19%">
-<col style="width: 57%">
+<col style="width: 8%">
+<col style="width: 18%">
+<col style="width: 72%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -335,96 +392,88 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td>_Z</td>
+<td>beta_hat</td>
 <td>numpy.numpy.ndarray</td>
-<td>Processed instruments after handling multicollinearity.</td>
+<td>Estimated coefficients.</td>
 </tr>
 <tr class="even">
-<td>_coefnames_z</td>
-<td>list</td>
-<td>Names of coefficients for Z after handling multicollinearity.</td>
+<td>Y_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Estimated dependent variable.</td>
 </tr>
 <tr class="odd">
-<td>_collin_vars_z</td>
-<td>list</td>
-<td>Variables identified as collinear in Z.</td>
+<td>u_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Estimated residuals.</td>
 </tr>
 <tr class="even">
-<td>_collin_index_z</td>
-<td>list</td>
-<td>Indices of collinear variables in Z.</td>
+<td>weights</td>
+<td>numpy.numpy.ndarray</td>
+<td>Weights (from the last iteration of the IRLS algorithm).</td>
 </tr>
 <tr class="odd">
-<td>_is_iv</td>
-<td>bool</td>
-<td>Indicator if instrumental variables are used.</td>
+<td>X</td>
+<td>numpy.numpy.ndarray</td>
+<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
 </tr>
 <tr class="even">
-<td>_support_crv3_inference</td>
-<td>bool</td>
-<td>Indicator for supporting CRV3 inference.</td>
+<td>Z</td>
+<td>numpy.numpy.ndarray</td>
+<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
 </tr>
 <tr class="odd">
-<td>_support_iid_inference</td>
-<td>bool</td>
-<td>Indicator for supporting IID inference.</td>
-</tr>
-<tr class="even">
-<td>_tZX</td>
+<td>Y</td>
 <td>numpy.numpy.ndarray</td>
-<td>Transpose of Z times X.</td>
-</tr>
-<tr class="odd">
-<td>_tXZ</td>
-<td>numpy.numpy.ndarray</td>
-<td>Transpose of X times Z.</td>
-</tr>
-<tr class="even">
-<td>_tZy</td>
-<td>numpy.numpy.ndarray</td>
-<td>Transpose of Z times Y.</td>
-</tr>
-<tr class="odd">
-<td>_tZZinv</td>
-<td>numpy.numpy.ndarray</td>
-<td>Inverse of transpose of Z times Z.</td>
-</tr>
-<tr class="even">
-<td>_beta_hat</td>
-<td>numpy.numpy.ndarray</td>
-<td>Estimated regression coefficients.</td>
-</tr>
-<tr class="odd">
-<td>_Y_hat_link</td>
-<td>numpy.numpy.ndarray</td>
-<td>Predicted values of the regression model.</td>
-</tr>
-<tr class="even">
-<td>_u_hat</td>
-<td>numpy.numpy.ndarray</td>
-<td>Residuals of the regression model.</td>
-</tr>
-<tr class="odd">
-<td>_scores</td>
-<td>numpy.numpy.ndarray</td>
-<td>Scores used in the regression.</td>
-</tr>
-<tr class="even">
-<td>_hessian</td>
-<td>numpy.numpy.ndarray</td>
-<td>Hessian matrix used in the regression.</td>
-</tr>
-<tr class="odd">
-<td>_bread</td>
-<td>numpy.numpy.ndarray</td>
-<td>Bread matrix used in the regression.</td>
+<td>Demeaned dependent variable (from the last iteration of the IRLS algorithm).</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="raises" class="level2">
-<h2 class="anchored" data-anchor-id="raises">Raises</h2>
+</section>
+<section id="pyfixest.fepois.Fepois.predict" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.fepois.Fepois.predict">predict</h3>
+<p><code>fepois.Fepois.predict(newdata=None, type='link')</code></p>
+<p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="table">
+<colgroup>
+<col style="width: 2%">
+<col style="width: 12%">
+<col style="width: 81%">
+<col style="width: 2%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>newdata</code></td>
+<td>typing.Union[None, pandas.pandas.DataFrame]</td>
+<td>A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>type</code></td>
+<td>str</td>
+<td>The type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.</td>
+<td><code>'link'</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4">
+<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="table">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 75%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -433,13 +482,15 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td>ValueError</td>
-<td>If Z is not a two-dimensional array.</td>
+<td>numpy.numpy.ndarray</td>
+<td>A flat array with the predicted values of the regression model.</td>
 </tr>
 </tbody>
 </table>
 
 
+</section>
+</section>
 </section>
 </section>
 
