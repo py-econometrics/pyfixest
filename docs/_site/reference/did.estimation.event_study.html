@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>fepois.fepois</title>
+<title>did.estimation.event_study</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -15,6 +15,69 @@ span.underline{text-decoration: underline;}
 div.column{display: inline-block; vertical-align: top; width: 50%;}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -53,6 +116,9 @@ ul.task-list{list-style: none;}
     "search-submit-button-title": "Submit"
   }
 }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -83,6 +149,9 @@ ul.task-list{list-style: none;}
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page">Documentation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">Contributing</a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../news.html">Changelog</a>
@@ -149,7 +218,7 @@ ul.task-list{list-style: none;}
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">did.estimation.event_study</a>
+  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link active">did.estimation.event_study</a>
   </div>
 </li>
       </ul>
@@ -169,7 +238,7 @@ ul.task-list{list-style: none;}
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link active">fepois.Fepois</a>
+  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link">fepois.Fepois</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -244,20 +313,19 @@ ul.task-list{list-style: none;}
 
 
 
-<section id="pyfixest.fepois.Fepois" class="level1">
-<h1>fepois.Fepois</h1>
-<p><code>fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)</code></p>
-<p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
-<p>The method implements the algorithm from Stata’s <code>pplmhdfe</code> module.</p>
+<section id="pyfixest.did.estimation.event_study" class="level1">
+<h1>did.estimation.event_study</h1>
+<p><code>did.estimation.event_study(data, yname, idname, tname, gname, xfml=None, estimator='twfe', att=True, cluster='idname')</code></p>
+<p>Function for Event Study Estimation.</p>
+<p>This function allows for the estimation of treatment effects using different estimators. Currently, it supports “twfe” for the two-way fixed effects estimator and “did2s” for Gardner’s two-step DID2S estimator. Other estimators are in development.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 16%">
-<col style="width: 22%">
-<col style="width: 51%">
-<col style="width: 10%">
+<col style="width: 6%">
+<col style="width: 5%">
+<col style="width: 82%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -269,207 +337,62 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>Y</code></td>
-<td>numpy.numpy.ndarray</td>
-<td>Dependent variable, a two-dimensional numpy array.</td>
+<td><code>data</code></td>
+<td>DataFrame</td>
+<td>The DataFrame containing all variables.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>X</code></td>
-<td>numpy.numpy.ndarray</td>
-<td>Independent variables, a two-dimensional numpy array.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>fe</code></td>
-<td>numpy.numpy.ndarray</td>
-<td>Fixed effects, a two-dimensional numpy array or None.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>weights</code></td>
-<td>numpy.numpy.ndarray</td>
-<td>Weights, a one-dimensional numpy array or None.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>coefnames</code></td>
-<td>typing.List[str]</td>
-<td>Names of the coefficients in the design matrix X.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>drop_singletons</code></td>
-<td>bool</td>
-<td>Whether to drop singleton fixed effects.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>collin_tol</code></td>
-<td>float</td>
-<td>Tolerance level for the detection of collinearity.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>maxiter</code></td>
-<td>typing.Optional[int]</td>
-<td>Maximum number of iterations for the IRLS algorithm.</td>
-<td><code>25</code></td>
-</tr>
-<tr class="odd">
-<td><code>tol</code></td>
-<td>typing.Optional[float]</td>
-<td>Tolerance level for the convergence of the IRLS algorithm.</td>
-<td><code>1e-08</code></td>
-</tr>
-<tr class="even">
-<td><code>weights_name</code></td>
-<td>typing.Optional[str]</td>
-<td>Name of the weights variable.</td>
-<td><code>None</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="methods" class="level2">
-<h2 class="anchored" data-anchor-id="methods">Methods</h2>
-<table class="table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="#pyfixest.fepois.Fepois.get_fit">get_fit</a></td>
-<td>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.fepois.Fepois.predict">predict</a></td>
-<td>Return a flat np.array with predicted values of the regression model.</td>
-</tr>
-</tbody>
-</table>
-<section id="pyfixest.fepois.Fepois.get_fit" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.fepois.Fepois.get_fit">get_fit</h3>
-<p><code>fepois.Fepois.get_fit()</code></p>
-<p>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</p>
-<section id="returns" class="level4">
-<h4 class="anchored" data-anchor-id="returns">Returns</h4>
-<table class="table">
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>None</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="attributes" class="level4">
-<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
-<table class="table">
-<colgroup>
-<col style="width: 8%">
-<col style="width: 18%">
-<col style="width: 72%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>beta_hat</td>
-<td>numpy.numpy.ndarray</td>
-<td>Estimated coefficients.</td>
-</tr>
-<tr class="even">
-<td>Y_hat</td>
-<td>numpy.numpy.ndarray</td>
-<td>Estimated dependent variable.</td>
-</tr>
-<tr class="odd">
-<td>u_hat</td>
-<td>numpy.numpy.ndarray</td>
-<td>Estimated residuals.</td>
-</tr>
-<tr class="even">
-<td>weights</td>
-<td>numpy.numpy.ndarray</td>
-<td>Weights (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="odd">
-<td>X</td>
-<td>numpy.numpy.ndarray</td>
-<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="even">
-<td>Z</td>
-<td>numpy.numpy.ndarray</td>
-<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="odd">
-<td>Y</td>
-<td>numpy.numpy.ndarray</td>
-<td>Demeaned dependent variable (from the last iteration of the IRLS algorithm).</td>
-</tr>
-</tbody>
-</table>
-</section>
-</section>
-<section id="pyfixest.fepois.Fepois.predict" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.fepois.Fepois.predict">predict</h3>
-<p><code>fepois.Fepois.predict(newdata=None, type='link')</code></p>
-<p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
-<table class="table">
-<colgroup>
-<col style="width: 2%">
-<col style="width: 12%">
-<col style="width: 81%">
-<col style="width: 2%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>newdata</code></td>
-<td>typing.Union[None, pandas.pandas.DataFrame]</td>
-<td>A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>type</code></td>
+<td><code>yname</code></td>
 <td>str</td>
-<td>The type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.</td>
-<td><code>'link'</code></td>
+<td>The name of the dependent variable.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>idname</code></td>
+<td>str</td>
+<td>The name of the id variable.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>tname</code></td>
+<td>str</td>
+<td>Variable name for calendar period.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>gname</code></td>
+<td>str</td>
+<td>Unit-specific time of initial treatment.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>xfml</code></td>
+<td>str</td>
+<td>The formula for the covariates.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>estimator</code></td>
+<td>str</td>
+<td>The estimator to use. Options are “did2s” and “twfe”.</td>
+<td><code>'twfe'</code></td>
+</tr>
+<tr class="even">
+<td><code>att</code></td>
+<td>bool</td>
+<td>If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.</td>
+<td><code>True</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns-1" class="level4">
-<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
+<section id="returns" class="level2">
+<h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
 <colgroup>
-<col style="width: 24%">
-<col style="width: 75%">
+<col style="width: 11%">
+<col style="width: 88%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -479,15 +402,115 @@ ul.task-list{list-style: none;}
 </thead>
 <tbody>
 <tr class="odd">
-<td>numpy.numpy.ndarray</td>
-<td>A flat array with the predicted values of the regression model.</td>
+<td>object</td>
+<td>A fitted model object of class [Feols(/reference/Feols.qmd).</td>
 </tr>
 </tbody>
 </table>
+</section>
+<section id="examples" class="level2">
+<h2 class="anchored" data-anchor-id="examples">Examples</h2>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> event_study</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    estimator<span class="op">=</span><span class="st">"twfe"</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit_twfe.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+      the module is not yet as thoroughly tested as I would like. So please use it with caution and
+      provide feedback in case you stumble over any bugs!
+      </code></pre>
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="ihxkTc"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("ihxkTc").appendChild(div);
+                    };
+                    var e = document.getElementById("ihxkTc");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5 %</th>
+      <th>97.5 %</th>
+    </tr>
+    <tr>
+      <th>Coefficient</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>ATT</th>
+      <td>1.98254</td>
+      <td>0.019093</td>
+      <td>103.83491</td>
+      <td>0.0</td>
+      <td>1.945118</td>
+      <td>2.019962</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
 
 
-</section>
-</section>
 </section>
 </section>
 
