@@ -26,3 +26,6 @@ def test_summary():
 
     fit_iv = feols("Y ~ X2 | f1 | X1 ~ Z1", data=df1)
     etable([fit_iv, fit1])
+
+    fit_multi = feols("Y + Y2 ~ X1 + X2 | f1", data=df1)
+    etable(fit_multi.to_list())
