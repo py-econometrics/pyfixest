@@ -1320,8 +1320,24 @@ class Feols:
             A pd.DataFrame with confidence intervals of the estimated regression model.
         Simultaneous confidence interval for joint null.
         """
+
         if not joint_indices:
-            return self.tidy()[["2.5 %", "97.5 %"]]
+
+            if self._vcov_type in ["iid", "hetero"]:
+                df = self._N - self._k
+            else:
+                _G = np.min(np.array(self._G))  # fixest default
+                df = _G - 1
+
+            # use t-dist for linear models, but normal for non-linear models
+            if self._method == "feols":
+                crit = np.abs(t.ppf(alpha / 2, df))
+            else:
+                crit = np.abs(norm.ppf(alpha / 2))
+
+            ub = pd.Series(self._beta_hat + crit * self._se)
+            lb = pd.Series(self._beta_hat - crit * self._se)
+
         else:
             C_coefs = (
                 1
@@ -1333,7 +1349,11 @@ class Feols:
             crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
             ub = pd.Series(self._beta_hat[joint_indices] + crit_val * self._se[joint_indices])
             lb = pd.Series(self._beta_hat[joint_indices] - crit_val * self._se[joint_indices])
-            return pd.DataFrame({"2.5 %": lb, "97.5 %": ub})
+
+        df = pd.DataFrame({f"{alpha / 2} %": lb, f"{1-alpha / 2}%": ub})
+        df.index = self._coefnames
+
+        return df
 
     def resid(self) -> np.ndarray:
         """
