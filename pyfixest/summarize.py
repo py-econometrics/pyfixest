@@ -115,16 +115,20 @@ def etable(
     etable_list = []
     for i, model in enumerate(models):
         model = model.tidy().reset_index().round(digits)
-        model["stars"] = np.where(
-            model["Pr(>|t|)"] < signif_code[0],
-            "***",
+        model["stars"] = (
             np.where(
-                model["Pr(>|t|)"] < signif_code[1],
-                "**",
-                np.where(model["Pr(>|t|)"] < signif_code[2], "*", ""),
-            ),
-        ) if signif_code else ""
-        model[coef_fmt_title] = ''
+                model["Pr(>|t|)"] < signif_code[0],
+                "***",
+                np.where(
+                    model["Pr(>|t|)"] < signif_code[1],
+                    "**",
+                    np.where(model["Pr(>|t|)"] < signif_code[2], "*", ""),
+                ),
+            )
+            if signif_code
+            else ""
+        )
+        model[coef_fmt_title] = ""
         for element in coef_fmt_elements:
             if element == "b":
                 model[coef_fmt_title] += model["Estimate"].astype(str) + model["stars"]
@@ -172,7 +176,10 @@ def etable(
     elif type == "md":
         res_all = _tabulate_etable(res_all, len(models), n_fixef)
         print(res_all)
-        if signif_code: print(f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}")
+        if signif_code:
+            print(
+                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            )
         print(f"Format of coefficient cell:\n{coef_fmt_title}")
     else:
         return res_all
@@ -346,16 +353,15 @@ def _parse_coef_fmt(coef_fmt: str):
     - coef_fmt_elements (str): The parsed coef_fmt string.
     - coef_fmt_title (str): The title for the coef_fmt string.
     """
-    # Replace the abbreviations with the full names
 
     allowed_elements = ["b", "se", "t", "p", " ", "\(", "\)", "\[", "\]", "\n"]
-    coef_fmt_elements = re.findall('|'.join(allowed_elements), coef_fmt)
+    coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     title_map = {
-        'b': 'Coefficient',
-        'se': 'Std. Error',
-        't': 't-stats',
-        'p': 'p-value',
+        "b": "Coefficient",
+        "se": "Std. Error",
+        "t": "t-stats",
+        "p": "p-value",
     }
-    coef_fmt_title = ''.join([title_map.get(x, x) for x in coef_fmt_elements])
+    coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
 
     return coef_fmt_elements, coef_fmt_title
