@@ -30,5 +30,5 @@ def test_summary():
     etable([fit1, fit2], signif_code=[0.01, 0.05, 0.1])
     etable([fit1, fit2], signif_code=None)
 
-    etable([fit1, fit2], coef_fmt = "t (p)")
-    etable([fit1, fit2], coef_fmt = "t (p) \n t (t)")
+    etable([fit1, fit2], coef_fmt="t (p)")
+    etable([fit1, fit2], coef_fmt="t (p) \n t (t)")
