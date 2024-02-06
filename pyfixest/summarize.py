@@ -56,7 +56,6 @@ def etable(
     etable([fit1, fit2, fit3])
     etable([fit1, fit2, fit3], type="df")
     etable([fit1, fit2, fit3], signif_code=[0.01, 0.05, 0.1])
-    etable([fit1, fit2, fit3], coef_fmt="b (se) \n t (p)")
     ```
     """
 
