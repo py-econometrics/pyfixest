@@ -1347,8 +1347,12 @@ class Feols:
                 / self._se[joint_indices]
             )
             crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
-            ub = pd.Series(self._beta_hat[joint_indices] + crit_val * self._se[joint_indices])
-            lb = pd.Series(self._beta_hat[joint_indices] - crit_val * self._se[joint_indices])
+            ub = pd.Series(
+                self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
+            )
+            lb = pd.Series(
+                self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
+            )
 
         df = pd.DataFrame({f"{alpha / 2} %": lb, f"{1-alpha / 2}%": ub})
         df.index = self._coefnames

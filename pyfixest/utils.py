@@ -231,6 +231,7 @@ def absolute_diff(x, y, tol=1e-03):
 
     return res
 
+
 def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
     """Generate critical value for simultaneous inference on linear model parameters using the Multiplier bootstrap.
 
@@ -250,4 +251,3 @@ def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
     p = C.shape[0]
     tmaxs = np.max(np.abs(msqrt(C) @ np.random.randn(p, S).reshape(p, S)), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
-
