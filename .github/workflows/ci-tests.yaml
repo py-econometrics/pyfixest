@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - NKeleher/*
   pull_request:
     branches:
       - master
