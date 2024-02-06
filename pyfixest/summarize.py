@@ -60,7 +60,7 @@ def etable(
     ```
     """
 
-    assert len(signif_code) == 3 or signif_code is None, "signif_code must be a list of length 3 or None"
+    assert signif_code is None or len(signif_code) == 3, "signif_code must be a list of length 3 or None"
     if signif_code:
         assert all([0 < i < 1 for i in signif_code]), "All values of signif_code must be between 0 and 1"
     if signif_code:
