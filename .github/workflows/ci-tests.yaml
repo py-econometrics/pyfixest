@@ -85,7 +85,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     needs: ["build-docs", "test"]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Download docs artifact
         uses: actions/download-artifact@v4
