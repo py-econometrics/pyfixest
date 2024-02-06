@@ -36,6 +36,11 @@ quartodoc = ">=0.7.2"
 jupyterlab = "^4.0.12"
 jupytext = "^1.16.1"
 
+[tool.pytest.ini_options]
+filterwarnings =[
+    "ignore::FutureWarning:rpy2",
+    "ignore::DeprecationWarning:rpy2"
+]
 
 [build-system]
 requires = ["poetry-core"]
