@@ -16,6 +16,7 @@ from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.summarize import etable
 
+
 def test_formula_parser2():
     with pytest.raises(DuplicateKeyError):
         FixestFormulaParser("y ~ sw(a, b) +  sw(c, d)| sw(X3, X4))")
@@ -184,7 +185,6 @@ def test_wls_errors():
         feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)
 
 
-
 def test_errors_etable():
 
     data = get_data()
@@ -192,10 +192,10 @@ def test_errors_etable():
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
     with pytest.raises(AssertionError):
-        etable([fit1, fit2],signif_code=[0.01, 0.05])
+        etable([fit1, fit2], signif_code=[0.01, 0.05])
 
     with pytest.raises(AssertionError):
-        etable([fit1, fit2],signif_code = [0.2, 0.05, 0.1])
+        etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
 
     with pytest.raises(AssertionError):
-        etable([fit1, fit2],signif_code = [0.1, 0.5, 1.5])
+        etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
