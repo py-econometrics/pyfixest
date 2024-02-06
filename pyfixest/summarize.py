@@ -6,12 +6,15 @@ import numpy as np
 import pandas as pd
 from typing import Union, List, Optional
 from tabulate import tabulate
+import re
 
 
 def etable(
     models: Union[Feols, Fepois, Feiv, List],
     digits: Optional[int] = 3,
     type: Optional[str] = "md",
+    signif_code: Optional[List] = [0.001, 0.01, 0.05],
+    coef_fmt: Optional[str] = "b (se)",
 ) -> Union[pd.DataFrame, str]:
     """
     Create an esttab-like table from a list of models.
@@ -24,6 +27,12 @@ def etable(
         Number of digits to round to.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. Default is "md".
+    signif_code : list, optional
+        Significance levels for the stars. Default is [0.001, 0.01, 0.05]. If None, no stars are printed.
+    coef_fmt : str, optional
+        The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is "b (se)".
+        Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
+        Newline is not support for LaTeX output.
 
     Returns
     -------
@@ -101,25 +110,40 @@ def etable(
     colnames.reverse()
     nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
 
+    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt)
+
     etable_list = []
     for i, model in enumerate(models):
         model = model.tidy().reset_index().round(digits)
-        model["stars"] = np.where(
-            model["Pr(>|t|)"] < 0.001,
-            "***",
+        model["stars"] = (
             np.where(
-                model["Pr(>|t|)"] < 0.01,
-                "**",
-                np.where(model["Pr(>|t|)"] < 0.05, "*", ""),
-            ),
-        )
-        model["Estimate (Std. Error)"] = pd.Categorical(
-            model.apply(
-                lambda row: f"{row['Estimate']}{row['stars']} ({row['Std. Error']})",
-                axis=1,
+                model["Pr(>|t|)"] < signif_code[0],
+                "***",
+                np.where(
+                    model["Pr(>|t|)"] < signif_code[1],
+                    "**",
+                    np.where(model["Pr(>|t|)"] < signif_code[2], "*", ""),
+                ),
             )
+            if signif_code
+            else ""
         )
-        model = model[["Coefficient", "Estimate (Std. Error)"]]
+        model[coef_fmt_title] = ""
+        for element in coef_fmt_elements:
+            if element == "b":
+                model[coef_fmt_title] += model["Estimate"].astype(str) + model["stars"]
+            elif element == "se":
+                model[coef_fmt_title] += model["Std. Error"].astype(str)
+            elif element == "t":
+                model[coef_fmt_title] += model["t value"].astype(str)
+            elif element == "p":
+                model[coef_fmt_title] += model["Pr(>|t|)"].astype(str)
+            elif element == "\n" and type == "tex":
+                raise ValueError("Newline is not supported for LaTeX output.")
+            else:
+                model[coef_fmt_title] += element
+        model[coef_fmt_title] = pd.Categorical(model[coef_fmt_title])
+        model = model[["Coefficient", coef_fmt_title]]
         model = pd.melt(
             model, id_vars=["Coefficient"], var_name="Metric", value_name=f"est{i+1}"
         )
@@ -152,7 +176,11 @@ def etable(
     elif type == "md":
         res_all = _tabulate_etable(res_all, len(models), n_fixef)
         print(res_all)
-        print("Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001")
+        if signif_code:
+            print(
+                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            )
+        print(f"Format of coefficient cell:\n{coef_fmt_title}")
     else:
         return res_all
 
@@ -312,3 +340,28 @@ def _tabulate_etable(df, n_models, n_fixef):
 
     # Print the formatted table
     return formatted_table
+
+
+def _parse_coef_fmt(coef_fmt: str):
+    """
+    Parse the coef_fmt string.
+
+    Parameters:
+    - coef_fmt (str): The coef_fmt string.
+
+    Returns:
+    - coef_fmt_elements (str): The parsed coef_fmt string.
+    - coef_fmt_title (str): The title for the coef_fmt string.
+    """
+
+    allowed_elements = ["b", "se", "t", "p", " ", "\(", "\)", "\[", "\]", "\n"]
+    coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
+    title_map = {
+        "b": "Coefficient",
+        "se": "Std. Error",
+        "t": "t-stats",
+        "p": "p-value",
+    }
+    coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
+
+    return coef_fmt_elements, coef_fmt_title
