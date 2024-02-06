@@ -38,25 +38,6 @@ def etable(
     -------
     pandas.DataFrame
         A DataFrame with the coefficients and standard errors of the models.
-
-    Examples
-    --------
-
-    ```{python}
-    from pyfixest.estimation import feols
-    from pyfixest.utils import get_data
-    from pyfixest.summarize import etable
-
-    # load data
-    df = get_data()
-    fit1 = feols("Y~X1 + X2 | f1", df)
-    fit2 = feols("Y~X1 + X2 | f1 + f2", df)
-    fit3 = feols("Y~X1 + X2 | f1 + f2 + f3", df)
-
-    etable([fit1, fit2, fit3])
-    etable([fit1, fit2, fit3], type="df")
-    etable([fit1, fit2, fit3], signif_code=[0.01, 0.05, 0.1])
-    ```
     """
 
     assert (
