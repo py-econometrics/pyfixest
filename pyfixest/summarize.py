@@ -30,7 +30,7 @@ def etable(
     signif_code : list, optional
         Significance levels for the stars. Default is [0.001, 0.01, 0.05]. If None, no stars are printed.
     coef_fmt : str, optional
-        The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is "b (se)".
+        The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is `"b (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         Newline is not support for LaTeX output.
 
