@@ -26,3 +26,9 @@ def test_summary():
 
     fit_iv = feols("Y ~ X2 | f1 | X1 ~ Z1", data=df1)
     etable([fit_iv, fit1])
+
+    etable([fit1, fit2], signif_code=[0.01, 0.05, 0.1])
+    etable([fit1, fit2], signif_code=None)
+
+    etable([fit1, fit2], coef_fmt = "t (p)")
+    etable([fit1, fit2], coef_fmt = "t (p) \n t (t)")
