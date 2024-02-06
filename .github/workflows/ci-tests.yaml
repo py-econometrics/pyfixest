@@ -4,12 +4,9 @@ on:
   push:
     branches:
       - master
-      - main
-      - NKeleher/*
   pull_request:
     branches:
       - master
-      - main
 
 jobs:
   test:
