@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from formulaic import model_matrix
+import sys
+import time
 
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
@@ -230,3 +232,4 @@ def absolute_diff(x, y, tol=1e-03):
         res = absolute_diff
 
     return res
+

@@ -348,8 +348,6 @@ def _tabulate_etable(df, n_models, n_fixef):
 
     # Print the formatted table
     return formatted_table
-<<<<<<< HEAD
-=======
 
 
 def _parse_coef_fmt(coef_fmt: str):
@@ -375,4 +373,3 @@ def _parse_coef_fmt(coef_fmt: str):
     coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
 
     return coef_fmt_elements, coef_fmt_title
->>>>>>> f5a42f5429b85f82e099c0efa7dd621a0547af62

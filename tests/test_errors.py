@@ -192,9 +192,11 @@ def test_multcomp_errors():
 
     data = get_data().dropna()
 
+    # param not in model
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     with pytest.raises(ValueError):
         rwolf(fit1.to_list(), param="X2", B=999, seed=92)
+
 
 
 def test_wildboottest_errors():

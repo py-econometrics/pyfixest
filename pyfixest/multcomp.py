@@ -4,10 +4,11 @@ from typing import Union, List
 from pyfixest.summarize import _post_processing_input_checks
 from pyfixest.feols import Feols
 from pyfixest.FixestMulti import FixestMulti
+from tqdm import tqdm
 
 
 def rwolf(
-    models: Union[List[Feols], FixestMulti], param: str, B: int, seed: int
+    models: Union[List[Feols], Feols], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -54,7 +55,9 @@ def rwolf(
     t_stats = np.zeros(S)
     boot_t_stats = np.zeros((B, S))
 
-    for i, model in enumerate(models):
+    for i in tqdm(range(S)):
+
+        model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
             param=param,
@@ -68,6 +71,7 @@ def rwolf(
     pval = _get_rwolf_pval(t_stats, boot_t_stats)
 
     all_model_stats.loc["RW Pr(>|t|)"] = pval
+    all_model_stats.columns = [f"est{i}" for i, _ in enumerate(models)]
 
     return all_model_stats
 
