@@ -14,6 +14,7 @@ from pyfixest.exceptions import (
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
+from pyfixest.summarize import etable
 
 
 def test_formula_parser2():
@@ -182,3 +183,19 @@ def test_wls_errors():
     data = get_data()
     with pytest.raises(NotImplementedError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)
+
+
+def test_errors_etable():
+
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.01, 0.05])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
