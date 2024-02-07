@@ -185,6 +185,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">did.estimation.event_study</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">multcomp.rwolf</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -1516,16 +1522,16 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="pyfixest.feols.Feols.wildboottest" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.wildboottest">wildboottest</h3>
-<p><code>feols.Feols.wildboottest(B, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False)</code></p>
+<p><code>feols.Feols.wildboottest(B, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False, return_bootstrapped_t_stats=False)</code></p>
 <p>Run a wild cluster bootstrap based on an object of type “Feols”.</p>
 <section id="parameters-9" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 3%">
+<col style="width: 5%">
 <col style="width: 16%">
-<col style="width: 76%">
-<col style="width: 3%">
+<col style="width: 74%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1602,6 +1608,12 @@ ul.task-list li input[type="checkbox"] {
 <td>An option to provide a random seed. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
+<tr class="even">
+<td><code>return_bootstrapped_t_stats</code></td>
+<td>bool, optional:</td>
+<td>If True, the method returns a tuple of the regular output and the bootstrapped t-stats. Defaults to False.</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -1609,8 +1621,8 @@ ul.task-list li input[type="checkbox"] {
 <h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
 <table class="table">
 <colgroup>
-<col style="width: 10%">
-<col style="width: 89%">
+<col style="width: 6%">
+<col style="width: 93%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1621,7 +1633,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>pandas.pandas.DataFrame</td>
-<td>A DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value, along with the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP.</td>
+<td>A DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value, along with the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP. If <code>return_bootstrapped_t_stats</code> is True, the method returns a tuple of the regular output and the bootstrapped t-stats.</td>
 </tr>
 </tbody>
 </table>

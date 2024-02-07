@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>did.estimation.lpdid</title>
+<title>multcomp.rwolf</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,44 +20,10 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -100,9 +66,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
-
-<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -165,7 +128,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/did.estimation.lpdid.html">did.estimation.lpdid</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/multcomp.rwolf.html">multcomp.rwolf</a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -212,7 +175,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">did.estimation.lpdid</span></a>
   </div>
 </li>
@@ -224,7 +187,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/multcomp.rwolf.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">multcomp.rwolf</span></a>
   </div>
 </li>
@@ -326,35 +289,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/did.estimation.lpdid.html">did.estimation.lpdid</a></li></ol></nav>
-<div class="quarto-title">
-<h1 class="title">did.estimation.lpdid</h1>
-</div>
 
 
 
-<div class="quarto-title-meta">
-
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<p><code>did.estimation.lpdid(data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0, att=True, xfml=None)</code></p>
-<p>Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.</p>
+<section id="pyfixest.multcomp.rwolf" class="level1">
+<h1>multcomp.rwolf</h1>
+<p><code>multcomp.rwolf(models, param, B, seed)</code></p>
+<p>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</p>
+<p>For each model, it is assumed that the adjustment is for the family of hypotheses is “param = 0”. This function uses the <code>wildboottest()</code> method for running the bootstrap, hence models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 7%">
-<col style="width: 76%">
-<col style="width: 6%">
+<col style="width: 4%">
+<col style="width: 31%">
+<col style="width: 59%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -366,70 +316,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
-<td>DataFrame</td>
-<td>The DataFrame containing all variables.</td>
+<td><code>models</code></td>
+<td>typing.List[pyfixest.feols.Feols] or pyfixest.FixestMulti.FixestMulti</td>
+<td>A list of models for which the p-values should be computed, or a FixestMulti object. Models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>yname</code></td>
+<td><code>param</code></td>
 <td>str</td>
-<td>The name of the dependent variable.</td>
+<td>The parameter for which the p-values should be computed.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>idname</code></td>
-<td>str</td>
-<td>The name of the id variable.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>tname</code></td>
-<td>str</td>
-<td>Variable name for calendar period.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td><code>gname</code></td>
-<td>str</td>
-<td>Unit-specific time of initial treatment.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>vcov</code></td>
-<td>(str, dict)</td>
-<td>The type of inference to employ. Defaults to {“CRV1”: idname}. Options include “iid”, “hetero”, or a dictionary like {“CRV1”: idname}.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>pre_window</code></td>
+<td><code>B</code></td>
 <td>int</td>
-<td>The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data.</td>
-<td><code>None</code></td>
+<td>The number of bootstrap replications.</td>
+<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>post_window</code></td>
+<td><code>seed</code></td>
 <td>int</td>
-<td>The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>never_treated</code></td>
-<td>int</td>
-<td>Value in gname indicating units never treated. Default is 0.</td>
-<td><code>0</code></td>
-</tr>
-<tr class="even">
-<td><code>att</code></td>
-<td>bool</td>
-<td>If True, estimates the pooled average treatment effect on the treated (ATT). Default is False.</td>
-<td><code>True</code></td>
-</tr>
-<tr class="odd">
-<td><code>xfml</code></td>
-<td>str</td>
-<td>Formula for the covariates. Not yet supported.</td>
-<td><code>None</code></td>
+<td>The seed for the random number generator.</td>
+<td><em>required</em></td>
 </tr>
 </tbody>
 </table>
@@ -437,6 +345,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="returns" class="level2">
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 78%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Type</th>
@@ -445,201 +357,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>DataFrame</td>
-<td>A DataFrame with the estimated coefficients.</td>
+<td>pandas.pandas.DataFrame</td>
+<td>A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.</td>
 </tr>
 </tbody>
 </table>
+
+
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="89b82a1b" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> lpdid</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> lpdid(</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>
-      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-      </code></pre>
-</div>
-<div class="cell-output cell-output-display">
-
-            <div id="w1Pfsf"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("w1Pfsf").appendChild(div);
-                    };
-                    var e = document.getElementById("w1Pfsf");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-display">
-   <div id="sJWhUN"></div>
-   <script type="text/javascript" data-lets-plot-script="plot">
-       (function() {
-           var plotSpec={
-"data":{
-"Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
-"Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.07556131947831908,-0.051277562684252105,0.047891216349789587,0.030061024401231366,0.039869683844842616,0.04845789728984681,-0.012820133350277497,0.013685361040923884,0.005199898128597303,0.016416277464837318,0.056416738856818846,0.0016957198969680782,-0.06496834258802509,0.010741616233677878,0.04275993550129887,0.003229015933287125,1.4520234748273066,1.6676220565025497,1.7336997045580052,1.843611819985164,1.962093749379402,2.0880835635857604,2.18196604372757,2.254678404642131,2.348473587127565,2.360384864306778,2.5161139333617535,2.552977994310089,2.603938509344383,2.578044287902035,2.7229688455567262,2.9092747255962252,2.859325154708493,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
-"2.5 %":[-0.22708269547764282,-0.16693825848108668,-0.1709996023235547,-0.09826170451362413,-0.22455341767455642,-0.11489450957715695,-0.1300261211286993,-0.13437295200650679,-0.11730100483137765,-0.1777160761704625,-0.11566892742077767,-0.11001240491647313,-0.10769379328464962,-0.06859048722022627,-0.1214853604230659,-0.18961678689455755,-0.09887320365939942,-0.0774383551703583,-0.1185901850478559,1.3363996532592988,1.5249457630422967,1.6253408304072405,1.7294961757918565,1.8189783255217127,1.9623105681403328,2.041961420384344,2.117157713082249,2.227411117482518,2.220744686573315,2.397598360655549,2.371302379450785,2.4123591065901233,2.402011397746462,2.516892060141281,2.721146526886651,2.6740882873860987,2.7278981041076427,2.6590374453797154,2.6721657516726136,2.7127030719766267],
-"97.5 %":[0.08097210637560169,0.15544317967957927,0.21072479412071787,0.24938434347026228,0.12199829230605222,0.2106769422767361,0.19014816993116204,0.21411231969619204,0.21421679941107127,0.15207580946990754,0.14303964950262543,0.12041220117366774,0.14052634821432425,0.18142396493386398,0.12487680021700207,0.05968010171850738,0.12035643612675517,0.16295822617295605,0.12504821691443016,1.5676472963953145,1.8102983499628027,1.8420585787087698,1.9577274641784717,2.1052091732370912,2.213856559031188,2.3219706670707962,2.392199096202013,2.469536056772612,2.500025042040241,2.634629506067958,2.7346536091693934,2.7955179120986426,2.754077178057608,2.9290456309721713,3.0974029243057997,3.044562022030887,3.0879882324146757,3.0883189131030977,3.0934487489657094,3.110298964160643],
-"Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
-},
-"mapping":{
-"x":"Coefficient",
-"y":"Estimate",
-"color":"Model"
-},
-"data_meta":{
-},
-"ggsize":{
-"width":1200.0,
-"height":400.0
-},
-"theme":{
-"axis_text_x":{
-"angle":0.0,
-"blank":false
-}
-},
-"ggtitle":{
-"text":"LPDID Event Study Estimate"
-},
-"kind":"plot",
-"scales":[{
-"name":"Estimate and 95% Confidence Interval",
-"aesthetic":"y"
-}],
-"layers":[{
-"geom":"point",
-"mapping":{
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"data":{
-}
-},{
-"geom":"errorbar",
-"mapping":{
-"ymin":"2.5 %",
-"ymax":"97.5 %"
-},
-"position":{
-"name":"dodge",
-"width":0.5
-},
-"data_meta":{
-},
-"width":0.05,
-"data":{
-}
-}],
-"metainfo_list":[]
-};
-           var plotContainer = document.getElementById("sJWhUN");
-           window.letsPlotCall(function() {{
-               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
-           }});
-       })();    
-   </script>
-</div>
-</div>
-<p>To get the ATT, set <code>att=True</code>:</p>
-<div id="27976aa9" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> lpdid(</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<div>
-
-
-<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">Estimate</th>
-<th data-quarto-table-cell-role="th">Std. Error</th>
-<th data-quarto-table-cell-role="th">t value</th>
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
-<th data-quarto-table-cell-role="th">2.5 %</th>
-<th data-quarto-table-cell-role="th">97.5 %</th>
-<th data-quarto-table-cell-role="th">N</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">treat_diff</td>
-<td>2.506746</td>
-<td>0.071357</td>
-<td>35.129648</td>
-<td>0.0</td>
-<td>2.362413</td>
-<td>2.65108</td>
-<td>5716.0</td>
-</tr>
-</tbody>
-</table>
-
-</div>
-</div>
-</div>
-
-
 </section>
 
 </main> <!-- /main -->
