@@ -16,7 +16,6 @@ wildrwolf = importr("wildrwolf")
 
 def test_wildrwolf():
 
-
     rng = np.random.default_rng(12345)
     data = get_data()
     data["Y2"] = data["Y"] * rng.normal(0, 0.5, size=len(data))
@@ -32,15 +31,13 @@ def test_wildrwolf():
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param = "X1", B=9999, seed=12345)
-
-
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
 
     np.testing.assert_allclose(
         rwolf_py.iloc[6].values,
         pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
         atol=1e-2,
-        rtol = np.inf
+        rtol=np.inf,
     )
 
     # test set 2
@@ -53,14 +50,15 @@ def test_wildrwolf():
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1 + f2"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param = "X1", B=9999, seed=12345)
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
 
     np.testing.assert_allclose(
         rwolf_py.iloc[6].values,
         pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
         atol=1e-2,
-        rtol = np.inf
+        rtol=np.inf,
     )
+
 
 def test_stepwise_function():
 
@@ -74,7 +72,4 @@ def test_stepwise_function():
     stepwise_py = _get_rwolf_pval(t_stat, t_boot)
     stepwise_r = wildrwolf.get_rwolf_pval(t_stat, t_boot)
 
-    np.testing.assert_allclose(
-        stepwise_py,
-        stepwise_r
-    )
+    np.testing.assert_allclose(stepwise_py, stepwise_r)

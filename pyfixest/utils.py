@@ -232,4 +232,3 @@ def absolute_diff(x, y, tol=1e-03):
         res = absolute_diff
 
     return res
-

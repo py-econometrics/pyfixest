@@ -198,7 +198,6 @@ def test_multcomp_errors():
         rwolf(fit1.to_list(), param="X2", B=999, seed=92)
 
 
-
 def test_wildboottest_errors():
 
     data = get_data()
@@ -221,6 +220,7 @@ def test_summary_errors():
         summary(fit1)
     with pytest.raises(TypeError):
         summary([fit1, fit2])
+
 
 def test_errors_etable():
 

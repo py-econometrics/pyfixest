@@ -55,9 +55,35 @@ pip install git+https://github.com/s3alfisc/pyfixest.git
 
 ## News
 
-`PyFixest` `0.13` adds support for the [local projections
-Difference-in-Differences
-Estimator](https://s3alfisc.github.io/pyfixest/difference-in-differences-estimation/).
+`PyFixest` `0.15.2` adds support Romano-Wolf Corrected p-values:
+
+```py
+from pyfixest.estimation import feols
+from pyfixest.multcomp import rwolf
+from pyfixest.utils import get_data
+
+rng = np.random.default_rng(12345)
+data = get_data()
+data["Y2"] = data["Y"] * rng.normal(0, 0.5, size=len(data))
+data["Y3"] = data["Y2"] + rng.normal(0, 0.5, size=len(data))
+
+# test set 1
+
+fit1 = feols("Y ~ X1", data=data)
+fit2 = feols("Y2 ~ X1", data=data)
+fit3 = feols("Y3 ~ X1", data=data)
+
+rwolf_df = rwolf([fit1, fit2, fit3], "X1", B=9999, seed=12345)
+rwolf_df.round(3)
+#               est0	 est1	  est2
+# Estimate	  -1.000	0.027	 0.011
+# Std. Error	 0.085	0.046	 0.050
+# t value	   -11.802	0.594	 0.216
+# Pr(>|t|)	   0.000	0.553	 0.829
+# 2.5 %	      -1.166	-0.062 -0.088
+# 97.5 %   	  -0.834	0.116	 0.110
+# RW Pr(>|t|)	 0.000	0.671	 0.832
+```
 
 ## Benchmarks
 
@@ -85,18 +111,18 @@ feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-    
+
 
 ### Multiple Estimation
 
@@ -133,7 +159,7 @@ etable([fit.fetch_model(i) for i in range(6)])
     Observations               998                999                997                998                997                998
     -----------------------------------------------------------------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
-    
+
 
 
 
@@ -149,19 +175,19 @@ fit1.vcov("hetero").summary()
 
     Model:  Y~X1
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y
     Inference:  hetero
     Observations:  998
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |
     | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
-    
+
 
 ### Poisson Regression via `fepois()`
 
@@ -174,19 +200,19 @@ fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
     ###
-    
+
     Estimation:  Poisson
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |
     | X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
     ---
     Deviance: 1068.836
-    
+
 
 ### IV Estimation via three-part formulas
 
@@ -200,14 +226,14 @@ fit_iv.summary()
 ```
 
     ###
-    
+
     Estimation:  IV
     Dep. var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
     |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
     ---
-    
+
