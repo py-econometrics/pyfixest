@@ -839,6 +839,7 @@ class Feols:
         adj: Optional[bool] = True,
         cluster_adj: Optional[bool] = True,
         parallel: Optional[bool] = False,
+        return_bootstrapped_t_stats=False,
     ):
         """
         Run a wild cluster bootstrap based on an object of type "Feols".
@@ -870,12 +871,15 @@ class Feols:
             Indicates whether to run the bootstrap in parallel. Defaults to False.
         seed : Union[str, None], optional
             An option to provide a random seed. Defaults to None.
+        return_bootstrapped_t_stats : bool, optional:
+            If True, the method returns a tuple of the regular output and the bootstrapped t-stats. Defaults to False.
 
         Returns
         -------
         pd.DataFrame
             A DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value, along with
             the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP.
+            If `return_bootstrapped_t_stats` is True, the method returns a tuple of the regular output and the bootstrapped t-stats.
         """
 
         _is_iv = self._is_iv
@@ -886,6 +890,12 @@ class Feols:
         _data = self._data
         _clustervar = self._clustervar
         _supports_wildboottest = self._supports_wildboottest
+
+        if param is not None:
+            if param not in _xnames:
+                raise ValueError(
+                    f"Parameter {param} not found in the model's coefficients."
+                )
 
         if not _supports_wildboottest:
             if self._is_iv:
@@ -999,7 +1009,10 @@ class Feols:
 
         res_df = pd.Series(res)
 
-        return res_df
+        if return_bootstrapped_t_stats:
+            return res_df, boot.t_boot
+        else:
+            return res_df
 
     def fixef(self) -> None:
         """

@@ -86,9 +86,10 @@ Tests run with R require the following packages:
 - did2s
 - fixest
 - stats
+- wildrwolf
 
 ```{bash}
-Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest"), repos="https://cran.rstudio.com")'
+Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com")'
 ```
 
 Documentation for `pyfixest` is written, compiled, and published using Quarto.
