@@ -17,6 +17,7 @@ from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.multcomp import rwolf
 from pyfixest.summarize import etable, summary
+from pyfixest.summarize import etable
 
 
 def test_formula_parser2():
@@ -218,3 +219,18 @@ def test_summary_errors():
         summary(fit1)
     with pytest.raises(TypeError):
         summary([fit1, fit2])
+
+def test_errors_etable():
+
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.01, 0.05])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])

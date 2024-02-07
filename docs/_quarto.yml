@@ -18,7 +18,7 @@ website:
         href: https://github.com/s3alfisc/pyfixest/
     left:
       - text: "PyFixest"
-        file: readme.md
+        file: pyfixest.qmd
       - text: "Quickstart"
         file: quickstart.ipynb
       - text: "Difference-in-Differences Estimation"
@@ -27,6 +27,8 @@ website:
         file: replicating-the-effect.ipynb
       - text: "Documentation"
         file: reference/index.qmd
+      - text: "Contributing"
+        file: contributing.qmd
       - text: "Changelog"
         file: news.qmd
 
@@ -61,7 +63,7 @@ quartodoc:
         Post-Processing of Estimation Results
       contents:
         - summarize.summary
-        - summarize.etable
+        #- summarize.etable
         - visualize.coefplot
         - visualize.iplot
     - title: Misc / Utilities
