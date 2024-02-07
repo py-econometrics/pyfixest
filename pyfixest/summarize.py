@@ -54,7 +54,12 @@ def etable(
     models = _post_processing_input_checks(models)
 
     assert digits >= 0, "digits must be a positive integer"
-    assert type in ["df", "tex", "md"], "type must be either 'df', 'md' or 'tex'"
+    assert type in [
+        "df",
+        "tex",
+        "md",
+        "html",
+    ], "type must be either 'df', 'md', 'html' or 'tex'"
 
     dep_var_list = []
     nobs_list = []
@@ -281,23 +286,32 @@ def _post_processing_input_checks(models):
 
     # check if models instance of Feols or Fepois
     if isinstance(models, (Feols, Fepois)):
+
         models = [models]
+
     else:
+
         if isinstance(models, list):
+
             for model in models:
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
-                        """
-                        The models argument must be either a list of Feols or Fepois instances,
-                        a dict of Feols or Fepois instances, or simply a Feols or Fepois instance.
+                        f"""
+                            Each element of the passed list needs to be of type Feols or Fepois, but {type(model)} was passed.
+                            If you want to summarize a FixestMulti object, please use FixestMulti.to_list() to convert it to a list of Feols or Fepois instances.
                         """
                     )
-        elif isinstance(models, dict):
-            for model in models.keys():
-                if not isinstance(models[model], (Feols, Fepois)):
-                    raise TypeError(
-                        "The models argument must be a list of Feols or Fepois instances."
-                    )
+
+        else:
+
+            raise TypeError(
+                """
+                The models argument must be either a list of Feols or Fepois instances, or
+                simply a single Feols or Fepois instance. The models argument does not accept instances
+                of type FixestMulti - please use models.to_list() to convert the FixestMulti
+                instance to a list of Feols or Fepois instances.
+                """
+            )
 
     return models
 

@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from formulaic import model_matrix
+import sys
+import time
 
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
