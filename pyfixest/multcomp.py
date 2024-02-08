@@ -113,7 +113,6 @@ def rwolf(
 
     S = 0
     for model in models:
-
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -128,7 +127,6 @@ def rwolf(
     boot_t_stats = np.zeros((B, S))
 
     for i in tqdm(range(S)):
-
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
