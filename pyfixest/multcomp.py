@@ -1,10 +1,11 @@
+from typing import List, Union
+
 import numpy as np
 import pandas as pd
-from typing import Union, List
-from pyfixest.summarize import _post_processing_input_checks
-from pyfixest.feols import Feols
-from pyfixest.FixestMulti import FixestMulti
 from tqdm import tqdm
+
+from pyfixest.feols import Feols
+from pyfixest.summarize import _post_processing_input_checks
 
 
 def rwolf(

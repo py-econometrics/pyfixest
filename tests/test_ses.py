@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
-from pyfixest.utils import ssc
-from pyfixest.utils import get_data
+import pytest
+
 from pyfixest.estimation import feols
+from pyfixest.utils import get_data, ssc
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])

@@ -1,23 +1,24 @@
+from typing import List, Optional, Tuple, Union
+
 import pandas as pd
-from typing import List, Tuple, Optional
-from pyfixest.summarize import _post_processing_input_checks
-from typing import Union
+from lets_plot import *
 from lets_plot import (
-    ggplot,
     aes,
-    geom_point,
+    coord_flip,
+    element_text,
     geom_errorbar,
     geom_hline,
+    geom_point,
     geom_vline,
+    ggplot,
     ggsize,
-    theme,
-    element_text,
-    position_dodge,
-    coord_flip,
     ggtitle,
+    position_dodge,
+    theme,
     ylab,
 )
-from lets_plot import *
+
+from pyfixest.summarize import _post_processing_input_checks
 
 LetsPlot.setup_html()
 

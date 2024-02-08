@@ -1,14 +1,15 @@
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.utils import get_data
-from pyfixest.estimation import feols, fepois
-from pyfixest.exceptions import NotImplementedError
+import pytest
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+
+from pyfixest.estimation import feols, fepois
+from pyfixest.exceptions import NotImplementedError
+from pyfixest.utils import get_data
 
 pandas2ri.activate()
 
