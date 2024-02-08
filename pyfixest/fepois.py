@@ -145,7 +145,7 @@ class Fepois(Feols):
                 ).flatten()
             return deviance
 
-        accelerate = True
+        accelerate = False
         # inner_tol = 1e-04
         stop_iterating = False
         crit = 1
@@ -164,15 +164,11 @@ class Fepois(Feols):
                 mu = (_Y + _mean) / 2
                 eta = np.log(mu)
                 Z = eta + _Y / mu - 1
-                last_Z = Z.copy()
                 reg_Z = Z.copy()
                 last = compute_deviance(_Y, mu)
 
             elif accelerate:
-                last_Z = Z.copy()
-                Z = eta + _Y / mu - 1
-                reg_Z = Z - last_Z + Z_resid
-                X = X_resid.copy()
+                raise ValueError("Acceleration is not yet implemented for Poisson regression.")
 
             else:
                 # update w and Z
@@ -189,7 +185,7 @@ class Fepois(Feols):
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(x=ZX, flist=_fe, weights=mu.flatten())
-                if success == False:
+                if not success:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
             else:
                 ZX_resid = ZX

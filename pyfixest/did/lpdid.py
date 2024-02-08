@@ -159,7 +159,6 @@ def _lpdid_estimate(
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid
 
     fit_all = []
-    reweight = False
 
     if xfml is None:
         fml = f"Dy ~ treat_diff | {tname}"

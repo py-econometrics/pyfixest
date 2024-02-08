@@ -194,17 +194,12 @@ def test_single_fit(
         #    return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
-            is_iv = True
             run_test = False
         else:
-            is_iv = False
             run_test = True
 
             # if formula does not contain "i(" or "C(", add, separation:
             if "i(" not in fml and "C(" not in fml:
-                where_zeros = np.where(data["Y"] == 0)[
-                    0
-                ]  # because np.where evaluates to a tuple
                 # draw three random indices
                 # idx = rng.choice(where_zeros, 3, True)
                 idx = np.array([10, 11, 12])
@@ -266,7 +261,6 @@ def test_single_fit(
         py_tstat = mod.tstat().xs("X1")
         py_confint = mod.confint().xs("X1").values
         py_nobs = mod._N
-        py_resid = mod._u_hat.flatten()
         # TODO: test residuals
 
         fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
@@ -292,7 +286,6 @@ def test_single_fit(
         r_tstat = df_X1["statistic"]
         r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
         r_nobs = stats.nobs(r_fixest)
-        r_resid = r_fixest.rx2("working_residuals")
 
         np.testing.assert_allclose(
             py_coef, r_coef, rtol=rtol, atol=atol, err_msg="py_coef != r_coef"
@@ -521,12 +514,6 @@ def test_twoway_clustering():
                 "Y ~ X1 + X2 ",
                 data=data,
                 vcov={"CRV1": "f1 +f2"},
-                ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
-            )
-            fit2 = feols(
-                "Y ~ X1 + X2 ",
-                data=data,
-                vcov={"CRV3": " f1+f2"},
                 ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
             )
 
@@ -782,7 +769,7 @@ def test_wald_test(fml, data):
 
     wald_r = fixest.wald(fit_r)
     wald_stat_r = wald_r[0]
-    wald_pval_r = wald_r[1]
+    #wald_pval_r = wald_r[1]
 
     np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
@@ -830,8 +817,8 @@ def test_singleton_dropping():
     )
 
     # test that standard errors match
-    se_py = fit_py.se().values
-    se_r = fixest.se(fit_r)
+    # se_py = fit_py.se().values
+    # se_r = fixest.se(fit_r)
     # np.testing.assert_allclose(
     #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
     # )

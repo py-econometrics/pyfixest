@@ -153,9 +153,9 @@ def model_matrix_fixest(
         fml_iv = None
 
     if _is_iv:
-        endogvar, instruments = fml_iv.split("~")
+        endogvar, _ = fml_iv.split("~")
     else:
-        endogvar, instruments = None, None
+        endogvar, _ = None, None
 
     # step 2: create formulas
     fml_exog = f"{depvar}~{covar}"
@@ -301,7 +301,7 @@ def model_matrix_fixest(
             dropped_singleton_bool = detect_singletons(fe.to_numpy())
             keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
 
-            if np.any(dropped_singleton_bool == True):
+            if np.any(dropped_singleton_bool):
                 warnings.warn(
                     f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
                 )

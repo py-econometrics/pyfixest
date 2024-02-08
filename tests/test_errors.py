@@ -155,7 +155,7 @@ def test_i_interaction_errors():
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data=data)
+        feols("Y ~ f1 | f1", data=data)
 
 
 def test_wls_errors():

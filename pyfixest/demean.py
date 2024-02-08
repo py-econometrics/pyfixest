@@ -78,7 +78,7 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean(var_diff, fe, weights)
-                if success == False:
+                if not success:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
                 YX_demeaned = pd.DataFrame(YX_demean_new)
@@ -97,7 +97,7 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
-            if success == False:
+            if not success:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 
             YX_demeaned = pd.DataFrame(YX_demeaned)

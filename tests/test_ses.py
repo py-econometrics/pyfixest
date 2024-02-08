@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation import feols
+from pyfixest.estimation import feols, fepois
 from pyfixest.utils import get_data, ssc
 
 
@@ -98,14 +98,14 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
 
 def run_crv3_poisson():
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
-    fit = fepois(
+    fepois(
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
         ssc=ssc(adj=False, cluster_adj=False),
     )
 
-    fit = fepois(
+    fepois(
         fml="Y~X1 |f1 + f2",
         data=data,
         vcov={"CRV3": "f1"},

@@ -62,7 +62,7 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     """
 
     adj = ssc_dict["adj"]
-    fixef_k = ssc_dict["fixef_k"]
+    # fixef_k = ssc_dict["fixef_k"] TODO: use fixef_k for ssc
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 

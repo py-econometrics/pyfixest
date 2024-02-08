@@ -69,7 +69,6 @@ def etable(
     n_coefs = []
     se_type_list = []
     r2_list = []
-    r2_within_list = []
 
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)

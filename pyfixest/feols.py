@@ -392,7 +392,7 @@ class Feols:
                 else:
                     transformed_scores = _scores / (1 - leverage)[:, None]
 
-            if _is_iv == False:
+            if not _is_iv:
                 meat = transformed_scores.transpose() @ transformed_scores
                 self._vcov = self._ssc * bread @ meat @ bread
             else:
@@ -468,7 +468,7 @@ class Feols:
                         cluster_col=cluster_col,
                     )
 
-                    if _is_iv == False:
+                    if not _is_iv:
                         self._vcov += self._ssc[x] * bread @ meat @ bread
                     else:
                         meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
@@ -487,9 +487,9 @@ class Feols:
                     beta_jack = np.zeros((len(clustid), _k))
 
                     if (
-                        (self._has_fixef == False)
+                        (not self._has_fixef)
                         and (self._method == "feols")
-                        and (_is_iv == False)
+                        and (not _is_iv)
                     ):
                         # inverse hessian precomputed?
                         tXX = np.transpose(self._X) @ self._X
@@ -1128,7 +1128,7 @@ class Feols:
             newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
             if self._has_fixef:
-                fml_linear, _ = _fml.split("|")
+                _ , _ = _fml.split("|")
 
                 if self._sumFE is None:
                     self.fixef()
@@ -1157,10 +1157,6 @@ class Feols:
                         # if new level not estimated: set to NaN
                         else:
                             fixef_mat[df_fe[fixef] == level, i] = np.nan
-
-            else:
-                fml_linear = _fml
-                fml_fe = None
 
             if not self._X_is_empty:
                 # deal with linear part

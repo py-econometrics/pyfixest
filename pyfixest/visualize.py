@@ -1,8 +1,8 @@
 from typing import List, Optional, Tuple, Union
 
 import pandas as pd
-from lets_plot import *
 from lets_plot import (
+    LetsPlot,
     aes,
     coord_flip,
     element_text,
@@ -99,7 +99,6 @@ def iplot(
     all_icovars = list(set(all_icovars))
 
     df = pd.concat(df_all, axis=0)
-    fml_list = df.index.unique()
     # keep only coefficients interacted via the i() syntax
     df = df[df.Coefficient.isin(all_icovars)].reset_index()
 

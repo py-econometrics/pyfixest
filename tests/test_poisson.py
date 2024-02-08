@@ -20,4 +20,4 @@ def test_separation():
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero")
+        fepois("Y ~ x  | fe1", data=df, vcov="hetero")

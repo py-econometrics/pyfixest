@@ -186,7 +186,7 @@ def test_errors():
     # boolean strings cannot be converted
     df_het["treat"] = df_het["treat"].astype(str)
     with pytest.raises(ValueError):
-        fit = did2s_pyfixest(
+        did2s_pyfixest(
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
@@ -198,7 +198,7 @@ def test_errors():
 
     df_het["treat2"] = np.random.choice([0, 1, 2], size=len(df_het))
     with pytest.raises(ValueError):
-        fit = did2s_pyfixest(
+        did2s_pyfixest(
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
