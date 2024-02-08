@@ -1,4 +1,4 @@
-from typing import Optional, Union, dict
+from typing import Optional, Union
 
 import pandas as pd
 

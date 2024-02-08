@@ -65,10 +65,8 @@ class FixestFormulaParser:
                         "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
                     )
 
-                if covars == "1":
-                    covars = endogvars
-                else:
-                    covars = f"{endogvars}+{covars}"
+                covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
+
             else:
                 fevars = fml_split[1]
                 endogvars = None

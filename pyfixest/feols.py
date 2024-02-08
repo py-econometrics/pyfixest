@@ -1,7 +1,7 @@
 import re
 import warnings
 from importlib import import_module
-from typing import Optional, Union, dict, list, tuple
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -1431,9 +1431,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         if isinstance(deparse_vcov, str):
             deparse_vcov = [deparse_vcov]
         deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
-    elif isinstance(vcov, list):
-        vcov_type_detail = vcov
-    elif isinstance(vcov, str):
+    elif isinstance(vcov, list) or isinstance(vcov, str):
         vcov_type_detail = vcov
     else:
         assert False, "arg vcov needs to be a dict, string or list"

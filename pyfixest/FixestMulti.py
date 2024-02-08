@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional, Union, dict, list
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -93,11 +93,9 @@ class FixestMulti:
             self._has_weights = True
 
         # set i_ref1 and i_ref2 to list if not None
-        if i_ref1 is not None:
-            if not isinstance(i_ref1, list):
+        if i_ref1 is not None and not isinstance(i_ref1, list):
                 i_ref1 = [i_ref1]
-        if i_ref2 is not None:
-            if not isinstance(i_ref2, list):
+        if i_ref2 is not None and not isinstance(i_ref2, list):
                 i_ref2 = [i_ref2]
 
         fxst_fml = FixestFormulaParser(fml)
@@ -168,7 +166,7 @@ class FixestMulti:
             lookup_demeaned_data = dict()
 
             # loop over both dictfe and dictfe_iv (if the latter is not None)
-            for depvar in dict2fe.keys():
+            for depvar in dict2fe:
                 for _, fml_linear in enumerate(dict2fe.get(depvar)):
                     covar = fml_linear.split("~")[1]
                     endogvars, instruments = None, None
@@ -217,10 +215,7 @@ class FixestMulti:
 
                     coefnames = X.columns.tolist()
 
-                    if fe is not None:
-                        _k_fe = fe.nunique(axis=0)
-                    else:
-                        _k_fe = None
+                    _k_fe = fe.nunique(axis=0) if fe is not None else None
 
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
@@ -350,9 +345,8 @@ class FixestMulti:
                         FIT.get_inference()
 
                         # other regression stats
-                        if _method == "feols":
-                            if not FIT._is_iv:
-                                FIT.get_performance()
+                        if _method == "feols" and not FIT._is_iv:
+                            FIT.get_performance()
 
                         if _icovars is not None:
                             FIT._icovars = _icovars
@@ -700,15 +694,8 @@ def get_fml(
 
     fml = f"{depvar} ~ {covar}"
 
-    if endogvars is not None:
-        fml_iv = f"| {endogvars} ~ {instruments}"
-    else:
-        fml_iv = None
-
-    if fval != "0":
-        fml_fval = f"| {fval}"
-    else:
-        fml_fval = None
+    fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
+    fml_fval = f"| {fval}" if fval != "0" else None
 
     if fml_fval is not None:
         fml += fml_fval

@@ -60,7 +60,7 @@ select = [
   "I", # isort
 #  "D", # flake8-docstrings
   "UP", # pyupgrade
-#  "SIM", # flake8-simplify
+  "SIM", # flake8-simplify
 #  "TRY", # tryceratops
 
 ]
