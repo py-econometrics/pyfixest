@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union, dict, list
 
 import pandas as pd
 
@@ -141,8 +141,8 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -277,7 +277,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,

@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union, list, tuple
 
 import pandas as pd
 from lets_plot import (
@@ -117,13 +117,13 @@ def iplot(
 
 
 def coefplot(
-    models: List,
+    models: list,
     alpha: int = 0.05,
     figsize: tuple = (500, 300),
     yintercept: float = 0,
     xintercept: float = None,
     rotate_xticks: int = 0,
-    coefficients: Optional[List[str]] = None,
+    coefficients: Optional[list[str]] = None,
     title: Optional[str] = None,
     coord_flip: Optional[bool] = True,
 ):
@@ -203,7 +203,7 @@ def coefplot(
 
 def _coefplot(
     df: pd.DataFrame,
-    figsize: Tuple[int, int],
+    figsize: tuple[int, int],
     alpha: float,
     yintercept: Optional[int] = None,
     xintercept: Optional[int] = None,

@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional, Union
+from typing import Optional, Union, list
 
 import numpy as np
 import pandas as pd
@@ -11,10 +11,10 @@ from pyfixest.fepois import Fepois
 
 
 def etable(
-    models: Union[Feols, Fepois, Feiv, List],
+    models: Union[Feols, Fepois, Feiv, list],
     digits: Optional[int] = 3,
     type: Optional[str] = "md",
-    signif_code: Optional[List] = [0.001, 0.01, 0.05],
+    signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
 ) -> Union[pd.DataFrame, str]:
     """
@@ -185,7 +185,7 @@ def etable(
 
 
 def summary(
-    models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
+    models: Union[Feols, Fepois, Feiv, list], digits: Optional[int] = 3
 ) -> None:
     """
     Prints a summary of estimation results for each estimated model.

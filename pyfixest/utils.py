@@ -165,7 +165,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("model needs to be 'Feols' or 'Fepois'.")
 
-    Y, Y2 = [pd.Series(x.flatten()) for x in [Y, Y2]]
+    Y, Y2 = (pd.Series(x.flatten()) for x in [Y, Y2])
     Y.name, Y2.name = "Y", "Y2"
 
     cluster = rng.choice(list(range(0, G)), N)

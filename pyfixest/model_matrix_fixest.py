@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union, list, tuple
 
 import numpy as np
 import pandas as pd
@@ -16,9 +16,9 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
-    i_ref1: Optional[Union[List, str, int]] = None,
-    i_ref2: Optional[Union[List, str, int]] = None,
-) -> Tuple[
+    i_ref1: Optional[Union[list, str, int]] = None,
+    i_ref2: Optional[Union[list, str, int]] = None,
+) -> tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
     Optional[pd.DataFrame],  # I
@@ -26,10 +26,10 @@ def model_matrix_fixest(
     np.ndarray,  # na_index
     np.ndarray,  # fe_na
     str,  # na_index_str
-    Optional[List[str]],  # z_names
+    Optional[list[str]],  # z_names
     Optional[str],  # weights
     bool,  # has_weights,
-    Optional[List[str]],  # icovars (list of variables interacted with i() syntax)
+    Optional[list[str]],  # icovars (list of variables interacted with i() syntax)
 ]:
     """
     Create model matrices for fixed effects estimation.
@@ -75,13 +75,13 @@ def model_matrix_fixest(
             An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
         - na_index_str : str
             na_index, but as a comma-separated string. Used for caching of demeaned variables.
-        - z_names : Optional[List[str]]
+        - z_names : Optional[list[str]]
             Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
         - weights : Optional[str]
             Weights as a string if provided, or None if no weights, e.g., "weights".
         - has_weights : bool
             A boolean indicating whether weights are used.
-        - icovars : Optional[List[str]]
+        - icovars : Optional[list[str]]
             A list of interaction variables provided via `i()`. None if no interaction variables via `i()` provided.
 
     Attributes
@@ -192,9 +192,9 @@ def model_matrix_fixest(
     else:
         endogvar, Z = None, None
 
-    Y, X, endogvar, Z = [
+    Y, X, endogvar, Z = (
         pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]
-    ]
+    )
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
@@ -383,7 +383,7 @@ def _check_is_iv(fml):
     return _is_iv
 
 
-def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
+def _clean_fe(data: pd.DataFrame, fval: str) -> tuple[pd.DataFrame, list[int]]:
     """
     Clean and transform fixed effects in a DataFrame.
 
@@ -400,11 +400,11 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
 
     Returns
     -------
-    Tuple[pd.DataFrame, List[int]]
+    tuple[pd.DataFrame, list[int]]
         A tuple containing two items:
         - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
         present in this DataFrame.
-        - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
+        - fe_na (list[int]): A list of columns in 'fe' that contain NaN values.
     """
 
     fval_list = fval.split("+")
@@ -435,7 +435,7 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     return fe, fe_na
 
 
-def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
+def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
     """
     Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
 

@@ -1,7 +1,7 @@
 import re
 import warnings
 from importlib import import_module
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union, dict, list, tuple
 
 import numba as nb
 import numpy as np
@@ -39,7 +39,7 @@ class Feols:
         Weights, a one-dimensional numpy array.
     collin_tol : float
         Tolerance level for collinearity checks.
-    coefnames : List[str]
+    coefnames : list[str]
         Names of the coefficients (of the design matrix X).
 
     Attributes
@@ -86,7 +86,7 @@ class Feols:
     _icovars : Any
         Internal covariates, to be enriched outside of the class.
     _ssc_dict : dict
-        Dictionary for sum of squares and cross products matrices.
+        dictionary for sum of squares and cross products matrices.
     _tZX : np.ndarray
         Transpose of Z multiplied by X, set in get_fit().
     _tXZ : np.ndarray
@@ -134,7 +134,7 @@ class Feols:
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
     _fixef_dict : dict
-        Dictionary containing fixed effects estimates.
+        dictionary containing fixed effects estimates.
     _sumFE : np.ndarray
         Sum of all fixed effects for each observation.
     _rmse : float
@@ -156,7 +156,7 @@ class Feols:
         X: np.ndarray,
         weights: np.ndarray,
         collin_tol: float,
-        coefnames: List[str],
+        coefnames: list[str],
         weights_name: Optional[str],
     ) -> None:
         self._method = "feols"
@@ -281,13 +281,13 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def vcov(self, vcov: Union[str, Dict[str, str]]):
+    def vcov(self, vcov: Union[str, dict[str, str]]):
         """
         Compute covariance matrices for an estimated regression model.
 
         Parameters
         ----------
-        vcov : Union[str, Dict[str, str]]
+        vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3". If a dictionary,
             it should have the format {"CRV1": "clustervar"} for CRV1 inference or {"CRV3": "clustervar"}
@@ -688,7 +688,7 @@ class Feols:
                 "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
             )
         else:
-            q = np.zeros((R.shape[0]))
+            q = np.zeros(R.shape[0])
 
         assert distribution in [
             "F",
@@ -718,11 +718,11 @@ class Feols:
     def coefplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (500, 300),
+        figsize: tuple[int, int] = (500, 300),
         yintercept: Optional[float] = 0,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
-        coefficients: Optional[List[str]] = None,
+        coefficients: Optional[list[str]] = None,
         title: Optional[str] = None,
         coord_flip: Optional[bool] = True,
     ):
@@ -733,7 +733,7 @@ class Feols:
         ----------
         alpha : float, optional
             Significance level for highlighting significant coefficients. Defaults to None.
-        figsize : Tuple[int, int], optional
+        figsize : tuple[int, int], optional
             Size of the plot (width, height) in inches. Defaults to None.
         yintercept : float, optional
             Value to set as the y-axis intercept (vertical line). Defaults to None.
@@ -741,8 +741,8 @@ class Feols:
             Value to set as the x-axis intercept (horizontal line). Defaults to None.
         rotate_xticks : int, optional
             Rotation angle for x-axis tick labels. Defaults to None.
-        coefficients : List[str], optional
-            List of coefficients to include in the plot. If None, all coefficients are included.
+        coefficients : list[str], optional
+            list of coefficients to include in the plot. If None, all coefficients are included.
         title : str, optional
             Title of the plot. Defaults to None.
         coord_flip : bool, optional
@@ -775,7 +775,7 @@ class Feols:
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (500, 300),
+        figsize: tuple[int, int] = (500, 300),
         yintercept: Optional[float] = None,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
@@ -789,7 +789,7 @@ class Feols:
         ----------
         alpha : float, optional
             Significance level for visualization options. Defaults to None.
-        figsize : Tuple[int, int], optional
+        figsize : tuple[int, int], optional
             Size of the plot (width, height) in inches. Defaults to None.
         yintercept : float, optional
             Value to set as the y-axis intercept (vertical line). Defaults to None.
@@ -1529,7 +1529,7 @@ def _get_vcov_type(vcov, fval):
 
 
 def _drop_multicollinear_variables(
-    X: np.ndarray, names: List[str], collin_tol: float
+    X: np.ndarray, names: list[str], collin_tol: float
 ) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
@@ -1538,7 +1538,7 @@ def _drop_multicollinear_variables(
     ----------
     X : numpy.ndarray
         The design matrix X.
-    names : List[str]
+    names : list[str]
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
@@ -1547,9 +1547,9 @@ def _drop_multicollinear_variables(
     -------
     Xd : numpy.ndarray
         The design matrix X after checking for multicollinearity.
-    names : List[str]
+    names : list[str]
         The names of the coefficients, excluding those identified as collinear.
-    collin_vars : List[str]
+    collin_vars : list[str]
         The collinear variables identified during the check.
     collin_index : numpy.ndarray
         Logical array, where True indicates that the variable is collinear.
@@ -1656,7 +1656,7 @@ def _find_collinear_variables(X, tol=1e-10):
 
 # CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
-def bucket_argsort(arr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     counts = np.zeros(arr.max() + 1, dtype=np.uint32)
     for i in range(arr.size):
         counts[arr[i]] += 1

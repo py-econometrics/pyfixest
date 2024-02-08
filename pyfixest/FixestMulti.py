@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union, dict, list
 
 import numpy as np
 import pandas as pd
@@ -48,13 +48,13 @@ class FixestMulti:
         self,
         estimation: str,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Union[None, str, dict[str, str]] = None,
         weights: Union[None, np.ndarray] = None,
-        ssc: Dict[str, str] = {},
+        ssc: dict[str, str] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
-        i_ref1: Optional[Union[List, str]] = None,
-        i_ref2: Optional[Union[List, str]] = None,
+        i_ref1: Optional[Union[list, str]] = None,
+        i_ref2: Optional[Union[list, str]] = None,
     ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
@@ -63,14 +63,14 @@ class FixestMulti:
         Args:
             estimation (str): Type of estimation. Either "feols" or "fepois".
             fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
-            vcov (Union[None, str, Dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            vcov (Union[None, str, dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
             weights (Union[None, np.ndarray], optional): An array of weights. Either None or a 1D array of length N. Default is None.
-            ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
+            ssc (dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
             drop_intercept (bool, optional): Whether to drop the intercept. Default is False.
-            i_ref1 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the first interaction variable.
-            i_ref2 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the second interaction variable.
+            i_ref1 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the first interaction variable.
+            i_ref2 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the second interaction variable.
 
         Returns:
             None
@@ -123,8 +123,8 @@ class FixestMulti:
 
     def _estimate_all_models(
         self,
-        vcov: Union[str, Dict[str, str], None],
-        fixef_keys: Union[List[str], None],
+        vcov: Union[str, dict[str, str], None],
+        fixef_keys: Union[list[str], None],
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -133,12 +133,12 @@ class FixestMulti:
         Estimate multiple regression models.
 
         Args:
-            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
                 matrix to use for inference.
                 - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
                   or {"CRV3": "clustervar"} for CRV3 inference.
-            fixef_keys (List[str]): A list of fixed effects combinations.
+            fixef_keys (list[str]): A list of fixed effects combinations.
             collin_tol (float, optional): The tolerance level for the multicollinearity check. Default is 1e-6.
             iwls_maxiter (int, optional): The maximum number of iterations for the IWLS algorithm. Default is 25.
                 Only relevant for non-linear estimation strategies.
@@ -244,10 +244,10 @@ class FixestMulti:
                         if not _is_iv:
                             Zd = Xd
 
-                        Yd, Xd, Zd, endogvard = [
+                        Yd, Xd, Zd, endogvard = (
                             x.to_numpy() if x is not None else x
                             for x in [Yd, Xd, Zd, endogvard]
-                        ]
+                        )
 
                         if _is_iv:
                             coefnames_z = Z.columns.tolist()
@@ -295,7 +295,7 @@ class FixestMulti:
                                 X.drop(na_separation, axis=0, inplace=True)
                                 fe.drop(na_separation, axis=0, inplace=True)
 
-                        Y, X = [x.to_numpy() for x in [Y, X]]
+                        Y, X = (x.to_numpy() for x in [Y, X])
                         N = X.shape[0]
 
                         if fe is not None:
@@ -396,7 +396,7 @@ class FixestMulti:
 
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, Dict[str, str]]):
+    def vcov(self, vcov: Union[str, dict[str, str]]):
         """
         Update regression inference "on the fly".
 
@@ -404,7 +404,7 @@ class FixestMulti:
         to the "Fixest" object are replaced with the variance-covariance matrix specified via the method.
 
         Args:
-            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
                 matrix to use for inference.
                 - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference

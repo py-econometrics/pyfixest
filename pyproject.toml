@@ -59,7 +59,7 @@ select = [
   "W", # pycodestyle warnings
   "I", # isort
 #  "D", # flake8-docstrings
-#  "UP", # pyupgrade
+  "UP", # pyupgrade
 #  "SIM", # flake8-simplify
 #  "TRY", # tryceratops
 

@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Optional, Union
+from typing import Optional, Union, list
 
 import numpy as np
 import pandas as pd
@@ -114,8 +114,8 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Args:
@@ -154,9 +154,9 @@ def _did2s_estimate(
                     raise ValueError(
                         f"The treatment variable {treatment} must be boolean."
                     )
-        _not_yet_treated_data = data[data[treatment] == False]
+        _not_yet_treated_data = data[~data[treatment]]
     else:
-        _not_yet_treated_data = data[data["ATT"] == False]
+        _not_yet_treated_data = data[~data["ATT"]]
 
     # check if first stage formulas has fixed effects
     if "|" not in _first_stage:
@@ -205,8 +205,8 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.

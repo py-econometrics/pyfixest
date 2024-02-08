@@ -185,7 +185,7 @@ def test_errors():
 
     # boolean strings cannot be converted
     df_het["treat"] = df_het["treat"].astype(str)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         did2s_pyfixest(
             df_het,
             yname="dep_var",

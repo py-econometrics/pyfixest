@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union, list
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from pyfixest.summarize import _post_processing_input_checks
 
 
 def rwolf(
-    models: Union[List[Feols], Feols], param: str, B: int, seed: int
+    models: Union[list[Feols], Feols], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -20,7 +20,7 @@ def rwolf(
 
     Parameters
     ----------
-    models : List[Feols] or FixestMulti
+    models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a FixestMulti object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str

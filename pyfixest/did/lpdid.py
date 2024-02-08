@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Optional, Union, dict
 
 import numpy as np
 import pandas as pd
@@ -127,7 +127,7 @@ def _lpdid_estimate(
     yname: str,
     idname: str,
     tname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     att: bool = True,

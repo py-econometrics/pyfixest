@@ -482,7 +482,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         py_se = mod.se().values
 
         # sort py_coef, py_se
-        py_coef, py_se = [np.sort(x) for x in [py_coef, py_se]]
+        py_coef, py_se = (np.sort(x) for x in [py_coef, py_se])
 
         fixest_object = r_fixest.rx2(x + 1)
         fixest_coef = fixest_object.rx2("coefficients")
@@ -492,7 +492,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         # fixest_se = fixest.se(r_fixest)
 
         # sort fixest_coef, fixest_se
-        fixest_coef, fixest_se = [np.sort(x) for x in [fixest_coef, fixest_se]]
+        fixest_coef, fixest_se = (np.sort(x) for x in [fixest_coef, fixest_se])
 
         np.testing.assert_allclose(
             py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."

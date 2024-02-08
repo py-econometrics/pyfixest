@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Optional
+from typing import Optional, list
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ class Fepois(Feols):
         Fixed effects, a two-dimensional numpy array or None.
     weights : np.ndarray
         Weights, a one-dimensional numpy array or None.
-    coefnames : List[str]
+    coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
@@ -55,7 +55,7 @@ class Fepois(Feols):
         X: np.ndarray,
         fe: np.ndarray,
         weights: np.ndarray,
-        coefnames: List[str],
+        coefnames: list[str],
         drop_singletons: bool,
         collin_tol: float,
         maxiter: Optional[int] = 25,
@@ -292,7 +292,7 @@ class Fepois(Feols):
         return y_hat
 
 
-def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> List:
+def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> list:
     """
     Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
     separation checks. Currently, only the "fe" check is implemented.
@@ -308,8 +308,8 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
 
     Returns
     -------
-    List
-        List of indices of observations that are removed due to separation.
+    list
+        list of indices of observations that are removed due to separation.
     """
 
     if check == "fe":

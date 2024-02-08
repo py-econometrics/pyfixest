@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional, dict, tuple
 
 import numba as nb
 import numpy as np
@@ -10,9 +10,9 @@ def demean_model(
     X: pd.DataFrame,
     fe: Optional[pd.DataFrame],
     weights: Optional[np.ndarray],
-    lookup_demeaned_data: Dict[str, Any],
+    lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
-) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Demeans a single regression model via the alterating projections algorithm (see `demean` function). Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
 
@@ -26,7 +26,7 @@ def demean_model(
         A DataFrame of the fixed effects. None if no fixed effects specified.
     weights : np.ndarray or None
         A numpy array of weights. None if no weights.
-    lookup_demeaned_data : Dict[str, Any]
+    lookup_demeaned_data : dict[str, Any]
         A dictionary with keys for each fixed effects combination and potentially values of demeaned data frames.
         The function checks this dictionary to see if some of the variables have already been demeaned.
     na_index_str : str
@@ -34,7 +34,7 @@ def demean_model(
 
     Returns
     -------
-    Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
+    tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
@@ -167,7 +167,7 @@ def demean(
     weights: np.ndarray,
     tol: float = 1e-08,
     maxiter: int = 100_000,
-) -> Tuple[np.ndarray, bool]:
+) -> tuple[np.ndarray, bool]:
     """
     Workhorse for demeaning an input array `x` based on the specified fixed effects and weights
     via the alternating projections algorithm.
@@ -188,7 +188,7 @@ def demean(
 
     Returns
     -------
-    Tuple[np.ndarray, bool]
+    tuple[np.ndarray, bool]
         A tuple containing the demeaned array of shape (n_samples, n_features)
         and a boolean indicating whether the algorithm converged successfully.
     """

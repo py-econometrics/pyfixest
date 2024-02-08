@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Optional, Union, dict
 
 import pandas as pd
 
@@ -12,7 +12,7 @@ from pyfixest.utils import ssc
 def feols(
     fml: str,
     data: DataFrameType,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -228,7 +228,7 @@ def feols(
 def fepois(
     fml: str,
     data: DataFrameType,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
