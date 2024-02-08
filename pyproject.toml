@@ -43,6 +43,50 @@ filterwarnings =[
     "ignore::DeprecationWarning:rpy2"
 ]
 
+[tool.ruff]
+line-length = 88
+fix = true
+extend-include = ["*.ipynb"]
+
+# Assume Python 3.9
+target-version = "py39"
+
+[tool.ruff.lint]
+# docs: https://docs.astral.sh/ruff/rules/
+select = [
+  "F", # Pyflakes
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "I", # isort
+#  "D", # flake8-docstrings
+#  "UP", # pyupgrade
+#  "SIM", # flake8-simplify
+#  "TRY", # tryceratops
+
+]
+
+ignore = [
+# do not enable if formatting
+# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "W191",   # tab indentation
+  "E111",   # indentation
+  "E114",   # indentation
+  "E117",   # over indented
+  "D206",   # indent with spaces
+  "D300",   # triple single quotes
+  "E501",   # line length regulated by formatter
+  "D105",   # missing docstring in magic method
+  "D100",   # missing docstring in public module
+  "D104",   # missing docstring in public package
+  "TRY003", # Avoid specifying long messages outside the exception class
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
