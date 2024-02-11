@@ -319,7 +319,7 @@
     "href": "reference/multcomp.rwolf.html",
     "title": "multcomp.rwolf",
     "section": "",
-    "text": "multcomp.rwolf(models, param, B, seed)\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.\nFor each model, it is assumed that tests to adjust are of the form “param = 0”. This function uses the wildboottest() method for running the bootstrap, hence models of type Feiv or Fepois are not supported.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist[pyfixest.feols.Feols] or pyfixest.FixestMulti\nA list of models for which the p-values should be computed, or a FixestMulti object. Models of type Feiv or Fepois are not supported.\nrequired\n\n\nparam\nstr\nThe parameter for which the p-values should be computed.\nrequired\n\n\nB\nint\nThe number of bootstrap replications.\nrequired\n\n\nseed\nint\nThe seed for the random number generator.\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\npandas.pandas.DataFrame\nA DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.\n\n\n\n\n\n\nfrom pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import rwolf\n\ndata = get_data().dropna()\nfit = feols(\"Y ~ Y2 + X1 + X2\", data=data)\nrwolf(fit.to_list(), \"X1\", B=9999, seed=123)\n\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nrwolf([fit1, fit2], \"X1\", B=9999, seed=123)",
+    "text": "multcomp.rwolf(models, param, B, seed)\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.\nFor each model, it is assumed that tests to adjust are of the form “param = 0”. This function uses the wildboottest() method for running the bootstrap, hence models of type Feiv or Fepois are not supported.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist[pyfixest.feols.Feols] or pyfixest.FixestMulti\nA list of models for which the p-values should be computed, or a FixestMulti object. Models of type Feiv or Fepois are not supported.\nrequired\n\n\nparam\nstr\nThe parameter for which the p-values should be computed.\nrequired\n\n\nB\nint\nThe number of bootstrap replications.\nrequired\n\n\nseed\nint\nThe seed for the random number generator.\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\npandas.pandas.DataFrame\nA DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.\n\n\n\n\n\n\nfrom pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import rwolf\n\ndata = get_data().dropna()\nfit = feols(\"Y ~ Y2 + X1 + X2\", data=data)\nrwolf(fit.to_list(), \"X1\", B=9999, seed=123)\n\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nrwolf_df = rwolf([fit1, fit2], \"X1\", B=9999, seed=123)\nrwolf_df",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
@@ -355,7 +355,7 @@
     "href": "reference/multcomp.rwolf.html#examples",
     "title": "multcomp.rwolf",
     "section": "",
-    "text": "from pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import rwolf\n\ndata = get_data().dropna()\nfit = feols(\"Y ~ Y2 + X1 + X2\", data=data)\nrwolf(fit.to_list(), \"X1\", B=9999, seed=123)\n\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nrwolf([fit1, fit2], \"X1\", B=9999, seed=123)",
+    "text": "from pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import rwolf\n\ndata = get_data().dropna()\nfit = feols(\"Y ~ Y2 + X1 + X2\", data=data)\nrwolf(fit.to_list(), \"X1\", B=9999, seed=123)\n\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nrwolf_df = rwolf([fit1, fit2], \"X1\", B=9999, seed=123)\nrwolf_df",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
@@ -411,368 +411,87 @@
     ]
   },
   {
-    "objectID": "reference/index.html",
-    "href": "reference/index.html",
-    "title": "Function reference",
+    "objectID": "reference/multcomp.bonferroni.html",
+    "href": "reference/multcomp.bonferroni.html",
+    "title": "multcomp.bonferroni",
     "section": "",
-    "text": "User facing estimation functions\n\n\n\nestimation.feols\nEstimate a linear regression models with fixed effects using fixest formula syntax.\n\n\nestimation.fepois\nEstimate Poisson regression models with fixed effects using the pplmhdfe algorithm.\n\n\ndid.estimation.did2s\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.\n\n\ndid.estimation.lpdid\nEstimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.\n\n\ndid.estimation.event_study\nFunction for Event Study Estimation.\n\n\nmultcomp.rwolf\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.\n\n\n\n\n\n\nDetails on Methods and Attributes\n\n\n\nfeols.Feols\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\nfepois.Fepois\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\n\n\nfeiv.Feiv\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\n\n\n\n\nPost-Processing of Estimation Results\n\n\n\nsummarize.summary\nPrints a summary of estimation results for each estimated model.\n\n\nvisualize.coefplot\nPlot model coefficients with confidence intervals.\n\n\nvisualize.iplot\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.\n\n\n\n\n\n\nPyFixest internals and utilities\n\n\n\ndemean.demean\nWorkhorse for demeaning an input array x based on the specified fixed effects and weights\n\n\ndetect_singletons.detect_singletons\nDetect singleton fixed effects in a dataset.\n\n\nmodel_matrix_fixest.model_matrix_fixest\nCreate model matrices for fixed effects estimation.",
-    "crumbs": [
-      "Documentation",
-      "Function reference"
-    ]
-  },
-  {
-    "objectID": "reference/index.html#estimation-functions",
-    "href": "reference/index.html#estimation-functions",
-    "title": "Function reference",
-    "section": "",
-    "text": "User facing estimation functions\n\n\n\nestimation.feols\nEstimate a linear regression models with fixed effects using fixest formula syntax.\n\n\nestimation.fepois\nEstimate Poisson regression models with fixed effects using the pplmhdfe algorithm.\n\n\ndid.estimation.did2s\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.\n\n\ndid.estimation.lpdid\nEstimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.\n\n\ndid.estimation.event_study\nFunction for Event Study Estimation.\n\n\nmultcomp.rwolf\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.",
-    "crumbs": [
-      "Documentation",
-      "Function reference"
-    ]
-  },
-  {
-    "objectID": "reference/index.html#estimation-classes",
-    "href": "reference/index.html#estimation-classes",
-    "title": "Function reference",
-    "section": "",
-    "text": "Details on Methods and Attributes\n\n\n\nfeols.Feols\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\nfepois.Fepois\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\n\n\nfeiv.Feiv\nNon user-facing class to estimate an IV model using a 2SLS estimator.",
-    "crumbs": [
-      "Documentation",
-      "Function reference"
-    ]
-  },
-  {
-    "objectID": "reference/index.html#summarize-and-visualize",
-    "href": "reference/index.html#summarize-and-visualize",
-    "title": "Function reference",
-    "section": "",
-    "text": "Post-Processing of Estimation Results\n\n\n\nsummarize.summary\nPrints a summary of estimation results for each estimated model.\n\n\nvisualize.coefplot\nPlot model coefficients with confidence intervals.\n\n\nvisualize.iplot\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.",
-    "crumbs": [
-      "Documentation",
-      "Function reference"
-    ]
-  },
-  {
-    "objectID": "reference/index.html#misc-utilities",
-    "href": "reference/index.html#misc-utilities",
-    "title": "Function reference",
-    "section": "",
-    "text": "PyFixest internals and utilities\n\n\n\ndemean.demean\nWorkhorse for demeaning an input array x based on the specified fixed effects and weights\n\n\ndetect_singletons.detect_singletons\nDetect singleton fixed effects in a dataset.\n\n\nmodel_matrix_fixest.model_matrix_fixest\nCreate model matrices for fixed effects estimation.",
-    "crumbs": [
-      "Documentation",
-      "Function reference"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.coefplot.html",
-    "href": "reference/visualize.coefplot.html",
-    "title": "visualize.coefplot",
-    "section": "",
-    "text": "visualize.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)\nPlot model coefficients with confidence intervals.",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.coefplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.coefplot.html#parameters",
-    "href": "reference/visualize.coefplot.html#parameters",
-    "title": "visualize.coefplot",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist or object\nA list of fitted models of type [Feols(/reference/Feols.qmd) or Fepois, or just a single model.\nrequired\n\n\nfigsize\ntuple\nThe size of the figure.\n(500, 300)\n\n\nalpha\nfloat\nThe significance level for the confidence intervals.\n0.05\n\n\nyintercept\nfloat or None\nThe value at which to draw a horizontal line on the plot. Default is 0.\n0\n\n\nxintercept\nfloat or None\nThe value at which to draw a vertical line on the plot. Default is None.\nNone\n\n\nrotate_xticks\nfloat\nThe angle in degrees to rotate the xticks labels. Default is 0 (no rotation).\n0\n\n\ncoefficients\nlist\nA list of coefficients to plot. If None, all coefficients are plotted.\nNone\n\n\ntitle\nstr\nThe title of the plot.\nNone\n\n\ncoord_flip\nbool\nWhether to flip the coordinates of the plot. Default is True.\nTrue",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.coefplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.coefplot.html#returns",
-    "href": "reference/visualize.coefplot.html#returns",
-    "title": "visualize.coefplot",
-    "section": "Returns",
-    "text": "Returns\n\n\n\nType\nDescription\n\n\n\n\nobject\nA lets-plot figure.",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.coefplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.coefplot.html#examples",
-    "href": "reference/visualize.coefplot.html#examples",
-    "title": "visualize.coefplot",
-    "section": "Examples",
-    "text": "Examples\n\nfrom pyfixest.utils import get_data\nfrom pyfixest.estimation import feols\nfrom pyfixest.visualize import coefplot\n\ndf = get_data()\nfit1 = feols(\"Y ~ X1\", data = df)\nfit2 = feols(\"Y ~ X1 + X2\", data = df)\nfit3 = feols(\"Y ~ X1 + X2 | f1\", data = df)\n\ncoefplot([fit1, fit2, fit3])",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.coefplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.iplot.html",
-    "href": "reference/visualize.iplot.html",
-    "title": "visualize.iplot",
-    "section": "",
-    "text": "visualize.iplot(models, alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.iplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.iplot.html#parameters",
-    "href": "reference/visualize.iplot.html#parameters",
-    "title": "visualize.iplot",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist or object\nA list of fitted models of type [Feols(/reference/Feols.qmd) or Fepois, or just a single model.\nrequired\n\n\nfigsize\ntuple\nThe size of the figure.\n(500, 300)\n\n\nalpha\nfloat\nThe significance level for the confidence intervals.\n0.05\n\n\nyintercept\nint or None\nThe value at which to draw a horizontal line on the plot.\nNone\n\n\nxintercept\nint or None\nThe value at which to draw a vertical line on the plot.\nNone\n\n\nrotate_xticks\nfloat\nThe angle in degrees to rotate the xticks labels. Default is 0 (no rotation).\n0\n\n\ntitle\nstr\nThe title of the plot.\nNone\n\n\ncoord_flip\nbool\nWhether to flip the coordinates of the plot. Default is True.\nTrue",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.iplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.iplot.html#returns",
-    "href": "reference/visualize.iplot.html#returns",
-    "title": "visualize.iplot",
-    "section": "Returns",
-    "text": "Returns\n\n\n\nType\nDescription\n\n\n\n\nobject\nA lets-plot figure.",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.iplot"
-    ]
-  },
-  {
-    "objectID": "reference/visualize.iplot.html#examples",
-    "href": "reference/visualize.iplot.html#examples",
-    "title": "visualize.iplot",
-    "section": "Examples",
-    "text": "Examples\n\nfrom pyfixest.utils import get_data\nfrom pyfixest.estimation import feols\nfrom pyfixest.visualize import iplot\n\ndf = get_data()\nfit1 = feols(\"Y ~ i(f1)\", data = df)\nfit2 = feols(\"Y ~ i(f1) + X2\", data = df)\nfit3 = feols(\"Y ~ i(f1) + X2 | f2\", data = df)\n\niplot([fit1, fit2, fit3])",
-    "crumbs": [
-      "Documentation",
-      "Summarize and Visualize",
-      "visualize.iplot"
-    ]
-  },
-  {
-    "objectID": "reference/estimation.feols.html",
-    "href": "reference/estimation.feols.html",
-    "title": "estimation.feols",
-    "section": "",
-    "text": "estimation.feols(fml, data, vcov=None, weights=None, ssc=ssc(), fixef_rm='none', collin_tol=1e-10, drop_intercept=False, i_ref1=None, i_ref2=None)\nEstimate a linear regression models with fixed effects using fixest formula syntax.",
+    "text": "multcomp.bonferroni(models, param)\nCompute Bonferroni adjusted p-values for multiple hypothesis testing.\nFor each model, it is assumed that tests to adjust are of the form “param = 0”.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\n(list[pyfixest.feols.Feols, pyfixest.fepois.Fepois], pyfixest.feols.Feols or pyfixest.fepois.Fepois)\nA list of models for which the p-values should be adjusted, or a Feols or Fepois object.\nrequired\n\n\nparam\nstr\nThe parameter for which the p-values should be adjusted.\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\npandas.pandas.DataFrame\nA DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.\n\n\n\n\n\n\nfrom pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import bonferroni\n\ndata = get_data().dropna()\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nbonf_df = bonferroni([fit1, fit2], param = \"X1\")\nbonf_df",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
-      "estimation.feols"
+      "multcomp.bonferroni"
     ]
   },
   {
-    "objectID": "reference/estimation.feols.html#parameters",
-    "href": "reference/estimation.feols.html#parameters",
-    "title": "estimation.feols",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nfml\nstr\nA three-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1”. “|” separates dependent variable, fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2).\nrequired\n\n\ndata\npyfixest.dev_utils.DataFrameType\nA pandas or polars dataframe containing the variables in the formula.\nrequired\n\n\nvcov\ntyping.Union[str, dict[str, str]]\nType of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.\nNone\n\n\nweights\nUnion[None, str], optional. Default is None. Weights for WLS estimation. If None, all observations are weighted equally. If a string, the name of the column in data that contains the weights.\n\nNone\n\n\nssc\nstr\nA ssc object specifying the small sample correction for inference.\nssc()\n\n\nfixef_rm\nstr\nSpecifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.\n'none'\n\n\ncollin_tol\nfloat\nTolerance for collinearity check, by default 1e-06.\n1e-10\n\n\ndrop_intercept\nbool\nWhether to drop the intercept from the model, by default False.\nFalse\n\n\ni_ref1\ntyping.Optional[typing.Union[list, str]]\nReference category for the first set of categorical variables interacted via “i()”, by default None.\nNone\n\n\ni_ref2\ntyping.Optional[typing.Union[list, str]]\nReference category for the second set of categorical variables interacted via “i()”, by default None.\nNone",
+    "objectID": "reference/multcomp.bonferroni.html#parameters",
+    "href": "reference/multcomp.bonferroni.html#parameters",
+    "title": "multcomp.bonferroni",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nmodels\n(list[pyfixest.feols.Feols, pyfixest.fepois.Fepois], pyfixest.feols.Feols or pyfixest.fepois.Fepois)\nA list of models for which the p-values should be adjusted, or a Feols or Fepois object.\nrequired\n\n\nparam\nstr\nThe parameter for which the p-values should be adjusted.\nrequired",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
-      "estimation.feols"
+      "multcomp.bonferroni"
     ]
   },
   {
-    "objectID": "reference/estimation.feols.html#returns",
-    "href": "reference/estimation.feols.html#returns",
-    "title": "estimation.feols",
-    "section": "Returns",
-    "text": "Returns\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nobject\nAn instance of the [Feols(/reference/Feols.qmd) class or FixestMulti class for multiple models specified via fml.",
+    "objectID": "reference/multcomp.bonferroni.html#returns",
+    "href": "reference/multcomp.bonferroni.html#returns",
+    "title": "multcomp.bonferroni",
+    "section": "",
+    "text": "Type\nDescription\n\n\n\n\npandas.pandas.DataFrame\nA DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
-      "estimation.feols"
+      "multcomp.bonferroni"
     ]
   },
   {
-    "objectID": "reference/estimation.feols.html#examples",
-    "href": "reference/estimation.feols.html#examples",
-    "title": "estimation.feols",
-    "section": "Examples",
-    "text": "Examples\nAs in fixest, the [Feols(/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects. The following example regresses Y on X1 and X2 with fixed effects for f1 and f2: fixed effects are specified after the | symbol.\n\nfrom pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.summarize import etable\n\ndata = get_data()\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.summary()\n\n\n            \n            \n            \n\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |\n| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n\n\nCalling feols() returns an instance of the [Feols(/reference/Feols.qmd) class. The summary() method can be used to print the results.\nAn alternative way to retrieve model results is via the tidy() method, which returns a pandas dataframe with the estimated coefficients, standard errors, t-statistics, and p-values.\n\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nX1\n-0.924046\n0.060934\n-15.164621\n2.664535e-15\n-1.048671\n-0.799421\n\n\nX2\n-0.174107\n0.014608\n-11.918277\n1.069367e-12\n-0.203985\n-0.144230\n\n\n\n\n\n\n\nYou can also access all elements in the tidy data frame by dedicated methods, e.g. fit.coef() for the coefficients, fit.se() for the standard errors, fit.tstat() for the t-statistics, and fit.pval() for the p-values, and fit.confint() for the confidence intervals.\nThe employed type of inference can be specified via the vcov argument. If vcov is not provided, PyFixest employs the fixest default of iid inference, unless there are fixed effects in the model, in which case feols() clusters the standard error by the first fixed effect (CRV1 inference).\n\nfit1 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov=\"iid\")\nfit2 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov=\"hetero\")\nfit3 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov={\"CRV1\": \"f1\"})\n\nSupported inference types are “iid”, “hetero”, “HC1”, “HC2”, “HC3”, and “CRV1”/“CRV3”. Clustered standard errors are specified via a dictionary, e.g. {\"CRV1\": \"f1\"} for CRV1 inference with clustering by f1 or {\"CRV3\": \"f1\"} for CRV3 inference with clustering by f1. For two-way clustering, you can provide a formula string, e.g. {\"CRV1\": \"f1 + f2\"} for CRV1 inference with clustering by f1.\n\nfit4 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov={\"CRV1\": \"f1 + f2\"})\n\nInference can be adjusted post estimation via the vcov method:\n\nfit.summary()\nfit.vcov(\"iid\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |\n| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  iid\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.054 |   -16.995 |      0.000 |  -1.031 |   -0.817 |\n| X2            |     -0.174 |        0.014 |   -12.081 |      0.000 |  -0.202 |   -0.146 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n\n\nThe ssc argument specifies the small sample correction for inference. In general, feols() uses all of fixest::feols() defaults, but sets the fixef.K argument to \"none\" whereas the fixest::feols() default is \"nested\". See here for more details: link to github.\nfeols() supports a range of multiple estimation syntax, i.e. you can estimate multiple models in one call. The following example estimates two models, one with fixed effects for f1 and one with fixed effects for f2 using the sw() syntax.\n\nfit = feols(\"Y ~ X1 + X2 | sw(f1, f2)\", data)\ntype(fit)\n\npyfixest.FixestMulti.FixestMulti\n\n\nThe returned object is an instance of the FixestMulti class. You can access the results of the first model via fit.fetch_model(0) and the results of the second model via fit.fetch_model(1). You can compare the model results via the etable() function:\n\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                  Y\n--------------------------------------------------\nX1             -0.95*** (0.067)  -0.979*** (0.077)\nX2            -0.174*** (0.018)  -0.175*** (0.022)\n--------------------------------------------------\nf1                            x                  -\nf2                            -                  x\n--------------------------------------------------\nR2                        0.489              0.354\nS.E. type                by: f1             by: f2\nObservations                997                998\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nOther supported multiple estimation syntax include sw0(), csw() and csw0(). While sw() adds variables in a “stepwise” fashinon, csw() does so cumulatively.\n\nfit = feols(\"Y ~ X1 + X2 | csw(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f1+f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                  Y\n--------------------------------------------------\nX1             -0.95*** (0.067)  -0.924*** (0.061)\nX2            -0.174*** (0.018)  -0.174*** (0.015)\n--------------------------------------------------\nf1                            x                  x\nf2                            -                  x\n--------------------------------------------------\nR2                        0.489              0.659\nS.E. type                by: f1             by: f1\nObservations                997                997\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nThe sw0() and csw0() syntax are similar to sw() and csw(), but start with a model that exludes the variables specified in sw() and csw():\n\nfit = feols(\"Y ~ X1 + X2 | sw0(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])\n\nModel:  Y~X1+X2\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f2\n                           est1               est2               est3\n------------  -----------------  -----------------  -----------------\ndepvar                        Y                  Y                  Y\n---------------------------------------------------------------------\nIntercept      0.889*** (0.108)\nX1            -0.993*** (0.082)   -0.95*** (0.067)  -0.979*** (0.077)\nX2            -0.176*** (0.022)  -0.174*** (0.018)  -0.175*** (0.022)\n---------------------------------------------------------------------\nf1                            -                  x                  -\nf2                            -                  -                  x\n---------------------------------------------------------------------\nR2                        0.177              0.489              0.354\nS.E. type                   iid             by: f1             by: f2\nObservations                998                997                998\n---------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nThe feols() function also supports multiple dependent variables. The following example estimates two models, one with Y1 as the dependent variable and one with Y2 as the dependent variable.\n\nfit = feols(\"Y + Y2 ~ X1 | f1 + f2\", data)\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1|f1+f2\nModel:  Y2~X1|f1+f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                 Y2\n--------------------------------------------------\nX1            -0.919*** (0.065)  -1.228*** (0.195)\n--------------------------------------------------\nf1                            x                  x\nf2                            x                  x\n--------------------------------------------------\nR2                        0.609              0.168\nS.E. type                by: f1             by: f1\nObservations                997                998\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nIt is possible to combine different multiple estimation operators:\n\nfit = feols(\"Y + Y2 ~ X1 | sw(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2), fit.fetch_model(3)])\n\nModel:  Y~X1|f1\nModel:  Y2~X1|f1\nModel:  Y~X1|f2\nModel:  Y2~X1|f2\n                           est1               est2               est3               est4\n------------  -----------------  -----------------  -----------------  -----------------\ndepvar                        Y                 Y2                  Y                 Y2\n----------------------------------------------------------------------------------------\nX1            -0.949*** (0.069)  -1.266*** (0.176)  -0.982*** (0.081)  -1.301*** (0.205)\n----------------------------------------------------------------------------------------\nf1                            x                  x                  -                  -\nf2                            -                  -                  x                  x\n----------------------------------------------------------------------------------------\nR2                        0.437              0.115              0.302               0.09\nS.E. type                by: f1             by: f1             by: f2             by: f2\nObservations                997                998                998                999\n----------------------------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nIn general, using muliple estimation syntax can improve the estimation time as covariates that are demeaned in one model and are used in another model do not need to be demeaned again: feols() implements a caching mechanism that stores the demeaned covariates.\nBesides OLS, feols() also supports IV estimation via three part formulas:\n\nfit = feols(\"Y ~  X2 | f1 + f2 | X1 ~ Z1\", data)\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nX1\n-1.050097\n0.085493\n-12.282912\n5.133671e-13\n-1.224949\n-0.875245\n\n\nX2\n-0.174351\n0.014779\n-11.797039\n1.369793e-12\n-0.204578\n-0.144124\n\n\n\n\n\n\n\nHere, X1 is the endogenous variable and Z1 is the instrument. f1 and f2 are the fixed effects, as before. To estimate IV models without fixed effects, simply omit the fixed effects part of the formula:\n\nfit = feols(\"Y ~  X2 | X1 ~ Z1\", data)\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n0.861939\n0.151187\n5.701137\n1.567858e-08\n0.565257\n1.158622\n\n\nX1\n-0.967238\n0.130078\n-7.435847\n2.238210e-13\n-1.222497\n-0.711980\n\n\nX2\n-0.176416\n0.021769\n-8.104001\n1.554312e-15\n-0.219134\n-0.133697\n\n\n\n\n\n\n\nLast, feols() supports interaction of variables via the i() syntax. Documentation on this is tba.\nAfter fitting a model via feols(), you can use the predict() method to get the predicted values:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.predict()[0:5]\n\narray([ 3.0633663 , -0.69574133, -0.91240433, -0.46370257, -1.67331154])\n\n\nThe predict() method also supports a newdata argument to predict on new data, which returns a numpy array of the predicted values:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.predict(newdata=data)[0:5]\n\narray([ 2.14598765,         nan,         nan,  3.0633663 , -0.69574133])\n\n\nLast, you can plot the results of a model via the coefplot() method:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.coefplot()",
+    "objectID": "reference/multcomp.bonferroni.html#examples",
+    "href": "reference/multcomp.bonferroni.html#examples",
+    "title": "multcomp.bonferroni",
+    "section": "",
+    "text": "from pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.multcomp import bonferroni\n\ndata = get_data().dropna()\nfit1 = feols(\"Y ~ X1\", data=data)\nfit2 = feols(\"Y ~ X1 + X2\", data=data)\nbonf_df = bonferroni([fit1, fit2], param = \"X1\")\nbonf_df",
     "crumbs": [
       "Documentation",
       "Estimation Functions",
-      "estimation.feols"
+      "multcomp.bonferroni"
     ]
   },
   {
-    "objectID": "replicating-the-effect.html",
-    "href": "replicating-the-effect.html",
-    "title": "Replicating Examples from “The Effect”",
+    "objectID": "reference/fepois.Fepois.html",
+    "href": "reference/fepois.Fepois.html",
+    "title": "fepois.Fepois",
     "section": "",
-    "text": "This notebook replicates code examples from Nick Huntington-Klein’s book on causal inference, The Effect.\n\n%load_ext autoreload\n%autoreload 2\n\nimport pandas as pd\nimport numpy as np\nfrom pyfixest.estimation import feols\nfrom pyfixest.summarize import summary\n\nThe autoreload extension is already loaded. To reload it, use:\n  %reload_ext autoreload\n\n\n\n\n\nfrom causaldata import Mroz\n\n# Read in data\ndt = Mroz.load_pandas().data\n# Keep just working women\ndt = dt[dt[\"lfp\"] == True]\n# Create unlogged earnings\ndt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n# 5. Run multiple linear regression models by succesively adding controls\nfit = feols(fml=\"lwg ~ csw(inc, wc, k5)\", data=dt, vcov=\"iid\")\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      1.007 |        0.071 |    14.180 |      0.000 |   0.868 |    1.147 |\n| inc           |      0.010 |        0.003 |     2.947 |      0.003 |   0.003 |    0.016 |\n---\nRMSE: 0.715   R2: 0.02\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.972 |        0.070 |    13.909 |      0.000 |   0.834 |    1.109 |\n| inc           |      0.005 |        0.003 |     1.640 |      0.102 |  -0.001 |    0.012 |\n| wc            |      0.342 |        0.075 |     4.595 |      0.000 |   0.196 |    0.489 |\n---\nRMSE: 0.698   R2: 0.066\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.982 |        0.071 |    13.819 |      0.000 |   0.843 |    1.122 |\n| inc           |      0.005 |        0.003 |     1.590 |      0.113 |  -0.001 |    0.012 |\n| wc            |      0.349 |        0.075 |     4.656 |      0.000 |   0.202 |    0.497 |\n| k5            |     -0.072 |        0.087 |    -0.825 |      0.410 |  -0.243 |    0.099 |\n---\nRMSE: 0.697   R2: 0.068\n\n\nC:\\Users\\alexa\\AppData\\Local\\Temp\\ipykernel_13896\\3519125210.py:8: SettingWithCopyWarning: \nA value is trying to be set on a copy of a slice from a DataFrame.\nTry using .loc[row_indexer,col_indexer] = value instead\n\nSee the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy\n  dt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n\n\n\n\n\n\n\nfrom causaldata import restaurant_inspections\n\nres = restaurant_inspections.load_pandas().data\nres.inspection_score = res.inspection_score.astype(float)\nres.NumberofLocations = res.NumberofLocations.astype(float)\nres.dtypes\n\nfit = feols(fml=\"inspection_score ~ NumberofLocations\", data=res)\nsummary(fit)\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept         |     94.866 |        0.046 |  2049.047 |      0.000 |  94.775 |   94.956 |\n| NumberofLocations |     -0.019 |        0.000 |   -43.321 |      0.000 |  -0.020 |   -0.018 |\n---\nRMSE: 6.051   R2: 0.065\n\n\n\n\n\n\ndf = restaurant_inspections.load_pandas().data\n\nfit1 = feols(\n    fml=\"inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year\", data=df\n)\nfit2 = feols(fml=\"inspection_score ~ NumberofLocations*Weekend + Year\", data=df)\n\nsummary([fit1, fit2])\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient            |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:-----------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept              |    225.504 |       12.409 |    18.172 |      0.000 | 201.181 |  249.827 |\n| NumberofLocations      |     -0.075 |        0.019 |    -4.041 |      0.000 |  -0.111 |   -0.039 |\n| I(NumberofLocations^2) |      0.056 |        0.019 |     3.009 |      0.003 |   0.020 |    0.093 |\n| Year                   |     -0.065 |        0.006 |   -10.527 |      0.000 |  -0.077 |   -0.053 |\n---\nRMSE: 6.038   R2: 0.069\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient               |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept                 |    225.126 |       12.415 |    18.134 |      0.000 | 200.793 |  249.460 |\n| NumberofLocations         |     -0.019 |        0.000 |   -43.759 |      0.000 |  -0.020 |   -0.018 |\n| Weekend                   |      1.759 |        0.488 |     3.606 |      0.000 |   0.803 |    2.715 |\n| Year                      |     -0.065 |        0.006 |   -10.494 |      0.000 |  -0.077 |   -0.053 |\n| NumberofLocations:Weekend |     -0.010 |        0.008 |    -1.307 |      0.191 |  -0.025 |    0.005 |\n---\nRMSE: 6.038   R2: 0.069\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov=\"HC3\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  HC3\nObservations:  27178\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.564 |  209.196 |\n| Year          |     -0.046 |        0.006 |    -7.551 |      0.000 |  -0.057 |   -0.034 |\n| Weekend       |      2.057 |        0.353 |     5.829 |      0.000 |   1.365 |    2.749 |\n---\nRMSE: 6.248   R2: 0.003\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov={\"CRV1\": \"Weekend\"}).tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n185.380033\n3.264345\n56.789343\n0.011209\n143.902592\n226.857474\n\n\nYear\n-0.045640\n0.001624\n-28.107556\n0.022640\n-0.066272\n-0.025008\n\n\nWeekend\n2.057166\n0.001401\n1468.256800\n0.000434\n2.039364\n2.074969\n\n\n\n\n\n\n\n\n\n\n\nfit = feols(fml=\"inspection_score ~ Year + Weekend\", data=df)\nfit.wildboottest(B=999, param=\"Year\")\n\n\n\n\n\n\n\ntba\n\n\n\n\nfrom causaldata import gapminder\n\ngm = gapminder.load_pandas().data\ngm[\"logGDPpercap\"] = gm[\"gdpPercap\"].apply(\"log\")\n\nfit = feols(fml=\"lifeExp ~ C(country) + np.log(gdpPercap)\", data=gm)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n-27.773459\n2.500533\n-11.107015\n0.000000e+00\n-32.678217\n-22.868701\n\n\nC(country)[T.Albania]\n17.782625\n2.195160\n8.100835\n1.110223e-15\n13.476853\n22.088397\n\n\nC(country)[T.Algeria]\n5.241055\n2.214496\n2.366704\n1.806875e-02\n0.897356\n9.584755\n\n\nC(country)[T.Angola]\n-13.907122\n2.201727\n-6.316460\n3.481857e-10\n-18.225777\n-9.588468\n\n\nC(country)[T.Argentina]\n8.132158\n2.272781\n3.578065\n3.567229e-04\n3.674133\n12.590183\n\n\n\n\n\n\n\n\n\n\n\n# Set our individual and time (index) for our data\nfit = feols(fml=\"lifeExp ~ np.log(gdpPercap) | country + year\", data=gm)\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lifeExp, Fixed effects: country+year\nInference:  CRV1\nObservations:  1704\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| np.log(gdpPercap) |      1.450 |        0.677 |     2.141 |      0.034 |   0.111 |    2.788 |\n---\nRMSE: 3.267  Adj. R2: 0.018  Adj. R2 Within: 0.018\n\n\n\n\n\n\n\n\n\nfrom causaldata import organ_donations\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\nod[\"After\"] = od[\"Quarter_Num\"] &gt; 3\nod[\"Treated\"] = 1 * (od[\"California\"] & od[\"After\"])\n\ndid = feols(fml=\"Rate ~ Treated | State + Quarter\", data=od)\ndid.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Rate, Fixed effects: State+Quarter\nInference:  CRV1\nObservations:  162\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Treated       |     -0.022 |        0.006 |    -3.733 |      0.001 |  -0.035 |   -0.010 |\n---\nRMSE: 0.022  Adj. R2: 0.003  Adj. R2 Within: 0.003\n\n\n\n\n\n\nfrom causaldata import organ_donations\nfrom pyfixest.visualize import iplot\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\n# od[\"Quarter_Num\"] = pd.Categorical(od.Quarter_Num)\nod[\"California\"] = od.California.astype(float)\n\ndid2 = feols(\n    fml=\"Rate ~ i(Quarter_Num, California) | State + Quarter_Num\", data=od, i_ref1=3\n)\n\ndid2.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.1]:California\n-0.002942\n0.004986\n-0.590105\n0.560215\n-0.013191\n0.007307\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.2]:California\n0.006296\n0.002222\n2.833502\n0.008782\n0.001729\n0.010864\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.4]:California\n-0.021565\n0.004937\n-4.368464\n0.000178\n-0.031713\n-0.011418\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.5]:California\n-0.020292\n0.004387\n-4.625529\n0.000090\n-0.029310\n-0.011275\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.6]:California\n-0.022165\n0.009820\n-2.257160\n0.032627\n-0.042351\n-0.001980"
-  },
-  {
-    "objectID": "replicating-the-effect.html#chapter-4-describing-relationships",
-    "href": "replicating-the-effect.html#chapter-4-describing-relationships",
-    "title": "Replicating Examples from “The Effect”",
-    "section": "",
-    "text": "from causaldata import Mroz\n\n# Read in data\ndt = Mroz.load_pandas().data\n# Keep just working women\ndt = dt[dt[\"lfp\"] == True]\n# Create unlogged earnings\ndt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n# 5. Run multiple linear regression models by succesively adding controls\nfit = feols(fml=\"lwg ~ csw(inc, wc, k5)\", data=dt, vcov=\"iid\")\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      1.007 |        0.071 |    14.180 |      0.000 |   0.868 |    1.147 |\n| inc           |      0.010 |        0.003 |     2.947 |      0.003 |   0.003 |    0.016 |\n---\nRMSE: 0.715   R2: 0.02\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.972 |        0.070 |    13.909 |      0.000 |   0.834 |    1.109 |\n| inc           |      0.005 |        0.003 |     1.640 |      0.102 |  -0.001 |    0.012 |\n| wc            |      0.342 |        0.075 |     4.595 |      0.000 |   0.196 |    0.489 |\n---\nRMSE: 0.698   R2: 0.066\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.982 |        0.071 |    13.819 |      0.000 |   0.843 |    1.122 |\n| inc           |      0.005 |        0.003 |     1.590 |      0.113 |  -0.001 |    0.012 |\n| wc            |      0.349 |        0.075 |     4.656 |      0.000 |   0.202 |    0.497 |\n| k5            |     -0.072 |        0.087 |    -0.825 |      0.410 |  -0.243 |    0.099 |\n---\nRMSE: 0.697   R2: 0.068\n\n\nC:\\Users\\alexa\\AppData\\Local\\Temp\\ipykernel_13896\\3519125210.py:8: SettingWithCopyWarning: \nA value is trying to be set on a copy of a slice from a DataFrame.\nTry using .loc[row_indexer,col_indexer] = value instead\n\nSee the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy\n  dt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")"
-  },
-  {
-    "objectID": "replicating-the-effect.html#chapter-13-regression",
-    "href": "replicating-the-effect.html#chapter-13-regression",
-    "title": "Replicating Examples from “The Effect”",
-    "section": "",
-    "text": "from causaldata import restaurant_inspections\n\nres = restaurant_inspections.load_pandas().data\nres.inspection_score = res.inspection_score.astype(float)\nres.NumberofLocations = res.NumberofLocations.astype(float)\nres.dtypes\n\nfit = feols(fml=\"inspection_score ~ NumberofLocations\", data=res)\nsummary(fit)\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept         |     94.866 |        0.046 |  2049.047 |      0.000 |  94.775 |   94.956 |\n| NumberofLocations |     -0.019 |        0.000 |   -43.321 |      0.000 |  -0.020 |   -0.018 |\n---\nRMSE: 6.051   R2: 0.065\n\n\n\n\n\n\ndf = restaurant_inspections.load_pandas().data\n\nfit1 = feols(\n    fml=\"inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year\", data=df\n)\nfit2 = feols(fml=\"inspection_score ~ NumberofLocations*Weekend + Year\", data=df)\n\nsummary([fit1, fit2])\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient            |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:-----------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept              |    225.504 |       12.409 |    18.172 |      0.000 | 201.181 |  249.827 |\n| NumberofLocations      |     -0.075 |        0.019 |    -4.041 |      0.000 |  -0.111 |   -0.039 |\n| I(NumberofLocations^2) |      0.056 |        0.019 |     3.009 |      0.003 |   0.020 |    0.093 |\n| Year                   |     -0.065 |        0.006 |   -10.527 |      0.000 |  -0.077 |   -0.053 |\n---\nRMSE: 6.038   R2: 0.069\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient               |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept                 |    225.126 |       12.415 |    18.134 |      0.000 | 200.793 |  249.460 |\n| NumberofLocations         |     -0.019 |        0.000 |   -43.759 |      0.000 |  -0.020 |   -0.018 |\n| Weekend                   |      1.759 |        0.488 |     3.606 |      0.000 |   0.803 |    2.715 |\n| Year                      |     -0.065 |        0.006 |   -10.494 |      0.000 |  -0.077 |   -0.053 |\n| NumberofLocations:Weekend |     -0.010 |        0.008 |    -1.307 |      0.191 |  -0.025 |    0.005 |\n---\nRMSE: 6.038   R2: 0.069\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov=\"HC3\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  HC3\nObservations:  27178\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.564 |  209.196 |\n| Year          |     -0.046 |        0.006 |    -7.551 |      0.000 |  -0.057 |   -0.034 |\n| Weekend       |      2.057 |        0.353 |     5.829 |      0.000 |   1.365 |    2.749 |\n---\nRMSE: 6.248   R2: 0.003\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov={\"CRV1\": \"Weekend\"}).tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n185.380033\n3.264345\n56.789343\n0.011209\n143.902592\n226.857474\n\n\nYear\n-0.045640\n0.001624\n-28.107556\n0.022640\n-0.066272\n-0.025008\n\n\nWeekend\n2.057166\n0.001401\n1468.256800\n0.000434\n2.039364\n2.074969\n\n\n\n\n\n\n\n\n\n\n\nfit = feols(fml=\"inspection_score ~ Year + Weekend\", data=df)\nfit.wildboottest(B=999, param=\"Year\")"
-  },
-  {
-    "objectID": "replicating-the-effect.html#chapter-16-fixed-effects",
-    "href": "replicating-the-effect.html#chapter-16-fixed-effects",
-    "title": "Replicating Examples from “The Effect”",
-    "section": "",
-    "text": "tba\n\n\n\n\nfrom causaldata import gapminder\n\ngm = gapminder.load_pandas().data\ngm[\"logGDPpercap\"] = gm[\"gdpPercap\"].apply(\"log\")\n\nfit = feols(fml=\"lifeExp ~ C(country) + np.log(gdpPercap)\", data=gm)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n-27.773459\n2.500533\n-11.107015\n0.000000e+00\n-32.678217\n-22.868701\n\n\nC(country)[T.Albania]\n17.782625\n2.195160\n8.100835\n1.110223e-15\n13.476853\n22.088397\n\n\nC(country)[T.Algeria]\n5.241055\n2.214496\n2.366704\n1.806875e-02\n0.897356\n9.584755\n\n\nC(country)[T.Angola]\n-13.907122\n2.201727\n-6.316460\n3.481857e-10\n-18.225777\n-9.588468\n\n\nC(country)[T.Argentina]\n8.132158\n2.272781\n3.578065\n3.567229e-04\n3.674133\n12.590183\n\n\n\n\n\n\n\n\n\n\n\n# Set our individual and time (index) for our data\nfit = feols(fml=\"lifeExp ~ np.log(gdpPercap) | country + year\", data=gm)\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lifeExp, Fixed effects: country+year\nInference:  CRV1\nObservations:  1704\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| np.log(gdpPercap) |      1.450 |        0.677 |     2.141 |      0.034 |   0.111 |    2.788 |\n---\nRMSE: 3.267  Adj. R2: 0.018  Adj. R2 Within: 0.018"
-  },
-  {
-    "objectID": "replicating-the-effect.html#chapter-18-difference-in-differences",
-    "href": "replicating-the-effect.html#chapter-18-difference-in-differences",
-    "title": "Replicating Examples from “The Effect”",
-    "section": "",
-    "text": "from causaldata import organ_donations\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\nod[\"After\"] = od[\"Quarter_Num\"] &gt; 3\nod[\"Treated\"] = 1 * (od[\"California\"] & od[\"After\"])\n\ndid = feols(fml=\"Rate ~ Treated | State + Quarter\", data=od)\ndid.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Rate, Fixed effects: State+Quarter\nInference:  CRV1\nObservations:  162\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Treated       |     -0.022 |        0.006 |    -3.733 |      0.001 |  -0.035 |   -0.010 |\n---\nRMSE: 0.022  Adj. R2: 0.003  Adj. R2 Within: 0.003\n\n\n\n\n\n\nfrom causaldata import organ_donations\nfrom pyfixest.visualize import iplot\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\n# od[\"Quarter_Num\"] = pd.Categorical(od.Quarter_Num)\nod[\"California\"] = od.California.astype(float)\n\ndid2 = feols(\n    fml=\"Rate ~ i(Quarter_Num, California) | State + Quarter_Num\", data=od, i_ref1=3\n)\n\ndid2.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.1]:California\n-0.002942\n0.004986\n-0.590105\n0.560215\n-0.013191\n0.007307\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.2]:California\n0.006296\n0.002222\n2.833502\n0.008782\n0.001729\n0.010864\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.4]:California\n-0.021565\n0.004937\n-4.368464\n0.000178\n-0.031713\n-0.011418\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.5]:California\n-0.020292\n0.004387\n-4.625529\n0.000090\n-0.029310\n-0.011275\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.6]:California\n-0.022165\n0.009820\n-2.257160\n0.032627\n-0.042351\n-0.001980"
-  },
-  {
-    "objectID": "pyfixest.html#features",
-    "href": "pyfixest.html#features",
-    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
-    "section": "Features",
-    "text": "Features\n\nOLS and IV Regression\nPoisson Regression following the pplmhdfe algorithm\nMultiple Estimation Syntax\nSeveral Robust and Cluster Robust Variance-Covariance Types\nWild Cluster Bootstrap Inference (via wildboottest)\nDifference-in-Difference Estimators:\n\nThe canonical Two-Way Fixed Effects Estimator\nGardner’s two-stage (“Did2s”) estimator\nBasic Versions of the Local Projections estimator following Dube et al (2023)\n\nMultiple Hypothesis Corrections following the Procedure by Romano and Wolf"
-  },
-  {
-    "objectID": "pyfixest.html#installation",
-    "href": "pyfixest.html#installation",
-    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
-    "section": "Installation",
-    "text": "Installation\nYou can install the release version from PyPi by running\npip install pyfixest\nor the development version from github by running\npip install git+https://github.com/s3alfisc/pyfixest.git"
-  },
-  {
-    "objectID": "pyfixest.html#news",
-    "href": "pyfixest.html#news",
-    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
-    "section": "News",
-    "text": "News\nPyFixest 0.15.2 adds support Romano-Wolf Corrected p-values via the rwolf function."
-  },
-  {
-    "objectID": "pyfixest.html#benchmarks",
-    "href": "pyfixest.html#benchmarks",
-    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
-    "section": "Benchmarks",
-    "text": "Benchmarks\nAll benchmarks follow the fixest benchmarks. All non-pyfixest timings are taken from the fixest benchmarks."
-  },
-  {
-    "objectID": "pyfixest.html#quickstart",
-    "href": "pyfixest.html#quickstart",
-    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
-    "section": "Quickstart",
-    "text": "Quickstart\n\nFixed Effects Regression via feols()\nYou can estimate a linear regression models just as you would in fixest - via feols():\n\nfrom pyfixest.estimation import feols, fepois\nfrom pyfixest.utils import get_data\nfrom pyfixest.summarize import etable\ndata = get_data()\nfeols(\"Y ~ X1 | f1 + f2\", data=data).summary()\n\n            \n            \n\n\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |\n---\nRMSE: 1.441   R2: 0.609   R2 Within: 0.2\n\n\n\n\nMultiple Estimation\nYou can estimate multiple models at once by using multiple estimation syntax:\n\n# OLS Estimation: estimate multiple models at once\nfit = feols(\"Y + Y2 ~X1 | csw0(f1, f2)\", data = data, vcov = {'CRV1':'group_id'})\n# Print the results\netable([fit.fetch_model(i) for i in range(6)])\n\nModel:  Y~X1\nModel:  Y2~X1\nModel:  Y~X1|f1\nModel:  Y2~X1|f1\nModel:  Y~X1|f1+f2\nModel:  Y2~X1|f1+f2\n                          est1               est2               est3               est4               est5               est6\n------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------\ndepvar                       Y                 Y2                  Y                 Y2                  Y                 Y2\n-----------------------------------------------------------------------------------------------------------------------------\nIntercept     0.919*** (0.121)   1.064*** (0.232)\nX1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)\n-----------------------------------------------------------------------------------------------------------------------------\nf1                           -                  -                  x                  x                  x                  x\nf2                           -                  -                  -                  -                  x                  x\n-----------------------------------------------------------------------------------------------------------------------------\nR2                       0.123              0.037              0.437              0.115              0.609              0.168\nS.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id\nObservations               998                999                997                998                997                998\n-----------------------------------------------------------------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\n\n\n\n\nAdjust Standard Errors “on-the-fly”\nStandard Errors can be adjusted after estimation, “on-the-fly”:\n\nfit1 = fit.fetch_model(0)\nfit1.vcov(\"hetero\").summary()\n\nModel:  Y~X1\n###\n\nEstimation:  OLS\nDep. var.: Y\nInference:  hetero\nObservations:  998\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |\n| X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |\n---\nRMSE: 2.158   R2: 0.123\n\n\n\n\nPoisson Regression via fepois()\nYou can estimate Poisson Regressions via the fepois() function:\n\npoisson_data = get_data(model = \"Fepois\")\nfepois(\"Y ~ X1 + X2 | f1 + f2\", data = poisson_data).summary()\n\n###\n\nEstimation:  Poisson\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |\n| X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |\n---\nDeviance: 1068.836\n\n\n\n\nIV Estimation via three-part formulas\nLast, PyFixest also supports IV estimation via three part formula syntax:\n\nfit_iv = feols(\"Y ~ 1 | f1 | X1 ~ Z1\", data = data)\nfit_iv.summary()\n\n###\n\nEstimation:  IV\nDep. var.: Y, Fixed effects: f1\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |\n---"
-  },
-  {
-    "objectID": "reference/feiv.Feiv.html",
-    "href": "reference/feiv.Feiv.html",
-    "title": "feiv.Feiv",
-    "section": "",
-    "text": "feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)\nNon user-facing class to estimate an IV model using a 2SLS estimator.\nInherits from the Feols class. Users should not directly instantiate this class, but rather use the feols() function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional np.array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional np.array.\nrequired\n\n\nZ\nnumpy.numpy.ndarray\nInstruments, a two-dimensional np.array.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional np.array.\nrequired\n\n\ncoefnames_x\nlist\nNames of the coefficients of X.\nrequired\n\n\ncoefnames_z\nlist\nNames of the coefficients of Z.\nrequired\n\n\ncollin_tol\nfloat\nTolerance for collinearity check.\nrequired\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n_Z\nnumpy.numpy.ndarray\nProcessed instruments after handling multicollinearity.\n\n\n_coefnames_z\nlist\nNames of coefficients for Z after handling multicollinearity.\n\n\n_collin_vars_z\nlist\nVariables identified as collinear in Z.\n\n\n_collin_index_z\nlist\nIndices of collinear variables in Z.\n\n\n_is_iv\nbool\nIndicator if instrumental variables are used.\n\n\n_support_crv3_inference\nbool\nIndicator for supporting CRV3 inference.\n\n\n_support_iid_inference\nbool\nIndicator for supporting IID inference.\n\n\n_tZX\nnumpy.numpy.ndarray\nTranspose of Z times X.\n\n\n_tXZ\nnumpy.numpy.ndarray\nTranspose of X times Z.\n\n\n_tZy\nnumpy.numpy.ndarray\nTranspose of Z times Y.\n\n\n_tZZinv\nnumpy.numpy.ndarray\nInverse of transpose of Z times Z.\n\n\n_beta_hat\nnumpy.numpy.ndarray\nEstimated regression coefficients.\n\n\n_Y_hat_link\nnumpy.numpy.ndarray\nPredicted values of the regression model.\n\n\n_u_hat\nnumpy.numpy.ndarray\nResiduals of the regression model.\n\n\n_scores\nnumpy.numpy.ndarray\nScores used in the regression.\n\n\n_hessian\nnumpy.numpy.ndarray\nHessian matrix used in the regression.\n\n\n_bread\nnumpy.numpy.ndarray\nBread matrix used in the regression.\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nValueError\nIf Z is not a two-dimensional array.",
+    "text": "fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\nInherits from the Feols class. Users should not directly instantiate this class, but rather use the fepois() function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).\nThe method implements the algorithm from Stata’s pplmhdfe module.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional numpy array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional numpy array.\nrequired\n\n\nfe\nnumpy.numpy.ndarray\nFixed effects, a two-dimensional numpy array or None.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional numpy array or None.\nrequired\n\n\ncoefnames\ntyping.List[str]\nNames of the coefficients in the design matrix X.\nrequired\n\n\ndrop_singletons\nbool\nWhether to drop singleton fixed effects.\nrequired\n\n\ncollin_tol\nfloat\nTolerance level for the detection of collinearity.\nrequired\n\n\nmaxiter\ntyping.Optional[int]\nMaximum number of iterations for the IRLS algorithm.\n25\n\n\ntol\ntyping.Optional[float]\nTolerance level for the convergence of the IRLS algorithm.\n1e-08\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nget_fit\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\npredict\nReturn a flat np.array with predicted values of the regression model.\n\n\n\n\n\nfepois.Fepois.get_fit()\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\n\n\n\nType\nDescription\n\n\n\n\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\nbeta_hat\nnumpy.numpy.ndarray\nEstimated coefficients.\n\n\nY_hat\nnumpy.numpy.ndarray\nEstimated dependent variable.\n\n\nu_hat\nnumpy.numpy.ndarray\nEstimated residuals.\n\n\nweights\nnumpy.numpy.ndarray\nWeights (from the last iteration of the IRLS algorithm).\n\n\nX\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nZ\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nY\nnumpy.numpy.ndarray\nDemeaned dependent variable (from the last iteration of the IRLS algorithm).\n\n\n\n\n\n\n\nfepois.Fepois.predict(newdata=None, type='link')\nReturn a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in newdata, predicted values for such observations will be set to NaN.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nnewdata\nUnion[None, pandas.pandas.DataFrame]\nA pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.\nNone\n\n\ntype\nstr\nThe type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.\n'link'\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nnumpy.numpy.ndarray\nA flat array with the predicted values of the regression model.",
     "crumbs": [
       "Documentation",
       "Estimation Classes",
-      "feiv.Feiv"
+      "fepois.Fepois"
     ]
   },
   {
-    "objectID": "reference/feiv.Feiv.html#parameters",
-    "href": "reference/feiv.Feiv.html#parameters",
-    "title": "feiv.Feiv",
+    "objectID": "reference/fepois.Fepois.html#parameters",
+    "href": "reference/fepois.Fepois.html#parameters",
+    "title": "fepois.Fepois",
     "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional np.array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional np.array.\nrequired\n\n\nZ\nnumpy.numpy.ndarray\nInstruments, a two-dimensional np.array.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional np.array.\nrequired\n\n\ncoefnames_x\nlist\nNames of the coefficients of X.\nrequired\n\n\ncoefnames_z\nlist\nNames of the coefficients of Z.\nrequired\n\n\ncollin_tol\nfloat\nTolerance for collinearity check.\nrequired\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nrequired",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional numpy array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional numpy array.\nrequired\n\n\nfe\nnumpy.numpy.ndarray\nFixed effects, a two-dimensional numpy array or None.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional numpy array or None.\nrequired\n\n\ncoefnames\ntyping.List[str]\nNames of the coefficients in the design matrix X.\nrequired\n\n\ndrop_singletons\nbool\nWhether to drop singleton fixed effects.\nrequired\n\n\ncollin_tol\nfloat\nTolerance level for the detection of collinearity.\nrequired\n\n\nmaxiter\ntyping.Optional[int]\nMaximum number of iterations for the IRLS algorithm.\n25\n\n\ntol\ntyping.Optional[float]\nTolerance level for the convergence of the IRLS algorithm.\n1e-08\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nNone",
     "crumbs": [
       "Documentation",
       "Estimation Classes",
-      "feiv.Feiv"
+      "fepois.Fepois"
     ]
   },
   {
-    "objectID": "reference/feiv.Feiv.html#attributes",
-    "href": "reference/feiv.Feiv.html#attributes",
-    "title": "feiv.Feiv",
+    "objectID": "reference/fepois.Fepois.html#methods",
+    "href": "reference/fepois.Fepois.html#methods",
+    "title": "fepois.Fepois",
     "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n_Z\nnumpy.numpy.ndarray\nProcessed instruments after handling multicollinearity.\n\n\n_coefnames_z\nlist\nNames of coefficients for Z after handling multicollinearity.\n\n\n_collin_vars_z\nlist\nVariables identified as collinear in Z.\n\n\n_collin_index_z\nlist\nIndices of collinear variables in Z.\n\n\n_is_iv\nbool\nIndicator if instrumental variables are used.\n\n\n_support_crv3_inference\nbool\nIndicator for supporting CRV3 inference.\n\n\n_support_iid_inference\nbool\nIndicator for supporting IID inference.\n\n\n_tZX\nnumpy.numpy.ndarray\nTranspose of Z times X.\n\n\n_tXZ\nnumpy.numpy.ndarray\nTranspose of X times Z.\n\n\n_tZy\nnumpy.numpy.ndarray\nTranspose of Z times Y.\n\n\n_tZZinv\nnumpy.numpy.ndarray\nInverse of transpose of Z times Z.\n\n\n_beta_hat\nnumpy.numpy.ndarray\nEstimated regression coefficients.\n\n\n_Y_hat_link\nnumpy.numpy.ndarray\nPredicted values of the regression model.\n\n\n_u_hat\nnumpy.numpy.ndarray\nResiduals of the regression model.\n\n\n_scores\nnumpy.numpy.ndarray\nScores used in the regression.\n\n\n_hessian\nnumpy.numpy.ndarray\nHessian matrix used in the regression.\n\n\n_bread\nnumpy.numpy.ndarray\nBread matrix used in the regression.",
+    "text": "Name\nDescription\n\n\n\n\nget_fit\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\npredict\nReturn a flat np.array with predicted values of the regression model.\n\n\n\n\n\nfepois.Fepois.get_fit()\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\n\n\n\nType\nDescription\n\n\n\n\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\nbeta_hat\nnumpy.numpy.ndarray\nEstimated coefficients.\n\n\nY_hat\nnumpy.numpy.ndarray\nEstimated dependent variable.\n\n\nu_hat\nnumpy.numpy.ndarray\nEstimated residuals.\n\n\nweights\nnumpy.numpy.ndarray\nWeights (from the last iteration of the IRLS algorithm).\n\n\nX\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nZ\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nY\nnumpy.numpy.ndarray\nDemeaned dependent variable (from the last iteration of the IRLS algorithm).\n\n\n\n\n\n\n\nfepois.Fepois.predict(newdata=None, type='link')\nReturn a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in newdata, predicted values for such observations will be set to NaN.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nnewdata\nUnion[None, pandas.pandas.DataFrame]\nA pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.\nNone\n\n\ntype\nstr\nThe type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.\n'link'\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nnumpy.numpy.ndarray\nA flat array with the predicted values of the regression model.",
     "crumbs": [
       "Documentation",
       "Estimation Classes",
-      "feiv.Feiv"
-    ]
-  },
-  {
-    "objectID": "reference/feiv.Feiv.html#raises",
-    "href": "reference/feiv.Feiv.html#raises",
-    "title": "feiv.Feiv",
-    "section": "",
-    "text": "Type\nDescription\n\n\n\n\nValueError\nIf Z is not a two-dimensional array.",
-    "crumbs": [
-      "Documentation",
-      "Estimation Classes",
-      "feiv.Feiv"
-    ]
-  },
-  {
-    "objectID": "reference/did.estimation.did2s.html",
-    "href": "reference/did.estimation.did2s.html",
-    "title": "did.estimation.did2s",
-    "section": "",
-    "text": "did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster, i_ref1=None, i_ref2=None)\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.",
-    "crumbs": [
-      "Documentation",
-      "Estimation Functions",
-      "did.estimation.did2s"
-    ]
-  },
-  {
-    "objectID": "reference/did.estimation.did2s.html#parameters",
-    "href": "reference/did.estimation.did2s.html#parameters",
-    "title": "did.estimation.did2s",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npandas.pandas.DataFrame\nThe DataFrame containing all variables.\nrequired\n\n\nyname\nstr\nThe name of the dependent variable.\nrequired\n\n\nfirst_stage\nstr\nThe formula for the first stage, starting with ‘~’.\nrequired\n\n\nsecond_stage\nstr\nThe formula for the second stage, starting with ‘~’.\nrequired\n\n\ntreatment\nstr\nThe name of the treatment variable.\nrequired\n\n\ncluster\nstr\nThe name of the cluster variable.\nrequired\n\n\ni_ref1\n(int, str, list)\nThe reference value(s) for the first variable used with “i()” syntax in the second stage formula. Default is None.\nNone\n\n\ni_ref2\n(int, str, list)\nThe reference value(s) for the second variable used with “i()” syntax in the second stage formula. Default is None.\nNone",
-    "crumbs": [
-      "Documentation",
-      "Estimation Functions",
-      "did.estimation.did2s"
-    ]
-  },
-  {
-    "objectID": "reference/did.estimation.did2s.html#returns",
-    "href": "reference/did.estimation.did2s.html#returns",
-    "title": "did.estimation.did2s",
-    "section": "Returns",
-    "text": "Returns\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nobject\nA fitted model object of class [Feols(/reference/Feols.qmd).",
-    "crumbs": [
-      "Documentation",
-      "Estimation Functions",
-      "did.estimation.did2s"
-    ]
-  },
-  {
-    "objectID": "reference/did.estimation.did2s.html#examples",
-    "href": "reference/did.estimation.did2s.html#examples",
-    "title": "did.estimation.did2s",
-    "section": "Examples",
-    "text": "Examples\n\nimport pandas as pd\nimport numpy as np\nfrom pyfixest.did.estimation import did2s\n\nurl = \"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv\"\ndf_het = pd.read_csv(url)\ndf_het.head()\n\n\n      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,\n      the module is not yet as thoroughly tested as I would like. So please use it with caution and\n      provide feedback in case you stumble over any bugs!\n      \n\n\n\n            \n            \n            \n\n\n\n\n\n\n\n\n\nunit\nstate\ngroup\nunit_fe\ng\nyear\nyear_fe\ntreat\nrel_year\nrel_year_binned\nerror\nte\nte_dynamic\ndep_var\n\n\n\n\n0\n1\n33\nGroup 2\n7.043016\n2010\n1990\n0.066159\nFalse\n-20.0\n-6\n-0.086466\n0\n0.0\n7.022709\n\n\n1\n1\n33\nGroup 2\n7.043016\n2010\n1991\n-0.030980\nFalse\n-19.0\n-6\n0.766593\n0\n0.0\n7.778628\n\n\n2\n1\n33\nGroup 2\n7.043016\n2010\n1992\n-0.119607\nFalse\n-18.0\n-6\n1.512968\n0\n0.0\n8.436377\n\n\n3\n1\n33\nGroup 2\n7.043016\n2010\n1993\n0.126321\nFalse\n-17.0\n-6\n0.021870\n0\n0.0\n7.191207\n\n\n4\n1\n33\nGroup 2\n7.043016\n2010\n1994\n-0.106921\nFalse\n-16.0\n-6\n-0.017603\n0\n0.0\n6.918492\n\n\n\n\n\n\n\nIn a first step, we estimate a classical event study model:\n\n# estimate the model\nfit = did2s(\n    df_het,\n    yname=\"dep_var\",\n    first_stage=\"~ 0 | unit + year\",\n    second_stage=\"~i(rel_year)\",\n    treatment=\"treat\",\n    cluster=\"state\",\n    i_ref1=[-1.0, np.inf],\n)\n\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-20.0]\n-0.058226\n0.035809\n-1.626011\n0.103954\n-0.128412\n0.011960\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-19.0]\n-0.006032\n0.030341\n-0.198816\n0.842408\n-0.065500\n0.053436\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-18.0]\n-0.006152\n0.035094\n-0.175310\n0.860837\n-0.074937\n0.062632\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-17.0]\n-0.012533\n0.024834\n-0.504689\n0.613780\n-0.061208\n0.036141\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-16.0]\n-0.034698\n0.029806\n-1.164128\n0.244378\n-0.093117\n0.023722\n\n\n\n\n\n\n\nWe can also inspect the model visually:\n\nfit.iplot(figsize= [1200, 400], coord_flip=False).show()\n\n   \n   \n\n\nTo estimate a pooled effect, we need to slightly update the second stage formula:\n\nfit = did2s(\n    df_het,\n    yname=\"dep_var\",\n    first_stage=\"~ 0 | unit + year\",\n    second_stage=\"~i(treat)\",\n    treatment=\"treat\",\n    cluster=\"state\"\n)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(treat)[T.True]\n2.230482\n0.024709\n90.271437\n0.0\n2.182052\n2.278911",
-    "crumbs": [
-      "Documentation",
-      "Estimation Functions",
-      "did.estimation.did2s"
+      "fepois.Fepois"
     ]
   },
   {
@@ -824,39 +543,368 @@
     ]
   },
   {
-    "objectID": "reference/fepois.Fepois.html",
-    "href": "reference/fepois.Fepois.html",
-    "title": "fepois.Fepois",
+    "objectID": "reference/did.estimation.did2s.html",
+    "href": "reference/did.estimation.did2s.html",
+    "title": "did.estimation.did2s",
     "section": "",
-    "text": "fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\nInherits from the Feols class. Users should not directly instantiate this class, but rather use the fepois() function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).\nThe method implements the algorithm from Stata’s pplmhdfe module.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional numpy array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional numpy array.\nrequired\n\n\nfe\nnumpy.numpy.ndarray\nFixed effects, a two-dimensional numpy array or None.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional numpy array or None.\nrequired\n\n\ncoefnames\ntyping.List[str]\nNames of the coefficients in the design matrix X.\nrequired\n\n\ndrop_singletons\nbool\nWhether to drop singleton fixed effects.\nrequired\n\n\ncollin_tol\nfloat\nTolerance level for the detection of collinearity.\nrequired\n\n\nmaxiter\ntyping.Optional[int]\nMaximum number of iterations for the IRLS algorithm.\n25\n\n\ntol\ntyping.Optional[float]\nTolerance level for the convergence of the IRLS algorithm.\n1e-08\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nNone\n\n\n\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nget_fit\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\npredict\nReturn a flat np.array with predicted values of the regression model.\n\n\n\n\n\nfepois.Fepois.get_fit()\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\n\n\n\nType\nDescription\n\n\n\n\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\nbeta_hat\nnumpy.numpy.ndarray\nEstimated coefficients.\n\n\nY_hat\nnumpy.numpy.ndarray\nEstimated dependent variable.\n\n\nu_hat\nnumpy.numpy.ndarray\nEstimated residuals.\n\n\nweights\nnumpy.numpy.ndarray\nWeights (from the last iteration of the IRLS algorithm).\n\n\nX\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nZ\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nY\nnumpy.numpy.ndarray\nDemeaned dependent variable (from the last iteration of the IRLS algorithm).\n\n\n\n\n\n\n\nfepois.Fepois.predict(newdata=None, type='link')\nReturn a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in newdata, predicted values for such observations will be set to NaN.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nnewdata\nUnion[None, pandas.pandas.DataFrame]\nA pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.\nNone\n\n\ntype\nstr\nThe type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.\n'link'\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nnumpy.numpy.ndarray\nA flat array with the predicted values of the regression model.",
+    "text": "did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster, i_ref1=None, i_ref2=None)\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.",
     "crumbs": [
       "Documentation",
-      "Estimation Classes",
-      "fepois.Fepois"
+      "Estimation Functions",
+      "did.estimation.did2s"
     ]
   },
   {
-    "objectID": "reference/fepois.Fepois.html#parameters",
-    "href": "reference/fepois.Fepois.html#parameters",
-    "title": "fepois.Fepois",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional numpy array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional numpy array.\nrequired\n\n\nfe\nnumpy.numpy.ndarray\nFixed effects, a two-dimensional numpy array or None.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional numpy array or None.\nrequired\n\n\ncoefnames\ntyping.List[str]\nNames of the coefficients in the design matrix X.\nrequired\n\n\ndrop_singletons\nbool\nWhether to drop singleton fixed effects.\nrequired\n\n\ncollin_tol\nfloat\nTolerance level for the detection of collinearity.\nrequired\n\n\nmaxiter\ntyping.Optional[int]\nMaximum number of iterations for the IRLS algorithm.\n25\n\n\ntol\ntyping.Optional[float]\nTolerance level for the convergence of the IRLS algorithm.\n1e-08\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nNone",
+    "objectID": "reference/did.estimation.did2s.html#parameters",
+    "href": "reference/did.estimation.did2s.html#parameters",
+    "title": "did.estimation.did2s",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata\npandas.pandas.DataFrame\nThe DataFrame containing all variables.\nrequired\n\n\nyname\nstr\nThe name of the dependent variable.\nrequired\n\n\nfirst_stage\nstr\nThe formula for the first stage, starting with ‘~’.\nrequired\n\n\nsecond_stage\nstr\nThe formula for the second stage, starting with ‘~’.\nrequired\n\n\ntreatment\nstr\nThe name of the treatment variable.\nrequired\n\n\ncluster\nstr\nThe name of the cluster variable.\nrequired\n\n\ni_ref1\n(int, str, list)\nThe reference value(s) for the first variable used with “i()” syntax in the second stage formula. Default is None.\nNone\n\n\ni_ref2\n(int, str, list)\nThe reference value(s) for the second variable used with “i()” syntax in the second stage formula. Default is None.\nNone",
     "crumbs": [
       "Documentation",
-      "Estimation Classes",
-      "fepois.Fepois"
+      "Estimation Functions",
+      "did.estimation.did2s"
     ]
   },
   {
-    "objectID": "reference/fepois.Fepois.html#methods",
-    "href": "reference/fepois.Fepois.html#methods",
-    "title": "fepois.Fepois",
+    "objectID": "reference/did.estimation.did2s.html#returns",
+    "href": "reference/did.estimation.did2s.html#returns",
+    "title": "did.estimation.did2s",
+    "section": "Returns",
+    "text": "Returns\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nobject\nA fitted model object of class [Feols(/reference/Feols.qmd).",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "did.estimation.did2s"
+    ]
+  },
+  {
+    "objectID": "reference/did.estimation.did2s.html#examples",
+    "href": "reference/did.estimation.did2s.html#examples",
+    "title": "did.estimation.did2s",
+    "section": "Examples",
+    "text": "Examples\n\nimport pandas as pd\nimport numpy as np\nfrom pyfixest.did.estimation import did2s\n\nurl = \"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv\"\ndf_het = pd.read_csv(url)\ndf_het.head()\n\n\n      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,\n      the module is not yet as thoroughly tested as I would like. So please use it with caution and\n      provide feedback in case you stumble over any bugs!\n      \n\n\n\n            \n            \n            \n\n\n\n\n\n\n\n\n\nunit\nstate\ngroup\nunit_fe\ng\nyear\nyear_fe\ntreat\nrel_year\nrel_year_binned\nerror\nte\nte_dynamic\ndep_var\n\n\n\n\n0\n1\n33\nGroup 2\n7.043016\n2010\n1990\n0.066159\nFalse\n-20.0\n-6\n-0.086466\n0\n0.0\n7.022709\n\n\n1\n1\n33\nGroup 2\n7.043016\n2010\n1991\n-0.030980\nFalse\n-19.0\n-6\n0.766593\n0\n0.0\n7.778628\n\n\n2\n1\n33\nGroup 2\n7.043016\n2010\n1992\n-0.119607\nFalse\n-18.0\n-6\n1.512968\n0\n0.0\n8.436377\n\n\n3\n1\n33\nGroup 2\n7.043016\n2010\n1993\n0.126321\nFalse\n-17.0\n-6\n0.021870\n0\n0.0\n7.191207\n\n\n4\n1\n33\nGroup 2\n7.043016\n2010\n1994\n-0.106921\nFalse\n-16.0\n-6\n-0.017603\n0\n0.0\n6.918492\n\n\n\n\n\n\n\nIn a first step, we estimate a classical event study model:\n\n# estimate the model\nfit = did2s(\n    df_het,\n    yname=\"dep_var\",\n    first_stage=\"~ 0 | unit + year\",\n    second_stage=\"~i(rel_year)\",\n    treatment=\"treat\",\n    cluster=\"state\",\n    i_ref1=[-1.0, np.inf],\n)\n\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-20.0]\n-0.058226\n0.035809\n-1.626011\n0.103954\n-0.128412\n0.011960\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-19.0]\n-0.006032\n0.030341\n-0.198816\n0.842408\n-0.065500\n0.053436\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-18.0]\n-0.006152\n0.035094\n-0.175310\n0.860837\n-0.074937\n0.062632\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-17.0]\n-0.012533\n0.024834\n-0.504689\n0.613780\n-0.061208\n0.036141\n\n\nC(rel_year,contr.treatment(base=-1.0))[T.-16.0]\n-0.034698\n0.029806\n-1.164128\n0.244378\n-0.093117\n0.023722\n\n\n\n\n\n\n\nWe can also inspect the model visually:\n\nfit.iplot(figsize= [1200, 400], coord_flip=False).show()\n\n   \n   \n\n\nTo estimate a pooled effect, we need to slightly update the second stage formula:\n\nfit = did2s(\n    df_het,\n    yname=\"dep_var\",\n    first_stage=\"~ 0 | unit + year\",\n    second_stage=\"~i(treat)\",\n    treatment=\"treat\",\n    cluster=\"state\"\n)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(treat)[T.True]\n2.230482\n0.024709\n90.271437\n0.0\n2.182052\n2.278911",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "did.estimation.did2s"
+    ]
+  },
+  {
+    "objectID": "reference/feiv.Feiv.html",
+    "href": "reference/feiv.Feiv.html",
+    "title": "feiv.Feiv",
     "section": "",
-    "text": "Name\nDescription\n\n\n\n\nget_fit\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\npredict\nReturn a flat np.array with predicted values of the regression model.\n\n\n\n\n\nfepois.Fepois.get_fit()\nFit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).\n\n\n\n\n\nType\nDescription\n\n\n\n\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\nbeta_hat\nnumpy.numpy.ndarray\nEstimated coefficients.\n\n\nY_hat\nnumpy.numpy.ndarray\nEstimated dependent variable.\n\n\nu_hat\nnumpy.numpy.ndarray\nEstimated residuals.\n\n\nweights\nnumpy.numpy.ndarray\nWeights (from the last iteration of the IRLS algorithm).\n\n\nX\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nZ\nnumpy.numpy.ndarray\nDemeaned independent variables (from the last iteration of the IRLS algorithm).\n\n\nY\nnumpy.numpy.ndarray\nDemeaned dependent variable (from the last iteration of the IRLS algorithm).\n\n\n\n\n\n\n\nfepois.Fepois.predict(newdata=None, type='link')\nReturn a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in newdata, predicted values for such observations will be set to NaN.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nnewdata\nUnion[None, pandas.pandas.DataFrame]\nA pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.\nNone\n\n\ntype\nstr\nThe type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.\n'link'\n\n\n\n\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nnumpy.numpy.ndarray\nA flat array with the predicted values of the regression model.",
+    "text": "feiv.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)\nNon user-facing class to estimate an IV model using a 2SLS estimator.\nInherits from the Feols class. Users should not directly instantiate this class, but rather use the feols() function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional np.array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional np.array.\nrequired\n\n\nZ\nnumpy.numpy.ndarray\nInstruments, a two-dimensional np.array.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional np.array.\nrequired\n\n\ncoefnames_x\nlist\nNames of the coefficients of X.\nrequired\n\n\ncoefnames_z\nlist\nNames of the coefficients of Z.\nrequired\n\n\ncollin_tol\nfloat\nTolerance for collinearity check.\nrequired\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n_Z\nnumpy.numpy.ndarray\nProcessed instruments after handling multicollinearity.\n\n\n_coefnames_z\nlist\nNames of coefficients for Z after handling multicollinearity.\n\n\n_collin_vars_z\nlist\nVariables identified as collinear in Z.\n\n\n_collin_index_z\nlist\nIndices of collinear variables in Z.\n\n\n_is_iv\nbool\nIndicator if instrumental variables are used.\n\n\n_support_crv3_inference\nbool\nIndicator for supporting CRV3 inference.\n\n\n_support_iid_inference\nbool\nIndicator for supporting IID inference.\n\n\n_tZX\nnumpy.numpy.ndarray\nTranspose of Z times X.\n\n\n_tXZ\nnumpy.numpy.ndarray\nTranspose of X times Z.\n\n\n_tZy\nnumpy.numpy.ndarray\nTranspose of Z times Y.\n\n\n_tZZinv\nnumpy.numpy.ndarray\nInverse of transpose of Z times Z.\n\n\n_beta_hat\nnumpy.numpy.ndarray\nEstimated regression coefficients.\n\n\n_Y_hat_link\nnumpy.numpy.ndarray\nPredicted values of the regression model.\n\n\n_u_hat\nnumpy.numpy.ndarray\nResiduals of the regression model.\n\n\n_scores\nnumpy.numpy.ndarray\nScores used in the regression.\n\n\n_hessian\nnumpy.numpy.ndarray\nHessian matrix used in the regression.\n\n\n_bread\nnumpy.numpy.ndarray\nBread matrix used in the regression.\n\n\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nValueError\nIf Z is not a two-dimensional array.",
     "crumbs": [
       "Documentation",
       "Estimation Classes",
-      "fepois.Fepois"
+      "feiv.Feiv"
+    ]
+  },
+  {
+    "objectID": "reference/feiv.Feiv.html#parameters",
+    "href": "reference/feiv.Feiv.html#parameters",
+    "title": "feiv.Feiv",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nY\nnumpy.numpy.ndarray\nDependent variable, a two-dimensional np.array.\nrequired\n\n\nX\nnumpy.numpy.ndarray\nIndependent variables, a two-dimensional np.array.\nrequired\n\n\nZ\nnumpy.numpy.ndarray\nInstruments, a two-dimensional np.array.\nrequired\n\n\nweights\nnumpy.numpy.ndarray\nWeights, a one-dimensional np.array.\nrequired\n\n\ncoefnames_x\nlist\nNames of the coefficients of X.\nrequired\n\n\ncoefnames_z\nlist\nNames of the coefficients of Z.\nrequired\n\n\ncollin_tol\nfloat\nTolerance for collinearity check.\nrequired\n\n\nweights_name\ntyping.Optional[str]\nName of the weights variable.\nrequired",
+    "crumbs": [
+      "Documentation",
+      "Estimation Classes",
+      "feiv.Feiv"
+    ]
+  },
+  {
+    "objectID": "reference/feiv.Feiv.html#attributes",
+    "href": "reference/feiv.Feiv.html#attributes",
+    "title": "feiv.Feiv",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n_Z\nnumpy.numpy.ndarray\nProcessed instruments after handling multicollinearity.\n\n\n_coefnames_z\nlist\nNames of coefficients for Z after handling multicollinearity.\n\n\n_collin_vars_z\nlist\nVariables identified as collinear in Z.\n\n\n_collin_index_z\nlist\nIndices of collinear variables in Z.\n\n\n_is_iv\nbool\nIndicator if instrumental variables are used.\n\n\n_support_crv3_inference\nbool\nIndicator for supporting CRV3 inference.\n\n\n_support_iid_inference\nbool\nIndicator for supporting IID inference.\n\n\n_tZX\nnumpy.numpy.ndarray\nTranspose of Z times X.\n\n\n_tXZ\nnumpy.numpy.ndarray\nTranspose of X times Z.\n\n\n_tZy\nnumpy.numpy.ndarray\nTranspose of Z times Y.\n\n\n_tZZinv\nnumpy.numpy.ndarray\nInverse of transpose of Z times Z.\n\n\n_beta_hat\nnumpy.numpy.ndarray\nEstimated regression coefficients.\n\n\n_Y_hat_link\nnumpy.numpy.ndarray\nPredicted values of the regression model.\n\n\n_u_hat\nnumpy.numpy.ndarray\nResiduals of the regression model.\n\n\n_scores\nnumpy.numpy.ndarray\nScores used in the regression.\n\n\n_hessian\nnumpy.numpy.ndarray\nHessian matrix used in the regression.\n\n\n_bread\nnumpy.numpy.ndarray\nBread matrix used in the regression.",
+    "crumbs": [
+      "Documentation",
+      "Estimation Classes",
+      "feiv.Feiv"
+    ]
+  },
+  {
+    "objectID": "reference/feiv.Feiv.html#raises",
+    "href": "reference/feiv.Feiv.html#raises",
+    "title": "feiv.Feiv",
+    "section": "",
+    "text": "Type\nDescription\n\n\n\n\nValueError\nIf Z is not a two-dimensional array.",
+    "crumbs": [
+      "Documentation",
+      "Estimation Classes",
+      "feiv.Feiv"
+    ]
+  },
+  {
+    "objectID": "pyfixest.html#features",
+    "href": "pyfixest.html#features",
+    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
+    "section": "Features",
+    "text": "Features\n\nOLS and IV Regression\nPoisson Regression following the pplmhdfe algorithm\nMultiple Estimation Syntax\nSeveral Robust and Cluster Robust Variance-Covariance Types\nWild Cluster Bootstrap Inference (via wildboottest)\nDifference-in-Difference Estimators:\n\nThe canonical Two-Way Fixed Effects Estimator\nGardner’s two-stage (“Did2s”) estimator\nBasic Versions of the Local Projections estimator following Dube et al (2023)\n\nMultiple Hypothesis Corrections following the Procedure by Romano and Wolf"
+  },
+  {
+    "objectID": "pyfixest.html#installation",
+    "href": "pyfixest.html#installation",
+    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
+    "section": "Installation",
+    "text": "Installation\nYou can install the release version from PyPi by running\npip install pyfixest\nor the development version from github by running\npip install git+https://github.com/s3alfisc/pyfixest.git"
+  },
+  {
+    "objectID": "pyfixest.html#news",
+    "href": "pyfixest.html#news",
+    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
+    "section": "News",
+    "text": "News\nPyFixest 0.15.2 adds support Romano-Wolf Corrected p-values via the rwolf function."
+  },
+  {
+    "objectID": "pyfixest.html#benchmarks",
+    "href": "pyfixest.html#benchmarks",
+    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
+    "section": "Benchmarks",
+    "text": "Benchmarks\nAll benchmarks follow the fixest benchmarks. All non-pyfixest timings are taken from the fixest benchmarks."
+  },
+  {
+    "objectID": "pyfixest.html#quickstart",
+    "href": "pyfixest.html#quickstart",
+    "title": "PyFixest: Fast High-Dimensional Fixed Effects Regression in Python",
+    "section": "Quickstart",
+    "text": "Quickstart\n\nFixed Effects Regression via feols()\nYou can estimate a linear regression models just as you would in fixest - via feols():\n\nfrom pyfixest.estimation import feols, fepois\nfrom pyfixest.utils import get_data\nfrom pyfixest.summarize import etable\ndata = get_data()\nfeols(\"Y ~ X1 | f1 + f2\", data=data).summary()\n\n            \n            \n\n\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |\n---\nRMSE: 1.441   R2: 0.609   R2 Within: 0.2\n\n\n\n\nMultiple Estimation\nYou can estimate multiple models at once by using multiple estimation syntax:\n\n# OLS Estimation: estimate multiple models at once\nfit = feols(\"Y + Y2 ~X1 | csw0(f1, f2)\", data = data, vcov = {'CRV1':'group_id'})\n# Print the results\netable([fit.fetch_model(i) for i in range(6)])\n\nModel:  Y~X1\nModel:  Y2~X1\nModel:  Y~X1|f1\nModel:  Y2~X1|f1\nModel:  Y~X1|f1+f2\nModel:  Y2~X1|f1+f2\n                          est1               est2               est3               est4               est5               est6\n------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------\ndepvar                       Y                 Y2                  Y                 Y2                  Y                 Y2\n-----------------------------------------------------------------------------------------------------------------------------\nIntercept     0.919*** (0.121)   1.064*** (0.232)\nX1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)\n-----------------------------------------------------------------------------------------------------------------------------\nf1                           -                  -                  x                  x                  x                  x\nf2                           -                  -                  -                  -                  x                  x\n-----------------------------------------------------------------------------------------------------------------------------\nR2                       0.123              0.037              0.437              0.115              0.609              0.168\nS.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id\nObservations               998                999                997                998                997                998\n-----------------------------------------------------------------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\n\n\n\n\nAdjust Standard Errors “on-the-fly”\nStandard Errors can be adjusted after estimation, “on-the-fly”:\n\nfit1 = fit.fetch_model(0)\nfit1.vcov(\"hetero\").summary()\n\nModel:  Y~X1\n###\n\nEstimation:  OLS\nDep. var.: Y\nInference:  hetero\nObservations:  998\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |\n| X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |\n---\nRMSE: 2.158   R2: 0.123\n\n\n\n\nPoisson Regression via fepois()\nYou can estimate Poisson Regressions via the fepois() function:\n\npoisson_data = get_data(model = \"Fepois\")\nfepois(\"Y ~ X1 + X2 | f1 + f2\", data = poisson_data).summary()\n\n###\n\nEstimation:  Poisson\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |\n| X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |\n---\nDeviance: 1068.836\n\n\n\n\nIV Estimation via three-part formulas\nLast, PyFixest also supports IV estimation via three part formula syntax:\n\nfit_iv = feols(\"Y ~ 1 | f1 | X1 ~ Z1\", data = data)\nfit_iv.summary()\n\n###\n\nEstimation:  IV\nDep. var.: Y, Fixed effects: f1\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |\n---"
+  },
+  {
+    "objectID": "replicating-the-effect.html",
+    "href": "replicating-the-effect.html",
+    "title": "Replicating Examples from “The Effect”",
+    "section": "",
+    "text": "This notebook replicates code examples from Nick Huntington-Klein’s book on causal inference, The Effect.\n\n%load_ext autoreload\n%autoreload 2\n\nimport pandas as pd\nimport numpy as np\nfrom pyfixest.estimation import feols\nfrom pyfixest.summarize import summary\n\nThe autoreload extension is already loaded. To reload it, use:\n  %reload_ext autoreload\n\n\n\n\n\nfrom causaldata import Mroz\n\n# Read in data\ndt = Mroz.load_pandas().data\n# Keep just working women\ndt = dt[dt[\"lfp\"] == True]\n# Create unlogged earnings\ndt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n# 5. Run multiple linear regression models by succesively adding controls\nfit = feols(fml=\"lwg ~ csw(inc, wc, k5)\", data=dt, vcov=\"iid\")\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      1.007 |        0.071 |    14.180 |      0.000 |   0.868 |    1.147 |\n| inc           |      0.010 |        0.003 |     2.947 |      0.003 |   0.003 |    0.016 |\n---\nRMSE: 0.715   R2: 0.02\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.972 |        0.070 |    13.909 |      0.000 |   0.834 |    1.109 |\n| inc           |      0.005 |        0.003 |     1.640 |      0.102 |  -0.001 |    0.012 |\n| wc            |      0.342 |        0.075 |     4.595 |      0.000 |   0.196 |    0.489 |\n---\nRMSE: 0.698   R2: 0.066\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.982 |        0.071 |    13.819 |      0.000 |   0.843 |    1.122 |\n| inc           |      0.005 |        0.003 |     1.590 |      0.113 |  -0.001 |    0.012 |\n| wc            |      0.349 |        0.075 |     4.656 |      0.000 |   0.202 |    0.497 |\n| k5            |     -0.072 |        0.087 |    -0.825 |      0.410 |  -0.243 |    0.099 |\n---\nRMSE: 0.697   R2: 0.068\n\n\nC:\\Users\\alexa\\AppData\\Local\\Temp\\ipykernel_13896\\3519125210.py:8: SettingWithCopyWarning: \nA value is trying to be set on a copy of a slice from a DataFrame.\nTry using .loc[row_indexer,col_indexer] = value instead\n\nSee the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy\n  dt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n\n\n\n\n\n\n\nfrom causaldata import restaurant_inspections\n\nres = restaurant_inspections.load_pandas().data\nres.inspection_score = res.inspection_score.astype(float)\nres.NumberofLocations = res.NumberofLocations.astype(float)\nres.dtypes\n\nfit = feols(fml=\"inspection_score ~ NumberofLocations\", data=res)\nsummary(fit)\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept         |     94.866 |        0.046 |  2049.047 |      0.000 |  94.775 |   94.956 |\n| NumberofLocations |     -0.019 |        0.000 |   -43.321 |      0.000 |  -0.020 |   -0.018 |\n---\nRMSE: 6.051   R2: 0.065\n\n\n\n\n\n\ndf = restaurant_inspections.load_pandas().data\n\nfit1 = feols(\n    fml=\"inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year\", data=df\n)\nfit2 = feols(fml=\"inspection_score ~ NumberofLocations*Weekend + Year\", data=df)\n\nsummary([fit1, fit2])\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient            |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:-----------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept              |    225.504 |       12.409 |    18.172 |      0.000 | 201.181 |  249.827 |\n| NumberofLocations      |     -0.075 |        0.019 |    -4.041 |      0.000 |  -0.111 |   -0.039 |\n| I(NumberofLocations^2) |      0.056 |        0.019 |     3.009 |      0.003 |   0.020 |    0.093 |\n| Year                   |     -0.065 |        0.006 |   -10.527 |      0.000 |  -0.077 |   -0.053 |\n---\nRMSE: 6.038   R2: 0.069\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient               |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept                 |    225.126 |       12.415 |    18.134 |      0.000 | 200.793 |  249.460 |\n| NumberofLocations         |     -0.019 |        0.000 |   -43.759 |      0.000 |  -0.020 |   -0.018 |\n| Weekend                   |      1.759 |        0.488 |     3.606 |      0.000 |   0.803 |    2.715 |\n| Year                      |     -0.065 |        0.006 |   -10.494 |      0.000 |  -0.077 |   -0.053 |\n| NumberofLocations:Weekend |     -0.010 |        0.008 |    -1.307 |      0.191 |  -0.025 |    0.005 |\n---\nRMSE: 6.038   R2: 0.069\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov=\"HC3\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  HC3\nObservations:  27178\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.564 |  209.196 |\n| Year          |     -0.046 |        0.006 |    -7.551 |      0.000 |  -0.057 |   -0.034 |\n| Weekend       |      2.057 |        0.353 |     5.829 |      0.000 |   1.365 |    2.749 |\n---\nRMSE: 6.248   R2: 0.003\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov={\"CRV1\": \"Weekend\"}).tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n185.380033\n3.264345\n56.789343\n0.011209\n143.902592\n226.857474\n\n\nYear\n-0.045640\n0.001624\n-28.107556\n0.022640\n-0.066272\n-0.025008\n\n\nWeekend\n2.057166\n0.001401\n1468.256800\n0.000434\n2.039364\n2.074969\n\n\n\n\n\n\n\n\n\n\n\nfit = feols(fml=\"inspection_score ~ Year + Weekend\", data=df)\nfit.wildboottest(B=999, param=\"Year\")\n\n\n\n\n\n\n\ntba\n\n\n\n\nfrom causaldata import gapminder\n\ngm = gapminder.load_pandas().data\ngm[\"logGDPpercap\"] = gm[\"gdpPercap\"].apply(\"log\")\n\nfit = feols(fml=\"lifeExp ~ C(country) + np.log(gdpPercap)\", data=gm)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n-27.773459\n2.500533\n-11.107015\n0.000000e+00\n-32.678217\n-22.868701\n\n\nC(country)[T.Albania]\n17.782625\n2.195160\n8.100835\n1.110223e-15\n13.476853\n22.088397\n\n\nC(country)[T.Algeria]\n5.241055\n2.214496\n2.366704\n1.806875e-02\n0.897356\n9.584755\n\n\nC(country)[T.Angola]\n-13.907122\n2.201727\n-6.316460\n3.481857e-10\n-18.225777\n-9.588468\n\n\nC(country)[T.Argentina]\n8.132158\n2.272781\n3.578065\n3.567229e-04\n3.674133\n12.590183\n\n\n\n\n\n\n\n\n\n\n\n# Set our individual and time (index) for our data\nfit = feols(fml=\"lifeExp ~ np.log(gdpPercap) | country + year\", data=gm)\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lifeExp, Fixed effects: country+year\nInference:  CRV1\nObservations:  1704\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| np.log(gdpPercap) |      1.450 |        0.677 |     2.141 |      0.034 |   0.111 |    2.788 |\n---\nRMSE: 3.267  Adj. R2: 0.018  Adj. R2 Within: 0.018\n\n\n\n\n\n\n\n\n\nfrom causaldata import organ_donations\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\nod[\"After\"] = od[\"Quarter_Num\"] &gt; 3\nod[\"Treated\"] = 1 * (od[\"California\"] & od[\"After\"])\n\ndid = feols(fml=\"Rate ~ Treated | State + Quarter\", data=od)\ndid.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Rate, Fixed effects: State+Quarter\nInference:  CRV1\nObservations:  162\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Treated       |     -0.022 |        0.006 |    -3.733 |      0.001 |  -0.035 |   -0.010 |\n---\nRMSE: 0.022  Adj. R2: 0.003  Adj. R2 Within: 0.003\n\n\n\n\n\n\nfrom causaldata import organ_donations\nfrom pyfixest.visualize import iplot\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\n# od[\"Quarter_Num\"] = pd.Categorical(od.Quarter_Num)\nod[\"California\"] = od.California.astype(float)\n\ndid2 = feols(\n    fml=\"Rate ~ i(Quarter_Num, California) | State + Quarter_Num\", data=od, i_ref1=3\n)\n\ndid2.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.1]:California\n-0.002942\n0.004986\n-0.590105\n0.560215\n-0.013191\n0.007307\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.2]:California\n0.006296\n0.002222\n2.833502\n0.008782\n0.001729\n0.010864\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.4]:California\n-0.021565\n0.004937\n-4.368464\n0.000178\n-0.031713\n-0.011418\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.5]:California\n-0.020292\n0.004387\n-4.625529\n0.000090\n-0.029310\n-0.011275\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.6]:California\n-0.022165\n0.009820\n-2.257160\n0.032627\n-0.042351\n-0.001980"
+  },
+  {
+    "objectID": "replicating-the-effect.html#chapter-4-describing-relationships",
+    "href": "replicating-the-effect.html#chapter-4-describing-relationships",
+    "title": "Replicating Examples from “The Effect”",
+    "section": "",
+    "text": "from causaldata import Mroz\n\n# Read in data\ndt = Mroz.load_pandas().data\n# Keep just working women\ndt = dt[dt[\"lfp\"] == True]\n# Create unlogged earnings\ndt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")\n\n# 5. Run multiple linear regression models by succesively adding controls\nfit = feols(fml=\"lwg ~ csw(inc, wc, k5)\", data=dt, vcov=\"iid\")\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      1.007 |        0.071 |    14.180 |      0.000 |   0.868 |    1.147 |\n| inc           |      0.010 |        0.003 |     2.947 |      0.003 |   0.003 |    0.016 |\n---\nRMSE: 0.715   R2: 0.02\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.972 |        0.070 |    13.909 |      0.000 |   0.834 |    1.109 |\n| inc           |      0.005 |        0.003 |     1.640 |      0.102 |  -0.001 |    0.012 |\n| wc            |      0.342 |        0.075 |     4.595 |      0.000 |   0.196 |    0.489 |\n---\nRMSE: 0.698   R2: 0.066\n###\n\nEstimation:  OLS\nDep. var.: lwg\nInference:  iid\nObservations:  428\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |      0.982 |        0.071 |    13.819 |      0.000 |   0.843 |    1.122 |\n| inc           |      0.005 |        0.003 |     1.590 |      0.113 |  -0.001 |    0.012 |\n| wc            |      0.349 |        0.075 |     4.656 |      0.000 |   0.202 |    0.497 |\n| k5            |     -0.072 |        0.087 |    -0.825 |      0.410 |  -0.243 |    0.099 |\n---\nRMSE: 0.697   R2: 0.068\n\n\nC:\\Users\\alexa\\AppData\\Local\\Temp\\ipykernel_13896\\3519125210.py:8: SettingWithCopyWarning: \nA value is trying to be set on a copy of a slice from a DataFrame.\nTry using .loc[row_indexer,col_indexer] = value instead\n\nSee the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy\n  dt.loc[:, \"earn\"] = dt[\"lwg\"].apply(\"exp\")"
+  },
+  {
+    "objectID": "replicating-the-effect.html#chapter-13-regression",
+    "href": "replicating-the-effect.html#chapter-13-regression",
+    "title": "Replicating Examples from “The Effect”",
+    "section": "",
+    "text": "from causaldata import restaurant_inspections\n\nres = restaurant_inspections.load_pandas().data\nres.inspection_score = res.inspection_score.astype(float)\nres.NumberofLocations = res.NumberofLocations.astype(float)\nres.dtypes\n\nfit = feols(fml=\"inspection_score ~ NumberofLocations\", data=res)\nsummary(fit)\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept         |     94.866 |        0.046 |  2049.047 |      0.000 |  94.775 |   94.956 |\n| NumberofLocations |     -0.019 |        0.000 |   -43.321 |      0.000 |  -0.020 |   -0.018 |\n---\nRMSE: 6.051   R2: 0.065\n\n\n\n\n\n\ndf = restaurant_inspections.load_pandas().data\n\nfit1 = feols(\n    fml=\"inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year\", data=df\n)\nfit2 = feols(fml=\"inspection_score ~ NumberofLocations*Weekend + Year\", data=df)\n\nsummary([fit1, fit2])\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient            |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:-----------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept              |    225.504 |       12.409 |    18.172 |      0.000 | 201.181 |  249.827 |\n| NumberofLocations      |     -0.075 |        0.019 |    -4.041 |      0.000 |  -0.111 |   -0.039 |\n| I(NumberofLocations^2) |      0.056 |        0.019 |     3.009 |      0.003 |   0.020 |    0.093 |\n| Year                   |     -0.065 |        0.006 |   -10.527 |      0.000 |  -0.077 |   -0.053 |\n---\nRMSE: 6.038   R2: 0.069\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  iid\nObservations:  27178\n\n| Coefficient               |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept                 |    225.126 |       12.415 |    18.134 |      0.000 | 200.793 |  249.460 |\n| NumberofLocations         |     -0.019 |        0.000 |   -43.759 |      0.000 |  -0.020 |   -0.018 |\n| Weekend                   |      1.759 |        0.488 |     3.606 |      0.000 |   0.803 |    2.715 |\n| Year                      |     -0.065 |        0.006 |   -10.494 |      0.000 |  -0.077 |   -0.053 |\n| NumberofLocations:Weekend |     -0.010 |        0.008 |    -1.307 |      0.191 |  -0.025 |    0.005 |\n---\nRMSE: 6.038   R2: 0.069\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov=\"HC3\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: inspection_score\nInference:  HC3\nObservations:  27178\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.564 |  209.196 |\n| Year          |     -0.046 |        0.006 |    -7.551 |      0.000 |  -0.057 |   -0.034 |\n| Weekend       |      2.057 |        0.353 |     5.829 |      0.000 |   1.365 |    2.749 |\n---\nRMSE: 6.248   R2: 0.003\n\n\n\n\n\n\nfeols(fml=\"inspection_score ~ Year + Weekend\", data=df, vcov={\"CRV1\": \"Weekend\"}).tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n185.380033\n3.264345\n56.789343\n0.011209\n143.902592\n226.857474\n\n\nYear\n-0.045640\n0.001624\n-28.107556\n0.022640\n-0.066272\n-0.025008\n\n\nWeekend\n2.057166\n0.001401\n1468.256800\n0.000434\n2.039364\n2.074969\n\n\n\n\n\n\n\n\n\n\n\nfit = feols(fml=\"inspection_score ~ Year + Weekend\", data=df)\nfit.wildboottest(B=999, param=\"Year\")"
+  },
+  {
+    "objectID": "replicating-the-effect.html#chapter-16-fixed-effects",
+    "href": "replicating-the-effect.html#chapter-16-fixed-effects",
+    "title": "Replicating Examples from “The Effect”",
+    "section": "",
+    "text": "tba\n\n\n\n\nfrom causaldata import gapminder\n\ngm = gapminder.load_pandas().data\ngm[\"logGDPpercap\"] = gm[\"gdpPercap\"].apply(\"log\")\n\nfit = feols(fml=\"lifeExp ~ C(country) + np.log(gdpPercap)\", data=gm)\nfit.tidy().head()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n-27.773459\n2.500533\n-11.107015\n0.000000e+00\n-32.678217\n-22.868701\n\n\nC(country)[T.Albania]\n17.782625\n2.195160\n8.100835\n1.110223e-15\n13.476853\n22.088397\n\n\nC(country)[T.Algeria]\n5.241055\n2.214496\n2.366704\n1.806875e-02\n0.897356\n9.584755\n\n\nC(country)[T.Angola]\n-13.907122\n2.201727\n-6.316460\n3.481857e-10\n-18.225777\n-9.588468\n\n\nC(country)[T.Argentina]\n8.132158\n2.272781\n3.578065\n3.567229e-04\n3.674133\n12.590183\n\n\n\n\n\n\n\n\n\n\n\n# Set our individual and time (index) for our data\nfit = feols(fml=\"lifeExp ~ np.log(gdpPercap) | country + year\", data=gm)\nfit.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: lifeExp, Fixed effects: country+year\nInference:  CRV1\nObservations:  1704\n\n| Coefficient       |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:------------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| np.log(gdpPercap) |      1.450 |        0.677 |     2.141 |      0.034 |   0.111 |    2.788 |\n---\nRMSE: 3.267  Adj. R2: 0.018  Adj. R2 Within: 0.018"
+  },
+  {
+    "objectID": "replicating-the-effect.html#chapter-18-difference-in-differences",
+    "href": "replicating-the-effect.html#chapter-18-difference-in-differences",
+    "title": "Replicating Examples from “The Effect”",
+    "section": "",
+    "text": "from causaldata import organ_donations\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\nod[\"After\"] = od[\"Quarter_Num\"] &gt; 3\nod[\"Treated\"] = 1 * (od[\"California\"] & od[\"After\"])\n\ndid = feols(fml=\"Rate ~ Treated | State + Quarter\", data=od)\ndid.summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Rate, Fixed effects: State+Quarter\nInference:  CRV1\nObservations:  162\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| Treated       |     -0.022 |        0.006 |    -3.733 |      0.001 |  -0.035 |   -0.010 |\n---\nRMSE: 0.022  Adj. R2: 0.003  Adj. R2 Within: 0.003\n\n\n\n\n\n\nfrom causaldata import organ_donations\nfrom pyfixest.visualize import iplot\n\nod = organ_donations.load_pandas().data\n\n# Create Treatment Variable\nod[\"California\"] = od[\"State\"] == \"California\"\n# od[\"Quarter_Num\"] = pd.Categorical(od.Quarter_Num)\nod[\"California\"] = od.California.astype(float)\n\ndid2 = feols(\n    fml=\"Rate ~ i(Quarter_Num, California) | State + Quarter_Num\", data=od, i_ref1=3\n)\n\ndid2.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.1]:California\n-0.002942\n0.004986\n-0.590105\n0.560215\n-0.013191\n0.007307\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.2]:California\n0.006296\n0.002222\n2.833502\n0.008782\n0.001729\n0.010864\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.4]:California\n-0.021565\n0.004937\n-4.368464\n0.000178\n-0.031713\n-0.011418\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.5]:California\n-0.020292\n0.004387\n-4.625529\n0.000090\n-0.029310\n-0.011275\n\n\nC(Quarter_Num,contr.treatment(base=3))[T.6]:California\n-0.022165\n0.009820\n-2.257160\n0.032627\n-0.042351\n-0.001980"
+  },
+  {
+    "objectID": "reference/estimation.feols.html",
+    "href": "reference/estimation.feols.html",
+    "title": "estimation.feols",
+    "section": "",
+    "text": "estimation.feols(fml, data, vcov=None, weights=None, ssc=ssc(), fixef_rm='none', collin_tol=1e-10, drop_intercept=False, i_ref1=None, i_ref2=None)\nEstimate a linear regression models with fixed effects using fixest formula syntax.",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "estimation.feols"
+    ]
+  },
+  {
+    "objectID": "reference/estimation.feols.html#parameters",
+    "href": "reference/estimation.feols.html#parameters",
+    "title": "estimation.feols",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nfml\nstr\nA three-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1”. “|” separates dependent variable, fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2).\nrequired\n\n\ndata\npyfixest.dev_utils.DataFrameType\nA pandas or polars dataframe containing the variables in the formula.\nrequired\n\n\nvcov\ntyping.Union[str, dict[str, str]]\nType of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.\nNone\n\n\nweights\nUnion[None, str], optional. Default is None. Weights for WLS estimation. If None, all observations are weighted equally. If a string, the name of the column in data that contains the weights.\n\nNone\n\n\nssc\nstr\nA ssc object specifying the small sample correction for inference.\nssc()\n\n\nfixef_rm\nstr\nSpecifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.\n'none'\n\n\ncollin_tol\nfloat\nTolerance for collinearity check, by default 1e-06.\n1e-10\n\n\ndrop_intercept\nbool\nWhether to drop the intercept from the model, by default False.\nFalse\n\n\ni_ref1\ntyping.Optional[typing.Union[list, str]]\nReference category for the first set of categorical variables interacted via “i()”, by default None.\nNone\n\n\ni_ref2\ntyping.Optional[typing.Union[list, str]]\nReference category for the second set of categorical variables interacted via “i()”, by default None.\nNone",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "estimation.feols"
+    ]
+  },
+  {
+    "objectID": "reference/estimation.feols.html#returns",
+    "href": "reference/estimation.feols.html#returns",
+    "title": "estimation.feols",
+    "section": "Returns",
+    "text": "Returns\n\n\n\n\n\n\n\nType\nDescription\n\n\n\n\nobject\nAn instance of the [Feols(/reference/Feols.qmd) class or FixestMulti class for multiple models specified via fml.",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "estimation.feols"
+    ]
+  },
+  {
+    "objectID": "reference/estimation.feols.html#examples",
+    "href": "reference/estimation.feols.html#examples",
+    "title": "estimation.feols",
+    "section": "Examples",
+    "text": "Examples\nAs in fixest, the [Feols(/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects. The following example regresses Y on X1 and X2 with fixed effects for f1 and f2: fixed effects are specified after the | symbol.\n\nfrom pyfixest.estimation import feols\nfrom pyfixest.utils import get_data\nfrom pyfixest.summarize import etable\n\ndata = get_data()\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.summary()\n\n\n            \n            \n            \n\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |\n| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n\n\nCalling feols() returns an instance of the [Feols(/reference/Feols.qmd) class. The summary() method can be used to print the results.\nAn alternative way to retrieve model results is via the tidy() method, which returns a pandas dataframe with the estimated coefficients, standard errors, t-statistics, and p-values.\n\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nX1\n-0.924046\n0.060934\n-15.164621\n2.664535e-15\n-1.048671\n-0.799421\n\n\nX2\n-0.174107\n0.014608\n-11.918277\n1.069367e-12\n-0.203985\n-0.144230\n\n\n\n\n\n\n\nYou can also access all elements in the tidy data frame by dedicated methods, e.g. fit.coef() for the coefficients, fit.se() for the standard errors, fit.tstat() for the t-statistics, and fit.pval() for the p-values, and fit.confint() for the confidence intervals.\nThe employed type of inference can be specified via the vcov argument. If vcov is not provided, PyFixest employs the fixest default of iid inference, unless there are fixed effects in the model, in which case feols() clusters the standard error by the first fixed effect (CRV1 inference).\n\nfit1 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov=\"iid\")\nfit2 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov=\"hetero\")\nfit3 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov={\"CRV1\": \"f1\"})\n\nSupported inference types are “iid”, “hetero”, “HC1”, “HC2”, “HC3”, and “CRV1”/“CRV3”. Clustered standard errors are specified via a dictionary, e.g. {\"CRV1\": \"f1\"} for CRV1 inference with clustering by f1 or {\"CRV3\": \"f1\"} for CRV3 inference with clustering by f1. For two-way clustering, you can provide a formula string, e.g. {\"CRV1\": \"f1 + f2\"} for CRV1 inference with clustering by f1.\n\nfit4 = feols(\"Y ~ X1 + X2 | f1 + f2\", data, vcov={\"CRV1\": \"f1 + f2\"})\n\nInference can be adjusted post estimation via the vcov method:\n\nfit.summary()\nfit.vcov(\"iid\").summary()\n\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  CRV1\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 |  -1.049 |   -0.799 |\n| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 |  -0.204 |   -0.144 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n###\n\nEstimation:  OLS\nDep. var.: Y, Fixed effects: f1+f2\nInference:  iid\nObservations:  997\n\n| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5 % |   97.5 % |\n|:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|\n| X1            |     -0.924 |        0.054 |   -16.995 |      0.000 |  -1.031 |   -0.817 |\n| X2            |     -0.174 |        0.014 |   -12.081 |      0.000 |  -0.202 |   -0.146 |\n---\nRMSE: 1.346   R2: 0.659   R2 Within: 0.303\n\n\nThe ssc argument specifies the small sample correction for inference. In general, feols() uses all of fixest::feols() defaults, but sets the fixef.K argument to \"none\" whereas the fixest::feols() default is \"nested\". See here for more details: link to github.\nfeols() supports a range of multiple estimation syntax, i.e. you can estimate multiple models in one call. The following example estimates two models, one with fixed effects for f1 and one with fixed effects for f2 using the sw() syntax.\n\nfit = feols(\"Y ~ X1 + X2 | sw(f1, f2)\", data)\ntype(fit)\n\npyfixest.FixestMulti.FixestMulti\n\n\nThe returned object is an instance of the FixestMulti class. You can access the results of the first model via fit.fetch_model(0) and the results of the second model via fit.fetch_model(1). You can compare the model results via the etable() function:\n\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                  Y\n--------------------------------------------------\nX1             -0.95*** (0.067)  -0.979*** (0.077)\nX2            -0.174*** (0.018)  -0.175*** (0.022)\n--------------------------------------------------\nf2                            -                  x\nf1                            x                  -\n--------------------------------------------------\nR2                        0.489              0.354\nS.E. type                by: f1             by: f2\nObservations                997                998\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nOther supported multiple estimation syntax include sw0(), csw() and csw0(). While sw() adds variables in a “stepwise” fashinon, csw() does so cumulatively.\n\nfit = feols(\"Y ~ X1 + X2 | csw(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f1+f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                  Y\n--------------------------------------------------\nX1             -0.95*** (0.067)  -0.924*** (0.061)\nX2            -0.174*** (0.018)  -0.174*** (0.015)\n--------------------------------------------------\nf2                            -                  x\nf1                            x                  x\n--------------------------------------------------\nR2                        0.489              0.659\nS.E. type                by: f1             by: f1\nObservations                997                997\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nThe sw0() and csw0() syntax are similar to sw() and csw(), but start with a model that exludes the variables specified in sw() and csw():\n\nfit = feols(\"Y ~ X1 + X2 | sw0(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])\n\nModel:  Y~X1+X2\nModel:  Y~X1+X2|f1\nModel:  Y~X1+X2|f2\n                           est1               est2               est3\n------------  -----------------  -----------------  -----------------\ndepvar                        Y                  Y                  Y\n---------------------------------------------------------------------\nIntercept      0.889*** (0.108)\nX1            -0.993*** (0.082)   -0.95*** (0.067)  -0.979*** (0.077)\nX2            -0.176*** (0.022)  -0.174*** (0.018)  -0.175*** (0.022)\n---------------------------------------------------------------------\nf2                            -                  -                  x\nf1                            -                  x                  -\n---------------------------------------------------------------------\nR2                        0.177              0.489              0.354\nS.E. type                   iid             by: f1             by: f2\nObservations                998                997                998\n---------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nThe feols() function also supports multiple dependent variables. The following example estimates two models, one with Y1 as the dependent variable and one with Y2 as the dependent variable.\n\nfit = feols(\"Y + Y2 ~ X1 | f1 + f2\", data)\netable([fit.fetch_model(0), fit.fetch_model(1)])\n\nModel:  Y~X1|f1+f2\nModel:  Y2~X1|f1+f2\n                           est1               est2\n------------  -----------------  -----------------\ndepvar                        Y                 Y2\n--------------------------------------------------\nX1            -0.919*** (0.065)  -1.228*** (0.195)\n--------------------------------------------------\nf2                            x                  x\nf1                            x                  x\n--------------------------------------------------\nR2                        0.609              0.168\nS.E. type                by: f1             by: f1\nObservations                997                998\n--------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nIt is possible to combine different multiple estimation operators:\n\nfit = feols(\"Y + Y2 ~ X1 | sw(f1, f2)\", data)\netable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2), fit.fetch_model(3)])\n\nModel:  Y~X1|f1\nModel:  Y2~X1|f1\nModel:  Y~X1|f2\nModel:  Y2~X1|f2\n                           est1               est2               est3               est4\n------------  -----------------  -----------------  -----------------  -----------------\ndepvar                        Y                 Y2                  Y                 Y2\n----------------------------------------------------------------------------------------\nX1            -0.949*** (0.069)  -1.266*** (0.176)  -0.982*** (0.081)  -1.301*** (0.205)\n----------------------------------------------------------------------------------------\nf2                            -                  -                  x                  x\nf1                            x                  x                  -                  -\n----------------------------------------------------------------------------------------\nR2                        0.437              0.115              0.302               0.09\nS.E. type                by: f1             by: f1             by: f2             by: f2\nObservations                997                998                998                999\n----------------------------------------------------------------------------------------\nSignificance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001\nFormat of coefficient cell:\nCoefficient (Std. Error)\n\n\nIn general, using muliple estimation syntax can improve the estimation time as covariates that are demeaned in one model and are used in another model do not need to be demeaned again: feols() implements a caching mechanism that stores the demeaned covariates.\nBesides OLS, feols() also supports IV estimation via three part formulas:\n\nfit = feols(\"Y ~  X2 | f1 + f2 | X1 ~ Z1\", data)\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nX1\n-1.050097\n0.085493\n-12.282912\n5.133671e-13\n-1.224949\n-0.875245\n\n\nX2\n-0.174351\n0.014779\n-11.797039\n1.369793e-12\n-0.204578\n-0.144124\n\n\n\n\n\n\n\nHere, X1 is the endogenous variable and Z1 is the instrument. f1 and f2 are the fixed effects, as before. To estimate IV models without fixed effects, simply omit the fixed effects part of the formula:\n\nfit = feols(\"Y ~  X2 | X1 ~ Z1\", data)\nfit.tidy()\n\n\n\n\n\n\n\n\nEstimate\nStd. Error\nt value\nPr(&gt;|t|)\n2.5 %\n97.5 %\n\n\nCoefficient\n\n\n\n\n\n\n\n\n\n\nIntercept\n0.861939\n0.151187\n5.701137\n1.567858e-08\n0.565257\n1.158622\n\n\nX1\n-0.967238\n0.130078\n-7.435847\n2.238210e-13\n-1.222497\n-0.711980\n\n\nX2\n-0.176416\n0.021769\n-8.104001\n1.554312e-15\n-0.219134\n-0.133697\n\n\n\n\n\n\n\nLast, feols() supports interaction of variables via the i() syntax. Documentation on this is tba.\nAfter fitting a model via feols(), you can use the predict() method to get the predicted values:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.predict()[0:5]\n\narray([ 3.0633663 , -0.69574133, -0.91240433, -0.46370257, -1.67331154])\n\n\nThe predict() method also supports a newdata argument to predict on new data, which returns a numpy array of the predicted values:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.predict(newdata=data)[0:5]\n\narray([ 2.14598765,         nan,         nan,  3.0633663 , -0.69574133])\n\n\nLast, you can plot the results of a model via the coefplot() method:\n\nfit = feols(\"Y ~ X1 + X2 | f1 + f2\", data)\nfit.coefplot()",
+    "crumbs": [
+      "Documentation",
+      "Estimation Functions",
+      "estimation.feols"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.iplot.html",
+    "href": "reference/visualize.iplot.html",
+    "title": "visualize.iplot",
+    "section": "",
+    "text": "visualize.iplot(models, alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.iplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.iplot.html#parameters",
+    "href": "reference/visualize.iplot.html#parameters",
+    "title": "visualize.iplot",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist or object\nA list of fitted models of type [Feols(/reference/Feols.qmd) or Fepois, or just a single model.\nrequired\n\n\nfigsize\ntuple\nThe size of the figure.\n(500, 300)\n\n\nalpha\nfloat\nThe significance level for the confidence intervals.\n0.05\n\n\nyintercept\nint or None\nThe value at which to draw a horizontal line on the plot.\nNone\n\n\nxintercept\nint or None\nThe value at which to draw a vertical line on the plot.\nNone\n\n\nrotate_xticks\nfloat\nThe angle in degrees to rotate the xticks labels. Default is 0 (no rotation).\n0\n\n\ntitle\nstr\nThe title of the plot.\nNone\n\n\ncoord_flip\nbool\nWhether to flip the coordinates of the plot. Default is True.\nTrue",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.iplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.iplot.html#returns",
+    "href": "reference/visualize.iplot.html#returns",
+    "title": "visualize.iplot",
+    "section": "Returns",
+    "text": "Returns\n\n\n\nType\nDescription\n\n\n\n\nobject\nA lets-plot figure.",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.iplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.iplot.html#examples",
+    "href": "reference/visualize.iplot.html#examples",
+    "title": "visualize.iplot",
+    "section": "Examples",
+    "text": "Examples\n\nfrom pyfixest.utils import get_data\nfrom pyfixest.estimation import feols\nfrom pyfixest.visualize import iplot\n\ndf = get_data()\nfit1 = feols(\"Y ~ i(f1)\", data = df)\nfit2 = feols(\"Y ~ i(f1) + X2\", data = df)\nfit3 = feols(\"Y ~ i(f1) + X2 | f2\", data = df)\n\niplot([fit1, fit2, fit3])",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.iplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.coefplot.html",
+    "href": "reference/visualize.coefplot.html",
+    "title": "visualize.coefplot",
+    "section": "",
+    "text": "visualize.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, coefficients=None, title=None, coord_flip=True)\nPlot model coefficients with confidence intervals.",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.coefplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.coefplot.html#parameters",
+    "href": "reference/visualize.coefplot.html#parameters",
+    "title": "visualize.coefplot",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nmodels\nlist or object\nA list of fitted models of type [Feols(/reference/Feols.qmd) or Fepois, or just a single model.\nrequired\n\n\nfigsize\ntuple\nThe size of the figure.\n(500, 300)\n\n\nalpha\nfloat\nThe significance level for the confidence intervals.\n0.05\n\n\nyintercept\nfloat or None\nThe value at which to draw a horizontal line on the plot. Default is 0.\n0\n\n\nxintercept\nfloat or None\nThe value at which to draw a vertical line on the plot. Default is None.\nNone\n\n\nrotate_xticks\nfloat\nThe angle in degrees to rotate the xticks labels. Default is 0 (no rotation).\n0\n\n\ncoefficients\nlist\nA list of coefficients to plot. If None, all coefficients are plotted.\nNone\n\n\ntitle\nstr\nThe title of the plot.\nNone\n\n\ncoord_flip\nbool\nWhether to flip the coordinates of the plot. Default is True.\nTrue",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.coefplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.coefplot.html#returns",
+    "href": "reference/visualize.coefplot.html#returns",
+    "title": "visualize.coefplot",
+    "section": "Returns",
+    "text": "Returns\n\n\n\nType\nDescription\n\n\n\n\nobject\nA lets-plot figure.",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.coefplot"
+    ]
+  },
+  {
+    "objectID": "reference/visualize.coefplot.html#examples",
+    "href": "reference/visualize.coefplot.html#examples",
+    "title": "visualize.coefplot",
+    "section": "Examples",
+    "text": "Examples\n\nfrom pyfixest.utils import get_data\nfrom pyfixest.estimation import feols\nfrom pyfixest.visualize import coefplot\n\ndf = get_data()\nfit1 = feols(\"Y ~ X1\", data = df)\nfit2 = feols(\"Y ~ X1 + X2\", data = df)\nfit3 = feols(\"Y ~ X1 + X2 | f1\", data = df)\n\ncoefplot([fit1, fit2, fit3])",
+    "crumbs": [
+      "Documentation",
+      "Summarize and Visualize",
+      "visualize.coefplot"
+    ]
+  },
+  {
+    "objectID": "reference/index.html",
+    "href": "reference/index.html",
+    "title": "Function reference",
+    "section": "",
+    "text": "User facing estimation functions\n\n\n\nestimation.feols\nEstimate a linear regression models with fixed effects using fixest formula syntax.\n\n\nestimation.fepois\nEstimate Poisson regression models with fixed effects using the pplmhdfe algorithm.\n\n\ndid.estimation.did2s\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.\n\n\ndid.estimation.lpdid\nEstimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.\n\n\ndid.estimation.event_study\nFunction for Event Study Estimation.\n\n\nmultcomp.bonferroni\nCompute Bonferroni adjusted p-values for multiple hypothesis testing.\n\n\nmultcomp.rwolf\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.\n\n\n\n\n\n\nDetails on Methods and Attributes\n\n\n\nfeols.Feols\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\nfepois.Fepois\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\n\n\nfeiv.Feiv\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\n\n\n\n\nPost-Processing of Estimation Results\n\n\n\nsummarize.summary\nPrints a summary of estimation results for each estimated model.\n\n\nvisualize.coefplot\nPlot model coefficients with confidence intervals.\n\n\nvisualize.iplot\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.\n\n\n\n\n\n\nPyFixest internals and utilities\n\n\n\ndemean.demean\nWorkhorse for demeaning an input array x based on the specified fixed effects and weights\n\n\ndetect_singletons.detect_singletons\nDetect singleton fixed effects in a dataset.\n\n\nmodel_matrix_fixest.model_matrix_fixest\nCreate model matrices for fixed effects estimation.",
+    "crumbs": [
+      "Documentation",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#estimation-functions",
+    "href": "reference/index.html#estimation-functions",
+    "title": "Function reference",
+    "section": "",
+    "text": "User facing estimation functions\n\n\n\nestimation.feols\nEstimate a linear regression models with fixed effects using fixest formula syntax.\n\n\nestimation.fepois\nEstimate Poisson regression models with fixed effects using the pplmhdfe algorithm.\n\n\ndid.estimation.did2s\nEstimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.\n\n\ndid.estimation.lpdid\nEstimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.\n\n\ndid.estimation.event_study\nFunction for Event Study Estimation.\n\n\nmultcomp.bonferroni\nCompute Bonferroni adjusted p-values for multiple hypothesis testing.\n\n\nmultcomp.rwolf\nCompute Romano-Wolf adjusted p-values for multiple hypothesis testing.",
+    "crumbs": [
+      "Documentation",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#estimation-classes",
+    "href": "reference/index.html#estimation-classes",
+    "title": "Function reference",
+    "section": "",
+    "text": "Details on Methods and Attributes\n\n\n\nfeols.Feols\nNon user-facing class to estimate an IV model using a 2SLS estimator.\n\n\nfepois.Fepois\nNon user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).\n\n\nfeiv.Feiv\nNon user-facing class to estimate an IV model using a 2SLS estimator.",
+    "crumbs": [
+      "Documentation",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#summarize-and-visualize",
+    "href": "reference/index.html#summarize-and-visualize",
+    "title": "Function reference",
+    "section": "",
+    "text": "Post-Processing of Estimation Results\n\n\n\nsummarize.summary\nPrints a summary of estimation results for each estimated model.\n\n\nvisualize.coefplot\nPlot model coefficients with confidence intervals.\n\n\nvisualize.iplot\nPlot model coefficients for variables interacted via “i()” syntax, with confidence intervals.",
+    "crumbs": [
+      "Documentation",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#misc-utilities",
+    "href": "reference/index.html#misc-utilities",
+    "title": "Function reference",
+    "section": "",
+    "text": "PyFixest internals and utilities\n\n\n\ndemean.demean\nWorkhorse for demeaning an input array x based on the specified fixed effects and weights\n\n\ndetect_singletons.detect_singletons\nDetect singleton fixed effects in a dataset.\n\n\nmodel_matrix_fixest.model_matrix_fixest\nCreate model matrices for fixed effects estimation.",
+    "crumbs": [
+      "Documentation",
+      "Function reference"
     ]
   },
   {
