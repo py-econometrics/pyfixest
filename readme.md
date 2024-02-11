@@ -75,7 +75,7 @@ data["Y3"] = data["Y2"] + rng.normal(0, 0.2, size=len(data))
 fit = feols("Y + Y2 + Y3~ X1", data=data)
 
 rwolf_df = rwolf(fit.to_list(), "X1", B=9999, seed=12345)
-rwolf_df.round(3)
+rwolf_df.round(3).to_markdown()
 ```
 
       0%|          | 0/3 [00:00<?, ?it/s]
