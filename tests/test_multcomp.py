@@ -1,12 +1,12 @@
-from pyfixest.estimation import feols
-from pyfixest.utils import get_data
-from pyfixest.multcomp import rwolf, _get_rwolf_pval
 import numpy as np
 import pandas as pd
-
-from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+
+from pyfixest.estimation import feols
+from pyfixest.multcomp import _get_rwolf_pval, rwolf
+from pyfixest.utils import get_data
 
 pandas2ri.activate()
 

@@ -1,9 +1,8 @@
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numba as nb
 import numpy as np
 import pandas as pd
-from numba.extending import overload
 
 
 def demean_model(

@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from pyfixest.estimation import feols
 from pyfixest.utils import get_data, ssc
 

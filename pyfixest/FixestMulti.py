@@ -1,19 +1,18 @@
 import warnings
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from typing import Union, Dict, Optional, List
 
+from pyfixest.demean import demean_model
+from pyfixest.dev_utils import _polars_to_pandas
+from pyfixest.exceptions import MultiEstNotSupportedError
+from pyfixest.feiv import Feiv
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois, _check_for_separation
-from pyfixest.feiv import Feiv
-from pyfixest.model_matrix_fixest import model_matrix_fixest
-from pyfixest.demean import demean_model
 from pyfixest.FormulaParser import FixestFormulaParser
-from pyfixest.utils import ssc
-from pyfixest.exceptions import MultiEstNotSupportedError
-from pyfixest.visualize import iplot, coefplot
-from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
+from pyfixest.model_matrix_fixest import model_matrix_fixest
+from pyfixest.visualize import coefplot, iplot
 
 
 class FixestMulti:
@@ -380,7 +379,7 @@ class FixestMulti:
             self._is_multiple_estimation = True
             if self._is_iv:
                 raise MultiEstNotSupportedError(
-                    f"""
+                    """
                         Multiple Estimations is currently not supported with IV.
                         This is mostly due to insufficient testing and will be possible with a future release of PyFixest.
                         """

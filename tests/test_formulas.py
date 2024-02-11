@@ -1,5 +1,4 @@
-import pytest
-from pyfixest.FormulaParser import _unpack_fml, _pack_to_fml, _find_sw, _flatten_list
+from pyfixest.FormulaParser import _find_sw, _flatten_list, _pack_to_fml, _unpack_fml
 
 
 def test_unpack_fml():

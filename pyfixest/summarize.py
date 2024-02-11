@@ -1,12 +1,13 @@
-from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
-from pyfixest.feiv import Feiv
+import re
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from typing import Union, List, Optional
 from tabulate import tabulate
-import re
+
+from pyfixest.feiv import Feiv
+from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
 
 
 def etable(
@@ -362,7 +363,7 @@ def _parse_coef_fmt(coef_fmt: str):
     - coef_fmt_title (str): The title for the coef_fmt string.
     """
 
-    allowed_elements = ["b", "se", "t", "p", " ", "\(", "\)", "\[", "\]", "\n"]
+    allowed_elements = ["b", "se", "t", "p", " ", r"\(", r"\)", r"\[", r"\]", "\n"]
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     title_map = {
         "b": "Coefficient",

@@ -1,6 +1,6 @@
 from pyfixest.estimation import feols, fepois
+from pyfixest.summarize import etable, summary
 from pyfixest.utils import get_data
-from pyfixest.summarize import summary, etable
 
 
 def test_summary():
