@@ -5,14 +5,56 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation import feols
-from pyfixest.multcomp import _get_rwolf_pval, rwolf
+from pyfixest.multcomp import _get_rwolf_pval, rwolf, bonferroni
 from pyfixest.utils import get_data
 
 pandas2ri.activate()
 
 fixest = importr("fixest")
 wildrwolf = importr("wildrwolf")
+stats = importr("stats")
+broom = importr("broom")
 
+
+def test_bonferroni():
+
+    data = get_data().dropna()
+    rng = np.random.default_rng(989)
+    data = get_data()
+    data["Y2"] = data["Y"] * rng.normal(0.2, 1, size=len(data))
+    data["Y3"] = data["Y2"] + rng.normal(0, 0.5, size=len(data))
+
+    # test set 1
+
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y2 ~ X1", data=data)
+    fit3 = feols("Y3 ~ X1", data=data)
+
+    bonferroni_py = bonferroni([fit1, fit2, fit3], "X1")
+
+    # R
+    fit1_r = fixest.feols(ro.Formula("Y ~ X1"), data=data)
+    fit2_r = fixest.feols(ro.Formula("Y2 ~ X1"), data=data)
+    fit3_r = fixest.feols(ro.Formula("Y3 ~ X1"), data=data)
+
+
+    pvalues_r = np.zeros(3)
+    for i, x in enumerate([fit1_r, fit2_r, fit3_r]):
+
+        df_tidy = broom.tidy_fixest(x)
+        df_r = pd.DataFrame(df_tidy).T
+        df_r.columns = [
+            "term",
+            "estimate",
+            "std.error",
+            "statistic",
+            "p.value"
+        ]
+        pvalues_r[i] = df_r.set_index('term').xs('X1')["p.value"]
+
+    bonferroni_r = stats.p_adjust(pvalues_r, method="bonferroni")
+
+    np.testing.assert_allclose(bonferroni_py.iloc[6].values, bonferroni_r, atol=1e-8, rtol=np.inf)
 
 def test_wildrwolf():
 
