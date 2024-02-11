@@ -56,7 +56,7 @@ pip install git+https://github.com/s3alfisc/pyfixest.git
 
 ## News
 
-`PyFixest` `0.15.2` adds support Romano-Wolf Corrected p-values via the [rwolf()](https://s3alfisc.github.io/pyfixest/reference/multcomp.rwolf.html#pyfixest.multcomp.rwolf) function.
+`PyFixest` `0.15.2` adds support for Romano-Wolf Corrected p-values via the [rwolf()](https://s3alfisc.github.io/pyfixest/reference/multcomp.rwolf.html#pyfixest.multcomp.rwolf) function.
 
 ## Benchmarks
 

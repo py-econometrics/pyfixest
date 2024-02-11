@@ -14,7 +14,7 @@ def rwolf(
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
-    For each model, it is assumed that the adjustment is for the family of hypotheses is
+    For each model, it is assumed that tests to adjust are of the form
     "param = 0". This function uses the `wildboottest()` method for running the bootstrap,
     hence models of type `Feiv` or `Fepois` are not supported.
 
