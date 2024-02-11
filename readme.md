@@ -26,7 +26,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
 ## Features
 
 -   OLS and IV Regression
--   Poisson Regression
+-   Poisson Regression following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
 -   Several Robust and Cluster Robust Variance-Covariance Types
 -   Wild Cluster Bootstrap Inference (via
