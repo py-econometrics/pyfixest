@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -9,18 +9,18 @@ from pyfixest.summarize import _post_processing_input_checks
 
 
 def rwolf(
-    models: Union[List[Feols], Feols], param: str, B: int, seed: int
+    models: Union[list[Feols], Feols], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
-    For each model, it is assumed that the adjustment is for the family of hypotheses is
+    For each model, it is assumed that tests to adjust are of the form
     "param = 0". This function uses the `wildboottest()` method for running the bootstrap,
     hence models of type `Feiv` or `Fepois` are not supported.
 
     Parameters
     ----------
-    models : List[Feols] or FixestMulti
+    models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a FixestMulti object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
@@ -35,6 +35,21 @@ def rwolf(
     pd.DataFrame
         A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.
 
+    Examples
+    --------
+    ```python
+    from pyfixest.estimation import feols
+    from pyfixest.utils import get_data
+    from pyfixest.multcomp import rwolf
+
+    data = get_data().dropna()
+    fit = feols("Y ~ Y2 + X1 + X2", data=data)
+    rwolf(fit.to_list(), "X1", B=9999, seed=123)
+
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2", data=data)
+    rwolf([fit1, fit2], "X1", B=9999, seed=123)
+    ```
     """
 
     models = _post_processing_input_checks(models)
