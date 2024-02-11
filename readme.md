@@ -38,6 +38,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
         estimator
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
+- Multiple Hypothesis Corrections Following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314)
 
 ## Installation
 
