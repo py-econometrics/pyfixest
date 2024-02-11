@@ -179,7 +179,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="features">Features</h2>
 <ul>
 <li>OLS and IV Regression</li>
-<li>Poisson Regression</li>
+<li>Poisson Regression following the <a href="https://journals.sagepub.com/doi/full/10.1177/1536867X20909691">pplmhdfe algorithm</a></li>
 <li>Multiple Estimation Syntax</li>
 <li>Several Robust and Cluster Robust Variance-Covariance Types</li>
 <li>Wild Cluster Bootstrap Inference (via <a href="https://github.com/s3alfisc/wildboottest">wildboottest</a>)</li>
@@ -189,6 +189,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><a href="https://jrgcmu.github.io/2sdd_current.pdf">Gardner’s two-stage (“<code>Did2s</code>”)</a> estimator</li>
 <li>Basic Versions of the Local Projections estimator following <a href="https://www.nber.org/papers/w31184">Dube et al (2023)</a></li>
 </ul></li>
+<li>Multiple Hypothesis Corrections following the Procedure by <a href="https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314">Romano and Wolf</a></li>
 </ul>
 </section>
 <section id="installation" class="level2">
@@ -200,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="news" class="level2">
 <h2 class="anchored" data-anchor-id="news">News</h2>
-<p><code>PyFixest</code> <code>0.13</code> adds support for the <a href="https://s3alfisc.github.io/pyfixest/difference-in-differences-estimation/">local projections Difference-in-Differences Estimator</a>.</p>
+<p><code>PyFixest</code> <code>0.15.2</code> adds support Romano-Wolf Corrected p-values via the <code>rwolf</code> function.</p>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
