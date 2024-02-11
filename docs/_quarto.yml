@@ -47,6 +47,7 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
+        - multcomp.bonferroni
         - multcomp.rwolf
     - title: Estimation Classes
       desc: |
