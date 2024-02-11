@@ -72,17 +72,86 @@ data["Y3"] = data["Y2"] + rng.normal(0, 0.2, size=len(data))
 
 fit = feols("Y + Y2 + Y3~ X1", data=data)
 rwolf_df = rwolf(fit.to_list(), "X1", B=9999, seed=12345)
+rwolf_df
 ```
 
       0%|          | 0/3 [00:00<?, ?it/s]
 
-    100%|██████████| 3/3 [00:02<00:00,  1.23it/s]
+    100%|██████████| 3/3 [00:02<00:00,  1.28it/s]
     
 
 
 
 
-    '|             |    est0 |   est1 |   est2 |\n|:------------|--------:|-------:|-------:|\n| Estimate    |  -1     |  0.011 |  0.004 |\n| Std. Error  |   0.085 |  0.018 |  0.02  |\n| t value     | -11.802 |  0.594 |  0.216 |\n| Pr(>|t|)    |   0     |  0.553 |  0.829 |\n| 2.5 %       |  -1.166 | -0.025 | -0.035 |\n| 97.5 %      |  -0.834 |  0.047 |  0.044 |\n| RW Pr(>|t|) |   0     |  0.671 |  0.832 |'
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>est0</th>
+      <th>est1</th>
+      <th>est2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Estimate</th>
+      <td>-1.000086</td>
+      <td>0.010825</td>
+      <td>0.004361</td>
+    </tr>
+    <tr>
+      <th>Std. Error</th>
+      <td>0.084735</td>
+      <td>0.018229</td>
+      <td>0.020165</td>
+    </tr>
+    <tr>
+      <th>t value</th>
+      <td>-11.802468</td>
+      <td>0.593858</td>
+      <td>0.216268</td>
+    </tr>
+    <tr>
+      <th>Pr(&gt;|t|)</th>
+      <td>0.000000</td>
+      <td>0.552742</td>
+      <td>0.828823</td>
+    </tr>
+    <tr>
+      <th>2.5 %</th>
+      <td>-1.166366</td>
+      <td>-0.024946</td>
+      <td>-0.035210</td>
+    </tr>
+    <tr>
+      <th>97.5 %</th>
+      <td>-0.833806</td>
+      <td>0.046596</td>
+      <td>0.043932</td>
+    </tr>
+    <tr>
+      <th>RW Pr(&gt;|t|)</th>
+      <td>0.000100</td>
+      <td>0.670900</td>
+      <td>0.831900</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 
 
