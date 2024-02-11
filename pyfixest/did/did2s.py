@@ -1,14 +1,14 @@
-import pandas as pd
+import warnings
+from typing import List, Optional, Union
+
 import numpy as np
+import pandas as pd
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.model_matrix_fixest import model_matrix_fixest
-
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
-import warnings
-from typing import Optional, Union, List
 
 
 class DID2S(DID):
@@ -47,7 +47,7 @@ class DID2S(DID):
             self._fml2 = f" ~ 0 + ATT + {xfml}"
         else:
             self._fml1 = f" ~ 0 | {idname} + {tname}"
-            self._fml2 = f" ~ 0 + ATT"
+            self._fml2 = " ~ 0 + ATT"
 
     def estimate(self):
         """

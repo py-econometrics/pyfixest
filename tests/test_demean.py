@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
 import pyhdfe
+
 from pyfixest.demean import demean
 
 

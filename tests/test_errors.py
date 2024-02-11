@@ -1,23 +1,22 @@
-from typing import Type
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.utils import get_data
+import pytest
+
+from pyfixest.estimation import feols, fepois
 from pyfixest.exceptions import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
-    UnderDeterminedIVError,
-    VcovTypeNotSupportedError,
+    InvalidReferenceLevelError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
-    InvalidReferenceLevelError,
+    UnderDeterminedIVError,
+    VcovTypeNotSupportedError,
 )
-from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.multcomp import rwolf
 from pyfixest.summarize import etable, summary
-from pyfixest.summarize import etable
+from pyfixest.utils import get_data
 
 
 def test_formula_parser2():

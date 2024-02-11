@@ -1,25 +1,22 @@
 import re
 import warnings
+from importlib import import_module
+from typing import Dict, List, Optional, Tuple, Union
+
+import numba as nb
 import numpy as np
 import pandas as pd
-import warnings
-import numba as nb
-
-from importlib import import_module
-from typing import Optional, Union, List, Dict, Tuple
-from pyfixest.dev_utils import DataFrameType
-
-from scipy.stats import norm, t, chi2, f
-from scipy.sparse.linalg import spsolve
-from scipy.sparse import csr_matrix
 from formulaic import model_matrix
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import spsolve
+from scipy.stats import f, norm, t
 
-from pyfixest.utils import get_ssc
+from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 from pyfixest.exceptions import (
-    VcovTypeNotSupportedError,
     NanInClusterVarError,
+    VcovTypeNotSupportedError,
 )
-from pyfixest.dev_utils import _polars_to_pandas
+from pyfixest.utils import get_ssc
 
 
 class Feols:

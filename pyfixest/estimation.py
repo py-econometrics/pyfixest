@@ -1,12 +1,12 @@
-from typing import Optional, Union, Dict
-from pyfixest.utils import ssc
-from pyfixest.FixestMulti import FixestMulti
-from pyfixest.fepois import Fepois
-from pyfixest.feols import Feols
-from pyfixest.dev_utils import DataFrameType
+from typing import Dict, Optional, Union
 
 import pandas as pd
-import numpy as np
+
+from pyfixest.dev_utils import DataFrameType
+from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
+from pyfixest.FixestMulti import FixestMulti
+from pyfixest.utils import ssc
 
 
 def feols(
@@ -358,7 +358,7 @@ def _estimation_input_checks(
     if not isinstance(collin_tol, float):
         raise ValueError("collin_tol must be a float")
 
-    if not fixef_rm in ["none", "singleton"]:
+    if fixef_rm not in ["none", "singleton"]:
         raise ValueError("fixef_rm must be either 'none' or 'singleton'")
     if not collin_tol > 0:
         raise ValueError("collin_tol must be greater than zero")

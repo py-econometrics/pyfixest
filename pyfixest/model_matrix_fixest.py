@@ -1,12 +1,13 @@
 import re
 import warnings
-import pandas as pd
-import numpy as np
+from typing import List, Optional, Tuple, Union
 
+import numpy as np
+import pandas as pd
 from formulaic import model_matrix
-from typing import Optional, Tuple, List, Union
-from pyfixest.exceptions import InvalidReferenceLevelError
+
 from pyfixest.detect_singletons import detect_singletons
+from pyfixest.exceptions import InvalidReferenceLevelError
 
 
 def model_matrix_fixest(

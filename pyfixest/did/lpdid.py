@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
+from typing import Dict, Optional, Union
 
+import numpy as np
+import pandas as pd
+
+from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.visualize import _coefplot
-from pyfixest.did.did import DID
-
-from typing import Optional, Union, Dict
 
 
 class LPDID(DID):

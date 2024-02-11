@@ -1,15 +1,15 @@
+import warnings
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
-import warnings
 
-
-from typing import Union, Optional, List
-from pyfixest.feols import Feols
 from pyfixest.demean import demean
 from pyfixest.exceptions import (
     NonConvergenceError,
     NotImplementedError,
 )
+from pyfixest.feols import Feols
 
 
 class Fepois(Feols):

@@ -1,8 +1,10 @@
+from typing import Dict, List, Optional, Union
+
 import pandas as pd
-from typing import Optional, Union, List, Dict
-from pyfixest.did.did2s import _did2s_estimate, _did2s_vcov, DID2S
-from pyfixest.did.twfe import TWFE
+
+from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
+from pyfixest.did.twfe import TWFE
 from pyfixest.exceptions import NotImplementedError
 
 
