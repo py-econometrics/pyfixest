@@ -37,24 +37,20 @@ def test_bonferroni():
     fit2_r = fixest.feols(ro.Formula("Y2 ~ X1"), data=data)
     fit3_r = fixest.feols(ro.Formula("Y3 ~ X1"), data=data)
 
-
     pvalues_r = np.zeros(3)
     for i, x in enumerate([fit1_r, fit2_r, fit3_r]):
 
         df_tidy = broom.tidy_fixest(x)
         df_r = pd.DataFrame(df_tidy).T
-        df_r.columns = [
-            "term",
-            "estimate",
-            "std.error",
-            "statistic",
-            "p.value"
-        ]
-        pvalues_r[i] = df_r.set_index('term').xs('X1')["p.value"]
+        df_r.columns = ["term", "estimate", "std.error", "statistic", "p.value"]
+        pvalues_r[i] = df_r.set_index("term").xs("X1")["p.value"]
 
     bonferroni_r = stats.p_adjust(pvalues_r, method="bonferroni")
 
-    np.testing.assert_allclose(bonferroni_py.iloc[6].values, bonferroni_r, atol=1e-8, rtol=np.inf)
+    np.testing.assert_allclose(
+        bonferroni_py.iloc[6].values, bonferroni_r, atol=1e-8, rtol=np.inf
+    )
+
 
 def test_wildrwolf():
 

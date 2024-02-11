@@ -9,9 +9,7 @@ from pyfixest.fepois import Fepois
 from pyfixest.summarize import _post_processing_input_checks
 
 
-
 def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:
-
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
@@ -40,7 +38,8 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     data = get_data().dropna()
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2", data=data)
-    bonferroni([fit1, fit2], param = "X1")
+    bonf_df = bonferroni([fit1, fit2], param = "X1")
+    bonf_df
     ```
     """
 
@@ -62,6 +61,7 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     all_model_stats.columns = [f"est{i}" for i, _ in enumerate(models)]
 
     return all_model_stats
+
 
 def rwolf(
     models: Union[list[Feols], Feols], param: str, B: int, seed: int
@@ -103,7 +103,8 @@ def rwolf(
 
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2", data=data)
-    rwolf([fit1, fit2], "X1", B=9999, seed=123)
+    rwolf_df = rwolf([fit1, fit2], "X1", B=9999, seed=123)
+    rwolf_df
     ```
     """
 
