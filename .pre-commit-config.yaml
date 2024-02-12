@@ -18,3 +18,8 @@ repos:
     hooks:
       - id: ruff
         name: ruff
+
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.1.1
+    hooks:
+      - id: black
