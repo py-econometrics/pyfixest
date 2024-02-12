@@ -65,10 +65,7 @@ class FixestFormulaParser:
                         "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
                     )
 
-                if covars == "1":
-                    covars = endogvars
-                else:
-                    covars = f"{endogvars}+{covars}"
+                covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
             else:
                 fevars = fml_split[1]
                 endogvars = None
@@ -90,10 +87,7 @@ class FixestFormulaParser:
                 )
 
             # add endogeneous variable to "covars" - yes, bad naming
-            if covars == "1":
-                covars = endogvars
-            else:
-                covars = f"{endogvars}+{covars}"
+            covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
         if endogvars is not None:
             if not isinstance(endogvars, list):
@@ -120,9 +114,9 @@ class FixestFormulaParser:
             self._is_iv = True
             # all rhs variables for the first stage (endog variable replaced with instrument)
             first_stage_covars_list = covars.split("+")
-            first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
-                instruments
-            )
+            first_stage_covars_list[
+                first_stage_covars_list.index(endogvars)
+            ] = instruments
             self.first_stage_covars_list = "+".join(first_stage_covars_list)
             self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
             self.depvars_first_stage = endogvars
@@ -156,10 +150,10 @@ class FixestFormulaParser:
                     fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
         """
 
-        fml_dict = dict()
+        fml_dict = {}
 
         for fevar in self.fevars_fml:
-            res = dict()
+            res = {}
             for depvar in self.depvars:
                 res[depvar] = []
                 if iv:
@@ -213,7 +207,7 @@ def _unpack_fml(x):
 
     Example:
     --------
-    >>> _unpack_fml('a+sw(b)+csw(x1,x2)+sw0(d)+csw0(y1,y2,y3)')
+    >>> _unpack_fml("a+sw(b)+csw(x1,x2)+sw0(d)+csw0(y1,y2,y3)")
     {'constant': ['a'],
      'sw': ['b'],
      'csw': [['x1', 'x2']],
@@ -224,9 +218,7 @@ def _unpack_fml(x):
     # Split the formula into its constituent variables
     var_split = x.split("+")
 
-    res_s = dict()
-    res_s["constant"] = []
-
+    res_s = {"constant": []}
     for var in var_split:
         # Check if this variable contains a switch
         varlist, sw_type = _find_sw(var)
@@ -273,13 +265,7 @@ def _pack_to_fml(unpacked):
             - 'csw0' : list of str or list of lists of str
     """
 
-    res = dict()
-
-    # add up all constant variables
-    if "constant" in unpacked:
-        res["constant"] = unpacked["constant"]
-    else:
-        res["constant"] = []
+    res = {"constant": unpacked.get("constant", [])}
 
     # add up all variable constants (only required for csw)
     if "csw" in unpacked:
@@ -298,10 +284,7 @@ def _pack_to_fml(unpacked):
         res["variable"] = []
         variable_type = None
 
-    if res["constant"]:
-        const_fml = "+".join(res["constant"])
-    else:
-        const_fml = []
+    const_fml = "+".join(res["constant"]) if res["constant"] else []
 
     variable_fml = []
     if res["variable"]:
@@ -326,11 +309,10 @@ def _pack_to_fml(unpacked):
                 fml_list = [const_fml] + fml_list
         else:
             fml_list = variable_fml
+    elif const_fml:
+        fml_list = const_fml
     else:
-        if const_fml:
-            fml_list = const_fml
-        else:
-            raise Exception("Not a valid formula provided.")
+        raise AttributeError("Not a valid formula provided.")
 
     if not isinstance(fml_list, list):
         fml_list = [fml_list]

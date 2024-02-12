@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from formulaic import model_matrix
@@ -6,8 +5,10 @@ from formulaic import model_matrix
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
     """
-    Set the small sample correction factor applied in `get_ssc()`
-    Parameters:
+    Set the small sample correction factor applied in `get_ssc()`.
+
+    Parameters
+    ----------
         adj: bool, default True
             If True, applies a small sample correction of (N-1) / (N-k) where N is the number of observations
             and k is the number of estimated coefficients excluding any fixed effects projected out in either fixest::feols() or lfe::felm().
@@ -21,10 +22,11 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
             all summands are multiplied with the same value, min(G) / (min(G) - 1)
-    Returns:
+
+    Returns
+    -------
         A dictionary with encoded info on how to form small sample corrections
     """
-
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
     if fixef_k not in ["none"]:
@@ -34,35 +36,47 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
     if cluster_df not in ["conventional", "min"]:
         raise ValueError("cluster_df must be 'conventional' or 'min'.")
 
-    res = {
+    return {
         "adj": adj,
         "fixef_k": fixef_k,
         "cluster_adj": cluster_adj,
         "cluster_df": cluster_df,
     }
 
-    return res
-
 
 def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     """
-    Compute small sample adjustment factors
+    Compute small sample adjustment factors.
 
-    Args:
-    - ssc_dict: An dictionariy created via the ssc() function
-    - N: The number of observations
-    - k: The number of estimated parameters
-    - G: The number of clusters
-    - vcov_sign: A vector that helps create the covariance matrix
-    - vcov_type: Either "iid", "hetero" or "CRV"
-    - is_twoway: Whether the covariance matrix is of the form V = V_1 + V_2 - V_12, i.e. whether it is a two-way cluster matrix
+    Parameters
+    ----------
+    ssc_dict : dict
+        A dictionary created via the ssc() function.
+    N : int
+        The number of observations.
+    k : int
+        The number of estimated parameters.
+    G : int
+        The number of clusters.
+    vcov_sign : array-like
+        A vector that helps create the covariance matrix.
+    vcov_type : str
+        The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
+    is_twoway : bool, optional
+        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12. Default is False.
 
-    Returns:
-    - A small sample adjustment factor
+    Returns
+    -------
+    float
+        A small sample adjustment factor.
+
+    Raises
+    ------
+    ValueError
+        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither "conventional" nor "min".
     """
-
     adj = ssc_dict["adj"]
-    fixef_k = ssc_dict["fixef_k"]
+    fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 
@@ -70,44 +84,53 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     adj_value = 1
 
     if vcov_type == "hetero":
-        if adj:
-            # adj_value = (N - 1) / (N - k)
-            adj_value = N / (N - k)
-        else:
-            # adj_value = 1
-            adj_value = N / (N - 1)
+        adj_value = N / (N - k) if adj else N / (N - 1)
     elif vcov_type in ["iid", "CRV"]:
         if adj:
             adj_value = (N - 1) / (N - k)
     else:
         raise ValueError("vcov_type must be either iid, hetero or CRV.")
 
-    if vcov_type == "CRV":
-        if cluster_adj:
-            if cluster_df == "conventional":
-                cluster_adj_value = G / (G - 1)
-            elif cluster_df == "min":
-                G = np.min(G)
-                cluster_adj_value = G / (G - 1)
-            else:
-                raise ValueError("cluster_df is neither conventional nor min.")
+    if vcov_type == "CRV" and cluster_adj:
+        if cluster_df == "conventional":
+            cluster_adj_value = G / (G - 1)
+        elif cluster_df == "min":
+            G = np.min(G)
+            cluster_adj_value = G / (G - 1)
+        else:
+            raise ValueError("cluster_df is neither conventional nor min.")
 
     return adj_value * cluster_adj_value * vcov_sign
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     """
-    create a random example data set
-    Args:
-        N: number of observations
-        seed: seed for the random number generator
-        beta_type: type of beta coefficients
-        error_type: type of error term
-        model: type of the dgp. Either "Feols" or "Fepois"
-    Returns:
-        df: a pandas data frame with simulated data
-    """
+    Create a random example data set.
 
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations. Default is 1000.
+    seed : int, optional
+        Seed for the random number generator. Default is 1234.
+    beta_type : str, optional
+        Type of beta coefficients. Must be one of '1', '2', or '3'. Default is '1'.
+    error_type : str, optional
+        Type of error term. Must be one of '1', '2', or '3'. Default is '1'.
+    model : str, optional
+        Type of the DGP. Must be either 'Feols' or 'Fepois'. Default is 'Feols'.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A pandas DataFrame with simulated data.
+
+    Raises
+    ------
+    ValueError
+        If beta_type is not '1', '2', or '3', or if error_type is not '1', '2', or '3',
+        or if model is not 'Feols' or 'Fepois'.
+    """
     rng = np.random.default_rng(seed)
     G = rng.choice(list(range(10, 20))).astype("int64")
     fe_dims = rng.choice(list(range(2, int(np.floor(np.sqrt(N))))), 3, True).astype(
@@ -165,10 +188,10 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("model needs to be 'Feols' or 'Fepois'.")
 
-    Y, Y2 = [pd.Series(x.flatten()) for x in [Y, Y2]]
+    Y, Y2 = (pd.Series(x.flatten()) for x in [Y, Y2])
     Y.name, Y2.name = "Y", "Y2"
 
-    cluster = rng.choice(list(range(0, G)), N)
+    cluster = rng.choice(list(range(G)), N)
     cluster = pd.Series(cluster)
     cluster.name = "group_id"
 
@@ -197,14 +220,20 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
 def get_poisson_data(N=1000, seed=4320):
     """
-    Generate data following a Poisson regression dgp.
-    Args:
-        N: number of observations
-        seed: seed for the random number generator
-    Returns:
-        data: a pandas data frame
-    """
+    Generate data following a Poisson regression DGP.
 
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations. Default is 1000.
+    seed : int, optional
+        Seed for the random number generator. Default is 4320.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Generated data with columns 'Y', 'X1', 'X2', 'X3', and 'X4'.
+    """
     # create data
     np.random.seed(seed)
     X1 = np.random.normal(0, 1, N)
@@ -217,17 +246,31 @@ def get_poisson_data(N=1000, seed=4320):
 
     Y = np.random.poisson(mu, N)
 
-    data = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3, "X4": X4})
-
-    return data
+    return pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3, "X4": X4})
 
 
 def absolute_diff(x, y, tol=1e-03):
+    """
+
+    Calculate the absolute difference between two values.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Numeric array representing the reference value.
+    y : numpy.ndarray
+        Numeric array representing the value to compare against.
+    tol : float, optional
+        Tolerance value used to determine if two values are different. Default is 1e-03.
+
+    Returns
+    -------
+    bool
+        True if the absolute difference is greater than the tolerance and there is a non-zero value in y, False otherwise.
+    """
     absolute_diff = (np.abs(x - y) > tol).any()
     if not any(y == 0):
         relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
-        res = absolute_diff and relative_diff
+        return absolute_diff and relative_diff
     else:
-        res = absolute_diff
-
-    return res
+        return absolute_diff

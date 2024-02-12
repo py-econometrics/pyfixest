@@ -58,7 +58,7 @@ select = [
   "E", # pycodestyle errors
   "W", # pycodestyle warnings
   "I", # isort
-  "D", # flake8-docstrings
+#  "D", # flake8-docstrings
   "UP", # pyupgrade
   "SIM", # flake8-simplify
   "TRY", # tryceratops
@@ -77,6 +77,7 @@ ignore = [
   "D105",   # missing docstring in magic method
   "D100",   # missing docstring in public module
   "D104",   # missing docstring in public package
+  "SIM110", # Use all instead of `for` loop
   "TRY003", # Avoid specifying long messages outside the exception class
 ]
 

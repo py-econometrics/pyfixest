@@ -1,7 +1,7 @@
 import re
 import warnings
 from importlib import import_module
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -39,7 +39,7 @@ class Feols:
         Weights, a one-dimensional numpy array.
     collin_tol : float
         Tolerance level for collinearity checks.
-    coefnames : List[str]
+    coefnames : list[str]
         Names of the coefficients (of the design matrix X).
 
     Attributes
@@ -156,7 +156,7 @@ class Feols:
         X: np.ndarray,
         weights: np.ndarray,
         collin_tol: float,
-        coefnames: List[str],
+        coefnames: list[str],
         weights_name: Optional[str],
     ) -> None:
         self._method = "feols"
@@ -281,13 +281,13 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def vcov(self, vcov: Union[str, Dict[str, str]]):
+    def vcov(self, vcov: Union[str, dict[str, str]]):
         """
         Compute covariance matrices for an estimated regression model.
 
         Parameters
         ----------
-        vcov : Union[str, Dict[str, str]]
+        vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3". If a dictionary,
             it should have the format {"CRV1": "clustervar"} for CRV1 inference or {"CRV3": "clustervar"}
@@ -298,7 +298,6 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
-
         _data = self._data
         _fml = self._fml
         _has_fixef = self._has_fixef
@@ -392,7 +391,7 @@ class Feols:
                 else:
                     transformed_scores = _scores / (1 - leverage)[:, None]
 
-            if _is_iv == False:
+            if _is_iv is False:
                 meat = transformed_scores.transpose() @ transformed_scores
                 self._vcov = self._ssc * bread @ meat @ bread
             else:
@@ -468,7 +467,7 @@ class Feols:
                         cluster_col=cluster_col,
                     )
 
-                    if _is_iv == False:
+                    if _is_iv is False:
                         self._vcov += self._ssc[x] * bread @ meat @ bread
                     else:
                         meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
@@ -487,9 +486,9 @@ class Feols:
                     beta_jack = np.zeros((len(clustid), _k))
 
                     if (
-                        (self._has_fixef == False)
+                        (self._has_fixef is False)
                         and (self._method == "feols")
-                        and (_is_iv == False)
+                        and (_is_iv is False)
                     ):
                         # inverse hessian precomputed?
                         tXX = np.transpose(self._X) @ self._X
@@ -563,10 +562,7 @@ class Feols:
         self._se = np.sqrt(np.diagonal(_vcov))
         self._tstat = _beta_hat / self._se
 
-        if _vcov_type in ["iid", "hetero"]:
-            df = _N - _k
-        else:
-            df = _G - 1
+        df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
@@ -616,7 +612,6 @@ class Feols:
         -------
         None
         """
-
         # some bookkeeping
         self._fml = fml
         self._depvar = depvar
@@ -650,17 +645,13 @@ class Feols:
         pd.Series
             A pd.Series with the Wald statistic and p-value.
         """
-
         raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
 
         _vcov = self._vcov
         _N = self._N
         _k = self._k
         _beta_hat = self._beta_hat
-        if self._has_fixef:
-            _k_fe = np.sum(self._k_fe.values)
-        else:
-            _k_fe = 0
+        _k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
 
         dfn = _N - _k_fe - _k
         dfd = _k
@@ -688,7 +679,7 @@ class Feols:
                 "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
             )
         else:
-            q = np.zeros((R.shape[0]))
+            q = np.zeros(R.shape[0])
 
         assert distribution in [
             "F",
@@ -718,11 +709,11 @@ class Feols:
     def coefplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (500, 300),
+        figsize: tuple[int, int] = (500, 300),
         yintercept: Optional[float] = 0,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
-        coefficients: Optional[List[str]] = None,
+        coefficients: Optional[list[str]] = None,
         title: Optional[str] = None,
         coord_flip: Optional[bool] = True,
     ):
@@ -733,7 +724,7 @@ class Feols:
         ----------
         alpha : float, optional
             Significance level for highlighting significant coefficients. Defaults to None.
-        figsize : Tuple[int, int], optional
+        figsize : tuple[int, int], optional
             Size of the plot (width, height) in inches. Defaults to None.
         yintercept : float, optional
             Value to set as the y-axis intercept (vertical line). Defaults to None.
@@ -741,7 +732,7 @@ class Feols:
             Value to set as the x-axis intercept (horizontal line). Defaults to None.
         rotate_xticks : int, optional
             Rotation angle for x-axis tick labels. Defaults to None.
-        coefficients : List[str], optional
+        coefficients : list[str], optional
             List of coefficients to include in the plot. If None, all coefficients are included.
         title : str, optional
             Title of the plot. Defaults to None.
@@ -753,7 +744,6 @@ class Feols:
         lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
         """
-
         # lazy loading to avoid circular import
         visualize_module = import_module("pyfixest.visualize")
         _coefplot = getattr(visualize_module, "coefplot")
@@ -775,7 +765,7 @@ class Feols:
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: Tuple[int, int] = (500, 300),
+        figsize: tuple[int, int] = (500, 300),
         yintercept: Optional[float] = None,
         xintercept: Optional[float] = None,
         rotate_xticks: int = 0,
@@ -789,7 +779,7 @@ class Feols:
         ----------
         alpha : float, optional
             Significance level for visualization options. Defaults to None.
-        figsize : Tuple[int, int], optional
+        figsize : tuple[int, int], optional
             Size of the plot (width, height) in inches. Defaults to None.
         yintercept : float, optional
             Value to set as the y-axis intercept (vertical line). Defaults to None.
@@ -807,7 +797,6 @@ class Feols:
         lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
         """
-
         visualize_module = import_module("pyfixest.visualize")
         _iplot = getattr(visualize_module, "iplot")
 
@@ -878,7 +867,6 @@ class Feols:
             the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP.
             If `return_bootstrapped_t_stats` is True, the method returns a tuple of the regular output and the bootstrapped t-stats.
         """
-
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
         _Y = self._Y.flatten()
@@ -888,11 +876,10 @@ class Feols:
         _clustervar = self._clustervar
         _supports_wildboottest = self._supports_wildboottest
 
-        if param is not None:
-            if param not in _xnames:
-                raise ValueError(
-                    f"Parameter {param} not found in the model's coefficients."
-                )
+        if param is not None and param not in _xnames:
+            raise ValueError(
+                f"Parameter {param} not found in the model's coefficients."
+            )
 
         if not _supports_wildboottest:
             if self._is_iv:
@@ -904,9 +891,8 @@ class Feols:
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
 
-        if cluster is None:
-            if _clustervar is not None:
-                cluster = _clustervar
+        if cluster is None and _clustervar is not None:
+            cluster = _clustervar
 
         if isinstance(cluster, str):
             cluster = [cluster]
@@ -1023,7 +1009,6 @@ class Feols:
         -------
         None
         """
-
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
         _method = self._method
@@ -1064,7 +1049,7 @@ class Feols:
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
 
-        res = dict()
+        res = {}
         for i, col in enumerate(cols):
             matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
             if matches:
@@ -1107,7 +1092,6 @@ class Feols:
         y_hat : np.ndarray
             A flat np.array with predicted values of the regression model.
         """
-
         _fml = self._fml
         _data = self._data
         _u_hat = self._u_hat
@@ -1150,17 +1134,14 @@ class Feols:
                     for level in new_levels:
                         # if level estimated: either estimated value (or 0 for reference level)
                         if level in old_levels:
-                            if level in subdict:
-                                fixef_mat[df_fe[fixef] == level, i] = subdict[level]
-                            else:
-                                fixef_mat[df_fe[fixef] == level, i] = 0
+                            fixef_mat[df_fe[fixef] == level, i] = subdict.get(level, 0)
                         # if new level not estimated: set to NaN
                         else:
                             fixef_mat[df_fe[fixef] == level, i] = np.nan
 
             else:
-                fml_linear = _fml
-                fml_fe = None
+                fml_linear = _fml  # noqa: F841
+                fml_fe = None  # noqa: F841
 
             if not self._X_is_empty:
                 # deal with linear part
@@ -1209,7 +1190,6 @@ class Feols:
         - r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.
         - adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.
         """
-
         _Y_within = self._Y
         _Y = self._Y_untransformed.values
         _u_hat = self._u_hat
@@ -1261,7 +1241,6 @@ class Feols:
             A tidy pd.DataFrame containing the regression results, including point estimates, standard errors,
             t statistics, and p-values.
         """
-
         _coefnames = self._coefnames
         _se = self._se
         _tstat = self._tstat
@@ -1290,7 +1269,6 @@ class Feols:
         pd.Series
             A pd.Series with the estimated coefficients of the regression model.
         """
-
         return self.tidy()["Estimate"]
 
     def se(self) -> pd.Series:
@@ -1349,7 +1327,6 @@ class Feols:
         -------
         None
         """
-
         # lazy loading to avoid circular import
         summarize_module = import_module("pyfixest.summarize")
         _summary = getattr(summarize_module, "summary")
@@ -1372,7 +1349,6 @@ def _check_vcov_input(vcov, data):
     -------
     None
     """
-
     assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
     if isinstance(vcov, dict):
         assert list(vcov.keys())[0] in [
@@ -1428,16 +1404,13 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
     clustervar : str
         The name of the cluster variable.
     """
-
     if isinstance(vcov, dict):
         vcov_type_detail = list(vcov.keys())[0]
         deparse_vcov = list(vcov.values())[0].split("+")
         if isinstance(deparse_vcov, str):
             deparse_vcov = [deparse_vcov]
         deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
-    elif isinstance(vcov, list):
-        vcov_type_detail = vcov
-    elif isinstance(vcov, str):
+    elif isinstance(vcov, (list, str)):
         vcov_type_detail = vcov
     else:
         assert False, "arg vcov needs to be a dict, string or list"
@@ -1461,10 +1434,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         vcov_type = "CRV"
         is_clustered = True
 
-    if is_clustered:
-        clustervar = deparse_vcov
-    else:
-        clustervar = None
+    clustervar = deparse_vcov if is_clustered else None
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
@@ -1484,7 +1454,6 @@ def _feols_input_checks(Y, X, weights):
     -------
     None
     """
-
     if not isinstance(Y, (np.ndarray)):
         raise TypeError("Y must be a numpy array.")
     if not isinstance(X, (np.ndarray)):
@@ -1517,7 +1486,6 @@ def _get_vcov_type(vcov, fval):
         The specified or default vcov type. Defaults to 'iid' if no fixed effect is included in the model,
         and 'CRV1' clustered by the first fixed effect if a fixed effect is included.
     """
-
     if vcov is None:
         # iid if no fixed effects
         if fval == "0":
@@ -1533,7 +1501,7 @@ def _get_vcov_type(vcov, fval):
 
 
 def _drop_multicollinear_variables(
-    X: np.ndarray, names: List[str], collin_tol: float
+    X: np.ndarray, names: list[str], collin_tol: float
 ) -> None:
     """
     Checks for multicollinearity in the design matrices X and Z.
@@ -1542,7 +1510,7 @@ def _drop_multicollinear_variables(
     ----------
     X : numpy.ndarray
         The design matrix X.
-    names : List[str]
+    names : list[str]
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
@@ -1551,14 +1519,13 @@ def _drop_multicollinear_variables(
     -------
     Xd : numpy.ndarray
         The design matrix X after checking for multicollinearity.
-    names : List[str]
+    names : list[str]
         The names of the coefficients, excluding those identified as collinear.
-    collin_vars : List[str]
+    collin_vars : list[str]
         The collinear variables identified during the check.
     collin_index : numpy.ndarray
         Logical array, where True indicates that the variable is collinear.
     """
-
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
@@ -1612,8 +1579,7 @@ def _find_collinear_variables(X, tol=1e-10):
         - n_excl (int): The number of collinear variables.
         - all_removed (bool): True if all variables are identified as collinear.
     """
-
-    res = dict()
+    res = {}
     K = X.shape[1]
     R = np.zeros((K, K))
     id_excl = np.zeros(K, dtype=bool)
@@ -1660,7 +1626,7 @@ def _find_collinear_variables(X, tol=1e-10):
 
 # CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
-def bucket_argsort(arr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     counts = np.zeros(arr.max() + 1, dtype=np.uint32)
     for i in range(arr.size):
         counts[arr[i]] += 1

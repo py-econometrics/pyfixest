@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -16,9 +16,9 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
-    i_ref1: Optional[Union[List, str, int]] = None,
-    i_ref2: Optional[Union[List, str, int]] = None,
-) -> Tuple[
+    i_ref1: Optional[Union[list, str, int]] = None,
+    i_ref2: Optional[Union[list, str, int]] = None,
+) -> tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
     Optional[pd.DataFrame],  # I
@@ -26,15 +26,15 @@ def model_matrix_fixest(
     np.ndarray,  # na_index
     np.ndarray,  # fe_na
     str,  # na_index_str
-    Optional[List[str]],  # z_names
+    Optional[list[str]],  # z_names
     Optional[str],  # weights
     bool,  # has_weights,
-    Optional[List[str]],  # icovars (list of variables interacted with i() syntax)
+    Optional[list[str]],  # icovars (list of variables interacted with i() syntax)
 ]:
     """
     Create model matrices for fixed effects estimation.
 
-    This function preprocesses the data and then calls `formulaic.model_matrix()`
+    This function processes the data and then calls `formulaic.model_matrix()`
     to create the model matrices.
 
     Parameters
@@ -75,13 +75,13 @@ def model_matrix_fixest(
             An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
         - na_index_str : str
             na_index, but as a comma-separated string. Used for caching of demeaned variables.
-        - z_names : Optional[List[str]]
+        - z_names : Optional[list[str]]
             Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
         - weights : Optional[str]
             Weights as a string if provided, or None if no weights, e.g., "weights".
         - has_weights : bool
             A boolean indicating whether weights are used.
-        - icovars : Optional[List[str]]
+        - icovars : Optional[list[str]]
             A list of interaction variables provided via `i()`. None if no interaction variables via `i()` provided.
 
     Attributes
@@ -89,7 +89,6 @@ def model_matrix_fixest(
     list or None
         icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
     """
-
     # check if weights are valid
     _check_weights(weights, data)
 
@@ -98,13 +97,10 @@ def model_matrix_fixest(
 
     _ivars = _find_ivars(fml)[0]
 
-    if _ivars:
-        if len(_ivars) == 2:
-            # check if _ivars[1] is continuous, i.e. a float or int, if not, throw an error
-            if not _is_numeric(data[_ivars[1]]):
-                raise ValueError(
-                    f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
-                )
+    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
+        raise ValueError(
+            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+        )
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -155,7 +151,7 @@ def model_matrix_fixest(
     if _is_iv:
         endogvar, instruments = fml_iv.split("~")
     else:
-        endogvar, instruments = None, None
+        endogvar, instruments = None, None  # noqa: F841
 
     # step 2: create formulas
     fml_exog = f"{depvar}~{covar}"
@@ -192,21 +188,19 @@ def model_matrix_fixest(
     else:
         endogvar, Z = None, None
 
-    Y, X, endogvar, Z = [
+    Y, X, endogvar, Z = (
         pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]
-    ]
+    )
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
         raise TypeError(
             f"The dependent variable must be numeric, but it is of type {data[depvar].dtype}."
         )
-    if endogvar is not None:
-        if endogvar.shape[1] > 1:
-            raise TypeError(
-                f"The endogenous variable must be numeric, but it is of type {data[endogvar].dtype}."
-            )
-
+    if endogvar is not None and endogvar.shape[1] > 1:
+        raise TypeError(
+            f"The endogenous variable must be numeric, but it is of type {data[endogvar].dtype}."
+        )
     # step 3: catch NaNs (before converting to numpy arrays)
     na_index_stage2 = data.index.difference(Y.index).tolist()
 
@@ -228,11 +222,10 @@ def model_matrix_fixest(
 
     columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
-    if columns_to_drop:
-        if not X_is_empty:
-            X.drop(columns_to_drop, axis=1, inplace=True)
-            if _is_iv:
-                Z.drop(columns_to_drop, axis=1, inplace=True)
+    if columns_to_drop and not X_is_empty:
+        X.drop(columns_to_drop, axis=1, inplace=True)
+        if _is_iv:
+            Z.drop(columns_to_drop, axis=1, inplace=True)
 
     # drop reference level, if specified
     # ivars are needed for plotting of all interacted variables via iplot()
@@ -263,13 +256,10 @@ def model_matrix_fixest(
     if fe is not None:
         fe.drop(na_index, axis=0, inplace=True)
         # drop intercept
-        if not X_is_empty:
-            # drop intercept. intercept is present unless there is i() interaction AND a reference level is set, in which case a "0" was added to the fml above
-            if "Intercept" in X.columns:
-                X.drop("Intercept", axis=1, inplace=True)
-        if _is_iv:
-            if "Intercept" in Z.columns:
-                Z.drop("Intercept", axis=1, inplace=True)
+        if not X_is_empty and "Intercept" in X.columns:
+            X.drop("Intercept", axis=1, inplace=True)
+        if _is_iv and "Intercept" in Z.columns:
+            Z.drop("Intercept", axis=1, inplace=True)
 
         # drop NaNs in fixed effects (not yet dropped via na_index)
         fe_na_remaining = list(set(fe_na) - set(na_index))
@@ -290,33 +280,31 @@ def model_matrix_fixest(
     if drop_intercept:
         if "Intercept" in X.columns:
             X.drop("Intercept", axis=1, inplace=True)
-        if _is_iv:
-            if "Intercept" in Z.columns:
-                Z.drop("Intercept", axis=1, inplace=True)
+        if _is_iv and "Intercept" in Z.columns:
+            Z.drop("Intercept", axis=1, inplace=True)
 
     # handle singleton fixed effects
 
-    if fe is not None:
-        if drop_singletons:
-            dropped_singleton_bool = detect_singletons(fe.to_numpy())
-            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+    if fe is not None and drop_singletons:
+        dropped_singleton_bool = detect_singletons(fe.to_numpy())
+        keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
 
-            if np.any(dropped_singleton_bool == True):
-                warnings.warn(
-                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
-                )
-                Y = Y.iloc[keep_singleton_indices]
-                if not X_is_empty:
-                    X = X.iloc[keep_singleton_indices]
-                fe = fe.iloc[keep_singleton_indices]
-                if _is_iv:
-                    Z = Z.iloc[keep_singleton_indices]
-                    endogvar = endogvar.iloc[keep_singleton_indices]
-                if weights_df is not None:
-                    weights_df = weights_df.iloc[keep_singleton_indices]
+        if np.any(dropped_singleton_bool is True):
+            warnings.warn(
+                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+            )
+            Y = Y.iloc[keep_singleton_indices]
+            if not X_is_empty:
+                X = X.iloc[keep_singleton_indices]
+            fe = fe.iloc[keep_singleton_indices]
+            if _is_iv:
+                Z = Z.iloc[keep_singleton_indices]
+                endogvar = endogvar.iloc[keep_singleton_indices]
+            if weights_df is not None:
+                weights_df = weights_df.iloc[keep_singleton_indices]
 
-                # overwrite na_index
-                na_index = list(set(range(data.shape[0])).difference(Y.index))
+            # overwrite na_index
+            na_index = list(set(range(data.shape[0])).difference(Y.index))
 
     na_index_str = ",".join(str(x) for x in na_index)
 
@@ -348,7 +336,6 @@ def _find_ivars(x):
     list
         A list of interaction variables or None
     """
-
     i_match = re.findall(r"i\((.*?)\)", x)
 
     if i_match:
@@ -371,7 +358,6 @@ def _check_is_iv(fml):
     bool
         True if the formula contains an IV, False otherwise.
     """
-
     # check if ~ contained twice in fml
     if fml.count("~") == 1:
         _is_iv = False
@@ -383,7 +369,7 @@ def _check_is_iv(fml):
     return _is_iv
 
 
-def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
+def _clean_fe(data: pd.DataFrame, fval: str) -> tuple[pd.DataFrame, list[int]]:
     """
     Clean and transform fixed effects in a DataFrame.
 
@@ -400,13 +386,12 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
 
     Returns
     -------
-    Tuple[pd.DataFrame, List[int]]
+    tuple[pd.DataFrame, list[int]]
         A tuple containing two items:
         - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
         present in this DataFrame.
-        - fe_na (List[int]): A list of columns in 'fe' that contain NaN values.
+        - fe_na (list[int]): A list of columns in 'fe' that contain NaN values.
     """
-
     fval_list = fval.split("+")
 
     # find interacted fixed effects via "^"
@@ -422,11 +407,10 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     fe = data[fval_list]
 
     for x in fe.columns:
-        if fe[x].dtype != "category":
-            if len(fe[x].unique()) == fe.shape[0]:
-                raise ValueError(
-                    f"Fixed effect {x} has only unique values. " "This is not allowed."
-                )
+        if fe[x].dtype != "category" and len(fe[x].unique()) == fe.shape[0]:
+            raise ValueError(
+                f"Fixed effect {x} has only unique values. " "This is not allowed."
+            )
 
     fe_na = fe.isna().any(axis=1)
     fe = fe.apply(lambda x: pd.factorize(x)[0])
@@ -435,7 +419,7 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> Tuple[pd.DataFrame, List[int]]:
     return fe, fe_na
 
 
-def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
+def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
     """
     Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
 
@@ -451,7 +435,6 @@ def _get_icovars(_ivars: List[str], X: pd.DataFrame) -> Optional[List[str]]:
     list
         A list of interacted variables or None.
     """
-
     if _ivars is not None:
         x_names = X.columns.tolist()
         if len(_ivars) == 2:
@@ -489,7 +472,6 @@ def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
     -------
     None
     """
-
     if ivars:
         ivar1 = ivars[0]
         if len(ivars) == 2:
@@ -535,7 +517,6 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
     X : pd.DataFrame
         The DataFrame containing the covariates.
     """
-
     columns_to_drop = []
 
     # now drop reference levels / variables before collecting variable names
@@ -582,14 +563,15 @@ def _is_numeric(column):
     Args:
         column: pd.Series
             A pandas Series.
-    Returns:
+
+    Returns
+    -------
         bool
             True if the column is numeric, False otherwise.
     """
-
     try:
         pd.to_numeric(column)
-        return True
+        return True  # noqa: TRY300
     except ValueError:
         return False
 
@@ -601,10 +583,11 @@ def _check_weights(weights, data):
             A string specifying the name of the weights column in `data`. Default is None.
         data: pd.DataFrame
             The input DataFrame containing the data.
-    Returns:
+
+    Returns
+    -------
         None
     """
-
     if weights is not None:
         if weights not in data.columns:
             raise ValueError(
@@ -626,8 +609,7 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
     """
     Check if a column is finite and positive.
     """
-
-    if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
+    if isinstance(x, (pd.DataFrame, pd.Series)):
         x = x.to_numpy()
 
     if x.any() in [np.inf, -np.inf]:

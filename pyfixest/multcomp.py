@@ -107,7 +107,6 @@ def rwolf(
     rwolf_df
     ```
     """
-
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
 
@@ -150,17 +149,18 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     """
     Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
 
-    Parameters:
+    Parameters
+    ----------
     t_stats (np.ndarray): A vector of length S - where S is the number of
                           tested hypotheses - containing the original,
                           non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
                                bootstrapped t-statistics.
 
-    Returns:
+    Returns
+    -------
     np.ndarray: A vector of Romano-Wolf corrected p-values.
     """
-
     t_stats = np.abs(t_stats)
     boot_t_stats = np.abs(boot_t_stats)
 
