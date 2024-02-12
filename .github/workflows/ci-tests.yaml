@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - fix-linting-errors
   pull_request:
     branches:
       - master
