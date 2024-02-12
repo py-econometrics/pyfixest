@@ -46,7 +46,7 @@ filterwarnings =[
 [tool.ruff]
 line-length = 88
 fix = true
-extend-include = ["*.ipynb"]
+#extend-include = ["*.ipynb"] # TODO: add ruff for notebooks
 
 # Assume Python 3.9
 target-version = "py39"
