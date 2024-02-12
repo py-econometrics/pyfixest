@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from pyfixest.summarize import _post_processing_input_checks
 
 
 def rwolf(
-    models: Union[List[Feols], Feols], param: str, B: int, seed: int
+    models: Union[list[Feols], Feols], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -20,7 +20,7 @@ def rwolf(
 
     Parameters
     ----------
-    models : List[Feols] or FixestMulti
+    models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a FixestMulti object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
@@ -36,13 +36,11 @@ def rwolf(
         A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.
 
     """
-
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
 
     S = 0
     for model in models:
-
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -57,7 +55,6 @@ def rwolf(
     boot_t_stats = np.zeros((B, S))
 
     for i in tqdm(range(S)):
-
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
@@ -81,17 +78,18 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     """
     Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
 
-    Parameters:
+    Parameters
+    ----------
     t_stats (np.ndarray): A vector of length S - where S is the number of
                           tested hypotheses - containing the original,
                           non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
                                bootstrapped t-statistics.
 
-    Returns:
+    Returns
+    -------
     np.ndarray: A vector of Romano-Wolf corrected p-values.
     """
-
     t_stats = np.abs(t_stats)
     boot_t_stats = np.abs(boot_t_stats)
 

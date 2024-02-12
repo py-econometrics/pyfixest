@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -52,7 +52,6 @@ def event_study(
 
     Examples
     --------
-
     ```{python}
     import pandas as pd
     from pyfixest.did.estimation import event_study
@@ -126,7 +125,7 @@ def event_study(
         fit._method = "twfe"
 
     else:
-        raise Exception("Estimator not supported")
+        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()
@@ -141,8 +140,8 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -173,8 +172,6 @@ def did2s(
 
     Examples
     --------
-
-
     ```{python}
     import pandas as pd
     import numpy as np
@@ -222,7 +219,6 @@ def did2s(
     fit.tidy().head()
     ```
     """
-
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
     assert first_stage[0] == "~", "First stage must start with ~"
@@ -277,7 +273,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,
@@ -319,7 +315,6 @@ def lpdid(
 
     Examples
     --------
-
     ```{python}
     import pandas as pd
     from pyfixest.did.estimation import lpdid
@@ -360,7 +355,6 @@ def lpdid(
     fit.tidy()
     ```
     """
-
     FIT = LPDID(
         data=data,
         yname=yname,
