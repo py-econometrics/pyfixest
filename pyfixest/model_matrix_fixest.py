@@ -288,8 +288,7 @@ def model_matrix_fixest(
     if fe is not None and drop_singletons:
         dropped_singleton_bool = detect_singletons(fe.to_numpy())
         keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
-
-        if np.any(dropped_singleton_bool is True):
+        if np.any(dropped_singleton_bool == True):  # noqa: E712
             warnings.warn(
                 f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
             )
