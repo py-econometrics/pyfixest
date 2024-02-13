@@ -153,9 +153,9 @@ def _did2s_estimate(
             warnings.warn(
                 f"The treatment variable {treatment} was converted to boolean."
             )
-        _not_yet_treated_data = data[data[treatment] is False]
+        _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
-        _not_yet_treated_data = data[data["ATT"] is False]
+        _not_yet_treated_data = data[data["ATT"] == False]  # noqa: E712
 
     # check if first stage formulas has fixed effects
     if "|" not in _first_stage:
