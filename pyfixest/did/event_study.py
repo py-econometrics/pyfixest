@@ -109,7 +109,7 @@ def event_study(
         fit._method = "twfe"
 
     else:
-        raise Exception("Estimator not supported")
+        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()

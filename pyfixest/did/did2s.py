@@ -1,5 +1,5 @@
 import warnings
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -34,10 +34,11 @@ class DID2S(DID):
             att: Whether to estimate the pooled average treatment effect on the treated (ATT) or the
                 canonical event study design with all leads and lags / the ATT for each period. Default is True.
             cluster (str): The name of the cluster variable.
-        Returns:
+
+        Returns
+        -------
             None
         """
-
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "did2s"
@@ -57,10 +58,11 @@ class DID2S(DID):
             _first_stage (str): The formula for the first stage.
             _second_stage (str): The formula for the second stage.
             treatment (str): The name of the treatment variable.
-        Returns:
+
+        Returns
+        -------
             tba
         """
-
         return _did2s_estimate(
             data=self._data,
             yname=self._yname,
@@ -114,8 +116,8 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Args:
@@ -126,10 +128,11 @@ def _did2s_estimate(
         treatment (str): The name of the treatment variable. Must be boolean.
         i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
         i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
-    Returns:
+
+    Returns
+    -------
         A fitted model object of class feols and the first and second stage residuals.
     """
-
     _first_stage_full = f"{yname} {_first_stage}"
     _second_stage_full = f"{yname}_hat {_second_stage}"
 
@@ -137,26 +140,22 @@ def _did2s_estimate(
         if treatment not in data.columns:
             raise ValueError(f"The variable {treatment} is not in the data.")
         # check that treatment is boolean
-        if data[treatment].dtype != "bool":
-            if data[treatment].dtype in [
-                "int64",
-                "int32",
-                "int8",
-                "float64",
-                "float32",
-            ]:
-                if data[treatment].nunique() == 2:
-                    data[treatment] = data[treatment].astype(bool)
-                    warnings.warn(
-                        f"The treatment variable {treatment} was converted to boolean."
-                    )
-                else:
-                    raise ValueError(
-                        f"The treatment variable {treatment} must be boolean."
-                    )
-        _not_yet_treated_data = data[data[treatment] == False]
+        if data[treatment].dtype != "bool" and data[treatment].dtype in [
+            "int64",
+            "int32",
+            "int8",
+            "float64",
+            "float32",
+        ]:
+            if data[treatment].nunique() != 2:
+                raise ValueError(f"The treatment variable {treatment} must be boolean.")
+            data[treatment] = data[treatment].astype(bool)
+            warnings.warn(
+                f"The treatment variable {treatment} was converted to boolean."
+            )
+        _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
-        _not_yet_treated_data = data[data["ATT"] == False]
+        _not_yet_treated_data = data[data["ATT"] == False]  # noqa: E712
 
     # check if first stage formulas has fixed effects
     if "|" not in _first_stage:
@@ -205,8 +204,8 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences Estimator.
@@ -221,10 +220,11 @@ def _did2s_vcov(
         cluster (str): The name of the cluster variable.
         i_ref1 (int, str or list): The reference value(s) for the first variable used with "i()" syntax. Only applicable for the second stage formula.
         i_ref2 (int, str or list): The reference value(s) for the second variable used with "i()" syntax. Only applicable for the second stage formula.
-    Returns:
+
+    Returns
+    -------
         A variance covariance matrix.
     """
-
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
