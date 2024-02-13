@@ -347,7 +347,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td><code>coefnames</code></td>
-<td>typing.List[str]</td>
+<td>list[str]</td>
 <td>Names of the coefficients (of the design matrix X).</td>
 <td><em>required</em></td>
 </tr>
@@ -840,10 +840,10 @@ ul.task-list li input[type="checkbox"] {
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 11%">
-<col style="width: 18%">
-<col style="width: 60%">
-<col style="width: 9%">
+<col style="width: 12%">
+<col style="width: 13%">
+<col style="width: 63%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -862,7 +862,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>figsize</code></td>
-<td>typing.Tuple[int, int]</td>
+<td>tuple[int, int]</td>
 <td>Size of the plot (width, height) in inches. Defaults to None.</td>
 <td><code>(500, 300)</code></td>
 </tr>
@@ -886,7 +886,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>coefficients</code></td>
-<td>typing.List[str]</td>
+<td>list[str]</td>
 <td>List of coefficients to include in the plot. If None, all coefficients are included.</td>
 <td><code>None</code></td>
 </tr>
@@ -1100,10 +1100,10 @@ ul.task-list li input[type="checkbox"] {
 <h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="table">
 <colgroup>
-<col style="width: 12%">
-<col style="width: 19%">
-<col style="width: 56%">
-<col style="width: 10%">
+<col style="width: 13%">
+<col style="width: 15%">
+<col style="width: 60%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1122,7 +1122,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>figsize</code></td>
-<td>typing.Tuple[int, int]</td>
+<td>tuple[int, int]</td>
 <td>Size of the plot (width, height) in inches. Defaults to None.</td>
 <td><code>(500, 300)</code></td>
 </tr>
@@ -1417,8 +1417,8 @@ ul.task-list li input[type="checkbox"] {
 <table class="table">
 <colgroup>
 <col style="width: 1%">
-<col style="width: 10%">
-<col style="width: 84%">
+<col style="width: 9%">
+<col style="width: 86%">
 <col style="width: 2%">
 </colgroup>
 <thead>
@@ -1432,7 +1432,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><code>vcov</code></td>
-<td>typing.Union[str, typing.Dict[str, str]]</td>
+<td>typing.Union[str, dict[str, str]]</td>
 <td>A string or dictionary specifying the type of variance-covariance matrix to use for inference. If a string, it can be one of “iid”, “hetero”, “HC1”, “HC2”, “HC3”. If a dictionary, it should have the format {“CRV1”: “clustervar”} for CRV1 inference or {“CRV3”: “clustervar”} for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation.</td>
 <td><em>required</em></td>
 </tr>

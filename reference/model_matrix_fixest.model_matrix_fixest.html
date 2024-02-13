@@ -302,7 +302,7 @@ ul.task-list li input[type="checkbox"] {
 <h1>model_matrix_fixest.model_matrix_fixest</h1>
 <p><code>model_matrix_fixest.model_matrix_fixest(fml, data, drop_singletons=False, weights=None, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
 <p>Create model matrices for fixed effects estimation.</p>
-<p>This function preprocesses the data and then calls <code>formulaic.model_matrix()</code> to create the model matrices.</p>
+<p>This function processes the data and then calls <code>formulaic.model_matrix()</code> to create the model matrices.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
@@ -388,7 +388,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>tuple</td>
-<td>A tuple of the following elements: - Y : pd.DataFrame A DataFrame of the dependent variable. - X : pd.DataFrame A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I : Optional[pd.DataFrame] A DataFrame of the Instruments, None if no IV. - fe : Optional[pd.DataFrame] A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index : np.array An array with indices of dropped columns. - fe_na : np.array An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str : str na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names : Optional[List[str]] Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights : Optional[str] Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights : bool A boolean indicating whether weights are used. - icovars : Optional[List[str]] A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</td>
+<td>A tuple of the following elements: - Y : pd.DataFrame A DataFrame of the dependent variable. - X : pd.DataFrame A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I : Optional[pd.DataFrame] A DataFrame of the Instruments, None if no IV. - fe : Optional[pd.DataFrame] A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index : np.array An array with indices of dropped columns. - fe_na : np.array An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str : str na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names : Optional[list[str]] Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights : Optional[str] Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights : bool A boolean indicating whether weights are used. - icovars : Optional[list[str]] A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</td>
 </tr>
 </tbody>
 </table>

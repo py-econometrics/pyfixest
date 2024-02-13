@@ -301,6 +301,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.demean.demean" class="level1">
 <h1>demean.demean</h1>
 <p><code>demean.demean(x, flist, weights, tol=1e-08, maxiter=100000)</code></p>
+<p>Demean an array.</p>
 <p>Workhorse for demeaning an input array <code>x</code> based on the specified fixed effects and weights via the alternating projections algorithm.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -357,8 +358,8 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
 <colgroup>
-<col style="width: 23%">
-<col style="width: 76%">
+<col style="width: 20%">
+<col style="width: 79%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -368,7 +369,7 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td>typing.Tuple[numpy.numpy.ndarray, bool]</td>
+<td>tuple[numpy.numpy.ndarray, bool]</td>
 <td>A tuple containing the demeaned array of shape (n_samples, n_features) and a boolean indicating whether the algorithm converged successfully.</td>
 </tr>
 </tbody>
