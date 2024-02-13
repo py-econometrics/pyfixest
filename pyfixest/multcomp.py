@@ -107,13 +107,11 @@ def rwolf(
     rwolf_df
     ```
     """
-
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
 
     S = 0
     for model in models:
-
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -128,7 +126,6 @@ def rwolf(
     boot_t_stats = np.zeros((B, S))
 
     for i in tqdm(range(S)):
-
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
@@ -152,17 +149,18 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     """
     Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
 
-    Parameters:
+    Parameters
+    ----------
     t_stats (np.ndarray): A vector of length S - where S is the number of
                           tested hypotheses - containing the original,
                           non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
                                bootstrapped t-statistics.
 
-    Returns:
+    Returns
+    -------
     np.ndarray: A vector of Romano-Wolf corrected p-values.
     """
-
     t_stats = np.abs(t_stats)
     boot_t_stats = np.abs(boot_t_stats)
 

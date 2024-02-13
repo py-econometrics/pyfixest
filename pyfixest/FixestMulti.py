@@ -1,5 +1,6 @@
 import warnings
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
+
 
 import numpy as np
 import pandas as pd
@@ -29,10 +30,10 @@ class FixestMulti:
         Args:
             data (pd.DataFrame): The input DataFrame for the object.
 
-        Returns:
+        Returns
+        -------
             None
         """
-
         self._data = None
         self._all_fitted_models = None
 
@@ -42,19 +43,19 @@ class FixestMulti:
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
-        self.all_fitted_models = dict()
+        self.all_fitted_models = {}
 
     def _prepare_estimation(
         self,
         estimation: str,
         fml: str,
-        vcov: Union[None, str, Dict[str, str]] = None,
+        vcov: Union[None, str, dict[str, str]] = None,
         weights: Union[None, np.ndarray] = None,
-        ssc: Dict[str, str] = {},
+        ssc: dict[str, str] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
-        i_ref1: Optional[Union[List, str]] = None,
-        i_ref2: Optional[Union[List, str]] = None,
+        i_ref1: Optional[Union[list, str]] = None,
+        i_ref2: Optional[Union[list, str]] = None,
     ) -> None:
         """
         Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
@@ -63,19 +64,19 @@ class FixestMulti:
         Args:
             estimation (str): Type of estimation. Either "feols" or "fepois".
             fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
-            vcov (Union[None, str, Dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
+            vcov (Union[None, str, dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
             weights (Union[None, np.ndarray], optional): An array of weights. Either None or a 1D array of length N. Default is None.
-            ssc (Dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
+            ssc (dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
             fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
                 Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
             drop_intercept (bool, optional): Whether to drop the intercept. Default is False.
-            i_ref1 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the first interaction variable.
-            i_ref2 (Optional[Union[List, str]], optional): A list or string specifying the reference category for the second interaction variable.
+            i_ref1 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the first interaction variable.
+            i_ref2 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the second interaction variable.
 
-        Returns:
+        Returns
+        -------
             None
         """
-
         self._method = None
         self._is_iv = None
         self._fml_dict = None
@@ -93,12 +94,10 @@ class FixestMulti:
             self._has_weights = True
 
         # set i_ref1 and i_ref2 to list if not None
-        if i_ref1 is not None:
-            if not isinstance(i_ref1, list):
-                i_ref1 = [i_ref1]
-        if i_ref2 is not None:
-            if not isinstance(i_ref2, list):
-                i_ref2 = [i_ref2]
+        if i_ref1 is not None and not isinstance(i_ref1, list):
+            i_ref1 = [i_ref1]
+        if i_ref2 is not None and not isinstance(i_ref2, list):
+            i_ref2 = [i_ref2]
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -123,8 +122,8 @@ class FixestMulti:
 
     def _estimate_all_models(
         self,
-        vcov: Union[str, Dict[str, str], None],
-        fixef_keys: Union[List[str], None],
+        vcov: Union[str, dict[str, str], None],
+        fixef_keys: Union[list[str], None],
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -133,22 +132,22 @@ class FixestMulti:
         Estimate multiple regression models.
 
         Args:
-            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
                 matrix to use for inference.
                 - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
                   or {"CRV3": "clustervar"} for CRV3 inference.
-            fixef_keys (List[str]): A list of fixed effects combinations.
+            fixef_keys (list[str]): A list of fixed effects combinations.
             collin_tol (float, optional): The tolerance level for the multicollinearity check. Default is 1e-6.
             iwls_maxiter (int, optional): The maximum number of iterations for the IWLS algorithm. Default is 25.
                 Only relevant for non-linear estimation strategies.
             iwls_tol (float, optional): The tolerance level for the IWLS algorithm. Default is 1e-8.
                 Only relevant for non-linear estimation strategies.
 
-        Returns:
+        Returns
+        -------
             None
         """
-
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
         _data = self._data
@@ -165,10 +164,10 @@ class FixestMulti:
 
             # dictionary to cache demeaned data with index: na_index_str,
             # only relevant for `.feols()`
-            lookup_demeaned_data = dict()
+            lookup_demeaned_data = {}
 
             # loop over both dictfe and dictfe_iv (if the latter is not None)
-            for depvar in dict2fe.keys():
+            for depvar in dict2fe:
                 for _, fml_linear in enumerate(dict2fe.get(depvar)):
                     covar = fml_linear.split("~")[1]
                     endogvars, instruments = None, None
@@ -217,10 +216,7 @@ class FixestMulti:
 
                     coefnames = X.columns.tolist()
 
-                    if fe is not None:
-                        _k_fe = fe.nunique(axis=0)
-                    else:
-                        _k_fe = None
+                    _k_fe = fe.nunique(axis=0) if fe is not None else None
 
                     if _method == "feols":
                         # demean Y, X, Z, if not already done in previous estimation
@@ -244,10 +240,10 @@ class FixestMulti:
                         if not _is_iv:
                             Zd = Xd
 
-                        Yd, Xd, Zd, endogvard = [
+                        Yd, Xd, Zd, endogvard = (
                             x.to_numpy() if x is not None else x
                             for x in [Yd, Xd, Zd, endogvard]
-                        ]
+                        )
 
                         if _is_iv:
                             coefnames_z = Z.columns.tolist()
@@ -295,7 +291,7 @@ class FixestMulti:
                                 X.drop(na_separation, axis=0, inplace=True)
                                 fe.drop(na_separation, axis=0, inplace=True)
 
-                        Y, X = [x.to_numpy() for x in [Y, X]]
+                        Y, X = (x.to_numpy() for x in [Y, X])
                         N = X.shape[0]
 
                         if fe is not None:
@@ -350,9 +346,8 @@ class FixestMulti:
                         FIT.get_inference()
 
                         # other regression stats
-                        if _method == "feols":
-                            if not FIT._is_iv:
-                                FIT.get_performance()
+                        if _method == "feols" and not FIT._is_iv:
+                            FIT.get_performance()
 
                         if _icovars is not None:
                             FIT._icovars = _icovars
@@ -374,7 +369,6 @@ class FixestMulti:
         Returns:
             None
         """
-
         if len(self.all_fitted_models) > 1:
             self._is_multiple_estimation = True
             if self._is_iv:
@@ -393,10 +387,9 @@ class FixestMulti:
         Returns:
             A list of all fitted models of types Feols or Fepois.
         """
-
         return list(self.all_fitted_models.values())
 
-    def vcov(self, vcov: Union[str, Dict[str, str]]):
+    def vcov(self, vcov: Union[str, dict[str, str]]):
         """
         Update regression inference "on the fly".
 
@@ -404,16 +397,16 @@ class FixestMulti:
         to the "Fixest" object are replaced with the variance-covariance matrix specified via the method.
 
         Args:
-            vcov (Union[str, Dict[str, str]]): A string or dictionary specifying the type of variance-covariance
+            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
                 matrix to use for inference.
                 - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
                 - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
                   or {"CRV3": "clustervar"} for CRV3 inference.
 
-        Returns:
+        Returns
+        -------
             An instance of the "Fixest" class with updated inference.f
         """
-
         for model in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[model]
             fxst._vcov_type = vcov
@@ -426,7 +419,9 @@ class FixestMulti:
     def tidy(self) -> pd.DataFrame:
         """
         Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
-        Returns:
+
+        Returns
+        -------
             pd.DataFrame or str
                 A tidy DataFrame with the following columns:
                 - fml: the formula used to generate the results
@@ -440,7 +435,6 @@ class FixestMulti:
                 If `type` is set to "markdown", the resulting DataFrame will be returned as a
                 markdown-formatted string with three decimal places.
         """
-
         res = []
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
@@ -463,7 +457,9 @@ class FixestMulti:
     def coef(self) -> pd.Series:
         """
         Obtain the coefficients of the fitted models.
-        Returns:
+
+        Returns
+        -------
             A pd.Series with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
         """
         return self.tidy()["Estimate"]
@@ -472,7 +468,8 @@ class FixestMulti:
         """
         Obtain the standard errors of the fitted models.
 
-        Returns:
+        Returns
+        -------
             A pd.Series with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
 
         """
@@ -482,7 +479,8 @@ class FixestMulti:
         """
         Obtain the t-statistics of the fitted models.
 
-         Returns:
+        Returns
+        -------
             A pd.Series with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
 
         """
@@ -492,7 +490,8 @@ class FixestMulti:
         """
         Obtain the p-values of the fitted models.
 
-        Returns:
+        Returns
+        -------
             A pd.Series with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
 
         """
@@ -502,10 +501,10 @@ class FixestMulti:
         """'
         Obtain confidence intervals for the fitted models.
 
-        Returns:
+        Returns
+        -------
             A pd.Series with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
         """
-
         return self.tidy()[["2.5 %", "97.5 %"]]
 
     def iplot(
@@ -530,10 +529,10 @@ class FixestMulti:
             title (str, optional): The title of the plot. Default is None.
             coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
 
-        Returns:
+        Returns
+        -------
             A lets-plot figure of coefficients (and respective CIs) interacted via the `i()` syntax.
         """
-
         models = self.all_fitted_models
         # get a list, not a dict, as iplot only works with lists
         models = [models[x] for x in list(self.all_fitted_models.keys())]
@@ -570,10 +569,11 @@ class FixestMulti:
             figtext (str, optional): The text at the bottom of the figure. Default is None.
             title (str, optional): The title of the plot. Default is None.
             coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
-        Returns:
+
+        Returns
+        -------
             A lets-plot figure of regression coefficients.
         """
-
         # get a list, not a dict, as iplot only works with lists
         models = self.all_fitted_models
         models = [models[x] for x in list(self.all_fitted_models.keys())]
@@ -622,11 +622,11 @@ class FixestMulti:
             cluster_adj (bool, optional): Whether to adjust standard errors for clustering in the bootstrap.
                 Default is True.
 
-        Returns:
+        Returns
+        -------
             A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated
             statistic derives from.
         """
-
         res = []
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
@@ -664,10 +664,11 @@ class FixestMulti:
         Args:
             i (int or str): The index of the model to fetch.
             print_fml (bool, optional): Whether to print the formula of the model. Default is True.
-        Returns:
+
+        Returns
+        -------
             A Feols object.
         """
-
         if isinstance(i, str):
             i = int(i)
 
@@ -694,21 +695,15 @@ def get_fml(
         endogvars (str, optional): The endogenous variables.
         instruments (str, optional): The instruments. E.g. "Z1+Z2+Z3"
 
-    Returns:
+    Returns
+    -------
         str: The formula string for the regression.
     """
-
     fml = f"{depvar} ~ {covar}"
 
-    if endogvars is not None:
-        fml_iv = f"| {endogvars} ~ {instruments}"
-    else:
-        fml_iv = None
+    fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
 
-    if fval != "0":
-        fml_fval = f"| {fval}"
-    else:
-        fml_fval = None
+    fml_fval = f"| {fval}" if fval != "0" else None
 
     if fml_fval is not None:
         fml += fml_fval
@@ -728,10 +723,11 @@ def _get_vcov_type(vcov, fval):
     Args:
         vcov (str): The specified vcov type.
         fval (str): The specified fixed effects. (i.e. "X1+X2")
-    Returns:
+
+    Returns
+    -------
         vcov_type (str): The specified vcov type.
     """
-
     if vcov is None:
         # iid if no fixed effects
         if fval == "0":
@@ -751,14 +747,12 @@ def _drop_singletons(fixef_rm: bool) -> bool:
     Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
     Args:
         fixef_rm (str): The fixef_rm argument.
-    Returns:
+
+    Returns
+    -------
         drop_singletons (bool): Whether to drop singletons.
     """
-
-    if fixef_rm == "singleton":
-        return True
-    else:
-        return False
+    return fixef_rm == "singleton"
 
 
 def _get_endogvars_instruments(
@@ -776,7 +770,6 @@ def _get_endogvars_instruments(
         endogvars (str): The endogenous variables.
         instruments (str): The instruments. E.g. "Z1+Z2+Z3"
     """
-
     dict2fe_iv = fml_dict_iv.get(fval)
     instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
     endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))

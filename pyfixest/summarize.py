@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -11,10 +11,10 @@ from pyfixest.fepois import Fepois
 
 
 def etable(
-    models: Union[Feols, Fepois, Feiv, List],
+    models: Union[Feols, Fepois, Feiv, list],
     digits: Optional[int] = 3,
     type: Optional[str] = "md",
-    signif_code: Optional[List] = [0.001, 0.01, 0.05],
+    signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
 ) -> Union[pd.DataFrame, str]:
     """
@@ -40,7 +40,6 @@ def etable(
     pandas.DataFrame
         A DataFrame with the coefficients and standard errors of the models.
     """
-
     assert (
         signif_code is None or len(signif_code) == 3
     ), "signif_code must be a list of length 3 or None"
@@ -69,7 +68,7 @@ def etable(
     n_coefs = []
     se_type_list = []
     r2_list = []
-    r2_within_list = []
+    r2_within_list = []  # noqa: F841
 
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
@@ -102,9 +101,8 @@ def etable(
             nobs_fixef_df[fixef] = "-"
 
             for i, model in enumerate(models):
-                if model._fixef is not None:
-                    if fixef in model._fixef.split("+"):
-                        nobs_fixef_df.loc[i, fixef] = "x"
+                if model._fixef is not None and fixef in model._fixef.split("+"):
+                    nobs_fixef_df.loc[i, fixef] = "x"
 
     colnames = nobs_fixef_df.columns.tolist()
     colnames.reverse()
@@ -154,10 +152,11 @@ def etable(
     # a lot of work to replace the NaNs with empty strings
     # reason: "" not a level of the category, might lead to a pandas error
     for column in res.columns:
-        if isinstance(res[column].dtype, pd.CategoricalDtype):
-            # Add an empty string level to the category if it's not already there
-            if "" not in res[column].cat.categories:
-                res[column] = res[column].cat.add_categories([""])
+        if (
+            isinstance(res[column].dtype, pd.CategoricalDtype)
+            and "" not in res[column].cat.categories
+        ):
+            res[column] = res[column].cat.add_categories([""])
 
         # Replace NA values with the empty string
         res[column] = res[column].fillna("")
@@ -186,7 +185,7 @@ def etable(
 
 
 def summary(
-    models: Union[Feols, Fepois, Feiv, List], digits: Optional[int] = 3
+    models: Union[Feols, Fepois, Feiv, list], digits: Optional[int] = 3
 ) -> None:
     """
     Prints a summary of estimation results for each estimated model.
@@ -220,7 +219,6 @@ def summary(
     summary([fit1, fit2, fit3])
     ```
     """
-
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
@@ -229,10 +227,7 @@ def summary(
         df = fxst.tidy().round(digits)
 
         if fxst._method == "feols":
-            if fxst._is_iv:
-                estimation_method = "IV"
-            else:
-                estimation_method = "OLS"
+            estimation_method = "IV" if fxst._is_iv else "OLS"
         elif fxst._method == "fepois":
             estimation_method = "Poisson"
         elif fxst._method == "twfe":
@@ -274,26 +269,25 @@ def _post_processing_input_checks(models):
     """
     Perform input checks for post-processing models.
 
-    Parameters:
+    Parameters
+    ----------
         models (Feols, Fepois, list, dict): The models to be checked.
 
-    Returns:
+    Returns
+    -------
         models (Feols, Fepois, list, dict): The checked models.
 
-    Raises:
+    Raises
+    ------
         TypeError: If the models argument is not of the expected type.
 
     """
-
     # check if models instance of Feols or Fepois
     if isinstance(models, (Feols, Fepois)):
-
         models = [models]
 
     else:
-
         if isinstance(models, list):
-
             for model in models:
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
@@ -304,7 +298,6 @@ def _post_processing_input_checks(models):
                     )
 
         else:
-
             raise TypeError(
                 """
                 The models argument must be either a list of Feols or Fepois instances, or
@@ -321,12 +314,14 @@ def _tabulate_etable(df, n_models, n_fixef):
     """
     Format and tabulate a DataFrame.
 
-    Parameters:
+    Parameters
+    ----------
     - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
     - n_models (int): The number of models.
     - n_fixef (int): The number of fixed effects.
 
-    Returns:
+    Returns
+    -------
     - formatted_table (str): The formatted table as a string.
     """
     # Format the DataFrame for tabulate
@@ -355,14 +350,15 @@ def _parse_coef_fmt(coef_fmt: str):
     """
     Parse the coef_fmt string.
 
-    Parameters:
+    Parameters
+    ----------
     - coef_fmt (str): The coef_fmt string.
 
-    Returns:
+    Returns
+    -------
     - coef_fmt_elements (str): The parsed coef_fmt string.
     - coef_fmt_title (str): The title for the coef_fmt string.
     """
-
     allowed_elements = ["b", "se", "t", "p", " ", r"\(", r"\)", r"\[", r"\]", "\n"]
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     title_map = {
