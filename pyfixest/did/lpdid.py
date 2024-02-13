@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
+from typing import Optional, Union
 
+import numpy as np
+import pandas as pd
+
+from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.visualize import _coefplot
-from pyfixest.did.did import DID
-
-from typing import Optional, Union, Dict
 
 
 class LPDID(DID):
@@ -127,7 +127,7 @@ def _lpdid_estimate(
     yname: str,
     idname: str,
     tname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     att: bool = True,
@@ -151,15 +151,16 @@ def _lpdid_estimate(
                        have value gname = 0.
         att: Whether to estimate the average treatment effect on the treated (ATT) or a canonical event study design with all leads and lags. Default is True.
         xfml: Optional formula for the covariates. Not yet supported. E.g. "X1 + X2 + X3".
-    Returns:
+
+    Returns
+    -------
         A data frame with the estimated coefficients.
     """
-
     # the implementation here is highly influenced by Alex Cardazzi's R
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid
 
     fit_all = []
-    reweight = False
+    reweight = False  # noqa: F841
 
     if xfml is None:
         fml = f"Dy ~ treat_diff | {tname}"
@@ -220,13 +221,15 @@ def _pooled_adjustment(df, y, pool_lead, idname):
     """
     Calculate post-treatment means rather than just using a single y value from t+h.
 
-    Parameters:
+    Parameters
+    ----------
     - df (pd.DataFrame): The dataset used in the analysis.
     - y (str): The column name that denotes the outcome variable.
     - pool_lead (int): The number of post-periods that should be used when calculating the post-treatment mean.
     - idname (str): The name of the id variable.
 
-    Returns:
+    Returns
+    -------
     - pd.Series: The average of all future values in the analysis.
     """
     # Initialize lead variable

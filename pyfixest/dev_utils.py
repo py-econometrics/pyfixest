@@ -1,5 +1,6 @@
-import pandas as pd
 from typing import Union
+
+import pandas as pd
 
 try:
     import polars as pl
@@ -12,7 +13,7 @@ except ImportError:
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
     if not isinstance(data, pd.DataFrame):
         try:
-            import polars as pl
+            import polars as pl  # noqa: F401
 
             data = data.to_pandas()
         except ImportError:

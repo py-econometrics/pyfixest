@@ -1,23 +1,26 @@
+from typing import Optional, Union
+
 import pandas as pd
-from typing import List, Tuple, Optional
-from pyfixest.summarize import _post_processing_input_checks
-from typing import Union
+
+# from lets_plot import *
 from lets_plot import (
-    ggplot,
+    LetsPlot,
     aes,
-    geom_point,
+    coord_flip,
+    element_text,
     geom_errorbar,
     geom_hline,
+    geom_point,
     geom_vline,
+    ggplot,
     ggsize,
-    theme,
-    element_text,
-    position_dodge,
-    coord_flip,
     ggtitle,
+    position_dodge,
+    theme,
     ylab,
 )
-from lets_plot import *
+
+from pyfixest.summarize import _post_processing_input_checks
 
 LetsPlot.setup_html()
 
@@ -61,7 +64,6 @@ def iplot(
 
     Examples
     --------
-
     ```{python}
     from pyfixest.utils import get_data
     from pyfixest.estimation import feols
@@ -75,7 +77,6 @@ def iplot(
     iplot([fit1, fit2, fit3])
     ```
     """
-
     models = _post_processing_input_checks(models)
 
     df_all = []
@@ -98,11 +99,11 @@ def iplot(
     all_icovars = list(set(all_icovars))
 
     df = pd.concat(df_all, axis=0)
-    fml_list = df.index.unique()
+    fml_list = df.index.unique()  # noqa: F841
     # keep only coefficients interacted via the i() syntax
     df = df[df.Coefficient.isin(all_icovars)].reset_index()
 
-    plot = _coefplot(
+    return _coefplot(
         df=df,
         figsize=figsize,
         alpha=alpha,
@@ -113,17 +114,15 @@ def iplot(
         flip_coord=coord_flip,
     )
 
-    return plot
-
 
 def coefplot(
-    models: List,
+    models: list,
     alpha: int = 0.05,
     figsize: tuple = (500, 300),
     yintercept: float = 0,
     xintercept: float = None,
     rotate_xticks: int = 0,
-    coefficients: Optional[List[str]] = None,
+    coefficients: Optional[list[str]] = None,
     title: Optional[str] = None,
     coord_flip: Optional[bool] = True,
 ):
@@ -158,7 +157,6 @@ def coefplot(
 
     Examples
     --------
-
     ```{python}
     from pyfixest.utils import get_data
     from pyfixest.estimation import feols
@@ -172,7 +170,6 @@ def coefplot(
     coefplot([fit1, fit2, fit3])
     ```
     """
-
     models = _post_processing_input_checks(models)
     df_all = []
     for x, _ in enumerate(models):
@@ -187,7 +184,7 @@ def coefplot(
     if coefficients is not None:
         df = df[df.Coefficient.isin(coefficients)].reset_index()
 
-    plot = _coefplot(
+    return _coefplot(
         df=df,
         figsize=figsize,
         alpha=alpha,
@@ -198,12 +195,10 @@ def coefplot(
         flip_coord=coord_flip,
     )
 
-    return plot
-
 
 def _coefplot(
     df: pd.DataFrame,
-    figsize: Tuple[int, int],
+    figsize: tuple[int, int],
     alpha: float,
     yintercept: Optional[int] = None,
     xintercept: Optional[int] = None,
@@ -240,7 +235,6 @@ def _coefplot(
     object
         A lets-plot figure.
     """
-
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
 

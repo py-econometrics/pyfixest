@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Optional
+
+import numpy as np
+
 from pyfixest.feols import Feols, _drop_multicollinear_variables
 
 

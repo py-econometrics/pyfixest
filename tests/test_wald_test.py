@@ -1,12 +1,13 @@
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.estimation import feols
-from pyfixest.utils import ssc
+import pytest
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-from rpy2.robjects import pandas2ri
+
+from pyfixest.estimation import feols
+from pyfixest.utils import ssc
 
 pandas2ri.activate()
 clubSandwich = importr("clubSandwich")

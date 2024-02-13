@@ -1,15 +1,15 @@
+import warnings
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-import warnings
 
-
-from typing import Union, Optional, List
-from pyfixest.feols import Feols
 from pyfixest.demean import demean
 from pyfixest.exceptions import (
     NonConvergenceError,
     NotImplementedError,
 )
+from pyfixest.feols import Feols
 
 
 class Fepois(Feols):
@@ -35,7 +35,7 @@ class Fepois(Feols):
         Fixed effects, a two-dimensional numpy array or None.
     weights : np.ndarray
         Weights, a one-dimensional numpy array or None.
-    coefnames : List[str]
+    coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
@@ -55,7 +55,7 @@ class Fepois(Feols):
         X: np.ndarray,
         fe: np.ndarray,
         weights: np.ndarray,
-        coefnames: List[str],
+        coefnames: list[str],
         drop_singletons: bool,
         collin_tol: float,
         maxiter: Optional[int] = 25,
@@ -126,7 +126,6 @@ class Fepois(Feols):
         Y : np.ndarray
             Demeaned dependent variable (from the last iteration of the IRLS algorithm).
         """
-
         _Y = self._Y
         _X = self._X
         _fe = self.fe
@@ -171,8 +170,8 @@ class Fepois(Feols):
             elif accelerate:
                 last_Z = Z.copy()
                 Z = eta + _Y / mu - 1
-                reg_Z = Z - last_Z + Z_resid
-                X = X_resid.copy()
+                reg_Z = Z - last_Z + Z_resid  # noqa: F821
+                X = X_resid.copy()  # noqa: F821, F841
 
             else:
                 # update w and Z
@@ -189,7 +188,7 @@ class Fepois(Feols):
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(x=ZX, flist=_fe, weights=mu.flatten())
-                if success == False:
+                if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
             else:
                 ZX_resid = ZX
@@ -254,6 +253,8 @@ class Fepois(Feols):
         self, newdata: Optional[pd.DataFrame] = None, type="link"
     ) -> np.ndarray:
         """
+        Return predicted values from regression model.
+
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values for such observations
         will be set to NaN.
@@ -273,7 +274,6 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-
         _Xbeta = self._Xbeta
         _has_fixef = self._has_fixef
 
@@ -296,8 +296,10 @@ class Fepois(Feols):
         return y_hat
 
 
-def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> List:
+def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> list:
     """
+    Check for separation.
+
     Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
     separation checks. Currently, only the "fe" check is implemented.
 
@@ -312,10 +314,9 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
 
     Returns
     -------
-    List
+    list
         List of indices of observations that are removed due to separation.
     """
-
     if check == "fe":
         if (Y > 0).all(axis=0).all():
             pass
@@ -370,7 +371,6 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
     -------
     None
     """
-
     # fe must be np.array of dimension 2 or None
     if fe is not None:
         if not isinstance(fe, np.ndarray):
@@ -379,15 +379,15 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
             raise AssertionError("fe must be a numpy array of dimension 2.")
     # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
-        raise AssertionError("drop_singletons must be logical.")
+        raise TypeError("drop_singletons must be logical.")
     # tol must be numeric and between 0 and 1
     if not isinstance(tol, (int, float)):
-        raise AssertionError("tol must be numeric.")
+        raise TypeError("tol must be numeric.")
     if tol <= 0 or tol >= 1:
         raise AssertionError("tol must be between 0 and 1.")
     # maxiter must be integer and greater than 0
     if not isinstance(maxiter, int):
-        raise AssertionError("maxiter must be integer.")
+        raise TypeError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
 
@@ -395,11 +395,10 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
 def _to_integer(x):
     if x.dtype == int:
         return x
-    else:
-        try:
-            x = x.astype(np.int64)
-            return x
-        except ValueError:
-            raise ValueError(
-                "Conversion of the dependent variable to integer is not possible. Please do so manually."
-            )
+    try:
+        x = x.astype(np.int64)
+        return x  # noqa: TRY300
+    except ValueError as e:
+        raise ValueError(
+            "Conversion of the dependent variable to integer is not possible. Please do so manually."
+        ) from e

@@ -1,18 +1,18 @@
-from typing import Optional, Union, Dict
-from pyfixest.utils import ssc
-from pyfixest.FixestMulti import FixestMulti
-from pyfixest.fepois import Fepois
-from pyfixest.feols import Feols
-from pyfixest.dev_utils import DataFrameType
+from typing import Optional, Union
 
 import pandas as pd
-import numpy as np
+
+from pyfixest.dev_utils import DataFrameType
+from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
+from pyfixest.FixestMulti import FixestMulti
+from pyfixest.utils import ssc
 
 
 def feols(
     fml: str,
     data: DataFrameType,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
@@ -64,7 +64,6 @@ def feols(
 
     Examples
     --------
-
     As in `fixest`, the [Feols(/reference/Feols.qmd) function can be used to estimate a simple linear regression model with fixed effects.
     The following example regresses `Y` on `X1` and `X2` with fixed effects for `f1` and `f2`: fixed effects are specified
     after the `|` symbol.
@@ -204,7 +203,6 @@ def feols(
     ```
 
     """
-
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
     _estimation_input_checks(
@@ -228,7 +226,7 @@ def feols(
 def fepois(
     fml: str,
     data: DataFrameType,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
     iwls_tol: float = 1e-08,
@@ -305,7 +303,6 @@ def fepois(
     ```
     For more examples, please take a look at the documentation of the `feols()` function.
     """
-
     assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
 
     weights = None
@@ -342,27 +339,27 @@ def _estimation_input_checks(
     fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
 ):
     if not isinstance(fml, str):
-        raise ValueError("fml must be a string")
+        raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
         try:
             import polars as pl
 
             if not isinstance(data, pl.DataFrame):
-                raise ValueError("data must be a pandas or polars dataframe")
+                raise TypeError("data must be a pandas or polars dataframe")
         except ImportError:
-            raise ValueError("data must be a pandas or polars dataframe")
+            raise TypeError("data must be a pandas or polars dataframe")
     if not isinstance(vcov, (str, dict, type(None))):
-        raise ValueError("vcov must be a string, dictionary, or None")
+        raise TypeError("vcov must be a string, dictionary, or None")
     if not isinstance(fixef_rm, str):
-        raise ValueError("fixef_rm must be a string")
+        raise TypeError("fixef_rm must be a string")
     if not isinstance(collin_tol, float):
-        raise ValueError("collin_tol must be a float")
+        raise TypeError("collin_tol must be a float")
 
-    if not fixef_rm in ["none", "singleton"]:
+    if fixef_rm not in ["none", "singleton"]:
         raise ValueError("fixef_rm must be either 'none' or 'singleton'")
-    if not collin_tol > 0:
+    if collin_tol <= 0:
         raise ValueError("collin_tol must be greater than zero")
-    if not collin_tol < 1:
+    if collin_tol >= 1:
         raise ValueError("collin_tol must be less than one")
 
     assert i_ref1 is None or isinstance(

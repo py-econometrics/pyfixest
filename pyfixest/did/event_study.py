@@ -1,7 +1,8 @@
 import pandas as pd
-from pyfixest.exceptions import NotImplementedError
+
 from pyfixest.did.did2s import DID2S
 from pyfixest.did.twfe import TWFE
+from pyfixest.exceptions import NotImplementedError
 
 
 def event_study(
@@ -108,7 +109,7 @@ def event_study(
         fit._method = "twfe"
 
     else:
-        raise Exception("Estimator not supported")
+        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()

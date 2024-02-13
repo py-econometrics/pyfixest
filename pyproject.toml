@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.15.2"
+version = "0.15.4"
 
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
@@ -42,6 +42,53 @@ filterwarnings =[
     "ignore::FutureWarning:rpy2",
     "ignore::DeprecationWarning:rpy2"
 ]
+
+[tool.ruff]
+line-length = 88
+fix = true
+#extend-include = ["*.ipynb"] # TODO: add ruff for notebooks
+
+# Assume Python 3.9
+target-version = "py39"
+
+[tool.ruff.lint]
+# docs: https://docs.astral.sh/ruff/rules/
+select = [
+  "F", # Pyflakes
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "I", # isort
+#  "D", # flake8-docstrings
+  "UP", # pyupgrade
+  "SIM", # flake8-simplify
+  "TRY", # tryceratops
+]
+
+ignore = [
+# do not enable if formatting
+# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "W191",   # tab indentation
+  "E111",   # indentation
+  "E114",   # indentation
+  "E117",   # over indented
+  "D206",   # indent with spaces
+  "D300",   # triple single quotes
+  "E501",   # line length regulated by formatter
+  "D105",   # missing docstring in magic method
+  "D100",   # missing docstring in public module
+  "D104",   # missing docstring in public package
+  "SIM110", # Use all instead of `for` loop
+  "TRY003", # Avoid specifying long messages outside the exception class
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D100", "D103"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [build-system]
 requires = ["poetry-core"]

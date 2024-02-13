@@ -1,25 +1,81 @@
+from typing import Union
+
 import numpy as np
 import pandas as pd
-from typing import Union, List
-from pyfixest.summarize import _post_processing_input_checks
-from pyfixest.feols import Feols
-from pyfixest.FixestMulti import FixestMulti
 from tqdm import tqdm
+
+from pyfixest.feols import Feols
+from pyfixest.fepois import Fepois
+from pyfixest.summarize import _post_processing_input_checks
+
+
+def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:
+    """
+    Compute Bonferroni adjusted p-values for multiple hypothesis testing.
+
+    For each model, it is assumed that tests to adjust are of the form
+    "param = 0".
+
+    Parameters
+    ----------
+    models : list[Feols, Fepois], Feols or Fepois
+        A list of models for which the p-values should be adjusted, or a Feols or Fepois object.
+    param : str
+        The parameter for which the p-values should be adjusted.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.
+
+    Examples
+    --------
+    ```python
+    from pyfixest.estimation import feols
+    from pyfixest.utils import get_data
+    from pyfixest.multcomp import bonferroni
+
+    data = get_data().dropna()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2", data=data)
+    bonf_df = bonferroni([fit1, fit2], param = "X1")
+    bonf_df
+    ```
+    """
+
+    models = _post_processing_input_checks(models)
+    all_model_stats = pd.DataFrame()
+    S = len(models)
+    pvalues = np.zeros(S)
+    for i, model in enumerate(models):
+        if param not in model._coefnames:
+            raise ValueError(
+                f"Parameter '{param}' not found in the model {model._fml}."
+            )
+        pvalues[i] = model.pvalue().xs(param)
+        all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
+
+    adjusted_pvalues = np.minimum(1, pvalues * S)
+
+    all_model_stats.loc["Bonferroni Pr(>|t|)"] = adjusted_pvalues
+    all_model_stats.columns = [f"est{i}" for i, _ in enumerate(models)]
+
+    return all_model_stats
 
 
 def rwolf(
-    models: Union[List[Feols], Feols], param: str, B: int, seed: int
+    models: Union[list[Feols], Feols], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
-    For each model, it is assumed that the adjustment is for the family of hypotheses is
+    For each model, it is assumed that tests to adjust are of the form
     "param = 0". This function uses the `wildboottest()` method for running the bootstrap,
     hence models of type `Feiv` or `Fepois` are not supported.
 
     Parameters
     ----------
-    models : List[Feols] or FixestMulti
+    models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a FixestMulti object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
@@ -34,14 +90,28 @@ def rwolf(
     pd.DataFrame
         A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.
 
-    """
+    Examples
+    --------
+    ```python
+    from pyfixest.estimation import feols
+    from pyfixest.utils import get_data
+    from pyfixest.multcomp import rwolf
 
+    data = get_data().dropna()
+    fit = feols("Y ~ Y2 + X1 + X2", data=data)
+    rwolf(fit.to_list(), "X1", B=9999, seed=123)
+
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2", data=data)
+    rwolf_df = rwolf([fit1, fit2], "X1", B=9999, seed=123)
+    rwolf_df
+    ```
+    """
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
 
     S = 0
     for model in models:
-
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -56,7 +126,6 @@ def rwolf(
     boot_t_stats = np.zeros((B, S))
 
     for i in tqdm(range(S)):
-
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
@@ -80,17 +149,18 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     """
     Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
 
-    Parameters:
+    Parameters
+    ----------
     t_stats (np.ndarray): A vector of length S - where S is the number of
                           tested hypotheses - containing the original,
                           non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
                                bootstrapped t-statistics.
 
-    Returns:
+    Returns
+    -------
     np.ndarray: A vector of Romano-Wolf corrected p-values.
     """
-
     t_stats = np.abs(t_stats)
     boot_t_stats = np.abs(boot_t_stats)
 

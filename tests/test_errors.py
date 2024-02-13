@@ -1,23 +1,22 @@
-from typing import Type
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.utils import get_data
+import pytest
+
+from pyfixest.estimation import feols, fepois
 from pyfixest.exceptions import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
-    UnderDeterminedIVError,
-    VcovTypeNotSupportedError,
+    InvalidReferenceLevelError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
-    InvalidReferenceLevelError,
+    UnderDeterminedIVError,
+    VcovTypeNotSupportedError,
 )
-from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
 from pyfixest.multcomp import rwolf
 from pyfixest.summarize import etable, summary
-from pyfixest.summarize import etable
+from pyfixest.utils import get_data
 
 
 def test_formula_parser2():
@@ -156,7 +155,7 @@ def test_i_interaction_errors():
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data=data)
+        fit = feols("Y ~ f1 | f1", data=data)  # noqa: F841
 
 
 def test_wls_errors():
@@ -189,7 +188,6 @@ def test_wls_errors():
 
 
 def test_multcomp_errors():
-
     data = get_data().dropna()
 
     # param not in model
@@ -199,7 +197,6 @@ def test_multcomp_errors():
 
 
 def test_wildboottest_errors():
-
     data = get_data()
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
@@ -207,7 +204,6 @@ def test_wildboottest_errors():
 
 
 def test_summary_errors():
-
     data = get_data()
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
@@ -223,7 +219,6 @@ def test_summary_errors():
 
 
 def test_errors_etable():
-
     data = get_data()
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
