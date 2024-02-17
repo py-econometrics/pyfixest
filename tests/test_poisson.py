@@ -9,7 +9,6 @@ def test_separation():
     """
     Test separation detection.
     """
-
     y = np.array([0, 0, 0, 1, 2, 3])
     df1 = np.array(["a", "a", "b", "b", "b", "c"])
     df2 = np.array(["c", "c", "d", "d", "d", "e"])

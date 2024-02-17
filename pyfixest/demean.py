@@ -1,6 +1,5 @@
 from typing import Any, Optional
 
-
 import numba as nb
 import numpy as np
 import pandas as pd

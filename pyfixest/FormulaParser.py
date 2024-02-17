@@ -13,7 +13,8 @@ class FixestFormulaParser:
     """
     A class for deparsing formulas with multiple estimation syntax.
 
-    Methods:
+    Methods
+    -------
         __init__(self, fml): Constructor method that initializes the object with a given formula.
         get_fml_dict(self): Returns a dictionary of all fevars & formula without fevars.
         get_var_dict(self): Returns a dictionary of all fevars and list of covars and depvars used in regression with those fevars.
@@ -27,11 +28,11 @@ class FixestFormulaParser:
         Args:
         fml (str): A one-to three sided formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
 
-        Returns:
+        Returns
+        -------
             None
 
         """
-
         # Clean up the formula string
         fml = "".join(fml.split())
 
@@ -137,10 +138,13 @@ class FixestFormulaParser:
         """
         Get a nested dictionary of all formulas.
 
-        Parameters:
+        Parameters
+        ----------
             iv: bool (default: False)
                 If True, the formulas for the first stage are returned. Otherwise, the formulas for the second stage are returned.
-        Returns:
+
+        Returns
+        -------
             fml_dict: dict
                 A nested dictionary of all formulas. The dictionary has the following structure: first, a dictionary with the
                 fixed effects combinations as keys. Then, for each fixed effect combination, a dictionary with the dependent variables
@@ -149,7 +153,6 @@ class FixestFormulaParser:
                 Here is an example:
                     fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
         """
-
         fml_dict = {}
 
         for fevar in self.fevars_fml:
@@ -176,13 +179,13 @@ def _unpack_fml(x):
     and returns a dictionary containing the result. The dictionary has the following keys: 'constant', 'sw', 'sw0', 'csw'.
     The values are lists of variables of the respective type.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x : str
         The formula string to unpack.
 
-    Returns:
-    --------
+    Returns
+    -------
     res_s : dict
         A dictionary containing the unpacked formula. The dictionary has the following keys:
             - 'constant' : list of str
@@ -200,8 +203,8 @@ def _unpack_fml(x):
                 Each element in the list can be either a single variable string, or a list of variable strings
                 if multiple variables are listed in the switch.
 
-    Raises:
-    -------
+    Raises
+    ------
     ValueError:
         If the switch type is not one of 'sw', 'sw0', 'csw', or 'csw0'.
 
@@ -214,7 +217,6 @@ def _unpack_fml(x):
      'sw0': ['d'],
      'csw0': [['y1', 'y2', 'y3']]}
     """
-
     # Split the formula into its constituent variables
     var_split = x.split("+")
 
@@ -264,7 +266,6 @@ def _pack_to_fml(unpacked):
                 if multiple variables are listed in the switch.
             - 'csw0' : list of str or list of lists of str
     """
-
     res = {"constant": unpacked.get("constant", [])}
 
     # add up all variable constants (only required for csw)
@@ -328,7 +329,8 @@ def _find_sw(x):
     Args:
         x (str): The string to search for matches in.
 
-    Returns:
+    Returns
+    -------
         (list[str] or str, str or None): If any matches were found, returns a tuple containing
         a list of the elements found and the type of match (either 'sw', 'sw0', 'csw', or 'csw0').
         Otherwise, returns the original string and None.
@@ -336,7 +338,6 @@ def _find_sw(x):
     Example:
         _find_sw('sw(var1, var2)') -> (['var1', ' var2'], 'sw')
     """
-
     # Search for matches in the string
     sw_match = re.findall(r"sw\((.*?)\)", x)
     csw_match = re.findall(r"csw\((.*?)\)", x)
@@ -369,16 +370,17 @@ def _flatten_list(lst):
     Args:
         lst (list): A list that may contain sublists.
 
-    Returns:
+    Returns
+    -------
         list: A flattened list with no sublists.
 
-    Examples:
+    Examples
+    --------
         >>> flatten_list([[1, 2, 3], 4, 5])
         [1, 2, 3, 4, 5]
         >>> flatten_list([1, 2, 3])
         [1, 2, 3]
     """
-
     flattened_list = []
     for i in lst:
         if isinstance(i, list):
@@ -396,10 +398,10 @@ def _check_duplicate_key(my_dict, key):
         my_dict (dict): The dictionary to check for duplicate keys.
         key (str): The key to check for in the dictionary.
 
-    Returns:
+    Returns
+    -------
         None
     """
-
     for key in ["sw", "csw", "sw0", "csw0"]:
         if key in my_dict:
             raise DuplicateKeyError(

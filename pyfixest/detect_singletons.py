@@ -58,7 +58,6 @@ def detect_singletons(ids):
     For performance reasons, the input array should be in column-major order. Operating on a row-major array can lead to
     significant performance losses.
     """
-
     ids = _prepare_fixed_effects(ids)
     n_samples, n_features = ids.shape
 

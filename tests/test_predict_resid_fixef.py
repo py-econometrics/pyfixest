@@ -30,7 +30,6 @@ def test_internally(data):
     Test predict() method internally.
     Currently only for OLS.
     """
-
     # predict via feols, without fixed effect
     fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
     mod = fit.fetch_model(0)
@@ -78,7 +77,6 @@ def test_vs_fixest(data, fml):
     """
     Test predict and resid methods against fixest.
     """
-
     feols_mod = feols(fml=fml, data=data, vcov="HC1")
     fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
 
@@ -240,7 +238,6 @@ def test_categorical_covariate_predict():
     """
     Test if predict handles missing levels in covariate correctly.
     """
-
     rng = np.random.default_rng(12345)
     df = pd.DataFrame(
         {

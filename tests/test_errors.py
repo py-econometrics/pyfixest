@@ -50,7 +50,6 @@ def test_cluster_na():
     test if a nan value in a cluster variable raises
     an error
     """
-
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
@@ -77,7 +76,6 @@ def test_depvar_numeric():
     """
     test if feols() throws an error when the dependent variable is not numeric
     """
-
     data = get_data()
     data["Y"] = data["Y"].astype("str")
     data["Y"] = pd.Categorical(data["Y"])
@@ -131,7 +129,6 @@ def test_poisson_devpar_count():
     """
     check that the dependent variable is a count variable
     """
-
     data = get_data()
     # under determined
     with pytest.raises(AssertionError):

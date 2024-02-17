@@ -120,7 +120,6 @@ def test_single_fit(
         - ... compare regression coefficients and standard errors
         - tba: t-statistics, covariance matrices, other metrics
     """
-
     inference_inflation_factor = 1.0
 
     if model == "Feols":
@@ -450,7 +449,6 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     """
     test pyfixest against fixest_multi objects
     """
-
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data[data == "nan"] = np.nan
 
@@ -566,7 +564,6 @@ def test_wls_na():
     """
     Special tests for WLS and NA values
     """
-
     data = get_data()
     data = data.dropna()
 
@@ -630,7 +627,6 @@ def _py_fml_to_r_fml(py_fml):
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
-
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -688,7 +684,6 @@ def test_i_interaction():
     """
     Test that interaction syntax via the `i()` operator works as in fixest
     """
-
     data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)

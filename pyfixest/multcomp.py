@@ -42,7 +42,6 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     bonf_df
     ```
     """
-
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
     S = len(models)

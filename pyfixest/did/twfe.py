@@ -22,10 +22,11 @@ class TWFE(DID):
             att: Whether to estimate the average treatment effect on the treated (ATT) or the
                 canonical event study design with all leads and lags. Default is True.
             cluster (str): The name of the cluster variable.
-        Returns:
+
+        Returns
+        -------
             None
         """
-
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "twfe"
@@ -48,7 +49,6 @@ class TWFE(DID):
         """
         Method not needed. The vcov matrix is calculated via the [Feols(/reference/Feols.qmd) object.
         """
-
         pass
 
     def iplot(

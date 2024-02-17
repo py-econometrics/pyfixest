@@ -20,7 +20,6 @@ def test_event_study():
     """
     Test the event_study() function.
     """
-
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     fit_did2s = event_study(
@@ -53,7 +52,6 @@ def test_did2s():
     """
     Test the did2s() function.
     """
-
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
@@ -213,7 +211,6 @@ def test_lpdid():
     """
     test the lpdid estimator.
     """
-
     # test vs stata
     df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
     df_het = df_het.astype(np.float64)

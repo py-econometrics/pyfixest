@@ -19,10 +19,11 @@ class DID(ABC):
             att: Whether to estimate the average treatment effect on the treated (ATT) or the
                 canonical event study design with all leads and lags. Default is True.
             cluster: The name of the cluster variable.
-        Returns:
+
+        Returns
+        -------
             None
         """
-
         # do some checks here
 
         self._data = data.copy()

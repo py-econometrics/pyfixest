@@ -48,7 +48,7 @@ def event_study(
         A fitted model object of class [Feols(/reference/Feols.qmd).
 
     Examples
-
+    --------
     ```{python}
     import pandas as pd
 
