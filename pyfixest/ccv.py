@@ -1,11 +1,12 @@
 from pyfixest.estimation import feols
 from scipy.stats import t
+from tqdm import tqdm
+
 import pandas as pd
 import numpy as np
 
 
-import numpy as np
-import pandas as pd
+
 
 def cluster_dgp(k):
 
@@ -126,7 +127,7 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     G = len(unique_clusters)
 
     vcov_splits = np.empty(splits)
-    for s in range(splits):
+    for s in tqdm(range(splits)):
 
         Z = rng.choice([False, True], size=N)
         # compute alpha, tau using Z == 0
