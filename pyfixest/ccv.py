@@ -107,10 +107,8 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     fml =  f"{depvar} ~ {treatment}" if xfml is None else f"{depvar} ~ {treatment} + {xfml}"
 
     fit_full = feols(fml, data, vcov = {"CRV1": cluster})
-    if fit_full._has_fixef is not None:
+    if fit_full._has_fixef:
         raise ValueError("The model has fixed effects, which is not supported by the CCV estimator.")
-    if fit_full._is_multiple_estimation:
-        raise ValueError("The `ccv()` function does not support multiple estimations.")
 
     tau_full = fit_full.coef().xs(treatment)
 
