@@ -5,7 +5,6 @@ from pyfixest.utils import get_data
 
 def test_summary():
     """Just run etable() and summary() on a few models."""
-
     df1 = get_data()
     df2 = get_data(model="Fepois")
 

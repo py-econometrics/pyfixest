@@ -28,9 +28,11 @@ def data():
 def test_internally(data):
     """
     Test predict() method internally.
+
+    Notes
+    -----
     Currently only for OLS.
     """
-
     # predict via feols, without fixed effect
     fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
     mod = fit.fetch_model(0)
@@ -75,10 +77,7 @@ def test_internally(data):
     ],
 )
 def test_vs_fixest(data, fml):
-    """
-    Test predict and resid methods against fixest.
-    """
-
+    """Test predict and resid methods against fixest."""
     feols_mod = feols(fml=fml, data=data, vcov="HC1")
     fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
 
@@ -145,7 +144,7 @@ def test_vs_fixest(data, fml):
         raise ValueError("Predictions for OLS are not of the same length.")
 
     # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):
+    # if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):  # noqa: W505
     #    raise ValueError("Predictions for Poisson are not equal")
 
     # test resid for OLS
@@ -237,10 +236,7 @@ def test_new_fixef_level(data, fml):
 
 
 def test_categorical_covariate_predict():
-    """
-    Test if predict handles missing levels in covariate correctly.
-    """
-
+    """Test if predict handles missing levels in covariate correctly."""
     rng = np.random.default_rng(12345)
     df = pd.DataFrame(
         {

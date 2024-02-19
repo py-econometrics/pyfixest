@@ -27,11 +27,14 @@ def etable(
     digits : int
         Number of digits to round to.
     type : str, optional
-        Type of output. Either "df" for pandas DataFrame, "md" for markdown, or "tex" for LaTeX table. Default is "md".
+        Type of output. Either "df" for pandas DataFrame, "md" for markdown,
+        or "tex" for LaTeX table. Default is "md".
     signif_code : list, optional
-        Significance levels for the stars. Default is [0.001, 0.01, 0.05]. If None, no stars are printed.
+        Significance levels for the stars. Default is [0.001, 0.01, 0.05].
+        If None, no stars are printed.
     coef_fmt : str, optional
-        The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is `"b (se)"`.
+        The format of the coefficient (b), standard error (se), t-stats (t), and
+        p-value (p). Default is `"b (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         Newline is not support for LaTeX output.
 
@@ -39,7 +42,7 @@ def etable(
     -------
     pandas.DataFrame
         A DataFrame with the coefficients and standard errors of the models.
-    """
+    """  # noqa: D301
     assert (
         signif_code is None or len(signif_code) == 3
     ), "signif_code must be a list of length 3 or None"
@@ -188,7 +191,7 @@ def summary(
     models: Union[Feols, Fepois, Feiv, list], digits: Optional[int] = 3
 ) -> None:
     """
-    Prints a summary of estimation results for each estimated model.
+    Print a summary of estimation results for each estimated model.
 
     For each model, this method prints a header indicating the fixed-effects and the
     dependent variable, followed by a table of coefficient estimates with standard
@@ -292,8 +295,10 @@ def _post_processing_input_checks(models):
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
                         f"""
-                            Each element of the passed list needs to be of type Feols or Fepois, but {type(model)} was passed.
-                            If you want to summarize a FixestMulti object, please use FixestMulti.to_list() to convert it to a list of Feols or Fepois instances.
+                        Each element of the passed list needs to be of type Feols
+                        or Fepois, but {type(model)} was passed. If you want to
+                        summarize a FixestMulti object, please use FixestMulti.to_list()
+                        to convert it to a list of Feols or Fepois instances.
                         """
                     )
 
