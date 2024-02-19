@@ -1,62 +1,62 @@
-class FixedEffectInteractionError(Exception):
+class FixedEffectInteractionError(Exception):  # noqa: D101
     pass
 
 
-class CovariateInteractionError(Exception):
+class CovariateInteractionError(Exception):  # noqa: D101
     pass
 
 
-class DuplicateKeyError(Exception):
+class DuplicateKeyError(Exception):  # noqa: D101
     pass
 
 
-class EndogVarsAsCovarsError(Exception):
+class EndogVarsAsCovarsError(Exception):  # noqa: D101
     pass
 
 
-class InstrumentsAsCovarsError(Exception):
+class InstrumentsAsCovarsError(Exception):  # noqa: D101
     pass
 
 
-class UnderDeterminedIVError(Exception):
+class UnderDeterminedIVError(Exception):  # noqa: D101
     pass
 
 
-class UnsupportedMultipleEstimationSyntax(Exception):
+class UnsupportedMultipleEstimationSyntax(Exception):  # noqa: D101
     pass
 
 
-class VcovTypeNotSupportedError(Exception):
+class VcovTypeNotSupportedError(Exception):  # noqa: D101
     pass
 
 
-class MultiEstNotSupportedError(Exception):
+class MultiEstNotSupportedError(Exception):  # noqa: D101
     pass
 
 
-class NanInClusterVarError(Exception):
+class NanInClusterVarError(Exception):  # noqa: D101
     pass
 
 
-class DepvarIsNotNumericError(Exception):
+class DepvarIsNotNumericError(Exception):  # noqa: D101
     pass
 
 
-class NotImplementedError(Exception):
+class NotImplementedError(Exception):  # noqa: D101
     pass
 
 
-class NonConvergenceError(Exception):
+class NonConvergenceError(Exception):  # noqa: D101
     pass
 
 
-class MatrixNotFullRankError(Exception):
+class MatrixNotFullRankError(Exception):  # noqa: D101
     pass
 
 
-class EmptyDesignMatrixError(Exception):
+class EmptyDesignMatrixError(Exception):  # noqa: D101
     pass
 
 
-class InvalidReferenceLevelError(Exception):
+class InvalidReferenceLevelError(Exception):  # noqa: D101
     pass

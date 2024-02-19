@@ -8,6 +8,8 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
+      - reference/multcomp.bonferroni.qmd
+      - reference/multcomp.rwolf.qmd
       section: Estimation Functions
     - contents:
       - reference/feols.Feols.qmd

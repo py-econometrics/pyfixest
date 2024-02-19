@@ -1,7 +1,6 @@
 import warnings
 from typing import Optional, Union
 
-
 import numpy as np
 import pandas as pd
 
@@ -17,18 +16,16 @@ from pyfixest.visualize import coefplot, iplot
 
 
 class FixestMulti:
-    """
-    # FixestMulti:
-
-    A class to estimate multiple regression models with fixed effects.
-    """
+    """A class to estimate multiple regression models with fixed effects."""
 
     def __init__(self, data: pd.DataFrame) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
-        Args:
-            data (pd.DataFrame): The input DataFrame for the object.
+        Parameters
+        ----------
+        data : panda.DataFrame
+            The input DataFrame for the object.
 
         Returns
         -------
@@ -58,20 +55,40 @@ class FixestMulti:
         i_ref2: Optional[Union[list, str]] = None,
     ) -> None:
         """
-        Utility function to prepare estimation via the `feols()` or `fepois()` methods. The function is called by both methods.
-        Mostly deparses the fml string.
+        Prepare model for estimation.
 
-        Args:
-            estimation (str): Type of estimation. Either "feols" or "fepois".
-            fml (str): A three-sided formula string using fixest formula syntax. Supported syntax includes: see `feols()` or `fepois()`.
-            vcov (Union[None, str, dict[str, str]], optional): A string or dictionary specifying the type of variance-covariance matrix to use for inference. See `feols()` or `fepois()`.
-            weights (Union[None, np.ndarray], optional): An array of weights. Either None or a 1D array of length N. Default is None.
-            ssc (dict[str, str], optional): A dictionary specifying the type of standard errors to use for inference. See `feols()` or `fepois()`.
-            fixef_rm (str, optional): A string specifying whether singleton fixed effects should be dropped.
-                Options are "none" (default) and "singleton". If "singleton", singleton fixed effects are dropped.
-            drop_intercept (bool, optional): Whether to drop the intercept. Default is False.
-            i_ref1 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the first interaction variable.
-            i_ref2 (Optional[Union[list, str]], optional): A list or string specifying the reference category for the second interaction variable.
+        Utility function to prepare estimation via the `feols()` or `fepois()` methods.
+        The function is called by both methods. Mostly deparses the fml string.
+
+        Parameters
+        ----------
+        estimation : str
+            Type of estimation. Either "feols" or "fepois".
+        fml : str
+            A three-sided formula string using fixest formula syntax.
+            Supported syntax includes: see `feols()` or `fepois()`.
+        vcov : Union[None, str, dict[str, str]], optional
+            A string or dictionary specifying the type of variance-covariance
+            matrix to use for inference.
+            See `feols()` or `fepois()`.
+        weights : Union[None, np.ndarray], optional
+            An array of weights.
+            Either None or a 1D array of length N. Default is None.
+        ssc : dict[str, str], optional
+            A dictionary specifying the type of standard errors to use for inference.
+            See `feols()` or `fepois()`.
+        fixef_rm : str, optional
+            A string specifying whether singleton fixed effects should be dropped.
+            Options are "none" (default) and "singleton". If "singleton",
+            singleton fixed effects are dropped.
+        drop_intercept : bool, optional
+            Whether to drop the intercept. Default is False.
+        i_ref1 : Optional[Union[list, str]], optional
+            A list or string specifying the reference category for the first
+            interaction variable.
+        i_ref2 : Optional[Union[list, str]], optional
+            A list or string specifying the reference category for the second
+            interaction variable.
 
         Returns
         -------
@@ -131,18 +148,24 @@ class FixestMulti:
         """
         Estimate multiple regression models.
 
-        Args:
-            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
-                matrix to use for inference.
-                - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
-                  or {"CRV3": "clustervar"} for CRV3 inference.
-            fixef_keys (list[str]): A list of fixed effects combinations.
-            collin_tol (float, optional): The tolerance level for the multicollinearity check. Default is 1e-6.
-            iwls_maxiter (int, optional): The maximum number of iterations for the IWLS algorithm. Default is 25.
-                Only relevant for non-linear estimation strategies.
-            iwls_tol (float, optional): The tolerance level for the IWLS algorithm. Default is 1e-8.
-                Only relevant for non-linear estimation strategies.
+        Parameters
+        ----------
+        vcov : Union[str, dict[str, str]]
+            A string or dictionary specifying the type of variance-covariance
+            matrix to use for inference.
+            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            - If a dictionary, it should have the format {"CRV1": "clustervar"}
+            for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        fixef_keys : list[str]
+            A list of fixed effects combinations.
+        collin_tol : float, optional
+            The tolerance level for the multicollinearity check. Default is 1e-6.
+        iwls_maxiter : int, optional
+            The maximum number of iterations for the IWLS algorithm. Default is 25.
+            Only relevant for non-linear estimation strategies.
+        iwls_tol : float, optional
+            The tolerance level for the IWLS algorithm. Default is 1e-8.
+            Only relevant for non-linear estimation strategies.
 
         Returns
         -------
@@ -268,7 +291,8 @@ class FixestMulti:
                                 weights_name=_weights,
                             )
 
-                        # special case: sometimes it is useful to fit models as "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
+                        # special case: sometimes it is useful to fit models as
+                        # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                         if FIT._X_is_empty:
                             FIT._u_hat = Y.to_numpy() - Yd
                         else:
@@ -338,7 +362,7 @@ class FixestMulti:
                         na_index=na_index,
                     )
 
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
@@ -362,6 +386,7 @@ class FixestMulti:
     def set_fixest_multi_flag(self):
         """
         Set a flag to indicate whether multiple estimations are being performed or not.
+
         Simple check if `all_fitted_models` has more than one key.
         Throws an error if multiple estimations are being performed with IV estimation.
         Args:
@@ -374,17 +399,22 @@ class FixestMulti:
             if self._is_iv:
                 raise MultiEstNotSupportedError(
                     """
-                        Multiple Estimations is currently not supported with IV.
-                        This is mostly due to insufficient testing and will be possible with a future release of PyFixest.
-                        """
+                    Multiple Estimations is currently not supported with IV.
+                    This is mostly due to insufficient testing and will be possible
+                    with a future release of PyFixest.
+                    """
                 )
 
     def to_list(self):
         """
-        Returns a list of all fitted models.
-        Args:
+        Return a list of all fitted models.
+
+        Parameters
+        ----------
             None
-        Returns:
+
+        Returns
+        -------
             A list of all fitted models of types Feols or Fepois.
         """
         return list(self.all_fitted_models.values())
@@ -394,18 +424,21 @@ class FixestMulti:
         Update regression inference "on the fly".
 
         By calling vcov() on a "Fixest" object, all inference procedures applied
-        to the "Fixest" object are replaced with the variance-covariance matrix specified via the method.
+        to the "Fixest" object are replaced with the variance-covariance matrix
+        specified via the method.
 
-        Args:
-            vcov (Union[str, dict[str, str]]): A string or dictionary specifying the type of variance-covariance
-                matrix to use for inference.
-                - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-                - If a dictionary, it should have the format {"CRV1": "clustervar"} for CRV1 inference
-                  or {"CRV3": "clustervar"} for CRV3 inference.
+        Parameters
+        ----------
+        vcov : Union[str, dict[str, str]])
+            A string or dictionary specifying the type of variance-covariance
+            matrix to use for inference.
+            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
+            - If a dictionary, it should have the format {"CRV1": "clustervar"}
+            for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
 
         Returns
         -------
-            An instance of the "Fixest" class with updated inference.f
+            An instance of the "Fixest" class with updated inference.
         """
         for model in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[model]
@@ -418,11 +451,11 @@ class FixestMulti:
 
     def tidy(self) -> pd.DataFrame:
         """
-        Returns the results of an estimation using `feols()` as a tidy Pandas DataFrame.
+        Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
 
         Returns
         -------
-            pd.DataFrame or str
+        pandas.DataFrame or str
                 A tidy DataFrame with the following columns:
                 - fml: the formula used to generate the results
                 - Coefficient: the names of the coefficients
@@ -432,8 +465,8 @@ class FixestMulti:
                 - Pr(>|t|): the p-values of the estimated coefficients
                 - 2.5 %: the lower bound of the 95% confidence interval
                 - 97.5 %: the upper bound of the 95% confidence interval
-                If `type` is set to "markdown", the resulting DataFrame will be returned as a
-                markdown-formatted string with three decimal places.
+                If `type` is set to "markdown", the resulting DataFrame will be
+                returned as a markdown-formatted string with three decimal places.
         """
         res = []
         for x in list(self.all_fitted_models.keys()):
@@ -446,12 +479,12 @@ class FixestMulti:
 
         return res
 
-    def summary(self, digits: int = 3) -> None:
+    def summary(self, digits: int = 3) -> None:  # noqa: D102
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
             fxst.summary(digits=digits)
 
-    def etable(self, digits: int = 3) -> pd.DataFrame:
+    def etable(self, digits: int = 3) -> pd.DataFrame:  # noqa: D102
         return self.tidy().T.round(digits)
 
     def coef(self) -> pd.Series:
@@ -460,7 +493,9 @@ class FixestMulti:
 
         Returns
         -------
-            A pd.Series with coefficient names and Estimates. The key indicates which models the estimated statistic derives from.
+        pandas.Series
+            A pd.Series with coefficient names and Estimates. The key indicates
+            which models the estimated statistic derives from.
         """
         return self.tidy()["Estimate"]
 
@@ -470,7 +505,9 @@ class FixestMulti:
 
         Returns
         -------
-            A pd.Series with coefficient names and standard error estimates. The key indicates which models the estimated statistic derives from.
+        pandas.Series
+            A pd.Series with coefficient names and standard error estimates.
+            The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["Std. Error"]
@@ -481,7 +518,8 @@ class FixestMulti:
 
         Returns
         -------
-            A pd.Series with coefficient names and estimated t-statistics. The key indicates which models the estimated statistic derives from.
+            A pd.Series with coefficient names and estimated t-statistics.
+            The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["t value"]
@@ -492,18 +530,22 @@ class FixestMulti:
 
         Returns
         -------
-            A pd.Series with coefficient names and p-values. The key indicates which models the estimated statistic derives from.
+        pandas.Series
+            A pd.Series with coefficient names and p-values.
+            The key indicates which models the estimated statistic derives from.
 
         """
         return self.tidy()["Pr(>|t|)"]
 
     def confint(self) -> pd.Series:
-        """'
+        """
         Obtain confidence intervals for the fitted models.
 
         Returns
         -------
-            A pd.Series with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from.
+        pandas.Series
+            A pd.Series with coefficient names and confidence intervals.
+            The key indicates which models the estimated statistic derives from.
         """
         return self.tidy()[["2.5 %", "97.5 %"]]
 
@@ -518,20 +560,33 @@ class FixestMulti:
         coord_flip: Optional[bool] = True,
     ):
         """
-        Plot model coefficients with confidence intervals for variable interactions specified via the `i()` syntax.
+        Plot model coefficients.
 
-        Args:
-            alpha (float, optional): The significance level for the confidence intervals. Default is 0.05.
-            figsize (tuple, optional): The size of the figure. Default is (10, 10).
-            yintercept (Union[int, str, None], optional): The value at which to draw a horizontal line.
-            xintercept (Union[int, str, None], optional): The value at which to draw a vertical line.
-            rotate_xticks (int, optional): The rotation angle for x-axis tick labels. Default is 0.
-            title (str, optional): The title of the plot. Default is None.
-            coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
+        Plot model coefficients with confidence intervals for variable interactions
+        specified via the `i()` syntax.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence intervals. Default is 0.05.
+        figsize : tuple, optional
+            The size of the figure. Default is (10, 10).
+        yintercept : Union[int, str, None], optional
+            The value at which to draw a horizontal line.
+        xintercept : Union[int, str, None], optional
+            The value at which to draw a vertical line.
+        rotate_xticks : int, optional
+            The rotation angle for x-axis tick labels. Default is 0.
+        title : str, optional
+            The title of the plot. Default is None.
+        coord_flip : bool, optional
+            Whether to flip the coordinates of the plot. Default is True.
 
         Returns
         -------
-            A lets-plot figure of coefficients (and respective CIs) interacted via the `i()` syntax.
+        lets-plot figure
+            A lets-plot figure of coefficients (and respective CIs) interacted
+            via the `i()` syntax.
         """
         models = self.all_fitted_models
         # get a list, not a dict, as iplot only works with lists
@@ -560,18 +615,30 @@ class FixestMulti:
         coord_flip: Optional[bool] = True,
     ):
         """
-        Plot estimation results. The plot() method is only defined for single regressions.
-        Args:
-            alpha (float): the significance level for the confidence intervals. Default is 0.05.
-            figsize (tuple): the size of the figure. Default is (5, 2).
-            yintercept (float): the value of the y-intercept. Default is 0.
-            figtitle (str, optional): The title of the figure. Default is None.
-            figtext (str, optional): The text at the bottom of the figure. Default is None.
-            title (str, optional): The title of the plot. Default is None.
-            coord_flip (bool, optional): Whether to flip the coordinates of the plot. Default is True.
+        Plot estimation results.
+
+        The plot() method is only defined for single regressions.
+
+        Parameters
+        ----------
+        alpha : float
+            The significance level for the confidence intervals. Default is 0.05.
+        figsize : tuple
+            The size of the figure. Default is (5, 2).
+        yintercept : float
+            The value of the y-intercept. Default is 0.
+        figtitle:str, optional
+        The title of the figure. Default is None.
+        figtext : str, optional
+            The text at the bottom of the figure. Default is None.
+        title : str, optional
+            The title of the plot. Default is None.
+        coord_flip : bool, optional
+            Whether to flip the coordinates of the plot. Default is True.
 
         Returns
         -------
+        lets-plot figure
             A lets-plot figure of regression coefficients.
         """
         # get a list, not a dict, as iplot only works with lists
@@ -606,26 +673,37 @@ class FixestMulti:
         """
         Run a wild cluster bootstrap for all regressions in the Fixest object.
 
-        Args:
-            B (int): The number of bootstrap iterations to run.
-            param (Union[str, None], optional): A string of length one, containing the test parameter of interest. Default is None.
-            cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
-            weights_type (str, optional): The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb', or 'normal'.
-                Default is 'rademacher'.
-            impose_null (bool, optional): Should the null hypothesis be imposed on the bootstrap dgp, or not?
-                Default is True.
-            bootstrap_type (str, optional): A string of length one. Allows choosing the bootstrap type
-                to be run. Either '11', '31', '13', or '33'. Default is '11'.
-            seed (Union[str, None], optional): Option to provide a random seed. Default is None.
-            adj (bool, optional): Whether to adjust the original coefficients with the bootstrap distribution.
-                Default is True.
-            cluster_adj (bool, optional): Whether to adjust standard errors for clustering in the bootstrap.
-                Default is True.
+        Parameters
+        ----------
+        B : int
+            The number of bootstrap iterations to run.
+        param : Union[str, None], optional
+            A string of length one, containing the test parameter of interest.
+            Default is None.
+        cluster : Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        weights_type : str, optional
+            The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
+            or 'normal'. Default is 'rademacher'.
+        impose_null : bool, optional
+            Should the null hypothesis be imposed on the bootstrap dgp, or not?
+            Default is True.
+        bootstrap_type : str, optional
+            A string of length one. Allows choosing the bootstrap type to be run.
+            Either '11', '31', '13', or '33'. Default is '11'.
+        seed : Union[str, None], optional
+            Option to provide a random seed. Default is None.
+        adj:bool, optional
+            Whether to adjust the original coefficients with the bootstrap distribution.
+            Default is True.
+        cluster_adj : bool, optional
+            Whether to adjust standard errors for clustering in the bootstrap.
+            Default is True.
 
         Returns
         -------
-            A pd.DataFrame with bootstrapped t-statistic and p-value. The index indicates which model the estimated
-            statistic derives from.
+        pandas.DataFrame
+            A pd.DataFrame with bootstrapped t-statistic and p-value.
+            The index indicates which model the estimated statistic derives from.
         """
         res = []
         for x in list(self.all_fitted_models.keys()):
@@ -660,10 +738,14 @@ class FixestMulti:
         self, i: Union[int, str], print_fml: Optional[bool] = True
     ) -> Union[Feols, Fepois]:
         """
-        Utility method to fetch a model of class Feols from the Fixest class.
-        Args:
-            i (int or str): The index of the model to fetch.
-            print_fml (bool, optional): Whether to print the formula of the model. Default is True.
+        Fetch a model of class Feols from the Fixest class.
+
+        Parameters
+        ----------
+        i : int or str
+            The index of the model to fetch.
+        print_fml : bool, optional
+            Whether to print the formula of the model. Default is True.
 
         Returns
         -------
@@ -688,16 +770,23 @@ def get_fml(
     """
     Stitches together the formula string for the regression.
 
-    Args:
-        depvar (str): The dependent variable.
-        covar (str): The covariates. E.g. "X1+X2+X3"
-        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-        endogvars (str, optional): The endogenous variables.
-        instruments (str, optional): The instruments. E.g. "Z1+Z2+Z3"
+    Parameters
+    ----------
+    depvar : str
+        The dependent variable.
+    covar : str
+        The covariates. E.g. "X1+X2+X3"
+    fval : str
+        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+    endogvars : str, optional
+        The endogenous variables.
+    instruments : str, optional
+        The instruments. E.g. "Z1+Z2+Z3"
 
     Returns
     -------
-        str: The formula string for the regression.
+    str
+        The formula string for the regression.
     """
     fml = f"{depvar} ~ {covar}"
 
@@ -718,15 +807,23 @@ def get_fml(
 
 def _get_vcov_type(vcov, fval):
     """
-    Passes the specified vcov type. If no vcov type specified, sets the default vcov type as iid if no fixed effect
-    is included in the model, and CRV1 clustered by the first fixed effect if a fixed effect is included in the model.
-    Args:
-        vcov (str): The specified vcov type.
-        fval (str): The specified fixed effects. (i.e. "X1+X2")
+    Pass the specified vcov type.
+
+    Passes the specified vcov type. If no vcov type specified, sets the default
+    vcov type as iid if no fixed effect is included in the model, and CRV1
+    clustered by the first fixed effect if a fixed effect is included in the model.
+
+    Parameters
+    ----------
+    vcov : str
+        The specified vcov type.
+    fval : str
+        The specified fixed effects. (i.e. "X1+X2")
 
     Returns
     -------
-        vcov_type (str): The specified vcov type.
+    str
+        vcov_type (str) : The specified vcov type.
     """
     if vcov is None:
         # iid if no fixed effects
@@ -744,13 +841,20 @@ def _get_vcov_type(vcov, fval):
 
 def _drop_singletons(fixef_rm: bool) -> bool:
     """
-    Checks if the fixef_rm argument is set to "singleton". If so, returns True, else False.
-    Args:
-        fixef_rm (str): The fixef_rm argument.
+    Drop singleton fixed effects.
+
+    Checks if the fixef_rm argument is set to "singleton". If so, returns True,
+    else False.
+
+    Parameters
+    ----------
+    fixef_rm : str
+        The fixef_rm argument.
 
     Returns
     -------
-        drop_singletons (bool): Whether to drop singletons.
+    bool
+        drop_singletons (bool) : Whether to drop singletons.
     """
     return fixef_rm == "singleton"
 
@@ -761,14 +865,23 @@ def _get_endogvars_instruments(
     """
     Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
 
-    Args:
-        fml_dict_iv (dict): The dictionary of formulas for the IV estimation.
-        fval (str): The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-        depvar (str): The dependent variable.
-        covar (str): The covariates. E.g. "X1+X2+X3"
-    Returns:
-        endogvars (str): The endogenous variables.
-        instruments (str): The instruments. E.g. "Z1+Z2+Z3"
+    Parameters
+    ----------
+    fml_dict_iv : dict
+        The dictionary of formulas for the IV estimation.
+    fval : str
+        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+    depvar : str
+        The dependent variable.
+    covar : str
+        The covariates. E.g. "X1+X2+X3"
+
+    Returns
+    -------
+    endogvars : str
+        The endogenous variables.
+    instruments : str
+        The instruments. E.g. "Z1+Z2+Z3"
     """
     dict2fe_iv = fml_dict_iv.get(fval)
     instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]

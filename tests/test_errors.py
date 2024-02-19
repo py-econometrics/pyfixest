@@ -46,11 +46,7 @@ def test_i_ref():
 
 
 def test_cluster_na():
-    """
-    test if a nan value in a cluster variable raises
-    an error
-    """
-
+    """Test if a nan value in a cluster variable raises an error."""
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
@@ -62,7 +58,11 @@ def test_cluster_na():
 
 def test_error_hc23_fe():
     """
-    test if HC2&HC3 inference with fixed effects regressions raises an error (currently not supported)
+    Test if HC2 & HC3 inference with fixed effects regressions raises an error.
+
+    Notes
+    -----
+    Currently not supported.
     """
     data = get_data().dropna()
 
@@ -74,10 +74,7 @@ def test_error_hc23_fe():
 
 
 def test_depvar_numeric():
-    """
-    test if feols() throws an error when the dependent variable is not numeric
-    """
-
+    """Test if feols() throws an error when the dependent variable is not numeric."""
     data = get_data()
     data["Y"] = data["Y"].astype("str")
     data["Y"] = pd.Categorical(data["Y"])
@@ -95,7 +92,7 @@ def test_iv_errors():
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogeneous variable specified as covariate
+    # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
         feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
     # instrument specified as covariate
@@ -128,10 +125,7 @@ def test_iv_errors():
 
 @pytest.mark.skip("Not yet implemented.")
 def test_poisson_devpar_count():
-    """
-    check that the dependent variable is a count variable
-    """
-
+    """Check that the dependent variable is a count variable."""
     data = get_data()
     # under determined
     with pytest.raises(AssertionError):
