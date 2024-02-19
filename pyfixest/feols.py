@@ -11,14 +11,12 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.dev_utils import simultaneous_crit_val
-from pyfixest.utils import DataFrameType, _polars_to_pandas
-
+from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 from pyfixest.exceptions import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import get_ssc
+from pyfixest.utils import get_ssc, simultaneous_crit_val
 
 
 class Feols:
@@ -1361,7 +1359,6 @@ class Feols:
             A pd.DataFrame with confidence intervals of the estimated regression model.
         Simultaneous confidence interval for joint null.
         """
-
         if not joint_indices:
 
             if self._vcov_type in ["iid", "hetero"]:
