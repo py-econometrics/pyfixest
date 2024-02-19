@@ -180,7 +180,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -352,15 +352,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p><code>visualize.iplot(models, alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)</code></p>
+<p>Plot model coefficients.</p>
 <p>Plot model coefficients for variables interacted via “i()” syntax, with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
+<col style="width: 13%">
+<col style="width: 12%">
+<col style="width: 62%">
 <col style="width: 11%">
-<col style="width: 10%">
-<col style="width: 67%">
-<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -374,7 +375,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>models</code></td>
 <td>list or object</td>
-<td>A list of fitted models of type [Feols(/reference/Feols.qmd) or <code>Fepois</code>, or just a single model.</td>
+<td>A list of fitted models of type <code>Feols</code> or <code>Fepois</code>, or just a single model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
@@ -441,7 +442,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="8a1e57a1" class="cell" data-execution_count="1">
+<div id="87014a50" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> iplot</span>
@@ -454,7 +455,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>iplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="p2SPN1"></div>
+            <div id="0yR8ew"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -478,16 +479,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("p2SPN1").appendChild(div);
+                        document.getElementById("0yR8ew").appendChild(div);
                     };
-                    var e = document.getElementById("p2SPN1");
+                    var e = document.getElementById("0yR8ew");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="E8AYao"></div>
+   <div id="vSU8TH"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -554,7 +555,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("E8AYao");
+           var plotContainer = document.getElementById("vSU8TH");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});

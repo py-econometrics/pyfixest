@@ -180,7 +180,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -352,7 +352,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p><code>did.estimation.event_study(data, yname, idname, tname, gname, xfml=None, estimator='twfe', att=True, cluster='idname')</code></p>
-<p>Function for Event Study Estimation.</p>
+<p>Estimate Event Study Model.</p>
 <p>This function allows for the estimation of treatment effects using different estimators. Currently, it supports “twfe” for the two-way fixed effects estimator and “did2s” for Gardner’s two-step DID2S estimator. Other estimators are in development.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -446,7 +446,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="a00b1755" class="cell" data-execution_count="1">
+<div id="50327c92" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> event_study</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -466,14 +466,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit_twfe.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
-      You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
-      the module is not yet as thoroughly tested as I would like. So please use it with caution and
-      provide feedback in case you stumble over any bugs!
-      </code></pre>
+    You have loaded the 'pyfixest.did' module. While every function is tested in `tests/test_did.py`,
+    the module is not yet as thoroughly tested as I would like. So please use it with caution and
+    provide feedback in case you stumble over any bugs!
+    </code></pre>
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Bzbpnu"></div>
+            <div id="qtajnv"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -497,9 +497,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Bzbpnu").appendChild(div);
+                        document.getElementById("qtajnv").appendChild(div);
                     };
-                    var e = document.getElementById("Bzbpnu");
+                    var e = document.getElementById("qtajnv");
                     e.appendChild(script);
                 })()
             </script>

@@ -143,7 +143,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -301,86 +301,75 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.fepois.Fepois" class="level1">
 <h1>fepois.Fepois</h1>
 <p><code>fepois.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)</code></p>
+<p>Estimate a Poisson regression model.</p>
 <p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
 <p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
 <p>The method implements the algorithm from Stata’s <code>pplmhdfe</code> module.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
 <colgroup>
-<col style="width: 16%">
-<col style="width: 22%">
-<col style="width: 51%">
-<col style="width: 10%">
+<col style="width: 15%">
+<col style="width: 30%">
+<col style="width: 54%">
 </colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
 <th>Type</th>
 <th>Description</th>
-<th>Default</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>Y</code></td>
+<td>Y</td>
 <td>numpy.numpy.ndarray</td>
 <td>Dependent variable, a two-dimensional numpy array.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>X</code></td>
+<td>X</td>
 <td>numpy.numpy.ndarray</td>
 <td>Independent variables, a two-dimensional numpy array.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>fe</code></td>
+<td>fe</td>
 <td>numpy.numpy.ndarray</td>
 <td>Fixed effects, a two-dimensional numpy array or None.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>weights</code></td>
+<td>weights</td>
 <td>numpy.numpy.ndarray</td>
 <td>Weights, a one-dimensional numpy array or None.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>coefnames</code></td>
+<td>coefnames</td>
 <td>list[str]</td>
 <td>Names of the coefficients in the design matrix X.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>drop_singletons</code></td>
+<td>drop_singletons</td>
 <td>bool</td>
 <td>Whether to drop singleton fixed effects.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>collin_tol</code></td>
+<td>collin_tol</td>
 <td>float</td>
 <td>Tolerance level for the detection of collinearity.</td>
-<td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>maxiter</code></td>
-<td>typing.Optional[int]</td>
+<td>maxiter</td>
+<td>Optional[int], default=25</td>
 <td>Maximum number of iterations for the IRLS algorithm.</td>
-<td><code>25</code></td>
 </tr>
 <tr class="odd">
-<td><code>tol</code></td>
-<td>typing.Optional[float]</td>
+<td>tol</td>
+<td>Optional[float], default=1e-08</td>
 <td>Tolerance level for the convergence of the IRLS algorithm.</td>
-<td><code>1e-08</code></td>
 </tr>
 <tr class="even">
-<td><code>weights_name</code></td>
+<td>weights_name</td>
 <td>typing.Optional[str]</td>
 <td>Name of the weights variable.</td>
-<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
@@ -426,8 +415,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="attributes" class="level4">
-<h4 class="anchored" data-anchor-id="attributes">Attributes</h4>
+<section id="attributes-1" class="level4">
+<h4 class="anchored" data-anchor-id="attributes-1">Attributes</h4>
 <table class="table">
 <colgroup>
 <col style="width: 8%">
@@ -486,8 +475,8 @@ ul.task-list li input[type="checkbox"] {
 <p><code>fepois.Fepois.predict(newdata=None, type='link')</code></p>
 <p>Return predicted values from regression model.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 2%">

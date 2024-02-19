@@ -180,7 +180,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -357,10 +357,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
+<col style="width: 13%">
+<col style="width: 12%">
+<col style="width: 62%">
 <col style="width: 11%">
-<col style="width: 10%">
-<col style="width: 67%">
-<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -374,7 +374,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>models</code></td>
 <td>list or object</td>
-<td>A list of fitted models of type [Feols(/reference/Feols.qmd) or <code>Fepois</code>, or just a single model.</td>
+<td>A list of fitted models of type <code>Feols</code> or <code>Fepois</code>, or just a single model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
@@ -447,7 +447,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="3fb38f27" class="cell" data-execution_count="1">
+<div id="c5143308" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot</span>
@@ -460,7 +460,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="5yvG2I"></div>
+            <div id="Xp2OeR"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -484,16 +484,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("5yvG2I").appendChild(div);
+                        document.getElementById("Xp2OeR").appendChild(div);
                     };
-                    var e = document.getElementById("5yvG2I");
+                    var e = document.getElementById("Xp2OeR");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="TqT2jJ"></div>
+   <div id="RfrFFx"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -571,7 +571,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("TqT2jJ");
+           var plotContainer = document.getElementById("RfrFFx");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});

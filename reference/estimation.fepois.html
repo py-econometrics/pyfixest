@@ -180,7 +180,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -352,7 +352,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
-<p>Estimate Poisson regression models with fixed effects using the <code>pplmhdfe</code> algorithm.</p>
+<p>Estimate Poisson regression model with fixed effects using the <code>pplmhdfe</code> algorithm.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
@@ -416,7 +416,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td><code>collin_tol</code></td>
 <td>float</td>
-<td>Tolerance for collinearity check, by default 1e-06.</td>
+<td>Tolerance for collinearity check, by default 1e-10.</td>
 <td><code>1e-10</code></td>
 </tr>
 <tr class="odd">
@@ -464,7 +464,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="8d2944fd" class="cell" data-execution_count="1">
+<div id="3ff26baa" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> fepois</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> etable</span>
@@ -474,7 +474,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="SrxG0A"></div>
+            <div id="fVrR9W"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -498,9 +498,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("SrxG0A").appendChild(div);
+                        document.getElementById("fVrR9W").appendChild(div);
                     };
-                    var e = document.getElementById("SrxG0A");
+                    var e = document.getElementById("fVrR9W");
                     e.appendChild(script);
                 })()
             </script>

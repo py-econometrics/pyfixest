@@ -143,7 +143,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+ <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -640,11 +640,11 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><a href="#pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</a></td>
-<td>Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</td>
+<td>Enrich Feols object.</td>
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.feols.Feols.coef">coef</a></td>
-<td></td>
+<td>Fitted model coefficents.</td>
 </tr>
 <tr class="odd">
 <td><a href="#pyfixest.feols.Feols.coefplot">coefplot</a></td>
@@ -652,65 +652,69 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.feols.Feols.confint">confint</a></td>
-<td></td>
+<td>Fitted model confidence intervals.</td>
 </tr>
 <tr class="odd">
 <td><a href="#pyfixest.feols.Feols.fixef">fixef</a></td>
 <td>Compute the coefficients of (swept out) fixed effects for a regression model.</td>
 </tr>
 <tr class="even">
+<td><a href="#pyfixest.feols.Feols.get_fit">get_fit</a></td>
+<td>Fit an OLS model.</td>
+</tr>
+<tr class="odd">
 <td><a href="#pyfixest.feols.Feols.get_inference">get_inference</a></td>
 <td>Compute standard errors, t-statistics, and p-values for the regression model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.get_nobs">get_nobs</a></td>
 <td>Fetch the number of observations used in fitting the regression model.</td>
 </tr>
-<tr class="even">
-<td><a href="#pyfixest.feols.Feols.get_performance">get_performance</a></td>
-<td>Compute multiple additional measures commonly reported with linear regression output,</td>
-</tr>
 <tr class="odd">
+<td><a href="#pyfixest.feols.Feols.get_performance">get_performance</a></td>
+<td>Get Goodness-of-Fit measures.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.iplot">iplot</a></td>
 <td>Create coefficient plots for variables interacted via <code>i()</code> syntax.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.feols.Feols.predict">predict</a></td>
-<td>Return a flat np.array with predicted values of the regression model.</td>
+<td>Predict values of the model on new data.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.pvalue">pvalue</a></td>
-<td></td>
+<td>Fitted model p-values.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.feols.Feols.resid">resid</a></td>
-<td></td>
+<td>Fitted model residuals.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.se">se</a></td>
-<td></td>
+<td>Fitted model standard errors.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.feols.Feols.summary">summary</a></td>
-<td></td>
-</tr>
-<tr class="odd">
-<td><a href="#pyfixest.feols.Feols.tidy">tidy</a></td>
-<td>Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics, and p-values.</td>
+<td>Summary of estimated model.</td>
 </tr>
 <tr class="even">
-<td><a href="#pyfixest.feols.Feols.tstat">tstat</a></td>
-<td></td>
+<td><a href="#pyfixest.feols.Feols.tidy">tidy</a></td>
+<td>Tidy model outputs.</td>
 </tr>
 <tr class="odd">
+<td><a href="#pyfixest.feols.Feols.tstat">tstat</a></td>
+<td>Fitted model t-statistics.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.vcov">vcov</a></td>
 <td>Compute covariance matrices for an estimated regression model.</td>
 </tr>
-<tr class="even">
-<td><a href="#pyfixest.feols.Feols.wald_test">wald_test</a></td>
-<td>Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null</td>
-</tr>
 <tr class="odd">
+<td><a href="#pyfixest.feols.Feols.wald_test">wald_test</a></td>
+<td>Conduct Wald test.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.feols.Feols.wildboottest">wildboottest</a></td>
 <td>Run a wild cluster bootstrap based on an object of type “Feols”.</td>
 </tr>
@@ -719,7 +723,8 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.add_fixest_multi_context" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.add_fixest_multi_context">add_fixest_multi_context</h3>
 <p><code>feols.Feols.add_fixest_multi_context(fml, depvar, Y, _data, _ssc_dict, _k_fe, fval, na_index)</code></p>
-<p>Enrich an instance of class [Feols(/reference/Feols.qmd) with additional attributes set in the <code>FixestMulti</code> class.</p>
+<p>Enrich Feols object.</p>
+<p>Enrich an instance of <code>Feols</code> Class with additional attributes set in the <code>FixestMulti</code> class.</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="table">
@@ -810,6 +815,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.coef" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.coef">coef</h3>
 <p><code>feols.Feols.coef()</code></p>
+<p>Fitted model coefficents.</p>
 <section id="returns-1" class="level4">
 <h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="table">
@@ -930,6 +936,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.confint" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.confint">confint</h3>
 <p><code>feols.Feols.confint()</code></p>
+<p>Fitted model confidence intervals.</p>
 <section id="returns-3" class="level4">
 <h4 class="anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="table">
@@ -959,6 +966,28 @@ ul.task-list li input[type="checkbox"] {
 <p>This method creates the following attributes: - <code>alphaDF</code> (pd.DataFrame): A DataFrame with the estimated fixed effects. - <code>sumFE</code> (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).</p>
 <section id="returns-4" class="level4">
 <h4 class="anchored" data-anchor-id="returns-4">Returns</h4>
+<table class="table">
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="pyfixest.feols.Feols.get_fit" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_fit">get_fit</h3>
+<p><code>feols.Feols.get_fit()</code></p>
+<p>Fit an OLS model.</p>
+<section id="returns-5" class="level4">
+<h4 class="anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1006,8 +1035,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-5" class="level4">
-<h4 class="anchored" data-anchor-id="returns-5">Returns</h4>
+<section id="returns-6" class="level4">
+<h4 class="anchored" data-anchor-id="returns-6">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1028,8 +1057,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_nobs">get_nobs</h3>
 <p><code>feols.Feols.get_nobs()</code></p>
 <p>Fetch the number of observations used in fitting the regression model.</p>
-<section id="returns-6" class="level4">
-<h4 class="anchored" data-anchor-id="returns-6">Returns</h4>
+<section id="returns-7" class="level4">
+<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1049,13 +1078,14 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.get_performance" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_performance">get_performance</h3>
 <p><code>feols.Feols.get_performance()</code></p>
+<p>Get Goodness-of-Fit measures.</p>
 <p>Compute multiple additional measures commonly reported with linear regression output, including R-squared and adjusted R-squared. Note that variables with the suffix _within use demeaned dependent variables Y, while variables without do not or are invariant to demeaning.</p>
-<section id="returns-7" class="level4">
-<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
+<section id="returns-8" class="level4">
+<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
 <table class="table">
 <colgroup>
-<col style="width: 88%">
-<col style="width: 11%">
+<col style="width: 82%">
+<col style="width: 17%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1081,11 +1111,19 @@ ul.task-list li input[type="checkbox"] {
 <td></td>
 </tr>
 <tr class="odd">
-<td>- r2_within (float): R-squared of the regression model, computed on demeaned dependent variable.</td>
+<td>- r2_within (float): R-squared of the regression model, computed on</td>
 <td></td>
 </tr>
 <tr class="even">
-<td>- adj_r2_within (float): Adjusted R-squared of the regression model, computed on demeaned dependent variable.</td>
+<td>demeaned dependent variable.</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>- adj_r2_within (float): Adjusted R-squared of the regression model,</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>computed on demeaned dependent variable.</td>
 <td></td>
 </tr>
 </tbody>
@@ -1117,13 +1155,13 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>alpha</code></td>
 <td>float</td>
-<td>Significance level for visualization options. Defaults to None.</td>
+<td>Significance level for visualization options. Defaults to 0.05.</td>
 <td><code>0.05</code></td>
 </tr>
 <tr class="even">
 <td><code>figsize</code></td>
 <td>tuple[int, int]</td>
-<td>Size of the plot (width, height) in inches. Defaults to None.</td>
+<td>Size of the plot (width, height) in inches. Defaults to (500, 300).</td>
 <td><code>(500, 300)</code></td>
 </tr>
 <tr class="odd">
@@ -1141,7 +1179,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>rotate_xticks</code></td>
 <td>int</td>
-<td>Rotation angle for x-axis tick labels. Defaults to None.</td>
+<td>Rotation angle for x-axis tick labels. Defaults to 0.</td>
 <td><code>0</code></td>
 </tr>
 <tr class="even">
@@ -1153,14 +1191,14 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>coord_flip</code></td>
 <td>bool</td>
-<td>Whether to flip the coordinates of the plot. Defaults to None.</td>
+<td>Whether to flip the coordinates of the plot. Defaults to True.</td>
 <td><code>True</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns-8" class="level4">
-<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
+<section id="returns-9" class="level4">
+<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 19%">
@@ -1184,6 +1222,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.predict">predict</h3>
 <p><code>feols.Feols.predict(newdata=None)</code></p>
+<p>Predict values of the model on new data.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
 <section id="parameters-5" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
@@ -1212,8 +1251,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-9" class="level4">
-<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
+<section id="returns-10" class="level4">
+<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 24%">
@@ -1237,8 +1276,9 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.pvalue" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.pvalue">pvalue</h3>
 <p><code>feols.Feols.pvalue()</code></p>
-<section id="returns-10" class="level4">
-<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
+<p>Fitted model p-values.</p>
+<section id="returns-11" class="level4">
+<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 26%">
@@ -1262,8 +1302,9 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.resid" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.resid">resid</h3>
 <p><code>feols.Feols.resid()</code></p>
-<section id="returns-11" class="level4">
-<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
+<p>Fitted model residuals.</p>
+<section id="returns-12" class="level4">
+<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 23%">
@@ -1287,8 +1328,9 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.se" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.se">se</h3>
 <p><code>feols.Feols.se()</code></p>
-<section id="returns-12" class="level4">
-<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
+<p>Fitted model standard errors.</p>
+<section id="returns-13" class="level4">
+<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 23%">
@@ -1312,6 +1354,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.summary" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.summary">summary</h3>
 <p><code>feols.Feols.summary(digits=3)</code></p>
+<p>Summary of estimated model.</p>
 <section id="parameters-6" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="table">
@@ -1339,8 +1382,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-13" class="level4">
-<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
+<section id="returns-14" class="level4">
+<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
 <table class="table">
 <thead>
 <tr class="header">
@@ -1360,9 +1403,10 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.tidy" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.tidy">tidy</h3>
 <p><code>feols.Feols.tidy()</code></p>
-<p>Return a tidy pd.DataFrame with the point estimates, standard errors, t statistics, and p-values.</p>
-<section id="returns-14" class="level4">
-<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
+<p>Tidy model outputs.</p>
+<p>Return a tidy pd.DataFrame with the point estimates, standard errors, t-statistics, and p-values.</p>
+<section id="returns-15" class="level4">
+<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 16%">
@@ -1377,7 +1421,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>pandas.pandas.DataFrame</td>
-<td>A tidy pd.DataFrame containing the regression results, including point estimates, standard errors, t statistics, and p-values.</td>
+<td>A tidy pd.DataFrame containing the regression results, including point estimates, standard errors, t-statistics, and p-values.</td>
 </tr>
 </tbody>
 </table>
@@ -1386,8 +1430,9 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.tstat" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.tstat">tstat</h3>
 <p><code>feols.Feols.tstat()</code></p>
-<section id="returns-15" class="level4">
-<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
+<p>Fitted model t-statistics.</p>
+<section id="returns-16" class="level4">
+<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 25%">
@@ -1439,8 +1484,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-16" class="level4">
-<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
+<section id="returns-17" class="level4">
+<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 22%">
@@ -1464,6 +1509,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="pyfixest.feols.Feols.wald_test" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.wald_test">wald_test</h3>
 <p><code>feols.Feols.wald_test(R=None, q=None, distribution='F')</code></p>
+<p>Conduct Wald test.</p>
 <p>Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.</p>
 <section id="parameters-8" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
@@ -1504,8 +1550,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-17" class="level4">
-<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
+<section id="returns-18" class="level4">
+<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 30%">
@@ -1623,8 +1669,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns-18" class="level4">
-<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
+<section id="returns-19" class="level4">
+<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
 <table class="table">
 <colgroup>
 <col style="width: 6%">
