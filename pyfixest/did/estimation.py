@@ -20,11 +20,12 @@ def event_study(
     cluster="idname",
 ):
     """
-    Function for Event Study Estimation.
+    Estimate Event Study Model.
 
-    This function allows for the estimation of treatment effects using different estimators.
-    Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
-    Other estimators are in development.
+    This function allows for the estimation of treatment effects using different
+    estimators. Currently, it supports "twfe" for the two-way fixed effects
+    estimator and "did2s" for Gardner's two-step DID2S estimator. Other estimators
+    are in development.
 
     Parameters
     ----------
@@ -43,7 +44,9 @@ def event_study(
     estimator : str
         The estimator to use. Options are "did2s" and "twfe".
     att : bool, optional
-        If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.
+        If True, estimates the average treatment effect on the treated (ATT).
+        If False, estimates the canonical event study design with all leads and
+        lags. Default is True.
 
     Returns
     -------
@@ -161,9 +164,11 @@ def did2s(
     cluster : str
         The name of the cluster variable.
     i_ref1 : int, str, list, optional
-        The reference value(s) for the first variable used with "i()" syntax in the second stage formula. Default is None.
+        The reference value(s) for the first variable used with "i()" syntax in
+        the second stage formula. Default is None.
     i_ref2 : int, str, list, optional
-        The reference value(s) for the second variable used with "i()" syntax in the second stage formula. Default is None.
+        The reference value(s) for the second variable used with "i()" syntax in
+        the second stage formula. Default is None.
 
     Returns
     -------
@@ -227,7 +232,11 @@ def did2s(
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage or "-1" in second_stage:
         raise ValueError(
-            "The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage."
+            """
+            The second stage formula should not contain '0' or '-1'. Note that
+            the intercept is dropped automatically due to the presence of fixed
+            effects in the first stage.
+            """
         )
 
     data = data.copy()
@@ -281,7 +290,10 @@ def lpdid(
     xfml=None,
 ) -> pd.DataFrame:
     """
-    Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.
+    Local projections approach to estimation.
+
+    Estimate a Difference-in-Differences / Event Study Model via the Local
+    Projections Approach.
 
     Parameters
     ----------
@@ -296,15 +308,19 @@ def lpdid(
     gname : str
         Unit-specific time of initial treatment.
     vcov : str, dict, optional
-        The type of inference to employ. Defaults to {"CRV1": idname}. Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
+        The type of inference to employ. Defaults to {"CRV1": idname}.
+        Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
     pre_window : int, optional
-        The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data.
+        The number of periods before the treatment to include in the estimation.
+        Default is the minimum relative year in the data.
     post_window : int, optional
-        The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data.
+        The number of periods after the treatment to include in the estimation.
+        Default is the maximum relative year in the data.
     never_treated : int, optional
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
-        If True, estimates the pooled average treatment effect on the treated (ATT). Default is False.
+        If True, estimates the pooled average treatment effect on the treated (ATT).
+        Default is False.
     xfml : str, optional
         Formula for the covariates. Not yet supported.
 

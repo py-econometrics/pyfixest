@@ -9,6 +9,37 @@ from pyfixest.visualize import _coefplot
 
 
 class LPDID(DID):
+    """
+    A class used to represent the Local Polynomial Differences-in-Differences model.
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        The DataFrame containing all variables.
+    yname : str
+        The name of the dependent variable.
+    idname : str
+        The name of the identifier variable.
+    tname : str
+        The name of the time variable.
+    gname : str
+        The name of the group variable.
+    xfml : str
+        The transformation to apply to the data.
+    att : str
+        The attribute to consider in the model.
+    cluster : str
+        The cluster to consider in the model.
+    vcov : str
+        The type of variance-covariance matrix to use.
+    pre_window : tuple
+        The pre-treatment window to consider in the model.
+    post_window : tuple
+        The post-treatment window to consider in the model.
+    never_treated : bool
+        Whether to consider never-treated units in the model.
+    """
+
     def __init__(
         self,
         data,
@@ -76,6 +107,7 @@ class LPDID(DID):
         self._estimator = "lpdid"
 
     def estimate(self):
+        """Estimate the DID model."""
         self._coeftable = _lpdid_estimate(
             data=self._data,
             yname=self._yname,
@@ -88,7 +120,7 @@ class LPDID(DID):
             xfml=self._xfml,
         )
 
-    def vcov(self):
+    def vcov(self):  # noqa: D102
         pass
 
     def iplot(
@@ -101,6 +133,33 @@ class LPDID(DID):
         title="LPDID Event Study Estimate",
         coord_flip=False,
     ):
+        """
+        Create coefficient plots.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for visualization options. Defaults to 0.05.
+        figsize : tuple[int, int], optional
+            Size of the plot (width, height) in inches. Defaults to (500, 300).
+        yintercept : float, optional
+            Value to set as the y-axis intercept (vertical line).
+            Defaults to None.
+        xintercept : float, optional
+            Value to set as the x-axis intercept (horizontal line).
+            Defaults to None.
+        rotate_xticks : int, optional
+            Rotation angle for x-axis tick labels. Defaults to 0.
+        title : str, optional
+            Title of the plot.
+        coord_flip : bool, optional
+            Whether to flip the coordinates of the plot. Defaults to False.
+
+        Returns
+        -------
+        lets-plot figure
+            A lets-plot figure with coefficient estimates and confidence intervals.
+        """
         df = self._coeftable
         df["fml"] = "lpdid"
 
@@ -115,10 +174,10 @@ class LPDID(DID):
             flip_coord=coord_flip,
         )
 
-    def tidy(self):
+    def tidy(self):  # noqa: D102
         return self._coeftable
 
-    def summary(self):
+    def summary(self):  # noqa: D102
         return self._coeftable
 
 
@@ -133,28 +192,49 @@ def _lpdid_estimate(
     att: bool = True,
     xfml=None,
 ) -> pd.DataFrame:
-    """ "
+    """
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
-    Args:
-        data: The DataFrame containing all variables.
-        yname: The name of the dependent variable.
-        idname: The name of the id variable.
-        tname: Variable name for calendar period.
-        gname: unit-specific time of initial treatment.
-        vcov: The name of the cluster variable. If None, then defaults to {"CRV1": idname}. Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
-              {"CRV3": "idname"}. You can pass anything that is accepted by the vcov argument of feols.
-        pre_window: The number of periods before the treatment to include in the estimation. Default is None, which means that the pre_window is set to the minimum
-                    relative year in the data.
-        post_window: The number of periods after the treatment to include in the estimation. Default is None, which means that the post_window is set to the maximum
-                     relative year in the data.
-        never_treated: Value in gname that indicates that a unit was never treated. By default, never treated units are assumed to
-                       have value gname = 0.
-        att: Whether to estimate the average treatment effect on the treated (ATT) or a canonical event study design with all leads and lags. Default is True.
-        xfml: Optional formula for the covariates. Not yet supported. E.g. "X1 + X2 + X3".
+
+    Parameters
+    ----------
+    data: pandas.DataFrame
+        The DataFrame containing all variables.
+    yname: str
+        The name of the dependent variable.
+    idname: str
+        The name of the id variable.
+    tname: str
+        Variable name for calendar period.
+    gname:  str
+        unit-specific time of initial treatment.
+    vcov: str
+        The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
+        Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
+        {"CRV3": "idname"}. You can pass anything that is accepted by the vcov
+        argument of feols.
+    pre_window: int
+        The number of periods before the treatment to include in the
+        estimation. Default is None, which means that the pre_window is set to
+        the minimum relative year in the data.
+    post_window: int
+        The number of periods after the treatment to include in the
+        estimation. Default is None, which means that the post_window is set to
+        the maximum relative year in the data.
+    never_treated: int
+        Value in gname that indicates that a unit was never treated.
+        By default, never treated units are assumed to have value gname = 0.
+    att: bool
+        Whether to estimate the average treatment effect on the treated (ATT)
+        or a canonical event study design with all leads and lags.
+        Default is True.
+    xfml: str
+        Optional formula for the covariates. Not yet supported.
+        E.g. "X1 + X2 + X3".
 
     Returns
     -------
-        A data frame with the estimated coefficients.
+    pandas.DataFrame
+        A DataFrame with the estimated coefficients.
     """
     # the implementation here is highly influenced by Alex Cardazzi's R
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid
@@ -223,14 +303,20 @@ def _pooled_adjustment(df, y, pool_lead, idname):
 
     Parameters
     ----------
-    - df (pd.DataFrame): The dataset used in the analysis.
-    - y (str): The column name that denotes the outcome variable.
-    - pool_lead (int): The number of post-periods that should be used when calculating the post-treatment mean.
-    - idname (str): The name of the id variable.
+    - df: pandas.DataFrame
+        The dataset used in the analysis.
+    - y: str
+        The column name that denotes the outcome variable.
+    - pool_lead: int
+        The number of post-periods that should be used when calculating the
+        post-treatment mean.
+    - idname: str
+        The name of the id variable.
 
     Returns
     -------
-    - pd.Series: The average of all future values in the analysis.
+    pandas.Series
+        The average of all future values in the analysis.
     """
     # Initialize lead variable
     x = 0

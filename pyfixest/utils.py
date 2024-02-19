@@ -9,14 +9,18 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
 
     Parameters
     ----------
-        adj: bool, default True
-            If True, applies a small sample correction of (N-1) / (N-k) where N is the number of observations
-            and k is the number of estimated coefficients excluding any fixed effects projected out in either fixest::feols() or lfe::felm().
-        fixef_k: str, default "none"
-            Equal to 'none': the fixed effects parameters are discarded when calculating k in (N-1) / (N-k).
-        cluster_adj: bool, default True
-            If True, a cluster correction G/(G-1) is performed, with G the number of clusters.
-        cluster_df: str, default "conventional"
+        adj : bool, default True
+            If True, applies a small sample correction of (N-1) / (N-k) where N
+            is the number of observations and k is the number of estimated
+            coefficients excluding any fixed effects projected out in either
+            fixest::feols() or lfe::felm().
+        fixef_k : str, default "none"
+            Equal to 'none': the fixed effects parameters are discarded when
+            calculating k in (N-1) / (N-k).
+        cluster_adj : bool, default True
+            If True, a cluster correction G/(G-1) is performed, with G the number
+            of clusters.
+        cluster_df : str, default "conventional"
             Controls how "G" is computed for multiway clustering if cluster_adj = True.
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
@@ -25,6 +29,7 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
 
     Returns
     -------
+    dict
         A dictionary with encoded info on how to form small sample corrections
     """
     if adj not in [True, False]:
@@ -63,7 +68,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     vcov_type : str
         The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
     is_twoway : bool, optional
-        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12. Default is False.
+        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12.
+            Default is False.
 
     Returns
     -------
@@ -73,7 +79,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     Raises
     ------
     ValueError
-        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither "conventional" nor "min".
+        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
+        "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
     fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
@@ -266,7 +273,8 @@ def absolute_diff(x, y, tol=1e-03):
     Returns
     -------
     bool
-        True if the absolute difference is greater than the tolerance and there is a non-zero value in y, False otherwise.
+        True if the absolute difference is greater than the tolerance and there
+        is a non-zero value in y, False otherwise.
     """
     absolute_diff = (np.abs(x - y) > tol).any()
     if not any(y == 0):

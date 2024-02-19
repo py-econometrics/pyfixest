@@ -15,18 +15,24 @@ class FixestFormulaParser:
 
     Methods
     -------
-        __init__(self, fml): Constructor method that initializes the object with a given formula.
-        get_fml_dict(self): Returns a dictionary of all fevars & formula without fevars.
-        get_var_dict(self): Returns a dictionary of all fevars and list of covars and depvars used in regression with those fevars.
+        __init__(self, fml): Constructor method that initializes the object with
+        a given formula.
+        get_fml_dict(self): Returns a dictionary of all fevars & formula without
+        fevars.
+        get_var_dict(self): Returns a dictionary of all fevars and list of covars
+        and depvars used in regression with those fevars.
 
     """
 
     def __init__(self, fml):
         """
-        Constructor method that initializes the object with a given formula.
+        Initialize the object with a given formula using constructor method.
 
-        Args:
-        fml (str): A one-to three sided formula string in the form "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
+        Parameters
+        ----------
+        fml : str
+            A one-to three sided formula string in the form
+            "Y1 + Y2 ~ X1 + X2 | FE1 + FE2 | endogvar ~ exogvar".
 
         Returns
         -------
@@ -48,15 +54,15 @@ class FixestFormulaParser:
             if "~" in fml_split[1]:
                 fevars = "0"
                 endogvars, instruments = fml_split[1].split("~")
-                # add endogeneous variable to "covars" - yes, bad naming
+                # add endogenous variable to "covars" - yes, bad naming
 
-                # check if any of the instruments or endogeneous variables are also specified
-                # as covariates
+                # check if any of the instruments or endogenous variables are
+                # also specified as covariates
                 if any(
                     element in covars.split("+") for element in endogvars.split("+")
                 ):
                     raise EndogVarsAsCovarsError(
-                        "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                        "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
                     )
 
                 if any(
@@ -75,11 +81,11 @@ class FixestFormulaParser:
             fevars = fml_split[1]
             endogvars, instruments = fml_split[2].split("~")
 
-            # check if any of the instruments or endogeneous variables are also specified
-            # as covariates
+            # check if any of the instruments or endogenous variables are also
+            # specified as covariates
             if any(element in covars.split("+") for element in endogvars.split("+")):
                 raise EndogVarsAsCovarsError(
-                    "Endogeneous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+                    "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
                 )
 
             if any(element in covars.split("+") for element in instruments.split("+")):
@@ -87,7 +93,7 @@ class FixestFormulaParser:
                     "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
                 )
 
-            # add endogeneous variable to "covars" - yes, bad naming
+            # add endogenous variable to "covars" - yes, bad naming
             covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
         if endogvars is not None:
@@ -113,7 +119,7 @@ class FixestFormulaParser:
         # clean instruments
         if instruments is not None:
             self._is_iv = True
-            # all rhs variables for the first stage (endog variable replaced with instrument)
+            # all rhs variables for the first stage (endog variable replaced with instrument)  # noqa: W505
             first_stage_covars_list = covars.split("+")
             first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
                 instruments
@@ -140,18 +146,23 @@ class FixestFormulaParser:
 
         Parameters
         ----------
-            iv: bool (default: False)
-                If True, the formulas for the first stage are returned. Otherwise, the formulas for the second stage are returned.
+        iv : bool (default: False)
+            If True, the formulas for the first stage are returned. Otherwise,
+            the formulas for the second stage are returned.
 
         Returns
         -------
-            fml_dict: dict
-                A nested dictionary of all formulas. The dictionary has the following structure: first, a dictionary with the
-                fixed effects combinations as keys. Then, for each fixed effect combination, a dictionary with the dependent variables
-                as keys. Finally, for each dependent variable, a list of formulas as values.
+        fml_dict: dict
+            A nested dictionary of all formulas. The dictionary has the following
+            structure:
+            First, a dictionary with the fixed effects combinations as keys.
+            Then, for each fixed effect combination, a dictionary with the
+            dependent variables as keys.
+            Finally, for each dependent variable, a list of formulas as values.
 
-                Here is an example:
-                    fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into: {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
+            Here is an example:
+                fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into:
+                {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
         """
         fml_dict = {}
 
@@ -175,8 +186,13 @@ class FixestFormulaParser:
 
 def _unpack_fml(x):
     """
-    Given a formula string `x` - e.g. 'X1 + csw(X2, X3)' - , splits it into its constituent variables and their types (if any),
-    and returns a dictionary containing the result. The dictionary has the following keys: 'constant', 'sw', 'sw0', 'csw'.
+    Parse a formula string.
+
+    Given a formula string `x` - e.g. 'X1 + csw(X2, X3)' - , splits it into its
+    constituent variables and their types (if any), and returns a dictionary
+    containing the result. The dictionary has the following keys: 'constant',
+    'sw', 'sw0', 'csw'.
+
     The values are lists of variables of the respective type.
 
     Parameters
@@ -187,21 +203,28 @@ def _unpack_fml(x):
     Returns
     -------
     res_s : dict
-        A dictionary containing the unpacked formula. The dictionary has the following keys:
+        A dictionary containing the unpacked formula. The dictionary has the
+        following keys:
             - 'constant' : list of str
                 The list of constant (i.e., non-switched) variables in the formula.
             - 'sw' : list of str
-                The list of variables that have a regular switch (i.e., 'sw(var1, var2, ...)' notation) in the formula.
+                The list of variables that have a regular switch
+                (i.e., 'sw(var1, var2, ...)' notation) in the formula.
             - 'sw0' : list of str
-                The list of variables that have a 'sw0(var1, var2, ..)' switch in the formula.
+                The list of variables that have a 'sw0(var1, var2, ..)' switch
+                in the formula.
             - 'csw' : list of str or list of lists of str
-                The list of variables that have a 'csw(var1, var2, ..)' switch in the formula.
-                Each element in the list can be either a single variable string, or a list of variable strings
-                if multiple variables are listed in the switch.
+                The list of variables that have a 'csw(var1, var2, ..)' switch
+                in the formula.
+                Each element in the list can be either a single variable string,
+                or a list of variable strings if multiple variables are listed
+                in the switch.
             - 'csw0' : list of str or list of lists of str
-                The list of variables that have a 'csw0(var1,var2,...)' switch in the formula.
-                Each element in the list can be either a single variable string, or a list of variable strings
-                if multiple variables are listed in the switch.
+                The list of variables that have a 'csw0(var1,var2,...)' switch
+                in the formula.
+                Each element in the list can be either a single variable string,
+                or a list of variable strings if multiple variables are listed
+                in the switch.
 
     Raises
     ------
@@ -247,23 +270,31 @@ def _unpack_fml(x):
 
 def _pack_to_fml(unpacked):
     """
-    Given a dictionary of "unpacked" formula variables, returns a string containing formulas. An "unpacked" formula is a
-    deparsed formula that allows for multiple estimations.
+    Generate a formula string from a dictionary of "unpacked" formula variables.
+
+    Given a dictionary of "unpacked" formula variables, returns a string containing
+    formulas. An "unpacked" formula is a deparsed formula that allows for multiple
+    estimations.
 
     Parameters
     ----------
     unpacked : dict
-        A dictionary of unpacked formula variables. The dictionary has the following keys:
+        A dictionary of unpacked formula variables. The dictionary has the following
+        keys:
             - 'constant' : list of str
                 The list of constant (i.e., non-switched) variables in the formula.
             - 'sw' : list of str
-                The list of variables that have a regular switch (i.e., 'sw(var1, var2, ...)' notation) in the formula.
+                The list of variables that have a regular switch
+                (i.e., 'sw(var1, var2, ...)' notation) in the formula.
             - 'sw0' : list of str
-                The list of variables that have a 'sw0(var1, var2, ..)' switch in the formula.
+                The list of variables that have a 'sw0(var1, var2, ..)' switch
+                in the formula.
             - 'csw' : list of str or list of lists of str
-                The list of variables that have a 'csw(var1, var2, ..)' switch in the formula.
-                Each element in the list can be either a single variable string, or a list of variable strings
-                if multiple variables are listed in the switch.
+                The list of variables that have a 'csw(var1, var2, ..)' switch
+                in the formula.
+                Each element in the list can be either a single variable string,
+                or a list of variable strings if multiple variables are listed
+                in the switch.
             - 'csw0' : list of str or list of lists of str
     """
     res = {"constant": unpacked.get("constant", [])}
@@ -323,16 +354,23 @@ def _pack_to_fml(unpacked):
 
 def _find_sw(x):
     """
-    Search for matches in a string. Matches are either 'sw', 'sw0', 'csw', 'csw0'. If a match is found, returns a
-    tuple containing a list of the elements found and the type of match. Otherwise, returns the original string and None.
+    Search for matches in a string.
 
-    Args:
-        x (str): The string to search for matches in.
+    Matches are either 'sw', 'sw0', 'csw', 'csw0'. If a match is found, returns a
+    tuple containing a list of the elements found and the type of match. Otherwise,
+    returns the original string and None.
+
+    Parameters
+    ----------
+    x : str
+        The string to search for matches in.
 
     Returns
     -------
-        (list[str] or str, str or None): If any matches were found, returns a tuple containing
-        a list of the elements found and the type of match (either 'sw', 'sw0', 'csw', or 'csw0').
+    list[str] or str, str or None
+        If any matches were found, returns a
+        tuple containing a list of the elements found and the type of match
+        (either 'sw', 'sw0', 'csw', or 'csw0').
         Otherwise, returns the original string and None.
 
     Example:
@@ -367,12 +405,15 @@ def _flatten_list(lst):
     """
     Flattens a list that may contain sublists.
 
-    Args:
-        lst (list): A list that may contain sublists.
+    Parameters
+    ----------
+    lst : list
+        A list that may contain sublists.
 
     Returns
     -------
-        list: A flattened list with no sublists.
+    list
+        A flattened list with no sublists.
 
     Examples
     --------
@@ -392,11 +433,17 @@ def _flatten_list(lst):
 
 def _check_duplicate_key(my_dict, key):
     """
-    Checks if a key already exists in a dictionary. If it does, raises a DuplicateKeyError. Otherwise, does nothing.
+    Identify duplicate keys.
 
-    Args:
-        my_dict (dict): The dictionary to check for duplicate keys.
-        key (str): The key to check for in the dictionary.
+    Checks if a key already exists in a dictionary. If it does, raises a
+    DuplicateKeyError. Otherwise, does nothing.
+
+    Parameters
+    ----------
+    my_dict : dict
+        The dictionary to check for duplicate keys.
+    key : str
+        The key to check for in the dictionary.
 
     Returns
     -------
@@ -406,7 +453,8 @@ def _check_duplicate_key(my_dict, key):
         if key in my_dict:
             raise DuplicateKeyError(
                 f"""
-                Duplicate key found: "{key}. Multiple estimation syntax can only be used once on the rhs of the two-sided formula.
+                Duplicate key found: "{key}. Multiple estimation syntax can
+                only be used once on the rhs of the two-sided formula.
                 """
             )
         else:

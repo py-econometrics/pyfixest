@@ -10,7 +10,7 @@ except ImportError:
     DataFrameType = pd.DataFrame
 
 
-def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
+def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
     if not isinstance(data, pd.DataFrame):
         try:
             import polars as pl  # noqa: F401
@@ -18,7 +18,8 @@ def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:
             data = data.to_pandas()
         except ImportError:
             raise ImportError(
-                "Polars is not installed. Please install Polars to use it as an alternative."
+                """Polars is not installed. Please install Polars to use it as
+                an alternative."""
             )
 
     return data
