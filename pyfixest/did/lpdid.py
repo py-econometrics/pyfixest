@@ -10,7 +10,7 @@ from pyfixest.visualize import _coefplot
 
 class LPDID(DID):
     """
-    A class used to represent the Local Polynomial Differences-in-Differences model.
+    A class used to represent the Local Projections Differences-in-Differences Estimator.
 
     Attributes
     ----------

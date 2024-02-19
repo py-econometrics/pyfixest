@@ -24,8 +24,6 @@ class DID(ABC):
         have a value of 0.
     xfml : str
         The formula for the covariates.
-    estimator: str
-        The estimator to use. Default is "did2s".
     att : str
         Whether to estimate the average treatment effect on the treated (ATT) or
         the canonical event study design with all leads and lags. Default is True.

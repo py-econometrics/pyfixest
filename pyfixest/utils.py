@@ -12,8 +12,8 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
         adj : bool, default True
             If True, applies a small sample correction of (N-1) / (N-k) where N
             is the number of observations and k is the number of estimated
-            coefficients excluding any fixed effects projected out in either
-            fixest::feols() or lfe::felm().
+            coefficients excluding any fixed effects projected out by either
+            `feols()` or `fepois()`.
         fixef_k : str, default "none"
             Equal to 'none': the fixed effects parameters are discarded when
             calculating k in (N-1) / (N-k).
