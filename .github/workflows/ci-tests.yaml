@@ -1,5 +1,3 @@
-
-
 name: CI
 
 on:
@@ -12,29 +10,27 @@ on:
 
 jobs:
   test:
+    name: "Tests"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.10", "3.11"]
-
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v2
-
+        uses: actions/checkout@v4
       - name: Setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
       - name: Install
-        run: |
-          pip install -e .
-          pip install pytest-cov wildboottest
-          pip install -r requirements_test_ci.txt
+        run: poetry install --without docs
 
       - name: set numba parallel flags
         run: |
@@ -44,11 +40,60 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich"))'
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf"))'
         shell: bash
 
       - name: Run tests
         run: |
-          pytest tests --cov=./ --cov-report=xml
+          poetry run pytest tests --cov=./ --cov-report=xml
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+
+  build-docs:
+    name: "Build Docs"
+    runs-on: ubuntu-latest
+    needs: ["test"]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
+      - name: Install dependencies
+        run: poetry install --with docs
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+      - name: Compile docstrings with quartodoc
+        run : |
+          poetry run quartodoc build --verbose --config docs/_quarto.yml
+      - name: Render docs
+        run: |
+          poetry run quarto render docs
+      - name: Save docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-html
+          path: docs/_site
+  publish-docs:
+    name: "Publish Docs"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    needs: ["build-docs", "test"]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-html
+          path: docs/_site
+      - name: Publish docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_site

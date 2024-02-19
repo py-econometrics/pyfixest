@@ -1,19 +1,22 @@
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.utils import get_data
+import pytest
+
+from pyfixest.estimation import feols, fepois
 from pyfixest.exceptions import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
-    UnderDeterminedIVError,
-    VcovTypeNotSupportedError,
+    InvalidReferenceLevelError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
-    InvalidReferenceLevelError,
+    UnderDeterminedIVError,
+    VcovTypeNotSupportedError,
 )
-from pyfixest.estimation import feols, fepois
 from pyfixest.FormulaParser import FixestFormulaParser
+from pyfixest.multcomp import rwolf
+from pyfixest.summarize import etable, summary
+from pyfixest.utils import get_data
 
 
 def test_formula_parser2():
@@ -43,11 +46,7 @@ def test_i_ref():
 
 
 def test_cluster_na():
-    """
-    test if a nan value in a cluster variable raises
-    an error
-    """
-
+    """Test if a nan value in a cluster variable raises an error."""
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
@@ -59,7 +58,11 @@ def test_cluster_na():
 
 def test_error_hc23_fe():
     """
-    test if HC2&HC3 inference with fixed effects regressions raises an error (currently not supported)
+    Test if HC2 & HC3 inference with fixed effects regressions raises an error.
+
+    Notes
+    -----
+    Currently not supported.
     """
     data = get_data().dropna()
 
@@ -71,10 +74,7 @@ def test_error_hc23_fe():
 
 
 def test_depvar_numeric():
-    """
-    test if feols() throws an error when the dependent variable is not numeric
-    """
-
+    """Test if feols() throws an error when the dependent variable is not numeric."""
     data = get_data()
     data["Y"] = data["Y"].astype("str")
     data["Y"] = pd.Categorical(data["Y"])
@@ -92,7 +92,7 @@ def test_iv_errors():
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogeneous variable specified as covariate
+    # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
         feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
     # instrument specified as covariate
@@ -125,10 +125,7 @@ def test_iv_errors():
 
 @pytest.mark.skip("Not yet implemented.")
 def test_poisson_devpar_count():
-    """
-    check that the dependent variable is a count variable
-    """
-
+    """Check that the dependent variable is a count variable."""
     data = get_data()
     # under determined
     with pytest.raises(AssertionError):
@@ -152,7 +149,7 @@ def test_i_interaction_errors():
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data=data)
+        fit = feols("Y ~ f1 | f1", data=data)  # noqa: F841
 
 
 def test_wls_errors():
@@ -182,3 +179,49 @@ def test_wls_errors():
     data = get_data()
     with pytest.raises(NotImplementedError):
         feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)
+
+
+def test_multcomp_errors():
+    data = get_data().dropna()
+
+    # param not in model
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    with pytest.raises(ValueError):
+        rwolf(fit1.to_list(), param="X2", B=999, seed=92)
+
+
+def test_wildboottest_errors():
+    data = get_data()
+    fit = feols("Y ~ X1", data=data)
+    with pytest.raises(ValueError):
+        fit.wildboottest(param="X2", B=999, seed=213)
+
+
+def test_summary_errors():
+    data = get_data()
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    with pytest.raises(TypeError):
+        etable(fit1)
+    with pytest.raises(TypeError):
+        etable([fit1, fit2])
+    with pytest.raises(TypeError):
+        summary(fit1)
+    with pytest.raises(TypeError):
+        summary([fit1, fit2])
+
+
+def test_errors_etable():
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2 | f1", data=data)
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.01, 0.05])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
+
+    with pytest.raises(AssertionError):
+        etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])

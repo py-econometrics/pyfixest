@@ -1,13 +1,14 @@
-from pyfixest.did.estimation import did2s as did2s_pyfixest
-from pyfixest.did.estimation import lpdid, event_study
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+
+from pyfixest.did.estimation import did2s as did2s_pyfixest
+from pyfixest.did.estimation import event_study, lpdid
 
 pandas2ri.activate()
 did2s = importr("did2s")
@@ -16,10 +17,7 @@ broom = importr("broom")
 
 
 def test_event_study():
-    """
-    Test the event_study() function.
-    """
-
+    """Test the event_study() function."""
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     fit_did2s = event_study(
@@ -49,10 +47,7 @@ def test_event_study():
 
 
 def test_did2s():
-    """
-    Test the did2s() function.
-    """
-
+    """Test the did2s() function."""
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
 
@@ -197,7 +192,7 @@ def test_errors():
 
     df_het["treat2"] = np.random.choice([0, 1, 2], size=len(df_het))
     with pytest.raises(ValueError):
-        fit = did2s_pyfixest(
+        fit = did2s_pyfixest(  # noqa: F841
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
@@ -209,10 +204,7 @@ def test_errors():
 
 
 def test_lpdid():
-    """
-    test the lpdid estimator.
-    """
-
+    """Test the lpdid estimator."""
     # test vs stata
     df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
     df_het = df_het.astype(np.float64)

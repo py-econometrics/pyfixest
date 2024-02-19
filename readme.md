@@ -26,7 +26,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
 ## Features
 
 -   OLS and IV Regression
--   Poisson Regression
+-   Poisson Regression following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
 -   Several Robust and Cluster Robust Variance-Covariance Types
 -   Wild Cluster Bootstrap Inference (via
@@ -38,6 +38,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
         estimator
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
+- Multiple Hypothesis Corrections following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314)
 
 ## Installation
 
@@ -55,9 +56,7 @@ pip install git+https://github.com/s3alfisc/pyfixest.git
 
 ## News
 
-`PyFixest` `0.13` adds support for the [local projections
-Difference-in-Differences
-Estimator](https://s3alfisc.github.io/pyfixest/difference-in-differences-estimation/).
+`PyFixest` `0.15.2` adds support for Romano-Wolf Corrected p-values via the [rwolf()](https://s3alfisc.github.io/pyfixest/reference/multcomp.rwolf.html#pyfixest.multcomp.rwolf) function.
 
 ## Benchmarks
 
@@ -69,11 +68,6 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 ![](figures/benchmarks_poisson.svg)
 
 ## Quickstart
-
-### Fixed Effects Regression via `feols()`
-
-You can estimate a linear regression models just as you would in
-`fixest` - via `feols()`:
 
 
 ```python
@@ -133,6 +127,8 @@ etable([fit.fetch_model(i) for i in range(6)])
     Observations               998                999                997                998                997                998
     -----------------------------------------------------------------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
+    Format of coefficient cell:
+    Coefficient (Std. Error)
     
 
 

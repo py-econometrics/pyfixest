@@ -1,16 +1,18 @@
-import pytest
 import re
 import warnings
+
 import numpy as np
 import pandas as pd
-from pyfixest.estimation import feols, fepois
-from pyfixest.utils import get_data, ssc
-from pyfixest.exceptions import NotImplementedError
+import pytest
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+
+from pyfixest.estimation import feols, fepois
+from pyfixest.exceptions import NotImplementedError
+from pyfixest.utils import get_data, ssc
 
 pandas2ri.activate()
 
@@ -53,17 +55,17 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
-        # ("Y ~ X1 + C(f1):C(fe2)"),            # currently does not work as C():C() translation not implemented
-        # ("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
+        # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
+        # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
         # ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
-        # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
-        # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
+        # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+        # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
         ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
         ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
@@ -74,16 +76,16 @@ rng = np.random.default_rng(8760985)
         # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
         ("Y ~ X1 + C(f1)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
-        # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
+        # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + I(X2 ** 2)"),
         ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
         ("Y ~ X1*X2"),
         ("Y ~ X1*X2 | f1+f2"),
-        # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
-        # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
-        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
+        # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
+        # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
+        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2 # noqa: W505
         # IV starts here
         ("Y ~ 1 | X1 ~ Z1"),
         "Y ~  X2 | X1 ~ Z1",
@@ -111,14 +113,13 @@ def test_single_fit(
     N, seed, beta_type, error_type, dropna, model, inference, weights, fml
 ):
     """
-    test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
+    Test pyfixest against fixest via rpy2 (OLS, IV, Poisson).
 
         - for multiple models
         - and multiple inference types
         - ... compare regression coefficients and standard errors
         - tba: t-statistics, covariance matrices, other metrics
     """
-
     inference_inflation_factor = 1.0
 
     if model == "Feols":
@@ -158,7 +159,7 @@ def test_single_fit(
             data["f2"] = pd.Categorical(data.f2.astype(str))
             data["f3"] = pd.Categorical(data.f3.astype(str))
         else:
-            raise e
+            raise e  # noqa: TRY201
 
     if model == "Feols":
         pyfixest = feols(fml=fml, data=data, vcov=inference, weights=weights)
@@ -195,12 +196,12 @@ def test_single_fit(
             is_iv = True
             run_test = False
         else:
-            is_iv = False
+            is_iv = False  # noqa: F841
             run_test = True
 
             # if formula does not contain "i(" or "C(", add, separation:
             if "i(" not in fml and "C(" not in fml:
-                where_zeros = np.where(data["Y"] == 0)[
+                where_zeros = np.where(data["Y"] == 0)[  # noqa: F841
                     0
                 ]  # because np.where evaluates to a tuple
                 # draw three random indices
@@ -254,7 +255,8 @@ def test_single_fit(
             r_nobs = stats.nobs(r_fixest)
 
     if run_test:
-        # get coefficients, standard errors, p-values, t-statistics, confidence intervals
+        # get coefficients, standard errors, p-values, t-statistics,
+        # confidence intervals
 
         mod = pyfixest
 
@@ -264,7 +266,7 @@ def test_single_fit(
         py_tstat = mod.tstat().xs("X1")
         py_confint = mod.confint().xs("X1").values
         py_nobs = mod._N
-        py_resid = mod._u_hat.flatten()
+        py_resid = mod._u_hat.flatten()  # noqa: F841
         # TODO: test residuals
 
         fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
@@ -290,7 +292,7 @@ def test_single_fit(
         r_tstat = df_X1["statistic"]
         r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
         r_nobs = stats.nobs(r_fixest)
-        r_resid = r_fixest.rx2("working_residuals")
+        r_resid = r_fixest.rx2("working_residuals")  # noqa: F841
 
         np.testing.assert_allclose(
             py_coef, r_coef, rtol=rtol, atol=atol, err_msg="py_coef != r_coef"
@@ -341,46 +343,43 @@ def test_single_fit(
             py_nobs, r_nobs, rtol=rtol, atol=atol, err_msg="py_nobs != r_nobs"
         )
 
-        if model == "Feols":
-            if not mod._is_iv:
-                py_r2 = mod._r2
-                py_r2_within = mod._r2_within
-                py_adj_r2 = mod._adj_r2
-                py_adj_r2_within = mod._adj_r2_within
+        if model == "Feols" and not mod._is_iv:
+            py_r2 = mod._r2
+            py_r2_within = mod._r2_within
+            py_adj_r2 = mod._adj_r2
+            py_adj_r2_within = mod._adj_r2_within
 
-                r_r = fixest.r2(r_fixest)
-                # unadjusted
+            r_r = fixest.r2(r_fixest)
+            # unadjusted
 
-                if True:
-                    if not mod._has_weights:
-                        # R2 currently not computed for WLS
-                        np.testing.assert_allclose(
-                            py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
-                        )
-                        np.testing.assert_allclose(
-                            py_r2_within,
-                            r_r[5],
-                            rtol=rtol,
-                            atol=atol,
-                            err_msg="py_r2_within != r_r",
-                        )
+            if True and not mod._has_weights:
+                np.testing.assert_allclose(
+                    py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
+                )
+                np.testing.assert_allclose(
+                    py_r2_within,
+                    r_r[5],
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="py_r2_within != r_r",
+                )
 
-                if False:
-                    # adjusted
-                    np.testing.assert_allclose(
-                        py_adj_r2,
-                        r_r[2],
-                        rtol=rtol,
-                        atol=atol,
-                        err_msg="py_adj_r2 != r_r",
-                    )
-                    np.testing.assert_allclose(
-                        py_adj_r2_within,
-                        r_r[6],
-                        rtol=rtol,
-                        atol=atol,
-                        err_msg="py_adj_r2_within != r_r",
-                    )
+            if False:
+                # adjusted
+                np.testing.assert_allclose(
+                    py_adj_r2,
+                    r_r[2],
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="py_adj_r2 != r_r",
+                )
+                np.testing.assert_allclose(
+                    py_adj_r2_within,
+                    r_r[6],
+                    rtol=rtol,
+                    atol=atol,
+                    err_msg="py_adj_r2_within != r_r",
+                )
 
         if model == "Fepois":
             r_deviance = r_fixest.rx2("deviance")
@@ -448,10 +447,7 @@ def test_single_fit(
     ],
 )
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
-    """
-    test pyfixest against fixest_multi objects
-    """
-
+    """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data[data == "nan"] = np.nan
 
@@ -487,7 +483,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         py_se = mod.se().values
 
         # sort py_coef, py_se
-        py_coef, py_se = [np.sort(x) for x in [py_coef, py_se]]
+        py_coef, py_se = (np.sort(x) for x in [py_coef, py_se])
 
         fixest_object = r_fixest.rx2(x + 1)
         fixest_coef = fixest_object.rx2("coefficients")
@@ -497,7 +493,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         # fixest_se = fixest.se(r_fixest)
 
         # sort fixest_coef, fixest_se
-        fixest_coef, fixest_se = [np.sort(x) for x in [fixest_coef, fixest_se]]
+        fixest_coef, fixest_se = (np.sort(x) for x in [fixest_coef, fixest_se])
 
         np.testing.assert_allclose(
             py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."
@@ -521,7 +517,7 @@ def test_twoway_clustering():
                 vcov={"CRV1": "f1 +f2"},
                 ssc=ssc(cluster_adj=cluster_adj, cluster_df=cluster_df),
             )
-            fit2 = feols(
+            fit2 = feols(  # noqa: F841
                 "Y ~ X1 + X2 ",
                 data=data,
                 vcov={"CRV3": " f1+f2"},
@@ -564,10 +560,7 @@ def test_twoway_clustering():
 
 
 def test_wls_na():
-    """
-    Special tests for WLS and NA values
-    """
-
+    """Special tests for WLS and NA values."""
     data = get_data()
     data = data.dropna()
 
@@ -627,11 +620,12 @@ def test_wls_na():
 
 def _py_fml_to_r_fml(py_fml):
     """
+    Covernt pyfixest formula.
+
     pyfixest multiple estimation fml syntax to fixest multiple depvar
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
-
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -649,9 +643,7 @@ def _py_fml_to_r_fml(py_fml):
 
 
 def _c_to_as_factor(py_fml):
-    """
-    transform formulaic C-syntax for categorical variables into R's as.factor
-    """
+    """Transform formulaic C-syntax for categorical variables into R's as.factor."""
     # Define a regular expression pattern to match "C(variable)"
     pattern = r"C\((.*?)\)"
 
@@ -679,20 +671,14 @@ def get_data_r(fml, data):
             factor_vars.append(var)
 
     # if factor_vars is not empty
-    if factor_vars:
-        data_r = data[~data[factor_vars].isna().any(axis=1)]
-    else:
-        data_r = data
+    data_r = data[~data[factor_vars].isna().any(axis=1)] if factor_vars else data
 
     return data_r
 
 
 @pytest.mark.skip("Currently not supported.")
 def test_i_interaction():
-    """
-    Test that interaction syntax via the `i()` operator works as in fixest
-    """
-
+    """Test that interaction syntax via the `i()` operator works as in fixest."""
     data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)
@@ -780,7 +766,7 @@ def test_wald_test(fml, data):
 
     wald_r = fixest.wald(fit_r)
     wald_stat_r = wald_r[0]
-    wald_pval_r = wald_r[1]
+    wald_pval_r = wald_r[1]  # noqa: F841
 
     np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
@@ -828,8 +814,8 @@ def test_singleton_dropping():
     )
 
     # test that standard errors match
-    se_py = fit_py.se().values
-    se_r = fixest.se(fit_r)
+    se_py = fit_py.se().values  # noqa: F841
+    se_r = fixest.se(fit_r)  # noqa: F841
     # np.testing.assert_allclose(
     #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
     # )

@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Optional
+
+import numpy as np
+
 from pyfixest.feols import Feols, _drop_multicollinear_variables
 
 
@@ -120,6 +122,7 @@ class Feiv(Feols):
         self._support_iid_inference = True
 
     def get_fit(self) -> None:
+        """Fit a IV model using a 2SLS estimator."""
         _X = self._X
         _Z = self._Z
         _Y = self._Y

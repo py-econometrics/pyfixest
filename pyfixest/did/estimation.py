@@ -1,8 +1,10 @@
+from typing import Optional, Union
+
 import pandas as pd
-from typing import Optional, Union, List, Dict
-from pyfixest.did.did2s import _did2s_estimate, _did2s_vcov, DID2S
-from pyfixest.did.twfe import TWFE
+
+from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
+from pyfixest.did.twfe import TWFE
 from pyfixest.exceptions import NotImplementedError
 
 
@@ -18,11 +20,12 @@ def event_study(
     cluster="idname",
 ):
     """
-    Function for Event Study Estimation.
+    Estimate Event Study Model.
 
-    This function allows for the estimation of treatment effects using different estimators.
-    Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
-    Other estimators are in development.
+    This function allows for the estimation of treatment effects using different
+    estimators. Currently, it supports "twfe" for the two-way fixed effects
+    estimator and "did2s" for Gardner's two-step DID2S estimator. Other estimators
+    are in development.
 
     Parameters
     ----------
@@ -41,7 +44,9 @@ def event_study(
     estimator : str
         The estimator to use. Options are "did2s" and "twfe".
     att : bool, optional
-        If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.
+        If True, estimates the average treatment effect on the treated (ATT).
+        If False, estimates the canonical event study design with all leads and
+        lags. Default is True.
 
     Returns
     -------
@@ -50,7 +55,6 @@ def event_study(
 
     Examples
     --------
-
     ```{python}
     import pandas as pd
     from pyfixest.did.estimation import event_study
@@ -124,7 +128,7 @@ def event_study(
         fit._method = "twfe"
 
     else:
-        raise Exception("Estimator not supported")
+        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()
@@ -139,8 +143,8 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    i_ref1: Optional[Union[int, str, List]] = None,
-    i_ref2: Optional[Union[int, str, List]] = None,
+    i_ref1: Optional[Union[int, str, list]] = None,
+    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -160,9 +164,11 @@ def did2s(
     cluster : str
         The name of the cluster variable.
     i_ref1 : int, str, list, optional
-        The reference value(s) for the first variable used with "i()" syntax in the second stage formula. Default is None.
+        The reference value(s) for the first variable used with "i()" syntax in
+        the second stage formula. Default is None.
     i_ref2 : int, str, list, optional
-        The reference value(s) for the second variable used with "i()" syntax in the second stage formula. Default is None.
+        The reference value(s) for the second variable used with "i()" syntax in
+        the second stage formula. Default is None.
 
     Returns
     -------
@@ -171,8 +177,6 @@ def did2s(
 
     Examples
     --------
-
-
     ```{python}
     import pandas as pd
     import numpy as np
@@ -220,7 +224,6 @@ def did2s(
     fit.tidy().head()
     ```
     """
-
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
     assert first_stage[0] == "~", "First stage must start with ~"
@@ -229,7 +232,11 @@ def did2s(
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage or "-1" in second_stage:
         raise ValueError(
-            "The second stage formula should not contain '0' or '-1'. Note that the intercept is dropped automatically due to the presence of fixed effects in the first stage."
+            """
+            The second stage formula should not contain '0' or '-1'. Note that
+            the intercept is dropped automatically due to the presence of fixed
+            effects in the first stage.
+            """
         )
 
     data = data.copy()
@@ -275,7 +282,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, Dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,
@@ -283,7 +290,10 @@ def lpdid(
     xfml=None,
 ) -> pd.DataFrame:
     """
-    Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.
+    Local projections approach to estimation.
+
+    Estimate a Difference-in-Differences / Event Study Model via the Local
+    Projections Approach.
 
     Parameters
     ----------
@@ -298,15 +308,19 @@ def lpdid(
     gname : str
         Unit-specific time of initial treatment.
     vcov : str, dict, optional
-        The type of inference to employ. Defaults to {"CRV1": idname}. Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
+        The type of inference to employ. Defaults to {"CRV1": idname}.
+        Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
     pre_window : int, optional
-        The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data.
+        The number of periods before the treatment to include in the estimation.
+        Default is the minimum relative year in the data.
     post_window : int, optional
-        The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data.
+        The number of periods after the treatment to include in the estimation.
+        Default is the maximum relative year in the data.
     never_treated : int, optional
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
-        If True, estimates the pooled average treatment effect on the treated (ATT). Default is False.
+        If True, estimates the pooled average treatment effect on the treated (ATT).
+        Default is False.
     xfml : str, optional
         Formula for the covariates. Not yet supported.
 
@@ -317,7 +331,6 @@ def lpdid(
 
     Examples
     --------
-
     ```{python}
     import pandas as pd
     from pyfixest.did.estimation import lpdid
@@ -358,7 +371,6 @@ def lpdid(
     fit.tidy()
     ```
     """
-
     FIT = LPDID(
         data=data,
         yname=yname,

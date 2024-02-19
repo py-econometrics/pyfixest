@@ -1,9 +1,8 @@
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Optional
 
 import numba as nb
 import numpy as np
 import pandas as pd
-from numba.extending import overload
 
 
 def demean_model(
@@ -11,31 +10,39 @@ def demean_model(
     X: pd.DataFrame,
     fe: Optional[pd.DataFrame],
     weights: Optional[np.ndarray],
-    lookup_demeaned_data: Dict[str, Any],
+    lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
-) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
+) -> tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
-    Demeans a single regression model via the alterating projections algorithm (see `demean` function). Prior to demeaning, the function checks if some of the variables have already been demeaned and uses values from the cache `lookup_demeaned_data` if possible. If the model has no fixed effects, the function does not demean the data.
+    Demean a regression model.
+
+    Demeans a single regression model via the alternating projections algorithm
+    (see `demean` function). Prior to demeaning, the function checks if some of
+    the variables have already been demeaned and uses values from the cache
+    `lookup_demeaned_data` if possible. If the model has no fixed effects, the
+    function does not demean the data.
 
     Parameters
     ----------
-    Y : pd.DataFrame
+    Y : pandas.DataFrame
         A DataFrame of the dependent variable.
-    X : pd.DataFrame
+    X : pandas.DataFrame
         A DataFrame of the covariates.
-    fe : pd.DataFrame or None
+    fe : pandas.DataFrame or None
         A DataFrame of the fixed effects. None if no fixed effects specified.
-    weights : np.ndarray or None
+    weights : numpy.ndarray or None
         A numpy array of weights. None if no weights.
-    lookup_demeaned_data : Dict[str, Any]
-        A dictionary with keys for each fixed effects combination and potentially values of demeaned data frames.
-        The function checks this dictionary to see if some of the variables have already been demeaned.
+    lookup_demeaned_data : dict[str, Any]
+        A dictionary with keys for each fixed effects combination and potentially
+        values of demeaned data frames. The function checks this dictionary to
+        see if some of the variables have already been demeaned.
     na_index_str : str
-        A string with indices of dropped columns. Used for caching of demeaned variables.
+        A string with indices of dropped columns. Used for caching of demeaned
+        variables.
 
     Returns
     -------
-    Tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
+    tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]
         A tuple of the following elements:
         - Yd : pd.DataFrame
             A DataFrame of the demeaned dependent variable.
@@ -44,7 +51,6 @@ def demean_model(
         - Id : pd.DataFrame or None
             A DataFrame of the demeaned Instruments. None if no IV.
     """
-
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
@@ -53,9 +59,8 @@ def demean_model(
     if YX.dtype != np.dtype("float64"):
         YX = YX.astype(np.float64)
 
-    if weights is not None:
-        if weights.ndim > 1:
-            weights = weights.flatten()
+    if weights is not None and weights.ndim > 1:
+        weights = weights.flatten()
 
     if fe is not None:
         fe = fe.to_numpy()
@@ -79,7 +84,7 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean(var_diff, fe, weights)
-                if success == False:
+                if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
                 YX_demeaned = pd.DataFrame(YX_demean_new)
@@ -98,7 +103,7 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
-            if success == False:
+            if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 
             YX_demeaned = pd.DataFrame(YX_demeaned)
@@ -168,19 +173,21 @@ def demean(
     weights: np.ndarray,
     tol: float = 1e-08,
     maxiter: int = 100_000,
-) -> Tuple[np.ndarray, bool]:
+) -> tuple[np.ndarray, bool]:
     """
-    Workhorse for demeaning an input array `x` based on the specified fixed effects and weights
-    via the alternating projections algorithm.
+    Demean an array.
+
+    Workhorse for demeaning an input array `x` based on the specified fixed
+    effects and weights via the alternating projections algorithm.
 
     Parameters
     ----------
-    x : np.ndarray
+    x : numpy.ndarray
         Input array of shape (n_samples, n_features). Needs to be of type float.
-    flist : np.ndarray
-        Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be
-        converted to integers.
-    weights : np.ndarray
+    flist : numpy.ndarray
+        Array of shape (n_samples, n_factors) specifying the fixed effects.
+        Needs to already be converted to integers.
+    weights : numpy.ndarray
         Array of shape (n_samples,) specifying the weights.
     tol : float, optional
         Tolerance criterion for convergence. Defaults to 1e-08.
@@ -189,7 +196,7 @@ def demean(
 
     Returns
     -------
-    Tuple[np.ndarray, bool]
+    tuple[numpy.ndarray, bool]
         A tuple containing the demeaned array of shape (n_samples, n_features)
         and a boolean indicating whether the algorithm converged successfully.
     """

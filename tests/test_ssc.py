@@ -1,4 +1,5 @@
 import pytest
+
 from pyfixest.utils import get_ssc
 
 

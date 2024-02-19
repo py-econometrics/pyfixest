@@ -1,7 +1,8 @@
 import pandas as pd
-from pyfixest.exceptions import NotImplementedError
+
 from pyfixest.did.did2s import DID2S
 from pyfixest.did.twfe import TWFE
+from pyfixest.exceptions import NotImplementedError
 
 
 def event_study(
@@ -18,8 +19,10 @@ def event_study(
     """
     Estimate a treatment effect using an event study design.
 
-    This function allows for the estimation of treatment effects using different estimators.
-    Currently, it supports "twfe" for the two-way fixed effects estimator and "did2s" for Gardner's two-step DID2S estimator.
+    This function allows for the estimation of treatment effects using different
+    estimators.
+    Currently, it supports "twfe" for the two-way fixed effects estimator and
+    "did2s" for Gardner's two-step DID2S estimator.
     Other estimators are in development.
 
     Parameters
@@ -39,7 +42,9 @@ def event_study(
     estimator : str
         The estimator to use. Options are "did2s" and "twfe".
     att : bool, optional
-        If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True.
+        If True, estimates the average treatment effect on the treated (ATT).
+        If False, estimates the canonical event study design with all leads and lags.
+        Default is True.
 
     Returns
     -------
@@ -47,7 +52,7 @@ def event_study(
         A fitted model object of class [Feols(/reference/Feols.qmd).
 
     Examples
-
+    --------
     ```{python}
     import pandas as pd
 
@@ -108,7 +113,7 @@ def event_study(
         fit._method = "twfe"
 
     else:
-        raise Exception("Estimator not supported")
+        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()

@@ -1,13 +1,14 @@
-import pytest
 import numpy as np
 import pandas as pd
-from pyfixest.estimation import feols
-from pyfixest.exceptions import InvalidReferenceLevelError
+import pytest
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+
+from pyfixest.estimation import feols
+from pyfixest.exceptions import InvalidReferenceLevelError
 
 pandas2ri.activate()
 
@@ -87,7 +88,7 @@ def test_i():
 def test_i_vs_fixest():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
-    # ---------------------------------------------------------------------------------------#
+    # ------------------------------------------------------------------------ #
     # no fixed effects
 
     # no references
@@ -122,7 +123,7 @@ def test_i_vs_fixest():
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
 
-    # ---------------------------------------------------------------------------------------#
+    # ------------------------------------------------------------------------ #
     # with fixed effects
 
     # no references
@@ -162,7 +163,7 @@ def test_i_interacted_fixest():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(df_het.shape[0])
 
-    # ---------------------------------------------------------------------------------------#
+    # ------------------------------------------------------------------------ #
     # no fixed effects
 
     # no references
