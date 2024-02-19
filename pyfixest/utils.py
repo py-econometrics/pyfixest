@@ -223,3 +223,35 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     # df["weights"].iloc[]
 
     return df
+
+def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
+    """
+    Simultaneous Critical Values.
+
+    Obtain critical values for simultaneous inference on linear model parameters
+    using the Multiplier bootstrap.
+
+    Parameters
+    ----------
+    C: numpy.ndarray
+        Covariance matrix. Symmetric, and contains as many rows/columns
+        as parameters of interest.
+    S: int
+        Number of replications
+    alpha: float
+        Significance level. Defaults to 0.05
+
+    Returns
+    -------
+    float
+        Critical value, larger than 1.96
+        (which is the crit-value for pointwise intervals)
+    """
+
+    def msqrt(C: np.ndarray) -> np.ndarray:
+        eig_vals, eig_vecs = np.linalg.eigh(C)
+        return eig_vecs @ np.diag(np.sqrt(eig_vals)) @ np.linalg.inv(eig_vecs)
+
+    p = C.shape[0]
+    tmaxs = np.max(np.abs(msqrt(C) @ np.random.randn(p, S).reshape(p, S)), axis=0)
+    return np.quantile(tmaxs, 1 - alpha)
