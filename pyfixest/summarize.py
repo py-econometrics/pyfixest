@@ -16,7 +16,7 @@ def etable(
     type: Optional[str] = "md",
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
-    custom_statistics: Optional[dict] = None,
+    custom_statistics: Optional[dict] = dict(),
 ) -> Union[pd.DataFrame, str]:
     """
     Create an esttab-like table from a list of models.
@@ -39,8 +39,7 @@ def etable(
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         Newline is not support for LaTeX output.
     custom_statistics: dict, optional
-        A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
-        "b", "se", "t", or "p" are reserved.
+        A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
 
     Returns
     -------
