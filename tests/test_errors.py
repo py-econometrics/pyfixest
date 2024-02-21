@@ -225,3 +225,43 @@ def test_errors_etable():
 
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
+
+    with pytest.raises(ValueError):
+        etable([fit1, fit2], coef_fmt="b (se) \n t [p]", type="tex")
+
+    with pytest.raises(ValueError):
+        etable(
+            models=[fit1, fit2],
+            custom_statistics={
+                "conf_int_lb": [
+                    fit2._conf_int[0]
+                ],  # length of customized statistics not equal to the number of models
+                "conf_int_ub": [fit2._conf_int[1]],
+            },
+            coef_fmt="b [conf_int_lb, conf_int_ub]",
+        )
+
+    with pytest.raises(ValueError):
+        etable(
+            models=[fit1, fit2],
+            custom_statistics={
+                "conf_int_lb": [
+                    fit2._conf_int[0],
+                    fit2._conf_int[0],
+                ],  # length of customized statistics not equal to length of model
+                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+            },
+            coef_fmt="b [conf_int_lb, conf_int_ub]",
+        )
+
+    with pytest.raises(ValueError):
+        etable(
+            models=[fit1, fit2],
+            custom_statistics={
+                "b": [
+                    fit2._conf_int[0],
+                    fit2._conf_int[0],
+                ],  # preserved keyword cannot be used as a custom statistic
+            },
+            coef_fmt="b [se]",
+        )
