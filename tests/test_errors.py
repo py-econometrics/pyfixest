@@ -246,7 +246,7 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_statistics={
                 "conf_int_lb": [
-                    fit2._conf_int[0],
+                    [0.1, 0.1, 0.1],
                     fit2._conf_int[0],
                 ],  # length of customized statistics not equal to length of model
                 "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
