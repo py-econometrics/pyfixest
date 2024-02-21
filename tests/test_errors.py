@@ -229,7 +229,7 @@ def test_errors_etable():
     with pytest.raises(ValueError):
         etable([fit1, fit2], coef_fmt="b (se) \n t [p]", type="tex")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
             custom_statistics={
@@ -241,7 +241,7 @@ def test_errors_etable():
             coef_fmt="b [conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
             custom_statistics={

@@ -153,10 +153,9 @@ def etable(
             elif element == "p":
                 model[coef_fmt_title] += model["Pr(>|t|)"].astype(str)
             elif element in custom_statistics:
-                if len(custom_statistics[key][i]) != len(model["Estimate"]):
-                    raise ValueError(
-                        f"Custom_statistics {key} has unequal length to the number of coefficients in model {i}"
-                    )
+                assert len(custom_statistics[key][i]) != len(
+                    model["Estimate"]
+                ), f"Custom_statistics {key} has unequal length to the number of coefficients in model {i}"
                 model[coef_fmt_title] += pd.Series(
                     np.round(custom_statistics[element][i], digits)
                 ).astype(str)
