@@ -32,5 +32,13 @@ def test_summary():
     etable([fit1, fit2], signif_code=[0.01, 0.05, 0.1])
     etable([fit1, fit2], signif_code=None)
 
-    etable([fit1, fit2], coef_fmt="t (p)")
-    etable([fit1, fit2], coef_fmt="t (p) \n t (t)")
+    etable([fit1, fit2], coef_fmt="b (se) \n t [p]")
+
+    etable(
+        models=[fit1, fit2],
+        custom_statistics={
+            "conf_int_lb": [fit1._conf_int[0], fit2._conf_int[0]],
+            "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+        },
+        coef_fmt="b [conf_int_lb, conf_int_ub]",
+    )
