@@ -16,6 +16,7 @@ def etable(
     type: Optional[str] = "md",
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
+    custom_statistics: Optional[dict] = None,
 ) -> Union[pd.DataFrame, str]:
     """
     Create an esttab-like table from a list of models.
@@ -37,6 +38,9 @@ def etable(
         p-value (p). Default is `"b (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         Newline is not support for LaTeX output.
+    custom_statistics: dict, optional
+        A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
+        "b", "se", "t", or "p" are reserved.
 
     Returns
     -------
@@ -55,6 +59,16 @@ def etable(
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
     models = _post_processing_input_checks(models)
+
+    if custom_statistics:
+        assert isinstance(custom_statistics, dict), "custom_statistics must be a dict"
+        for key in custom_statistics:
+            assert isinstance(
+                custom_statistics[key], list
+            ), "custom_statistics values must be a list"
+            assert len(custom_statistics[key]) == len(
+                models
+            ), f"custom_statistics {key} must have the same number as models"
 
     assert digits >= 0, "digits must be a positive integer"
     assert type in [
@@ -111,7 +125,7 @@ def etable(
     colnames.reverse()
     nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
 
-    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt)
+    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_statistics)
 
     etable_list = []
     for i, model in enumerate(models):
@@ -139,8 +153,16 @@ def etable(
                 model[coef_fmt_title] += model["t value"].astype(str)
             elif element == "p":
                 model[coef_fmt_title] += model["Pr(>|t|)"].astype(str)
+            elif element in custom_statistics:
+                if len(custom_statistics[key][i]) != len(model["Estimate"]):
+                    raise ValueError(
+                        f"Custom_statistics {key} has unequal length to the number of coefficients in model {i}"
+                    )
+                model[coef_fmt_title] += pd.Series(
+                    np.round(custom_statistics[element][i], digits)
+                ).astype(str)
             elif element == "\n" and type == "tex":
-                raise ValueError("Newline is not supported for LaTeX output.")
+                raise ValueError("Newline is currently not supported for LaTeX output.")
             else:
                 model[coef_fmt_title] += element
         model[coef_fmt_title] = pd.Categorical(model[coef_fmt_title])
@@ -351,27 +373,42 @@ def _tabulate_etable(df, n_models, n_fixef):
     return formatted_table
 
 
-def _parse_coef_fmt(coef_fmt: str):
+def _parse_coef_fmt(coef_fmt: str, custom_statistics: Optional[dict] = None):
     """
     Parse the coef_fmt string.
 
     Parameters
     ----------
-    - coef_fmt (str): The coef_fmt string.
+    coef_fmt: str
+        The coef_fmt string.
+    custom_statistics: dict, optional
+        A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
+        If you provide "b", "se", "t", or "p" as a key, it will overwrite the default
+        values.
 
     Returns
     -------
-    - coef_fmt_elements (str): The parsed coef_fmt string.
-    - coef_fmt_title (str): The title for the coef_fmt string.
+    coef_fmt_elements: str
+        The parsed coef_fmt string.
+    coef_fmt_title: str
+        The title for the coef_fmt string.
     """
-    allowed_elements = ["b", "se", "t", "p", " ", r"\(", r"\)", r"\[", r"\]", "\n"]
-    coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     title_map = {
         "b": "Coefficient",
         "se": "Std. Error",
         "t": "t-stats",
         "p": "p-value",
     }
+
+    allowed_elements = ["b", "se", "t", "p", " ", "\n", r"\(", r"\)", r"\[", r"\]", ","]
+    if custom_statistics:
+        custom_elements = list(custom_statistics.keys())
+        if any([x in ["b", "se", "t", "p"] for x in custom_elements]):
+            raise ValueError(
+                "You cannot use 'b', 'se', 't', or 'p' as a key in custom_statistics."
+            )
+        allowed_elements += list(custom_statistics.keys())
+    coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
 
     return coef_fmt_elements, coef_fmt_title
