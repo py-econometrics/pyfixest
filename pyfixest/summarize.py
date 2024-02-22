@@ -45,11 +45,9 @@ def etable(
         pattern) or a list (multiple patterns). Default is keeping all
         coefficients.
         You should use regular expressions to select coefficients.
-        [
             "age",            # would keep all coefficients containing age
             r"^tr",           # would keep all coefficients starting with tr
-            r"\\d$",           # would keep all coefficients ending with number
-        ]
+            r"\\d$",          # would keep all coefficients ending with number
         Output will be in the order of the patterns.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
