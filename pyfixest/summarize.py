@@ -63,8 +63,6 @@ def etable(
         Whether to use scientific notation. Default is True.
     scientific_notation_threshold: int, optional
         The threshold for using scientific notation. Default is 10_000.
-    integer: bool, optional
-        Whether to format the number as an integer. Default is False.
 
     Returns
     -------
@@ -508,7 +506,7 @@ def _number_formatter(x: float, **kwargs) -> str:
         x += ".0"  # Add a decimal point if it's an integer
     _int, _float = str(x).split(".")
     _float = _float.ljust(digits, "0")
-    return _int if integer else f"{_int}.{_float}"
+    return _int if digits == 0 else f"{_int}.{_float}"
 
 
 def _order_coefs(res, keep, drop):
