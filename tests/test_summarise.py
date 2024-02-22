@@ -73,8 +73,10 @@ def test_summary():
         thousands_sep=True,
     )
 
-    # Test coefficient pattern
+    # Test select / order coefficients
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]")
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep=["X1", "cep"])
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", drop=[r"\d$"])
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep=[r"\d"], drop=["f"])
+    etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep="X")
+    etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", drop=r"\d$")

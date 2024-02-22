@@ -16,8 +16,8 @@ def etable(
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
     custom_stats: Optional[dict] = dict(),
-    keep: Optional[list] = [],
-    drop: Optional[list] = [],
+    keep: Optional[Union[list, str]] = [],
+    drop: Optional[Union[list, str]] = [],
     **kwargs,
 ) -> Union[pd.DataFrame, str]:
     """
@@ -40,9 +40,10 @@ def etable(
         Newline is not support for LaTeX output.
     custom_stats: dict, optional
         A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
-    keep: list, optional
-        The pattern for retaining coefficient names.
-        Default is [], keeping all coefficients.
+    keep: str or list of str, optional
+        The pattern for retaining coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Default is keeping all
+        coefficients.
         You should use regular expressions to select coefficients.
         [
             "age",            # would keep all coefficients containing age
@@ -50,11 +51,11 @@ def etable(
             r"\\d$",           # would keep all coefficients ending with number
         ]
         Output will be in the order of the patterns.
-    drop: list, optional
-        The pattern for excluding coefficient names.
-        Default if [], keeping all coefficients. Grammar is the same as for keep.
-        keep and drop can be used simultaneously, as long as you know what you
-        are doing.
+    drop: str or list of str, optional
+        The pattern for excluding coefficient names. You can pass a string (one
+        pattern )or a list (multiple patterns). Syntax is the same as for `keep`.
+        Default is keeping all coefficients. Parameter `keep` and `drop` can be
+        used simultaneously.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -206,7 +207,11 @@ def etable(
 
     res = pd.concat(etable_list, axis=1)
     if keep or drop:
-        res = _order_coefs(res, keep, drop)
+        if isinstance(keep, str):
+            keep = [keep]
+        if isinstance(drop, str):
+            drop = [drop]
+        res = _select_order_coefs(res, keep, drop)
     res.reset_index(inplace=True)
     # a lot of work to replace the NaNs with empty strings
     # reason: "" not a level of the category, might lead to a pandas error
@@ -509,9 +514,9 @@ def _number_formatter(x: float, **kwargs) -> str:
     return _int if digits == 0 else f"{_int}.{_float}"
 
 
-def _order_coefs(res, keep, drop):
+def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
     """
-    Order the coefficients based on the pattern.
+    Select and order the coefficients based on the pattern.
 
     Parameters
     ----------
