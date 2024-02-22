@@ -42,8 +42,7 @@ def etable(
         A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
     keep: str or list of str, optional
         The pattern for retaining coefficient names. You can pass a string (one
-        pattern) or a list (multiple patterns). Default is keeping all
-        coefficients.
+        pattern) or a list (multiple patterns). Default is keeping all coefficients.
         You should use regular expressions to select coefficients.
             "age",            # would keep all coefficients containing age
             r"^tr",           # would keep all coefficients starting with tr
@@ -51,7 +50,7 @@ def etable(
         Output will be in the order of the patterns.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
-        pattern )or a list (multiple patterns). Syntax is the same as for `keep`.
+        pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
     digits: int
