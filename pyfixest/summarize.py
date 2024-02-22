@@ -12,11 +12,13 @@ from pyfixest.fepois import Fepois
 
 def etable(
     models: Union[Feols, Fepois, Feiv, list],
-    digits: Optional[int] = 3,
     type: Optional[str] = "md",
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
-    custom_statistics: Optional[dict] = dict(),
+    custom_stats: Optional[dict] = dict(),
+    keep: Optional[Union[list, str]] = [],
+    drop: Optional[Union[list, str]] = [],
+    **kwargs,
 ) -> Union[pd.DataFrame, str]:
     """
     Create an esttab-like table from a list of models.
@@ -25,8 +27,6 @@ def etable(
     ----------
     models : list
         A list of models of type Feols, Feiv, Fepois.
-    digits : int
-        Number of digits to round to.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         or "tex" for LaTeX table. Default is "md".
@@ -38,8 +38,29 @@ def etable(
         p-value (p). Default is `"b (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         Newline is not support for LaTeX output.
-    custom_statistics: dict, optional
+    custom_stats: dict, optional
         A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
+    keep: str or list of str, optional
+        The pattern for retaining coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Default is keeping all coefficients.
+        You should use regular expressions to select coefficients.
+            "age",            # would keep all coefficients containing age
+            r"^tr",           # would keep all coefficients starting with tr
+            r"\\d$",          # would keep all coefficients ending with number
+        Output will be in the order of the patterns.
+    drop: str or list of str, optional
+        The pattern for excluding coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+        Default is keeping all coefficients. Parameter `keep` and `drop` can be
+        used simultaneously.
+    digits: int
+        The number of digits to round to.
+    thousands_sep: bool, optional
+        The thousands separator. Default is False.
+    scientific_notation: bool, optional
+        Whether to use scientific notation. Default is True.
+    scientific_notation_threshold: int, optional
+        The threshold for using scientific notation. Default is 10_000.
 
     Returns
     -------
@@ -59,17 +80,16 @@ def etable(
         ), "signif_code must be in increasing order"
     models = _post_processing_input_checks(models)
 
-    if custom_statistics:
-        assert isinstance(custom_statistics, dict), "custom_statistics must be a dict"
-        for key in custom_statistics:
+    if custom_stats:
+        assert isinstance(custom_stats, dict), "custom_stats must be a dict"
+        for key in custom_stats:
             assert isinstance(
-                custom_statistics[key], list
-            ), "custom_statistics values must be a list"
-            assert len(custom_statistics[key]) == len(
+                custom_stats[key], list
+            ), "custom_stats values must be a list"
+            assert len(custom_stats[key]) == len(
                 models
-            ), f"custom_statistics {key} must have the same number as models"
+            ), f"custom_stats {key} must have the same number as models"
 
-    assert digits >= 0, "digits must be a positive integer"
     assert type in [
         "df",
         "tex",
@@ -89,9 +109,9 @@ def etable(
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
-        nobs_list.append(model._N)
+        nobs_list.append(_number_formatter(model._N, integer=True, **kwargs))
         if model._method == "feols" and not model._is_iv and not model._has_weights:
-            r2_list.append(np.round(model._r2, digits))
+            r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
             r2_list.append("-")
 
@@ -124,11 +144,13 @@ def etable(
     colnames.reverse()
     nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
 
-    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_statistics)
+    coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
 
     etable_list = []
     for i, model in enumerate(models):
-        model = model.tidy().reset_index().round(digits)
+        model = (
+            model.tidy().reset_index()
+        )  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
         model["stars"] = (
             np.where(
                 model["Pr(>|t|)"] < signif_code[0],
@@ -145,20 +167,29 @@ def etable(
         model[coef_fmt_title] = ""
         for element in coef_fmt_elements:
             if element == "b":
-                model[coef_fmt_title] += model["Estimate"].astype(str) + model["stars"]
+                model[coef_fmt_title] += (
+                    model["Estimate"].apply(_number_formatter, **kwargs)
+                    + model["stars"]
+                )
             elif element == "se":
-                model[coef_fmt_title] += model["Std. Error"].astype(str)
+                model[coef_fmt_title] += model["Std. Error"].apply(
+                    _number_formatter, **kwargs
+                )
             elif element == "t":
-                model[coef_fmt_title] += model["t value"].astype(str)
+                model[coef_fmt_title] += model["t value"].apply(
+                    _number_formatter, **kwargs
+                )
             elif element == "p":
-                model[coef_fmt_title] += model["Pr(>|t|)"].astype(str)
-            elif element in custom_statistics:
-                assert len(custom_statistics[element][i]) == len(
+                model[coef_fmt_title] += model["Pr(>|t|)"].apply(
+                    _number_formatter, **kwargs
+                )
+            elif element in custom_stats:
+                assert len(custom_stats[element][i]) == len(
                     model["Estimate"]
-                ), f"Custom_statistics {element} has unequal length to the number of coefficients in model {i}"
-                model[coef_fmt_title] += pd.Series(
-                    np.round(custom_statistics[element][i], digits)
-                ).astype(str)
+                ), f"custom_stats {element} has unequal length to the number of coefficients in model {i}"
+                model[coef_fmt_title] += pd.Series(custom_stats[element][i]).apply(
+                    _number_formatter, **kwargs
+                )
             elif element == "\n" and type == "tex":
                 raise ValueError("Newline is currently not supported for LaTeX output.")
             else:
@@ -171,7 +202,14 @@ def etable(
         model = model.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model)
 
-    res = pd.concat(etable_list, axis=1).reset_index()
+    res = pd.concat(etable_list, axis=1)
+    if keep or drop:
+        if isinstance(keep, str):
+            keep = [keep]
+        if isinstance(drop, str):
+            drop = [drop]
+        res = _select_order_coefs(res, keep, drop)
+    res.reset_index(inplace=True)
     # a lot of work to replace the NaNs with empty strings
     # reason: "" not a level of the category, might lead to a pandas error
     for column in res.columns:
@@ -371,7 +409,7 @@ def _tabulate_etable(df, n_models, n_fixef):
     return formatted_table
 
 
-def _parse_coef_fmt(coef_fmt: str, custom_statistics: Optional[dict] = None):
+def _parse_coef_fmt(coef_fmt: str, custom_stats: Optional[dict] = None):
     """
     Parse the coef_fmt string.
 
@@ -379,7 +417,7 @@ def _parse_coef_fmt(coef_fmt: str, custom_statistics: Optional[dict] = None):
     ----------
     coef_fmt: str
         The coef_fmt string.
-    custom_statistics: dict, optional
+    custom_stats: dict, optional
         A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
         If you provide "b", "se", "t", or "p" as a key, it will overwrite the default
         values.
@@ -391,6 +429,12 @@ def _parse_coef_fmt(coef_fmt: str, custom_statistics: Optional[dict] = None):
     coef_fmt_title: str
         The title for the coef_fmt string.
     """
+    custom_elements = list(custom_stats.keys())
+    if any([x in ["b", "se", "t", "p"] for x in custom_elements]):
+        raise ValueError(
+            "You cannot use 'b', 'se', 't', or 'p' as a key in custom_stats."
+        )
+
     title_map = {
         "b": "Coefficient",
         "se": "Std. Error",
@@ -398,15 +442,111 @@ def _parse_coef_fmt(coef_fmt: str, custom_statistics: Optional[dict] = None):
         "p": "p-value",
     }
 
-    allowed_elements = ["b", "se", "t", "p", " ", "\n", r"\(", r"\)", r"\[", r"\]", ","]
-    if custom_statistics:
-        custom_elements = list(custom_statistics.keys())
-        if any([x in ["b", "se", "t", "p"] for x in custom_elements]):
-            raise ValueError(
-                "You cannot use 'b', 'se', 't', or 'p' as a key in custom_statistics."
-            )
-        allowed_elements += list(custom_statistics.keys())
+    allowed_elements = [
+        "b",
+        "se",
+        "t",
+        "p",
+        " ",
+        "\n",
+        r"\(",
+        r"\)",
+        r"\[",
+        r"\]",
+        ",",
+    ] + custom_elements
+    allowed_elements.sort(key=len, reverse=True)
+
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
     coef_fmt_title = "".join([title_map.get(x, x) for x in coef_fmt_elements])
 
     return coef_fmt_elements, coef_fmt_title
+
+
+def _number_formatter(x: float, **kwargs) -> str:
+    """
+    Format a number.
+
+    Parameters
+    ----------
+    x: float
+        The series to be formatted.
+    digits: int
+        The number of digits to round to.
+    thousands_sep: bool, optional
+        The thousands separator. Default is False.
+    scientific_notation: bool, optional
+        Whether to use scientific notation. Default is True.
+    scientific_notation_threshold: int, optional
+        The threshold for using scientific notation. Default is 10_000.
+    integer: bool, optional
+        Whether to format the number as an integer. Default is False.
+
+    Returns
+    -------
+    formatted_x: pd.Series
+        The formatted series.
+    """
+    digits = kwargs.get("digits", 3)
+    thousands_sep = kwargs.get("thousands_sep", False)
+    scientific_notation = kwargs.get("scientific_notation", True)
+    scientific_notation_threshold = kwargs.get("scientific_notation_threshold", 10_000)
+    integer = kwargs.get("integer", False)
+
+    assert digits >= 0, "digits must be a positive integer"
+
+    if integer:
+        digits = 0
+    x = np.round(x, digits)
+
+    if scientific_notation and x > scientific_notation_threshold:
+        return f"%.{digits}E" % x
+
+    x = f"{x:,}" if thousands_sep else str(x)
+
+    if "." not in x:
+        x += ".0"  # Add a decimal point if it's an integer
+    _int, _float = str(x).split(".")
+    _float = _float.ljust(digits, "0")
+    return _int if digits == 0 else f"{_int}.{_float}"
+
+
+def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
+    """
+    Select and order the coefficients based on the pattern.
+
+    Parameters
+    ----------
+    res: pd.DataFrame
+        The DataFrame to be ordered.
+    keep: list
+        Refer to the `keep` parameter in the `etable` function.
+    drop: list
+        Refer to the `drop` parameter in the `etable` function.
+
+    Returns
+    -------
+    res: pd.DataFrame
+        The ordered DataFrame.
+    """
+    coefs = list(res.index)
+    coef_order = [] if keep else coefs[:]  # Store matched coefs
+    for pattern in keep:
+        _coefs = []  # Store remaining coefs
+        for coef in coefs:
+            if re.findall(pattern, coef):
+                coef_order.append(coef)
+            else:
+                _coefs.append(coef)
+        coefs = _coefs
+
+    for pattern in drop:
+        _coefs = []
+        for (
+            coef
+        ) in coef_order:  # Remove previously matched coefs that match the drop pattern
+            if not re.findall(pattern, coef):
+                _coefs.append(coef)
+        coef_order = _coefs
+
+    return res.loc[coef_order]
