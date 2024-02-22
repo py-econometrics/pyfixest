@@ -227,24 +227,24 @@ def test_errors_etable():
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
     with pytest.raises(ValueError):
-        etable([fit1, fit2], coef_fmt="b (se) \n t [p]", type="tex")
+        etable([fit1, fit2], coef_fmt="b (se)\nt [p]", type="tex")
 
     with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
-            custom_statistics={
+            custom_stats={
                 "conf_int_lb": [
                     fit2._conf_int[0]
                 ],  # length of customized statistics not equal to the number of models
                 "conf_int_ub": [fit2._conf_int[1]],
             },
-            coef_fmt="b [conf_int_lb, conf_int_ub]",
+            coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
     with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
-            custom_statistics={
+            custom_stats={
                 "conf_int_lb": [
                     [0.1, 0.1, 0.1],
                     fit2._conf_int[0],
@@ -257,7 +257,7 @@ def test_errors_etable():
     with pytest.raises(ValueError):
         etable(
             models=[fit1, fit2],
-            custom_statistics={
+            custom_stats={
                 "b": [
                     fit2._conf_int[0],
                     fit2._conf_int[0],
