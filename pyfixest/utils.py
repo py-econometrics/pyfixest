@@ -226,6 +226,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     return df
 
+
 def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
     """
     Simultaneous Critical Values.

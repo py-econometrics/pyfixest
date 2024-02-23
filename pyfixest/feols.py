@@ -1352,7 +1352,7 @@ class Feols:
         keep: Optional[Union[list, str]] = [],
         drop: Optional[Union[list, str]] = [],
         joint_cis: bool = False,
-        nboot: int = 10_000
+        nboot: int = 10_000,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -1424,8 +1424,12 @@ class Feols:
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
 
-        ub = pd.Series(self._beta_hat[joint_indices] + crit_val * self._se[joint_indices])
-        lb = pd.Series(self._beta_hat[joint_indices] - crit_val * self._se[joint_indices])
+        ub = pd.Series(
+            self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
+        )
+        lb = pd.Series(
+            self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
+        )
 
         df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
         df.index = coefnames
