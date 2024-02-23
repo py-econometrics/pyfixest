@@ -16,7 +16,7 @@ from pyfixest.exceptions import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils import _select_order_coefs, get_ssc, simultaneous_crit_val
 
 
 class Feols:
@@ -463,7 +463,6 @@ class Feols:
                     k_instruments = _Z.shape[1]
                     meat = np.zeros((k_instruments, k_instruments))
 
-                    # import pdb; pdb.set_trace()
                     # deviance uniquely for Poisson
                     if hasattr(self, "deviance"):
                         weighted_uhat = _weights.flatten() * _u_hat.flatten()
@@ -1296,8 +1295,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5 %": _conf_int[0],
-                "97.5 %": _conf_int[1],
+                "2.5%": _conf_int[0],
+                "97.5%": _conf_int[1],
             }
         )
 
@@ -1348,18 +1347,65 @@ class Feols:
         return self.tidy()["Pr(>|t|)"]
 
     def confint(
-        self, joint_indices: np.array = None, nboot: int = 10_000, alpha: float = 0.05
+        self,
+        alpha: float = 0.05,
+        keep: Optional[Union[list, str]] = [],
+        drop: Optional[Union[list, str]] = [],
+        joint_cis: bool = False,
+        nboot: int = 10_000
     ) -> pd.DataFrame:
-        """
+        r"""
         Fitted model confidence intervals.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for confidence intervals. Defaults to 0.05.
+            keep: str or list of str, optional
+        joint_cis : bool, optional
+            Whether to compute simultaneous confidence interval for joint null
+            of parameters selected by `keep` and `drop`. Defaults to False. See
+            https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
+            Remark 4.4.1 for details.
+        keep: str or list of str, optional
+            The pattern for retaining coefficient names. You can pass a string (one
+            pattern) or a list (multiple patterns). Default is keeping all coefficients.
+            You should use regular expressions to select coefficients.
+                "age",            # would keep all coefficients containing age
+                r"^tr",           # would keep all coefficients starting with tr
+                r"\\d$",          # would keep all coefficients ending with number
+            Output will be in the order of the patterns.
+        drop: str or list of str, optional
+            The pattern for excluding coefficient names. You can pass a string (one
+            pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+            Default is keeping all coefficients. Parameter `keep` and `drop` can be
+            used simultaneously.
+        nboot : int, optional
+            The number of bootstrap iterations to run for joint confidence intervals.
+            Defaults to 10_000. Only used if `joint_cis` is True.
 
         Returns
         -------
         pd.DataFrame
-            A pd.DataFrame with confidence intervals of the estimated regression model.
-        Simultaneous confidence interval for joint null.
+            A pd.DataFrame with confidence intervals of the estimated regression model
+            for the selected coefficients.
         """
+
+        if keep or drop:
+            if isinstance(keep, str):
+                keep = [keep]
+            if isinstance(drop, str):
+                drop = [drop]
+            res = _select_order_coefs(self.tidy(), keep, drop)
+            coefnames = res.index.tolist()
+        else:
+            coefnames = self._coefnames
+
+        joint_indices = [i for i, x in enumerate(self._coefnames) if x in coefnames]
         if not joint_indices:
+            raise ValueError("No coefficients match the keep/drop patterns.")
+
+        if not joint_cis:
 
             if self._vcov_type in ["iid", "hetero"]:
                 df = self._N - self._k
@@ -1369,31 +1415,21 @@ class Feols:
 
             # use t-dist for linear models, but normal for non-linear models
             if self._method == "feols":
-                crit = np.abs(t.ppf(alpha / 2, df))
+                crit_val = np.abs(t.ppf(alpha / 2, df))
             else:
-                crit = np.abs(norm.ppf(alpha / 2))
-
-            ub = pd.Series(self._beta_hat + crit * self._se)
-            lb = pd.Series(self._beta_hat - crit * self._se)
-
+                crit_val = np.abs(norm.ppf(alpha / 2))
         else:
-            C_coefs = (
-                1
-                / self._se[joint_indices]
-                @ self._vcov[joint_indices, joint_indices]
-                @ 1
-                / self._se[joint_indices]
-            )
-            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
-            ub = pd.Series(
-                self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
-            )
-            lb = pd.Series(
-                self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
-            )
 
-        df = pd.DataFrame({f"{alpha / 2} %": lb, f"{1-alpha / 2}%": ub})
-        df.index = self._coefnames
+            D_inv = 1 / self._se[joint_indices]
+            V = self._vcov[np.ix_(joint_indices, joint_indices)]
+            C_coefs = (D_inv * V).T * D_inv
+            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
+
+        ub = pd.Series(self._beta_hat[joint_indices] + crit_val * self._se[joint_indices])
+        lb = pd.Series(self._beta_hat[joint_indices] - crit_val * self._se[joint_indices])
+
+        df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
+        df.index = coefnames
 
         return df
 
