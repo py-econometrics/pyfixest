@@ -4,10 +4,9 @@ import pandas as pandas
 from pyfixest.estimation import feols
 from pyfixest.utils import get_data
 
+
 def test_confint():
-
-    """Test the confint method of the feols class"""
-
+    """Test the confint method of the feols class."""
     data = get_data()
     fit = feols("Y ~ X1 + X2 + C(f1)", data=data)
     confint = fit.confint()

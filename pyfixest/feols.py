@@ -1390,7 +1390,6 @@ class Feols:
             A pd.DataFrame with confidence intervals of the estimated regression model
             for the selected coefficients.
         """
-
         if keep or drop:
             if isinstance(keep, str):
                 keep = [keep]
