@@ -8,6 +8,7 @@ from tabulate import tabulate
 from pyfixest.feiv import Feiv
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
+from pyfixest.utils import _select_order_coefs
 
 
 def etable(
@@ -509,44 +510,3 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
-
-
-def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
-    """
-    Select and order the coefficients based on the pattern.
-
-    Parameters
-    ----------
-    res: pd.DataFrame
-        The DataFrame to be ordered.
-    keep: list
-        Refer to the `keep` parameter in the `etable` function.
-    drop: list
-        Refer to the `drop` parameter in the `etable` function.
-
-    Returns
-    -------
-    res: pd.DataFrame
-        The ordered DataFrame.
-    """
-    coefs = list(res.index)
-    coef_order = [] if keep else coefs[:]  # Store matched coefs
-    for pattern in keep:
-        _coefs = []  # Store remaining coefs
-        for coef in coefs:
-            if re.findall(pattern, coef):
-                coef_order.append(coef)
-            else:
-                _coefs.append(coef)
-        coefs = _coefs
-
-    for pattern in drop:
-        _coefs = []
-        for (
-            coef
-        ) in coef_order:  # Remove previously matched coefs that match the drop pattern
-            if not re.findall(pattern, coef):
-                _coefs.append(coef)
-        coef_order = _coefs
-
-    return res.loc[coef_order]
