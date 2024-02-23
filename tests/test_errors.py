@@ -265,3 +265,11 @@ def test_errors_etable():
             },
             coef_fmt="b [se]",
         )
+
+
+def test_errors_confint():
+
+    data = get_data()
+    fit = feols("Y ~ X1", data=data)
+    with pytest.raises(ValueError):
+        fit.confint(alpha=0.5, keep = ["abababa"])
