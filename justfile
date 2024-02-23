@@ -1,4 +1,5 @@
-set shell := ["powershell.exe", "-c"]
+# uncomment for windows
+# set shell := ["powershell.exe", "-c"]
 
 # docs: justfile docs: https://just.systems/man/en/
 default:
