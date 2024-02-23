@@ -1,3 +1,5 @@
+set shell := ["powershell.exe", "-c"]
+
 # docs: justfile docs: https://just.systems/man/en/
 default:
 	just --list --unsorted
@@ -48,3 +50,6 @@ preview:
 # Clean docs build
 docs-clean:
 	rm -rf docs/_build docs/api/api_card
+
+lint:
+	poetry run pre-commit run ruff --all-files
