@@ -5,61 +5,6 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
-
-
-
-def cluster_dgp(k):
-
-    """
-    Parameters
-    ----------
-    k : int
-        Number of populations
-    """
-
-    # number of samples per population
-    N = np.empty(k, dtype=int)
-    # number of clusters per population
-    m = np.empty(k, dtype=int)
-    # cluster assignment per population
-    cluster = []
-    for i in range(k):
-        N[i] = np.random.randint(10000, 20000)
-        m[i] = np.random.randint(20, 100)
-        # split N into m clusters
-        cluster.append(np.sort(np.random.choice(m[i], N[i],  replace=True)))
-
-    # assign treatment
-    treatment = []
-    for i in range(k):
-    #    # cluster randomization
-        treatment_assignment = np.empty(N[i], dtype=int)
-        unique_clusters = np.unique(cluster[i])
-        for j in unique_clusters:
-            idx = np.where(cluster[i] == j)
-            treatment_assignment[idx] = (np.repeat(np.random.choice([0, 1], 1, replace=True), np.sum(cluster[i] == j)))
-
-        treatment.append(treatment_assignment)
-        #cluster_treatment = np.random.choice([0, 1], unique_clusters, replace=True)
-        #treatment.append(np.random.choice(2, N[i],  replace=True))
-
-    Y0 = []
-    Y1 = []
-    for i in range(k):
-        Y0.append(np.random.normal(0, 1, N[i]))
-        Y1.append(np.random.normal(0, 1, N[i]) + 0.5*treatment[i])
-
-    # collect all of it in a dataframe
-    df = pd.DataFrame()
-    for i in range(k):
-        df = pd.concat([df, pd.DataFrame({'cluster': cluster[i], 'D': treatment[i], 'Y0': Y0[i], 'Y1': Y1[i], 'population':i})], axis = 0)
-
-    df["Y"] = df["Y0"] + df["D"]*(df["Y1"] - df["Y0"])
-
-    return df
-
-
-
 def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk = 1, splits = 4):
     """
     Compute the CCV cluster robust variance estimator following Abadie, Athey, Imbens, Wooldridge (2022).
