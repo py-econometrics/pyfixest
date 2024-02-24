@@ -1,11 +1,12 @@
-from pyfixest.estimation import feols
+import numpy as np
+import pandas as pd
 from scipy.stats import t
 from tqdm import tqdm
 
-import pandas as pd
-import numpy as np
+from pyfixest.estimation import feols
 
-def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk = 1, n_splits = 4):
+
+def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_splits=4):
     """
     Compute the CCV cluster robust variance estimator following Abadie, Athey, Imbens, Wooldridge (2022).
     The code is based on a Python implementation of the authours published under CC0 1.0 Deed and available at
@@ -50,11 +51,17 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     assert isinstance(n_splits, int)
 
     rng = np.random.default_rng(seed)
-    fml =  f"{depvar} ~ {treatment}" if xfml is None else f"{depvar} ~ {treatment} + {xfml}"
+    fml = (
+        f"{depvar} ~ {treatment}"
+        if xfml is None
+        else f"{depvar} ~ {treatment} + {xfml}"
+    )
 
-    fit_full = feols(fml, data, vcov = {"CRV1": cluster})
+    fit_full = feols(fml, data, vcov={"CRV1": cluster})
     if fit_full._has_fixef:
-        raise ValueError("The model has fixed effects, which is not supported by the CCV estimator.")
+        raise ValueError(
+            "The model has fixed effects, which is not supported by the CCV estimator."
+        )
 
     tau_full = fit_full.coef().xs(treatment)
 
@@ -63,7 +70,9 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     data = fit_full._data
     Y = fit_full._Y.flatten()
     W = data[treatment].values
-    assert np.all(np.isin(W, [0, 1])), "Treatment variable must be binary with values 0 and 1"
+    assert np.all(
+        np.isin(W, [0, 1])
+    ), "Treatment variable must be binary with values 0 and 1"
     X = fit_full._X
     cluster_vec = data[cluster].values
     unique_clusters = np.unique(cluster_vec)
@@ -75,25 +84,25 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     for s in tqdm(range(n_splits)):
 
         vcov_ccv = _compute_CCV(
-            fml = fml,
-            Y = Y,
-            X = X,
-            W = W,
-            rng = rng,
-            data = data,
-            treatment = treatment,
-            cluster_vec = cluster_vec,
-            pk = pk
+            fml=fml,
+            Y=Y,
+            X=X,
+            W=W,
+            rng=rng,
+            data=data,
+            treatment=treatment,
+            cluster_vec=cluster_vec,
+            pk=pk,
         )
         vcov_splits += vcov_ccv
 
     vcov_splits /= n_splits
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     crv1_idx = fit_full._coefnames.index(treatment)
     vcov_crv1 = fit_full._vcov[crv1_idx, crv1_idx]
     qk = 1
-    vcov_ccv = qk * vcov_ccv  + (1 - qk) * vcov_crv1
+    vcov_ccv = qk * vcov_ccv + (1 - qk) * vcov_crv1
 
     se = np.sqrt(vcov_ccv / N)
     tstat = tau_full / se
@@ -104,14 +113,16 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     z_se = z * se
     conf_int = np.array([tau_full - z_se, tau_full + z_se])
 
-    res_ccv = pd.Series({
-        "Estimate": tau_full,
-        "Std. Error": se,
-        "t value": tstat,
-        "Pr(>|t|)": pvalue,
-        "2.5 %": conf_int[0],
-        "97.5 %": conf_int[1]
-    })
+    res_ccv = pd.Series(
+        {
+            "Estimate": tau_full,
+            "Std. Error": se,
+            "t value": tstat,
+            "Pr(>|t|)": pvalue,
+            "2.5%": conf_int[0],
+            "97.5%": conf_int[1],
+        }
+    )
     res_ccv.name = "CCV"
 
     res_crv1 = fit_full.tidy().xs(treatment)
@@ -120,9 +131,7 @@ def ccv(data, depvar, treatment, cluster, xfml = None, seed = None, pk = 1, qk =
     return pd.concat([res_ccv, res_crv1], axis=1).T
 
 
-
 def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
-
     """
     Compute the causal cluster variance estimator following Abadie, Athey, Imbens, Wooldridge (2023).
 
@@ -153,7 +162,7 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
     G = len(unique_clusters)
 
     Z = rng.choice([False, True], size=N)
-     # compute alpha, tau using Z == 0
+    # compute alpha, tau using Z == 0
     fit_split1 = feols(fml, data[Z])
     coefs_split = fit_split1._beta_hat
     tau = fit_split1.coef().xs(treatment)
@@ -170,8 +179,10 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
         N += Nm
         ind_m_and_split = ind_m & Z
 
-        treatment_nested_in_cluster = (data.loc[ind_m, treatment].nunique() == 1)
-        treatment_nested_in_cluster_split = (data.loc[ind_m_and_split, treatment].nunique() == 1)
+        treatment_nested_in_cluster = data.loc[ind_m, treatment].nunique() == 1
+        treatment_nested_in_cluster_split = (
+            data.loc[ind_m_and_split, treatment].nunique() == 1
+        )
 
         if treatment_nested_in_cluster:
             aux_tau_full = tau_full
@@ -188,25 +199,29 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
         tau_ms[i] = aux_tau
 
         # compute the pk term in Z0
-        aux_pk = Nm*((aux_tau_full-tau)**2)
+        aux_pk = Nm * ((aux_tau_full - tau) ** 2)
         pk_term += aux_pk
 
-    pk_term *= (1-pk) / N
+    pk_term *= (1 - pk) / N
     uhat = Y - X @ coefs_split
     Wbar = np.mean(W[Z])
     Zavg = 1 - np.mean(Z)
     Zavg_squared = Zavg**2
-    n_adj = N * (Wbar**2) * ((1-Wbar)**2)
+    n_adj = N * (Wbar**2) * ((1 - Wbar) ** 2)
 
     vcov_ccv = 0
     for i, m in enumerate(unique_clusters):
-        ind_m = cluster_vec==m
+        ind_m = cluster_vec == m
 
-        res_term = (W[ind_m & ~Z] - Wbar)*uhat[ind_m & ~Z]
-        tau_term = (tau_ms[i] - tau)*Wbar*(1.-Wbar)
+        res_term = (W[ind_m & ~Z] - Wbar) * uhat[ind_m & ~Z]
+        tau_term = (tau_ms[i] - tau) * Wbar * (1.0 - Wbar)
         diff = res_term - tau_term
-        sq_sum = np.sum(diff)**2
+        sq_sum = np.sum(diff) ** 2
         sum_sq = np.sum(diff**2)
-        vcov_ccv += (1./(Zavg**2))*sq_sum - ((1.-Zavg)/(Zavg_squared))*sum_sq + n_adj * pk_term
+        vcov_ccv += (
+            (1.0 / (Zavg**2)) * sq_sum
+            - ((1.0 - Zavg) / (Zavg_squared)) * sum_sq
+            + n_adj * pk_term
+        )
 
     return vcov_ccv / n_adj
