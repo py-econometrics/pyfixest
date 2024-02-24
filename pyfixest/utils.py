@@ -1,8 +1,11 @@
 import re
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 from formulaic import model_matrix
+
+from pyfixest.dev_utils import _create_rng
 
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
@@ -227,7 +230,9 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     return df
 
 
-def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
+def simultaneous_crit_val(
+    C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
+) -> float:
     """
     Simultaneous Critical Values.
 
@@ -243,6 +248,8 @@ def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
         Number of replications
     alpha: float
         Significance level. Defaults to 0.05
+    seed: int, optional
+        Seed for the random number generator. Default is None.
 
     Returns
     -------
@@ -255,8 +262,9 @@ def simultaneous_crit_val(C: np.ndarray, S: int, alpha: float = 0.05) -> float:
         eig_vals, eig_vecs = np.linalg.eigh(C)
         return eig_vecs @ np.diag(np.sqrt(eig_vals)) @ np.linalg.inv(eig_vecs)
 
+    rng = _create_rng(seed)
     p = C.shape[0]
-    tmaxs = np.max(np.abs(msqrt(C) @ np.random.randn(p, S).reshape(p, S)), axis=0)
+    tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
 
 

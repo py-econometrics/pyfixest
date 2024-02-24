@@ -27,3 +27,11 @@ def test_confint():
             confint.loc[:, "0.975%"]
             < fit.confint(alpha=0.05, joint_cis=True).loc[:, "0.975%"]
         )
+
+    # test seeds
+    confint1 = fit.confint(joint_cis=True, seed=1)
+    confint2 = fit.confint(joint_cis=True, seed=1)
+    confint3 = fit.confint(joint_cis=True, seed=2)
+
+    assert np.all(confint1 == confint2)
+    assert np.all(confint1 != confint3)

@@ -1,5 +1,6 @@
-from typing import Union
+from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 
 try:
@@ -23,3 +24,22 @@ def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
             )
 
     return data
+
+
+def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
+    """
+    Create a random number generator.
+
+    Parameters
+    ----------
+    seed : int, optional
+        The seed of the random number generator. If None, a random seed is chosen.
+
+    Returns
+    -------
+    numpy.random.Generator
+        A random number generator.
+    """
+    if seed is None:
+        seed = np.random.choice(range(1_000_000))
+    return np.random.default_rng(seed)

@@ -1352,6 +1352,7 @@ class Feols:
         keep: Optional[Union[list, str]] = [],
         drop: Optional[Union[list, str]] = [],
         joint_cis: bool = False,
+        seed: Optional[int] = None,
         nboot: int = 10_000,
     ) -> pd.DataFrame:
         r"""
@@ -1383,6 +1384,9 @@ class Feols:
         nboot : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint_cis` is True.
+        seed : int, optional
+            The seed for the random number generator. Defaults to None. Only used if
+            `joint_cis` is True.
 
         Returns
         -------
@@ -1422,7 +1426,7 @@ class Feols:
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
-            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha)
+            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha, seed=seed)
 
         ub = pd.Series(
             self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
