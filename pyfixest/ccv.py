@@ -119,8 +119,8 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
             "Std. Error": se,
             "t value": tstat,
             "Pr(>|t|)": pvalue,
-            "2.5%": conf_int[0],
-            "97.5%": conf_int[1],
+            "2.5 %": conf_int[0],
+            "97.5 %": conf_int[1],
         }
     )
     res_ccv.name = "CCV"

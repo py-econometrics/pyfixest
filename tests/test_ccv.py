@@ -28,6 +28,7 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
     # compute alpha, tau using first split
     alpha = df[u1 & w0][depvar].mean()
     tau = df[u1 & w1][depvar].mean() - df[u1 & w0][depvar].mean()
+    tau_full = df[w1][depvar].mean() - df[w0][depvar].mean()
 
     # compute for each m
     tau_ms = {}
@@ -152,5 +153,5 @@ def test_against_stata():
         pk=0.05,
     ).xs("CCV")
 
-    assert np.abs(res_ccv["2.5%"] - 0.459) < 0.001
-    assert np.abs(res_ccv["97.5%"] - 0.472) < 0.001
+    assert np.abs(res_ccv["2.5 %"] - 0.459) < 0.001
+    assert np.abs(res_ccv["97.5 %"] - 0.472) < 0.001
