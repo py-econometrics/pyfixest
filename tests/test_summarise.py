@@ -1,7 +1,7 @@
 import pandas as pd
 
 from pyfixest.estimation import feols, fepois
-from pyfixest.summarize import etable, summary
+from pyfixest.summarize import _select_order_coefs, etable, summary
 from pyfixest.utils import get_data
 
 
@@ -80,3 +80,13 @@ def test_summary():
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep=[r"\d"], drop=["f"])
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep="X")
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", drop=r"\d$")
+
+    cols = ["x1", "x2", "x11", "x21"]
+    assert _select_order_coefs(cols, keep=["x1"]) == ["x1", "x11"]
+    assert _select_order_coefs(cols, drop=["x1"]) == ["x2", "x21"]
+    assert _select_order_coefs(cols, keep=["x1"], exact_match=True) == ["x1"]
+    assert _select_order_coefs(cols, drop=["x1"], exact_match=True) == [
+        "x2",
+        "x11",
+        "x21",
+    ]
