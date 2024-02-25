@@ -9,7 +9,6 @@ from pyfixest.dev_utils import _select_order_coefs
 from pyfixest.feiv import Feiv
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
-from pyfixest.utils import _select_order_coefs
 
 
 def etable(

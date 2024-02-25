@@ -11,12 +11,12 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
+from pyfixest.dev_utils import DataFrameType, _polars_to_pandas, _select_order_coefs
 from pyfixest.exceptions import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import _select_order_coefs, get_ssc, simultaneous_crit_val
+from pyfixest.utils import get_ssc, simultaneous_crit_val
 
 
 class Feols:
