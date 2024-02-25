@@ -143,7 +143,8 @@ def test_against_stata():
     and can be found here: https://github.com/Daniel-Pailanir/TSCB-CCV.
     """
 
-    data = pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
+    # this can take a while
+    data = pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
 
     fit = feols("ln_earnings ~ college", data=data, vcov = {"CRV1": "state"})
 
