@@ -1393,6 +1393,18 @@ class Feols:
         pd.DataFrame
             A pd.DataFrame with confidence intervals of the estimated regression model
             for the selected coefficients.
+
+        Examples
+        --------
+        ```python
+        from pyfixest.utils import get_data
+        from pyfixest.estimation import feols
+
+        data = get_data()
+        fit = feols("Y ~ C(f1)", data = data)
+        fit.confint(alpha = 0.10).head()
+        fit.confint(alpha = 0.10, joint = True, nboot = 9999).head()
+        ```
         """
         if keep or drop:
             if isinstance(keep, str):
