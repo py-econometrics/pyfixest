@@ -282,6 +282,11 @@ def test_errors_ccv():
     with pytest.raises(NotImplementedError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
+    # error when treatment not found
+    fit = feols("Y ~ D", data=data)
+    with pytest.raises(ValueError):
+        fit.ccv(treatment="X2", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
     # error when no cluster variable found
     fit = feols("Y ~ D", data=data)
     with pytest.raises(ValueError):

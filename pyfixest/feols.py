@@ -1098,6 +1098,11 @@ class Feols:
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
             )
 
+        if treatment not in self._coefnames:
+            raise ValueError(
+                f"Variable {treatment} not found in the model's coefficients."
+            )
+
         if cluster is None:
             cluster = self._clustervar
             if cluster is None:
