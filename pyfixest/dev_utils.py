@@ -41,5 +41,5 @@ def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
         A random number generator.
     """
     if seed is None:
-        seed = np.random.choice(range(1_000_000))
+        seed = np.randint(100_000_000)
     return np.random.default_rng(seed)
