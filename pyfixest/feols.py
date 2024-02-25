@@ -998,9 +998,15 @@ class Feols:
         else:
             return res_df
 
-
-    def ccv(self, treatment, cluster: Optional[str] = None, seed: Optional[int] = None, n_splits: int = 8, pk: float = 1, qk: float = 1) -> pd.DataFrame:
-
+    def ccv(
+        self,
+        treatment,
+        cluster: Optional[str] = None,
+        seed: Optional[int] = None,
+        n_splits: int = 8,
+        pk: float = 1,
+        qk: float = 1,
+    ) -> pd.DataFrame:
         """
         Compute the Causal Cluster Variance following Abadie, Athey, Imbens, and Wooldridge (2023).
 
@@ -1025,10 +1031,16 @@ class Feols:
             A DataFrame with inference based on the "Causal Cluster Variance" and "regular" CRV1 inference.
         """
 
-        assert self._supports_cluster_causal_variance, "The model does not support the causal cluster variance estimator."
+        assert (
+            self._supports_cluster_causal_variance
+        ), "The model does not support the causal cluster variance estimator."
         assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, "cluster must be a string or None."
-        assert isinstance(seed, int) or cluster is None, "seed must be an integer or None."
+        assert (
+            isinstance(cluster, str) or cluster is None
+        ), "cluster must be a string or None."
+        assert (
+            isinstance(seed, int) or cluster is None
+        ), "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)), "pk must be an int or float."
         assert isinstance(qk, (int, float)), "qk must be an int or float."
@@ -1040,7 +1052,7 @@ class Feols:
 
         if cluster is None:
             cluster = self._clustervar
-            if cluster == None:
+            if cluster is None:
                 raise ValueError("No cluster variable found in the model fit.")
             elif len(cluster) > 1:
                 raise ValueError(
@@ -1056,32 +1068,24 @@ class Feols:
         fml = self._fml
         xfml = fml.split("~")[1].split("+")
         xfml = [x for x in xfml if x != treatment]
-        if not xfml:
-            xfml = None
-        else:
-            xfml = "+".join(xfml)
+        xfml = None if not xfml else "+".join(xfml)
 
         data = self._data
 
         ccv_module = import_module("pyfixest.ccv")
         _ccv = getattr(ccv_module, "ccv")
 
-
         return _ccv(
-            data = data,
-            depvar = depvar,
-            treatment = treatment,
-            cluster = cluster,
+            data=data,
+            depvar=depvar,
+            treatment=treatment,
+            cluster=cluster,
             xfml=xfml,
             seed=seed,
             pk=pk,
             qk=qk,
-            n_splits=n_splits
+            n_splits=n_splits,
         )
-
-
-
-
 
     def fixef(self) -> None:
         """

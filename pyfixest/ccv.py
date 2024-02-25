@@ -27,9 +27,9 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
     cluster : str
         Name of the cluster variable
     pk : float
-        tba
+        The proportion of clusters sampled. Default is 1, which means all clusters are sampled.
     qk: float
-        tba
+        The proportion of individuals sampled within clusters. Default is 1, which means all individuals are sampled.
     seed: random seed
         Random seed to control the behavior or sample splits. Sample are splitted so that E(Z) = 0.5.
     n_splits: int
@@ -45,8 +45,8 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
     assert isinstance(treatment, str)
     assert isinstance(cluster, str)
     assert isinstance(xfml, str) or xfml is None
-    assert isinstance(pk, (int, float))
-    assert isinstance(qk, (int, float))
+    assert isinstance(pk, (int, float)) and 0 <= pk <= 1
+    assert isinstance(qk, (int, float)) and 0 <= qk <= 1
     assert isinstance(seed, int) or seed is None
     assert isinstance(n_splits, int)
 
@@ -60,7 +60,7 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
     fit_full = feols(fml, data, vcov={"CRV1": cluster})
     if fit_full._has_fixef:
         raise ValueError(
-            "The model has fixed effects, which is not supported by the CCV estimator."
+            "The specified regression model has fixed effects, which is not supported by the CCV estimator."
         )
 
     tau_full = fit_full.coef().xs(treatment)
@@ -93,6 +93,7 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
             treatment=treatment,
             cluster_vec=cluster_vec,
             pk=pk,
+            tau_full=tau_full,
         )
         vcov_splits += vcov_ccv
 
@@ -130,7 +131,7 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
     return pd.concat([res_ccv, res_crv1], axis=1).T
 
 
-def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
+def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
     """
     Compute the causal cluster variance estimator following Abadie, Athey, Imbens, Wooldridge (2023).
 
@@ -153,7 +154,9 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk):
     cluster_vec : np.array
         Array with unique cluster identifiers.
     pk : float between 0 and 1.
-        tba
+        The proportion of clusters sampled. Default is 1, which means all clusters are sampled.
+    tau_full : float
+        The treatment effect estimate for the full sample.
     """
 
     unique_clusters = np.unique(cluster_vec)

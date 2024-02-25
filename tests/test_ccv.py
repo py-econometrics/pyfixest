@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
-from pyfixest.estimation import feols
 import pytest
 
-from pyfixest.ccv import _compute_CCV, ccv
+from pyfixest.ccv import _compute_CCV
+from pyfixest.estimation import feols
+
+data = pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
 
 
 # function retrieved from Harvard Dataverse
@@ -21,15 +23,14 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
     rng = np.random.default_rng(seed)
     df["u"] = rng.choice([False, True], size=df.shape[0])
 
-    u1 = df["u"] == True
-    u0 = df["u"] == False
+    u1 = df["u"] == True  # noqa: E712
+    u0 = df["u"] == False  # noqa: E712
     w1 = df[nmx] == 1
     w0 = df[nmx] == 0
 
     # compute alpha, tau using first split
     alpha = df[u1 & w0][depvar].mean()
     tau = df[u1 & w1][depvar].mean() - df[u1 & w0][depvar].mean()
-    tau_full = df[w1][depvar].mean() - df[w0][depvar].mean()
 
     # compute for each m
     tau_ms = {}
@@ -67,7 +68,7 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
     pk_term = pk_term * (1.0 - pk) / df.shape[0]
 
     # compute avg Z
-    Zavg = (np.sum(df["u"] == False)) / df.shape[0]
+    Zavg = (np.sum(df["u"] == False)) / df.shape[0]  # noqa: E712
 
     # compute the normalized CCV using second split
     n = df.shape[0] * (Wbar**2) * ((1.0 - Wbar) ** 2)
@@ -105,7 +106,8 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
 
 
 @pytest.mark.skip(reason="This test is not yet implemented")
-def test_ccv_against_AAIW():
+@pytest.mark.fixture(data=data)
+def test_ccv_against_AAIW(data):
 
     df = pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
     N = df.shape[0]
@@ -135,7 +137,8 @@ def test_ccv_against_AAIW():
     assert vcov_AAIW == vcov
 
 
-def test_against_stata():
+@pytest.mark.fixture(data=data)
+def test_against_stata(data):
     """
     Test the ccv function against the stata implementation of the CCV variance.
 
@@ -144,14 +147,21 @@ def test_against_stata():
     """
 
     # this can take a while
-    data = pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
 
-    fit = feols("ln_earnings ~ college", data=data, vcov = {"CRV1": "state"})
+    fit = feols("ln_earnings ~ college", data=data, vcov={"CRV1": "state"})
 
-    res_ccv1 = fit.ccv(treatment = "college", pk = 0.05, qk = 1, n_splits = 8, seed = 929).xs("CCV")
-    res_ccv2 = fit.ccv(treatment = "college", pk = 0.5, qk = 1, n_splits = 8, seed = 929).xs("CCV")
-    res_ccv3 = fit.ccv(treatment = "college", pk = 1, qk = 0.05, n_splits = 8, seed = 929).xs("CCV")
-    res_ccv4 = fit.ccv(treatment = "college", pk = 1, qk = 0.5, n_splits = 8, seed = 929).xs("CCV")
+    res_ccv1 = fit.ccv(treatment="college", pk=0.05, qk=1, n_splits=8, seed=929).xs(
+        "CCV"
+    )
+    res_ccv2 = fit.ccv(treatment="college", pk=0.5, qk=1, n_splits=8, seed=929).xs(
+        "CCV"
+    )
+    res_ccv3 = fit.ccv(treatment="college", pk=1, qk=0.05, n_splits=8, seed=929).xs(
+        "CCV"
+    )
+    res_ccv4 = fit.ccv(treatment="college", pk=1, qk=0.5, n_splits=8, seed=929).xs(
+        "CCV"
+    )
 
     assert np.abs(res_ccv1["2.5 %"] - 0.458) < 1e-02
     assert np.abs(res_ccv1["97.5 %"] - 0.473) < 1e-02
