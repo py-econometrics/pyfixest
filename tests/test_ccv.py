@@ -1,10 +1,10 @@
-from threading import local
 import numpy as np
 import pandas as pd
 import pytest
 
 from pyfixest.ccv import _compute_CCV
 from pyfixest.estimation import feols
+
 
 @pytest.fixture
 def data(local=False):
@@ -13,6 +13,7 @@ def data(local=False):
         return pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
     else:
         return pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
+
 
 # function retrieved from Harvard Dataverse
 def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):

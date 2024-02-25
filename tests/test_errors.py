@@ -1,4 +1,3 @@
-from ast import Assert
 import numpy as np
 import pandas as pd
 import pytest
@@ -245,12 +244,12 @@ def test_errors_ccv():
         fit.ccv(treatment="X1", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when fixed effects in estimation
-    fit = feols("Y ~ D | f1", data = data)
+    fit = feols("Y ~ D | f1", data=data)
     with pytest.raises(NotImplementedError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when no cluster variable found
-    fit = feols("Y ~ D", data = data)
+    fit = feols("Y ~ D", data=data)
     with pytest.raises(ValueError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
@@ -259,18 +258,18 @@ def test_errors_ccv():
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929, cluster="e8")
 
     # error when two-way clustering
-    fit = feols("Y ~ D", data = data, vcov = {"CRV1":"f1+f2"})
+    fit = feols("Y ~ D", data=data, vcov={"CRV1": "f1+f2"})
     with pytest.raises(ValueError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when ccv is attempted on fepois
     pois_data = get_data(model="Fepois").dropna()
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
-    fit = fepois("Y ~ D", data = pois_data)
+    fit = fepois("Y ~ D", data=pois_data)
     with pytest.raises(AssertionError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
-    fit = feols("Y ~ 1 | D ~ Z1", data = data)
+    fit = feols("Y ~ 1 | D ~ Z1", data=data)
     with pytest.raises(AssertionError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
