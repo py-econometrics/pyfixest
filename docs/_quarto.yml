@@ -65,7 +65,7 @@ quartodoc:
         Post-Processing of Estimation Results
       contents:
         - summarize.summary
-        #- summarize.etable
+        - summarize.etable
         - visualize.coefplot
         - visualize.iplot
     - title: Misc / Utilities

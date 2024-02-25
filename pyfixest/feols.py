@@ -1025,6 +1025,7 @@ class Feols:
             A DataFrame with inference based on the "Causal Cluster Variance" and "regular" CRV1 inference.
         """
 
+        assert self._supports_cluster_causal_variance, "The model does not support the causal cluster variance estimator."
         assert isinstance(treatment, str), "treatment must be a string."
         assert isinstance(cluster, str) or cluster is None, "cluster must be a string or None."
         assert isinstance(seed, int) or cluster is None, "seed must be an integer or None."

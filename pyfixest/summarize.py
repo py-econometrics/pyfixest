@@ -17,7 +17,7 @@ def etable(
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
 ) -> Union[pd.DataFrame, str]:
-    """
+    r"""
     Create an esttab-like table from a list of models.
 
     Parameters
