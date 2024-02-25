@@ -20,13 +20,14 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     """
     Compute the CCV variance using a slight variation of AAIW's code.
 
-    The code is based on a Python implementation of the authours published under CC0 1.0 Deed and available at
-    https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT. This function has also
-    benefitted from Daniel Pailanir and Damian Clarke's implementation in Stata available at
+    The code is based on a Python implementation of the authours
+    published under CC0 1.0 Deed and available at
+    https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT.
+    This function has also benefitted from Daniel Pailanir
+    and Damian Clarke's implementation in Stata available at
     https://github.com/Daniel-Pailanir/TSCB-CCV and published under GPL3 License.
 
     """
-
     rng = np.random.default_rng(seed)
     data["u"] = rng.choice([False, True], size=data.shape[0])
 
@@ -146,10 +147,10 @@ def test_against_stata(data):
     """
     Test the ccv function against the stata implementation of the CCV variance.
 
-    The test values are taken from the readme example of the stata implementation of the CCV variance
+    The test values are taken from the readme example of the stata
+    implementation of the CCV variance
     and can be found here: https://github.com/Daniel-Pailanir/TSCB-CCV.
     """
-
     # this can take a while
 
     fit = feols("ln_earnings ~ college", data=data, vcov={"CRV1": "state"})

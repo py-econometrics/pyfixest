@@ -10,10 +10,13 @@ def _ccv(
     data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_splits=4
 ):
     """
-    Compute the CCV cluster robust variance estimator following Abadie, Athey, Imbens, Wooldridge (2022).
-    The code is based on a Python implementation of the authours published under CC0 1.0 Deed and available at
-    https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT. This function has also
-    benefitted from Daniel Pailanir and Damian Clarke's implementation in Stata available at
+    Compute the CCV estimator following Abadie et al (QJE 2022).
+
+    The code is based on a Python implementation of the authours
+    published under CC0 1.0 Deed and available at
+    https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/27VMOT.
+    This function has also benefitted from Daniel Pailanir and
+    Damian Clarke's implementation in Stata available at
     https://github.com/Daniel-Pailanir/TSCB-CCV and published under GPL3 License.
 
     Parameters
@@ -29,19 +32,22 @@ def _ccv(
     cluster : str
         Name of the cluster variable
     pk : float
-        The proportion of clusters sampled. Default is 1, which means all clusters are sampled.
+        The proportion of clusters sampled. Default is 1, which means all
+        clusters are sampled.
     qk: float
-        The proportion of individuals sampled within clusters. Default is 1, which means all individuals are sampled.
+        The proportion of individuals sampled within clusters.
+        Default is 1, which means all individuals are sampled.
     seed: random seed
-        Random seed to control the behavior or sample splits. Sample are splitted so that E(Z) = 0.5.
+        Random seed to control the behavior or sample splits.
+        Sample are splitted so that E(Z) = 0.5.
     n_splits: int
         Number of splits to compute the variance estimator. Default is 4.
+
     Returns
     -------
     fit_full : feols
         Object with the fitted model and the cluster robust variance estimator
     """
-
     assert isinstance(data, pd.DataFrame)
     assert isinstance(depvar, str)
     assert isinstance(treatment, str)
@@ -61,7 +67,7 @@ def _ccv(
 
     fit_full = feols(fml, data, vcov={"CRV1": cluster})
     if fit_full._has_fixef:
-        raise ValueError(
+        raise AssertionError(
             "The specified regression model has fixed effects, which is not supported by the CCV estimator."
         )
 
@@ -135,7 +141,7 @@ def _ccv(
 
 def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
     """
-    Compute the causal cluster variance estimator following Abadie, Athey, Imbens, Wooldridge (2023).
+    Compute the causal cluster variance estimator following Abadie et al (QJE 2023).
 
     Parameters
     ----------
@@ -156,11 +162,11 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
     cluster_vec : np.array
         Array with unique cluster identifiers.
     pk : float between 0 and 1.
-        The proportion of clusters sampled. Default is 1, which means all clusters are sampled.
+        The proportion of clusters sampled.
+        Default is 1, which means all clusters are sampled.
     tau_full : float
         The treatment effect estimate for the full sample.
     """
-
     unique_clusters = np.unique(cluster_vec)
     N = data.shape[0]
     G = len(unique_clusters)

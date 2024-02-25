@@ -21,9 +21,9 @@ from pyfixest.utils import get_ssc
 
 class Feols:
     """
-    Non user-facing class to estimate an IV model using a 2SLS estimator.
+    Non user-facing class to estimate a liner regression via OLS.
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
+    Users should not directly instantiate this class,
     but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
     [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
@@ -1039,29 +1039,46 @@ class Feols:
         qk: float = 1,
     ) -> pd.DataFrame:
         """
-        Compute the Causal Cluster Variance following Abadie, Athey, Imbens, and Wooldridge (2023).
+        Compute the Causal Cluster Variance following Abadie et al (QJE 2023).
 
         Parameters
         ----------
         treatment: str
             The name of the treatment variable.
         cluster : str
-            The name of the cluster variable. None by default. If None, uses the cluster variable from the model fit.
+            The name of the cluster variable. None by default.
+            If None, uses the cluster variable from the model fit.
         seed : int, optional
             An integer to set the random seed. Defaults to None.
         n_splits : int, optional
             The number of splits to use in the cross-fitting procedure. Defaults to 8.
-        pk : float, optional
-            tba
-        qk : float, optional
-            tba
+        pk: float, optional
+            The proportion of sampled clusters. Defaults to 1, which
+            corresponds to all clusters of the population being sampled.
+        qk: float, optional
+            The proportion of sampled observations within each cluster.
+            Defaults to 1, which corresponds to all observations within
+            each cluster being sampled.
 
         Returns
         -------
         pd.DataFrame
-            A DataFrame with inference based on the "Causal Cluster Variance" and "regular" CRV1 inference.
-        """
+            A DataFrame with inference based on the "Causal Cluster Variance"
+            and "regular" CRV1 inference.
 
+        Examples
+        --------
+        ```python
+        from pyfixest.estimation import feols
+        from pyfixest.utils import get_data
+
+        data = get_data()
+        data["D1"] = np.random.choice([0, 1], size=data.shape[0])
+
+        fit = feols("Y ~ D", data=data, vcov = {"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk = 0.05, gk = 0.5, n_splits = 8, seed = 123).head()
+        ```
+        """
         assert (
             self._supports_cluster_causal_variance
         ), "The model does not support the causal cluster variance estimator."

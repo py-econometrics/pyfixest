@@ -265,7 +265,8 @@ def test_errors_etable():
             },
             coef_fmt="b [se]",
         )
-        
+
+
 def test_errors_ccv():
 
     data = get_data().dropna()
