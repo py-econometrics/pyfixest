@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pyfixest.estimation import feols
 import pytest
 
 from pyfixest.ccv import _compute_CCV, ccv
@@ -143,15 +144,22 @@ def test_against_stata():
     """
 
     data = pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
-    res_ccv = ccv(
-        data=data,
-        depvar="ln_earnings",
-        treatment="college",
-        cluster="state",
-        n_splits=8,
-        seed=2992,
-        pk=0.05,
-    ).xs("CCV")
 
-    assert np.abs(res_ccv["2.5 %"] - 0.459) < 0.001
-    assert np.abs(res_ccv["97.5 %"] - 0.472) < 0.001
+    fit = feols("ln_earnings ~ college", data=data, vcov = {"CRV1": "state"})
+
+    res_ccv1 = fit.ccv(treatment = "college", pk = 0.05, qk = 1, n_splits = 8, seed = 929).xs("CCV")
+    res_ccv2 = fit.ccv(treatment = "college", pk = 0.5, qk = 1, n_splits = 8, seed = 929).xs("CCV")
+    res_ccv3 = fit.ccv(treatment = "college", pk = 1, qk = 0.05, n_splits = 8, seed = 929).xs("CCV")
+    res_ccv4 = fit.ccv(treatment = "college", pk = 1, qk = 0.5, n_splits = 8, seed = 929).xs("CCV")
+
+    assert np.abs(res_ccv1["2.5 %"] - 0.458) < 1e-02
+    assert np.abs(res_ccv1["97.5 %"] - 0.473) < 1e-02
+
+    assert np.abs(res_ccv2["2.5 %"] - 0.458) < 1e-02
+    assert np.abs(res_ccv2["97.5 %"] - 0.473) < 1e-02
+
+    assert np.abs(res_ccv3["2.5 %"] - 0.414) < 1e-02
+    assert np.abs(res_ccv3["97.5 %"] - 0.517) < 1e-02
+
+    assert np.abs(res_ccv4["2.5 %"] - 0.428) < 1e-02
+    assert np.abs(res_ccv4["97.5 %"] - 0.503) < 1e-02
