@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+from pyfixest.dev_utils import _select_order_coefs
 from pyfixest.feiv import Feiv
 from pyfixest.feols import Feols
 from pyfixest.fepois import Fepois
@@ -19,6 +20,7 @@ def etable(
     custom_stats: Optional[dict] = dict(),
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
+    exact_match: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str]:
     """
@@ -54,6 +56,10 @@ def etable(
         pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
+    exact_match: bool, optional
+        Whether to use exact match for `keep` and `drop`. Default is False.
+        If True, the pattern will be matched exactly to the coefficient name
+        instead of using regular expressions.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -205,12 +211,10 @@ def etable(
 
     res = pd.concat(etable_list, axis=1)
     if keep or drop:
-        if isinstance(keep, str):
-            keep = [keep]
-        if isinstance(drop, str):
-            drop = [drop]
-        res = _select_order_coefs(res, keep, drop)
-    res.reset_index(inplace=True)
+        idxs = _select_order_coefs(res.index, keep, drop, exact_match)
+    else:
+        idxs = res.index
+    res = res.loc[idxs, :].reset_index()
     # a lot of work to replace the NaNs with empty strings
     # reason: "" not a level of the category, might lead to a pandas error
     for column in res.columns:
