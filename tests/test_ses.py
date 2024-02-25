@@ -59,7 +59,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     # adj: default adjustments are different for HC3 and CRV3
     adj_correction = np.sqrt((N - 1) / N)
 
-    # if not np.allclose(np.sort(res_hc3["Std. Error"]) * adj_correction , np.sort(res_crv3["Std. Error"])):
+    # if not np.allclose(np.sort(res_hc3["Std. Error"]) * adj_correction , np.sort(res_crv3["Std. Error"])):  # noqa: W505
     #    raise ValueError("HC3 and CRV3 ses are not the same.")
     if not np.allclose(res_hc3["t value"] / adj_correction, res_crv3["t value"]):
         raise ValueError("HC3 and CRV3 t values are not the same.")

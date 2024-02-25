@@ -123,6 +123,7 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
 
     def get_fit(self) -> None:
+        """Fit a IV model using a 2SLS estimator."""
         _X = self._X
         _Z = self._Z
         _Y = self._Y

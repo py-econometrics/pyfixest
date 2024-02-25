@@ -36,12 +36,16 @@ def iplot(
     coord_flip: Optional[bool] = True,
 ):
     """
-    Plot model coefficients for variables interacted via "i()" syntax, with confidence intervals.
+    Plot model coefficients.
+
+    Plot model coefficients for variables interacted via "i()" syntax, with
+    confidence intervals.
 
     Parameters
     ----------
     models : list or object
-        A list of fitted models of type [Feols(/reference/Feols.qmd) or `Fepois`, or just a single model.
+        A list of fitted models of type `Feols` or
+        `Fepois`, or just a single model.
     figsize : tuple
         The size of the figure.
     alpha : float
@@ -132,7 +136,7 @@ def coefplot(
     Parameters
     ----------
     models : list or object
-        A list of fitted models of type [Feols(/reference/Feols.qmd) or `Fepois`, or just a single model.
+        A list of fitted models of type `Feols` or `Fepois`, or just a single model.
     figsize : tuple
         The size of the figure.
     alpha : float

@@ -55,17 +55,17 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
-        # ("Y ~ X1 + C(f1):C(fe2)"),            # currently does not work as C():C() translation not implemented
-        # ("Y ~ X1 + C(f1):C(fe2) | f3"),       # currently does not work as C():C() translation not implemented
+        # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
+        # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
         ("Y~X1|f2^f3"),
         ("Y~X1|f1 + f2^f3"),
         # ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
-        # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
-        # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
+        # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+        # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+        # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
         ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
         ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
@@ -76,16 +76,16 @@ rng = np.random.default_rng(8760985)
         # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
         ("Y ~ X1 + C(f1)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
-        # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
+        # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + I(X2 ** 2)"),
         ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
         ("Y ~ X1*X2"),
         ("Y ~ X1*X2 | f1+f2"),
-        # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
-        # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
-        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2
+        # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
+        # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
+        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2 # noqa: W505
         # IV starts here
         ("Y ~ 1 | X1 ~ Z1"),
         "Y ~  X2 | X1 ~ Z1",
@@ -113,14 +113,13 @@ def test_single_fit(
     N, seed, beta_type, error_type, dropna, model, inference, weights, fml
 ):
     """
-    test pyfixest against fixest via rpy2 (OLS, IV, Poisson)
+    Test pyfixest against fixest via rpy2 (OLS, IV, Poisson).
 
         - for multiple models
         - and multiple inference types
         - ... compare regression coefficients and standard errors
         - tba: t-statistics, covariance matrices, other metrics
     """
-
     inference_inflation_factor = 1.0
 
     if model == "Feols":
@@ -256,7 +255,8 @@ def test_single_fit(
             r_nobs = stats.nobs(r_fixest)
 
     if run_test:
-        # get coefficients, standard errors, p-values, t-statistics, confidence intervals
+        # get coefficients, standard errors, p-values, t-statistics,
+        # confidence intervals
 
         mod = pyfixest
 
@@ -447,10 +447,7 @@ def test_single_fit(
     ],
 )
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
-    """
-    test pyfixest against fixest_multi objects
-    """
-
+    """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data[data == "nan"] = np.nan
 
@@ -563,10 +560,7 @@ def test_twoway_clustering():
 
 
 def test_wls_na():
-    """
-    Special tests for WLS and NA values
-    """
-
+    """Special tests for WLS and NA values."""
     data = get_data()
     data = data.dropna()
 
@@ -626,11 +620,12 @@ def test_wls_na():
 
 def _py_fml_to_r_fml(py_fml):
     """
+    Covernt pyfixest formula.
+
     pyfixest multiple estimation fml syntax to fixest multiple depvar
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
-
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -648,9 +643,7 @@ def _py_fml_to_r_fml(py_fml):
 
 
 def _c_to_as_factor(py_fml):
-    """
-    transform formulaic C-syntax for categorical variables into R's as.factor
-    """
+    """Transform formulaic C-syntax for categorical variables into R's as.factor."""
     # Define a regular expression pattern to match "C(variable)"
     pattern = r"C\((.*?)\)"
 
@@ -685,10 +678,7 @@ def get_data_r(fml, data):
 
 @pytest.mark.skip("Currently not supported.")
 def test_i_interaction():
-    """
-    Test that interaction syntax via the `i()` operator works as in fixest
-    """
-
+    """Test that interaction syntax via the `i()` operator works as in fixest."""
     data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)

@@ -19,14 +19,16 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     Parameters
     ----------
     models : list[Feols, Fepois], Feols or Fepois
-        A list of models for which the p-values should be adjusted, or a Feols or Fepois object.
+        A list of models for which the p-values should be adjusted, or a Feols or
+        Fepois object.
     param : str
         The parameter for which the p-values should be adjusted.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.
+        A DataFrame containing estimation statistics, including the Bonferroni
+        adjusted p-values.
 
     Examples
     --------
@@ -38,11 +40,10 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     data = get_data().dropna()
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2", data=data)
-    bonf_df = bonferroni([fit1, fit2], param = "X1")
+    bonf_df = bonferroni([fit1, fit2], param="X1")
     bonf_df
     ```
     """
-
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
     S = len(models)
@@ -70,13 +71,14 @@ def rwolf(
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
     For each model, it is assumed that tests to adjust are of the form
-    "param = 0". This function uses the `wildboottest()` method for running the bootstrap,
-    hence models of type `Feiv` or `Fepois` are not supported.
+    "param = 0". This function uses the `wildboottest()` method for running the
+    bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
 
     Parameters
     ----------
     models : list[Feols] or FixestMulti
-        A list of models for which the p-values should be computed, or a FixestMulti object.
+        A list of models for which the p-values should be computed, or a
+        FixestMulti object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
         The parameter for which the p-values should be computed.
@@ -88,7 +90,8 @@ def rwolf(
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.
+        A DataFrame containing estimation statistics, including the Romano-Wolf
+        adjusted p-values.
 
     Examples
     --------
@@ -152,10 +155,10 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
     Parameters
     ----------
     t_stats (np.ndarray): A vector of length S - where S is the number of
-                          tested hypotheses - containing the original,
-                          non-bootstrappe t-statisics.
+                        tested hypotheses - containing the original,
+                        non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
-                               bootstrapped t-statistics.
+                            bootstrapped t-statistics.
 
     Returns
     -------

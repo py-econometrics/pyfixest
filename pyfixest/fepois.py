@@ -14,18 +14,20 @@ from pyfixest.feols import Feols
 
 class Fepois(Feols):
     """
-    Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).
+    Estimate a Poisson regression model.
+
+    Non user-facing class to estimate a Poisson regression model via Iterated
+    Weighted Least Squares (IWLS).
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [fepois()](/reference/estimation.fepois.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
+    but rather use the [fepois()](/reference/estimation.fepois.qmd) function.
+    Note that no demeaning is performed in this class: demeaning is performed in the
     [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
     of demeaned variables for multiple estimation).
 
     The method implements the algorithm from Stata's `pplmhdfe` module.
 
-
-    Parameters
+    Attributes
     ----------
     Y : np.ndarray
         Dependent variable, a two-dimensional numpy array.
@@ -121,11 +123,14 @@ class Fepois(Feols):
         weights : np.ndarray
             Weights (from the last iteration of the IRLS algorithm).
         X : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS algorithm).
+            Demeaned independent variables (from the last iteration of the IRLS
+            algorithm).
         Z : np.ndarray
-            Demeaned independent variables (from the last iteration of the IRLS algorithm).
+            Demeaned independent variables (from the last iteration of the IRLS
+            algorithm).
         Y : np.ndarray
-            Demeaned dependent variable (from the last iteration of the IRLS algorithm).
+            Demeaned dependent variable (from the last iteration of the IRLS
+            algorithm).
         """
         _Y = self._Y
         _X = self._X
@@ -156,7 +161,10 @@ class Fepois(Feols):
                 break
             if i == _maxiter:
                 raise NonConvergenceError(
-                    f"The IRLS algorithm did not converge with {_iwls_maxiter} iterations. Try to increase the maximum number of iterations."
+                    f"""
+                    The IRLS algorithm did not converge with {_iwls_maxiter}
+                    iterations. Try to increase the maximum number of iterations.
+                    """
                 )
 
             if i == 0:
@@ -257,7 +265,8 @@ class Fepois(Feols):
         Return predicted values from regression model.
 
         Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values for such observations
+        If new fixed effect levels are introduced in `newdata`, predicted values
+        for such observations
         will be set to NaN.
 
         Parameters
@@ -266,9 +275,12 @@ class Fepois(Feols):
             A pd.DataFrame with the new data, to be used for prediction.
             If None (default), uses the data used for fitting the model.
         type : str, optional
-            The type of prediction to be computed. Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.
+            The type of prediction to be computed.
+            Can be either "response" (default) or "link".
+            If type="response", the output is at the level of the response variable,
+            i.e., it is the expected predictor E(Y|X).
+            If "link", the output is at the level of the explanatory variables,
+            i.e., the linear predictor X @ beta.
 
         Returns
         -------
@@ -301,8 +313,8 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
     """
     Check for separation.
 
-    Check for separation of Poisson Regression. For details, see the pplmhdfe documentation on
-    separation checks. Currently, only the "fe" check is implemented.
+    Check for separation of Poisson Regression. For details, see the pplmhdfe
+    documentation on separation checks. Currently, only the "fe" check is implemented.
 
     Parameters
     ----------
