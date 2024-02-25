@@ -1061,6 +1061,12 @@ class Feols:
             else:
                 cluster = cluster[0]
 
+        # check that cluster is in data
+        if cluster not in self._data.columns:
+            raise ValueError(
+                f"Cluster variable {cluster} not found in the data used for the model fit."
+            )
+
         if seed is None:
             seed = np.random.randint(1, 100_000_000)
 
@@ -1073,7 +1079,7 @@ class Feols:
         data = self._data
 
         ccv_module = import_module("pyfixest.ccv")
-        _ccv = getattr(ccv_module, "ccv")
+        _ccv = getattr(ccv_module, "_ccv")
 
         return _ccv(
             data=data,

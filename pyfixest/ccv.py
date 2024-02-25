@@ -6,7 +6,7 @@ from tqdm import tqdm
 from pyfixest.estimation import feols
 
 
-def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_splits=4):
+def _ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_splits=4):
     """
     Compute the CCV cluster robust variance estimator following Abadie, Athey, Imbens, Wooldridge (2022).
     The code is based on a Python implementation of the authours published under CC0 1.0 Deed and available at
