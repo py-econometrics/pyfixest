@@ -2,27 +2,37 @@ from abc import ABC, abstractmethod
 
 
 class DID(ABC):
+    """
+    A class used to represent the DID (Differences-in-Differences) model.
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        The DataFrame containing all variables.
+    yname : str
+        The name of the dependent variable.
+    idname : str
+        The name of the identifier variable.
+    tname : str
+        Variable name for calendar period. Must be an integer in the format
+        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
+        Datetime variables are currently not accepted.
+    gname : str
+        unit-specific time of initial treatment. Must be an integer in the format
+        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
+        Datetime variables are currently not accepted. Never treated units must
+        have a value of 0.
+    xfml : str
+        The formula for the covariates.
+    att : str
+        Whether to estimate the average treatment effect on the treated (ATT) or
+        the canonical event study design with all leads and lags. Default is True.
+    cluster : str
+        The name of the cluster variable.
+    """
+
     @abstractmethod
     def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
-        """
-        Args:
-            data: The DataFrame containing all variables.
-            yname: The name of the dependent variable.
-            idname: The name of the id variable.
-            tname: Variable name for calendar period. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
-                   possible to compare two dates via '>'. Date time variables are currently not accepted.
-            gname: unit-specific time of initial treatment. Must be an integer in the format YYYYMMDDHHMMSS, i.e. it must be
-                   possible to compare two dates via '>'. Date time variables are currently not accepted. Never treated units
-                   must have a value of 0.
-            xfml: The formula for the covariates.
-            estimator: The estimator to use. Options are "did2s".
-            att: Whether to estimate the average treatment effect on the treated (ATT) or the
-                canonical event study design with all leads and lags. Default is True.
-            cluster: The name of the cluster variable.
-        Returns:
-            None
-        """
-
         # do some checks here
 
         self._data = data.copy()
@@ -58,7 +68,9 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"The variable {self._tname} must be of a numeric type, and more specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013, etc or 201201, 201202, 201203 etc."
+                f"""The variable {self._tname} must be of a numeric type, and more
+                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
+                etc. or 201201, 201202, 201203 etc."""
             )
         if self._data[self._gname].dtype not in [
             "int64",
@@ -68,7 +80,9 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"The variable {self._tname} must be of a numeric type, and more specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013, etc or 201201, 201202, 201203 etc."
+                f"""The variable {self._tname} must be of a numeric type, and more
+                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
+                etc. or 201201, 201202, 201203 etc."""
             )
 
         # create a treatment variable
@@ -77,21 +91,21 @@ class DID(ABC):
         )
 
     @abstractmethod
-    def estimate(self):
+    def estimate(self):  # noqa: D102
         pass
 
     @abstractmethod
-    def vcov(self):
+    def vcov(self):  # noqa: D102
         pass
 
     @abstractmethod
-    def iplot(self):
+    def iplot(self):  # noqa: D102
         pass
 
     @abstractmethod
-    def tidy(self):
+    def tidy(self):  # noqa: D102
         pass
 
     @abstractmethod
-    def summary(self):
+    def summary(self):  # noqa: D102
         pass

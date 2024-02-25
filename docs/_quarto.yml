@@ -34,7 +34,9 @@ website:
 
 quartodoc:
   package: pyfixest
-
+  title: "PyFixest Function Reference"
+  parser: numpy
+  rewrite_all_pages: False
   sidebar: _sidebar.yml
 
   sections:

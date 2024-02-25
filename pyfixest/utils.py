@@ -9,14 +9,18 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
 
     Parameters
     ----------
-        adj: bool, default True
-            If True, applies a small sample correction of (N-1) / (N-k) where N is the number of observations
-            and k is the number of estimated coefficients excluding any fixed effects projected out in either fixest::feols() or lfe::felm().
-        fixef_k: str, default "none"
-            Equal to 'none': the fixed effects parameters are discarded when calculating k in (N-1) / (N-k).
-        cluster_adj: bool, default True
-            If True, a cluster correction G/(G-1) is performed, with G the number of clusters.
-        cluster_df: str, default "conventional"
+        adj : bool, default True
+            If True, applies a small sample correction of (N-1) / (N-k) where N
+            is the number of observations and k is the number of estimated
+            coefficients excluding any fixed effects projected out by either
+            `feols()` or `fepois()`.
+        fixef_k : str, default "none"
+            Equal to 'none': the fixed effects parameters are discarded when
+            calculating k in (N-1) / (N-k).
+        cluster_adj : bool, default True
+            If True, a cluster correction G/(G-1) is performed, with G the number
+            of clusters.
+        cluster_df : str, default "conventional"
             Controls how "G" is computed for multiway clustering if cluster_adj = True.
             Note that the covariance matrix in the multiway clustering case is of
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
@@ -25,6 +29,7 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
 
     Returns
     -------
+    dict
         A dictionary with encoded info on how to form small sample corrections
     """
     if adj not in [True, False]:
@@ -63,7 +68,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     vcov_type : str
         The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
     is_twoway : bool, optional
-        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12. Default is False.
+        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12.
+            Default is False.
 
     Returns
     -------
@@ -73,7 +79,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     Raises
     ------
     ValueError
-        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither "conventional" nor "min".
+        If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
+        "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
     fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
@@ -216,61 +223,3 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     # df["weights"].iloc[]
 
     return df
-
-
-def get_poisson_data(N=1000, seed=4320):
-    """
-    Generate data following a Poisson regression DGP.
-
-    Parameters
-    ----------
-    N : int, optional
-        Number of observations. Default is 1000.
-    seed : int, optional
-        Seed for the random number generator. Default is 4320.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Generated data with columns 'Y', 'X1', 'X2', 'X3', and 'X4'.
-    """
-    # create data
-    np.random.seed(seed)
-    X1 = np.random.normal(0, 1, N)
-    X2 = np.random.choice([0, 1], N, True)
-    X3 = np.random.choice([0, 1, 2, 3, 4, 5, 6], N, True)
-    X4 = np.random.choice([0, 1], N, True)
-    beta = np.array([1, 0, 1, 0])
-    u = np.random.normal(0, 1, N)
-    mu = np.exp(1 + X1 * beta[0] + X2 * beta[1] + X3 * beta[2] + X4 * beta[3] + u)
-
-    Y = np.random.poisson(mu, N)
-
-    return pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3, "X4": X4})
-
-
-def absolute_diff(x, y, tol=1e-03):
-    """
-
-    Calculate the absolute difference between two values.
-
-    Parameters
-    ----------
-    x : numpy.ndarray
-        Numeric array representing the reference value.
-    y : numpy.ndarray
-        Numeric array representing the value to compare against.
-    tol : float, optional
-        Tolerance value used to determine if two values are different. Default is 1e-03.
-
-    Returns
-    -------
-    bool
-        True if the absolute difference is greater than the tolerance and there is a non-zero value in y, False otherwise.
-    """
-    absolute_diff = (np.abs(x - y) > tol).any()
-    if not any(y == 0):
-        relative_diff = (np.abs(x - y) / np.abs(y) > tol).any()
-        return absolute_diff and relative_diff
-    else:
-        return absolute_diff

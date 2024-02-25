@@ -46,11 +46,7 @@ def test_i_ref():
 
 
 def test_cluster_na():
-    """
-    test if a nan value in a cluster variable raises
-    an error
-    """
-
+    """Test if a nan value in a cluster variable raises an error."""
     data = get_data()
     data = data.dropna()
     data["f3"] = data["f3"].astype("int64")
@@ -62,7 +58,11 @@ def test_cluster_na():
 
 def test_error_hc23_fe():
     """
-    test if HC2&HC3 inference with fixed effects regressions raises an error (currently not supported)
+    Test if HC2 & HC3 inference with fixed effects regressions raises an error.
+
+    Notes
+    -----
+    Currently not supported.
     """
     data = get_data().dropna()
 
@@ -74,10 +74,7 @@ def test_error_hc23_fe():
 
 
 def test_depvar_numeric():
-    """
-    test if feols() throws an error when the dependent variable is not numeric
-    """
-
+    """Test if feols() throws an error when the dependent variable is not numeric."""
     data = get_data()
     data["Y"] = data["Y"].astype("str")
     data["Y"] = pd.Categorical(data["Y"])
@@ -95,7 +92,7 @@ def test_iv_errors():
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogeneous variable specified as covariate
+    # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
         feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
     # instrument specified as covariate
@@ -128,10 +125,7 @@ def test_iv_errors():
 
 @pytest.mark.skip("Not yet implemented.")
 def test_poisson_devpar_count():
-    """
-    check that the dependent variable is a count variable
-    """
-
+    """Check that the dependent variable is a count variable."""
     data = get_data()
     # under determined
     with pytest.raises(AssertionError):
@@ -232,7 +226,46 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
+    with pytest.raises(ValueError):
+        etable([fit1, fit2], coef_fmt="b (se)\nt [p]", type="tex")
 
+    with pytest.raises(AssertionError):
+        etable(
+            models=[fit1, fit2],
+            custom_stats={
+                "conf_int_lb": [
+                    fit2._conf_int[0]
+                ],  # length of customized statistics not equal to the number of models
+                "conf_int_ub": [fit2._conf_int[1]],
+            },
+            coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
+        )
+
+    with pytest.raises(AssertionError):
+        etable(
+            models=[fit1, fit2],
+            custom_stats={
+                "conf_int_lb": [
+                    [0.1, 0.1, 0.1],
+                    fit2._conf_int[0],
+                ],  # length of customized statistics not equal to length of model
+                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+            },
+            coef_fmt="b [conf_int_lb, conf_int_ub]",
+        )
+
+    with pytest.raises(ValueError):
+        etable(
+            models=[fit1, fit2],
+            custom_stats={
+                "b": [
+                    fit2._conf_int[0],
+                    fit2._conf_int[0],
+                ],  # preserved keyword cannot be used as a custom statistic
+            },
+            coef_fmt="b [se]",
+        )
+        
 def test_errors_ccv():
 
     data = get_data().dropna()

@@ -50,8 +50,9 @@ def model_matrix_fixest(
     data : pd.DataFrame
         The input DataFrame containing the data.
     drop_intercept : bool
-        Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix
-        created by formulaic.
+        Whether to drop the intercept from the model matrix. Default is False.
+        If True, the intercept is dropped ex post from the model matrix created
+        by formulaic.
     i_ref1 : str or list
         The reference level for the first variable in the i() syntax.
     i_ref2 : str or list
@@ -64,30 +65,38 @@ def model_matrix_fixest(
         - Y : pd.DataFrame
             A DataFrame of the dependent variable.
         - X : pd.DataFrame
-            A DataFrame of the covariates. If `combine = True`, contains covariates and fixed effects as dummies.
+            A DataFrame of the covariates. If `combine = True`, contains covariates
+            and fixed effects as dummies.
         - I : Optional[pd.DataFrame]
             A DataFrame of the Instruments, None if no IV.
         - fe : Optional[pd.DataFrame]
-            A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if `combine = False`.
+            A DataFrame of the fixed effects, None if no fixed effects specified.
+            Only applicable if `combine = False`.
         - na_index : np.array
             An array with indices of dropped columns.
         - fe_na : np.array
-            An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects.
+            An array with indices of dropped columns due to fixed effect singletons
+            or NaNs in the fixed effects.
         - na_index_str : str
-            na_index, but as a comma-separated string. Used for caching of demeaned variables.
+            na_index, but as a comma-separated string. Used for caching of demeaned
+            variables.
         - z_names : Optional[list[str]]
-            Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV.
+            Names of all covariates, minus the endogenous variables,
+            plus the instruments.
+            None if no IV.
         - weights : Optional[str]
             Weights as a string if provided, or None if no weights, e.g., "weights".
         - has_weights : bool
             A boolean indicating whether weights are used.
         - icovars : Optional[list[str]]
-            A list of interaction variables provided via `i()`. None if no interaction variables via `i()` provided.
+            A list of interaction variables provided via `i()`. None if no interaction
+            variables via `i()` provided.
 
     Attributes
     ----------
     list or None
-        icovars - A list of interaction variables. None if no interaction variables via `i()` provided.
+        icovars - A list of interaction variables. None if no interaction variables
+        via `i()` provided.
     """
     # check if weights are valid
     _check_weights(weights, data)
@@ -112,15 +121,17 @@ def model_matrix_fixest(
         is_ivar = _find_ivars(x)
         # if yes:
         if is_ivar[1]:
-            # if a reference level i_ref1 is set: code contrast as C(var, contr.treatment(base=i_ref1[0]))
+            # if a reference level i_ref1 is set: code contrast as
+            # C(var, contr.treatment(base=i_ref1[0]))
             # if no reference level is set: code contrast as C(var)
             if i_ref1:
                 inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
             else:
                 inner_C = f"C({_ivars[0]})"
 
-            # if there is a second variable interacted via i() syntax, i.e. i(var1, var2),
-            # then code contrast as C(var1, contr.treatment(base=i_ref1[0])):var2, where var2 = i_ref2[1]
+            # if there is a second variable interacted via i() syntax,
+            # i.e. i(var1, var2), then code contrast as
+            # C(var1, contr.treatment(base=i_ref1[0])):var2, where var2 = i_ref2[1]
             if len(_ivars) == 2:
                 interact_vars = f"{inner_C}:{_ivars[1]}"
             elif len(_ivars) == 1:
@@ -168,7 +179,9 @@ def model_matrix_fixest(
 
     Y, X = model_matrix(fml_exog, data)
 
-    X_is_empty = False  # special case: sometimes it is useful to run models "Y ~ 0 | f1" to demean Y + to use the predict method
+    # special case: sometimes it is useful to run models "Y ~ 0 | f1"
+    # to demean Y + to use the predict method
+    X_is_empty = False
     if X.shape[1] == 0:
         X_is_empty = True
 
@@ -374,7 +387,8 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> tuple[pd.DataFrame, list[int]]:
 
     This is a helper function used in `_model_matrix_fixest()`. The function converts
     the fixed effects to integers and marks fixed effects with NaNs. It's important
-    to note that NaNs are not removed at this stage; this is done in `_model_matrix_fixest()`.
+    to note that NaNs are not removed at this stage; this is done in
+    `_model_matrix_fixest()`.
 
     Parameters
     ----------
@@ -420,7 +434,10 @@ def _clean_fe(data: pd.DataFrame, fval: str) -> tuple[pd.DataFrame, list[int]]:
 
 def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
     """
-    Get all interacted variables via i() syntax. Required for plotting of all interacted variables via iplot().
+    Get interacted variables.
+
+    Get all interacted variables via i() syntax. Required for plotting of all
+    interacted variables via iplot().
 
     Parameters
     ----------
@@ -454,7 +471,10 @@ def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
 
 def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
     """
-    Check if the reference level have the same type as the variable (if not, string matching might fail).
+    Check reference levels.
+
+    Check if the reference level have the same type as the variable
+    (if not, string matching might fail).
 
     Parameters
     ----------
@@ -477,7 +497,8 @@ def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
             ivar2 = ivars[1]
 
         if i_ref1:
-            # check that the type of each value in i_ref1 is the same as the type of the variable
+            # check that the type of each value in i_ref1 is the same as the
+            # type of the variable
             ivar1_col = data[ivar1]
             for i in i_ref1:
                 if pd.api.types.is_integer_dtype(ivar1_col) and not isinstance(i, int):
@@ -503,7 +524,10 @@ def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
 
 def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
     """
-    Collect all variables that (still) need to be dropped as reference levels from the model matrix.
+    Identify reference levels to drop.
+
+    Collect all variables that (still) need to be dropped as reference levels
+    from the model matrix.
 
     Parameters
     ----------
@@ -521,7 +545,8 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
     # now drop reference levels / variables before collecting variable names
     if _ivars:
         if i_ref1:
-            # different logic for one vs two interaction variables in i() due to how contr.treatment() works
+            # different logic for one vs two interaction variables in i() due
+            # to how contr.treatment() works
             if len(_ivars) == 1:
                 if len(i_ref1) == 1:
                     pass  # do nothing, reference level already dropped via contr.treatment()
@@ -559,6 +584,7 @@ def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
 def _is_numeric(column):
     """
     Check if a column is numeric.
+
     Args:
         column: pd.Series
             A pandas Series.
@@ -577,9 +603,12 @@ def _is_numeric(column):
 
 def _check_weights(weights, data):
     """
+    Check if valid weights are in data.
+
     Args:
         weights: str or None
-            A string specifying the name of the weights column in `data`. Default is None.
+            A string specifying the name of the weights column in `data`.
+            Default is None.
         data: pd.DataFrame
             The input DataFrame containing the data.
 
@@ -605,9 +634,7 @@ def _check_weights(weights, data):
 
 
 def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
-    """
-    Check if a column is finite and positive.
-    """
+    """Check if a column is finite and positive."""
     if isinstance(x, (pd.DataFrame, pd.Series)):
         x = x.to_numpy()
 

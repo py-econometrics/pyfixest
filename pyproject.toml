@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.15.4"
+version = "0.16.0"
 
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
@@ -58,7 +58,7 @@ select = [
   "E", # pycodestyle errors
   "W", # pycodestyle warnings
   "I", # isort
-#  "D", # flake8-docstrings
+  "D", # flake8-docstrings
   "UP", # pyupgrade
   "SIM", # flake8-simplify
   "TRY", # tryceratops
@@ -84,11 +84,15 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D100", "D103"]
 
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [tool.ruff.format]
 docstring-code-format = true
+docstring-code-line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
