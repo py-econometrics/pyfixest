@@ -1351,7 +1351,7 @@ class Feols:
         alpha: float = 0.05,
         keep: Optional[Union[list, str]] = [],
         drop: Optional[Union[list, str]] = [],
-        joint_cis: bool = False,
+        joint: bool = False,
         seed: Optional[int] = None,
         nboot: int = 10_000,
     ) -> pd.DataFrame:
@@ -1363,7 +1363,7 @@ class Feols:
         alpha : float, optional
             The significance level for confidence intervals. Defaults to 0.05.
             keep: str or list of str, optional
-        joint_cis : bool, optional
+        joint : bool, optional
             Whether to compute simultaneous confidence interval for joint null
             of parameters selected by `keep` and `drop`. Defaults to False. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
@@ -1383,10 +1383,10 @@ class Feols:
             used simultaneously.
         nboot : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
-            Defaults to 10_000. Only used if `joint_cis` is True.
+            Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
             The seed for the random number generator. Defaults to None. Only used if
-            `joint_cis` is True.
+            `joint` is True.
 
         Returns
         -------
@@ -1408,7 +1408,7 @@ class Feols:
         if not joint_indices:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
-        if not joint_cis:
+        if not joint:
 
             if self._vcov_type in ["iid", "hetero"]:
                 df = self._N - self._k
