@@ -1,3 +1,4 @@
+from threading import local
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,11 +6,16 @@ import pytest
 from pyfixest.ccv import _compute_CCV
 from pyfixest.estimation import feols
 
-data = pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
-
+@pytest.fixture
+def data(local=False):
+    """Load the census data used in the tests."""
+    if local:
+        return pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
+    else:
+        return pd.read_stata("http://www.damianclarke.net/stata/census2000_5pc.dta")
 
 # function retrieved from Harvard Dataverse
-def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
+def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     """
     Compute the CCV variance using a slight variation of AAIW's code.
 
@@ -21,28 +27,28 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
     """
 
     rng = np.random.default_rng(seed)
-    df["u"] = rng.choice([False, True], size=df.shape[0])
+    data["u"] = rng.choice([False, True], size=data.shape[0])
 
-    u1 = df["u"] == True  # noqa: E712
-    u0 = df["u"] == False  # noqa: E712
-    w1 = df[nmx] == 1
-    w0 = df[nmx] == 0
+    u1 = data["u"] == True  # noqa: E712
+    u0 = data["u"] == False  # noqa: E712
+    w1 = data[nmx] == 1
+    w0 = data[nmx] == 0
 
     # compute alpha, tau using first split
-    alpha = df[u1 & w0][depvar].mean()
-    tau = df[u1 & w1][depvar].mean() - df[u1 & w0][depvar].mean()
+    alpha = data[u1 & w0][depvar].mean()
+    tau = data[u1 & w1][depvar].mean() - data[u1 & w0][depvar].mean()
 
     # compute for each m
     tau_ms = {}
     nm = "tau_"
     pk_term = 0
-    for m in df[cluster].unique():
-        ind_m = df[cluster] == m
-        aux1 = df[u1 & ind_m & w1][depvar].mean()
-        aux0 = df[u1 & ind_m & w0][depvar].mean()
+    for m in data[cluster].unique():
+        ind_m = data[cluster] == m
+        aux1 = data[u1 & ind_m & w1][depvar].mean()
+        aux0 = data[u1 & ind_m & w0][depvar].mean()
 
-        aux1_full = df[ind_m & w1][depvar].mean()
-        aux0_full = df[ind_m & w0][depvar].mean()
+        aux1_full = data[ind_m & w1][depvar].mean()
+        aux0_full = data[ind_m & w0][depvar].mean()
         aux_tau = aux1 - aux0
         aux_tau_full = aux1_full - aux0_full
 
@@ -53,37 +59,37 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
         tau_ms[aux_nm] = aux_tau
 
         # compute the pk term in u0
-        Nm = df[ind_m].shape[0]
+        Nm = data[ind_m].shape[0]
         aux_pk = Nm * ((aux_tau_full - tau) ** 2)
         pk_term = pk_term + aux_pk
 
     # compute the residuals
-    df["resU"] = df[depvar] - alpha - df[nmx] * tau
+    data["resU"] = data[depvar] - alpha - data[nmx] * tau
 
     # Wbar
-    Wbar = df[u1][nmx].mean()
-    # Wbar = df[nmx].mean() # to match Guido
+    Wbar = data[u1][nmx].mean()
+    # Wbar = data[nmx].mean() # to match Guido
 
     # pk term
-    pk_term = pk_term * (1.0 - pk) / df.shape[0]
+    pk_term = pk_term * (1.0 - pk) / data.shape[0]
 
     # compute avg Z
-    Zavg = (np.sum(df["u"] == False)) / df.shape[0]  # noqa: E712
+    Zavg = (np.sum(data["u"] == False)) / data.shape[0]  # noqa: E712
 
     # compute the normalized CCV using second split
-    n = df.shape[0] * (Wbar**2) * ((1.0 - Wbar) ** 2)
+    n = data.shape[0] * (Wbar**2) * ((1.0 - Wbar) ** 2)
 
     sum_CCV = 0
-    for m in df[cluster].unique():
-        ind_m = df[cluster] == m
-        df_m = df[u0 & ind_m]
+    for m in data[cluster].unique():
+        ind_m = data[cluster] == m
+        data_m = data[u0 & ind_m]
         aux_nm = nm + str(m)
 
         # tau term
         tau_term = (tau_ms[aux_nm] - tau) * Wbar * (1.0 - Wbar)
 
         # Residual term
-        res_term = (df_m[nmx] - Wbar) * df_m["resU"]
+        res_term = (data_m[nmx] - Wbar) * data_m["resU"]
 
         # square of sums
         sq_sum = np.sum(res_term - tau_term) ** 2
@@ -106,21 +112,19 @@ def compute_CCV_AAIW(df, depvar, cluster, seed, nmx, pk):
 
 
 @pytest.mark.skip(reason="This test is not yet implemented")
-@pytest.mark.fixture(data=data)
-def test_ccv_against_AAIW(data):
+def test_ccv_against_AAIW():
 
-    df = pd.read_stata("C:/Users/alexa/Downloads/census2000_5pc.dta")
-    N = df.shape[0]
-    Y = df["ln_earnings"].values
-    W = df["college"].values.reshape(-1, 1)
+    N = data.shape[0]
+    Y = data["ln_earnings"].values
+    W = data["college"].values.reshape(-1, 1)
     X = np.concatenate([np.ones((N, 1)), W], axis=1)
-    cluster_vec = df["state"].values
+    cluster_vec = data["state"].values
     rng = np.random.default_rng(2002)
 
     fml = "ln_earnings ~ college"
 
     vcov_AAIW = compute_CCV_AAIW(
-        df, depvar="ln_earnings", cluster="state", seed=2002, nmx="college", pk=0.05
+        data, depvar="ln_earnings", cluster="state", seed=2002, nmx="college", pk=0.05
     )
     vcov = _compute_CCV(
         fml=fml,
@@ -131,13 +135,12 @@ def test_ccv_against_AAIW(data):
         cluster_vec=cluster_vec,
         pk=0.05,
         rng=rng,
-        data=df,
+        data=data,
     )
 
     assert vcov_AAIW == vcov
 
 
-@pytest.mark.fixture(data=data)
 def test_against_stata(data):
     """
     Test the ccv function against the stata implementation of the CCV variance.
