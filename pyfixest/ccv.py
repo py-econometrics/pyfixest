@@ -98,11 +98,9 @@ def ccv(data, depvar, treatment, cluster, xfml=None, seed=None, pk=1, qk=1, n_sp
 
     vcov_splits /= n_splits
 
-    # import pdb; pdb.set_trace()
     crv1_idx = fit_full._coefnames.index(treatment)
     vcov_crv1 = fit_full._vcov[crv1_idx, crv1_idx]
-    qk = 1
-    vcov_ccv = qk * vcov_ccv + (1 - qk) * vcov_crv1
+    vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
     se = np.sqrt(vcov_ccv / N)
     tstat = tau_full / se
