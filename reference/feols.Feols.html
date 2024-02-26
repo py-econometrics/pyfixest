@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -935,14 +969,77 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="pyfixest.feols.Feols.confint" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.confint">confint</h3>
-<p><code>feols.Feols.confint()</code></p>
+<p><code>feols.Feols.confint(alpha=0.05, keep=[], drop=[], exact_match=False, joint=False, seed=None, nboot=10000)</code></p>
 <p>Fitted model confidence intervals.</p>
+<section id="parameters-3" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="table">
+<colgroup>
+<col style="width: 2%">
+<col style="width: 8%">
+<col style="width: 86%">
+<col style="width: 2%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>alpha</code></td>
+<td>float</td>
+<td>The significance level for confidence intervals. Defaults to 0.05. keep: str or list of str, optional</td>
+<td><code>0.05</code></td>
+</tr>
+<tr class="even">
+<td><code>joint</code></td>
+<td>bool</td>
+<td>Whether to compute simultaneous confidence interval for joint null of parameters selected by <code>keep</code> and <code>drop</code>. Defaults to False. See https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf, Remark 4.4.1 for details.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>keep</code></td>
+<td>typing.Optional[typing.Union[list, str]]</td>
+<td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
+<td><code>[]</code></td>
+</tr>
+<tr class="even">
+<td><code>drop</code></td>
+<td>typing.Optional[typing.Union[list, str]]</td>
+<td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
+<td><code>[]</code></td>
+</tr>
+<tr class="odd">
+<td><code>exact_match</code></td>
+<td>typing.Optional[bool]</td>
+<td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>nboot</code></td>
+<td>int</td>
+<td>The number of bootstrap iterations to run for joint confidence intervals. Defaults to 10_000. Only used if <code>joint</code> is True.</td>
+<td><code>10000</code></td>
+</tr>
+<tr class="odd">
+<td><code>seed</code></td>
+<td>int</td>
+<td>The seed for the random number generator. Defaults to None. Only used if <code>joint</code> is True.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="returns-3" class="level4">
 <h4 class="anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="table">
 <colgroup>
-<col style="width: 24%">
-<col style="width: 75%">
+<col style="width: 18%">
+<col style="width: 81%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -953,10 +1050,20 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>pandas.pandas.DataFrame</td>
-<td>A pd.DataFrame with confidence intervals of the estimated regression model.</td>
+<td>A pd.DataFrame with confidence intervals of the estimated regression model for the selected coefficients.</td>
 </tr>
 </tbody>
 </table>
+</section>
+<section id="examples" class="level4">
+<h4 class="anchored" data-anchor-id="examples">Examples</h4>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ C(f1)"</span>, data <span class="op">=</span> data)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha <span class="op">=</span> <span class="fl">0.10</span>).head()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha <span class="op">=</span> <span class="fl">0.10</span>, joint <span class="op">=</span> <span class="va">True</span>, nboot <span class="op">=</span> <span class="dv">9999</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="pyfixest.feols.Feols.fixef" class="level3">
@@ -1008,8 +1115,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.get_inference">get_inference</h3>
 <p><code>feols.Feols.get_inference(alpha=0.95)</code></p>
 <p>Compute standard errors, t-statistics, and p-values for the regression model.</p>
-<section id="parameters-3" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
+<section id="parameters-4" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 9%">
@@ -1134,8 +1241,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.iplot">iplot</h3>
 <p><code>feols.Feols.iplot(alpha=0.05, figsize=(500, 300), yintercept=None, xintercept=None, rotate_xticks=0, title=None, coord_flip=True)</code></p>
 <p>Create coefficient plots for variables interacted via <code>i()</code> syntax.</p>
-<section id="parameters-4" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
+<section id="parameters-5" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 13%">
@@ -1224,8 +1331,8 @@ ul.task-list li input[type="checkbox"] {
 <p><code>feols.Feols.predict(newdata=None)</code></p>
 <p>Predict values of the model on new data.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters-5" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
+<section id="parameters-6" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 5%">
@@ -1355,8 +1462,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.summary">summary</h3>
 <p><code>feols.Feols.summary(digits=3)</code></p>
 <p>Summary of estimated model.</p>
-<section id="parameters-6" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
+<section id="parameters-7" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 12%">
@@ -1457,8 +1564,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.vcov">vcov</h3>
 <p><code>feols.Feols.vcov(vcov)</code></p>
 <p>Compute covariance matrices for an estimated regression model.</p>
-<section id="parameters-7" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
+<section id="parameters-8" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 1%">
@@ -1511,8 +1618,8 @@ ul.task-list li input[type="checkbox"] {
 <p><code>feols.Feols.wald_test(R=None, q=None, distribution='F')</code></p>
 <p>Conduct Wald test.</p>
 <p>Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.</p>
-<section id="parameters-8" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
+<section id="parameters-9" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 12%">
@@ -1576,8 +1683,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="pyfixest.feols.Feols.wildboottest">wildboottest</h3>
 <p><code>feols.Feols.wildboottest(B, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False, return_bootstrapped_t_stats=False)</code></p>
 <p>Run a wild cluster bootstrap based on an object of type “Feols”.</p>
-<section id="parameters-9" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
+<section id="parameters-10" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-10">Parameters</h4>
 <table class="table">
 <colgroup>
 <col style="width: 5%">
