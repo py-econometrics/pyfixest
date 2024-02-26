@@ -24,3 +24,7 @@ def test_visualize():
     # iplot
     fit5 = feols("Y ~ i(f1)", data=data)
     iplot(fit5)
+
+    # FixestMulti
+    fit6 = feols("Y + Y2 ~ X1 + X2 | f1", data=data)
+    fit6.coefplot()
