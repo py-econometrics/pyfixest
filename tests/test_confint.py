@@ -20,6 +20,13 @@ def test_confint():
     assert np.all(confint.loc[:, "0.025%"] < fit.confint(alpha=0.10).loc[:, "0.05%"])
     assert np.all(confint.loc[:, "0.975%"] > fit.confint(alpha=0.10).loc[:, "0.95%"])
 
+    # test keep, drop, and exact_match
+    assert fit.confint(keep="X1", exact_match=True).shape[0] == 1
+    assert (
+        fit.confint(drop=["X2"], exact_match=True).shape[0] == len(fit._coefnames) - 1
+    )
+    assert fit.confint(keep="X").shape[0] == 2
+
     # simultaneous CIs: simultaneous CIs always wider
     for _ in range(5):
         assert np.all(
