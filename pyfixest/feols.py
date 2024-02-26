@@ -1351,6 +1351,7 @@ class Feols:
         alpha: float = 0.05,
         keep: Optional[Union[list, str]] = [],
         drop: Optional[Union[list, str]] = [],
+        exact_match: Optional[bool] = False,
         joint: bool = False,
         seed: Optional[int] = None,
         nboot: int = 10_000,
@@ -1381,6 +1382,10 @@ class Feols:
             pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
             Default is keeping all coefficients. Parameter `keep` and `drop` can be
             used simultaneously.
+        exact_match: bool, optional
+            Whether to use exact match for `keep` and `drop`. Default is False.
+            If True, the pattern will be matched exactly to the coefficient name
+            instead of using regular expressions.
         nboot : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
@@ -1406,13 +1411,15 @@ class Feols:
         fit.confint(alpha = 0.10, joint = True, nboot = 9999).head()
         ```
         """
+
+        tidy_df = self.tidy()
         if keep or drop:
             if isinstance(keep, str):
                 keep = [keep]
             if isinstance(drop, str):
                 drop = [drop]
-            res = _select_order_coefs(self.tidy(), keep, drop)
-            coefnames = res.index.tolist()
+            idxs = _select_order_coefs(tidy_df.index, keep, drop, exact_match)
+            coefnames = tidy_df.loc[idxs, :].index.tolist()
         else:
             coefnames = self._coefnames
 
