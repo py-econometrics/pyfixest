@@ -1411,7 +1411,6 @@ class Feols:
         fit.confint(alpha = 0.10, joint = True, nboot = 9999).head()
         ```
         """
-
         tidy_df = self.tidy()
         if keep or drop:
             if isinstance(keep, str):
