@@ -1086,9 +1086,7 @@ class Feols:
         assert (
             isinstance(cluster, str) or cluster is None
         ), "cluster must be a string or None."
-        assert (
-            isinstance(seed, int) or seed is None
-        ), "seed must be an integer or None."
+        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
         assert isinstance(qk, (int, float)) and 0 <= qk <= 1
@@ -1121,7 +1119,9 @@ class Feols:
             )
 
         if not self._is_clustered:
-            warnings.warn("The initial model was not clustered. CRV1 inference is computed and stored in the model object.")
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
             self.vcov({"CRV1": cluster})
 
         if seed is None:

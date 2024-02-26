@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from pyfixest.summarize import _tabulate_etable
 import pytest
 
 from pyfixest.ccv import _compute_CCV
@@ -120,7 +119,7 @@ def test_ccv_against_AAIW(data, pk):
     N = data.shape[0]
     Y = data["ln_earnings"].values
     W = data["college"].values
-    X = np.concatenate([np.ones((N, 1)), W.reshape(-1,1)], axis=1)
+    X = np.concatenate([np.ones((N, 1)), W.reshape(-1, 1)], axis=1)
     cluster_vec = data["state"].values
     seed = 2002
 
@@ -142,21 +141,21 @@ def test_ccv_against_AAIW(data, pk):
         pk=pk,
         rng=rng,
         data=data,
-        tau_full = tau_full
+        tau_full=tau_full,
     )
 
     assert np.abs(vcov - vcov_AAIW) < 1e-6
 
 
 def test_ccv_internally(data):
-
     """Test the ccv function internally."""
-
     # it does not matter where CRV inference is specified
     fit1 = feols("ln_earnings ~ college", data=data)
     fit2 = feols("ln_earnings ~ college", data=data, vcov={"CRV1": "state"})
 
-    res1 = fit1.ccv(treatment="college", pk=0.05, qk=1, n_splits=2, seed=929, cluster = "state")
+    res1 = fit1.ccv(
+        treatment="college", pk=0.05, qk=1, n_splits=2, seed=929, cluster="state"
+    )
     res2 = fit2.ccv(treatment="college", pk=0.05, qk=1, n_splits=2, seed=929)
 
     assert np.all(res1 == res2)
