@@ -313,6 +313,7 @@ def test_errors_ccv():
     with pytest.raises(AssertionError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
+
 def test_errors_confint():
 
     data = get_data()
