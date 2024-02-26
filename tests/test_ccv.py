@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pyfixest.summarize import _tabulate_etable
 import pytest
 
 from pyfixest.ccv import _compute_CCV
@@ -113,20 +114,23 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     return V_CCV
 
 
-@pytest.mark.skip(reason="This test is not yet implemented")
-def test_ccv_against_AAIW():
+@pytest.mark.parametrize("pk", [0.05, 0.5, 0.95])
+def test_ccv_against_AAIW(data, pk):
 
     N = data.shape[0]
     Y = data["ln_earnings"].values
-    W = data["college"].values.reshape(-1, 1)
-    X = np.concatenate([np.ones((N, 1)), W], axis=1)
+    W = data["college"].values
+    X = np.concatenate([np.ones((N, 1)), W.reshape(-1,1)], axis=1)
     cluster_vec = data["state"].values
-    rng = np.random.default_rng(2002)
+    seed = 2002
+
+    rng = np.random.default_rng(seed)
 
     fml = "ln_earnings ~ college"
+    tau_full = feols(fml, data=data).coef().xs("college")
 
     vcov_AAIW = compute_CCV_AAIW(
-        data, depvar="ln_earnings", cluster="state", seed=2002, nmx="college", pk=0.05
+        data, depvar="ln_earnings", cluster="state", seed=seed, nmx="college", pk=pk
     )
     vcov = _compute_CCV(
         fml=fml,
@@ -135,12 +139,27 @@ def test_ccv_against_AAIW():
         W=W,
         treatment="college",
         cluster_vec=cluster_vec,
-        pk=0.05,
+        pk=pk,
         rng=rng,
         data=data,
+        tau_full = tau_full
     )
 
-    assert vcov_AAIW == vcov
+    assert np.abs(vcov - vcov_AAIW) < 1e-6
+
+
+def test_ccv_internally(data):
+
+    """Test the ccv function internally."""
+
+    # it does not matter where CRV inference is specified
+    fit1 = feols("ln_earnings ~ college", data=data)
+    fit2 = feols("ln_earnings ~ college", data=data, vcov={"CRV1": "state"})
+
+    res1 = fit1.ccv(treatment="college", pk=0.05, qk=1, n_splits=2, seed=929, cluster = "state")
+    res2 = fit2.ccv(treatment="college", pk=0.05, qk=1, n_splits=2, seed=929)
+
+    assert np.all(res1 == res2)
 
 
 def test_against_stata(data):
@@ -168,14 +187,14 @@ def test_against_stata(data):
         "CCV"
     )
 
-    assert np.abs(res_ccv1["2.5 %"] - 0.458) < 1e-02
-    assert np.abs(res_ccv1["97.5 %"] - 0.473) < 1e-02
+    assert np.abs(res_ccv1["2.5%"] - 0.458) < 1e-02
+    assert np.abs(res_ccv1["97.5%"] - 0.473) < 1e-02
 
-    assert np.abs(res_ccv2["2.5 %"] - 0.458) < 1e-02
-    assert np.abs(res_ccv2["97.5 %"] - 0.473) < 1e-02
+    assert np.abs(res_ccv2["2.5%"] - 0.458) < 1e-02
+    assert np.abs(res_ccv2["97.5%"] - 0.473) < 1e-02
 
-    assert np.abs(res_ccv3["2.5 %"] - 0.414) < 1e-02
-    assert np.abs(res_ccv3["97.5 %"] - 0.517) < 1e-02
+    assert np.abs(res_ccv3["2.5%"] - 0.414) < 1e-02
+    assert np.abs(res_ccv3["97.5%"] - 0.517) < 1e-02
 
-    assert np.abs(res_ccv4["2.5 %"] - 0.428) < 1e-02
-    assert np.abs(res_ccv4["97.5 %"] - 0.503) < 1e-02
+    assert np.abs(res_ccv4["2.5%"] - 0.428) < 1e-02
+    assert np.abs(res_ccv4["97.5%"] - 0.503) < 1e-02

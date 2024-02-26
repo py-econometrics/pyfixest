@@ -1087,7 +1087,7 @@ class Feols:
             isinstance(cluster, str) or cluster is None
         ), "cluster must be a string or None."
         assert (
-            isinstance(seed, int) or cluster is None
+            isinstance(seed, int) or seed is None
         ), "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
@@ -1119,6 +1119,10 @@ class Feols:
             raise ValueError(
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
+
+        if not self._is_clustered:
+            warnings.warn("The initial model was not clustered. CRV1 inference is computed and stored in the model object.")
+            self.vcov({"CRV1": cluster})
 
         if seed is None:
             seed = np.random.randint(1, 100_000_000)
@@ -1187,8 +1191,8 @@ class Feols:
                 "Std. Error": se,
                 "t value": tstat,
                 "Pr(>|t|)": pvalue,
-                "2.5 %": conf_int[0],
-                "97.5 %": conf_int[1],
+                "2.5%": conf_int[0],
+                "97.5%": conf_int[1],
             }
         )
         res_ccv.name = "CCV"
