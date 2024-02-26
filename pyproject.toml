@@ -2,7 +2,6 @@
 name = "pyfixest"
 version = "0.16.2"
 
-
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
 license = "MIT"
@@ -31,6 +30,7 @@ pyhdfe = ">=0.2.0"
 pyarrow = ">=14.0.2"
 wildboottest = ">=0.2.0"
 pre-commit = "^3.6.0"
+doubleml = "^0.7.1"
 
 [tool.poetry.group.docs.dependencies]
 quartodoc = ">=0.7.2"

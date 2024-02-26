@@ -1,6 +1,11 @@
+import re
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 from formulaic import model_matrix
+
+from pyfixest.dev_utils import _create_rng
 
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
@@ -223,3 +228,82 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     # df["weights"].iloc[]
 
     return df
+
+
+def simultaneous_crit_val(
+    C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
+) -> float:
+    """
+    Simultaneous Critical Values.
+
+    Obtain critical values for simultaneous inference on linear model parameters
+    using the Multiplier bootstrap.
+
+    Parameters
+    ----------
+    C: numpy.ndarray
+        Covariance matrix. Symmetric, and contains as many rows/columns
+        as parameters of interest.
+    S: int
+        Number of replications
+    alpha: float
+        Significance level. Defaults to 0.05
+    seed: int, optional
+        Seed for the random number generator. Default is None.
+
+    Returns
+    -------
+    float
+        Critical value, larger than 1.96
+        (which is the crit-value for pointwise intervals)
+    """
+
+    def msqrt(C: np.ndarray) -> np.ndarray:
+        eig_vals, eig_vecs = np.linalg.eigh(C)
+        return eig_vecs @ np.diag(np.sqrt(eig_vals)) @ np.linalg.inv(eig_vecs)
+
+    rng = _create_rng(seed)
+    p = C.shape[0]
+    tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
+    return np.quantile(tmaxs, 1 - alpha)
+
+
+def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
+    """
+    Select and order the coefficients based on the pattern.
+
+    Parameters
+    ----------
+    res: pd.DataFrame
+        The DataFrame to be ordered.
+    keep: list
+        Refer to the `keep` parameter in the `etable` function.
+    drop: list
+        Refer to the `drop` parameter in the `etable` function.
+
+    Returns
+    -------
+    res: pd.DataFrame
+        The ordered DataFrame.
+    """
+    coefs = list(res.index)
+    coef_order = [] if keep else coefs[:]  # Store matched coefs
+    for pattern in keep:
+        _coefs = []  # Store remaining coefs
+        for coef in coefs:
+            if re.findall(pattern, coef):
+                coef_order.append(coef)
+            else:
+                _coefs.append(coef)
+        coefs = _coefs
+
+    for pattern in drop:
+        _coefs = []
+        for (
+            coef
+        ) in coef_order:  # Remove previously matched coefs that match the drop pattern
+            if not re.findall(pattern, coef):
+                _coefs.append(coef)
+        coef_order = _coefs
+
+    return res.loc[coef_order]
