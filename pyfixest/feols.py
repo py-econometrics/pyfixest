@@ -10,6 +10,7 @@ from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
+from tqdm import tqdm
 
 from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
 from pyfixest.exceptions import (
@@ -1090,8 +1091,8 @@ class Feols:
             isinstance(seed, int) or cluster is None
         ), "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)), "pk must be an int or float."
-        assert isinstance(qk, (int, float)), "qk must be an int or float."
+        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
+        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
 
         if self._has_fixef:
             raise NotImplementedError(
@@ -1122,6 +1123,7 @@ class Feols:
 
         if seed is None:
             seed = np.random.randint(1, 100_000_000)
+        rng = np.random.default_rng(seed)
 
         depvar = self._depvar
         fml = self._fml
@@ -1130,6 +1132,72 @@ class Feols:
         xfml = None if not xfml else "+".join(xfml)
 
         data = self._data
+        Y = self._Y.flatten()
+        W = data[treatment].values
+        assert np.all(
+            np.isin(W, [0, 1])
+        ), "Treatment variable must be binary with values 0 and 1"
+        X = self._X
+        cluster_vec = data[cluster].values
+        unique_clusters = np.unique(cluster_vec)
+
+        tau_full = self.coef().xs(treatment)
+
+        N = self._N
+        G = len(unique_clusters)
+
+        ccv_module = import_module("pyfixest.ccv")
+        _compute_CCV = getattr(ccv_module, "_compute_CCV")
+
+        vcov_splits = 0.0
+        for _ in tqdm(range(n_splits)):
+
+            vcov_ccv = _compute_CCV(
+                fml=fml,
+                Y=Y,
+                X=X,
+                W=W,
+                rng=rng,
+                data=data,
+                treatment=treatment,
+                cluster_vec=cluster_vec,
+                pk=pk,
+                tau_full=tau_full,
+            )
+            vcov_splits += vcov_ccv
+
+        vcov_splits /= n_splits
+        vcov_splits /= N
+
+        crv1_idx = self._coefnames.index(treatment)
+        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
+        vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
+
+        se = np.sqrt(vcov_ccv)
+        tstat = tau_full / se
+        df = G - 1
+        pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
+        alpha = 0.95
+        z = np.abs(t.ppf((1 - alpha) / 2, df))
+        z_se = z * se
+        conf_int = np.array([tau_full - z_se, tau_full + z_se])
+
+        res_ccv = pd.Series(
+            {
+                "Estimate": tau_full,
+                "Std. Error": se,
+                "t value": tstat,
+                "Pr(>|t|)": pvalue,
+                "2.5 %": conf_int[0],
+                "97.5 %": conf_int[1],
+            }
+        )
+        res_ccv.name = "CCV"
+
+        res_crv1 = self.tidy().xs(treatment)
+        res_crv1.name = "CRV1"
+
+        return pd.concat([res_ccv, res_crv1], axis=1).T
 
         ccv_module = import_module("pyfixest.ccv")
         _ccv = getattr(ccv_module, "_ccv")
