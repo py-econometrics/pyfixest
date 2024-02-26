@@ -447,7 +447,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="d9fcf0b5" class="cell" data-execution_count="1">
+<div id="c109cc48" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.visualize <span class="im">import</span> coefplot</span>
@@ -460,7 +460,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="oal7SV"></div>
+            <div id="rh6Fgb"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -484,22 +484,94 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("oal7SV").appendChild(div);
+                        document.getElementById("rh6Fgb").appendChild(div);
                     };
-                    var e = document.getElementById("oal7SV");
+                    var e = document.getElementById("rh6Fgb");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="DmjPjg"></div>
+   <div id="csCiw6"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
-"__error_message":"Variable not found: '2.5 %'. Variables in data frame: ['Model', 'Coefficient', 'Estimate', 'Std. Error', 't value', 'Pr(>|t|)', '2.5%', '97.5%']"
+"data":{
+"Model":["Y~X1","Y~X1","Y~X1+X2","Y~X1+X2","Y~X1+X2","Y~X1+X2|f1","Y~X1+X2|f1"],
+"Coefficient":["Intercept","X1","Intercept","X1","X2","X1","X2"],
+"Estimate":[0.9185177588356426,-1.000085840074156,0.888779148933936,-0.9929357698186859,-0.17634236659778288,-0.9495255714191589,-0.1742252748945438],
+"2.5%":[0.6990856170653885,-1.1663660739416457,0.67601628367764,-1.1540790755856782,-0.2190548570563819,-1.085581857547282,-0.2118570044389386],
+"97.5%":[1.1379499006058966,-0.8338056062066661,1.101542014190232,-0.8317924640516935,-0.13362987613918387,-0.813469285291036,-0.13659354535014903]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+},
+"coord":{
+"name":"flip",
+"flip":true
+},
+"ggsize":{
+"width":500.0,
+"height":300.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"kind":"plot",
+"scales":[{
+"name":"Estimate and 95% Confidence Interval",
+"aesthetic":"y"
+}],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[]
 };
-           var plotContainer = document.getElementById("DmjPjg");
+           var plotContainer = document.getElementById("csCiw6");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
