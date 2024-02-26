@@ -45,6 +45,7 @@ def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
         seed = np.random.randint(100_000_000)
     return np.random.default_rng(seed)
 
+
 def _select_order_coefs(
     coefs: list,
     keep: Optional[Union[list, str]] = [],
