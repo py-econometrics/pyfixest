@@ -463,8 +463,8 @@ class FixestMulti:
                 - Std. Error: the standard errors of the estimated coefficients
                 - t value: the t-values of the estimated coefficients
                 - Pr(>|t|): the p-values of the estimated coefficients
-                - 2.5 %: the lower bound of the 95% confidence interval
-                - 97.5 %: the upper bound of the 95% confidence interval
+                - 2.5%: the lower bound of the 95% confidence interval
+                - 97.5%: the upper bound of the 95% confidence interval
                 If `type` is set to "markdown", the resulting DataFrame will be
                 returned as a markdown-formatted string with three decimal places.
         """
