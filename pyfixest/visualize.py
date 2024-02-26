@@ -246,7 +246,7 @@ def _coefplot(
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
         + geom_point(position=position_dodge(0.5))
         + geom_errorbar(
-            aes(ymin="2.5 %", ymax="97.5 %"), width=0.05, position=position_dodge(0.5)
+            aes(ymin="2.5%", ymax="97.5%"), width=0.05, position=position_dodge(0.5)
         )
         + ylab("Estimate and 95% Confidence Interval")
     )
