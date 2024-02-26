@@ -11,12 +11,12 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.dev_utils import DataFrameType, _polars_to_pandas
+from pyfixest.dev_utils import DataFrameType, _polars_to_pandas, _select_order_coefs
 from pyfixest.exceptions import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import get_ssc
+from pyfixest.utils import get_ssc, simultaneous_crit_val
 
 
 class Feols:
@@ -463,7 +463,6 @@ class Feols:
                     k_instruments = _Z.shape[1]
                     meat = np.zeros((k_instruments, k_instruments))
 
-                    # import pdb; pdb.set_trace()
                     # deviance uniquely for Poisson
                     if hasattr(self, "deviance"):
                         weighted_uhat = _weights.flatten() * _u_hat.flatten()
@@ -1296,8 +1295,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5 %": _conf_int[0],
-                "97.5 %": _conf_int[1],
+                "2.5%": _conf_int[0],
+                "97.5%": _conf_int[1],
             }
         )
 
@@ -1347,16 +1346,117 @@ class Feols:
         """
         return self.tidy()["Pr(>|t|)"]
 
-    def confint(self) -> pd.DataFrame:
-        """
+    def confint(
+        self,
+        alpha: float = 0.05,
+        keep: Optional[Union[list, str]] = [],
+        drop: Optional[Union[list, str]] = [],
+        exact_match: Optional[bool] = False,
+        joint: bool = False,
+        seed: Optional[int] = None,
+        nboot: int = 10_000,
+    ) -> pd.DataFrame:
+        r"""
         Fitted model confidence intervals.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for confidence intervals. Defaults to 0.05.
+            keep: str or list of str, optional
+        joint : bool, optional
+            Whether to compute simultaneous confidence interval for joint null
+            of parameters selected by `keep` and `drop`. Defaults to False. See
+            https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
+            Remark 4.4.1 for details.
+        keep: str or list of str, optional
+            The pattern for retaining coefficient names. You can pass a string (one
+            pattern) or a list (multiple patterns). Default is keeping all coefficients.
+            You should use regular expressions to select coefficients.
+                "age",            # would keep all coefficients containing age
+                r"^tr",           # would keep all coefficients starting with tr
+                r"\\d$",          # would keep all coefficients ending with number
+            Output will be in the order of the patterns.
+        drop: str or list of str, optional
+            The pattern for excluding coefficient names. You can pass a string (one
+            pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+            Default is keeping all coefficients. Parameter `keep` and `drop` can be
+            used simultaneously.
+        exact_match: bool, optional
+            Whether to use exact match for `keep` and `drop`. Default is False.
+            If True, the pattern will be matched exactly to the coefficient name
+            instead of using regular expressions.
+        nboot : int, optional
+            The number of bootstrap iterations to run for joint confidence intervals.
+            Defaults to 10_000. Only used if `joint` is True.
+        seed : int, optional
+            The seed for the random number generator. Defaults to None. Only used if
+            `joint` is True.
 
         Returns
         -------
         pd.DataFrame
-            A pd.DataFrame with confidence intervals of the estimated regression model.
+            A pd.DataFrame with confidence intervals of the estimated regression model
+            for the selected coefficients.
+
+        Examples
+        --------
+        ```python
+        from pyfixest.utils import get_data
+        from pyfixest.estimation import feols
+
+        data = get_data()
+        fit = feols("Y ~ C(f1)", data = data)
+        fit.confint(alpha = 0.10).head()
+        fit.confint(alpha = 0.10, joint = True, nboot = 9999).head()
+        ```
         """
-        return self.tidy()[["2.5 %", "97.5 %"]]
+        tidy_df = self.tidy()
+        if keep or drop:
+            if isinstance(keep, str):
+                keep = [keep]
+            if isinstance(drop, str):
+                drop = [drop]
+            idxs = _select_order_coefs(tidy_df.index, keep, drop, exact_match)
+            coefnames = tidy_df.loc[idxs, :].index.tolist()
+        else:
+            coefnames = self._coefnames
+
+        joint_indices = [i for i, x in enumerate(self._coefnames) if x in coefnames]
+        if not joint_indices:
+            raise ValueError("No coefficients match the keep/drop patterns.")
+
+        if not joint:
+
+            if self._vcov_type in ["iid", "hetero"]:
+                df = self._N - self._k
+            else:
+                _G = np.min(np.array(self._G))  # fixest default
+                df = _G - 1
+
+            # use t-dist for linear models, but normal for non-linear models
+            if self._method == "feols":
+                crit_val = np.abs(t.ppf(alpha / 2, df))
+            else:
+                crit_val = np.abs(norm.ppf(alpha / 2))
+        else:
+
+            D_inv = 1 / self._se[joint_indices]
+            V = self._vcov[np.ix_(joint_indices, joint_indices)]
+            C_coefs = (D_inv * V).T * D_inv
+            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha, seed=seed)
+
+        ub = pd.Series(
+            self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
+        )
+        lb = pd.Series(
+            self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
+        )
+
+        df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
+        df.index = coefnames
+
+        return df
 
     def resid(self) -> np.ndarray:
         """
