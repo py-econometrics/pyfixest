@@ -547,7 +547,7 @@ class FixestMulti:
             A pd.Series with coefficient names and confidence intervals.
             The key indicates which models the estimated statistic derives from.
         """
-        return self.tidy()[["2.5 %", "97.5 %"]]
+        return self.tidy()[["2.5%", "97.5%"]]
 
     def iplot(
         self,
