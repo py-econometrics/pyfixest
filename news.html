@@ -188,8 +188,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="pyfixest-0.15.0" class="level2">
-<h2 class="anchored" data-anchor-id="pyfixest-0.15.0">PyFixest 0.15.0</h2>
+<section id="pyfixest-0.17.0-in-development" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.17.0-in-development">PyFixest 0.17.0 (In Development)</h2>
+<ul>
+<li>Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to <a href="https://github.com/apoorvalal"><span class="citation" data-cites="apoorvalal">@apoorvalal</span></a> for the contribution!</li>
+<li>Adds support for the causal cluster variance estimator by <a href="https://academic.oup.com/qje/article/138/1/1/6750017">Abadie et al.&nbsp;(QJE, 2023)</a> for OLS via the <code>.ccv()</code> method.</li>
+</ul>
+</section>
+<section id="pyfixest-0.16.0" class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.16.0">PyFixest 0.16.0</h2>
+<ul>
+<li>Adds multiple quality of life improvements for developers, thanks to <a href="https://github.com/NKeleher">NKeleher</a>.</li>
+<li>Adds more options to customize <code>etable()</code> output thanks to <a href="https://github.com/Wenzhi-Ding">Wenzhi-Ding</a>.</li>
+<li>Implements Romano-Wolf and Bonferroni corrections for multiple testing in the <code>multcomp</code> module.</li>
+</ul>
+</section>
+<section id="pyfixest-0.15." class="level2">
+<h2 class="anchored" data-anchor-id="pyfixest-0.15.">PyFixest 0.15.</h2>
 <ul>
 <li>Adds support for weighted least squares for <code>feols()</code>.</li>
 <li>Reduces testing time drastically by running tests on fewer random data samples. Qualitatively, the set of test remains identical.</li>
@@ -203,7 +218,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Changes all docstrings to <code>numpy</code> format.</li>
 <li>Difference-in-differences estimation functions now need to be imported via the <code>pyfixest.did.estimation</code> module:</li>
 </ul>
-<div id="f5481e54" class="cell" data-execution_count="1">
+<div id="72e45db4" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s, lpdid, event_study</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
@@ -214,7 +229,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="wdDRt6"></div>
+            <div id="G1f9Qp"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -238,9 +253,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("wdDRt6").appendChild(div);
+                        document.getElementById("G1f9Qp").appendChild(div);
                     };
-                    var e = document.getElementById("wdDRt6");
+                    var e = document.getElementById("G1f9Qp");
                     e.appendChild(script);
                 })()
             </script>
