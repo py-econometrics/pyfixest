@@ -10,6 +10,7 @@ from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
+from tqdm import tqdm
 
 from pyfixest.dev_utils import DataFrameType, _polars_to_pandas, _select_order_coefs
 from pyfixest.exceptions import (
@@ -21,9 +22,9 @@ from pyfixest.utils import get_ssc, simultaneous_crit_val
 
 class Feols:
     """
-    Non user-facing class to estimate an IV model using a 2SLS estimator.
+    Non user-facing class to estimate a liner regression via OLS.
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
+    Users should not directly instantiate this class,
     but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
     no demeaning is performed in this class: demeaning is performed in the
     [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
@@ -201,6 +202,7 @@ class Feols:
             self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_wildboottest = True
+        self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
             self._supports_wildboottest = False
 
@@ -1026,6 +1028,194 @@ class Feols:
             return res_df, boot.t_boot
         else:
             return res_df
+
+    def ccv(
+        self,
+        treatment,
+        cluster: Optional[str] = None,
+        seed: Optional[int] = None,
+        n_splits: int = 8,
+        pk: float = 1,
+        qk: float = 1,
+    ) -> pd.DataFrame:
+        """
+        Compute the Causal Cluster Variance following Abadie et al (QJE 2023).
+
+        Parameters
+        ----------
+        treatment: str
+            The name of the treatment variable.
+        cluster : str
+            The name of the cluster variable. None by default.
+            If None, uses the cluster variable from the model fit.
+        seed : int, optional
+            An integer to set the random seed. Defaults to None.
+        n_splits : int, optional
+            The number of splits to use in the cross-fitting procedure. Defaults to 8.
+        pk: float, optional
+            The proportion of sampled clusters. Defaults to 1, which
+            corresponds to all clusters of the population being sampled.
+        qk: float, optional
+            The proportion of sampled observations within each cluster.
+            Defaults to 1, which corresponds to all observations within
+            each cluster being sampled.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with inference based on the "Causal Cluster Variance"
+            and "regular" CRV1 inference.
+
+        Examples
+        --------
+        ```python
+        from pyfixest.estimation import feols
+        from pyfixest.utils import get_data
+
+        data = get_data()
+        data["D1"] = np.random.choice([0, 1], size=data.shape[0])
+
+        fit = feols("Y ~ D", data=data, vcov = {"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk = 0.05, gk = 0.5, n_splits = 8, seed = 123).head()
+        ```
+        """
+        assert (
+            self._supports_cluster_causal_variance
+        ), "The model does not support the causal cluster variance estimator."
+        assert isinstance(treatment, str), "treatment must be a string."
+        assert (
+            isinstance(cluster, str) or cluster is None
+        ), "cluster must be a string or None."
+        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
+        assert isinstance(n_splits, int), "n_splits must be an integer."
+        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
+        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
+
+        if self._has_fixef:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is currently not supported for models with fixed effects."
+            )
+
+        if treatment not in self._coefnames:
+            raise ValueError(
+                f"Variable {treatment} not found in the model's coefficients."
+            )
+
+        if cluster is None:
+            cluster = self._clustervar
+            if cluster is None:
+                raise ValueError("No cluster variable found in the model fit.")
+            elif len(cluster) > 1:
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the causal cluster variance estimator."
+                )
+            else:
+                cluster = cluster[0]
+
+        # check that cluster is in data
+        if cluster not in self._data.columns:
+            raise ValueError(
+                f"Cluster variable {cluster} not found in the data used for the model fit."
+            )
+
+        if not self._is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        if seed is None:
+            seed = np.random.randint(1, 100_000_000)
+        rng = np.random.default_rng(seed)
+
+        depvar = self._depvar
+        fml = self._fml
+        xfml = fml.split("~")[1].split("+")
+        xfml = [x for x in xfml if x != treatment]
+        xfml = None if not xfml else "+".join(xfml)
+
+        data = self._data
+        Y = self._Y.flatten()
+        W = data[treatment].values
+        assert np.all(
+            np.isin(W, [0, 1])
+        ), "Treatment variable must be binary with values 0 and 1"
+        X = self._X
+        cluster_vec = data[cluster].values
+        unique_clusters = np.unique(cluster_vec)
+
+        tau_full = self.coef().xs(treatment)
+
+        N = self._N
+        G = len(unique_clusters)
+
+        ccv_module = import_module("pyfixest.ccv")
+        _compute_CCV = getattr(ccv_module, "_compute_CCV")
+
+        vcov_splits = 0.0
+        for _ in tqdm(range(n_splits)):
+
+            vcov_ccv = _compute_CCV(
+                fml=fml,
+                Y=Y,
+                X=X,
+                W=W,
+                rng=rng,
+                data=data,
+                treatment=treatment,
+                cluster_vec=cluster_vec,
+                pk=pk,
+                tau_full=tau_full,
+            )
+            vcov_splits += vcov_ccv
+
+        vcov_splits /= n_splits
+        vcov_splits /= N
+
+        crv1_idx = self._coefnames.index(treatment)
+        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
+        vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
+
+        se = np.sqrt(vcov_ccv)
+        tstat = tau_full / se
+        df = G - 1
+        pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
+        alpha = 0.95
+        z = np.abs(t.ppf((1 - alpha) / 2, df))
+        z_se = z * se
+        conf_int = np.array([tau_full - z_se, tau_full + z_se])
+
+        res_ccv = pd.Series(
+            {
+                "Estimate": tau_full,
+                "Std. Error": se,
+                "t value": tstat,
+                "Pr(>|t|)": pvalue,
+                "2.5%": conf_int[0],
+                "97.5%": conf_int[1],
+            }
+        )
+        res_ccv.name = "CCV"
+
+        res_crv1 = self.tidy().xs(treatment)
+        res_crv1.name = "CRV1"
+
+        return pd.concat([res_ccv, res_crv1], axis=1).T
+
+        ccv_module = import_module("pyfixest.ccv")
+        _ccv = getattr(ccv_module, "_ccv")
+
+        return _ccv(
+            data=data,
+            depvar=depvar,
+            treatment=treatment,
+            cluster=cluster,
+            xfml=xfml,
+            seed=seed,
+            pk=pk,
+            qk=qk,
+            n_splits=n_splits,
+        )
 
     def fixef(self) -> None:
         """

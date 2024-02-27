@@ -1,6 +1,18 @@
 # News
 
-## PyFixest 0.15.0
+## PyFixest 0.17.0 (In Development)
+
+- Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to [@apoorvalal](https://github.com/apoorvalal) for the contribution!
+- Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017)
+  for OLS via the `.ccv()` method.
+
+## PyFixest 0.16.0
+
+- Adds multiple quality of life improvements for developers, thanks to [NKeleher](https://github.com/NKeleher).
+- Adds more options to customize `etable()` output thanks to [Wenzhi-Ding](https://github.com/Wenzhi-Ding).
+- Implements Romano-Wolf and Bonferroni corrections for multiple testing in the `multcomp` module.
+
+## PyFixest 0.15.
 
 - Adds support for weighted least squares for `feols()`.
 - Reduces testing time drastically by running tests on fewer random data samples. Qualitatively,

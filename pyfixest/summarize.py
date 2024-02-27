@@ -22,7 +22,7 @@ def etable(
     exact_match: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str]:
-    """
+    r"""
     Create an esttab-like table from a list of models.
 
     Parameters
