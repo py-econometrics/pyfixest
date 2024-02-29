@@ -69,16 +69,14 @@ def iplot(
     Examples
     --------
     ```{python}
-    from pyfixest.utils import get_data
-    from pyfixest.estimation import feols
-    from pyfixest.visualize import iplot
+    import pyfixest as pf
 
-    df = get_data()
-    fit1 = feols("Y ~ i(f1)", data = df)
-    fit2 = feols("Y ~ i(f1) + X2", data = df)
-    fit3 = feols("Y ~ i(f1) + X2 | f2", data = df)
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ i(f1)", data = df)
+    fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
+    fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    iplot([fit1, fit2, fit3])
+    pf.iplot([fit1, fit2, fit3])
     ```
     """
     models = _post_processing_input_checks(models)
@@ -162,16 +160,14 @@ def coefplot(
     Examples
     --------
     ```{python}
-    from pyfixest.utils import get_data
-    from pyfixest.estimation import feols
-    from pyfixest.visualize import coefplot
+    import pyfixest as pf
 
-    df = get_data()
-    fit1 = feols("Y ~ X1", data = df)
-    fit2 = feols("Y ~ X1 + X2", data = df)
-    fit3 = feols("Y ~ X1 + X2 | f1", data = df)
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ X1", data = df)
+    fit2 = pf.feols("Y ~ X1 + X2", data = df)
+    fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
-    coefplot([fit1, fit2, fit3])
+    pf.coefplot([fit1, fit2, fit3])
     ```
     """
     models = _post_processing_input_checks(models)

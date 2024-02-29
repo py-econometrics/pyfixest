@@ -271,17 +271,15 @@ def summary(
     Examples
     --------
     ```{python}
-    from pyfixest.utils import get_data
-    from pyfixest.estimation import feols
-    from pyfixest.summarize import summary
+    import pyfixest as pf
 
     # load data
-    df = get_data()
-    fit1 = feols("Y~X1 + X2 | f1", df)
-    fit2 = feols("Y~X1 + X2 | f1 + f2", df)
-    fit3 = feols("Y~X1 + X2 | f1 + f2 + f3", df)
+    df = pf.get_data()
+    fit1 = pf.feols("Y~X1 + X2 | f1", df)
+    fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
+    fit3 = pf.feols("Y~X1 + X2 | f1 + f2 + f3", df)
 
-    summary([fit1, fit2, fit3])
+    pf.summary([fit1, fit2, fit3])
     ```
     """
     models = _post_processing_input_checks(models)

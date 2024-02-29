@@ -80,13 +80,11 @@ def feols(
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
     ```{python}
-    from pyfixest.estimation import feols
-    from pyfixest.utils import get_data
-    from pyfixest.summarize import etable
+    import pyfixest as py
 
-    data = get_data()
+    data = pf.get_data()
 
-    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     fit.summary()
     ```
 
@@ -112,9 +110,9 @@ def feols(
     the standard error by the first fixed effect (CRV1 inference).
 
     ```{python}
-    fit1 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
-    fit2 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov="hetero")
-    fit3 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
+    fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
+    fit2 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="hetero")
+    fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
     ```
 
     Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
@@ -125,7 +123,7 @@ def feols(
     CRV1 inference with clustering by `f1`.
 
     ```{python}
-    fit4 = feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
+    fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
     ```
 
     Inference can be adjusted post estimation via the `vcov` method:
@@ -145,7 +143,7 @@ def feols(
     fixed effects for `f1` and one with fixed effects for `f2` using the `sw()` syntax.
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | sw(f1, f2)", data)
+    fit = pf.feols("Y ~ X1 + X2 | sw(f1, f2)", data)
     type(fit)
     ```
 
@@ -155,23 +153,23 @@ def feols(
     via the `etable()` function:
 
     ```{python}
-    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
     ```
 
     Other supported multiple estimation syntax include `sw0()`, `csw()` and `csw0()`.
     While `sw()` adds variables in a "stepwise" fashion, `csw()` does so cumulatively.
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | csw(f1, f2)", data)
-    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    fit = pf.feols("Y ~ X1 + X2 | csw(f1, f2)", data)
+    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
     ```
 
     The `sw0()` and `csw0()` syntax are similar to `sw()` and `csw()`, but start
     with a model that excludes the variables specified in `sw()` and `csw()`:
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | sw0(f1, f2)", data)
-    etable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])
+    fit = pf.feols("Y ~ X1 + X2 | sw0(f1, f2)", data)
+    pf.etable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])
     ```
 
     The `feols()` function also supports multiple dependent variables. The following
@@ -179,14 +177,14 @@ def feols(
     with `Y2` as the dependent variable.
 
     ```{python}
-    fit = feols("Y + Y2 ~ X1 | f1 + f2", data)
-    etable([fit.fetch_model(0), fit.fetch_model(1)])
+    fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
+    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
     ```
 
     It is possible to combine different multiple estimation operators:
 
     ```{python}
-    fit = feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+    fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
     etable([fit.fetch_model(0),
             fit.fetch_model(1),
             fit.fetch_model(2),
@@ -203,7 +201,7 @@ def feols(
     Besides OLS, `feols()` also supports IV estimation via three part formulas:
 
     ```{python}
-    fit = feols("Y ~  X2 | f1 + f2 | X1 ~ Z1", data)
+    fit = pf.feols("Y ~  X2 | f1 + f2 | X1 ~ Z1", data)
     fit.tidy()
     ```
     Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
@@ -211,7 +209,7 @@ def feols(
     simply omit the fixed effects part of the formula:
 
     ```{python}
-    fit = feols("Y ~  X2 | X1 ~ Z1", data)
+    fit = pf.feols("Y ~  X2 | X1 ~ Z1", data)
     fit.tidy()
     ```
 
@@ -222,7 +220,7 @@ def feols(
     get the predicted values:
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     fit.predict()[0:5]
     ```
 
@@ -230,14 +228,14 @@ def feols(
     which returns a numpy array of the predicted values:
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     fit.predict(newdata=data)[0:5]
     ```
 
     Last, you can plot the results of a model via the `coefplot()` method:
 
     ```{python}
-    fit = feols("Y ~ X1 + X2 | f1 + f2", data)
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     fit.coefplot()
     ```
 
@@ -340,12 +338,10 @@ def fepois(
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
     ```{python}
-    from pyfixest.estimation import fepois
-    from pyfixest.utils import get_data
-    from pyfixest.summarize import etable
+    import pyfixest as pf
 
-    data = get_data(model = "Fepois")
-    fit = fepois("Y ~ X1 + X2 | f1 + f2", data)
+    data = pf.get_data(model = "Fepois")
+    fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
     fit.summary()
     ```
     For more examples, please take a look at the documentation of the `feols()`
