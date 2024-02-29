@@ -4,12 +4,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from pyfixest.demean import demean
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     NonConvergenceError,
     NotImplementedError,
 )
-from pyfixest.feols import Feols
+from pyfixest.estimation.demean import demean
+from pyfixest.estimation.feols_ import Feols
 
 
 class Fepois(Feols):

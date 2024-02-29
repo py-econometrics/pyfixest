@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from pyfixest.dev_utils import _select_order_coefs
-from pyfixest.feiv import Feiv
-from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
+from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.utils.dev_utils import _select_order_coefs
 
 
 def etable(

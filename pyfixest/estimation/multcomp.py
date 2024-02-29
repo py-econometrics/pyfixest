@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
-from pyfixest.summarize import _post_processing_input_checks
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.report.summarize import _post_processing_input_checks
 
 
 def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:

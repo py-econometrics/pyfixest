@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation import feols
-from pyfixest.utils import get_data, ssc
+from pyfixest.estimation.estimation import feols
+from pyfixest.utils.utils import get_data, ssc
 
 
 @pytest.fixture

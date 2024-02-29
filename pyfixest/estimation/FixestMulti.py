@@ -4,15 +4,15 @@ from typing import Optional, Union
 import numpy as np
 import pandas as pd
 
-from pyfixest.demean import demean_model
-from pyfixest.dev_utils import _polars_to_pandas
-from pyfixest.exceptions import MultiEstNotSupportedError
-from pyfixest.feiv import Feiv
-from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois, _check_for_separation
-from pyfixest.FormulaParser import FixestFormulaParser
-from pyfixest.model_matrix_fixest import model_matrix_fixest
-from pyfixest.visualize import coefplot, iplot
+from pyfixest.errors import MultiEstNotSupportedError
+from pyfixest.estimation.demean import demean_model
+from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
+from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.model_matrix_fixest import model_matrix_fixest
+from pyfixest.report.visualize import coefplot, iplot
+from pyfixest.utils.dev_utils import _polars_to_pandas
 
 
 class FixestMulti:

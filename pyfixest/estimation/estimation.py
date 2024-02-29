@@ -2,11 +2,11 @@ from typing import Optional, Union
 
 import pandas as pd
 
-from pyfixest.dev_utils import DataFrameType
-from pyfixest.feols import Feols
-from pyfixest.fepois import Fepois
-from pyfixest.FixestMulti import FixestMulti
-from pyfixest.utils import ssc
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti import FixestMulti
+from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import ssc
 
 
 def feols(

@@ -12,12 +12,16 @@ from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 from tqdm import tqdm
 
-from pyfixest.dev_utils import DataFrameType, _polars_to_pandas, _select_order_coefs
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.dev_utils import (
+    DataFrameType,
+    _polars_to_pandas,
+    _select_order_coefs,
+)
+from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
 
 class Feols:

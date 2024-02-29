@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from formulaic import model_matrix
 
-from pyfixest.detect_singletons import detect_singletons
-from pyfixest.exceptions import InvalidReferenceLevelError
+from pyfixest.errors import InvalidReferenceLevelError
+from pyfixest.estimation.detect_singletons import detect_singletons
 
 
 def model_matrix_fixest(

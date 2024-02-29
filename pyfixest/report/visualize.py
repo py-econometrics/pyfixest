@@ -20,7 +20,7 @@ from lets_plot import (
     ylab,
 )
 
-from pyfixest.summarize import _post_processing_input_checks
+from pyfixest.report.summarize import _post_processing_input_checks
 
 LetsPlot.setup_html()
 
