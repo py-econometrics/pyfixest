@@ -11,8 +11,6 @@ from pyfixest import (
 from pyfixest.estimation import (
     feols,
     fepois,
-)
-from pyfixest.estimation.multcomp import (
     bonferroni,
     rwolf,
 )
