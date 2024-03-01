@@ -24,6 +24,9 @@ from pyfixest.estimation.multcomp import (
     bonferroni,
     rwolf,
 )
+from pyfixest.estimation.FixestMulti import (
+    FixestMulti,
+)
 
 __all__ = [
     "feols",
@@ -36,4 +39,5 @@ __all__ = [
     "Feols",
     "Fepois",
     "Feiv",
+    "FixestMulti",
 ]

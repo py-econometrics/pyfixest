@@ -80,7 +80,7 @@ def feols(
     `f1` and `f2`: fixed effects are specified after the `|` symbol.
 
     ```{python}
-    import pyfixest as py
+    import pyfixest as pf
 
     data = pf.get_data()
 
@@ -274,7 +274,7 @@ def fepois(
     i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Fepois, FixestMulti]:
     """
-    Estimate Poisson regression model with fixed effects using the `pplmhdfe` algorithm.
+    Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
 
     Parameters
     ----------
