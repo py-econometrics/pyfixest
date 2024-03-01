@@ -7,7 +7,7 @@ import pandas as pd
 from formulaic import model_matrix
 
 from pyfixest.errors import InvalidReferenceLevelError
-from pyfixest.estimation.detect_singletons import detect_singletons
+from pyfixest.estimation.detect_singletons_ import detect_singletons
 
 
 def model_matrix_fixest(
