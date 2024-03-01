@@ -9,9 +9,9 @@ from pyfixest import (
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (
+    bonferroni,
     feols,
     fepois,
-    bonferroni,
     rwolf,
 )
 from pyfixest.report import (

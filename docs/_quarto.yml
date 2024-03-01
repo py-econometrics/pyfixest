@@ -49,15 +49,15 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
-        - estimation.multcomp.bonferroni
-        - estimation.multcomp.rwolf
+        - estimation.bonferroni
+        - estimation.rwolf
     - title: Estimation Classes
       desc: |
         Details on Methods and Attributes
       contents:
-        - estimation.feols.Feols
-        - estimation.fepois.Fepois
-        - estimation.feiv.Feiv
+        - estimation.Feols
+        - estimation.Fepois
+        - estimation.Feiv
         #- did.DID
         #- did.did2s
         #- did.lpdid
@@ -74,6 +74,6 @@ quartodoc:
       desc: |
         PyFixest internals and utilities
       contents:
-        - estimation.demean.demean
-        - estimation.detect_singletons.detect_singletons
-        - estimation.model_matrix_fixest.model_matrix_fixest
+        - estimation.demean
+        - estimation.detect_singletons
+        - estimation.model_matrix_fixest
