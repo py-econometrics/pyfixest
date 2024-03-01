@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import MultiEstNotSupportedError
-from pyfixest.estimation.demean import demean_model
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation

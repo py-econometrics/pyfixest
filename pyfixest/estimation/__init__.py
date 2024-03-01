@@ -1,4 +1,4 @@
-from pyfixest.estimation.demean import (
+from pyfixest.estimation.demean_ import (
     demean,
 )
 from pyfixest.estimation.detect_singletons_ import (
