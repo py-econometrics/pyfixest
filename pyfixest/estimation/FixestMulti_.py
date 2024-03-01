@@ -10,7 +10,7 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.model_matrix_fixest import model_matrix_fixest
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.report.visualize import coefplot, iplot
 from pyfixest.utils.dev_utils import _polars_to_pandas
 

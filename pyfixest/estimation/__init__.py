@@ -17,14 +17,14 @@ from pyfixest.estimation.feols_ import (
 from pyfixest.estimation.fepois_ import (
     Fepois,
 )
-from pyfixest.estimation.model_matrix_fixest import (
+from pyfixest.estimation.model_matrix_fixest_ import (
     model_matrix_fixest,
 )
 from pyfixest.estimation.multcomp import (
     bonferroni,
     rwolf,
 )
-from pyfixest.estimation.FixestMulti import (
+from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
 

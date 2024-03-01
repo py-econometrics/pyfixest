@@ -4,7 +4,7 @@ import pandas as pd
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
-from pyfixest.estimation.FixestMulti import FixestMulti
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import ssc
 
