@@ -45,7 +45,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
 You can install the release version from `PyPi` by running
 
 ``` py
-pip install pyfixest
+pip install -U pyfixest
 ```
 
 or the development version from github by running
