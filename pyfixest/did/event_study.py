@@ -1,6 +1,5 @@
 import pandas as pd
 
-from pyfixest.did import _rename_did_coefficients
 from pyfixest.did.did2s import DID2S
 from pyfixest.did.twfe import TWFE
 from pyfixest.errors import NotImplementedError
@@ -15,7 +14,7 @@ def event_study(
     xfml=None,
     estimator="twfe",
     att=True,
-    cluster="idname"
+    cluster="idname",
 ):
     """
     Estimate a treatment effect using an event study design.
@@ -46,11 +45,7 @@ def event_study(
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and lags.
         Default is True.
-    cluster : str, optional
-        The name of the cluster variable. Default is "idname".
-    i_ref1 : list, optional
-        The reference category for the event study estimation. Default is None. If e.g. [-1], the
-        reference category is the year before the treatment.
+
     Returns
     -------
     object
@@ -103,7 +98,6 @@ def event_study(
         fit._method = "did2s"
 
     elif estimator == "twfe":
-
         twfe = TWFE(
             data=data,
             yname=yname,
@@ -115,10 +109,6 @@ def event_study(
             cluster=cluster,
         )
         fit = twfe.estimate()
-        if not att:
-            import pdb; pdb.set_trace()
-            fit._coefnames = _rename_did_coefficients(fit._coefnames)
-
         vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
 
