@@ -185,7 +185,7 @@ def feols(
 
     ```{python}
     fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
-    etable([fit.fetch_model(0),
+    pf.etable([fit.fetch_model(0),
             fit.fetch_model(1),
             fit.fetch_model(2),
             fit.fetch_model(3)
