@@ -1,5 +1,6 @@
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
+from typing import Union
 
 
 class TWFE(DID):
@@ -39,21 +40,26 @@ class TWFE(DID):
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "twfe"
-
-        if self._xfml is not None:
-            self._fml = f"{yname} ~ ATT + {xfml} | {idname} + {tname}"
+        if self._att:
+            if self._xfml is not None:
+                self._fml = f"{yname} ~ ATT + {xfml} | {idname} + {tname}"
+            else:
+                self._fml = f"{yname} ~ ATT | {idname} + {tname}"
         else:
-            self._fml = f"{yname} ~ ATT | {idname} + {tname}"
+            if self._xfml is not None:
+                self._fml = f"{yname} ~ i(_rel_yearZZZ) + {xfml} | {idname} + {tname}"
+            else:
+                self._fml = f"{yname} ~ i(_rel_yearZZZ) | {idname} + {tname}"
+
 
     def estimate(self):
         """Estimate the TWFE model."""
         _fml = self._fml
         _data = self._data
+        _att = self._att
 
-        fit = feols(fml=_fml, data=_data)
-        self._fit = fit
-
-        return fit
+        self._fit = feols(fml=_fml, data=_data) if _att else feols(fml=_fml, data=_data, i_ref1=[-1])
+        return self._fit
 
     def vcov(self):
         """

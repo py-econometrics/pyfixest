@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import re
 
 
 class DID(ABC):
@@ -90,6 +91,10 @@ class DID(ABC):
             self._data[self._gname] > 0
         )
 
+        #data["treat"] = np.where(data[gname] <= data[tname], 1, 0)
+        self._data["_rel_yearZZZ"] = data[tname] - data[gname]
+
+
     @abstractmethod
     def estimate(self):  # noqa: D102
         pass
@@ -109,3 +114,33 @@ class DID(ABC):
     @abstractmethod
     def summary(self):  # noqa: D102
         pass
+
+
+def _rename_did_coefficients(original_strings):
+    """
+    Transforms a list of strings by automatically identifying the variable name and
+    replacing a specific pattern with 'time_to_treatment::<value>'.
+
+    Parameters:
+    - original_strings: List of strings to be transformed.
+
+    Returns:
+    - A list of transformed strings.
+    """
+    modified_strings = []
+
+    for s in original_strings:
+        # Attempt to find the variable name using regex
+        match = re.search(r'C\(([^,]+),contr.treatment', s)
+        if match:
+            variable_name = match.group(1)
+            # Construct the pattern with the found variable name
+            pattern = rf'C\({variable_name},contr.treatment(?:\(base=[-.0-9]+\))?\)\[T.([-.0-9]+)\]'
+            replacement = r'time_to_treatment::\1'
+            modified_string = re.sub(pattern, replacement, s)
+            modified_strings.append(modified_string)
+        else:
+            # If no match, add the original string unmodified
+            modified_strings.append(s)
+
+    return modified_strings

@@ -6,9 +6,10 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-from pyfixest.did.did import DID
+from pyfixest.did.did import DID, _rename_did_coefficients
 from pyfixest.estimation import feols
 from pyfixest.model_matrix_fixest import model_matrix_fixest
+from pyfixest.visualize import _coefplot
 
 
 class DID2S(DID):
@@ -101,15 +102,20 @@ class DID2S(DID):
         coord_flip=False,
     ):
         """Plot DID estimates."""
-        self.iplot(
+
+        plot = coefplot(
+            models=[self],
             alpha=alpha,
             figsize=figsize,
             yintercept=yintercept,
             xintercept=xintercept,
             rotate_xticks=rotate_xticks,
+            coefficients=self._coefnames,
             title=title,
             coord_flip=coord_flip,
         )
+
+        return plot
 
     def tidy(self):  # noqa: D102
         return self.tidy()
@@ -212,6 +218,11 @@ def _did2s_estimate(
         i_ref2=i_ref2,
     )
     _second_u = fit2.resid()
+
+    #import pdb; pdb.set_trace()
+
+    if fit2._icovars is not None:
+        fit2._coefnames = _rename_did_coefficients(fit2._coefnames)
 
     return fit2, _first_u, _second_u
 

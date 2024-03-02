@@ -6,6 +6,7 @@ import pandas as pd
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.visualize import _coefplot
+from tqdm import tqdm
 
 
 class LPDID(DID):
@@ -261,7 +262,7 @@ def _lpdid_estimate(
         res = pd.DataFrame(fit_tidy_post).T
 
     else:
-        for h in range(post_window + 1):
+        for h in tqdm(range(post_window + 1)):
             data["Dy"] = data.groupby(idname)[yname].shift(-h) - data[f"{yname}_lag"]
 
             sample_idx = (data["treat_diff"] == 1) | (
@@ -275,7 +276,7 @@ def _lpdid_estimate(
             fit_tidy.name = h
             fit_all.append(fit_tidy)
 
-        for h in range(pre_window + 1):
+        for h in tqdm(range(pre_window + 1)):
             if h <= 1:
                 # skip the reference period
                 continue
