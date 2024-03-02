@@ -1,6 +1,6 @@
 import pytest
 
-from pyfixest.utils import get_ssc
+from pyfixest.utils.utils import get_ssc
 
 
 @pytest.fixture

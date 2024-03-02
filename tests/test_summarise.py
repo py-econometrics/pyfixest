@@ -1,8 +1,8 @@
 import pandas as pd
 
-from pyfixest.estimation import feols, fepois
-from pyfixest.summarize import _select_order_coefs, etable, summary
-from pyfixest.utils import get_data
+from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.report.summarize import _select_order_coefs, etable, summary
+from pyfixest.utils.utils import get_data
 
 
 def test_summary():

@@ -1,6 +1,6 @@
 import re
 
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,

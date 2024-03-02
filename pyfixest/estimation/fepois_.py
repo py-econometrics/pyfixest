@@ -4,12 +4,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from pyfixest.demean import demean
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     NonConvergenceError,
     NotImplementedError,
 )
-from pyfixest.feols import Feols
+from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.feols_ import Feols
 
 
 class Fepois(Feols):
@@ -25,7 +25,7 @@ class Fepois(Feols):
     [FixestMulti](/reference/estimation.fixest_multi.qmd) class (to allow for caching
     of demeaned variables for multiple estimation).
 
-    The method implements the algorithm from Stata's `pplmhdfe` module.
+    The method implements the algorithm from Stata's `ppmlhdfe` module.
 
     Attributes
     ----------
@@ -313,7 +313,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
     """
     Check for separation.
 
-    Check for separation of Poisson Regression. For details, see the pplmhdfe
+    Check for separation of Poisson Regression. For details, see the ppmlhdfe
     documentation on separation checks. Currently, only the "fe" check is implemented.
 
     Parameters

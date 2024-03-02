@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation import fepois
+from pyfixest.estimation.estimation import fepois
 
 
 def test_separation():
