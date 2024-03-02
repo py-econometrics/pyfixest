@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyfixest.estimation import feols
+from pyfixest.estimation.estimation import feols
 
 
 def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):

@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
-from pyfixest.estimation import feols, fepois
-from pyfixest.utils import get_data, ssc
+from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.utils.utils import get_data, ssc
 
 
 def test_multicol_overdetermined_iv():

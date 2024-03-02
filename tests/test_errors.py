@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation import feols, fepois
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
@@ -13,10 +12,11 @@ from pyfixest.exceptions import (
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.FormulaParser import FixestFormulaParser
-from pyfixest.multcomp import rwolf
-from pyfixest.summarize import etable, summary
-from pyfixest.utils import get_data
+from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.multcomp import rwolf
+from pyfixest.report.summarize import etable, summary
+from pyfixest.utils.utils import get_data
 
 
 def test_formula_parser2():

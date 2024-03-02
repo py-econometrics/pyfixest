@@ -60,3 +60,23 @@ class EmptyDesignMatrixError(Exception):  # noqa: D101
 
 class InvalidReferenceLevelError(Exception):  # noqa: D101
     pass
+
+
+__all__ = [
+    "FixedEffectInteractionError",
+    "CovariateInteractionError",
+    "DuplicateKeyError",
+    "EndogVarsAsCovarsError",
+    "InstrumentsAsCovarsError",
+    "UnderDeterminedIVError",
+    "UnsupportedMultipleEstimationSyntax",
+    "VcovTypeNotSupportedError",
+    "MultiEstNotSupportedError",
+    "NanInClusterVarError",
+    "DepvarIsNotNumericError",
+    "NotImplementedError",
+    "NonConvergenceError",
+    "MatrixNotFullRankError",
+    "EmptyDesignMatrixError",
+    "InvalidReferenceLevelError",
+]

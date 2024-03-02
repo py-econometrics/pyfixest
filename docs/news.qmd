@@ -149,7 +149,7 @@ iplot([fit, fit_twfe], coord_flip=False, figsize = (900, 400), title = "TWFE vs 
 %autoreload 2
 
 from pyfixest.did.did import event_study
-from pyfixest.summarize import etable
+import pyfixest as pf
 import pandas as pd
 df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
@@ -171,7 +171,7 @@ fit_did2s = event_study(
     estimator = "did2s"
 )
 
-etable([fit_twfe, fit_did2s])
+pf.etable([fit_twfe, fit_did2s])
 # | Coefficient   | est1             | est2             |
 # |:--------------|:-----------------|:-----------------|
 # | ATT           | 2.135*** (0.044) | 2.152*** (0.048) |

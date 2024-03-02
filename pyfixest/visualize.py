@@ -1,28 +1,8 @@
+import warnings
 from typing import Optional, Union
 
-import pandas as pd
-
-# from lets_plot import *
-from lets_plot import (
-    LetsPlot,
-    aes,
-    coord_flip,
-    element_text,
-    geom_errorbar,
-    geom_hline,
-    geom_point,
-    geom_vline,
-    ggplot,
-    ggsize,
-    ggtitle,
-    position_dodge,
-    theme,
-    ylab,
-)
-
-from pyfixest.summarize import _post_processing_input_checks
-
-LetsPlot.setup_html()
+import pyfixest
+from pyfixest.utils._exceptions import find_stack_level
 
 
 def iplot(
@@ -40,6 +20,10 @@ def iplot(
 
     Plot model coefficients for variables interacted via "i()" syntax, with
     confidence intervals.
+
+        'pyfixest.visualize.iplot' is deprecated and will be removed in a future
+        version. Please use 'pyfixest.iplot' instead. You may refer the updated
+        documentation at: https://s3alfisc.github.io/pyfixest/quickstart.html
 
     Parameters
     ----------
@@ -81,41 +65,24 @@ def iplot(
     iplot([fit1, fit2, fit3])
     ```
     """
-    models = _post_processing_input_checks(models)
-
-    df_all = []
-    all_icovars = []
-
-    for x, _ in enumerate(models):
-        fxst = models[x]
-        if fxst._icovars is None:
-            raise ValueError(
-                f"The {x} th estimated model did not have ivars / 'i()' model syntax."
-                "In consequence, the '.iplot()' method is not supported."
-            )
-        all_icovars += fxst._icovars
-        df_model = fxst.tidy().reset_index()  # Coefficient -> simple column
-        df_model["fml"] = fxst._fml
-        df_model.set_index("fml", inplace=True)
-        df_all.append(df_model)
-
-    # drop duplicates
-    all_icovars = list(set(all_icovars))
-
-    df = pd.concat(df_all, axis=0)
-    fml_list = df.index.unique()  # noqa: F841
-    # keep only coefficients interacted via the i() syntax
-    df = df[df.Coefficient.isin(all_icovars)].reset_index()
-
-    return _coefplot(
-        df=df,
-        figsize=figsize,
+    warnings.warn(
+        "'pyfixest.visualize.iplot' is deprecated and "
+        "will be removed in a future version.\n"
+        "Please use 'pyfixest.iplot' instead. "
+        "You may refer the updated documentation at: "
+        "https://s3alfisc.github.io/pyfixest/quickstart.html",
+        FutureWarning,
+        stacklevel=find_stack_level(),
+    )
+    return pyfixest.iplot(
+        models=models,
         alpha=alpha,
+        figsize=figsize,
         yintercept=yintercept,
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
         title=title,
-        flip_coord=coord_flip,
+        coord_flip=coord_flip,
     )
 
 
@@ -132,6 +99,10 @@ def coefplot(
 ):
     """
     Plot model coefficients with confidence intervals.
+
+        'pyfixest.visualize.coefplot' is deprecated and will be removed in a future
+        version. Please use 'pyfixest.coefplot' instead. You may refer the updated
+        documentation at: https://s3alfisc.github.io/pyfixest/quickstart.html
 
     Parameters
     ----------
@@ -174,94 +145,23 @@ def coefplot(
     coefplot([fit1, fit2, fit3])
     ```
     """
-    models = _post_processing_input_checks(models)
-    df_all = []
-    for x, _ in enumerate(models):
-        fxst = models[x]
-        df_model = fxst.tidy().reset_index()
-        df_model["fml"] = fxst._fml
-        df_model.set_index("fml", inplace=True)
-        df_all.append(df_model)
-
-    df = pd.concat(df_all, axis=0)
-
-    if coefficients is not None:
-        df = df[df.Coefficient.isin(coefficients)].reset_index()
-
-    return _coefplot(
-        df=df,
-        figsize=figsize,
+    warnings.warn(
+        "'pyfixest.visualize.coefplot' is deprecated and "
+        "will be removed in a future version.\n"
+        "Please use 'pyfixest.coefplot' instead. "
+        "You may refer the updated documentation at: "
+        "https://s3alfisc.github.io/pyfixest/quickstart.html",
+        FutureWarning,
+        stacklevel=find_stack_level(),
+    )
+    return pyfixest.coefplot(
+        models=models,
         alpha=alpha,
+        figsize=figsize,
         yintercept=yintercept,
         xintercept=xintercept,
         rotate_xticks=rotate_xticks,
+        coefficients=coefficients,
         title=title,
-        flip_coord=coord_flip,
+        coord_flip=coord_flip,
     )
-
-
-def _coefplot(
-    df: pd.DataFrame,
-    figsize: tuple[int, int],
-    alpha: float,
-    yintercept: Optional[int] = None,
-    xintercept: Optional[int] = None,
-    rotate_xticks: float = 0,
-    title: Optional[str] = None,
-    flip_coord: Optional[bool] = True,
-):
-    """
-    Plot model coefficients with confidence intervals.
-
-    Parameters
-    ----------
-    models : list
-        A list of fitted models indices.
-    figsize : tuple
-        The size of the figure.
-    alpha : float
-        The significance level for the confidence intervals.
-    yintercept : int or None, optional
-        The value at which to draw a horizontal line on the plot.
-    xintercept : int or None, optional
-        The value at which to draw a vertical line on the plot.
-    df : pandas.DataFrame
-        The dataframe containing the data used for the model fitting.
-    rotate_xticks : float, optional
-        The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-    title : str, optional
-        The title of the plot.
-    flip_coord : bool, optional
-        Whether to flip the coordinates of the plot. Default is True.
-
-    Returns
-    -------
-    object
-        A lets-plot figure.
-    """
-    df.reset_index(inplace=True)
-    df.rename(columns={"fml": "Model"}, inplace=True)
-
-    plot = (
-        ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
-        + geom_point(position=position_dodge(0.5))
-        + geom_errorbar(
-            aes(ymin="2.5%", ymax="97.5%"), width=0.05, position=position_dodge(0.5)
-        )
-        + ylab("Estimate and 95% Confidence Interval")
-    )
-
-    if flip_coord:
-        plot += coord_flip()
-    if yintercept is not None:
-        plot += geom_hline(yintercept=yintercept, linetype="dashed", color="black")
-    if xintercept is not None:
-        plot += geom_vline(xintercept=xintercept, linetype="dashed", color="black")
-    if figsize is not None:
-        plot += ggsize(figsize[0], figsize[1])
-    if rotate_xticks is not None:
-        plot += theme(axis_text_x=element_text(angle=rotate_xticks))
-    if title is not None:
-        plot += ggtitle(title)
-
-    return plot

@@ -7,8 +7,8 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
-from pyfixest.estimation import feols
-from pyfixest.model_matrix_fixest import model_matrix_fixest
+from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 
 
 class DID2S(DID):

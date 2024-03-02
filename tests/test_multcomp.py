@@ -4,9 +4,9 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation import feols
-from pyfixest.multcomp import _get_rwolf_pval, bonferroni, rwolf
-from pyfixest.utils import get_data
+from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
+from pyfixest.utils.utils import get_data
 
 pandas2ri.activate()
 
