@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.did.did import DID
-from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import _coefplot
+from pyfixest.estimation import feols
+from pyfixest.visualize import _coefplot
 
 
 class LPDID(DID):
