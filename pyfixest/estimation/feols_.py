@@ -12,12 +12,16 @@ from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 from tqdm import tqdm
 
-from pyfixest.dev_utils import DataFrameType, _polars_to_pandas, _select_order_coefs
-from pyfixest.exceptions import (
+from pyfixest.errors import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
-from pyfixest.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.dev_utils import (
+    DataFrameType,
+    _polars_to_pandas,
+    _select_order_coefs,
+)
+from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
 
 class Feols:
@@ -766,7 +770,7 @@ class Feols:
             A lets-plot figure with coefficient estimates and confidence intervals.
         """
         # lazy loading to avoid circular import
-        visualize_module = import_module("pyfixest.visualize")
+        visualize_module = import_module("pyfixest.report")
         _coefplot = getattr(visualize_module, "coefplot")
 
         plot = _coefplot(
@@ -818,7 +822,7 @@ class Feols:
         lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
         """
-        visualize_module = import_module("pyfixest.visualize")
+        visualize_module = import_module("pyfixest.report")
         _iplot = getattr(visualize_module, "iplot")
 
         plot = _iplot(
@@ -1149,7 +1153,7 @@ class Feols:
         N = self._N
         G = len(unique_clusters)
 
-        ccv_module = import_module("pyfixest.ccv")
+        ccv_module = import_module("pyfixest.estimation.ccv")
         _compute_CCV = getattr(ccv_module, "_compute_CCV")
 
         vcov_splits = 0.0
@@ -1202,7 +1206,7 @@ class Feols:
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
-        ccv_module = import_module("pyfixest.ccv")
+        ccv_module = import_module("pyfixest.estimation.ccv")
         _ccv = getattr(ccv_module, "_ccv")
 
         return _ccv(
@@ -1673,7 +1677,7 @@ class Feols:
         None
         """
         # lazy loading to avoid circular import
-        summarize_module = import_module("pyfixest.summarize")
+        summarize_module = import_module("pyfixest.report")
         _summary = getattr(summarize_module, "summary")
 
         return _summary(models=self, digits=digits)

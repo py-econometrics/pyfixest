@@ -1,9 +1,9 @@
 import pandas as pd
 import pytest
 
-from pyfixest.estimation import feols
-from pyfixest.utils import get_data
-from pyfixest.visualize import coefplot, iplot
+from pyfixest.estimation.estimation import feols
+from pyfixest.report.visualize import coefplot, iplot
+from pyfixest.utils.utils import get_data
 
 
 @pytest.fixture

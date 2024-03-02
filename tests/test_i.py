@@ -7,8 +7,8 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation import feols
-from pyfixest.exceptions import InvalidReferenceLevelError
+from pyfixest.errors import InvalidReferenceLevelError
+from pyfixest.estimation.estimation import feols
 
 pandas2ri.activate()
 

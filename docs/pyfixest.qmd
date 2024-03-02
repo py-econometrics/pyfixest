@@ -28,7 +28,7 @@ Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.
 ## Features
 
 -   OLS and IV Regression
--   Poisson Regression following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
+-   Poisson Regression following the [ppmlhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
 -   Several Robust and Cluster Robust Variance-Covariance Types
 -   Wild Cluster Bootstrap Inference (via
@@ -78,11 +78,9 @@ You can estimate a linear regression models just as you would in
 
 ::: {.cell execution_count="1"}
 ``` {.python .cell-code}
-from pyfixest.estimation import feols, fepois
-from pyfixest.utils import get_data
-from pyfixest.summarize import etable
-data = get_data()
-feols("Y ~ X1 | f1 + f2", data=data).summary()
+import pyfixest as pf
+data = pf.get_data()
+pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
 ::: {.cell-output .cell-output-display}
@@ -145,9 +143,9 @@ syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html
 ::: {.cell execution_count="2"}
 ``` {.python .cell-code}
 # OLS Estimation: estimate multiple models at once
-fit = feols("Y + Y2 ~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_id'})
+fit = pf.feols("Y + Y2 ~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_id'})
 # Print the results
-etable([fit.fetch_model(i) for i in range(6)])
+pf.etable([fit.fetch_model(i) for i in range(6)])
 ```
 
 ::: {.cell-output .cell-output-stdout}
@@ -209,8 +207,8 @@ You can estimate Poisson Regressions via the `fepois()` function:
 
 ::: {.cell execution_count="4"}
 ``` {.python .cell-code}
-poisson_data = get_data(model = "Fepois")
-fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
+poisson_data = pf.get_data(model = "Fepois")
+pf.fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
 ::: {.cell-output .cell-output-stdout}
@@ -237,7 +235,7 @@ syntax:
 
 ::: {.cell execution_count="5"}
 ``` {.python .cell-code}
-fit_iv = feols("Y ~ 1 | f1 | X1 ~ Z1", data = data)
+fit_iv = pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data = data)
 fit_iv.summary()
 ```
 

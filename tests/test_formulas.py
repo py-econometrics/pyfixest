@@ -1,4 +1,9 @@
-from pyfixest.FormulaParser import _find_sw, _flatten_list, _pack_to_fml, _unpack_fml
+from pyfixest.estimation.FormulaParser import (
+    _find_sw,
+    _flatten_list,
+    _pack_to_fml,
+    _unpack_fml,
+)
 
 
 def test_unpack_fml():

@@ -4,8 +4,8 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
-from pyfixest.estimation import feols
-from pyfixest.utils import get_data
+from pyfixest.estimation.estimation import feols
+from pyfixest.utils.utils import get_data
 
 
 def test_confint():

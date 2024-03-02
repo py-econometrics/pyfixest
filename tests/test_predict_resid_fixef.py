@@ -7,9 +7,9 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation import feols, fepois
-from pyfixest.exceptions import NotImplementedError
-from pyfixest.utils import get_data
+from pyfixest.errors import NotImplementedError
+from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.utils.utils import get_data
 
 pandas2ri.activate()
 

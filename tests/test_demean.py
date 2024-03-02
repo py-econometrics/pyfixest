@@ -1,7 +1,7 @@
 import numpy as np
 import pyhdfe
 
-from pyfixest.demean import demean
+from pyfixest.estimation.demean_ import demean
 
 
 def test_demean():

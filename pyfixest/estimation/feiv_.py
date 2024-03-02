@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 
-from pyfixest.feols import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 
 
 class Feiv(Feols):

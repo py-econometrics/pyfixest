@@ -1,5 +1,5 @@
 from pyfixest.did.did import DID
-from pyfixest.estimation import feols
+from pyfixest.estimation.estimation import feols
 
 
 class TWFE(DID):

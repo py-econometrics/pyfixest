@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from formulaic import model_matrix
 
-from pyfixest.dev_utils import _create_rng
+from pyfixest.utils.dev_utils import _create_rng
 
 
 def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
