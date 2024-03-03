@@ -10,7 +10,6 @@ from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
-from tqdm import tqdm
 
 from pyfixest.errors import (
     NanInClusterVarError,
@@ -1083,6 +1082,10 @@ class Feols:
         fit.ccv(treatment="D", pk = 0.05, gk = 0.5, n_splits = 8, seed = 123).head()
         ```
         """
+
+        tqdm_module = import_module("tqdm")
+        _tqdm = getattr(tqdm_module, "tqdm")
+
         assert (
             self._supports_cluster_causal_variance
         ), "The model does not support the causal cluster variance estimator."
@@ -1157,7 +1160,7 @@ class Feols:
         _compute_CCV = getattr(ccv_module, "_compute_CCV")
 
         vcov_splits = 0.0
-        for _ in tqdm(range(n_splits)):
+        for _ in _tqdm(range(n_splits)):
 
             vcov_ccv = _compute_CCV(
                 fml=fml,
