@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>index</title>
+<title>estimation.fepois</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -128,7 +128,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/index.html">PyFixest Function Reference</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.Fepois.html">estimation.Fepois</a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -142,7 +142,7 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">PyFixest Function Reference</span></a>
   </div>
 </li>
@@ -216,7 +216,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">estimation.Fepois</span></a>
   </div>
 </li>
@@ -304,104 +304,78 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="pyfixest-function-reference" class="level1 doc doc-index">
-<h1 class="doc doc-index">PyFixest Function Reference</h1>
-<section id="estimation-functions" class="level2">
-<h2 class="anchored" data-anchor-id="estimation-functions">Estimation Functions</h2>
-<p>User facing estimation functions</p>
+<section id="pyfixest.estimation.Fepois" class="level1">
+<h1>estimation.Fepois</h1>
+<p><code>estimation.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)</code></p>
+<p>Estimate a Poisson regression model.</p>
+<p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>The method implements the algorithm from Stata’s <code>ppmlhdfe</code> module.</p>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 30%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
 <tbody>
 <tr class="odd">
-<td><a href="../reference/estimation.feols.html#pyfixest.estimation.feols">estimation.feols</a></td>
-<td>Estimate a linear regression models with fixed effects using fixest formula syntax.</td>
+<td>Y</td>
+<td>numpy.numpy.ndarray</td>
+<td>Dependent variable, a two-dimensional numpy array.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/estimation.fepois.html#pyfixest.estimation.fepois">estimation.fepois</a></td>
-<td>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</td>
+<td>X</td>
+<td>numpy.numpy.ndarray</td>
+<td>Independent variables, a two-dimensional numpy array.</td>
 </tr>
 <tr class="odd">
-<td><a href="../reference/did.estimation.did2s.html#pyfixest.did.estimation.did2s">did.estimation.did2s</a></td>
-<td>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</td>
+<td>fe</td>
+<td>numpy.numpy.ndarray</td>
+<td>Fixed effects, a two-dimensional numpy array or None.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/did.estimation.lpdid.html#pyfixest.did.estimation.lpdid">did.estimation.lpdid</a></td>
-<td>Local projections approach to estimation.</td>
+<td>weights</td>
+<td>numpy.numpy.ndarray</td>
+<td>Weights, a one-dimensional numpy array or None.</td>
 </tr>
 <tr class="odd">
-<td><a href="../reference/did.estimation.event_study.html#pyfixest.did.estimation.event_study">did.estimation.event_study</a></td>
-<td>Estimate Event Study Model.</td>
+<td>coefnames</td>
+<td>list[str]</td>
+<td>Names of the coefficients in the design matrix X.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/estimation.bonferroni.html#pyfixest.estimation.bonferroni">estimation.bonferroni</a></td>
-<td>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</td>
+<td>drop_singletons</td>
+<td>bool</td>
+<td>Whether to drop singleton fixed effects.</td>
 </tr>
 <tr class="odd">
-<td><a href="../reference/estimation.rwolf.html#pyfixest.estimation.rwolf">estimation.rwolf</a></td>
-<td>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="estimation-classes" class="level2">
-<h2 class="anchored" data-anchor-id="estimation-classes">Estimation Classes</h2>
-<p>Details on Methods and Attributes</p>
-<table class="table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/estimation.Feols.html#pyfixest.estimation.Feols">estimation.Feols</a></td>
-<td>Non user-facing class to estimate a liner regression via OLS.</td>
+<td>collin_tol</td>
+<td>float</td>
+<td>Tolerance level for the detection of collinearity.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/estimation.Fepois.html#pyfixest.estimation.Fepois">estimation.Fepois</a></td>
-<td>Estimate a Poisson regression model.</td>
+<td>maxiter</td>
+<td>Optional[int], default=25</td>
+<td>Maximum number of iterations for the IRLS algorithm.</td>
 </tr>
 <tr class="odd">
-<td><a href="../reference/estimation.Feiv.html#pyfixest.estimation.Feiv">estimation.Feiv</a></td>
-<td>Non user-facing class to estimate an IV model using a 2SLS estimator.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="summarize-and-visualize" class="level2">
-<h2 class="anchored" data-anchor-id="summarize-and-visualize">Summarize and Visualize</h2>
-<p>Post-Processing of Estimation Results</p>
-<table class="table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/report.summary.html#pyfixest.report.summary">report.summary</a></td>
-<td>Print a summary of estimation results for each estimated model.</td>
+<td>tol</td>
+<td>Optional[float], default=1e-08</td>
+<td>Tolerance level for the convergence of the IRLS algorithm.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/report.etable.html#pyfixest.report.etable">report.etable</a></td>
-<td>Create an esttab-like table from a list of models.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/report.coefplot.html#pyfixest.report.coefplot">report.coefplot</a></td>
-<td>Plot model coefficients with confidence intervals.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/report.iplot.html#pyfixest.report.iplot">report.iplot</a></td>
-<td>Plot model coefficients.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="misc-utilities" class="level2">
-<h2 class="anchored" data-anchor-id="misc-utilities">Misc / Utilities</h2>
-<p>PyFixest internals and utilities</p>
-<table class="table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/estimation.demean.html#pyfixest.estimation.demean">estimation.demean</a></td>
-<td>Demean an array.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.detect_singletons.html#pyfixest.estimation.detect_singletons">estimation.detect_singletons</a></td>
-<td>Detect singleton fixed effects in a dataset.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.model_matrix_fixest.html#pyfixest.estimation.model_matrix_fixest">estimation.model_matrix_fixest</a></td>
-<td>Create model matrices for fixed effects estimation.</td>
+<td>weights_name</td>
+<td>typing.Optional[str]</td>
+<td>Name of the weights variable.</td>
 </tr>
 </tbody>
 </table>

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>summarize.summary</title>
+<title>estimation.feols</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,44 +20,10 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -100,9 +66,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
-
-<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -165,7 +128,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/summarize.summary.html">Summarize and Visualize</a></li><li class="breadcrumb-item"><a href="../reference/summarize.summary.html">summarize.summary</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.Feols.html">estimation.Feols</a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -224,14 +187,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/multcomp.bonferroni.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">multcomp.bonferroni</span></a>
+  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.bonferroni</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/multcomp.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">multcomp.rwolf</span></a>
+  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.rwolf</span></a>
   </div>
 </li>
       </ul>
@@ -247,20 +210,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feols.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">feols.Feols</span></a>
+  <a href="../reference/estimation.Feols.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">fepois.Fepois</span></a>
+  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">feiv.Feiv</span></a>
+  <a href="../reference/estimation.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.Feiv</span></a>
   </div>
 </li>
       </ul>
@@ -276,26 +239,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">summarize.summary</span></a>
+  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.summary</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.etable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">summarize.etable</span></a>
+  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.etable</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">visualize.coefplot</span></a>
+  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.coefplot</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.iplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">visualize.iplot</span></a>
+  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.iplot</span></a>
   </div>
 </li>
       </ul>
@@ -311,20 +274,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demean.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demean.demean</span></a>
+  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.demean</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">detect_singletons.detect_singletons</span></a>
+  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/model_matrix_fixest.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">model_matrix_fixest.model_matrix_fixest</span></a>
+  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.model_matrix_fixest</span></a>
   </div>
 </li>
       </ul>
@@ -338,36 +301,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/summarize.summary.html">Summarize and Visualize</a></li><li class="breadcrumb-item"><a href="../reference/summarize.summary.html">summarize.summary</a></li></ol></nav>
-<div class="quarto-title">
-<h1 class="title">summarize.summary</h1>
-</div>
 
 
 
-<div class="quarto-title-meta">
-
-    
-  
-    
-  </div>
-  
-
-
-</header>
-
-
-<p><code>summarize.summary(models, digits=3)</code></p>
-<p>Print a summary of estimation results for each estimated model.</p>
-<p>For each model, this method prints a header indicating the fixed-effects and the dependent variable, followed by a table of coefficient estimates with standard errors, t-values, and p-values.</p>
+<section id="pyfixest.estimation.Feols" class="level1">
+<h1>estimation.Feols</h1>
+<p><code>estimation.Feols(self, Y, X, weights, collin_tol, coefnames, weights_name)</code></p>
+<p>Non user-facing class to estimate a liner regression via OLS.</p>
+<p>Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 7%">
-<col style="width: 73%">
-<col style="width: 10%">
+<col style="width: 13%">
+<col style="width: 20%">
+<col style="width: 53%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -379,123 +328,314 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>digits</code></td>
-<td>int</td>
-<td>The number of decimal places to round the summary statistics to. Default is 3.</td>
-<td><code>3</code></td>
+<td><code>Y</code></td>
+<td>numpy.numpy.ndarray</td>
+<td>Dependent variable, a two-dimensional numpy array.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>X</code></td>
+<td>numpy.numpy.ndarray</td>
+<td>Independent variables, a two-dimensional numpy array.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>weights</code></td>
+<td>numpy.numpy.ndarray</td>
+<td>Weights, a one-dimensional numpy array.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>collin_tol</code></td>
+<td>float</td>
+<td>Tolerance level for collinearity checks.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>coefnames</code></td>
+<td>list[str]</td>
+<td>Names of the coefficients (of the design matrix X).</td>
+<td><em>required</em></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 17%">
+<col style="width: 61%">
+</colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>None</td>
-<td></td>
+<td>_method</td>
+<td>str</td>
+<td>Specifies the method used for regression, set to “feols”.</td>
+</tr>
+<tr class="even">
+<td>_is_iv</td>
+<td>bool</td>
+<td>Indicates whether instrumental variables are used, initialized as False.</td>
+</tr>
+<tr class="odd">
+<td>_Y</td>
+<td>numpy.numpy.ndarray</td>
+<td>The dependent variable array.</td>
+</tr>
+<tr class="even">
+<td>_X</td>
+<td>numpy.numpy.ndarray</td>
+<td>The independent variables array.</td>
+</tr>
+<tr class="odd">
+<td>_X_is_empty</td>
+<td>bool</td>
+<td>Indicates whether the X array is empty.</td>
+</tr>
+<tr class="even">
+<td>_collin_tol</td>
+<td>float</td>
+<td>Tolerance level for collinearity checks.</td>
+</tr>
+<tr class="odd">
+<td>_coefnames</td>
+<td>list</td>
+<td>Names of the coefficients (of the design matrix X).</td>
+</tr>
+<tr class="even">
+<td>_collin_vars</td>
+<td>list</td>
+<td>Variables identified as collinear.</td>
+</tr>
+<tr class="odd">
+<td>_collin_index</td>
+<td>list</td>
+<td>Indices of collinear variables.</td>
+</tr>
+<tr class="even">
+<td>_Z</td>
+<td>numpy.numpy.ndarray</td>
+<td>Alias for the _X array, used for calculations.</td>
+</tr>
+<tr class="odd">
+<td>_weights</td>
+<td>numpy.numpy.ndarray</td>
+<td>Array of weights for each observation.</td>
+</tr>
+<tr class="even">
+<td>_N</td>
+<td>int</td>
+<td>Number of observations.</td>
+</tr>
+<tr class="odd">
+<td>_k</td>
+<td>int</td>
+<td>Number of independent variables (or features).</td>
+</tr>
+<tr class="even">
+<td>_support_crv3_inference</td>
+<td>bool</td>
+<td>Indicates support for CRV3 inference.</td>
+</tr>
+<tr class="odd">
+<td>_support_iid_inference</td>
+<td>bool</td>
+<td>Indicates support for IID inference.</td>
+</tr>
+<tr class="even">
+<td>_data</td>
+<td>Any</td>
+<td>Data used in the regression, to be enriched outside of the class.</td>
+</tr>
+<tr class="odd">
+<td>_fml</td>
+<td>Any</td>
+<td>Formula used in the regression, to be enriched outside of the class.</td>
+</tr>
+<tr class="even">
+<td>_has_fixef</td>
+<td>bool</td>
+<td>Indicates whether fixed effects are used.</td>
+</tr>
+<tr class="odd">
+<td>_fixef</td>
+<td>Any</td>
+<td>Fixed effects used in the regression.</td>
+</tr>
+<tr class="even">
+<td>_icovars</td>
+<td>Any</td>
+<td>Internal covariates, to be enriched outside of the class.</td>
+</tr>
+<tr class="odd">
+<td>_ssc_dict</td>
+<td>dict</td>
+<td>Dictionary for sum of squares and cross products matrices.</td>
+</tr>
+<tr class="even">
+<td>_tZX</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of Z multiplied by X, set in get_fit().</td>
+</tr>
+<tr class="odd">
+<td>_tXZ</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of X multiplied by Z, set in get_fit().</td>
+</tr>
+<tr class="even">
+<td>_tZy</td>
+<td>numpy.numpy.ndarray</td>
+<td>Transpose of Z multiplied by Y, set in get_fit().</td>
+</tr>
+<tr class="odd">
+<td>_tZZinv</td>
+<td>numpy.numpy.ndarray</td>
+<td>Inverse of the transpose of Z multiplied by Z, set in get_fit().</td>
+</tr>
+<tr class="even">
+<td>_beta_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Estimated regression coefficients.</td>
+</tr>
+<tr class="odd">
+<td>_Y_hat_link</td>
+<td>numpy.numpy.ndarray</td>
+<td>Predicted values of the dependent variable.</td>
+</tr>
+<tr class="even">
+<td>_Y_hat_response</td>
+<td>numpy.numpy.ndarray</td>
+<td>Response predictions of the model.</td>
+</tr>
+<tr class="odd">
+<td>_u_hat</td>
+<td>numpy.numpy.ndarray</td>
+<td>Residuals of the regression model.</td>
+</tr>
+<tr class="even">
+<td>_scores</td>
+<td>numpy.numpy.ndarray</td>
+<td>Scores used in the regression analysis.</td>
+</tr>
+<tr class="odd">
+<td>_hessian</td>
+<td>numpy.numpy.ndarray</td>
+<td>Hessian matrix used in the regression.</td>
+</tr>
+<tr class="even">
+<td>_bread</td>
+<td>numpy.numpy.ndarray</td>
+<td>Bread matrix, used in calculating the variance-covariance matrix.</td>
+</tr>
+<tr class="odd">
+<td>_vcov_type</td>
+<td>Any</td>
+<td>Type of variance-covariance matrix used.</td>
+</tr>
+<tr class="even">
+<td>_vcov_type_detail</td>
+<td>Any</td>
+<td>Detailed specification of the variance-covariance matrix type.</td>
+</tr>
+<tr class="odd">
+<td>_is_clustered</td>
+<td>bool</td>
+<td>Indicates if clustering is used in the variance-covariance calculation.</td>
+</tr>
+<tr class="even">
+<td>_clustervar</td>
+<td>Any</td>
+<td>Variable used for clustering in the variance-covariance calculation.</td>
+</tr>
+<tr class="odd">
+<td>_G</td>
+<td>Any</td>
+<td>Group information used in clustering.</td>
+</tr>
+<tr class="even">
+<td>_ssc</td>
+<td>Any</td>
+<td>Sum of squares and cross products matrix.</td>
+</tr>
+<tr class="odd">
+<td>_vcov</td>
+<td>numpy.numpy.ndarray</td>
+<td>Variance-covariance matrix of the estimated coefficients.</td>
+</tr>
+<tr class="even">
+<td>_se</td>
+<td>numpy.numpy.ndarray</td>
+<td>Standard errors of the estimated coefficients.</td>
+</tr>
+<tr class="odd">
+<td>_tstat</td>
+<td>numpy.numpy.ndarray</td>
+<td>T-statistics of the estimated coefficients.</td>
+</tr>
+<tr class="even">
+<td>_pvalue</td>
+<td>numpy.numpy.ndarray</td>
+<td>P-values associated with the t-statistics.</td>
+</tr>
+<tr class="odd">
+<td>_conf_int</td>
+<td>numpy.numpy.ndarray</td>
+<td>Confidence intervals for the estimated coefficients.</td>
+</tr>
+<tr class="even">
+<td>_F_stat</td>
+<td>Any</td>
+<td>F-statistic for the model, set in get_Ftest().</td>
+</tr>
+<tr class="odd">
+<td>_fixef_dict</td>
+<td>dict</td>
+<td>Dictionary containing fixed effects estimates.</td>
+</tr>
+<tr class="even">
+<td>_sumFE</td>
+<td>numpy.numpy.ndarray</td>
+<td>Sum of all fixed effects for each observation.</td>
+</tr>
+<tr class="odd">
+<td>_rmse</td>
+<td>float</td>
+<td>Root mean squared error of the model.</td>
+</tr>
+<tr class="even">
+<td>_r2</td>
+<td>float</td>
+<td>R-squared value of the model.</td>
+</tr>
+<tr class="odd">
+<td>_r2_within</td>
+<td>float</td>
+<td>R-squared value computed on demeaned dependent variable.</td>
+</tr>
+<tr class="even">
+<td>_adj_r2</td>
+<td>float</td>
+<td>Adjusted R-squared value of the model.</td>
+</tr>
+<tr class="odd">
+<td>_adj_r2_within</td>
+<td>float</td>
+<td>Adjusted R-squared value computed on demeaned dependent variable.</td>
 </tr>
 </tbody>
 </table>
+
+
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="093be476" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.summarize <span class="im">import</span> summary</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># load data</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> get_data()</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1"</span>, df)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2"</span>, df)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> feols(<span class="st">"Y~X1 + X2 | f1 + f2 + f3"</span>, df)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>summary([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-
-            <div id="6FaCFR"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.2.0/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("6FaCFR").appendChild(div);
-                    };
-                    var e = document.getElementById("6FaCFR");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>###
-
-Estimation:  OLS
-Dep. var.: Y, Fixed effects: f1
-Inference:  CRV1
-Observations:  997
-
-| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
-|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.950 |        0.067 |   -14.273 |      0.000 | -1.086 |  -0.813 |
-| X2            |     -0.174 |        0.018 |    -9.469 |      0.000 | -0.212 |  -0.137 |
----
-RMSE: 1.648   R2: 0.489   R2 Within: 0.239
-###
-
-Estimation:  OLS
-Dep. var.: Y, Fixed effects: f1+f2
-Inference:  CRV1
-Observations:  997
-
-| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
-|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.924 |        0.061 |   -15.165 |      0.000 | -1.049 |  -0.799 |
-| X2            |     -0.174 |        0.015 |   -11.918 |      0.000 | -0.204 |  -0.144 |
----
-RMSE: 1.346   R2: 0.659   R2 Within: 0.303
-###
-
-Estimation:  OLS
-Dep. var.: Y, Fixed effects: f1+f2+f3
-Inference:  CRV1
-Observations:  997
-
-| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
-|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.957 |        0.039 |   -24.645 |      0.000 | -1.037 |  -0.878 |
-| X2            |     -0.194 |        0.009 |   -21.730 |      0.000 | -0.212 |  -0.176 |
----
-RMSE: 0.97   R2: 0.823   R2 Within: 0.481</code></pre>
-</div>
-</div>
-
-
 </section>
 
 </main> <!-- /main -->

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>multcomp.rwolf</title>
+<title>estimation.model_matrix_fixest</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,40 +19,6 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -162,7 +128,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/multcomp.rwolf.html">multcomp.rwolf</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.demean.html">Misc / Utilities</a></li><li class="breadcrumb-item"><a href="../reference/estimation.model_matrix_fixest.html">estimation.model_matrix_fixest</a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -221,14 +187,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/multcomp.bonferroni.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">multcomp.bonferroni</span></a>
+  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.bonferroni</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/multcomp.rwolf.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">multcomp.rwolf</span></a>
+  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.rwolf</span></a>
   </div>
 </li>
       </ul>
@@ -244,20 +210,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feols.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">feols.Feols</span></a>
+  <a href="../reference/estimation.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/fepois.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">fepois.Fepois</span></a>
+  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/feiv.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">feiv.Feiv</span></a>
+  <a href="../reference/estimation.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.Feiv</span></a>
   </div>
 </li>
       </ul>
@@ -273,26 +239,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">summarize.summary</span></a>
+  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.summary</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/summarize.etable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">summarize.etable</span></a>
+  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.etable</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.coefplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">visualize.coefplot</span></a>
+  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.coefplot</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/visualize.iplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">visualize.iplot</span></a>
+  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.iplot</span></a>
   </div>
 </li>
       </ul>
@@ -308,20 +274,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/demean.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">demean.demean</span></a>
+  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.demean</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">detect_singletons.detect_singletons</span></a>
+  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.detect_singletons</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/model_matrix_fixest.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">model_matrix_fixest.model_matrix_fixest</span></a>
+  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.model_matrix_fixest</span></a>
   </div>
 </li>
       </ul>
@@ -338,18 +304,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<section id="pyfixest.multcomp.rwolf" class="level1">
-<h1>multcomp.rwolf</h1>
-<p><code>multcomp.rwolf(models, param, B, seed)</code></p>
-<p>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</p>
-<p>For each model, it is assumed that tests to adjust are of the form “param = 0”. This function uses the <code>wildboottest()</code> method for running the bootstrap, hence models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</p>
+<section id="pyfixest.estimation.model_matrix_fixest" class="level1">
+<h1>estimation.model_matrix_fixest</h1>
+<p><code>estimation.model_matrix_fixest(fml, data, drop_singletons=False, weights=None, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
+<p>Create model matrices for fixed effects estimation.</p>
+<p>This function processes the data and then calls <code>formulaic.model_matrix()</code> to create the model matrices.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 4%">
-<col style="width: 25%">
-<col style="width: 64%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 73%">
 <col style="width: 5%">
 </colgroup>
 <thead>
@@ -362,28 +328,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>models</code></td>
-<td>list[pyfixest.feols.Feols] or pyfixest.FixestMulti</td>
-<td>A list of models for which the p-values should be computed, or a FixestMulti object. Models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</td>
+<td><code>fml</code></td>
+<td>str</td>
+<td>A two-sided formula string using fixest formula syntax.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>param</code></td>
-<td>str</td>
-<td>The parameter for which the p-values should be computed.</td>
+<td><code>data</code></td>
+<td>pandas.pandas.DataFrame</td>
+<td>The input DataFrame containing the data.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>B</code></td>
-<td>int</td>
-<td>The number of bootstrap replications.</td>
+<td><code>drop_singletons</code></td>
+<td>bool</td>
+<td>Whether to drop singleton fixed effects. Default is False.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>weights</code></td>
+<td>str or None</td>
+<td>A string specifying the name of the weights column in <code>data</code>. Default is None.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>data</code></td>
+<td>pandas.pandas.DataFrame</td>
+<td>The input DataFrame containing the data.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>seed</code></td>
-<td>int</td>
-<td>The seed for the random number generator.</td>
-<td><em>required</em></td>
+<td><code>drop_intercept</code></td>
+<td>bool</td>
+<td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>i_ref1</code></td>
+<td>str or list</td>
+<td>The reference level for the first variable in the i() syntax.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>i_ref2</code></td>
+<td>str or list</td>
+<td>The reference level for the second variable in the i() syntax.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
@@ -392,8 +382,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="table">
 <colgroup>
-<col style="width: 21%">
-<col style="width: 78%">
+<col style="width: 0%">
+<col style="width: 99%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -403,26 +393,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>pandas.pandas.DataFrame</td>
-<td>A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.</td>
+<td>tuple</td>
+<td>A tuple of the following elements: - Y : pd.DataFrame A DataFrame of the dependent variable. - X : pd.DataFrame A DataFrame of the covariates. If <code>combine = True</code>, contains covariates and fixed effects as dummies. - I : Optional[pd.DataFrame] A DataFrame of the Instruments, None if no IV. - fe : Optional[pd.DataFrame] A DataFrame of the fixed effects, None if no fixed effects specified. Only applicable if <code>combine = False</code>. - na_index : np.array An array with indices of dropped columns. - fe_na : np.array An array with indices of dropped columns due to fixed effect singletons or NaNs in the fixed effects. - na_index_str : str na_index, but as a comma-separated string. Used for caching of demeaned variables. - z_names : Optional[list[str]] Names of all covariates, minus the endogenous variables, plus the instruments. None if no IV. - weights : Optional[str] Weights as a string if provided, or None if no weights, e.g., “weights”. - has_weights : bool A boolean indicating whether weights are used. - icovars : Optional[list[str]] A list of interaction variables provided via <code>i()</code>. None if no interaction variables via <code>i()</code> provided.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.multcomp <span class="im">import</span> rwolf</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data().dropna()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ Y2 + X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>rwolf(fit.to_list(), <span class="st">"X1"</span>, B<span class="op">=</span><span class="dv">9999</span>, seed<span class="op">=</span><span class="dv">123</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>rwolf_df <span class="op">=</span> rwolf([fit1, fit2], <span class="st">"X1"</span>, B<span class="op">=</span><span class="dv">9999</span>, seed<span class="op">=</span><span class="dv">123</span>)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>rwolf_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="attributes" class="level2">
+<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<table class="table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 81%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>list or None</td>
+<td></td>
+<td>icovars - A list of interaction variables. None if no interaction variables via <code>i()</code> provided.</td>
+</tr>
+</tbody>
+</table>
 
 
 </section>
