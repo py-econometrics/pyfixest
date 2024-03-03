@@ -104,7 +104,7 @@ def test_did2s():
         np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
         np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-    if True:
+    if False:
         # test event study with covariate in first stage
         fit = did2s_pyfixest(
             df_het,
@@ -131,7 +131,7 @@ def test_did2s():
         np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
         np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-    if False:
+    if True:
         # test event study with covariate in first stage and second stage
         fit = did2s_pyfixest(
             df_het,
