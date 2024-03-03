@@ -10,7 +10,6 @@ from formulaic import model_matrix
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
-from tqdm import tqdm
 
 from pyfixest.errors import (
     NanInClusterVarError,
@@ -1157,7 +1156,7 @@ class Feols:
         _compute_CCV = getattr(ccv_module, "_compute_CCV")
 
         vcov_splits = 0.0
-        for _ in tqdm(range(n_splits)):
+        for _ in (range(n_splits)):
 
             vcov_ccv = _compute_CCV(
                 fml=fml,
