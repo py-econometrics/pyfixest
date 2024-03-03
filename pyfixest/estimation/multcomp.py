@@ -6,6 +6,7 @@ import pandas as pd
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.report.summarize import _post_processing_input_checks
+from tqdm import tqdm
 
 
 def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:
@@ -127,7 +128,7 @@ def rwolf(
     t_stats = np.zeros(S)
     boot_t_stats = np.zeros((B, S))
 
-    for i in (range(S)):
+    for i in tqdm(range(S)):
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
