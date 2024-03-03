@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.16.3"
+version = "0.17.0"
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures. Additionally, experimentally supports (some of) the regression based new Difference-in-Differences Estimators (Did2s)."
 authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
@@ -18,7 +18,6 @@ formulaic = ">=0.6.6,<1.0.0"
 lets-plot = ">=4.0.1"
 numba = ">=0.58.0"
 tabulate = ">=0.9.0"
-tqdm = "^4.66.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest=">=7.0.0"
