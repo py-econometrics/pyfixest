@@ -49,7 +49,9 @@ def test_event_study():
 def test_did2s():
     """Test the did2s() function."""
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
-    df_het["X"] = np.random.normal(size=len(df_het))
+
+    rng = np.random.default_rng(12345)
+    df_het["X"] = rng.normal(size=len(df_het))
 
     # ATT, no covariates
     fit_did2s = did2s_pyfixest(
@@ -190,7 +192,8 @@ def test_errors():
             i_ref1=[-1.0, np.inf],
         )
 
-    df_het["treat2"] = np.random.choice([0, 1, 2], size=len(df_het))
+    rng = np.random.default_rng(12)
+    df_het["treat2"] = rng.choice([0, 1, 2], size=len(df_het))
     with pytest.raises(ValueError):
         fit = did2s_pyfixest(  # noqa: F841
             df_het,
@@ -247,7 +250,9 @@ def test_lpdid():
     # test vs R
 
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
-    df_het["X"] = np.random.normal(size=len(df_het))
+
+    rng = np.random.default_rng(1231)
+    df_het["X"] = rng.normal(size=len(df_het))
 
     df_het.drop("treat", axis=1)
     df_het.drop("rel_year", axis=1)

@@ -1,10 +1,34 @@
 # News
 
-## PyFixest 0.17.0 (In Development)
+## PyFixest 0.17.0
+
+- Restructures the codebase and reorganizes how users can interact with the `pyfixest` API. It is now recommended to use `pyfixest` in the following way:
+
+  ```{python}
+  import numpy as np
+  import pyfixest as pf
+  data = pf.get_data()
+  data["D"] = data["X1"] > 0
+  fit = pf.feols("Y ~ D + f1", data = data)
+  fit.tidy()
+  ```
+
+  The update should not inroduce any breaking changes. Thanks to [@Wenzhi-Ding](https://github.com/Wenzhi-Ding) for the PR!
 
 - Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to [@apoorvalal](https://github.com/apoorvalal) for the contribution!
+
+  ```{python}
+  pyfixest.confit(joint = True, B = 9999)
+  ```
+
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017)
   for OLS via the `.ccv()` method.
+
+  ```{python}
+  fit.ccv(treatment = "D")
+  ```
+
+
 
 ## PyFixest 0.16.0
 
