@@ -1160,7 +1160,11 @@ class Feols:
         _compute_CCV = getattr(ccv_module, "_compute_CCV")
 
         vcov_splits = 0.0
+<<<<<<< HEAD
         for _ in _tqdm(range(n_splits)):
+=======
+        for _ in (range(n_splits)):
+>>>>>>> 6caf7b4ee432121223e6ee317e0c952ff9ac9563
 
             vcov_ccv = _compute_CCV(
                 fml=fml,

@@ -2,7 +2,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
@@ -128,7 +127,7 @@ def rwolf(
     t_stats = np.zeros(S)
     boot_t_stats = np.zeros((B, S))
 
-    for i in tqdm(range(S)):
+    for i in (range(S)):
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
