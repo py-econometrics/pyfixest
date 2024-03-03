@@ -76,7 +76,7 @@ def test_did2s():
     np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r))
     np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
 
-    if False:
+    if True:
         # ATT, event study
 
         fit = did2s_pyfixest(
