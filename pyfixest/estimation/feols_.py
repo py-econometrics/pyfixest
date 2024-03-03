@@ -1082,7 +1082,6 @@ class Feols:
         fit.ccv(treatment="D", pk = 0.05, gk = 0.5, n_splits = 8, seed = 123).head()
         ```
         """
-
         tqdm_module = import_module("tqdm")
         _tqdm = getattr(tqdm_module, "tqdm")
 

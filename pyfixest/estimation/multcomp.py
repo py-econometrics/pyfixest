@@ -2,11 +2,11 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.report.summarize import _post_processing_input_checks
-from tqdm import tqdm
 
 
 def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:
