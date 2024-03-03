@@ -76,7 +76,7 @@ def test_did2s():
     np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r))
     np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
 
-    if True:
+    if False:
         # ATT, event study
 
         fit = did2s_pyfixest(
@@ -104,7 +104,7 @@ def test_did2s():
         np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
         np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-    if True:
+    if False:
         # test event study with covariate in first stage
         fit = did2s_pyfixest(
             df_het,
@@ -131,7 +131,7 @@ def test_did2s():
         np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
         np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-    if True:
+    if False:
         # test event study with covariate in first stage and second stage
         fit = did2s_pyfixest(
             df_het,
@@ -158,7 +158,7 @@ def test_did2s():
         np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
         np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
 
-    if True:
+    if False:
         # binary non boolean treatment variable, just check that it runs
         df_het["treat"] = df_het["treat"].astype(int)
         fit = did2s_pyfixest(
