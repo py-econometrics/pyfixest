@@ -46,7 +46,6 @@ def test_event_study():
         np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
 
 
-# @pytest.mark.skip(reason="causes ci error")
 def test_did2s():
     """Test the did2s() function."""
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
