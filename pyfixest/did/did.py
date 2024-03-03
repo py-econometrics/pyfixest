@@ -90,9 +90,6 @@ class DID(ABC):
             self._data[self._gname] > 0
         )
 
-        # data["treat"] = np.where(data[gname] <= data[tname], 1, 0)
-        self._data["_rel_yearZZZ"] = data[tname] - data[gname]
-
     @abstractmethod
     def estimate(self):  # noqa: D102
         pass
