@@ -40,8 +40,6 @@ def iplot(
     exact_match: Optional[bool] = False,
 ):
     r"""
-    Plot model coefficients.
-
     Plot model coefficients for variables interacted via "i()" syntax, with
     confidence intervals.
 
@@ -105,8 +103,7 @@ def iplot(
     df_all = []
     all_icovars = []
 
-    for x, _ in enumerate(models):
-        fxst = models[x]
+    for x, fxst in enumerate(list(models)):
         if fxst._icovars is None:
             raise ValueError(
                 f"The {x} th estimated model did not have ivars / 'i()' model syntax."
@@ -215,8 +212,7 @@ def coefplot(
     """
     models = _post_processing_input_checks(models)
     df_all = []
-    for x, _ in enumerate(models):
-        fxst = models[x]
+    for fxst in models:
         df_model = fxst.tidy().reset_index()
         df_model["fml"] = fxst._fml
         df_model.set_index("fml", inplace=True)

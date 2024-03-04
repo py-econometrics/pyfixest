@@ -1,4 +1,6 @@
+import functools
 import warnings
+from importlib import import_module
 from typing import Optional, Union
 
 import numpy as np
@@ -11,7 +13,6 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.report.visualize import coefplot, iplot
 from pyfixest.utils.dev_utils import _polars_to_pandas
 
 
@@ -41,6 +42,21 @@ class FixestMulti:
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
         self.all_fitted_models = {}
+
+        # set functions inherited from other modules
+        _module = import_module("pyfixest.report")
+        _tmp = getattr(_module, "coefplot")
+        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.coefplot.__doc__ = _tmp.__doc__
+        _tmp = getattr(_module, "iplot")
+        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.iplot.__doc__ = _tmp.__doc__
+        _tmp = getattr(_module, "summary")
+        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.summary.__doc__ = _tmp.__doc__
+        _tmp = getattr(_module, "etable")
+        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.etable.__doc__ = _tmp.__doc__
 
     def _prepare_estimation(
         self,
@@ -479,14 +495,6 @@ class FixestMulti:
 
         return res
 
-    def summary(self, digits: int = 3) -> None:  # noqa: D102
-        for x in list(self.all_fitted_models.keys()):
-            fxst = self.all_fitted_models[x]
-            fxst.summary(digits=digits)
-
-    def etable(self, digits: int = 3) -> pd.DataFrame:  # noqa: D102
-        return self.tidy().T.round(digits)
-
     def coef(self) -> pd.Series:
         """
         Obtain the coefficients of the fitted models.
@@ -548,115 +556,6 @@ class FixestMulti:
             The key indicates which models the estimated statistic derives from.
         """
         return self.tidy()[["2.5%", "97.5%"]]
-
-    def iplot(
-        self,
-        alpha: float = 0.05,
-        figsize: tuple = (500, 300),
-        yintercept: Union[int, str, None] = None,
-        xintercept: Union[int, str, None] = None,
-        rotate_xticks: int = 0,
-        title: Optional[str] = None,
-        coord_flip: Optional[bool] = True,
-    ):
-        """
-        Plot model coefficients.
-
-        Plot model coefficients with confidence intervals for variable interactions
-        specified via the `i()` syntax.
-
-        Parameters
-        ----------
-        alpha : float, optional
-            The significance level for the confidence intervals. Default is 0.05.
-        figsize : tuple, optional
-            The size of the figure. Default is (10, 10).
-        yintercept : Union[int, str, None], optional
-            The value at which to draw a horizontal line.
-        xintercept : Union[int, str, None], optional
-            The value at which to draw a vertical line.
-        rotate_xticks : int, optional
-            The rotation angle for x-axis tick labels. Default is 0.
-        title : str, optional
-            The title of the plot. Default is None.
-        coord_flip : bool, optional
-            Whether to flip the coordinates of the plot. Default is True.
-
-        Returns
-        -------
-        lets-plot figure
-            A lets-plot figure of coefficients (and respective CIs) interacted
-            via the `i()` syntax.
-        """
-        models = self.all_fitted_models
-        # get a list, not a dict, as iplot only works with lists
-        models = [models[x] for x in list(self.all_fitted_models.keys())]
-
-        plot = iplot(
-            models=models,
-            alpha=alpha,
-            figsize=figsize,
-            yintercept=yintercept,
-            xintercept=xintercept,
-            rotate_xticks=rotate_xticks,
-            title=title,
-            coord_flip=coord_flip,
-        )
-
-        return plot
-
-    def coefplot(
-        self,
-        alpha: float = 0.05,
-        figsize: tuple = (500, 300),
-        yintercept: int = 0,
-        rotate_xticks: int = 0,
-        title: Optional[str] = None,
-        coord_flip: Optional[bool] = True,
-    ):
-        """
-        Plot estimation results.
-
-        The plot() method is only defined for single regressions.
-
-        Parameters
-        ----------
-        alpha : float
-            The significance level for the confidence intervals. Default is 0.05.
-        figsize : tuple
-            The size of the figure. Default is (5, 2).
-        yintercept : float
-            The value of the y-intercept. Default is 0.
-        figtitle:str, optional
-        The title of the figure. Default is None.
-        figtext : str, optional
-            The text at the bottom of the figure. Default is None.
-        title : str, optional
-            The title of the plot. Default is None.
-        coord_flip : bool, optional
-            Whether to flip the coordinates of the plot. Default is True.
-
-        Returns
-        -------
-        lets-plot figure
-            A lets-plot figure of regression coefficients.
-        """
-        # get a list, not a dict, as iplot only works with lists
-        models = self.all_fitted_models
-        models = [models[x] for x in list(self.all_fitted_models.keys())]
-
-        plot = coefplot(
-            models=models,
-            figsize=figsize,
-            alpha=alpha,
-            yintercept=yintercept,
-            xintercept=None,
-            rotate_xticks=rotate_xticks,
-            title=title,
-            coord_flip=coord_flip,
-        )
-
-        return plot
 
     def wildboottest(
         self,

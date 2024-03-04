@@ -263,7 +263,7 @@ class Feols:
         self._adj_r2 = None
         self._adj_r2_within = None
 
-        # set functions from other modules
+        # set functions inherited from other modules
         _module = import_module("pyfixest.report")
         _tmp = getattr(_module, "coefplot")
         self.coefplot = functools.partial(_tmp, models=[self])

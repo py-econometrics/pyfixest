@@ -118,3 +118,13 @@ def _select_order_coefs(
         res = _coefs
 
     return res
+
+
+def docstring_from(func, custom_doc=""):
+    """Copy the docstring of another function."""
+
+    def decorator(target_func):
+        target_func.__doc__ = custom_doc + "\n\n" + func.__doc__
+        return target_func
+
+    return decorator

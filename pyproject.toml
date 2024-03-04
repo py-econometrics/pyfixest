@@ -82,6 +82,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D100", "D103"]
+"pyfixest/multcomp.py" = ["D103"]
+"pyfixest/summarize.py" = ["D103"]
+"pyfixest/visualize.py" = ["D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
