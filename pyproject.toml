@@ -78,6 +78,7 @@ ignore = [
   "D104",   # missing docstring in public package
   "SIM110", # Use all instead of `for` loop
   "TRY003", # Avoid specifying long messages outside the exception class
+  "D205",   # 1 blank line required between summary line and description
 ]
 
 [tool.ruff.lint.per-file-ignores]
