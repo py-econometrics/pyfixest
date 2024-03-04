@@ -1,4 +1,3 @@
-import warnings
 from typing import Optional, Union
 
 import pandas as pd
@@ -22,7 +21,6 @@ from lets_plot import (
 )
 
 from pyfixest.report.summarize import _post_processing_input_checks
-from pyfixest.utils._exceptions import find_stack_level
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 LetsPlot.setup_html()
@@ -152,7 +150,6 @@ def coefplot(
     yintercept: float = 0,
     xintercept: float = None,
     rotate_xticks: int = 0,
-    coefficients: Optional[list[str]] = None,
     title: Optional[str] = None,
     coord_flip: Optional[bool] = True,
     keep: Optional[Union[list, str]] = [],
@@ -237,17 +234,6 @@ def coefplot(
     else:
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
-
-    if coefficients is not None:
-        warnings.warn(
-            "'coefficients' parameter is deprecated and will be removed in a future "
-            "version. Please use 'keep', 'drop', and 'exact_match' instead. You "
-            "may refer the updated documentation at: "
-            "https://s3alfisc.github.io/pyfixest/quickstart.html",
-            FutureWarning,
-            stacklevel=find_stack_level(),
-        )
-        df = df[df.Coefficient.isin(coefficients)].reset_index()
 
     return _coefplot(
         df=df,
