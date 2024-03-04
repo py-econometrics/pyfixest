@@ -1,8 +1,8 @@
+import functools
 import re
 import warnings
 from importlib import import_module
 from typing import Optional, Union
-import functools
 
 import numba as nb
 import numpy as np
@@ -740,7 +740,6 @@ class Feols:
             # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
 
         return res
-
 
     def wildboottest(
         self,
