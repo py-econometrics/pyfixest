@@ -173,12 +173,6 @@ def coefplot(
         The value at which to draw a vertical line on the plot. Default is None.
     rotate_xticks : float, optional
         The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
-    coefficients : list, optional
-        A list of coefficients to plot. If None, all coefficients are plotted.
-
-            'coefficients' parameter is deprecated and will be removed in a future
-            version. Please use 'keep', 'drop', and 'exact_match' instead.
-
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
