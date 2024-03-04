@@ -1,3 +1,4 @@
+import functools
 import re
 import warnings
 from importlib import import_module
@@ -261,6 +262,18 @@ class Feols:
         self._r2_within = None
         self._adj_r2 = None
         self._adj_r2_within = None
+
+        # set functions inherited from other modules
+        _module = import_module("pyfixest.report")
+        _tmp = getattr(_module, "coefplot")
+        self.coefplot = functools.partial(_tmp, models=[self])
+        self.coefplot.__doc__ = _tmp.__doc__
+        _tmp = getattr(_module, "iplot")
+        self.iplot = functools.partial(_tmp, models=[self])
+        self.iplot.__doc__ = _tmp.__doc__
+        _tmp = getattr(_module, "summary")
+        self.summary = functools.partial(_tmp, models=[self])
+        self.summary.__doc__ = _tmp.__doc__
 
     def get_fit(self) -> None:
         """
@@ -727,115 +740,6 @@ class Feols:
             # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
 
         return res
-
-    def coefplot(
-        self,
-        alpha: float = 0.05,
-        figsize: tuple[int, int] = (500, 300),
-        yintercept: Optional[float] = 0,
-        xintercept: Optional[float] = None,
-        rotate_xticks: int = 0,
-        coefficients: Optional[list[str]] = None,
-        title: Optional[str] = None,
-        coord_flip: Optional[bool] = True,
-    ):
-        """
-        Create a coefficient plot to visualize model coefficients.
-
-        Parameters
-        ----------
-        alpha : float, optional
-            Significance level for highlighting significant coefficients.
-            Defaults to None.
-        figsize : tuple[int, int], optional
-            Size of the plot (width, height) in inches. Defaults to None.
-        yintercept : float, optional
-            Value to set as the y-axis intercept (vertical line). Defaults to None.
-        xintercept : float, optional
-            Value to set as the x-axis intercept (horizontal line). Defaults to None.
-        rotate_xticks : int, optional
-            Rotation angle for x-axis tick labels. Defaults to None.
-        coefficients : list[str], optional
-            List of coefficients to include in the plot.
-            If None, all coefficients are included.
-        title : str, optional
-            Title of the plot. Defaults to None.
-        coord_flip : bool, optional
-            Whether to flip the coordinates of the plot. Defaults to None.
-
-        Returns
-        -------
-        lets-plot figure
-            A lets-plot figure with coefficient estimates and confidence intervals.
-        """
-        # lazy loading to avoid circular import
-        visualize_module = import_module("pyfixest.report")
-        _coefplot = getattr(visualize_module, "coefplot")
-
-        plot = _coefplot(
-            models=[self],
-            alpha=alpha,
-            figsize=figsize,
-            yintercept=yintercept,
-            xintercept=xintercept,
-            rotate_xticks=rotate_xticks,
-            coefficients=coefficients,
-            title=title,
-            coord_flip=coord_flip,
-        )
-
-        return plot
-
-    def iplot(
-        self,
-        alpha: float = 0.05,
-        figsize: tuple[int, int] = (500, 300),
-        yintercept: Optional[float] = None,
-        xintercept: Optional[float] = None,
-        rotate_xticks: int = 0,
-        title: Optional[str] = None,
-        coord_flip: Optional[bool] = True,
-    ):
-        """
-        Create coefficient plots for variables interacted via `i()` syntax.
-
-        Parameters
-        ----------
-        alpha : float, optional
-            Significance level for visualization options. Defaults to 0.05.
-        figsize : tuple[int, int], optional
-            Size of the plot (width, height) in inches. Defaults to (500, 300).
-        yintercept : float, optional
-            Value to set as the y-axis intercept (vertical line). Defaults to None.
-        xintercept : float, optional
-            Value to set as the x-axis intercept (horizontal line). Defaults to None.
-        rotate_xticks : int, optional
-            Rotation angle for x-axis tick labels. Defaults to 0.
-        title : str, optional
-            Title of the plot. Defaults to None.
-        coord_flip : bool, optional
-            Whether to flip the coordinates of the plot. Defaults to True.
-
-        Returns
-        -------
-        lets-plot figure
-            A lets-plot figure with coefficient estimates and confidence intervals.
-        """
-        visualize_module = import_module("pyfixest.report")
-        _iplot = getattr(visualize_module, "iplot")
-
-        plot = _iplot(
-            models=[self],
-            alpha=alpha,
-            figsize=figsize,
-            yintercept=yintercept,
-            xintercept=xintercept,
-            rotate_xticks=rotate_xticks,
-            title=title,
-            coord_flip=coord_flip,
-        )
-
-        return plot
 
     def wildboottest(
         self,
@@ -1661,25 +1565,6 @@ class Feols:
             A np.ndarray with the residuals of the estimated regression model.
         """
         return self._u_hat
-
-    def summary(self, digits=3) -> None:
-        """
-        Summary of estimated model.
-
-        Parameters
-        ----------
-        digits : int, optional
-            The number of digits to be displayed. Defaults to 3.
-
-        Returns
-        -------
-        None
-        """
-        # lazy loading to avoid circular import
-        summarize_module = import_module("pyfixest.report")
-        _summary = getattr(summarize_module, "summary")
-
-        return _summary(models=self, digits=digits)
 
 
 def _check_vcov_input(vcov, data):

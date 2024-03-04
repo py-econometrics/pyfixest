@@ -350,7 +350,7 @@ def _post_processing_input_checks(models):
         models = [models]
 
     else:
-        if isinstance(models, list):
+        if isinstance(models, (list, type({}.values()))):
             for model in models:
                 if not isinstance(model, (Feols, Fepois)):
                     raise TypeError(
