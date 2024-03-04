@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Union
 
 import pandas as pd
@@ -21,6 +22,8 @@ from lets_plot import (
 )
 
 from pyfixest.report.summarize import _post_processing_input_checks
+from pyfixest.utils._exceptions import find_stack_level
+from pyfixest.utils.dev_utils import _select_order_coefs
 
 LetsPlot.setup_html()
 
@@ -34,8 +37,11 @@ def iplot(
     rotate_xticks: int = 0,
     title: Optional[str] = None,
     coord_flip: Optional[bool] = True,
+    keep: Optional[Union[list, str]] = [],
+    drop: Optional[Union[list, str]] = [],
+    exact_match: Optional[bool] = False,
 ):
-    """
+    r"""
     Plot model coefficients.
 
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -60,6 +66,23 @@ def iplot(
         The title of the plot.
     coord_flip : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
+    keep: str or list of str, optional
+        The pattern for retaining coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Default is keeping all coefficients.
+        You should use regular expressions to select coefficients.
+            "age",            # would keep all coefficients containing age
+            r"^tr",           # would keep all coefficients starting with tr
+            r"\\d$",          # would keep all coefficients ending with number
+        Output will be in the order of the patterns.
+    drop: str or list of str, optional
+        The pattern for excluding coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+        Default is keeping all coefficients. Parameter `keep` and `drop` can be
+        used simultaneously.
+    exact_match: bool, optional
+        Whether to use exact match for `keep` and `drop`. Default is False.
+        If True, the pattern will be matched exactly to the coefficient name
+        instead of using regular expressions.
 
     Returns
     -------
@@ -101,9 +124,14 @@ def iplot(
     all_icovars = list(set(all_icovars))
 
     df = pd.concat(df_all, axis=0)
+    if keep or drop:
+        idxs = _select_order_coefs(df["Coefficient"], keep, drop, exact_match)
+    else:
+        idxs = df["Coefficient"]
+    df = df.loc[df["Coefficient"].isin(idxs), :]
     fml_list = df.index.unique()  # noqa: F841
     # keep only coefficients interacted via the i() syntax
-    df = df[df.Coefficient.isin(all_icovars)].reset_index()
+    df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
     return _coefplot(
         df=df,
@@ -127,8 +155,11 @@ def coefplot(
     coefficients: Optional[list[str]] = None,
     title: Optional[str] = None,
     coord_flip: Optional[bool] = True,
+    keep: Optional[Union[list, str]] = [],
+    drop: Optional[Union[list, str]] = [],
+    exact_match: Optional[bool] = False,
 ):
-    """
+    r"""
     Plot model coefficients with confidence intervals.
 
     Parameters
@@ -147,10 +178,31 @@ def coefplot(
         The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     coefficients : list, optional
         A list of coefficients to plot. If None, all coefficients are plotted.
+
+            'coefficients' parameter is deprecated and will be removed in a future
+            version. Please use 'keep', 'drop', and 'exact_match' instead.
+
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
+    keep: str or list of str, optional
+        The pattern for retaining coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Default is keeping all coefficients.
+        You should use regular expressions to select coefficients.
+            "age",            # would keep all coefficients containing age
+            r"^tr",           # would keep all coefficients starting with tr
+            r"\\d$",          # would keep all coefficients ending with number
+        Output will be in the order of the patterns.
+    drop: str or list of str, optional
+        The pattern for excluding coefficient names. You can pass a string (one
+        pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
+        Default is keeping all coefficients. Parameter `keep` and `drop` can be
+        used simultaneously.
+    exact_match: bool, optional
+        Whether to use exact match for `keep` and `drop`. Default is False.
+        If True, the pattern will be matched exactly to the coefficient name
+        instead of using regular expressions.
 
     Returns
     -------
@@ -180,8 +232,21 @@ def coefplot(
         df_all.append(df_model)
 
     df = pd.concat(df_all, axis=0)
+    if keep or drop:
+        idxs = _select_order_coefs(df.index, keep, drop, exact_match)
+    else:
+        idxs = df.index
+    df = df.loc[idxs, :].reset_index()
 
     if coefficients is not None:
+        warnings.warn(
+            "'coefficients' parameter is deprecated and will be removed in a future "
+            "version. Please use 'keep', 'drop', and 'exact_match' instead. You "
+            "may refer the updated documentation at: "
+            "https://s3alfisc.github.io/pyfixest/quickstart.html",
+            FutureWarning,
+            stacklevel=find_stack_level(),
+        )
         df = df[df.Coefficient.isin(coefficients)].reset_index()
 
     return _coefplot(

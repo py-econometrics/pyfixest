@@ -26,6 +26,8 @@ def test_iplot(data):
     iplot([fit1, fit2])
     iplot([fit1, fit2], yintercept=0)
 
+    iplot([fit1, fit2], drop="T.12")
+
     with pytest.raises(ValueError):
         fit3 = feols(fml="Y ~ X1", data=data, vcov="iid")
         fit3.iplot()
@@ -46,6 +48,10 @@ def test_coefplot(data):
     coefplot(fit1)
     coefplot([fit1, fit2])
     coefplot([fit1, fit2], yintercept=0)
+    coefplot([fit1, fit2], coefficients=["X1"])
+    coefplot([fit1, fit2], keep="X")
+    coefplot([fit1, fit2], drop="X")
+    coefplot([fit1, fit2], coefficients=["X1", "X2"], drop="X", exact_match=True)
 
     fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
     fit_multi.coefplot()
