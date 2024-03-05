@@ -7,7 +7,7 @@ from typing import Optional, Union
 import numba as nb
 import numpy as np
 import pandas as pd
-from formulaic import model_matrix
+from formulaic import Formula
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
@@ -864,7 +864,7 @@ class Feols:
             fml_dummies = f"{fml_linear} + {fixef_fml}"
 
             # make this sparse once wildboottest allows it
-            _, _X = model_matrix(fml_dummies, _data, output="numpy")
+            _, _X = Formula(fml_dummies).get_model_matrix(_data, output = "numpy")
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
@@ -1161,7 +1161,7 @@ class Feols:
         fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
-        Y, X = model_matrix(fml_linear, _data)
+        Y, X = Formula(fml_linear).get_model_matrix(_data, output = "pandas")
         if self._X_is_empty:
             Y = Y.to_numpy()
             uhat = Y
@@ -1172,7 +1172,7 @@ class Feols:
             X = X.to_numpy()
             uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
 
-        D2 = model_matrix("-1+" + fixef_fml, _data, output="sparse")
+        D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
@@ -1276,7 +1276,7 @@ class Feols:
             if not self._X_is_empty:
                 # deal with linear part
                 xfml = _fml.split("|")[0].split("~")[1]
-                X = model_matrix(xfml, newdata)
+                X = Formula(xfml).get_model_matrix(newdata)
                 X_index = X.index
                 coef_idx = np.isin(self._coefnames, X.columns)
                 X = X[np.array(self._coefnames)[coef_idx]]

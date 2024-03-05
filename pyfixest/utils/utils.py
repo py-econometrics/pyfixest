@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from formulaic import model_matrix
+from formulaic import Formula
 
 from pyfixest.utils.dev_utils import _create_rng
 
@@ -164,7 +164,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     X["f2"] = X["f2"].astype("category")
     X["f3"] = X["f3"].astype("category")
 
-    mm = model_matrix("~ X1 + X2 + f1 + f2 + f3", data=X)
+    mm = Formula("~ X1 + X2 + f1 + f2 + f3").get_model_matrix(data=X, output = "pandas")
 
     k = mm.shape[1]
 

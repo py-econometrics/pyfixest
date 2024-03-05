@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from formulaic import model_matrix
+from formulaic import Formula
 
 from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
@@ -34,7 +34,7 @@ def model_matrix_fixest(
     """
     Create model matrices for fixed effects estimation.
 
-    This function processes the data and then calls `formulaic.model_matrix()`
+    This function processes the data and then calls `formulaic.Formula.get_model_matrix()`
     to create the model matrices.
 
     Parameters
@@ -100,16 +100,146 @@ def model_matrix_fixest(
     """
     # check if weights are valid
     _check_weights(weights, data)
-
-    fml = fml.replace(" ", "")
-    _is_iv = _check_is_iv(fml)
-
     _ivars = _find_ivars(fml)[0]
 
     if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
         raise ValueError(
             f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
         )
+    _check_i_refs2(_ivars, i_ref1, i_ref2, data)
+
+    depvar, covar, endogvar, instruments, fval = deparse_fml(fml, i_ref1, i_ref2)
+    _is_iv = True if endogvar is not None else False
+    endogvar = Z = weights_df = fe = None
+
+    fml_kwargs = {
+        "Y": depvar,
+        "X": covar if fval != 0 or drop_intercept else f"1+{covar}",
+        **({"endog": endogvar, "instruments": instruments} if _is_iv else {}),
+        **({"fe": fval_to_numeric(fval)} if fval != "0" else {}),
+        **({"weights": weights} if weights is not None else {})
+    }
+
+    FML = Formula(**fml_kwargs)
+    mm = FML.get_model_matrix(data, output="pandas", context = {"to_numeric": pd.to_numeric})
+
+    for x in fml_kwargs.keys():
+
+        if x == "Y":
+            Y = mm["Y"]
+        elif x == "X":
+            X = mm["X"]
+            # special case: sometimes it is useful to run models "Y ~ 0 | f1"
+            # to demean Y + to use the predict method
+            X_is_empty = False if X.shape[1] > 0 else True
+        elif x == "endog":
+            endogvar = mm["endog"]
+        elif x == "instruments":
+            Z = mm["instruments"]
+        elif x == "fe":
+            fe = mm["fe"]
+        elif x == "weights":
+            weights_df = mm["weights"]
+
+    # make sure that all of the following are of type float64: Y, X, Z, endogvar, fe, weights_df
+    for df in [Y, X, Z, endogvar, fe, weights_df]:
+        if df is not None:
+            cols_to_convert = df.select_dtypes(exclude=['int64', 'float64']).columns
+            df[cols_to_convert] = df[cols_to_convert].astype('float64')
+
+    # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
+    if Y.shape[1] > 1:
+        raise TypeError(
+            f"The dependent variable must be numeric, but it is of type {data[depvar].dtype}."
+        )
+    if endogvar is not None and endogvar.shape[1] > 1:
+        raise TypeError(
+            f"The endogenous variable must be numeric, but it is of type {data[endogvar].dtype}."
+        )
+
+    columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
+
+    if columns_to_drop and not X_is_empty:
+        X.drop(columns_to_drop, axis=1, inplace=True)
+        if _is_iv:
+            Z.drop(columns_to_drop, axis=1, inplace=True)
+
+    # drop reference level, if specified
+    # ivars are needed for plotting of all interacted variables via iplot()
+
+    _icovars = _get_icovars(_ivars, X)
+
+    # drop intercept if specified in feols() call - mostly handy for did2s()
+    if drop_intercept:
+        if "Intercept" in X.columns:
+            X.drop("Intercept", axis=1, inplace=True)
+        if _is_iv and "Intercept" in Z.columns:
+            Z.drop("Intercept", axis=1, inplace=True)
+
+    # handle singleton fixed effects
+
+    if fe is not None and drop_singletons:
+        dropped_singleton_bool = detect_singletons(fe.to_numpy())
+        keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+        if np.any(dropped_singleton_bool == True):  # noqa: E712
+            warnings.warn(
+                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+            )
+            Y = Y.iloc[keep_singleton_indices]
+            if not X_is_empty:
+                X = X.iloc[keep_singleton_indices]
+            fe = fe.iloc[keep_singleton_indices]
+            if _is_iv:
+                Z = Z.iloc[keep_singleton_indices]
+                endogvar = endogvar.iloc[keep_singleton_indices]
+            if weights_df is not None:
+                weights_df = weights_df.iloc[keep_singleton_indices]
+
+
+    # overwrite na_index
+    na_index = list(set(range(data.shape[0])).difference(Y.index))
+    na_index_str = ",".join(str(x) for x in na_index)
+
+    return (
+        Y,
+        X,
+        fe,
+        endogvar,
+        Z,
+        weights_df,
+        na_index,
+        na_index_str,
+        _icovars,
+        X_is_empty,
+    )
+
+
+def fval_to_numeric(pattern):
+    """
+    Transforms a pattern of variables separated by '+' into a string where
+    each variable is wrapped with to_numeric().
+
+    Parameters:
+    - pattern: A string representing the pattern of variables, e.g., "a+b+c".
+
+    Returns:
+    - A transformed string where each variable in the input pattern is wrapped
+      with pd.to_numeric(), e.g., "pd.to_numeric(a) + pd.to_numeric(b) + pd.to_numeric(c)".
+    """
+    variables = pattern.split('+')
+    transformed_variables = ['to_numeric(' + var.strip() + ')' for var in variables]
+    transformed_pattern = ' + '.join(transformed_variables)
+
+    return transformed_pattern
+
+def deparse_fml(
+    fml: str,
+    i_ref1: Optional[Union[list, str, int]],
+    i_ref2: Optional[Union[list, str, int]],
+):
+
+    fml = fml.replace(" ", "")
+    _is_iv = _check_is_iv(fml)
 
     # step 1: deparse formula
     fml_parts = fml.split("|")
@@ -143,11 +273,6 @@ def model_matrix_fixest(
             covar = covar.replace(x, interact_vars)
             break
 
-    # should any variables be dropped from the model matrix
-    # (e.g., reference level dummies, if specified)
-    # _check_i_refs(_ivars, i_ref1, i_ref2, data)
-    _check_i_refs2(_ivars, i_ref1, i_ref2, data)
-
     if len(fml_parts) == 3:
         fval, fml_iv = fml_parts[1], fml_parts[2]
     elif len(fml_parts) == 2:
@@ -164,174 +289,8 @@ def model_matrix_fixest(
     else:
         endogvar, instruments = None, None  # noqa: F841
 
-    # step 2: create formulas
-    fml_exog = f"{depvar}~{covar}"
-    if _is_iv:
-        fml_iv_full = f"{fml_iv}+{covar}-{endogvar}"
-    # clean fixed effects
-    if fval != "0":
-        fe, fe_na = _clean_fe(data, fval)
-        # fml_exog += " | " + fval
-    else:
-        fe = None
-        fe_na = None
-    # fml_iv already created
+    return depvar, covar, endogvar, instruments, fval
 
-    Y, X = model_matrix(fml_exog, data)
-
-    # special case: sometimes it is useful to run models "Y ~ 0 | f1"
-    # to demean Y + to use the predict method
-    X_is_empty = False
-    if X.shape[1] == 0:
-        X_is_empty = True
-
-    # if int, turn, Y into int64, else float64
-    if pd.api.types.is_integer_dtype(Y.iloc[:, 0]):
-        pass
-    else:
-        Y = Y.astype("float64")
-    for x in X.columns:
-        if X[x].dtype == "int64":
-            pass
-        else:
-            X.loc[:, x] = X[x].astype("float64")
-
-    if _is_iv:
-        endogvar, Z = model_matrix(fml_iv_full, data)
-    else:
-        endogvar, Z = None, None
-
-    Y, X, endogvar, Z = (
-        pd.DataFrame(x) if x is not None else x for x in [Y, X, endogvar, Z]
-    )
-
-    # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
-    if Y.shape[1] > 1:
-        raise TypeError(
-            f"The dependent variable must be numeric, but it is of type {data[depvar].dtype}."
-        )
-    if endogvar is not None and endogvar.shape[1] > 1:
-        raise TypeError(
-            f"The endogenous variable must be numeric, but it is of type {data[endogvar].dtype}."
-        )
-    # step 3: catch NaNs (before converting to numpy arrays)
-    na_index_stage2 = data.index.difference(Y.index).tolist()
-
-    if _is_iv:
-        na_index_stage1 = data.index.difference(Z.index).tolist()
-        # NaNs in stage 1 not in stage 2
-        diff1 = list(set(na_index_stage1) - set(na_index_stage2))
-        # NaNs in stage 2 not in stage 1
-        diff2 = list(set(na_index_stage2) - set(na_index_stage1))
-        if diff1:
-            Y.drop(diff1, axis=0, inplace=True)
-            X.drop(diff1, axis=0, inplace=True)
-        if diff2:
-            Z.drop(diff2, axis=0, inplace=True)
-            endogvar.drop(diff2, axis=0, inplace=True)
-        na_index = list(set(na_index_stage1 + na_index_stage2))
-    else:
-        na_index = na_index_stage2
-
-    columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
-
-    if columns_to_drop and not X_is_empty:
-        X.drop(columns_to_drop, axis=1, inplace=True)
-        if _is_iv:
-            Z.drop(columns_to_drop, axis=1, inplace=True)
-
-    # drop reference level, if specified
-    # ivars are needed for plotting of all interacted variables via iplot()
-
-    _icovars = _get_icovars(_ivars, X)
-
-    # drop NaNs from weights
-    weights_df = None
-    if weights is not None:
-        weights_df = data[weights]
-        weights_na = np.where(weights_df.isna())[0].tolist()
-
-        # check if there are any NaN in weights not yet in na_index
-        weights_na_remaining = list(set(weights_na) - set(na_index))
-
-        if weights_na_remaining:
-            X.drop(weights_na_remaining, axis=0, inplace=True)
-            Y.drop(weights_na_remaining, axis=0, inplace=True)
-            if _is_iv:
-                Z.drop(weights_na_remaining, axis=0, inplace=True)
-                endogvar.drop(weights_na_remaining, axis=0, inplace=True)
-            na_index += weights_na_remaining
-            weights_df = weights_df.drop(na_index, axis=0)
-
-        else:
-            weights_df.drop(na_index, axis=0, inplace=True)
-
-    if fe is not None:
-        fe.drop(na_index, axis=0, inplace=True)
-        # drop intercept
-        if not X_is_empty and "Intercept" in X.columns:
-            X.drop("Intercept", axis=1, inplace=True)
-        if _is_iv and "Intercept" in Z.columns:
-            Z.drop("Intercept", axis=1, inplace=True)
-
-        # drop NaNs in fixed effects (not yet dropped via na_index)
-        fe_na_remaining = list(set(fe_na) - set(na_index))
-        if fe_na_remaining:
-            Y.drop(fe_na_remaining, axis=0, inplace=True)
-            if not X_is_empty:
-                X.drop(fe_na_remaining, axis=0, inplace=True)
-            fe.drop(fe_na_remaining, axis=0, inplace=True)
-            if _is_iv:
-                Z.drop(fe_na_remaining, axis=0, inplace=True)
-                endogvar.drop(fe_na_remaining, axis=0, inplace=True)
-            na_index += fe_na_remaining
-            na_index = list(set(na_index))
-            if weights_df is not None:
-                weights_df = weights_df.drop(fe_na_remaining, axis=0)
-
-    # drop intercept if specified in feols() call - mostly handy for did2s()
-    if drop_intercept:
-        if "Intercept" in X.columns:
-            X.drop("Intercept", axis=1, inplace=True)
-        if _is_iv and "Intercept" in Z.columns:
-            Z.drop("Intercept", axis=1, inplace=True)
-
-    # handle singleton fixed effects
-
-    if fe is not None and drop_singletons:
-        dropped_singleton_bool = detect_singletons(fe.to_numpy())
-        keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
-        if np.any(dropped_singleton_bool == True):  # noqa: E712
-            warnings.warn(
-                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
-            )
-            Y = Y.iloc[keep_singleton_indices]
-            if not X_is_empty:
-                X = X.iloc[keep_singleton_indices]
-            fe = fe.iloc[keep_singleton_indices]
-            if _is_iv:
-                Z = Z.iloc[keep_singleton_indices]
-                endogvar = endogvar.iloc[keep_singleton_indices]
-            if weights_df is not None:
-                weights_df = weights_df.iloc[keep_singleton_indices]
-
-            # overwrite na_index
-            na_index = list(set(range(data.shape[0])).difference(Y.index))
-
-    na_index_str = ",".join(str(x) for x in na_index)
-
-    return (
-        Y,
-        X,
-        fe,
-        endogvar,
-        Z,
-        weights_df,
-        na_index,
-        na_index_str,
-        _icovars,
-        X_is_empty,
-    )
 
 
 def _find_ivars(x):
