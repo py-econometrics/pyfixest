@@ -224,7 +224,6 @@ def did2s(
     fit.tidy().head()
     ```
     """
-
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
     assert first_stage[0] == "~", "First stage must start with ~"

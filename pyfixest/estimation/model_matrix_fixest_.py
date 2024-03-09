@@ -112,9 +112,8 @@ def model_matrix_fixest(
     endogvar = Z = weights_df = fe = None
     fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
 
-    fval, data = _fixef_interactions(fval = fval, data = data)
+    fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
-
 
     fml_kwargs = {
         "fml_second_stage": fml_second_stage,
@@ -234,7 +233,7 @@ def deparse_fml(
     fml: str,
     i_ref1: Optional[Union[list, str, int]],
     i_ref2: Optional[Union[list, str, int]],
-    _ivars: Optional[list[str]] = None
+    _ivars: Optional[list[str]] = None,
 ):
     """
     Deparse a pyfixest formula into formulaic format.
@@ -327,10 +326,10 @@ def deparse_fml(
 
     return fml_second_stage, fml_first_stage, fval
 
-def _fixef_interactions(fval, data):
 
+def _fixef_interactions(fval, data):
     """
-    Utility function to allow for interactions in fixed effects via "^".
+    Add interacted fixed effects to the input data".
 
     Parameters
     ----------
@@ -346,17 +345,18 @@ def _fixef_interactions(fval, data):
         the function creates new columns in the DataFrame for the interacted
         fixed effects.
     """
-
     if "^" in fval:
         for val in fval.split("+"):
             if "^" in val:
                 vars = val.split("^")
-                data[val.replace("^","_")] = data[vars].apply(
-                    lambda x: "^".join(x.dropna().astype(str)) if x.notna().all() else np.nan,
+                data[val.replace("^", "_")] = data[vars].apply(
+                    lambda x: (
+                        "^".join(x.dropna().astype(str)) if x.notna().all() else np.nan
+                    ),
                     axis=1,
                 )
 
-    return fval.replace("^","_"), data
+    return fval.replace("^", "_"), data
 
 
 def _find_ivars(x):

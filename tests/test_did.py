@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 from formulaic.errors import FactorEvaluationError
+from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
