@@ -113,16 +113,9 @@ def model_matrix_fixest(
     fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
     _is_iv = fml_first_stage is not None
 
-    # second_stage_fml = f"{depvar} ~ {covar}"
-    # if _is_iv:
-    #    first_stage_fml = f"{fml_iv}+{covar}-{endogvar}"
-
     fml_kwargs = {
         "fml_second_stage": fml_second_stage,
         **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
-        # "Y": depvar,
-        # "X": x_fml,
-        # **({"endog": endogvar, "Z": z_fml} if _is_iv else {}),
         **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
         **({"weights": weights} if weights is not None else {}),
     }

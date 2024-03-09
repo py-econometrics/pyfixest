@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
+from formulaic.errors import FactorEvaluationError
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -181,7 +182,7 @@ def test_errors():
 
     # boolean strings cannot be converted
     df_het["treat"] = df_het["treat"].astype(str)
-    with pytest.raises(ValueError):
+    with pytest.raises(FactorEvaluationError):
         fit = did2s_pyfixest(
             df_het,
             yname="dep_var",
@@ -194,7 +195,7 @@ def test_errors():
 
     rng = np.random.default_rng(12)
     df_het["treat2"] = rng.choice([0, 1, 2], size=len(df_het))
-    with pytest.raises(ValueError):
+    with pytest.raises(FactorEvaluationError):
         fit = did2s_pyfixest(  # noqa: F841
             df_het,
             yname="dep_var",
