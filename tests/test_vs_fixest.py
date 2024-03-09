@@ -57,8 +57,8 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1) | f2 + f3"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
-        #("Y~X1|f2^f3"),
-        #("Y~X1|f1 + f2^f3"),
+        # ("Y~X1|f2^f3"),
+        # ("Y~X1|f1 + f2^f3"),
         # ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
@@ -85,7 +85,9 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1*X2 | f1+f2"),
         # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
         # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
-        ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2 # noqa: W505
+        (
+            "Y ~ X1 + poly(X2, 2) | f1"
+        ),  # bug in formulaic in case of NAs in X1, X2 # noqa: W505
         # IV starts here
         ("Y ~ 1 | X1 ~ Z1"),
         "Y ~  X2 | X1 ~ Z1",
@@ -98,7 +100,7 @@ rng = np.random.default_rng(8760985)
         "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
         "Y ~ 1 | f1 | X1 ~ Z1",
         "Y ~ 1 | f1 + f2 | X1 ~ Z1",
-        #"Y ~ 1 | f1^f2 | X1 ~ Z1",
+        # "Y ~ 1 | f1^f2 | X1 ~ Z1",
         "Y ~  X2| f1 | X1 ~ Z1",
         # tests of overidentified models
         "Y ~ 1 | X1 ~ Z1 + Z2",

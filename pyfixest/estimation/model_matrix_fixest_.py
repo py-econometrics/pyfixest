@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from formulaic import Formula, model_matrix
+from formulaic import Formula
 
 from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
@@ -110,13 +110,11 @@ def model_matrix_fixest(
     _check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     endogvar = Z = weights_df = fe = None
-    fml_second_stage, fml_first_stage, fval = deparse_fml(
-        fml, i_ref1, i_ref2, _ivars
-    )
+    fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
     _is_iv = fml_first_stage is not None
 
-    #second_stage_fml = f"{depvar} ~ {covar}"
-    #if _is_iv:
+    # second_stage_fml = f"{depvar} ~ {covar}"
+    # if _is_iv:
     #    first_stage_fml = f"{fml_iv}+{covar}-{endogvar}"
 
     fml_kwargs = {
@@ -132,8 +130,6 @@ def model_matrix_fixest(
     FML = Formula(**fml_kwargs)
 
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
-
-    mm2 = model_matrix(fml_second_stage, data)
 
     Y = mm["fml_second_stage"]["lhs"]
     X = mm["fml_second_stage"]["rhs"]
@@ -155,13 +151,9 @@ def model_matrix_fixest(
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
-        raise TypeError(
-            f"The dependent variable must be numeric, but it is of type {data[depvar].dtype}."
-        )
+        raise TypeError("The dependent variable must be numeric.")
     if endogvar is not None and endogvar.shape[1] > 1:
-        raise TypeError(
-            f"The endogenous variable must be numeric, but it is of type {data[endogvar].dtype}."
-        )
+        raise TypeError("The endogenous variable must be numeric.")
 
     columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
