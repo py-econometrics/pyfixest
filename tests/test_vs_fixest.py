@@ -85,7 +85,7 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1*X2 | f1+f2"),
         # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
         # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
-        # ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2 # noqa: W505
+        ("Y ~ X1 + poly(X2, 2) | f1"),             # bug in formulaic in case of NAs in X1, X2 # noqa: W505
         # IV starts here
         ("Y ~ 1 | X1 ~ Z1"),
         "Y ~  X2 | X1 ~ Z1",
