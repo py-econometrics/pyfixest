@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from formulaic import Formula
+from formulaic import Formula, model_matrix
 
 from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
@@ -110,23 +110,21 @@ def model_matrix_fixest(
     _check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     endogvar = Z = weights_df = fe = None
-    depvar, covar, endogvar, instruments, fval = deparse_fml(
+    fml_second_stage, fml_first_stage, fval = deparse_fml(
         fml, i_ref1, i_ref2, _ivars
     )
-    _is_iv = endogvar is not None
+    _is_iv = fml_first_stage is not None
 
-    x_fml = covar if fval != "0" or drop_intercept else f"1+{covar}"
-    if _is_iv:
-        z_fml = (
-            f"{covar} + {instruments} - {endogvar}"
-            if fval != "0" or drop_intercept
-            else f" 1+{covar} + {instruments} - {endogvar}"
-        )
+    #second_stage_fml = f"{depvar} ~ {covar}"
+    #if _is_iv:
+    #    first_stage_fml = f"{fml_iv}+{covar}-{endogvar}"
 
     fml_kwargs = {
-        "Y": depvar,
-        "X": x_fml,
-        **({"endog": endogvar, "Z": z_fml} if _is_iv else {}),
+        "fml_second_stage": fml_second_stage,
+        **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
+        # "Y": depvar,
+        # "X": x_fml,
+        # **({"endog": endogvar, "Z": z_fml} if _is_iv else {}),
         **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
         **({"weights": weights} if weights is not None else {}),
     }
@@ -135,12 +133,14 @@ def model_matrix_fixest(
 
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
 
-    Y = mm["Y"]
-    X = mm["X"]
+    mm2 = model_matrix(fml_second_stage, data)
+
+    Y = mm["fml_second_stage"]["lhs"]
+    X = mm["fml_second_stage"]["rhs"]
     X_is_empty = not X.shape[1] > 0
     if _is_iv:
-        Z = mm["Z"]
-        endogvar = mm["endog"]
+        endogvar = mm["fml_first_stage"]["lhs"]
+        Z = mm["fml_first_stage"]["rhs"]
     if fval != "0":
         fe = mm["fe"]
     if weights is not None:
@@ -175,8 +175,9 @@ def model_matrix_fixest(
 
     _icovars = _get_icovars(_ivars, X)
 
-    # drop intercept if specified in feols() call - mostly handy for did2s()
-    if drop_intercept:
+    # drop intercept if specified i
+    # n feols() call - mostly handy for did2s()
+    if drop_intercept or fe is not None:
         if "Intercept" in X.columns:
             X.drop("Intercept", axis=1, inplace=True)
         if _is_iv and "Intercept" in Z.columns:
@@ -336,7 +337,10 @@ def deparse_fml(
     else:
         endogvar, instruments = None, None  # noqa: F841
 
-    return depvar, covar, endogvar, instruments, fval
+    fml_second_stage = f"{depvar} ~ {covar} + 1"
+    fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if _is_iv else None
+
+    return fml_second_stage, fml_first_stage, fval
 
 
 def _find_ivars(x):
