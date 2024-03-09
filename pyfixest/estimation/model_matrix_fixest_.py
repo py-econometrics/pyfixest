@@ -111,7 +111,10 @@ def model_matrix_fixest(
 
     endogvar = Z = weights_df = fe = None
     fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
+
+    fval, data = _fixef_interactions(fval = fval, data = data)
     _is_iv = fml_first_stage is not None
+
 
     fml_kwargs = {
         "fml_second_stage": fml_second_stage,
@@ -154,9 +157,6 @@ def model_matrix_fixest(
         X.drop(columns_to_drop, axis=1, inplace=True)
         if _is_iv:
             Z.drop(columns_to_drop, axis=1, inplace=True)
-
-    # drop reference level, if specified
-    # ivars are needed for plotting of all interacted variables via iplot()
 
     _icovars = _get_icovars(_ivars, X)
 
@@ -234,7 +234,7 @@ def deparse_fml(
     fml: str,
     i_ref1: Optional[Union[list, str, int]],
     i_ref2: Optional[Union[list, str, int]],
-    _ivars: Optional[list[str]] = None,
+    _ivars: Optional[list[str]] = None
 ):
     """
     Deparse a pyfixest formula into formulaic format.
@@ -326,6 +326,37 @@ def deparse_fml(
     fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if _is_iv else None
 
     return fml_second_stage, fml_first_stage, fval
+
+def _fixef_interactions(fval, data):
+
+    """
+    Utility function to allow for interactions in fixed effects via "^".
+
+    Parameters
+    ----------
+    fval : str
+        A string describing the fixed effects, e.g., "fe1 + fe2".
+    data : pd.DataFrame
+        The input DataFrame containing the data.
+
+    Returns
+    -------
+    pd.DataFrame
+        The input DataFrame. If the fixed effects contain interactions via "^",
+        the function creates new columns in the DataFrame for the interacted
+        fixed effects.
+    """
+
+    if "^" in fval:
+        for val in fval.split("+"):
+            if "^" in val:
+                vars = val.split("^")
+                data[val.replace("^","_")] = data[vars].apply(
+                    lambda x: "^".join(x.dropna().astype(str)) if x.notna().all() else np.nan,
+                    axis=1,
+                )
+
+    return fval.replace("^","_"), data
 
 
 def _find_ivars(x):

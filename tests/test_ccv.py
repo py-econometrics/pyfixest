@@ -114,6 +114,7 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
 
 
 @pytest.mark.parametrize("pk", [0.05, 0.5, 0.95])
+#@pytest.mark.skip(reason="This test is too slow.")
 def test_ccv_against_AAIW(data, pk):
 
     N = data.shape[0]

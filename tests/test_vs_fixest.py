@@ -33,7 +33,7 @@ iwls_tol = 1e-08
 rng = np.random.default_rng(8760985)
 
 
-@pytest.mark.parametrize("N", [1000])
+@pytest.mark.parametrize("N", [500])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
 @pytest.mark.parametrize("error_type", ["2"])
@@ -57,9 +57,9 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1) | f2 + f3"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
-        # ("Y~X1|f2^f3"),
-        # ("Y~X1|f1 + f2^f3"),
-        # ("Y~X1|f2^f3^f1"),
+        ("Y~X1|f2^f3"),
+        ("Y~X1|f1 + f2^f3"),
+        ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
         ("Y ~ X1 + X2:f1 | f3 + f1"),
@@ -100,7 +100,7 @@ rng = np.random.default_rng(8760985)
         "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
         "Y ~ 1 | f1 | X1 ~ Z1",
         "Y ~ 1 | f1 + f2 | X1 ~ Z1",
-        # "Y ~ 1 | f1^f2 | X1 ~ Z1",
+        "Y ~ 1 | f1^f2 | X1 ~ Z1",
         "Y ~  X2| f1 | X1 ~ Z1",
         # tests of overidentified models
         "Y ~ 1 | X1 ~ Z1 + Z2",
