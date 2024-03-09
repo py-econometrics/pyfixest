@@ -8,7 +8,6 @@ from formulaic import Formula
 
 from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
-from pyfixest.utils.dev_utils import _to_integer
 
 
 def model_matrix_fixest(
@@ -35,8 +34,8 @@ def model_matrix_fixest(
     """
     Create model matrices for fixed effects estimation.
 
-    This function processes the data and then calls `formulaic.Formula.get_model_matrix()`
-    to create the model matrices.
+    This function processes the data and then calls
+    `formulaic.Formula.get_model_matrix()` to create the model matrices.
 
     Parameters
     ----------
@@ -100,6 +99,7 @@ def model_matrix_fixest(
         via `i()` provided.
     """
     # check if weights are valid
+
     _check_weights(weights, data)
     _ivars = _find_ivars(fml)[0]
 
@@ -110,48 +110,48 @@ def model_matrix_fixest(
     _check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     endogvar = Z = weights_df = fe = None
-    depvar, covar, endogvar, instruments, fval = deparse_fml(fml, i_ref1, i_ref2)
-    _is_iv = True if endogvar is not None else False
+    depvar, covar, endogvar, instruments, fval = deparse_fml(
+        fml, i_ref1, i_ref2, _ivars
+    )
+    _is_iv = endogvar is not None
+
+    x_fml = covar if fval != "0" or drop_intercept else f"1+{covar}"
+    if _is_iv:
+        z_fml = (
+            f"{covar} + {instruments} - {endogvar}"
+            if fval != "0" or drop_intercept
+            else f" 1+{covar} + {instruments} - {endogvar}"
+        )
 
     fml_kwargs = {
         "Y": depvar,
-        "X": covar if fval != 0 or drop_intercept else f"1+{covar}",
-        **({"endog": endogvar, "instruments": instruments} if _is_iv else {}),
+        "X": x_fml,
+        **({"endog": endogvar, "Z": z_fml} if _is_iv else {}),
         **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
-        **({"weights": weights} if weights is not None else {})
+        **({"weights": weights} if weights is not None else {}),
     }
-
 
     FML = Formula(**fml_kwargs)
 
-    mm = FML.get_model_matrix(data, output="pandas", context = {"factorize": factorize})
+    mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
 
-    for x in fml_kwargs.keys():
+    Y = mm["Y"]
+    X = mm["X"]
+    X_is_empty = not X.shape[1] > 0
+    if _is_iv:
+        Z = mm["Z"]
+        endogvar = mm["endog"]
+    if fval != "0":
+        fe = mm["fe"]
+    if weights is not None:
+        weights_df = mm["weights"]
 
-        if x == "Y":
-            Y = mm["Y"]
-        elif x == "X":
-            X = mm["X"]
-            # special case: sometimes it is useful to run models "Y ~ 0 | f1"
-            # to demean Y + to use the predict method
-            X_is_empty = False if X.shape[1] > 0 else True
-        elif x == "endog":
-            endogvar = mm["endog"]
-        elif x == "instruments":
-            Z = mm["instruments"]
-        elif x == "fe":
-            fe = mm["fe"]
-        elif x == "weights":
-            weights_df = mm["weights"]
-
-    #import pdb; pdb.set_trace()
-    # make sure that all of the following are of type float64: Y, X, Z, endogvar, fe, weights_df
     for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
-            cols_to_convert = df.select_dtypes(exclude=['int64', 'float64']).columns
-            df[cols_to_convert] = df[cols_to_convert].astype('float64')
+            cols_to_convert = df.select_dtypes(exclude=["int64", "float64"]).columns
+            df[cols_to_convert] = df[cols_to_convert].astype("float64")
     if fe is not None:
-        fe = fe.astype('int64')
+        fe = fe.astype("int64")
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
@@ -182,13 +182,12 @@ def model_matrix_fixest(
         if _is_iv and "Intercept" in Z.columns:
             Z.drop("Intercept", axis=1, inplace=True)
 
-    # handle singleton fixed effects
-
+    # handle NaNs in fixed effects & singleton fixed effects
     if fe is not None:
 
         # find values where fe == -1, these are the NaNs
         # see the pd.factorize() documentation for more details
-        fe_na = np.any(fe == -1, axis = 1)
+        fe_na = np.any(fe == -1, axis=1)
         keep_indices = np.where(~fe_na)[0]
 
         if drop_singletons:
@@ -211,7 +210,6 @@ def model_matrix_fixest(
         if weights_df is not None:
             weights_df = weights_df.iloc[keep_indices]
 
-
     # overwrite na_index
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
@@ -231,47 +229,62 @@ def model_matrix_fixest(
 
 
 def factorize(fe: pd.DataFrame) -> pd.DataFrame:
-
     """
     Factorize fixed effects into integers.
 
-    Parameters:
+    Parameters
     ----------
     - fe: A DataFrame of fixed effects.
 
-    Returns:
-    ----------
+    Returns
+    -------
     - A DataFrame of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
     return pd.factorize(fe)[0]
 
 
-def wrap_factorize(pattern):
-    """
-    Transforms a pattern of variables separated by '+' into a string where
-    each variable is wrapped with to_numeric().
-
-    Parameters:
-    - pattern: A string representing the pattern of variables, e.g., "a+b+c".
-
-    Returns:
-    - A transformed string where each variable in the input pattern is wrapped
-      with pd.to_numeric(), e.g., "pd.to_numeric(a) + pd.to_numeric(b) + pd.to_numeric(c)".
-    """
-
-    variables = pattern.split('+')
-    transformed_variables = ['factorize(' + var.strip() + ')' for var in variables]
-    transformed_pattern = ' + '.join(transformed_variables)
-
-    return transformed_pattern
-
 def deparse_fml(
     fml: str,
     i_ref1: Optional[Union[list, str, int]],
     i_ref2: Optional[Union[list, str, int]],
+    _ivars: Optional[list[str]] = None,
 ):
+    """
+    Deparse a pyfixest formula into formulaic format.
 
+    This function deparses a formula string into its components, i.e., the dependent
+    variable, the covariates, the endogenous variable, and the instruments.
+    For example, it changes "i()" syntax into formulaic format,
+    e.g., "i(f1) & i_ref = 1" into "C(f1, contr.treatment(base=1))".
+
+    Parameters
+    ----------
+    fml : str
+        A two-sided formula string using fixest formula syntax.
+    i_ref1 : str or list
+        The reference level for the first variable in the i() syntax.
+    i_ref2 : str or list
+        The reference level for the second variable in the i() syntax.
+    _ivars : list or None
+        A list of interaction variables. None if no interaction variables
+        via `i()` provided.
+
+    Returns
+    -------
+    tuple
+        A tuple of the following elements:
+        - depvar : str
+            The dependent variable.
+        - covar : str
+            The covariates.
+        - endogvar : str
+            The endogenous variable. None if no IV.
+        - instruments : str
+            The instruments. None if no IV.
+        - fval : str
+            The fixed effects. "0" if no fixed effects specified.
+    """
     fml = fml.replace(" ", "")
     _is_iv = _check_is_iv(fml)
 
@@ -324,7 +337,6 @@ def deparse_fml(
         endogvar, instruments = None, None  # noqa: F841
 
     return depvar, covar, endogvar, instruments, fval
-
 
 
 def _find_ivars(x):
@@ -636,3 +648,28 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
     else:
         if (x[~np.isnan(x)] > 0).all():
             return True
+
+
+def wrap_factorize(pattern):
+    """
+    Transform fixed effect formula.
+
+    This function wraps each variable in the input pattern with pd.factorize()
+    so that formulaic does not accidentally one hot encodes fixed effects
+    provided as categorical: we want to keep the fixed effects in their
+    input column format.
+
+    Parameters
+    ----------
+    - pattern: A string representing the pattern of variables, e.g., "a+b+c".
+
+    Returns
+    -------
+    - A transformed string where each variable in the input pattern is wrapped
+      with pd.factorize(), e.g., "factorize(a) + pd.factorize(b)".
+    """
+    variables = pattern.split("+")
+    transformed_variables = ["factorize(" + var.strip() + ")" for var in variables]
+    transformed_pattern = " + ".join(transformed_variables)
+
+    return transformed_pattern

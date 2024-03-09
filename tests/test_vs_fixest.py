@@ -38,9 +38,9 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("beta_type", ["2"])
 @pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols"])
-@pytest.mark.parametrize("inference", ["iid"])
-@pytest.mark.parametrize("weights", [None])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -57,8 +57,8 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1) | f2 + f3"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
-        #("Y~X1|f2^f3"),
-        #("Y~X1|f1 + f2^f3"),
+        ("Y~X1|f2^f3"),
+        ("Y~X1|f1 + f2^f3"),
         # ("Y~X1|f2^f3^f1"),
         ("Y ~ X1 + X2:f1"),
         ("Y ~ X1 + X2:f1 | f3"),
@@ -66,10 +66,10 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-        #("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
-        #("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
-        #("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
-        #("Y ~ X1 + i(f1,X2) | f2 + f3"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),  # temporarily non-supported feature
         # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
         # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
         # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
@@ -98,7 +98,7 @@ rng = np.random.default_rng(8760985)
         "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
         "Y ~ 1 | f1 | X1 ~ Z1",
         "Y ~ 1 | f1 + f2 | X1 ~ Z1",
-        #"Y ~ 1 | f1^f2 | X1 ~ Z1",
+        "Y ~ 1 | f1^f2 | X1 ~ Z1",
         "Y ~  X2| f1 | X1 ~ Z1",
         # tests of overidentified models
         "Y ~ 1 | X1 ~ Z1 + Z2",
@@ -306,7 +306,7 @@ def test_single_fit(
         #    err_msg = "py_resid != r_resid"
         # )
 
-        if False:
+        if True:
             np.testing.assert_allclose(
                 py_se,
                 r_se,
@@ -352,7 +352,7 @@ def test_single_fit(
             r_r = fixest.r2(r_fixest)
             # unadjusted
 
-            if False and not mod._has_weights:
+            if True and not mod._has_weights:
                 np.testing.assert_allclose(
                     py_r2, r_r[1], rtol=rtol, atol=atol, err_msg="py_r2 != r_r"
                 )

@@ -164,7 +164,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     X["f2"] = X["f2"].astype("category")
     X["f3"] = X["f3"].astype("category")
 
-    mm = Formula("~ X1 + X2 + f1 + f2 + f3").get_model_matrix(data=X, output = "pandas")
+    mm = Formula("~ X1 + X2 + f1 + f2 + f3").get_model_matrix(data=X, output="pandas")
 
     k = mm.shape[1]
 

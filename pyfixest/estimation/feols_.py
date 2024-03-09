@@ -864,7 +864,7 @@ class Feols:
             fml_dummies = f"{fml_linear} + {fixef_fml}"
 
             # make this sparse once wildboottest allows it
-            _, _X = Formula(fml_dummies).get_model_matrix(_data, output = "numpy")
+            _, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
@@ -1161,7 +1161,7 @@ class Feols:
         fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
-        Y, X = Formula(fml_linear).get_model_matrix(_data, output = "pandas")
+        Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
             Y = Y.to_numpy()
             uhat = Y
