@@ -8,6 +8,7 @@ from formulaic import Formula
 
 from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
+from pyfixest.utils.dev_utils import _to_integer
 
 
 def model_matrix_fixest(
@@ -108,20 +109,22 @@ def model_matrix_fixest(
         )
     _check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
+    endogvar = Z = weights_df = fe = None
     depvar, covar, endogvar, instruments, fval = deparse_fml(fml, i_ref1, i_ref2)
     _is_iv = True if endogvar is not None else False
-    endogvar = Z = weights_df = fe = None
 
     fml_kwargs = {
         "Y": depvar,
         "X": covar if fval != 0 or drop_intercept else f"1+{covar}",
         **({"endog": endogvar, "instruments": instruments} if _is_iv else {}),
-        **({"fe": fval_to_numeric(fval)} if fval != "0" else {}),
+        **({"fe": wrap_factorize(fval)} if fval != "0" else {}),
         **({"weights": weights} if weights is not None else {})
     }
 
+
     FML = Formula(**fml_kwargs)
-    mm = FML.get_model_matrix(data, output="pandas", context = {"to_numeric": pd.to_numeric})
+
+    mm = FML.get_model_matrix(data, output="pandas", context = {"factorize": factorize})
 
     for x in fml_kwargs.keys():
 
@@ -141,11 +144,14 @@ def model_matrix_fixest(
         elif x == "weights":
             weights_df = mm["weights"]
 
+    #import pdb; pdb.set_trace()
     # make sure that all of the following are of type float64: Y, X, Z, endogvar, fe, weights_df
-    for df in [Y, X, Z, endogvar, fe, weights_df]:
+    for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
             cols_to_convert = df.select_dtypes(exclude=['int64', 'float64']).columns
             df[cols_to_convert] = df[cols_to_convert].astype('float64')
+    if fe is not None:
+        fe = fe.astype('int64')
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
@@ -178,22 +184,32 @@ def model_matrix_fixest(
 
     # handle singleton fixed effects
 
-    if fe is not None and drop_singletons:
-        dropped_singleton_bool = detect_singletons(fe.to_numpy())
-        keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
-        if np.any(dropped_singleton_bool == True):  # noqa: E712
-            warnings.warn(
-                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
-            )
-            Y = Y.iloc[keep_singleton_indices]
-            if not X_is_empty:
-                X = X.iloc[keep_singleton_indices]
-            fe = fe.iloc[keep_singleton_indices]
-            if _is_iv:
-                Z = Z.iloc[keep_singleton_indices]
-                endogvar = endogvar.iloc[keep_singleton_indices]
-            if weights_df is not None:
-                weights_df = weights_df.iloc[keep_singleton_indices]
+    if fe is not None:
+
+        # find values where fe == -1, these are the NaNs
+        # see the pd.factorize() documentation for more details
+        fe_na = np.any(fe == -1, axis = 1)
+        keep_indices = np.where(~fe_na)[0]
+
+        if drop_singletons:
+            dropped_singleton_bool = detect_singletons(fe.to_numpy())
+            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+
+            if np.any(dropped_singleton_bool == True):  # noqa: E712
+                warnings.warn(
+                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+                )
+            keep_indices = np.intersect1d(keep_indices, keep_singleton_indices)
+
+        Y = Y.iloc[keep_indices]
+        if not X_is_empty:
+            X = X.iloc[keep_indices]
+        fe = fe.iloc[keep_indices]
+        if _is_iv:
+            Z = Z.iloc[keep_indices]
+            endogvar = endogvar.iloc[keep_indices]
+        if weights_df is not None:
+            weights_df = weights_df.iloc[keep_indices]
 
 
     # overwrite na_index
@@ -214,7 +230,24 @@ def model_matrix_fixest(
     )
 
 
-def fval_to_numeric(pattern):
+def factorize(fe: pd.DataFrame) -> pd.DataFrame:
+
+    """
+    Factorize fixed effects into integers.
+
+    Parameters:
+    ----------
+    - fe: A DataFrame of fixed effects.
+
+    Returns:
+    ----------
+    - A DataFrame of fixed effects where each unique value is replaced by an integer.
+      NaNs are not removed but set to -1.
+    """
+    return pd.factorize(fe)[0]
+
+
+def wrap_factorize(pattern):
     """
     Transforms a pattern of variables separated by '+' into a string where
     each variable is wrapped with to_numeric().
@@ -226,8 +259,9 @@ def fval_to_numeric(pattern):
     - A transformed string where each variable in the input pattern is wrapped
       with pd.to_numeric(), e.g., "pd.to_numeric(a) + pd.to_numeric(b) + pd.to_numeric(c)".
     """
+
     variables = pattern.split('+')
-    transformed_variables = ['to_numeric(' + var.strip() + ')' for var in variables]
+    transformed_variables = ['factorize(' + var.strip() + ')' for var in variables]
     transformed_pattern = ' + '.join(transformed_variables)
 
     return transformed_pattern
