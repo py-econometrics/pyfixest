@@ -435,8 +435,7 @@ class Feols:
 
             assert all(
                 col.replace(" ", "") in _data.columns for col in self._clustervar
-                ), "vcov dict value must be a column in the data"
-
+            ), "vcov dict value must be a column in the data"
 
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
@@ -1675,7 +1674,9 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
     # loop over clustervar to change "^" to "_"
     if clustervar:
         clustervar = [x.replace("^", "_") for x in clustervar]
-        warnings.warn("The '^' character in the cluster variable name is replaced by '_'.")
+        warnings.warn(
+            "The '^' character in the cluster variable name is replaced by '_'."
+        )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
