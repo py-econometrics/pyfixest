@@ -113,6 +113,7 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
 
     return V_CCV
 
+
 @pytest.mark.parametrize("pk", [0.05, 0.5, 0.95])
 @pytest.mark.extended
 def test_ccv_against_AAIW(data, pk):
@@ -147,6 +148,7 @@ def test_ccv_against_AAIW(data, pk):
 
     assert np.abs(vcov - vcov_AAIW) < 1e-6
 
+
 @pytest.mark.extended
 def test_ccv_internally(data):
     """Test the ccv function internally."""
@@ -160,6 +162,7 @@ def test_ccv_internally(data):
     res2 = fit2.ccv(treatment="college", pk=0.05, qk=1, n_splits=2, seed=929)
 
     assert np.all(res1 == res2)
+
 
 @pytest.mark.extended
 def test_against_stata(data):
