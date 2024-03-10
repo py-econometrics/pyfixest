@@ -213,22 +213,6 @@ def model_matrix_fixest(
     )
 
 
-def factorize(fe: pd.DataFrame) -> pd.DataFrame:
-    """
-    Factorize fixed effects into integers.
-
-    Parameters
-    ----------
-    - fe: A DataFrame of fixed effects.
-
-    Returns
-    -------
-    - A DataFrame of fixed effects where each unique value is replaced by an integer.
-      NaNs are not removed but set to -1.
-    """
-    return pd.factorize(fe)[0]
-
-
 def deparse_fml(
     fml: str,
     i_ref1: Optional[Union[list, str, int]],
@@ -404,57 +388,6 @@ def _check_is_iv(fml):
         raise ValueError("The formula must contain at most two '~'.")
 
     return _is_iv
-
-
-def _clean_fe(data: pd.DataFrame, fval: str) -> tuple[pd.DataFrame, list[int]]:
-    """
-    Clean and transform fixed effects in a DataFrame.
-
-    This is a helper function used in `_model_matrix_fixest()`. The function converts
-    the fixed effects to integers and marks fixed effects with NaNs. It's important
-    to note that NaNs are not removed at this stage; this is done in
-    `_model_matrix_fixest()`.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        The input DataFrame containing the data.
-    fval : str
-        A string describing the fixed effects, e.g., "fe1 + fe2".
-
-    Returns
-    -------
-    tuple[pd.DataFrame, list[int]]
-        A tuple containing two items:
-        - fe (pd.DataFrame): The DataFrame with cleaned fixed effects. NaNs are
-        present in this DataFrame.
-        - fe_na (list[int]): A list of columns in 'fe' that contain NaN values.
-    """
-    fval_list = fval.split("+")
-
-    # find interacted fixed effects via "^"
-    interacted_fes = [x for x in fval_list if len(x.split("^")) > 1]
-
-    for x in interacted_fes:
-        vars = x.split("^")
-        data[x] = data[vars].apply(
-            lambda x: "^".join(x.dropna().astype(str)) if x.notna().all() else np.nan,
-            axis=1,
-        )
-
-    fe = data[fval_list]
-
-    for x in fe.columns:
-        if fe[x].dtype != "category" and len(fe[x].unique()) == fe.shape[0]:
-            raise ValueError(
-                f"Fixed effect {x} has only unique values. " "This is not allowed."
-            )
-
-    fe_na = fe.isna().any(axis=1)
-    fe = fe.apply(lambda x: pd.factorize(x)[0])
-    fe_na = fe_na[fe_na].index.tolist()
-
-    return fe, fe_na
 
 
 def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
@@ -668,6 +601,22 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
     else:
         if (x[~np.isnan(x)] > 0).all():
             return True
+
+
+def factorize(fe: pd.DataFrame) -> pd.DataFrame:
+    """
+    Factorize fixed effects into integers.
+
+    Parameters
+    ----------
+    - fe: A DataFrame of fixed effects.
+
+    Returns
+    -------
+    - A DataFrame of fixed effects where each unique value is replaced by an integer.
+      NaNs are not removed but set to -1.
+    """
+    return pd.factorize(fe)[0]
 
 
 def wrap_factorize(pattern):
