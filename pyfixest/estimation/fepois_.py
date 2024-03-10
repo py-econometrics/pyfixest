@@ -10,6 +10,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols
+from pyfixest.utils.dev_utils import _to_integer
 
 
 class Fepois(Feols):
@@ -403,15 +404,3 @@ def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
         raise TypeError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
-
-
-def _to_integer(x):
-    if x.dtype == int:
-        return x
-    try:
-        x = x.astype(np.int64)
-        return x  # noqa: TRY300
-    except ValueError as e:
-        raise ValueError(
-            "Conversion of the dependent variable to integer is not possible. Please do so manually."
-        ) from e
