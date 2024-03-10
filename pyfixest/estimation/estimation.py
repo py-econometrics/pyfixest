@@ -252,7 +252,7 @@ def feols(
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, fixest._fixef_keys, collin_tol=collin_tol)
+    fixest._estimate_all_models(vcov, collin_tol=collin_tol)
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -367,7 +367,6 @@ def fepois(
 
     fixest._estimate_all_models(
         vcov=vcov,
-        fixef_keys=fixest._fixef_keys,
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,

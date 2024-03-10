@@ -13,7 +13,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _polars_to_pandas
+from pyfixest.utils.dev_utils import _polars_to_pandas, _to_list
 
 
 class FixestMulti:
@@ -116,7 +116,6 @@ class FixestMulti:
         self._fml_dict_iv = None
         self._ssc_dict = None
         self._drop_singletons = None
-        self._fixef_keys = None
         self._is_multiple_estimation = None
         self._i_ref1 = None
         self._i_ref2 = None
@@ -126,11 +125,9 @@ class FixestMulti:
         if weights is not None:
             self._has_weights = True
 
-        # set i_ref1 and i_ref2 to list if not None
-        if i_ref1 is not None and not isinstance(i_ref1, list):
-            i_ref1 = [i_ref1]
-        if i_ref2 is not None and not isinstance(i_ref2, list):
-            i_ref2 = [i_ref2]
+        self._i_ref1 = _to_list(i_ref1)
+        self._i_ref2 = _to_list(i_ref1)
+        self._drop_intercept = drop_intercept
 
         fxst_fml = FixestFormulaParser(fml)
         fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
@@ -147,16 +144,10 @@ class FixestMulti:
             self._fml_dict_iv = fxst_fml._fml_dict_iv
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
-        self._fixef_keys = list(self._fml_dict.keys())
-
-        self._i_ref1 = i_ref1
-        self._i_ref2 = i_ref2
-        self._drop_intercept = drop_intercept
 
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
-        fixef_keys: Union[list[str], None],
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -172,8 +163,6 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-        fixef_keys : list[str]
-            A list of fixed effects combinations.
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -197,8 +186,9 @@ class FixestMulti:
         _i_ref1 = self._i_ref1
         _i_ref2 = self._i_ref2
         _weights = self._weights
+        _fixef_keys = list(self._fml_dict.keys())
 
-        for _, fval in enumerate(fixef_keys):
+        for _, fval in enumerate(_fixef_keys):
             dict2fe = _fml_dict.get(fval)
 
             # dictionary to cache demeaned data with index: na_index_str,

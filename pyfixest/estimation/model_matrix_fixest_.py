@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.errors import InvalidReferenceLevelError
+from pyfixest.errors import InvalidReferenceLevelError, EndogVarsAsCovarsError, InstrumentsAsCovarsError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 
 
@@ -112,6 +112,8 @@ def model_matrix_fixest(
     endogvar = Z = weights_df = fe = None
     fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
 
+    _check_syntax(second_stage, first_stage, fval)
+
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
 
@@ -211,6 +213,31 @@ def model_matrix_fixest(
         _icovars,
         X_is_empty,
     )
+
+
+def _check_syntax(second_stage, first_stage, fval):
+
+    covars = second_stage.split("~")[1].strip()
+    if first_stage is not None:
+        endogvars = first_stage.split("~")[0].strip()
+        instruments = first_stage.split("~")[1].strip()
+
+    # check if any of the instruments or endogenous variables are
+    # also specified as covariates
+    if any(
+        element in covars.split("+") for element in endogvars.split("+")
+        ):
+        raise EndogVarsAsCovarsError(
+            "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
+            )
+
+    if any(
+        element in covars.split("+") for element in instruments.split("+")
+        ):
+        raise InstrumentsAsCovarsError(
+            "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
+        )
+
 
 
 def deparse_fml(

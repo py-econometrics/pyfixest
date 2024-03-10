@@ -2,8 +2,6 @@ import re
 
 from pyfixest.errors import (
     DuplicateKeyError,
-    EndogVarsAsCovarsError,
-    InstrumentsAsCovarsError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
 )
@@ -39,152 +37,92 @@ class FixestFormulaParser:
             None
 
         """
-        # Clean up the formula string
-        fml = "".join(fml.split())
 
-        # Split the formula string into its components
-        fml_split = fml.split("|")
-        depvars, covars = fml_split[0].split("~")
+        depvars, covars, fevars, endogvars, instruments = deparse_fml(fml)
 
-        if len(fml_split) == 1:
+        # Parse all individual formula components that allow for
+        # multiple estimations into dictionaries that separate a 'constant'
+        # part common to all estimations from a varying part with key of the
+        # 'type' of variation, e.g. 'sw' or 'csw'.
+        depvars_dict = depvars.split("+")
+        covars_dict = _input_formula_to_dict(covars) # e.g. {'constant': [], 'csw': ['X1', 'X2']}
+        fevars_dict = _input_formula_to_dict(fevars) # e.g. {'constant': ['f1^f2']}
+
+        # Now parse all formula components in covars_dict, fevars_dict into lists
+        # of formulas that can be used in the estimation.
+        # E.g. {'constant': [], 'csw': ['X1', 'X2']} becomes ['X1', 'X1+X2']
+        # and {'constant': ['f1^f2']} becomes ['f1^f2'].
+        covars_formulas_list = _dict_to_list_of_formulas(covars_dict) # evaluate self.covars to list: ['X1', 'X1+X2']
+        fevars_formula_list = _dict_to_list_of_formulas(fevars_dict) # ['f1^f2']
+
+        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_dict, covars_formulas_list, iv = False)
+
+def collect_fml_dict(fevars_formula, depvars_dict, covars_formula, iv = False):
+
+    """
+    Condense the formulas into a nested dictionary.
+    """
+
+    import pdb; pdb.set_trace()
+    fml_dict = {}
+
+    for fevar in fevars_formula:
+        res = {}
+        for depvar in depvars_dict:
+            res[depvar] = []
+            for covar in covars_formula:
+                res[depvar].append(f"{depvar}~{covar}")
+        fml_dict[fevar] = res
+
+    return fml_dict
+
+def deparse_fml(fml):
+
+    # Clean up the formula string
+    fml = "".join(fml.split())
+
+    # Split the formula string into its components
+    fml_split = fml.split("|")
+    depvars, covars = fml_split[0].split("~")
+
+    if len(fml_split) == 1:
+        fevars = "0"
+        endogvars = None
+        instruments = None
+    elif len(fml_split) == 2:
+        if "~" in fml_split[1]:
             fevars = "0"
+            endogvars, instruments = fml_split[1].split("~")
+            # add endogenous variable to "covars" - yes, bad naming
+
+            covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
+        else:
+            fevars = fml_split[1]
             endogvars = None
             instruments = None
-        elif len(fml_split) == 2:
-            if "~" in fml_split[1]:
-                fevars = "0"
-                endogvars, instruments = fml_split[1].split("~")
-                # add endogenous variable to "covars" - yes, bad naming
+    elif len(fml_split) == 3:
+        fevars = fml_split[1]
+        endogvars, instruments = fml_split[2].split("~")
 
-                # check if any of the instruments or endogenous variables are
-                # also specified as covariates
-                if any(
-                    element in covars.split("+") for element in endogvars.split("+")
-                ):
-                    raise EndogVarsAsCovarsError(
-                        "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
-                    )
+        # add endogenous variable to "covars" - yes, bad naming
+        covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
-                if any(
-                    element in covars.split("+") for element in instruments.split("+")
-                ):
-                    raise InstrumentsAsCovarsError(
-                        "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
-                    )
-
-                covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
-            else:
-                fevars = fml_split[1]
-                endogvars = None
-                instruments = None
-        elif len(fml_split) == 3:
-            fevars = fml_split[1]
-            endogvars, instruments = fml_split[2].split("~")
-
-            # check if any of the instruments or endogenous variables are also
-            # specified as covariates
-            if any(element in covars.split("+") for element in endogvars.split("+")):
-                raise EndogVarsAsCovarsError(
-                    "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
-                )
-
-            if any(element in covars.split("+") for element in instruments.split("+")):
-                raise InstrumentsAsCovarsError(
-                    "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
-                )
-
-            # add endogenous variable to "covars" - yes, bad naming
-            covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
-
-        if endogvars is not None:
-            if not isinstance(endogvars, list):
-                endogvars_list = endogvars.split("+")
-            if not isinstance(instruments, list):
-                instruments_list = instruments.split("+")
-            if len(endogvars_list) > len(instruments_list):
-                raise UnderDeterminedIVError(
-                    "The IV system is underdetermined. Please provide as many or more instruments as endogenous variables."
-                )
-            else:
-                pass
-
-        # Parse all individual formula components into lists
-        self.depvars = depvars.split("+")
-        self.covars = _unpack_fml(covars)
-        self.fevars = _unpack_fml(fevars)
-        # no fancy syntax for endogvars, instruments allowed
-        self.endogvars = endogvars
-        self.instruments = instruments
-
-        # clean instruments
-        if instruments is not None:
-            self._is_iv = True
-            # all rhs variables for the first stage (endog variable replaced with instrument)  # noqa: W505
-            first_stage_covars_list = covars.split("+")
-            first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
-                instruments
+    if endogvars is not None:
+        if not isinstance(endogvars, list):
+            endogvars_list = endogvars.split("+")
+        if not isinstance(instruments, list):
+            instruments_list = instruments.split("+")
+        if len(endogvars_list) > len(instruments_list):
+            raise UnderDeterminedIVError(
+                "The IV system is underdetermined. Please provide as many or more instruments as endogenous variables."
             )
-            self.first_stage_covars_list = "+".join(first_stage_covars_list)
-            self.covars_first_stage = _unpack_fml(self.first_stage_covars_list)
-            self.depvars_first_stage = endogvars
         else:
-            self._is_iv = False
-            self.covars_first_stage = None
-            self.depvars_first_stage = None
+            pass
 
-        # Pack the formula components back into strings
-        self.covars_fml = _pack_to_fml(self.covars)
-        self.fevars_fml = _pack_to_fml(self.fevars)
-        if instruments is not None:
-            self.covars_first_stage_fml = _pack_to_fml(self.covars_first_stage)
-        else:
-            self.covars_first_stage_fml = None
-
-    def get_fml_dict(self, iv=False):
-        """
-        Get a nested dictionary of all formulas.
-
-        Parameters
-        ----------
-        iv : bool (default: False)
-            If True, the formulas for the first stage are returned. Otherwise,
-            the formulas for the second stage are returned.
-
-        Returns
-        -------
-        fml_dict: dict
-            A nested dictionary of all formulas. The dictionary has the following
-            structure:
-            First, a dictionary with the fixed effects combinations as keys.
-            Then, for each fixed effect combination, a dictionary with the
-            dependent variables as keys.
-            Finally, for each dependent variable, a list of formulas as values.
-
-            Here is an example:
-                fml = Y1 + Y2 ~ X1 + X2 | FE1 + FE2 is transformed into:
-                {"FE1 + FE2": {"Y1": "Y2 ~X1+X2", "Y2":"X1+X2"}}
-        """
-        fml_dict = {}
-
-        for fevar in self.fevars_fml:
-            res = {}
-            for depvar in self.depvars:
-                res[depvar] = []
-                if iv:
-                    for covar in self.covars_first_stage_fml:
-                        res[depvar].append(f"{depvar}~{covar}")
-                else:
-                    for covar in self.covars_fml:
-                        res[depvar].append(f"{depvar}~{covar}")
-            fml_dict[fevar] = res
-
-        if iv:
-            self._fml_dict_iv = fml_dict
-        else:
-            self._fml_dict = fml_dict
+    return depvars, covars, fevars, endogvars, instruments
 
 
-def _unpack_fml(x):
+def _input_formula_to_dict(x):
     """
     Parse a formula string.
 
@@ -233,7 +171,7 @@ def _unpack_fml(x):
 
     Example:
     --------
-    >>> _unpack_fml("a+sw(b)+csw(x1,x2)+sw0(d)+csw0(y1,y2,y3)")
+    >>> _input_formula_to_dict("a+sw(b)+csw(x1,x2)+sw0(d)+csw0(y1,y2,y3)")
     {'constant': ['a'],
      'sw': ['b'],
      'csw': [['x1', 'x2']],
@@ -246,7 +184,7 @@ def _unpack_fml(x):
     res_s = {"constant": []}
     for var in var_split:
         # Check if this variable contains a switch
-        varlist, sw_type = _find_sw(var)
+        varlist, sw_type = _find_multiple_estimation_syntax(var)
 
         # If there's no switch, just add the variable to the list
         if sw_type is None:
@@ -268,9 +206,9 @@ def _unpack_fml(x):
     return res_s
 
 
-def _pack_to_fml(unpacked):
+def _dict_to_list_of_formulas(unpacked):
     """
-    Generate a formula string from a dictionary of "unpacked" formula variables.
+    Generate a list of formula strings from a dictionary of "unpacked" formula variables.
 
     Given a dictionary of "unpacked" formula variables, returns a string containing
     formulas. An "unpacked" formula is a deparsed formula that allows for multiple
@@ -352,9 +290,9 @@ def _pack_to_fml(unpacked):
     return fml_list
 
 
-def _find_sw(x):
+def _find_multiple_estimation_syntax(x):
     """
-    Search for matches in a string.
+    Search for matches of multiple estimation syntax in a string.
 
     Matches are either 'sw', 'sw0', 'csw', 'csw0'. If a match is found, returns a
     tuple containing a list of the elements found and the type of match. Otherwise,
@@ -374,7 +312,7 @@ def _find_sw(x):
         Otherwise, returns the original string and None.
 
     Example:
-        _find_sw('sw(var1, var2)') -> (['var1', ' var2'], 'sw')
+        _find_multiple_estimation_syntax('sw(var1, var2)') -> (['var1', ' var2'], 'sw')
     """
     # Search for matches in the string
     sw_match = re.findall(r"sw\((.*?)\)", x)
@@ -399,36 +337,6 @@ def _find_sw(x):
     # No matches found
     else:
         return x, None
-
-
-def _flatten_list(lst):
-    """
-    Flattens a list that may contain sublists.
-
-    Parameters
-    ----------
-    lst : list
-        A list that may contain sublists.
-
-    Returns
-    -------
-    list
-        A flattened list with no sublists.
-
-    Examples
-    --------
-        >>> flatten_list([[1, 2, 3], 4, 5])
-        [1, 2, 3, 4, 5]
-        >>> flatten_list([1, 2, 3])
-        [1, 2, 3]
-    """
-    flattened_list = []
-    for i in lst:
-        if isinstance(i, list):
-            flattened_list.extend(_flatten_list(i))
-        else:
-            flattened_list.append(i)
-    return flattened_list
 
 
 def _check_duplicate_key(my_dict, key):
@@ -459,3 +367,22 @@ def _check_duplicate_key(my_dict, key):
             )
         else:
             None
+
+
+def clean_instruments():
+
+    # clean instruments
+    if instruments is not None:
+        self._is_iv = True
+        # all rhs variables for the first stage (endog variable replaced with instrument)  # noqa: W505
+        first_stage_covars_list = covars.split("+")
+        first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
+            instruments
+        )
+        self.first_stage_covars_list = "+".join(first_stage_covars_list)
+        self.covars_first_stage = _input_formula_to_dict(self.first_stage_covars_list)
+        self.depvars_first_stage = endogvars
+    else:
+        self._is_iv = False
+        self.covars_first_stage = None
+        self.depvars_first_stage = None

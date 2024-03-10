@@ -85,17 +85,3 @@ def test_find_sw_csw0():
     expected = (["a", " b", " c"], "csw0")
     assert _find_sw(x) == expected
 
-
-# def test_find_sw_multiple_matches():
-#    x = "sw(a, b, c) + csw(d, e) + sw0(f, g)"
-#    expected = (["a", " b", " c"], "sw")
-#    assert _find_sw(x) == expected
-
-
-def test_flatten_list():
-    assert _flatten_list([1, 2, 3]) == [1, 2, 3]
-    assert _flatten_list([[1, 2, 3], 4, 5]) == [1, 2, 3, 4, 5]
-    assert _flatten_list([[[1, 2], [3, 4]], 5]) == [1, 2, 3, 4, 5]
-    assert _flatten_list([[], [1, [2, [3]]], [4, 5]]) == [1, 2, 3, 4, 5]
-    assert _flatten_list([1, [2, [3, [4, [5]]]]]) == [1, 2, 3, 4, 5]
-    assert _flatten_list([]) == []

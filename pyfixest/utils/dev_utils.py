@@ -1,5 +1,6 @@
 import re
 from typing import Optional, Union
+from xml.etree.ElementPath import xpath_tokenizer
 
 import numpy as np
 import pandas as pd
@@ -140,3 +141,14 @@ def _to_integer(x):
         raise ValueError(
             "Conversion of the dependent variable to integer is not possible. Please do so manually."
         ) from e
+
+
+def _to_list(x):
+
+    """
+    Ensure that
+    """
+
+    if x is not None and not isinstance(x, list):
+        return [x]
+    return x
