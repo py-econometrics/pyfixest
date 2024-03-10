@@ -432,6 +432,12 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+
+            assert all(
+                col.replace(" ", "") in _data.columns for col in self._clustervar
+                ), "vcov dict value must be a column in the data"
+
+
             cluster_df = _data[self._clustervar]
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -1592,10 +1598,6 @@ def _check_vcov_input(vcov, data):
             list(vcov.values())[0], str
         ), "vcov dict value must be a string"
         deparse_vcov = list(vcov.values())[0].split("+")
-        assert all(
-            col.replace(" ", "") in data.columns for col in deparse_vcov
-        ), "vcov dict value must be a column in the data"
-
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
@@ -1669,6 +1671,11 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
         is_clustered = True
 
     clustervar = deparse_vcov if is_clustered else None
+
+    # loop over clustervar to change "^" to "_"
+    if clustervar:
+        clustervar = [x.replace("^", "_") for x in clustervar]
+        warnings.warn("The '^' character in the cluster variable name is replaced by '_'.")
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
