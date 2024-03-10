@@ -128,3 +128,15 @@ def docstring_from(func, custom_doc=""):
         return target_func
 
     return decorator
+
+
+def _to_integer(x):
+    if x.dtype == int:
+        return x
+    try:
+        x = x.astype(np.int64)
+        return x  # noqa: TRY300
+    except ValueError as e:
+        raise ValueError(
+            "Conversion of the dependent variable to integer is not possible. Please do so manually."
+        ) from e
