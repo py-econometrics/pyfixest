@@ -37,6 +37,9 @@ jupyterlab = "^4.0.12"
 jupytext = "^1.16.1"
 
 [tool.pytest.ini_options]
+markers = [
+    "extended: mark test to be part of the extended test suite"
+]
 filterwarnings =[
     "ignore::FutureWarning:rpy2",
     "ignore::DeprecationWarning:rpy2"

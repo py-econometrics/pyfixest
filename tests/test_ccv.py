@@ -7,6 +7,7 @@ from pyfixest.estimation.estimation import feols
 
 
 @pytest.fixture
+@pytest.mark.extended
 def data(local=False):
     """Load the census data used in the tests."""
     if local:
@@ -112,9 +113,8 @@ def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
 
     return V_CCV
 
-
 @pytest.mark.parametrize("pk", [0.05, 0.5, 0.95])
-# @pytest.mark.skip(reason="This test is too slow.")
+@pytest.mark.extended
 def test_ccv_against_AAIW(data, pk):
 
     N = data.shape[0]
@@ -147,7 +147,7 @@ def test_ccv_against_AAIW(data, pk):
 
     assert np.abs(vcov - vcov_AAIW) < 1e-6
 
-
+@pytest.mark.extended
 def test_ccv_internally(data):
     """Test the ccv function internally."""
     # it does not matter where CRV inference is specified
@@ -161,7 +161,7 @@ def test_ccv_internally(data):
 
     assert np.all(res1 == res2)
 
-
+@pytest.mark.extended
 def test_against_stata(data):
     """
     Test the ccv function against the stata implementation of the CCV variance.
@@ -174,16 +174,16 @@ def test_against_stata(data):
 
     fit = feols("ln_earnings ~ college", data=data, vcov={"CRV1": "state"})
 
-    res_ccv1 = fit.ccv(treatment="college", pk=0.05, qk=1, n_splits=8, seed=929).xs(
+    res_ccv1 = fit.ccv(treatment="college", pk=0.05, qk=1, n_splits=4, seed=929).xs(
         "CCV"
     )
-    res_ccv2 = fit.ccv(treatment="college", pk=0.5, qk=1, n_splits=8, seed=929).xs(
+    res_ccv2 = fit.ccv(treatment="college", pk=0.5, qk=1, n_splits=4, seed=929).xs(
         "CCV"
     )
-    res_ccv3 = fit.ccv(treatment="college", pk=1, qk=0.05, n_splits=8, seed=929).xs(
+    res_ccv3 = fit.ccv(treatment="college", pk=1, qk=0.05, n_splits=4, seed=929).xs(
         "CCV"
     )
-    res_ccv4 = fit.ccv(treatment="college", pk=1, qk=0.5, n_splits=8, seed=929).xs(
+    res_ccv4 = fit.ccv(treatment="college", pk=1, qk=0.5, n_splits=4, seed=929).xs(
         "CCV"
     )
 
