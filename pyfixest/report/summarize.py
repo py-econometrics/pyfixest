@@ -115,11 +115,12 @@ def etable(
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
-        nobs_list.append(
-            _number_formatter(
-                model._N, integer=True, scientific_notation=False, **kwargs
-            )
-        )
+        
+        _nobs_kwargs = kwargs.copy()
+        _nobs_kwargs["integer"] = True
+        _nobs_kwargs["scientific_notation"] = False
+        nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
+        
         if model._method == "feols" and not model._is_iv and not model._has_weights:
             r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
