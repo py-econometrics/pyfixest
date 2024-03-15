@@ -44,18 +44,27 @@ class FixestFormulaParser:
         # multiple estimations into dictionaries that separate a 'constant'
         # part common to all estimations from a varying part with key of the
         # 'type' of variation, e.g. 'sw' or 'csw'.
-        depvars_dict = depvars.split("+")
+        depvars_list = depvars.split("+")
         covars_dict = _input_formula_to_dict(covars) # e.g. {'constant': [], 'csw': ['X1', 'X2']}
         fevars_dict = _input_formula_to_dict(fevars) # e.g. {'constant': ['f1^f2']}
-
         # Now parse all formula components in covars_dict, fevars_dict into lists
         # of formulas that can be used in the estimation.
         # E.g. {'constant': [], 'csw': ['X1', 'X2']} becomes ['X1', 'X1+X2']
         # and {'constant': ['f1^f2']} becomes ['f1^f2'].
         covars_formulas_list = _dict_to_list_of_formulas(covars_dict) # evaluate self.covars to list: ['X1', 'X1+X2']
         fevars_formula_list = _dict_to_list_of_formulas(fevars_dict) # ['f1^f2']
+        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_list, covars_formulas_list, iv = False)
 
-        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_dict, covars_formulas_list, iv = False)
+        # now repeat for IV:
+        self.is_iv = False
+        self.condensed_fml_dict_iv = None
+        if endogvars is not None:
+            self.is_iv = True
+            endogvars_list = endogvars.split("+")
+            instruments_dict = _input_formula_to_dict(instruments)
+            instruments_formulas_list = _dict_to_list_of_formulas(instruments_dict)
+            self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list, iv = False)
+
 
 def collect_fml_dict(fevars_formula, depvars_dict, covars_formula, iv = False):
 

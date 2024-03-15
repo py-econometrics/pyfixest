@@ -130,18 +130,10 @@ class FixestMulti:
         self._drop_intercept = drop_intercept
 
         fxst_fml = FixestFormulaParser(fml)
-        #fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
-        #if fxst_fml._is_iv:
-        #    _is_iv = True
-        #    fxst_fml.get_fml_dict(iv=True)
-        #else:
-        #    _is_iv = False
-
         self._method = estimation
-        #self._is_iv = _is_iv
+        self._is_iv = fxst_fml.is_iv
         self._fml_dict = fxst_fml.condensed_fml_dict
-        #if _is_iv:
-        #    self._fml_dict_iv = fxst_fml._fml_dict_iv
+        self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
 
@@ -176,6 +168,7 @@ class FixestMulti:
         -------
             None
         """
+
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
         _data = self._data
@@ -204,9 +197,8 @@ class FixestMulti:
                         endogvars, instruments = _get_endogvars_instruments(
                             fml_dict_iv=self._fml_dict_iv,
                             fval=fval,
-                            depvar=depvar,
-                            covar=covar,
                         )
+                    import pdb; pdb.set_trace()
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
                     # get Y, X, Z, fe, NA indices for model
@@ -748,7 +740,7 @@ def _drop_singletons(fixef_rm: bool) -> bool:
 
 
 def _get_endogvars_instruments(
-    fml_dict_iv: dict, fval: str, depvar: str, covar: str
+    fml_dict_iv: dict, fval: str
 ) -> tuple:
     """
     Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
@@ -759,10 +751,6 @@ def _get_endogvars_instruments(
         The dictionary of formulas for the IV estimation.
     fval : str
         The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-    depvar : str
-        The dependent variable.
-    covar : str
-        The covariates. E.g. "X1+X2+X3"
 
     Returns
     -------
@@ -772,10 +760,7 @@ def _get_endogvars_instruments(
         The instruments. E.g. "Z1+Z2+Z3"
     """
     dict2fe_iv = fml_dict_iv.get(fval)
-    instruments2 = dict2fe_iv.get(depvar)[0].split("~")[1]
-    endogvar_list = list(set(covar.split("+")) - set(instruments2.split("+")))
-    instrument_list = list(set(instruments2.split("+")) - set(covar.split("+")))
-    endogvars = endogvar_list[0]
-    instruments = "+".join(instrument_list)
+    instruments = list(dict2fe_iv.keys())[0]
+    endogvars = list(dict2fe_iv.values())[0][0].split("~")[1] # no multiple estimation for IV
 
     return endogvars, instruments
