@@ -318,7 +318,7 @@ def summary(
         print(df.to_markdown(floatfmt=f".{digits}f"))
         print("---")
         if fxst._method == "feols":
-            if not fxst._is_iv:
+            if not fxst._is_iv and not fxst._has_weights:
                 if fxst._has_fixef:
                     print(
                         f"RMSE: {np.round(fxst._rmse, digits)}   R2: {np.round(fxst._r2, digits)}   R2 Within: {np.round(fxst._r2_within, digits)}"
