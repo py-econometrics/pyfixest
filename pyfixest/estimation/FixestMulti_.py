@@ -130,18 +130,18 @@ class FixestMulti:
         self._drop_intercept = drop_intercept
 
         fxst_fml = FixestFormulaParser(fml)
-        fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
-        if fxst_fml._is_iv:
-            _is_iv = True
-            fxst_fml.get_fml_dict(iv=True)
-        else:
-            _is_iv = False
+        #fxst_fml.get_fml_dict()  # fxst_fml._fml_dict might look like this: {'0': {'Y': ['Y~X1'], 'Y2': ['Y2~X1']}}. Hence {FE: {DEPVAR: [FMLS]}}
+        #if fxst_fml._is_iv:
+        #    _is_iv = True
+        #    fxst_fml.get_fml_dict(iv=True)
+        #else:
+        #    _is_iv = False
 
         self._method = estimation
-        self._is_iv = _is_iv
-        self._fml_dict = fxst_fml._fml_dict
-        if _is_iv:
-            self._fml_dict_iv = fxst_fml._fml_dict_iv
+        #self._is_iv = _is_iv
+        self._fml_dict = fxst_fml.condensed_fml_dict
+        #if _is_iv:
+        #    self._fml_dict_iv = fxst_fml._fml_dict_iv
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
 
@@ -209,7 +209,6 @@ class FixestMulti:
                         )
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
-
                     # get Y, X, Z, fe, NA indices for model
                     (
                         Y,

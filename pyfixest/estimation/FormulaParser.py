@@ -63,7 +63,6 @@ def collect_fml_dict(fevars_formula, depvars_dict, covars_formula, iv = False):
     Condense the formulas into a nested dictionary.
     """
 
-    import pdb; pdb.set_trace()
     fml_dict = {}
 
     for fevar in fevars_formula:
