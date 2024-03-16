@@ -1,12 +1,11 @@
 import re
+from itertools import product
 
 from pyfixest.errors import (
     DuplicateKeyError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
 )
-
-from typing import Optional, Union
 
 
 class FixestFormulaParser:
@@ -39,7 +38,6 @@ class FixestFormulaParser:
             None
 
         """
-
         depvars, covars, fevars, endogvars, instruments = deparse_fml(fml)
 
         # Parse all individual formula components that allow for
@@ -61,6 +59,8 @@ class FixestFormulaParser:
         # now repeat for IV:
         self.is_iv = False
         self.condensed_fml_dict_iv = None
+        endogvars_list = []
+        instruments_formulas_list = []
         if endogvars is not None:
             self.is_iv = True
             endogvars_list = endogvars.split("+")
@@ -69,44 +69,39 @@ class FixestFormulaParser:
             self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list)
 
         self.FixestFormulaDict = {}
-
-        for depvar in depvars_list:
-            for covar in covars_formulas_list:
-                for fval in fevars_formula_list:
-                    if self.is_iv:
-                        for endogvar in endogvars_list:
-                            for instrument in instruments_formulas_list:
-                                FixestFML = FixestFormula(
-                                    depvar = depvar,
-                                    covar = covar,
-                                    fval = fval,
-                                    endogvars = endogvar,
-                                    instruments = instrument
-                                )
-                                FixestFML.get_first_and_second_stage_fml()
-                                FixestFML.get_fml()
-
-                                key = FixestFML._fval
-                                if key not in self.FixestFormulaDict:
-                                    self.FixestFormulaDict[key] = []
-                                self.FixestFormulaDict[key].append(FixestFML)
-                    else:
-                        FixestFML = FixestFormula(
-                            depvar = depvar,
-                            covar = covar,
-                            fval = fval,
-                            endogvars = None,
-                            instruments = None
-                        )
-                        FixestFML.get_first_and_second_stage_fml()
-                        FixestFML.get_fml()
-
-                        key = FixestFML._fval
-                        if key not in self.FixestFormulaDict:
-                            self.FixestFormulaDict[key] = []
-                        self.FixestFormulaDict[key].append(FixestFML)
+        self.populate_fixest_formula_dict(
+            depvars_list = depvars_list,
+            covars_formulas_list=covars_formulas_list,
+            fevars_formula_list=fevars_formula_list,
+            endogvars_list=endogvars_list,
+            instruments_formulas_list=instruments_formulas_list
+        )
 
 
+    def add_to_FixestFormulaDict(self, depvar, covar, fval, endogvar = None, instrument = None):
+
+        FixestFML = FixestFormula(
+            depvar=depvar,
+            covar=covar,
+            fval=fval,
+            endogvars=endogvar,
+            instruments=instrument
+        )
+        FixestFML.get_first_and_second_stage_fml()
+        FixestFML.get_fml()
+
+        if fval not in self.FixestFormulaDict:
+            self.FixestFormulaDict[fval] = []
+        self.FixestFormulaDict[fval].append(FixestFML)
+
+    def populate_fixest_formula_dict(self, depvars_list, covars_formulas_list, fevars_formula_list, endogvars_list, instruments_formulas_list):
+
+        if self.is_iv:
+            for depvar, covar, fval, endogvar, instrument in product(depvars_list, covars_formulas_list, fevars_formula_list, endogvars_list, instruments_formulas_list):
+                self.add_to_FixestFormulaDict(depvar, covar, fval, endogvar, instrument)
+        else:
+            for depvar, covar, fval in product(depvars_list, covars_formulas_list, fevars_formula_list):
+                self.add_to_FixestFormulaDict(depvar, covar, fval)
 
 
 class FixestFormula:

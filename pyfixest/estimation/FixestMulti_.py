@@ -168,7 +168,6 @@ class FixestMulti:
         -------
             None
         """
-
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
@@ -383,7 +382,6 @@ class FixestMulti:
         Returns:
             None
         """
-
         if len(self.all_fitted_models) > 1:
             self._is_multiple_estimation = True
             if self._is_iv:
@@ -663,7 +661,6 @@ def get_fml(
     str
         The formula string for the regression.
     """
-
     fml = f"{depvar} ~ {covar}"
     fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
 

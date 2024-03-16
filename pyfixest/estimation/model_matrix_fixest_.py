@@ -14,6 +14,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
 
+
 def model_matrix_fixest(
     #fml: str,
 
