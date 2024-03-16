@@ -112,12 +112,12 @@ def model_matrix_fixest(
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
     #depvar = FixestFormula._depvar
-    #covar = FixestFormula._covar
+    covars = FixestFormula._covar
     fval = FixestFormula._fval
-    #instruments = FixestFormula._instruments
-    #endogvars = FixestFormula._endogvars
+    instruments = FixestFormula._instruments
+    endogvars = FixestFormula._endogvars
     #import pdb; pdb.set_trace()
-    #_check_syntax(fml_second_stage, fml_first_stage, fval)
+    _check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
     #import pdb; pdb.set_trace()
@@ -234,15 +234,9 @@ def model_matrix_fixest(
     )
 
 
-def _check_syntax(second_stage, first_stage, fval):
+def _check_syntax(covars, instruments, endogvars):
 
-    covars = second_stage.split("~")[1].strip()
-    if first_stage is not None:
-        endogvars = first_stage.split("~")[0].strip()
-        instruments = first_stage.split("~")[1].strip()
-
-        # check if any of the instruments or endogenous variables are
-        # also specified as covariates
+    if instruments is not None:
         if any(
             element in covars.split("+") for element in endogvars.split("+")
             ):
