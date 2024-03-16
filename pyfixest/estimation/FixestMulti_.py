@@ -198,7 +198,6 @@ class FixestMulti:
                             fml_dict_iv=self._fml_dict_iv,
                             fval=fval,
                         )
-                    import pdb; pdb.set_trace()
                     # stitch formula back together
                     fml = get_fml(depvar, covar, fval, endogvars, instruments)
                     # get Y, X, Z, fe, NA indices for model

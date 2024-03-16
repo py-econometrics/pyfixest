@@ -53,7 +53,7 @@ class FixestFormulaParser:
         # and {'constant': ['f1^f2']} becomes ['f1^f2'].
         covars_formulas_list = _dict_to_list_of_formulas(covars_dict) # evaluate self.covars to list: ['X1', 'X1+X2']
         fevars_formula_list = _dict_to_list_of_formulas(fevars_dict) # ['f1^f2']
-        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_list, covars_formulas_list, iv = False)
+        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_list, covars_formulas_list)
 
         # now repeat for IV:
         self.is_iv = False
@@ -63,10 +63,10 @@ class FixestFormulaParser:
             endogvars_list = endogvars.split("+")
             instruments_dict = _input_formula_to_dict(instruments)
             instruments_formulas_list = _dict_to_list_of_formulas(instruments_dict)
-            self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list, iv = False)
+            self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list)
 
 
-def collect_fml_dict(fevars_formula, depvars_dict, covars_formula, iv = False):
+def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
 
     """
     Condense the formulas into a nested dictionary.
@@ -375,22 +375,3 @@ def _check_duplicate_key(my_dict, key):
             )
         else:
             None
-
-
-def clean_instruments():
-
-    # clean instruments
-    if instruments is not None:
-        self._is_iv = True
-        # all rhs variables for the first stage (endog variable replaced with instrument)  # noqa: W505
-        first_stage_covars_list = covars.split("+")
-        first_stage_covars_list[first_stage_covars_list.index(endogvars)] = (
-            instruments
-        )
-        self.first_stage_covars_list = "+".join(first_stage_covars_list)
-        self.covars_first_stage = _input_formula_to_dict(self.first_stage_covars_list)
-        self.depvars_first_stage = endogvars
-    else:
-        self._is_iv = False
-        self.covars_first_stage = None
-        self.depvars_first_stage = None
