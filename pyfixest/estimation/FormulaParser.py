@@ -6,6 +6,8 @@ from pyfixest.errors import (
     UnsupportedMultipleEstimationSyntax,
 )
 
+from typing import Optional, Union
+
 
 class FixestFormulaParser:
     """
@@ -37,6 +39,7 @@ class FixestFormulaParser:
             None
 
         """
+
         depvars, covars, fevars, endogvars, instruments = deparse_fml(fml)
 
         # Parse all individual formula components that allow for
@@ -52,6 +55,7 @@ class FixestFormulaParser:
         # and {'constant': ['f1^f2']} becomes ['f1^f2'].
         covars_formulas_list = _dict_to_list_of_formulas(covars_dict) # evaluate self.covars to list: ['X1', 'X1+X2']
         fevars_formula_list = _dict_to_list_of_formulas(fevars_dict) # ['f1^f2']
+
         self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_list, covars_formulas_list)
 
         # now repeat for IV:
@@ -64,10 +68,157 @@ class FixestFormulaParser:
             instruments_formulas_list = _dict_to_list_of_formulas(instruments_dict)
             self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list)
 
+        self.FixestFormulaDict = {}
+
+        for depvar in depvars_list:
+            for covar in covars_formulas_list:
+                for fval in fevars_formula_list:
+                    if self.is_iv:
+                        for endogvar in endogvars_list:
+                            for instrument in instruments_formulas_list:
+                                FixestFML = FixestFormula(
+                                    depvar = depvar,
+                                    covar = covar,
+                                    fval = fval,
+                                    endogvars = endogvar,
+                                    instruments = instrument
+                                )
+                                FixestFML.get_first_and_second_stage_fml()
+                                FixestFML.get_fml()
+
+                                key = FixestFML._fval
+                                if key not in self.FixestFormulaDict:
+                                    self.FixestFormulaDict[key] = []
+                                self.FixestFormulaDict[key].append(FixestFML)
+                    else:
+                        FixestFML = FixestFormula(
+                            depvar = depvar,
+                            covar = covar,
+                            fval = fval,
+                            endogvars = None,
+                            instruments = None
+                        )
+                        FixestFML.get_first_and_second_stage_fml()
+                        FixestFML.get_fml()
+
+                        key = FixestFML._fval
+                        if key not in self.FixestFormulaDict:
+                            self.FixestFormulaDict[key] = []
+                        self.FixestFormulaDict[key].append(FixestFML)
+
+
+
+
+class FixestFormula:
+
+    def __init__(self, depvar, covar, fval, endogvars, instruments):
+
+        self._depvar = depvar
+        self._covar = covar
+        self._fval = fval
+        self._endogvars = endogvars
+        self._instruments = instruments
+
+    def get_first_and_second_stage_fml(self):
+
+        self.fml_second_stage, self.fml_first_stage = _get_first_and_second_stage_fml(
+                depvar = self._depvar,
+                covar = self._covar,
+                fval = self._fval,
+                endogvar = self._endogvars,
+                instruments = self._instruments,
+
+        )
+
+    def get_fml(self):
+
+        depvar = self._depvar
+        covar = self._covar
+        fval = self._fval
+        endogvars = self._endogvars
+        instruments = self._instruments
+
+        fml = f"{depvar} ~ {covar}"
+        fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
+
+        fml_fval = f"| {fval}" if fval != "0" else None
+
+        if fml_fval is not None:
+            fml += fml_fval
+
+        if fml_iv is not None:
+            fml += fml_iv
+
+        self.fml = fml.replace(" ", "")
+
+
+
+def _get_first_and_second_stage_fml(
+    depvar,
+    covar,
+    fval,
+    endogvar,
+    instruments,
+):
+
+    if fval is None:
+        fval = "0"
+
+    fml_iv = f"{endogvar} ~ {instruments}"
+
+    fml_second_stage = f"{depvar} ~ {covar} + 1"
+    fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if endogvar else None
+
+    return fml_second_stage, fml_first_stage
+
+
+
+def get_fml(
+    depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None
+) -> str:
+    """
+    Stitches together the formula string for the regression.
+
+    Parameters
+    ----------
+    depvar : str
+        The dependent variable.
+    covar : str
+        The covariates. E.g. "X1+X2+X3"
+    fval : str
+        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
+    endogvars : str, optional
+        The endogenous variables.
+    instruments : str, optional
+        The instruments. E.g. "Z1+Z2+Z3"
+
+    Returns
+    -------
+    str
+        The formula string for the regression.
+    """
+    fml = f"{depvar} ~ {covar}"
+    fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
+
+    fml_fval = f"| {fval}" if fval != "0" else None
+
+    if fml_fval is not None:
+        fml += fml_fval
+
+    if fml_iv is not None:
+        fml += fml_iv
+
+    fml = fml.replace(" ", "")
+
+    return fml
+
 
 def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
     """
     Condense the formulas into a nested dictionary.
+
+    Parameters
+    ----------
     """
     fml_dict = {}
 

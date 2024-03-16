@@ -12,10 +12,12 @@ from pyfixest.errors import (
     InvalidReferenceLevelError,
 )
 from pyfixest.estimation.detect_singletons_ import detect_singletons
-
+from pyfixest.estimation.FormulaParser import FixestFormula
 
 def model_matrix_fixest(
-    fml: str,
+    #fml: str,
+
+    FixestFormula: FixestFormula,
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: Optional[str] = None,
@@ -104,17 +106,25 @@ def model_matrix_fixest(
     """
     # check if weights are valid
 
-    _check_weights(weights, data)
-    _ivars = _find_ivars(fml)[0]
+    fml_second_stage = FixestFormula.fml_second_stage
+    fml_first_stage = FixestFormula.fml_first_stage
+    #depvar = FixestFormula._depvar
+    #covar = FixestFormula._covar
+    fval = FixestFormula._fval
+    #instruments = FixestFormula._instruments
+    #endogvars = FixestFormula._endogvars
 
-    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
-        raise ValueError(
-            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
-        )
-    _check_i_refs2(_ivars, i_ref1, i_ref2, data)
+    _check_weights(weights, data)
+    #_ivars = _find_ivars(fml)[0]
+
+    #if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
+    #    raise ValueError(
+    #        f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+    #    )
+    #_check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     endogvar = Z = weights_df = fe = None
-    fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
+    #fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
 
     #_check_syntax(fml_second_stage, fml_first_stage, fval)
 
@@ -156,14 +166,14 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
+    #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
-    if columns_to_drop and not X_is_empty:
-        X.drop(columns_to_drop, axis=1, inplace=True)
-        if _is_iv:
-            Z.drop(columns_to_drop, axis=1, inplace=True)
+    #if columns_to_drop and not X_is_empty:
+    #    X.drop(columns_to_drop, axis=1, inplace=True)
+    #    if _is_iv:
+    #        Z.drop(columns_to_drop, axis=1, inplace=True)
 
-    _icovars = _get_icovars(_ivars, X)
+    #_icovars = _get_icovars(_ivars, X)
 
     # drop intercept if specified i
     # n feols() call - mostly handy for did2s()
@@ -204,6 +214,8 @@ def model_matrix_fixest(
     # overwrite na_index
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
+
+    _icovars = None
 
     return (
         Y,
