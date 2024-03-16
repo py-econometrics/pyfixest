@@ -6,7 +6,11 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.errors import InvalidReferenceLevelError, EndogVarsAsCovarsError, InstrumentsAsCovarsError
+from pyfixest.errors import (
+    EndogVarsAsCovarsError,
+    InstrumentsAsCovarsError,
+    InvalidReferenceLevelError,
+)
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 
 
@@ -112,7 +116,7 @@ def model_matrix_fixest(
     endogvar = Z = weights_df = fe = None
     fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
 
-    _check_syntax(fml_second_stage, fml_first_stage, fval)
+    #_check_syntax(fml_second_stage, fml_first_stage, fval)
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None

@@ -168,7 +168,6 @@ class FixestMulti:
         -------
             None
         """
-
         _fml_dict = self._fml_dict
         _is_iv = self._is_iv
         _data = self._data
@@ -668,7 +667,6 @@ def get_fml(
         The formula string for the regression.
     """
     fml = f"{depvar} ~ {covar}"
-
     fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
 
     fml_fval = f"| {fval}" if fval != "0" else None
@@ -759,7 +757,7 @@ def _get_endogvars_instruments(
         The instruments. E.g. "Z1+Z2+Z3"
     """
     dict2fe_iv = fml_dict_iv.get(fval)
-    instruments = list(dict2fe_iv.keys())[0]
-    endogvars = list(dict2fe_iv.values())[0][0].split("~")[1] # no multiple estimation for IV
+    endogvars = list(dict2fe_iv.keys())[0]
+    instruments = list(dict2fe_iv.values())[0][0].split("~")[1] # no multiple estimation for IV
 
     return endogvars, instruments

@@ -37,7 +37,6 @@ class FixestFormulaParser:
             None
 
         """
-
         depvars, covars, fevars, endogvars, instruments = deparse_fml(fml)
 
         # Parse all individual formula components that allow for
@@ -67,11 +66,9 @@ class FixestFormulaParser:
 
 
 def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
-
     """
     Condense the formulas into a nested dictionary.
     """
-
     fml_dict = {}
 
     for fevar in fevars_formula:
