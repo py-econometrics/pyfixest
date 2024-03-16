@@ -117,7 +117,7 @@ def model_matrix_fixest(
     instruments = FixestFormula._instruments
     endogvars = FixestFormula._endogvars
     #import pdb; pdb.set_trace()
-    _check_syntax(covars, instruments, endogvars)
+    #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
     #import pdb; pdb.set_trace()
@@ -236,6 +236,7 @@ def model_matrix_fixest(
 
 def _check_syntax(covars, instruments, endogvars):
 
+    #import pdb; pdb.set_trace()
     if instruments is not None:
         if any(
             element in covars.split("+") for element in endogvars.split("+")
