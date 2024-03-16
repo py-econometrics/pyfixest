@@ -1,3 +1,4 @@
+from multiprocessing import Value
 import re
 import warnings
 from typing import Optional, Union
@@ -5,6 +6,7 @@ from typing import Optional, Union
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+#from formulaic.errors import FactorEvaluationError
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -114,20 +116,22 @@ def model_matrix_fixest(
     fval = FixestFormula._fval
     #instruments = FixestFormula._instruments
     #endogvars = FixestFormula._endogvars
-
+    #import pdb; pdb.set_trace()
+    #_check_syntax(fml_second_stage, fml_first_stage, fval)
     _check_weights(weights, data)
-    #_ivars = _find_ivars(fml)[0]
 
-    #if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
-    #    raise ValueError(
-    #        f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
-    #    )
+    #import pdb; pdb.set_trace()
+    #_ivars = [_find_ivars(x) for x in [fml_second_stage, fml_first_stage] if x is not None][0]
+    #_check_ivars(_ivars, data)
     #_check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
-    endogvar = Z = weights_df = fe = None
-    #fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
+    #import pdb; pdb.set_trace()
+    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref1=(?P<ref1>\w+|\d+\.?\d*))?\)'
+    fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
+    fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
+    #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
-    #_check_syntax(fml_second_stage, fml_first_stage, fval)
+    endogvar = Z = weights_df = fe = None
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
@@ -167,13 +171,11 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
 
     #if columns_to_drop and not X_is_empty:
     #    X.drop(columns_to_drop, axis=1, inplace=True)
     #    if _is_iv:
     #        Z.drop(columns_to_drop, axis=1, inplace=True)
-
     #_icovars = _get_icovars(_ivars, X)
 
     # drop intercept if specified i
@@ -256,104 +258,26 @@ def _check_syntax(second_stage, first_stage, fval):
             )
 
 
+def _check_ivars(_ivars, data):
 
-def deparse_fml(
-    fml: str,
-    i_ref1: Optional[Union[list, str, int]],
-    i_ref2: Optional[Union[list, str, int]],
-    _ivars: Optional[list[str]] = None,
-):
-    """
-    Deparse a pyfixest formula into formulaic format.
+    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
+        raise ValueError(
+            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+        )
 
-    This function deparses a formula string into its components, i.e., the dependent
-    variable, the covariates, the endogenous variable, and the instruments.
-    For example, it changes "i()" syntax into formulaic format,
-    e.g., "i(f1) & i_ref = 1" into "C(f1, contr.treatment(base=1))".
+def transform_i_to_C(match):
+    # Extracting the matched groups
+    var1, var2, ref1 = match.group('var1'), match.group('var2'), match.group('ref1')
 
-    Parameters
-    ----------
-    fml : str
-        A two-sided formula string using fixest formula syntax.
-    i_ref1 : str or list
-        The reference level for the first variable in the i() syntax.
-    i_ref2 : str or list
-        The reference level for the second variable in the i() syntax.
-    _ivars : list or None
-        A list of interaction variables. None if no interaction variables
-        via `i()` provided.
-
-    Returns
-    -------
-    tuple
-        A tuple of the following elements:
-        - depvar : str
-            The dependent variable.
-        - covar : str
-            The covariates.
-        - endogvar : str
-            The endogenous variable. None if no IV.
-        - instruments : str
-            The instruments. None if no IV.
-        - fval : str
-            The fixed effects. "0" if no fixed effects specified.
-    """
-    fml = fml.replace(" ", "")
-    _is_iv = _check_is_iv(fml)
-
-    # step 1: deparse formula
-    fml_parts = fml.split("|")
-    depvar, covar = fml_parts[0].split("~")
-
-    # covar to : interaction (as formulaic does not know about i() syntax
-    for x in covar.split("+"):
-        # id there an i() interaction?
-        is_ivar = _find_ivars(x)
-        # if yes:
-        if is_ivar[1]:
-            # if a reference level i_ref1 is set: code contrast as
-            # C(var, contr.treatment(base=i_ref1[0]))
-            # if no reference level is set: code contrast as C(var)
-            if i_ref1:
-                inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
-            else:
-                inner_C = f"C({_ivars[0]})"
-
-            # if there is a second variable interacted via i() syntax,
-            # i.e. i(var1, var2), then code contrast as
-            # C(var1, contr.treatment(base=i_ref1[0])):var2, where var2 = i_ref2[1]
-            if len(_ivars) == 2:
-                interact_vars = f"{inner_C}:{_ivars[1]}"
-            elif len(_ivars) == 1:
-                interact_vars = f"{inner_C}"
-            else:
-                raise ValueError(
-                    "Something went wrong with the i() syntax. Please report this issue to the package author via github."
-                )
-            covar = covar.replace(x, interact_vars)
-            break
-
-    if len(fml_parts) == 3:
-        fval, fml_iv = fml_parts[1], fml_parts[2]
-    elif len(fml_parts) == 2:
-        if _is_iv:
-            fval, fml_iv = "0", fml_parts[1]
-        else:
-            fval, fml_iv = fml_parts[1], None
+    # Determine transformation based on captured groups
+    if var2:
+        # Case: i(X1,X2) or i(X1,X2,ref1=1)
+        base = f",contr.treatment(base={ref1})" if ref1 else ""
+        return f"C({var1}{base}):{var2}"
     else:
-        fval = "0"
-        fml_iv = None
-
-    if _is_iv:
-        endogvar, instruments = fml_iv.split("~")
-    else:
-        endogvar, instruments = None, None  # noqa: F841
-
-    fml_second_stage = f"{depvar} ~ {covar} + 1"
-    fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if _is_iv else None
-
-    return fml_second_stage, fml_first_stage, fval
-
+        # Case: i(X1) or i(X1,ref1=1)
+        base = f",contr.treatment(base={ref1})" if ref1 else ""
+        return f"C({var1}{base})"
 
 def _fixef_interactions(fval, data):
     """
@@ -403,10 +327,13 @@ def _find_ivars(x):
     """
     i_match = re.findall(r"i\((.*?)\)", x)
 
+    if len(i_match) > 1:
+        raise ValueError("Only one i() interaction allowed per estimation.")
+
     if i_match:
-        return i_match[0].split(","), "i"
+        return i_match[0].split(",")
     else:
-        return None, None
+        return None
 
 
 def _check_is_iv(fml):

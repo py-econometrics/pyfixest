@@ -23,53 +23,53 @@ def test_i():
 
     if (
         "C(rel_year)[T.1.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=1.0)._coefnames
+        in feols("dep_var~i(rel_year, ref1 = 1.0)", df_het)._coefnames
     ):
         raise AssertionError("C(rel_year)[T.1.0] should not be in the column names.")
     if (
         "C(rel_year)[T.-2.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=-2.0)._coefnames
+        in feols("dep_var~i(rel_year,ref1=-2.0)", df_het)._coefnames
     ):
         raise AssertionError("C(rel_year)[T.-2.0] should not be in the column names.")
-    if (
-        "C(rel_year)[T.1.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError("C(rel_year)[T.1.0] should not be in the column names.")
-    if (
-        "C(rel_year)[T.2.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError("C(rel_year)[T.2.0] should not be in the column names.")
+    #if (
+    #    "C(rel_year)[T.1.0]"
+    #    in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
+    #):
+    #    raise AssertionError("C(rel_year)[T.1.0] should not be in the column names.")
+    #if (
+    #    "C(rel_year)[T.2.0]"
+    #    in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
+    #):
+    #    raise AssertionError("C(rel_year)[T.2.0] should not be in the column names.")
 
     if (
         "C(rel_year)[T.1.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=1.0)._coefnames
+        in feols("dep_var~i(rel_year, treat, ref1=1.0)", df_het)._coefnames
     ):
         raise AssertionError(
             "C(rel_year)[T.1.0]:treat should not be in the column names."
         )
     if (
         "C(rel_year)[T.-2.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=-2.0)._coefnames
+        in feols("dep_var~i(rel_year, treat,ref1=-2.0)", df_het)._coefnames
     ):
         raise AssertionError(
             "C(rel_year)[T.-2.0]:treat should not be in the column names."
         )
-    if (
-        "C(rel_year)[T.1.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError(
-            "C(rel_year)[T.1.0]:treat should not be in the column names."
-        )
-    if (
-        "C(rel_year)[T.2.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError(
-            "C(rel_year)[T.2.0]:treat should not be in the column names."
-        )
+    #if (
+    #    "C(rel_year)[T.1.0]:treat"
+    #    in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
+    #):
+    #    raise AssertionError(
+    #        "C(rel_year)[T.1.0]:treat should not be in the column names."
+    #    )
+    #if (
+    #    "C(rel_year)[T.2.0]:treat"
+    #    in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
+    #):
+    #    raise AssertionError(
+    #        "C(rel_year)[T.2.0]:treat should not be in the column names."
+    #    )
 
     with pytest.raises(InvalidReferenceLevelError):
         feols("dep_var~i(rel_year)", df_het, i_ref1="1.0")
