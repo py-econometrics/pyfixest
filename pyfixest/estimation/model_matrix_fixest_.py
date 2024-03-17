@@ -126,7 +126,7 @@ def model_matrix_fixest(
     #_check_i_refs2(_ivars, i_ref1, i_ref2, data)
 
     #import pdb; pdb.set_trace()
-    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref1=(?P<ref1>\w+|\d+\.?\d*))?\)'
+    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref1>\w+|\d+\.?\d*))?\)'
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
     fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
     #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)

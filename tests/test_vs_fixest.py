@@ -51,14 +51,14 @@ rng = np.random.default_rng(8760985)
         ("log(Y) ~ X1"),
         ("Y ~ X1 + exp(X2)"),
         ("Y ~ X1 + C(f1)"),
-        ("Y ~ X1 + C(f1,ref1=1)"),
-        ("Y ~ X1 + C(f1,ref1=1.0)"),
-        ("Y ~ X1 + C(f2)"),
+        ("Y ~ X1 + i(f1, ref = 1)"),
+        ("Y ~ X1 + C(f1)"),
+        ("Y ~ X1 + (f2, ref = 2.0)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
-        ("Y ~ X1 + C(f1,ref1=1) | f2"),
-        ("Y ~ X1 + C(f1,ref1=1.0) | f2"),
+        ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
+        ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
         ("Y~X1|f2^f3"),
@@ -686,9 +686,9 @@ def test_i_interaction():
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)
     fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
-    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=1.0)
-    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0])
-    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0, 3.0])
+    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=1.0)
+    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0])
+    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0, 3.0])
 
     fit1_r = fixest.feols(
         ro.Formula("Y ~ i(f1, X2)"),
