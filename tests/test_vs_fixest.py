@@ -53,7 +53,7 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + C(f1)"),
         ("Y ~ X1 + i(f1, ref = 1)"),
         ("Y ~ X1 + C(f1)"),
-        ("Y ~ X1 + (f2, ref = 2.0)"),
+        ("Y ~ X1 + i(f2, ref = 2.0)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
