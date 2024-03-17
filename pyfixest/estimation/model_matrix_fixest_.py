@@ -127,6 +127,18 @@ def model_matrix_fixest(
 
     #import pdb; pdb.set_trace()
     pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref1>\w+|\d+\.?\d*))?\)'
+
+    matches = re.finditer(pattern, fml_second_stage)
+    if matches:
+        var1 = []
+        var2 = []
+        for match in matches:
+            if match.group('var1'):
+                var1.append(match.group('var1'))
+            if match.group('var2'):
+                var2.append(match.group('var2'))
+        _ivars = var1 + var2
+
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
     fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
     #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
@@ -218,7 +230,11 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-    _icovars = None
+    import pdb; pdb.set_trace()
+    if len(_ivars) == 1:
+        _icovars = [name for name in X.columns if _ivars[0] in name]
+    else:
+        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
 
     return (
         Y,
