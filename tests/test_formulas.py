@@ -1,5 +1,5 @@
 from pyfixest.estimation.FormulaParser import (
-    _find_sw,
+    _find_multiple_estimation_syntax,
     _pack_to_fml,
     _unpack_fml,
 )
@@ -56,31 +56,31 @@ def test_pack_to_fml():
     assert _pack_to_fml({"constant": ["x", "y"], "csw": []}) == ["x+y"]
 
 
-def test_find_sw_no_match():
+def test_find_multiple_estimation_syntax_no_match():
     x = "a + b + c"
-    assert _find_sw(x) == (x, None)
+    assert _find_multiple_estimation_syntax(x) == (x, None)
 
 
-def test_find_sw_sw():
+def test_find_multiple_estimation_syntax_sw():
     x = "sw(a, b, c)"
     expected = (["a", " b", " c"], "sw")
-    assert _find_sw(x) == expected
+    assert _find_multiple_estimation_syntax(x) == expected
 
 
-def test_find_sw_csw():
+def test_find_multiple_estimation_syntax_csw():
     x = "csw(a, b, c)"
     expected = (["a", " b", " c"], "csw")
-    assert _find_sw(x) == expected
+    assert _find_multiple_estimation_syntax(x) == expected
 
 
-def test_find_sw_sw0():
+def test_find_multiple_estimation_syntax_sw0():
     x = "sw0(a, b, c)"
     expected = (["a", " b", " c"], "sw0")
-    assert _find_sw(x) == expected
+    assert _find_multiple_estimation_syntax(x) == expected
 
 
-def test_find_sw_csw0():
+def test_find_multiple_estimation_syntax_csw0():
     x = "csw0(a, b, c)"
     expected = (["a", " b", " c"], "csw0")
-    assert _find_sw(x) == expected
+    assert _find_multiple_estimation_syntax(x) == expected
 

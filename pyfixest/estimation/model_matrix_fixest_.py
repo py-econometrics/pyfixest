@@ -116,28 +116,13 @@ def model_matrix_fixest(
     fval = FixestFormula._fval
     instruments = FixestFormula._instruments
     endogvars = FixestFormula._endogvars
-    #import pdb; pdb.set_trace()
     #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
-    #import pdb; pdb.set_trace()
-    #_ivars = [_find_ivars(x) for x in [fml_second_stage, fml_first_stage] if x is not None][0]
-    #_check_ivars(_ivars, data)
-    #_check_i_refs2(_ivars, i_ref1, i_ref2, data)
-
-    #import pdb; pdb.set_trace()
     pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref1>\w+|\d+\.?\d*))?\)'
 
-    matches = re.finditer(pattern, fml_second_stage)
-    if matches:
-        var1 = []
-        var2 = []
-        for match in matches:
-            if match.group('var1'):
-                var1.append(match.group('var1'))
-            if match.group('var2'):
-                var2.append(match.group('var2'))
-        _ivars = var1 + var2
+    fml_all = fml_second_stage if fml_first_stage is None else f"{fml_second_stage} + {fml_first_stage}"
+    _ivars = _find_ivars(fml_all, pattern)
 
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
     fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
@@ -230,11 +215,13 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-    import pdb; pdb.set_trace()
-    if len(_ivars) == 1:
-        _icovars = [name for name in X.columns if _ivars[0] in name]
+    if _ivars:
+        if len(_ivars) == 1:
+            _icovars = [name for name in X.columns if _ivars[0] in name]
+        else:
+            _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
     else:
-        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
+        _icovars = None
 
     return (
         Y,
@@ -252,7 +239,6 @@ def model_matrix_fixest(
 
 def _check_syntax(covars, instruments, endogvars):
 
-    #import pdb; pdb.set_trace()
     if instruments is not None:
         if any(
             element in covars.split("+") for element in endogvars.split("+")
@@ -322,30 +308,23 @@ def _fixef_interactions(fval, data):
     return fval.replace("^", "_"), data
 
 
-def _find_ivars(x):
-    """
-    Find interaction variables in i() syntax.
+def _find_ivars(fml, pattern):
 
-    Parameters
-    ----------
-    x : str
-        A string containing the interaction variables in i() syntax.
+    matches = re.finditer(pattern, fml)
 
-    Returns
-    -------
-    list
-        A list of interaction variables or None
-    """
-    i_match = re.findall(r"i\((.*?)\)", x)
-
-    if len(i_match) > 1:
-        raise ValueError("Only one i() interaction allowed per estimation.")
-
-    if i_match:
-        return i_match[0].split(",")
+    if matches:
+        var1 = []
+        var2 = []
+        for match in matches:
+            if match.group('var1'):
+                var1.append(match.group('var1'))
+            if match.group('var2'):
+                var2.append(match.group('var2'))
+        _ivars = var1 + var2
     else:
-        return None
+        _ivars = None
 
+    return _ivars
 
 def _check_is_iv(fml):
     """

@@ -9,6 +9,7 @@ from scipy.sparse.linalg import spsolve
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.FormulaParser import FixestFormulaParser
 
 
 class DID2S(DID):
@@ -278,8 +279,15 @@ def _did2s_vcov(
 
     # note for future Alex: intercept needs to be dropped! it is not as fixed
     # effects are converted to dummies, hence has_fixed checks are False
+
+    FML1 = FixestFormulaParser(f"{yname} {first_stage}")
+    FML2 = FixestFormulaParser(f"{yname} {second_stage}")
+    FixestFormulaDict1 = FML1.FixestFormulaDict
+    FixestFormulaDict2 = FML2.FixestFormulaDict
+
+
     _, X1, _, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {first_stage}",
+        FixestFormula=next(iter(FixestFormulaDict1.values()))[0],
         data=data,
         weights=None,
         drop_singletons=False,
@@ -288,7 +296,7 @@ def _did2s_vcov(
         i_ref2=i_ref2,
     )
     _, X2, _, _, _, _, _, _, _, _ = model_matrix_fixest(
-        fml=f"{yname} {second_stage}",
+        FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
         data=data,
         weights=None,
         drop_singletons=False,
