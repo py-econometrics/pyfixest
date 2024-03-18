@@ -1,4 +1,3 @@
-from multiprocessing import Value
 import re
 import warnings
 from typing import Optional, Union
@@ -119,16 +118,13 @@ def model_matrix_fixest(
     #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
-    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref1>\w+|\d+\.?\d*))?\)'
+    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>\w+|\d+\.?\d*))?\)'
 
     fml_all = fml_second_stage if fml_first_stage is None else f"{fml_second_stage} + {fml_first_stage}"
-    _ivars = _find_ivars(fml_all, pattern)
+    _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
 
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
     fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
-    #columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
-
-    endogvar = Z = weights_df = fe = None
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
@@ -143,6 +139,8 @@ def model_matrix_fixest(
     FML = Formula(**fml_kwargs)
 
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
+
+    endogvar = Z = weights_df = fe = None
 
     Y = mm["fml_second_stage"]["lhs"]
     X = mm["fml_second_stage"]["rhs"]
@@ -168,6 +166,13 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
+    #import pdb; pdb.set_trace()
+
+    #columns_to_drop = []
+    #for _i_ref in _list_of_ivars_dict:
+    #    if _i_ref.get("var2"):
+    #        columns_to_drop_new = _i_ref.get("var1") and _i_ref.get("ref") in X.columns
+    #        columns_to_drop.append(columns_to_drop_new)
 
     #if columns_to_drop and not X_is_empty:
     #    X.drop(columns_to_drop, axis=1, inplace=True)
@@ -215,14 +220,18 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-    if _ivars:
-        if len(_ivars) == 1:
-            _icovars = [name for name in X.columns if _ivars[0] in name]
-        else:
-            _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
-    else:
-        _icovars = None
+    #import pdb; pdb.set_trace()
 
+    #_ivars = [(d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
+    #if _ivars:
+    #    if len(_ivars) == 1:
+    #        _icovars = [name for name in X.columns if _ivars[0] in name]
+    #    else:
+    #        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
+    #else:
+    #    _icovars = None
+
+    _icovars = None
     return (
         Y,
         X,
@@ -264,16 +273,16 @@ def _check_ivars(_ivars, data):
 
 def transform_i_to_C(match):
     # Extracting the matched groups
-    var1, var2, ref1 = match.group('var1'), match.group('var2'), match.group('ref1')
+    var1, var2, ref = match.group('var1'), match.group('var2'), match.group('ref')
 
     # Determine transformation based on captured groups
     if var2:
-        # Case: i(X1,X2) or i(X1,X2,ref1=1)
-        base = f",contr.treatment(base={ref1})" if ref1 else ""
+        # Case: i(X1,X2) or i(X1,X2,ref=1)
+        base = f",contr.treatment(base={ref})" if ref else ""
         return f"C({var1}{base}):{var2}"
     else:
-        # Case: i(X1) or i(X1,ref1=1)
-        base = f",contr.treatment(base={ref1})" if ref1 else ""
+        # Case: i(X1) or i(X1,ref=1)
+        base = f",contr.treatment(base={ref})" if ref else ""
         return f"C({var1}{base})"
 
 def _fixef_interactions(fval, data):
@@ -308,23 +317,25 @@ def _fixef_interactions(fval, data):
     return fval.replace("^", "_"), data
 
 
-def _find_ivars(fml, pattern):
+def _get_ivars_dict(fml, pattern):
 
     matches = re.finditer(pattern, fml)
 
+    res = []
     if matches:
-        var1 = []
-        var2 = []
         for match in matches:
+            match_dict = {}
             if match.group('var1'):
-                var1.append(match.group('var1'))
+                match_dict["var1"] = match.group("var1")
             if match.group('var2'):
-                var2.append(match.group('var2'))
-        _ivars = var1 + var2
+                match_dict["var2"] = match.group("var2")
+            if match.group("ref"):
+                match_dict["ref"] = match.group("ref")
+            res.append(match_dict)
     else:
-        _ivars = None
+        res = None
 
-    return _ivars
+    return res
 
 def _check_is_iv(fml):
     """

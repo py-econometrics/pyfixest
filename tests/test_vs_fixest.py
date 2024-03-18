@@ -74,10 +74,10 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + i(f2,X2)"),
         ("Y ~ X1 + i(f1,X2) | f2"),
         ("Y ~ X1 + i(f1,X2) | f2 + f3"),
-        # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
-        # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
-        # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
-        # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
+        ("Y ~ i(f1,X1, ref=1.0)"),
+        ("Y ~ i(f2,X1, ref=2.0)"),
+        ("Y ~ i(f1,X1, ref=3.0) | f2"),
+        ("Y ~ i(f1,X1, ref=4.0) | f2 + f3"),
         # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
         ("Y ~ X1 + I(X2 ** 2)"),

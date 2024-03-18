@@ -86,10 +86,10 @@ def test_did2s():
             df_het,
             yname="dep_var",
             first_stage="~ 0 | state + year",
-            second_stage="~i(rel_year)",
+            second_stage="~i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
+            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -113,10 +113,10 @@ def test_did2s():
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
-            second_stage="~i(rel_year)",
+            second_stage="~i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
+            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -140,10 +140,10 @@ def test_did2s():
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
-            second_stage="~ X + i(rel_year)",
+            second_stage="~ X + i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
+            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -168,10 +168,10 @@ def test_did2s():
             df_het,
             yname="dep_var",
             first_stage="~ X | state + year",
-            second_stage="~ X + i(rel_year)",
+            second_stage="~ X + i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
+            #i_ref1=[-1.0, np.inf],
         )
 
 
