@@ -1,5 +1,6 @@
 import re
 from itertools import product
+from typing import Optional
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -78,7 +79,7 @@ class FixestFormulaParser:
         )
 
 
-    def add_to_FixestFormulaDict(self, depvar, covar, fval, endogvar = None, instrument = None):
+    def add_to_FixestFormulaDict(self, depvar: str, covar: str, fval: str, endogvar: Optional[str] = None, instrument: Optional[str] = None):
 
         FixestFML = FixestFormula(
             depvar=depvar,

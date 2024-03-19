@@ -5,8 +5,8 @@ from typing import Optional, Union
 import numpy as np
 import pandas as pd
 from formulaic import Formula
-#from formulaic.errors import FactorEvaluationError
 
+#from formulaic.errors import FactorEvaluationError
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
@@ -110,11 +110,7 @@ def model_matrix_fixest(
 
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
-    #depvar = FixestFormula._depvar
-    covars = FixestFormula._covar
     fval = FixestFormula._fval
-    instruments = FixestFormula._instruments
-    endogvars = FixestFormula._endogvars
     #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 

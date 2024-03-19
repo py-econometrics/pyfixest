@@ -138,14 +138,8 @@ def _to_integer(x):
         return x  # noqa: TRY300
     except ValueError as e:
         raise ValueError(
-            "Conversion of the dependent variable to integer is not possible. Please do so manually."
+            """
+            Conversion of the dependent variable to integer is not possible.
+            Please do so manually.
+            """
         ) from e
-
-
-def _to_list(x):
-    """
-    Ensure that
-    """
-    if x is not None and not isinstance(x, list):
-        return [x]
-    return x
