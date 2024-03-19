@@ -74,8 +74,8 @@ rng = np.random.default_rng(8760985)
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         ("Y ~ X1 + i(f1,X2)"),
         ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
-        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X2)"),
-        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X2, ref =2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X1, ref =2)"),
         ("Y ~ X1 + i(f2,X2)"),
         ("Y ~ X1 + i(f1,X2) | f2"),
         ("Y ~ X1 + i(f1,X2) | f2 + f3"),
