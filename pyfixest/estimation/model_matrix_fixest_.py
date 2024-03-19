@@ -162,18 +162,33 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    #import pdb; pdb.set_trace()
+    #_ivars = [(d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
+    #if _ivars:
+    #    if len(_ivars) == 1:
+    #        _icovars = [name for name in X.columns if _ivars[0] in name]
+    #    else:
+    #        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
+    #else:
+    #    _icovars = None
 
-    #columns_to_drop = []
-    #for _i_ref in _list_of_ivars_dict:
-    #    if _i_ref.get("var2"):
-    #        columns_to_drop_new = _i_ref.get("var1") and _i_ref.get("ref") in X.columns
-    #        columns_to_drop.append(columns_to_drop_new)
+    columns_to_drop = []
+    for _i_ref in _list_of_ivars_dict:
+        if _i_ref.get("var2"):
 
-    #if columns_to_drop and not X_is_empty:
-    #    X.drop(columns_to_drop, axis=1, inplace=True)
-    #    if _is_iv:
-    #        Z.drop(columns_to_drop, axis=1, inplace=True)
+            var1 = _i_ref.get("var1")
+            var2 = _i_ref.get("var2")
+            ref = _i_ref.get("ref")
+
+            pattern = rf'\[T\.{ref}(?:\.0)?\]:{var2}'
+            if ref:
+                for column in X.columns:
+                    if var1 in column and re.search(pattern, column):
+                        columns_to_drop.append(column)
+
+    if columns_to_drop and not X_is_empty:
+        X.drop(columns_to_drop, axis=1, inplace=True)
+        if _is_iv:
+            Z.drop(columns_to_drop, axis=1, inplace=True)
     #_icovars = _get_icovars(_ivars, X)
 
     # drop intercept if specified i
@@ -216,16 +231,6 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-    #import pdb; pdb.set_trace()
-
-    #_ivars = [(d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
-    #if _ivars:
-    #    if len(_ivars) == 1:
-    #        _icovars = [name for name in X.columns if _ivars[0] in name]
-    #    else:
-    #        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
-    #else:
-    #    _icovars = None
 
     _icovars = None
     return (

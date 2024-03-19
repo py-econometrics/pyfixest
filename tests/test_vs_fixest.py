@@ -59,6 +59,8 @@ rng = np.random.default_rng(8760985)
         ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
         ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
+        ("Y ~ X1 + i(f1) + i(f2)"),
+        ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
         ("Y~X1|f2^f3"),
@@ -71,13 +73,16 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         ("Y ~ X1 + i(f1,X2)"),
+        ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X2, ref =2)"),
         ("Y ~ X1 + i(f2,X2)"),
         ("Y ~ X1 + i(f1,X2) | f2"),
         ("Y ~ X1 + i(f1,X2) | f2 + f3"),
-        ("Y ~ i(f1,X1, ref=1.0)"),
-        ("Y ~ i(f2,X1, ref=2.0)"),
-        ("Y ~ i(f1,X1, ref=3.0) | f2"),
-        ("Y ~ i(f1,X1, ref=4.0) | f2 + f3"),
+        ("Y ~ X1 + i(f1,X2, ref=1.0)"),
+        ("Y ~ X1 + i(f2,X2, ref=2.0)"),
+        ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
+        ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
         # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
         ("Y ~ X1 + I(X2 ** 2)"),

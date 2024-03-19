@@ -143,3 +143,11 @@ def _to_integer(x):
             Please do so manually.
             """
         ) from e
+
+def _to_list(x):
+    """
+    Ensure that x is a list.
+    """
+    if x is not None and not isinstance(x, list):
+        return [x]
+    return x
