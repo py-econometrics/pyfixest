@@ -105,13 +105,13 @@ def test_i_vs_fixest():
     )
 
     # with references
-    fit_py = feols("dep_var~i(treat)", df_het, i_ref1=False)
+    fit_py = feols("dep_var~i(treat, ref = False)", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(treat, ref = FALSE)"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
 
-    fit_py = feols("dep_var~i(rel_year)", df_het, i_ref1=1.0)
+    fit_py = feols("dep_var~i(rel_year, ref = 1.0)", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(rel_year, ref = c(1))"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))

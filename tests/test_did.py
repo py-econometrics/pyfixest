@@ -18,7 +18,7 @@ broom = importr("broom")
 
 @pytest.fixture
 def data():
-    df_het = pd.read_csv("pyfixest/did/data/df_het.csv"
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     return df_het
 
 def test_event_study(data):
@@ -251,7 +251,7 @@ def test_lpdid():
 
     # test vs R
 
-    data = pd.read_csv("pyfixest/did/data/data.csv")
+    data = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     rng = np.random.default_rng(1231)
     data["X"] = rng.normal(size=len(data))

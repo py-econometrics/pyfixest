@@ -38,13 +38,6 @@ def test_formula_parser3():
 #        FixestFormulaParser('y ~ X1 + X2^X3')
 
 
-def test_i_ref():
-    data = get_data()
-
-    with pytest.raises(ValueError):
-        feols(fml="y ~ i(X1, X2, ref = -1)", data=data, vcov="iid")
-
-
 def test_cluster_na():
     """Test if a nan value in a cluster variable raises an error."""
     data = get_data()
