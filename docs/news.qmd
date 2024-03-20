@@ -1,5 +1,10 @@
 # News
 
+## PyFixest 0.18.0
+
+- Large Refactoring of Interal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`.
+- Brings back fixed effects reference setting via `i(var1, var2, ref)` syntax. Deprecates the `i_ref1`, `i_ref2` function arguments.
+
 ## PyFixest 0.17.0
 
 - Restructures the codebase and reorganizes how users can interact with the `pyfixest` API. It is now recommended to use `pyfixest` in the following way:

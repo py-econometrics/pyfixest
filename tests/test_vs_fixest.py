@@ -51,10 +51,16 @@ rng = np.random.default_rng(8760985)
         ("log(Y) ~ X1"),
         ("Y ~ X1 + exp(X2)"),
         ("Y ~ X1 + C(f1)"),
-        ("Y ~ X1 + C(f2)"),
+        ("Y ~ X1 + i(f1, ref = 1)"),
+        ("Y ~ X1 + C(f1)"),
+        ("Y ~ X1 + i(f2, ref = 2.0)"),
         ("Y ~ X1 + C(f1) + C(f2)"),
         ("Y ~ X1 + C(f1) | f2"),
+        ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
         ("Y ~ X1 + C(f1) | f2 + f3"),
+        ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
+        ("Y ~ X1 + i(f1) + i(f2)"),
+        ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
         # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
         # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
         ("Y~X1|f2^f3"),
@@ -66,19 +72,19 @@ rng = np.random.default_rng(8760985)
         # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
         # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-        ("Y ~ X1 + i(f1,X2)"),  # temporarily non-supported feature
-        ("Y ~ X1 + i(f2,X2)"),  # temporarily non-supported feature
-        ("Y ~ X1 + i(f1,X2) | f2"),  # temporarily non-supported feature
-        ("Y ~ X1 + i(f1,X2) | f2 + f3"),  # temporarily non-supported feature
-        # ("Y ~ i(f1,X2, ref='1.0')"),               # currently does not work
-        # ("Y ~ i(f2,X2, ref='2.0')"),               # currently does not work
-        # ("Y ~ i(f1,X2, ref='3.0') | f2"),          # currently does not work
-        # ("Y ~ i(f1,X2, ref='4.0') | f2 + f3"),     # currently does not work
-        ("Y ~ X1 + C(f1)"),
-        ("Y ~ X1 + C(f1) + C(f2)"),
+        ("Y ~ X1 + i(f1,X2)"),
+        ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
+        ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X1, ref =2)"),
+        ("Y ~ X1 + i(f2,X2)"),
+        ("Y ~ X1 + i(f1,X2) | f2"),
+        ("Y ~ X1 + i(f1,X2) | f2 + f3"),
+        ("Y ~ X1 + i(f1,X2, ref=1.0)"),
+        ("Y ~ X1 + i(f2,X2, ref=2.0)"),
+        ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
+        ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
         # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
         # ("Y ~ C(f1):C(f2)"),                       # currently does not work
-        ("Y ~ X1 + C(f1) | f2"),
         ("Y ~ X1 + I(X2 ** 2)"),
         ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
         ("Y ~ X1*X2"),
@@ -102,7 +108,7 @@ rng = np.random.default_rng(8760985)
         "Y ~ 1 | f1 + f2 | X1 ~ Z1",
         "Y ~ 1 | f1^f2 | X1 ~ Z1",
         "Y ~  X2| f1 | X1 ~ Z1",
-        # tests of overidentified models
+        ## tests of overidentified models
         "Y ~ 1 | X1 ~ Z1 + Z2",
         "Y ~ X2 | X1 ~ Z1 + Z2",
         "Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
@@ -685,9 +691,9 @@ def test_i_interaction():
 
     fit1 = feols("Y ~ i(f1, X2)", data=data)
     fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
-    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=1.0)
-    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0])
-    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref1=[2.0, 3.0])
+    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=1.0)
+    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0])
+    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0, 3.0])
 
     fit1_r = fixest.feols(
         ro.Formula("Y ~ i(f1, X2)"),

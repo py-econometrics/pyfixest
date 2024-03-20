@@ -6,18 +6,17 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.detect_singletons_ import detect_singletons
+from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 def model_matrix_fixest(
-    fml: str,
+    # fml: str,
+    FixestFormula: FixestFormula,
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
-    i_ref1: Optional[Union[list, str, int]] = None,
-    i_ref2: Optional[Union[list, str, int]] = None,
 ) -> tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -53,10 +52,6 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
-    i_ref1 : str or list
-        The reference level for the first variable in the i() syntax.
-    i_ref2 : str or list
-        The reference level for the second variable in the i() syntax.
 
     Returns
     -------
@@ -100,17 +95,29 @@ def model_matrix_fixest(
     """
     # check if weights are valid
 
+    FixestFormula.check_syntax()
+
+    fml_second_stage = FixestFormula.fml_second_stage
+    fml_first_stage = FixestFormula.fml_first_stage
+    fval = FixestFormula._fval
     _check_weights(weights, data)
-    _ivars = _find_ivars(fml)[0]
 
-    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
-        raise ValueError(
-            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
-        )
-    _check_i_refs2(_ivars, i_ref1, i_ref2, data)
+    pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
 
-    endogvar = Z = weights_df = fe = None
-    fml_second_stage, fml_first_stage, fval = deparse_fml(fml, i_ref1, i_ref2, _ivars)
+    fml_all = (
+        fml_second_stage
+        if fml_first_stage is None
+        else f"{fml_second_stage} + {fml_first_stage}"
+    )
+
+    _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
+
+    fml_second_stage = re.sub(pattern, _transform_i_to_C, fml_second_stage)
+    fml_first_stage = (
+        re.sub(pattern, _transform_i_to_C, fml_first_stage)
+        if fml_first_stage is not None
+        else fml_first_stage
+    )
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
@@ -125,6 +132,8 @@ def model_matrix_fixest(
     FML = Formula(**fml_kwargs)
 
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
+
+    endogvar = Z = weights_df = fe = None
 
     Y = mm["fml_second_stage"]["lhs"]
     X = mm["fml_second_stage"]["rhs"]
@@ -150,14 +159,14 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    columns_to_drop = _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X)
+    columns_to_drop = _get_columns_to_drop(_list_of_ivars_dict, X)
 
     if columns_to_drop and not X_is_empty:
         X.drop(columns_to_drop, axis=1, inplace=True)
         if _is_iv:
             Z.drop(columns_to_drop, axis=1, inplace=True)
 
-    _icovars = _get_icovars(_ivars, X)
+    _icovars = _get_icovars(_list_of_ivars_dict, X)
 
     # drop intercept if specified i
     # n feols() call - mostly handy for did2s()
@@ -213,102 +222,48 @@ def model_matrix_fixest(
     )
 
 
-def deparse_fml(
-    fml: str,
-    i_ref1: Optional[Union[list, str, int]],
-    i_ref2: Optional[Union[list, str, int]],
-    _ivars: Optional[list[str]] = None,
-):
-    """
-    Deparse a pyfixest formula into formulaic format.
+def _get_columns_to_drop(_list_of_ivars_dict, X):
 
-    This function deparses a formula string into its components, i.e., the dependent
-    variable, the covariates, the endogenous variable, and the instruments.
-    For example, it changes "i()" syntax into formulaic format,
-    e.g., "i(f1) & i_ref = 1" into "C(f1, contr.treatment(base=1))".
+    columns_to_drop = []
+    for _i_ref in _list_of_ivars_dict:
+        if _i_ref.get("var2"):
 
-    Parameters
-    ----------
-    fml : str
-        A two-sided formula string using fixest formula syntax.
-    i_ref1 : str or list
-        The reference level for the first variable in the i() syntax.
-    i_ref2 : str or list
-        The reference level for the second variable in the i() syntax.
-    _ivars : list or None
-        A list of interaction variables. None if no interaction variables
-        via `i()` provided.
+            var1 = _i_ref.get("var1")
+            var2 = _i_ref.get("var2")
+            ref = _i_ref.get("ref")
 
-    Returns
-    -------
-    tuple
-        A tuple of the following elements:
-        - depvar : str
-            The dependent variable.
-        - covar : str
-            The covariates.
-        - endogvar : str
-            The endogenous variable. None if no IV.
-        - instruments : str
-            The instruments. None if no IV.
-        - fval : str
-            The fixed effects. "0" if no fixed effects specified.
-    """
-    fml = fml.replace(" ", "")
-    _is_iv = _check_is_iv(fml)
+            pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
+            if ref:
+                for column in X.columns:
+                    if var1 in column and re.search(pattern, column):
+                        columns_to_drop.append(column)
 
-    # step 1: deparse formula
-    fml_parts = fml.split("|")
-    depvar, covar = fml_parts[0].split("~")
+    return columns_to_drop
 
-    # covar to : interaction (as formulaic does not know about i() syntax
-    for x in covar.split("+"):
-        # id there an i() interaction?
-        is_ivar = _find_ivars(x)
-        # if yes:
-        if is_ivar[1]:
-            # if a reference level i_ref1 is set: code contrast as
-            # C(var, contr.treatment(base=i_ref1[0]))
-            # if no reference level is set: code contrast as C(var)
-            if i_ref1:
-                inner_C = f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))"
-            else:
-                inner_C = f"C({_ivars[0]})"
 
-            # if there is a second variable interacted via i() syntax,
-            # i.e. i(var1, var2), then code contrast as
-            # C(var1, contr.treatment(base=i_ref1[0])):var2, where var2 = i_ref2[1]
-            if len(_ivars) == 2:
-                interact_vars = f"{inner_C}:{_ivars[1]}"
-            elif len(_ivars) == 1:
-                interact_vars = f"{inner_C}"
-            else:
-                raise ValueError(
-                    "Something went wrong with the i() syntax. Please report this issue to the package author via github."
-                )
-            covar = covar.replace(x, interact_vars)
-            break
+def _check_ivars(_ivars, data):
 
-    if len(fml_parts) == 3:
-        fval, fml_iv = fml_parts[1], fml_parts[2]
-    elif len(fml_parts) == 2:
-        if _is_iv:
-            fval, fml_iv = "0", fml_parts[1]
-        else:
-            fval, fml_iv = fml_parts[1], None
+    if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
+        raise ValueError(
+            f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
+        )
+
+
+def _transform_i_to_C(match):
+    # Extracting the matched groups
+    var1 = match.group("var1")
+    var2 = match.group("var2")
+    ref = match.group("ref")
+
+    # Determine transformation based on captured groups
+    if var2:
+        # Case: i(X1,X2) or i(X1,X2,ref=1)
+        base = f",contr.treatment(base={ref})" if ref else ""
+        return f"C({var1}{base}):{var2}"
     else:
-        fval = "0"
-        fml_iv = None
-
-    if _is_iv:
-        endogvar, instruments = fml_iv.split("~")
-    else:
-        endogvar, instruments = None, None  # noqa: F841
-
-    fml_second_stage = f"{depvar} ~ {covar} + 1"
-    fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if _is_iv else None
-
-    return fml_second_stage, fml_first_stage, fval
+        # Case: i(X1) or i(X1,ref=1)
+        base = f",contr.treatment(base={ref})" if ref else ""
+        return f"C({var1}{base})"
 
 
 def _fixef_interactions(fval, data):
@@ -343,54 +298,28 @@ def _fixef_interactions(fval, data):
     return fval.replace("^", "_"), data
 
 
-def _find_ivars(x):
-    """
-    Find interaction variables in i() syntax.
+def _get_ivars_dict(fml, pattern):
 
-    Parameters
-    ----------
-    x : str
-        A string containing the interaction variables in i() syntax.
+    matches = re.finditer(pattern, fml)
 
-    Returns
-    -------
-    list
-        A list of interaction variables or None
-    """
-    i_match = re.findall(r"i\((.*?)\)", x)
-
-    if i_match:
-        return i_match[0].split(","), "i"
+    res = []
+    if matches:
+        for match in matches:
+            match_dict = {}
+            if match.group("var1"):
+                match_dict["var1"] = match.group("var1")
+            if match.group("var2"):
+                match_dict["var2"] = match.group("var2")
+            if match.group("ref"):
+                match_dict["ref"] = match.group("ref")
+            res.append(match_dict)
     else:
-        return None, None
+        res = None
+
+    return res
 
 
-def _check_is_iv(fml):
-    """
-    Check if the formula contains an IV.
-
-    Parameters
-    ----------
-    fml : str
-        The formula string.
-
-    Returns
-    -------
-    bool
-        True if the formula contains an IV, False otherwise.
-    """
-    # check if ~ contained twice in fml
-    if fml.count("~") == 1:
-        _is_iv = False
-    elif fml.count("~") == 2:
-        _is_iv = True
-    else:
-        raise ValueError("The formula must contain at most two '~'.")
-
-    return _is_iv
-
-
-def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
+def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[str]]:
     """
     Get interacted variables.
 
@@ -409,134 +338,42 @@ def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
     list
         A list of interacted variables or None.
     """
-    if _ivars is not None:
-        x_names = X.columns.tolist()
-        if len(_ivars) == 2:
-            _icovars = [
-                s
-                for s in x_names
-                if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
-            ]
-        else:
-            _icovars = [
-                s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")
-            ]
+    if _list_of_ivars_dict:
+
+        _ivars = [
+            (
+                (d.get("var1"),)
+                if d.get("var2") is None
+                else (d.get("var1"), d.get("var2"))
+            )
+            for d in _list_of_ivars_dict
+        ]
+
+        _icovars_set = set()
+
+        for _ivar in _ivars:
+            if len(_ivar) == 1:
+                _icovars_set.update(
+                    [col for col in X.columns if f"C({_ivar[0]})" in col]
+                )
+            if len(_ivar) == 2:
+                var1, var2 = _ivar
+                pattern = rf"C\({var1},.*\)\[.*\]:{var2}"
+                _icovars_set.update(
+                    [
+                        match.group()
+                        for match in (re.search(pattern, x) for x in X.columns)
+                        if match
+                    ]
+                )
+
+        _icovars = list(_icovars_set)
+
     else:
+
         _icovars = None
 
     return _icovars
-
-
-def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
-    """
-    Check reference levels.
-
-    Check if the reference level have the same type as the variable
-    (if not, string matching might fail).
-
-    Parameters
-    ----------
-    ivars : list
-        A list of interaction variables of maximum length 2.
-    i_ref1 : list
-        A list of reference levels for the first variable in the i() syntax.
-    i_ref2 : list
-        A list of reference levels for the second variable in the i() syntax.
-    data : pd.DataFrame
-        The DataFrame containing the covariates.
-
-    Returns
-    -------
-    None
-    """
-    if ivars:
-        ivar1 = ivars[0]
-        if len(ivars) == 2:
-            ivar2 = ivars[1]
-
-        if i_ref1:
-            # check that the type of each value in i_ref1 is the same as the
-            # type of the variable
-            ivar1_col = data[ivar1]
-            for i in i_ref1:
-                if pd.api.types.is_integer_dtype(ivar1_col) and not isinstance(i, int):
-                    raise InvalidReferenceLevelError(
-                        f"If the first interacted variable via i() syntax, '{ivar1}', is of type 'int', the reference level {i} must also be of type 'int', but it is of type {type(i)}."
-                    )
-                if pd.api.types.is_float_dtype(ivar1_col) and not isinstance(i, float):
-                    raise InvalidReferenceLevelError(
-                        f"If the first interacted variable via i() syntax, '{ivar1}', is of type 'float', the reference level {i} must also be of type 'float', but it is of type {type(i)}."
-                    )
-        if i_ref2:
-            ivar2_col = data[ivar2]
-            for i in i_ref2:
-                if pd.api.types.is_integer_dtype(ivar2_col) and not isinstance(i, int):
-                    raise InvalidReferenceLevelError(
-                        f"If the second interacted variable via i() syntax, '{ivar2}', is of type 'int', the reference level {i} must also be of type 'int', but it is of type {type(i)}."
-                    )
-                if pd.api.types.is_float_dtype(ivar2_col) and not isinstance(i, float):
-                    raise InvalidReferenceLevelError(
-                        f"If the second interacted variable via i() syntax, '{ivar2}', is of type 'float', the reference level {i} must also be of type 'float', but it is of type {type(i)}."
-                    )
-
-
-def _get_i_refs_to_drop(_ivars, i_ref1, i_ref2, X):
-    """
-    Identify reference levels to drop.
-
-    Collect all variables that (still) need to be dropped as reference levels
-    from the model matrix.
-
-    Parameters
-    ----------
-    _ivars : list
-        A list of interaction variables of maximum length 2.
-    i_ref1 : list
-        A list of reference levels for the first variable in the i() syntax.
-    i_ref2 : list
-        A list of reference levels for the second variable in the i() syntax.
-    X : pd.DataFrame
-        The DataFrame containing the covariates.
-    """
-    columns_to_drop = []
-
-    # now drop reference levels / variables before collecting variable names
-    if _ivars:
-        if i_ref1:
-            # different logic for one vs two interaction variables in i() due
-            # to how contr.treatment() works
-            if len(_ivars) == 1:
-                if len(i_ref1) == 1:
-                    pass  # do nothing, reference level already dropped via contr.treatment()
-                else:
-                    i_ref_to_drop = i_ref1[1:]
-                    # collect all column names that contain the reference level
-                    for x in i_ref_to_drop:
-                        # decode formulaic naming conventions
-                        columns_to_drop += [
-                            s
-                            for s in X.columns
-                            if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]"
-                            in s
-                        ]
-            elif len(_ivars) == 2:
-                i_ref_to_drop = i_ref1
-                for x in i_ref_to_drop:
-                    # decode formulaic naming conventions
-                    columns_to_drop += [
-                        s
-                        for s in X.columns
-                        if f"C({_ivars[0]},contr.treatment(base={i_ref1[0]}))[T.{x}]:{_ivars[1]}"
-                        in s
-                    ]
-            else:
-                raise ValueError(
-                    "Something went wrong with the i() syntax. Please report this issue to the package author via github."
-                )
-        if i_ref2:
-            raise ValueError("The function argument `i_ref2` is not yet supported.")
-
-    return columns_to_drop
 
 
 def _is_numeric(column):
