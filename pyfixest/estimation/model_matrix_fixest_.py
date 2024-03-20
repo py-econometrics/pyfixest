@@ -22,9 +22,7 @@ def model_matrix_fixest(
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: Optional[str] = None,
-    drop_intercept=False,
-    i_ref1: Optional[Union[list, str, int]] = None,
-    i_ref2: Optional[Union[list, str, int]] = None,
+    drop_intercept=False
 ) -> tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -60,10 +58,6 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
-    i_ref1 : str or list
-        The reference level for the first variable in the i() syntax.
-    i_ref2 : str or list
-        The reference level for the second variable in the i() syntax.
 
     Returns
     -------

@@ -18,8 +18,6 @@ def feols(
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
-    i_ref1: Optional[Union[list, str]] = None,
-    i_ref2: Optional[Union[list, str]] = None,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -57,14 +55,6 @@ def feols(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1 : Optional[Union[list, str]], optional
-        Reference category for the first set of categorical variables interacted
-        via "i()", by default None.
-
-    i_ref2 : Optional[Union[list, str]], optional
-        Reference category for the second set of categorical variables interacted
-        via "i()", by default None.
 
     Returns
     -------
@@ -240,15 +230,13 @@ def feols(
     ```
 
     """
-    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
-
     _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol
     )
 
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation(
-        "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+        "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
@@ -269,9 +257,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    drop_intercept: bool = False,
-    i_ref1: Optional[Union[list, str]] = None,
-    i_ref2: Optional[Union[list, str]] = None,
+    drop_intercept: bool = False
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -316,14 +302,6 @@ def fepois(
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
-    i_ref1 : Optional[Union[list, str]], optional
-        Reference category for the first set of categorical variables interacted
-        via "i()", by default None.
-
-    i_ref2 : Optional[Union[list, str]], optional
-        Reference category for the second set of categorical variables interacted
-        via "i()", by default None.
-
     Returns
     -------
     object
@@ -347,18 +325,16 @@ def fepois(
     For more examples, please take a look at the documentation of the `feols()`
     function.
     """
-    assert i_ref2 is None, "The function argument i_ref2 is not yet supported."
-
     weights = None
 
     _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol
     )
 
     fixest = FixestMulti(data=data)
 
     fixest._prepare_estimation(
-        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept, i_ref1, i_ref2
+        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -379,7 +355,7 @@ def fepois(
 
 
 def _estimation_input_checks(
-    fml, data, vcov, weights, ssc, fixef_rm, collin_tol, i_ref1
+    fml, data, vcov, weights, ssc, fixef_rm, collin_tol
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -404,16 +380,6 @@ def _estimation_input_checks(
         raise ValueError("collin_tol must be greater than zero")
     if collin_tol >= 1:
         raise ValueError("collin_tol must be less than one")
-
-    assert i_ref1 is None or isinstance(
-        i_ref1, (list, str, int, bool, float)
-    ), "i_ref1 must be either None, a list, string, int, bool, or float"
-    # check that if i_ref1 is a list, all elements are of the same type
-    if isinstance(i_ref1, list):
-        assert len(i_ref1) > 0, "i_ref1 must not be an empty list"
-        assert all(
-            isinstance(x, type(i_ref1[0])) for x in i_ref1
-        ), "i_ref1 must be a list of elements of the same type"
 
     # check that weights is either None or an np.array of length nrow(data) x 1
     assert isinstance(weights, str) or weights is None

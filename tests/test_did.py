@@ -91,7 +91,6 @@ def test_did2s(data):
             second_stage="~i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -118,7 +117,6 @@ def test_did2s(data):
             second_stage="~i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -145,7 +143,6 @@ def test_did2s(data):
             second_stage="~ X + i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            #i_ref1=[-1.0, np.inf],
         )
 
         fit_r = did2s.did2s(
@@ -173,7 +170,6 @@ def test_did2s(data):
             second_stage="~ X + i(rel_year, ref = -1.0)",
             treatment="treat",
             cluster="state",
-            #i_ref1=[-1.0, np.inf],
         )
 
 
@@ -191,7 +187,6 @@ def test_errors(data):
             second_stage="~ X + i(rel_year)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
         )
 
     rng = np.random.default_rng(12)
@@ -204,7 +199,6 @@ def test_errors(data):
             second_stage="~ X + i(rel_year)",
             treatment="treat",
             cluster="state",
-            i_ref1=[-1.0, np.inf],
         )
 
 

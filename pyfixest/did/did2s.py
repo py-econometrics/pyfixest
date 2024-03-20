@@ -125,9 +125,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    i_ref1: Optional[Union[int, str, list]] = None,
-    i_ref2: Optional[Union[int, str, list]] = None,
-):
+    ):
     """
     Estimate the two-step DID2S model.
 
@@ -143,12 +141,6 @@ def _did2s_estimate(
         The formula for the second stage.
     treatment: str
         The name of the treatment variable. Must be boolean.
-    i_ref1: int, str or list
-        The reference value(s) for the first variable used with "i()" syntax.
-        Only applicable for the second stage formula.
-    i_ref2: int, str or list
-        The reference value(s) for the second variable used with "i()" syntax.
-        Only applicable for the second stage formula.
 
     Returns
     -------
@@ -191,8 +183,6 @@ def _did2s_estimate(
         fml=_first_stage_full,
         data=_not_yet_treated_data,
         vcov="iid",
-        i_ref1=None,
-        i_ref2=None,
     )  # iid as it might be faster than CRV
 
     # obtain estimated fixed effects
@@ -209,8 +199,6 @@ def _did2s_estimate(
         data=data,
         vcov="iid",
         drop_intercept=True,
-        i_ref1=i_ref1,
-        i_ref2=i_ref2,
     )
     _second_u = fit2.resid()
 
@@ -226,8 +214,6 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
-    i_ref1: Optional[Union[int, str, list]] = None,
-    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -253,12 +239,6 @@ def _did2s_vcov(
         The second stage residuals.
     cluster: str
         The name of the cluster variable.
-    i_ref1: int, str or list
-        The reference value(s) for the first variable used with "i()" syntax.
-        Only applicable for the second stage formula.
-    i_ref2: int, str or list
-        The reference value(s) for the second variable used with "i()" syntax.
-        Only applicable for the second stage formula.
 
     Returns
     -------
@@ -292,8 +272,6 @@ def _did2s_vcov(
         weights=None,
         drop_singletons=False,
         drop_intercept=False,
-        i_ref1=i_ref1,
-        i_ref2=i_ref2,
     )
     _, X2, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
@@ -301,8 +279,6 @@ def _did2s_vcov(
         weights=None,
         drop_singletons=False,
         drop_intercept=True,
-        i_ref1=i_ref1,
-        i_ref2=i_ref2,
     )  # reference values not dropped, multicollinearity error
 
     X1 = csr_matrix(X1.values)

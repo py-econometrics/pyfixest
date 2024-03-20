@@ -65,9 +65,7 @@ class FixestMulti:
         weights: Union[None, np.ndarray] = None,
         ssc: dict[str, str] = {},
         fixef_rm: str = "none",
-        drop_intercept: bool = False,
-        i_ref1: Optional[Union[list, str]] = None,
-        i_ref2: Optional[Union[list, str]] = None,
+        drop_intercept: bool = False
     ) -> None:
         """
         Prepare model for estimation.
@@ -98,12 +96,6 @@ class FixestMulti:
             singleton fixed effects are dropped.
         drop_intercept : bool, optional
             Whether to drop the intercept. Default is False.
-        i_ref1 : Optional[Union[list, str]], optional
-            A list or string specifying the reference category for the first
-            interaction variable.
-        i_ref2 : Optional[Union[list, str]], optional
-            A list or string specifying the reference category for the second
-            interaction variable.
 
         Returns
         -------
@@ -116,16 +108,12 @@ class FixestMulti:
         self._ssc_dict = None
         self._drop_singletons = None
         self._is_multiple_estimation = None
-        self._i_ref1 = None
-        self._i_ref2 = None
         self._drop_intercept = None
         self._weights = weights
         self._has_weights = False
         if weights is not None:
             self._has_weights = True
 
-        self._i_ref1 = _to_list(i_ref1)
-        self._i_ref2 = _to_list(i_ref1)
         self._drop_intercept = drop_intercept
 
         FML = FixestFormulaParser(fml)
@@ -175,8 +163,6 @@ class FixestMulti:
         _drop_singletons = self._drop_singletons
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
-        _i_ref1 = self._i_ref1
-        _i_ref2 = self._i_ref2
         _weights = self._weights
 
         FixestFormulaDict = self.FixestFormulaDict
@@ -210,8 +196,6 @@ class FixestMulti:
                     data=_data,
                     drop_singletons=_drop_singletons,
                     drop_intercept=_drop_intercept,
-                    i_ref1=_i_ref1,
-                    i_ref2=_i_ref2,
                     weights=_weights,
                 )
 
