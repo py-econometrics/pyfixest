@@ -162,34 +162,14 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    #_ivars = [(d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
-    #if _ivars:
-    #    if len(_ivars) == 1:
-    #        _icovars = [name for name in X.columns if _ivars[0] in name]
-    #    else:
-    #        _icovars = [name for name in X.columns if _ivars[0] in name or _ivars[1] in name]
-    #else:
-    #    _icovars = None
-
-    columns_to_drop = []
-    for _i_ref in _list_of_ivars_dict:
-        if _i_ref.get("var2"):
-
-            var1 = _i_ref.get("var1")
-            var2 = _i_ref.get("var2")
-            ref = _i_ref.get("ref")
-
-            pattern = rf'\[T\.{ref}(?:\.0)?\]:{var2}'
-            if ref:
-                for column in X.columns:
-                    if var1 in column and re.search(pattern, column):
-                        columns_to_drop.append(column)
+    columns_to_drop = _get_columns_to_drop(_list_of_ivars_dict, X)
 
     if columns_to_drop and not X_is_empty:
         X.drop(columns_to_drop, axis=1, inplace=True)
         if _is_iv:
             Z.drop(columns_to_drop, axis=1, inplace=True)
-    #_icovars = _get_icovars(_ivars, X)
+
+    _icovars = _get_icovars(_list_of_ivars_dict, X)
 
     # drop intercept if specified i
     # n feols() call - mostly handy for did2s()
@@ -231,8 +211,6 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-
-    _icovars = None
     return (
         Y,
         X,
@@ -263,6 +241,24 @@ def _check_syntax(covars, instruments, endogvars):
             raise InstrumentsAsCovarsError(
                 "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
             )
+
+def _get_columns_to_drop(_list_of_ivars_dict, X):
+
+    columns_to_drop = []
+    for _i_ref in _list_of_ivars_dict:
+        if _i_ref.get("var2"):
+
+            var1 = _i_ref.get("var1")
+            var2 = _i_ref.get("var2")
+            ref = _i_ref.get("ref")
+
+            pattern = rf'\[T\.{ref}(?:\.0)?\]:{var2}'
+            if ref:
+                for column in X.columns:
+                    if var1 in column and re.search(pattern, column):
+                        columns_to_drop.append(column)
+
+    return columns_to_drop
 
 
 def _check_ivars(_ivars, data):
@@ -363,7 +359,7 @@ def _check_is_iv(fml):
     return _is_iv
 
 
-def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
+def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[str]]:
     """
     Get interacted variables.
 
@@ -382,22 +378,28 @@ def _get_icovars(_ivars: list[str], X: pd.DataFrame) -> Optional[list[str]]:
     list
         A list of interacted variables or None.
     """
-    if _ivars is not None:
-        x_names = X.columns.tolist()
-        if len(_ivars) == 2:
-            _icovars = [
-                s
-                for s in x_names
-                if s.startswith("C(" + _ivars[0]) and s.endswith(_ivars[1])
-            ]
-        else:
-            _icovars = [
-                s for s in x_names if s.startswith("C(" + _ivars[0]) and s.endswith("]")
-            ]
+    if _list_of_ivars_dict:
+
+        _ivars = [(d.get('var1'),) if d.get('var2') is None else (d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
+
+        _icovars_set = set()
+
+        for _ivar in _ivars:
+            if len(_ivar) == 1:
+                _icovars_set.update([col for col in X.columns if f"C({_ivar[0]})" in col])
+            if len(_ivar) == 2:
+                var1, var2 = _ivar
+                pattern = rf'C\({var1},.*\)\[.*\]:{var2}'
+                _icovars_set.update([match.group() for match in (re.search(pattern, x) for x in X.columns) if match])
+
+        _icovars = list(_icovars_set)
+
     else:
+
         _icovars = None
 
     return _icovars
+
 
 
 def _check_i_refs2(ivars, i_ref1, i_ref2, data) -> None:
