@@ -717,30 +717,3 @@ def _drop_singletons(fixef_rm: bool) -> bool:
         drop_singletons (bool) : Whether to drop singletons.
     """
     return fixef_rm == "singleton"
-
-
-def _get_endogvars_instruments(
-    fml_dict_iv: dict, fval: str
-) -> tuple:
-    """
-    Fetch the endogenous variables and instruments from the fml_dict_iv dictionary.
-
-    Parameters
-    ----------
-    fml_dict_iv : dict
-        The dictionary of formulas for the IV estimation.
-    fval : str
-        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-
-    Returns
-    -------
-    endogvars : str
-        The endogenous variables.
-    instruments : str
-        The instruments. E.g. "Z1+Z2+Z3"
-    """
-    dict2fe_iv = fml_dict_iv.get(fval)
-    endogvars = list(dict2fe_iv.keys())[0]
-    instruments = list(dict2fe_iv.values())[0][0].split("~")[1] # no multiple estimation for IV
-
-    return endogvars, instruments

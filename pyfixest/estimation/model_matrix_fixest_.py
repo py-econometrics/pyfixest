@@ -331,30 +331,6 @@ def _get_ivars_dict(fml, pattern):
 
     return res
 
-def _check_is_iv(fml):
-    """
-    Check if the formula contains an IV.
-
-    Parameters
-    ----------
-    fml : str
-        The formula string.
-
-    Returns
-    -------
-    bool
-        True if the formula contains an IV, False otherwise.
-    """
-    # check if ~ contained twice in fml
-    if fml.count("~") == 1:
-        _is_iv = False
-    elif fml.count("~") == 2:
-        _is_iv = True
-    else:
-        raise ValueError("The formula must contain at most two '~'.")
-
-    return _is_iv
-
 
 def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[str]]:
     """
