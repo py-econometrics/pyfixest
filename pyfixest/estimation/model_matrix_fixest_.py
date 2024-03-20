@@ -108,15 +108,17 @@ def model_matrix_fixest(
     """
     # check if weights are valid
 
+
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
     fval = FixestFormula._fval
     #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
-    pattern = r'i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>\w+|\d+\.?\d*))?\)'
+    pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
 
     fml_all = fml_second_stage if fml_first_stage is None else f"{fml_second_stage} + {fml_first_stage}"
+
     _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
 
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
@@ -270,7 +272,9 @@ def _check_ivars(_ivars, data):
 
 def transform_i_to_C(match):
     # Extracting the matched groups
-    var1, var2, ref = match.group('var1'), match.group('var2'), match.group('ref')
+    var1 = match.group("var1")
+    var2 = match.group("var2")
+    ref = match.group("ref")
 
     # Determine transformation based on captured groups
     if var2:

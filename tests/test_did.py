@@ -16,13 +16,16 @@ did2s = importr("did2s")
 stats = importr("stats")
 broom = importr("broom")
 
+@pytest.fixture
+def data():
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv"
+    return df_het
 
-def test_event_study():
+def test_event_study(data):
     """Test the event_study() function."""
-    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     fit_did2s = event_study(
-        data=df_het,
+        data=data,
         yname="dep_var",
         idname="state",
         tname="year",
@@ -31,7 +34,7 @@ def test_event_study():
     )
 
     fit_did2s_r = did2s.did2s(
-        data=df_het,
+        data=data,
         yname="dep_var",
         first_stage=ro.Formula("~ 0 | state + year"),
         second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
@@ -47,16 +50,15 @@ def test_event_study():
         np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
 
 
-def test_did2s():
+def test_did2s(data):
     """Test the did2s() function."""
-    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
 
     rng = np.random.default_rng(12345)
-    df_het["X"] = rng.normal(size=len(df_het))
+    data["X"] = rng.normal(size=len(data))
 
     # ATT, no covariates
     fit_did2s = did2s_pyfixest(
-        data=df_het,
+        data=data,
         yname="dep_var",
         first_stage="~ 0 | state + year",
         second_stage="~ treat",
@@ -65,7 +67,7 @@ def test_did2s():
     )
 
     fit_did2s_r = did2s.did2s(
-        data=df_het,
+        data=data,
         yname="dep_var",
         first_stage=ro.Formula("~ 0 | state + year"),
         second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
@@ -83,7 +85,7 @@ def test_did2s():
         # ATT, event study
 
         fit = did2s_pyfixest(
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ 0 | state + year",
             second_stage="~i(rel_year, ref = -1.0)",
@@ -93,10 +95,10 @@ def test_did2s():
         )
 
         fit_r = did2s.did2s(
-            data=df_het,
+            data=data,
             yname="dep_var",
             first_stage=ro.Formula("~ 0 | state + year"),
-            second_stage=ro.Formula("~ i(rel_year, ref = c(-1, Inf))"),
+            second_stage=ro.Formula("~ i(rel_year, ref = c(-1))"),
             treatment="treat",
             cluster_var="state",
         )
@@ -110,7 +112,7 @@ def test_did2s():
     if True:
         # test event study with covariate in first stage
         fit = did2s_pyfixest(
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ X | state + year",
             second_stage="~i(rel_year, ref = -1.0)",
@@ -120,10 +122,10 @@ def test_did2s():
         )
 
         fit_r = did2s.did2s(
-            data=df_het,
+            data=data,
             yname="dep_var",
             first_stage=ro.Formula("~ X | state + year"),
-            second_stage=ro.Formula("~ i(rel_year, ref = c(-1, Inf))"),
+            second_stage=ro.Formula("~ i(rel_year, ref = c(-1))"),
             treatment="treat",
             cluster_var="state",
         )
@@ -137,7 +139,7 @@ def test_did2s():
     if True:
         # test event study with covariate in first stage and second stage
         fit = did2s_pyfixest(
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ X | state + year",
             second_stage="~ X + i(rel_year, ref = -1.0)",
@@ -147,10 +149,10 @@ def test_did2s():
         )
 
         fit_r = did2s.did2s(
-            data=df_het,
+            data=data,
             yname="dep_var",
             first_stage=ro.Formula("~ X | state + year"),
-            second_stage=ro.Formula("~ X + i(rel_year, ref = c(-1, Inf))"),
+            second_stage=ro.Formula("~ X + i(rel_year, ref = c(-1))"),
             treatment="treat",
             cluster_var="state",
         )
@@ -163,9 +165,9 @@ def test_did2s():
 
     if True:
         # binary non boolean treatment variable, just check that it runs
-        df_het["treat"] = df_het["treat"].astype(int)
+        data["treat"] = data["treat"].astype(int)
         fit = did2s_pyfixest(
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ X | state + year",
             second_stage="~ X + i(rel_year, ref = -1.0)",
@@ -175,16 +177,15 @@ def test_did2s():
         )
 
 
-def test_errors():
-    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+def test_errors(data):
 
     # test expected errors: treatment
 
     # boolean strings cannot be converted
-    df_het["treat"] = df_het["treat"].astype(str)
+    data["treat"] = data["treat"].astype(str)
     with pytest.raises(FactorEvaluationError):
         fit = did2s_pyfixest(
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ X | state + year",
             second_stage="~ X + i(rel_year)",
@@ -194,10 +195,10 @@ def test_errors():
         )
 
     rng = np.random.default_rng(12)
-    df_het["treat2"] = rng.choice([0, 1, 2], size=len(df_het))
+    data["treat2"] = rng.choice([0, 1, 2], size=len(data))
     with pytest.raises(FactorEvaluationError):
         fit = did2s_pyfixest(  # noqa: F841
-            df_het,
+            data,
             yname="dep_var",
             first_stage="~ X | state + year",
             second_stage="~ X + i(rel_year)",
@@ -210,11 +211,11 @@ def test_errors():
 def test_lpdid():
     """Test the lpdid estimator."""
     # test vs stata
-    df_het = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
-    df_het = df_het.astype(np.float64)
+    data = pd.read_stata("pyfixest/did/data/lpdidtestdata1.dta")
+    data = data.astype(np.float64)
 
     fit = lpdid(
-        df_het,
+        data,
         yname="Y",
         idname="unit",
         tname="time",
@@ -233,7 +234,7 @@ def test_lpdid():
     np.testing.assert_allclose(N[-1], 28709)
 
     fit = lpdid(
-        df_het,
+        data,
         yname="Y",
         idname="unit",
         tname="time",
@@ -250,25 +251,25 @@ def test_lpdid():
 
     # test vs R
 
-    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    data = pd.read_csv("pyfixest/did/data/data.csv")
 
     rng = np.random.default_rng(1231)
-    df_het["X"] = rng.normal(size=len(df_het))
+    data["X"] = rng.normal(size=len(data))
 
-    df_het.drop("treat", axis=1)
-    df_het.drop("rel_year", axis=1)
+    data.drop("treat", axis=1)
+    data.drop("rel_year", axis=1)
 
     fit = lpdid(
-        data=df_het, yname="dep_var", idname="unit", tname="year", gname="g", att=False
+        data=data, yname="dep_var", idname="unit", tname="year", gname="g", att=False
     )
     coefs = fit._coeftable["Estimate"].values
 
     # values obtained from R package lpdid
     # library(lpdid)
     # library(did2s)
-    # data(df_het) # could also just load df_het from pyfixest/did/data/df_het.csv
-    # df_het$rel_year <- ifelse(df_het$rel_year == Inf, -9999, df_het$rel_year)
-    # fit <- lpdid(df_het, window = c(-20, 20), y = "dep_var",
+    # data(data) # could also just load data from pyfixest/did/data/data.csv
+    # data$rel_year <- ifelse(data$rel_year == Inf, -9999, data$rel_year)
+    # fit <- lpdid(data, window = c(-20, 20), y = "dep_var",
     #          unit_index = "unit", time_index = "year",
     #          rel_time = "rel_year")
     # fit$coeftable$Estimate
