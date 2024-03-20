@@ -7,7 +7,6 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.estimation import feols
 
 pandas2ri.activate()
@@ -71,12 +70,6 @@ def test_i():
     #        "C(rel_year)[T.2.0]:treat should not be in the column names."
     #    )
 
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1="1.0")
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1=[1])
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1=[1, 2])
     with pytest.raises(AssertionError):
         feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, "a"])
 
