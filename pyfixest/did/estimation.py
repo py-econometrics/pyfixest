@@ -143,8 +143,6 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    i_ref1: Optional[Union[int, str, list]] = None,
-    i_ref2: Optional[Union[int, str, list]] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -163,12 +161,6 @@ def did2s(
         The name of the treatment variable.
     cluster : str
         The name of the cluster variable.
-    i_ref1 : int, str, list, optional
-        The reference value(s) for the first variable used with "i()" syntax in
-        the second stage formula. Default is None.
-    i_ref2 : int, str, list, optional
-        The reference value(s) for the second variable used with "i()" syntax in
-        the second stage formula. Default is None.
 
     Returns
     -------
@@ -195,10 +187,9 @@ def did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
-        second_stage="~i(rel_year)",
+        second_stage="~i(rel_year, ref=-1.0)",
         treatment="treat",
         cluster="state",
-        i_ref1=[-1.0, np.inf],
     )
 
     fit.tidy().head()
@@ -230,10 +221,10 @@ def did2s(
     assert second_stage[0] == "~", "Second stage must start with ~"
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
-    if "0" in second_stage or "-1" in second_stage:
+    if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):
         raise ValueError(
             """
-            The second stage formula should not contain '0' or '-1'. Note that
+            The second stage formula should not contain '+0' or '-1'. Note that
             the intercept is dropped automatically due to the presence of fixed
             effects in the first stage.
             """
@@ -247,8 +238,6 @@ def did2s(
         _first_stage=first_stage,
         _second_stage=second_stage,
         treatment=treatment,
-        i_ref1=i_ref1,
-        i_ref2=i_ref2,
     )
 
     vcov, _G = _did2s_vcov(
@@ -260,8 +249,6 @@ def did2s(
         first_u=first_u,
         second_u=second_u,
         cluster=cluster,
-        i_ref1=i_ref1,
-        i_ref2=i_ref2,
     )
 
     fit._vcov = vcov

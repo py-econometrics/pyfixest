@@ -58,10 +58,6 @@ class EmptyDesignMatrixError(Exception):  # noqa: D101
     pass
 
 
-class InvalidReferenceLevelError(Exception):  # noqa: D101
-    pass
-
-
 __all__ = [
     "FixedEffectInteractionError",
     "CovariateInteractionError",
@@ -78,5 +74,4 @@ __all__ = [
     "NonConvergenceError",
     "MatrixNotFullRankError",
     "EmptyDesignMatrixError",
-    "InvalidReferenceLevelError",
 ]

@@ -54,3 +54,6 @@ docs-clean:
 
 lint:
 	poetry run pre-commit run ruff --all-files
+
+debug:
+	python pyfixest/debug.py

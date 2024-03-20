@@ -7,7 +7,6 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.errors import InvalidReferenceLevelError
 from pyfixest.estimation.estimation import feols
 
 pandas2ri.activate()
@@ -23,66 +22,32 @@ def test_i():
 
     if (
         "C(rel_year)[T.1.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=1.0)._coefnames
+        in feols("dep_var~i(rel_year, ref = 1.0)", df_het)._coefnames
     ):
         raise AssertionError("C(rel_year)[T.1.0] should not be in the column names.")
     if (
         "C(rel_year)[T.-2.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=-2.0)._coefnames
+        in feols("dep_var~i(rel_year,ref=-2.0)", df_het)._coefnames
     ):
         raise AssertionError("C(rel_year)[T.-2.0] should not be in the column names.")
-    if (
-        "C(rel_year)[T.1.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError("C(rel_year)[T.1.0] should not be in the column names.")
-    if (
-        "C(rel_year)[T.2.0]"
-        in feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError("C(rel_year)[T.2.0] should not be in the column names.")
 
     if (
         "C(rel_year)[T.1.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=1.0)._coefnames
+        in feols("dep_var~i(rel_year, treat, ref=1.0)", df_het)._coefnames
     ):
         raise AssertionError(
             "C(rel_year)[T.1.0]:treat should not be in the column names."
         )
     if (
         "C(rel_year)[T.-2.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=-2.0)._coefnames
+        in feols("dep_var~i(rel_year, treat,ref=-2.0)", df_het)._coefnames
     ):
         raise AssertionError(
             "C(rel_year)[T.-2.0]:treat should not be in the column names."
         )
-    if (
-        "C(rel_year)[T.1.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError(
-            "C(rel_year)[T.1.0]:treat should not be in the column names."
-        )
-    if (
-        "C(rel_year)[T.2.0]:treat"
-        in feols("dep_var~i(rel_year, treat)", df_het, i_ref1=[1.0, 2.0])._coefnames
-    ):
-        raise AssertionError(
-            "C(rel_year)[T.2.0]:treat should not be in the column names."
-        )
 
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1="1.0")
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1=[1])
-    with pytest.raises(InvalidReferenceLevelError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1=[1, 2])
-    with pytest.raises(AssertionError):
-        feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, "a"])
-
-    # i_ref2 currently not supported
-    with pytest.raises(AssertionError):
-        feols("dep_var~i(rel_year, treat)", df_het, i_ref2="1.0")
+    with pytest.raises(ValueError):
+        feols("dep_var~i(rel_year, ref = [1.0, 'a'])", df_het)
 
 
 def test_i_vs_fixest():
@@ -105,20 +70,14 @@ def test_i_vs_fixest():
     )
 
     # with references
-    fit_py = feols("dep_var~i(treat)", df_het, i_ref1=False)
+    fit_py = feols("dep_var~i(treat, ref = False)", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(treat, ref = FALSE)"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
 
-    fit_py = feols("dep_var~i(rel_year)", df_het, i_ref1=1.0)
+    fit_py = feols("dep_var~i(rel_year, ref = 1.0)", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(rel_year, ref = c(1))"), df_het)
-    np.testing.assert_allclose(
-        fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-    )
-
-    fit_py = feols("dep_var~i(rel_year)", df_het, i_ref1=[1.0, 2.0])
-    fit_r = fixest.feols(ro.Formula("dep_var~i(rel_year, ref = c(1, 2))"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
@@ -140,20 +99,14 @@ def test_i_vs_fixest():
     )
 
     # with references
-    fit_py = feols("dep_var~i(treat) | year", df_het, i_ref1=False)
+    fit_py = feols("dep_var~i(treat,ref=False) | year", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(treat, ref = FALSE)|year"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
 
-    fit_py = feols("dep_var~i(rel_year) | year", df_het, i_ref1=1.0)
+    fit_py = feols("dep_var~i(rel_year,ref=1.0) | year", df_het)
     fit_r = fixest.feols(ro.Formula("dep_var~i(rel_year, ref = c(1))|year"), df_het)
-    np.testing.assert_allclose(
-        fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-    )
-
-    fit_py = feols("dep_var~i(rel_year) | year", df_het, i_ref1=[1.0, 2.0])
-    fit_r = fixest.feols(ro.Formula("dep_var~i(rel_year, ref = c(1, 2))|year"), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
@@ -183,7 +136,7 @@ def test_i_interacted_fixest():
 
     if True:
         # one reference
-        fit_py = feols("dep_var~i(state, year)  ", df_het, i_ref1=1)
+        fit_py = feols("dep_var~i(state, year,ref=1)  ", df_het)
         fit_r = fixest.feols(ro.Formula("dep_var~i(state, year, ref = 1)"), df_het)
         np.testing.assert_allclose(
             fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
@@ -191,26 +144,9 @@ def test_i_interacted_fixest():
 
     if True:
         # one reference and fixed effect
-        fit_py = feols("dep_var~i(state, year) | state ", df_het, i_ref1=1)
+        fit_py = feols("dep_var~i(state, year,ref=1) | state ", df_het)
         fit_r = fixest.feols(
             ro.Formula("dep_var~i(state, year, ref = 1) | state"), df_het
-        )
-        np.testing.assert_allclose(
-            fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-        )
-
-    if True:
-        # two references and no fixed effect
-        fit_py = feols("dep_var~i(state, year)  ", df_het, i_ref1=[1, 2])
-        fit_r = fixest.feols(ro.Formula("dep_var~i(state, year, ref = c(1,2))"), df_het)
-        np.testing.assert_allclose(
-            fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-        )
-
-        # two references and one fixed effect
-        fit_py = feols("dep_var~i(state, year) | state ", df_het, i_ref1=[1, 2])
-        fit_r = fixest.feols(
-            ro.Formula("dep_var~i(state, year, ref = c(1,2)) | state"), df_het
         )
         np.testing.assert_allclose(
             fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
