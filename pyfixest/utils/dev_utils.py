@@ -144,6 +144,7 @@ def _to_integer(x):
             """
         ) from e
 
+
 def _to_list(x):
     """
     Ensure that x is a list.

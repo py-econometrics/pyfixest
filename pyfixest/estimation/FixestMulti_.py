@@ -65,7 +65,7 @@ class FixestMulti:
         weights: Union[None, np.ndarray] = None,
         ssc: dict[str, str] = {},
         fixef_rm: str = "none",
-        drop_intercept: bool = False
+        drop_intercept: bool = False,
     ) -> None:
         """
         Prepare model for estimation.
@@ -120,8 +120,8 @@ class FixestMulti:
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
-        #self._fml_dict = fxst_fml.condensed_fml_dict
-        #self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
+        # self._fml_dict = fxst_fml.condensed_fml_dict
+        # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
         self._ssc_dict = ssc
         self._drop_singletons = _drop_singletons(fixef_rm)
 
@@ -191,8 +191,8 @@ class FixestMulti:
                     _icovars,
                     X_is_empty,
                 ) = model_matrix_fixest(
-                    #fml=fml,
-                    FixestFormula = FixestFormula,
+                    # fml=fml,
+                    FixestFormula=FixestFormula,
                     data=_data,
                     drop_singletons=_drop_singletons,
                     drop_intercept=_drop_intercept,
@@ -277,9 +277,7 @@ class FixestMulti:
 
                     na_separation = []
                     if fe is not None:
-                        na_separation = _check_for_separation(
-                            Y=Y, fe=fe, check="fe"
-                        )
+                        na_separation = _check_for_separation(Y=Y, fe=fe, check="fe")
                         if na_separation:
                             warnings.warn(
                                 f"{str(len(na_separation))} observations removed because of separation."
@@ -336,7 +334,7 @@ class FixestMulti:
                     na_index=na_index,
                 )
 
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
+                # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)

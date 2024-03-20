@@ -85,7 +85,7 @@ def test_iv_errors():
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
     # endogenous variable specified as covariate
-    #with pytest.raises(EndogVarsAsCovarsError):
+    # with pytest.raises(EndogVarsAsCovarsError):
     #    feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
     # test equivalence
     fit1 = feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
@@ -94,7 +94,6 @@ def test_iv_errors():
     fit3 = feols(fml="Y ~ X2 + Z1 | Z1  ~ X1", data=data)
     fit4 = feols(fml="Y ~ X2  | Z1  ~ X1", data=data)
     np.testing.assert_allclose(fit3.coef().values, fit4.coef().values)
-
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -131,7 +130,6 @@ def test_poisson_devpar_count():
     # under determined
     with pytest.raises(AssertionError):
         fepois(fml="Y ~ X1 | X4", data=data)
-
 
 
 def test_all_variables_multicollinear():

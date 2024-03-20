@@ -230,9 +230,7 @@ def feols(
     ```
 
     """
-    _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol
-    )
+    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)
 
     fixest = FixestMulti(data=data)
     fixest._prepare_estimation(
@@ -257,7 +255,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    drop_intercept: bool = False
+    drop_intercept: bool = False,
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -327,9 +325,7 @@ def fepois(
     """
     weights = None
 
-    _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol
-    )
+    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)
 
     fixest = FixestMulti(data=data)
 
@@ -354,9 +350,7 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(
-    fml, data, vcov, weights, ssc, fixef_rm, collin_tol
-):
+def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):

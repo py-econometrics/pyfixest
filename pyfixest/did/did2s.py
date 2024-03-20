@@ -125,7 +125,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    ):
+):
     """
     Estimate the two-step DID2S model.
 
@@ -264,7 +264,6 @@ def _did2s_vcov(
     FML2 = FixestFormulaParser(f"{yname} {second_stage}")
     FixestFormulaDict1 = FML1.FixestFormulaDict
     FixestFormulaDict2 = FML2.FixestFormulaDict
-
 
     _, X1, _, _, _, _, _, _, _, _ = model_matrix_fixest(
         FixestFormula=next(iter(FixestFormulaDict1.values()))[0],

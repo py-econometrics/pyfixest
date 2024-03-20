@@ -143,7 +143,7 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
-    ):
+):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
 

@@ -11,13 +11,12 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 def model_matrix_fixest(
-    #fml: str,
-
+    # fml: str,
     FixestFormula: FixestFormula,
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: Optional[str] = None,
-    drop_intercept=False
+    drop_intercept=False,
 ) -> tuple[
     pd.DataFrame,  # Y
     pd.DataFrame,  # X
@@ -105,12 +104,20 @@ def model_matrix_fixest(
 
     pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
 
-    fml_all = fml_second_stage if fml_first_stage is None else f"{fml_second_stage} + {fml_first_stage}"
+    fml_all = (
+        fml_second_stage
+        if fml_first_stage is None
+        else f"{fml_second_stage} + {fml_first_stage}"
+    )
 
     _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
 
     fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
-    fml_first_stage = re.sub(pattern, transform_i_to_C, fml_first_stage) if fml_first_stage is not None else fml_first_stage
+    fml_first_stage = (
+        re.sub(pattern, transform_i_to_C, fml_first_stage)
+        if fml_first_stage is not None
+        else fml_first_stage
+    )
 
     fval, data = _fixef_interactions(fval=fval, data=data)
     _is_iv = fml_first_stage is not None
@@ -214,6 +221,7 @@ def model_matrix_fixest(
         X_is_empty,
     )
 
+
 def _get_columns_to_drop(_list_of_ivars_dict, X):
 
     columns_to_drop = []
@@ -224,7 +232,7 @@ def _get_columns_to_drop(_list_of_ivars_dict, X):
             var2 = _i_ref.get("var2")
             ref = _i_ref.get("ref")
 
-            pattern = rf'\[T\.{ref}(?:\.0)?\]:{var2}'
+            pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
             if ref:
                 for column in X.columns:
                     if var1 in column and re.search(pattern, column):
@@ -239,6 +247,7 @@ def _check_ivars(_ivars, data):
         raise ValueError(
             f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
         )
+
 
 def transform_i_to_C(match):
     # Extracting the matched groups
@@ -255,6 +264,7 @@ def transform_i_to_C(match):
         # Case: i(X1) or i(X1,ref=1)
         base = f",contr.treatment(base={ref})" if ref else ""
         return f"C({var1}{base})"
+
 
 def _fixef_interactions(fval, data):
     """
@@ -296,9 +306,9 @@ def _get_ivars_dict(fml, pattern):
     if matches:
         for match in matches:
             match_dict = {}
-            if match.group('var1'):
+            if match.group("var1"):
                 match_dict["var1"] = match.group("var1")
-            if match.group('var2'):
+            if match.group("var2"):
                 match_dict["var2"] = match.group("var2")
             if match.group("ref"):
                 match_dict["ref"] = match.group("ref")
@@ -330,17 +340,32 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
     """
     if _list_of_ivars_dict:
 
-        _ivars = [(d.get('var1'),) if d.get('var2') is None else (d.get('var1'), d.get('var2')) for d in _list_of_ivars_dict]
+        _ivars = [
+            (
+                (d.get("var1"),)
+                if d.get("var2") is None
+                else (d.get("var1"), d.get("var2"))
+            )
+            for d in _list_of_ivars_dict
+        ]
 
         _icovars_set = set()
 
         for _ivar in _ivars:
             if len(_ivar) == 1:
-                _icovars_set.update([col for col in X.columns if f"C({_ivar[0]})" in col])
+                _icovars_set.update(
+                    [col for col in X.columns if f"C({_ivar[0]})" in col]
+                )
             if len(_ivar) == 2:
                 var1, var2 = _ivar
-                pattern = rf'C\({var1},.*\)\[.*\]:{var2}'
-                _icovars_set.update([match.group() for match in (re.search(pattern, x) for x in X.columns) if match])
+                pattern = rf"C\({var1},.*\)\[.*\]:{var2}"
+                _icovars_set.update(
+                    [
+                        match.group()
+                        for match in (re.search(pattern, x) for x in X.columns)
+                        if match
+                    ]
+                )
 
         _icovars = list(_icovars_set)
 

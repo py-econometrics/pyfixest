@@ -16,10 +16,12 @@ did2s = importr("did2s")
 stats = importr("stats")
 broom = importr("broom")
 
+
 @pytest.fixture
 def data():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     return df_het
+
 
 def test_event_study(data):
     """Test the event_study() function."""

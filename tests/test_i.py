@@ -82,7 +82,6 @@ def test_i_vs_fixest():
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
 
-
     # ------------------------------------------------------------------------ #
     # with fixed effects
 
@@ -111,7 +110,6 @@ def test_i_vs_fixest():
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
-
 
 
 def test_i_interacted_fixest():
@@ -153,4 +151,3 @@ def test_i_interacted_fixest():
         np.testing.assert_allclose(
             fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
         )
-

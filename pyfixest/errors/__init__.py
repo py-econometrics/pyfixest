@@ -58,7 +58,6 @@ class EmptyDesignMatrixError(Exception):  # noqa: D101
     pass
 
 
-
 __all__ = [
     "FixedEffectInteractionError",
     "CovariateInteractionError",

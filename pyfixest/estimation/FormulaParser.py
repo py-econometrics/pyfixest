@@ -6,8 +6,9 @@ from pyfixest.errors import (
     DuplicateKeyError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
-    InstrumentsAsCovarsError
+    InstrumentsAsCovarsError,
 )
+
 
 class FixestFormulaParser:
     """
@@ -46,16 +47,22 @@ class FixestFormulaParser:
         # part common to all estimations from a varying part with key of the
         # 'type' of variation, e.g. 'sw' or 'csw'.
         depvars_list = depvars.split("+")
-        covars_dict = _input_formula_to_dict(covars) # e.g. {'constant': [], 'csw': ['X1', 'X2']}
-        fevars_dict = _input_formula_to_dict(fevars) # e.g. {'constant': ['f1^f2']}
+        covars_dict = _input_formula_to_dict(
+            covars
+        )  # e.g. {'constant': [], 'csw': ['X1', 'X2']}
+        fevars_dict = _input_formula_to_dict(fevars)  # e.g. {'constant': ['f1^f2']}
         # Now parse all formula components in covars_dict, fevars_dict into lists
         # of formulas that can be used in the estimation.
         # E.g. {'constant': [], 'csw': ['X1', 'X2']} becomes ['X1', 'X1+X2']
         # and {'constant': ['f1^f2']} becomes ['f1^f2'].
-        covars_formulas_list = _dict_to_list_of_formulas(covars_dict) # evaluate self.covars to list: ['X1', 'X1+X2']
-        fevars_formula_list = _dict_to_list_of_formulas(fevars_dict) # ['f1^f2']
+        covars_formulas_list = _dict_to_list_of_formulas(
+            covars_dict
+        )  # evaluate self.covars to list: ['X1', 'X1+X2']
+        fevars_formula_list = _dict_to_list_of_formulas(fevars_dict)  # ['f1^f2']
 
-        self.condensed_fml_dict = collect_fml_dict(fevars_formula_list, depvars_list, covars_formulas_list)
+        self.condensed_fml_dict = collect_fml_dict(
+            fevars_formula_list, depvars_list, covars_formulas_list
+        )
 
         # now repeat for IV:
         self.is_iv = False
@@ -67,26 +74,34 @@ class FixestFormulaParser:
             endogvars_list = endogvars.split("+")
             instruments_dict = _input_formula_to_dict(instruments)
             instruments_formulas_list = _dict_to_list_of_formulas(instruments_dict)
-            self.condensed_fml_dict_iv = collect_fml_dict(fevars_formula_list, endogvars_list, instruments_formulas_list)
+            self.condensed_fml_dict_iv = collect_fml_dict(
+                fevars_formula_list, endogvars_list, instruments_formulas_list
+            )
 
         self.FixestFormulaDict = {}
         self.populate_fixest_formula_dict(
-            depvars_list = depvars_list,
+            depvars_list=depvars_list,
             covars_formulas_list=covars_formulas_list,
             fevars_formula_list=fevars_formula_list,
             endogvars_list=endogvars_list,
-            instruments_formulas_list=instruments_formulas_list
+            instruments_formulas_list=instruments_formulas_list,
         )
 
-
-    def add_to_FixestFormulaDict(self, depvar: str, covar: str, fval: str, endogvar: Optional[str] = None, instrument: Optional[str] = None):
+    def add_to_FixestFormulaDict(
+        self,
+        depvar: str,
+        covar: str,
+        fval: str,
+        endogvar: Optional[str] = None,
+        instrument: Optional[str] = None,
+    ):
 
         FixestFML = FixestFormula(
             depvar=depvar,
             covar=covar,
             fval=fval,
             endogvars=endogvar,
-            instruments=instrument
+            instruments=instrument,
         )
         FixestFML.get_first_and_second_stage_fml()
         FixestFML.get_fml()
@@ -95,13 +110,28 @@ class FixestFormulaParser:
             self.FixestFormulaDict[fval] = []
         self.FixestFormulaDict[fval].append(FixestFML)
 
-    def populate_fixest_formula_dict(self, depvars_list, covars_formulas_list, fevars_formula_list, endogvars_list, instruments_formulas_list):
+    def populate_fixest_formula_dict(
+        self,
+        depvars_list,
+        covars_formulas_list,
+        fevars_formula_list,
+        endogvars_list,
+        instruments_formulas_list,
+    ):
 
         if self.is_iv:
-            for depvar, covar, fval, endogvar, instrument in product(depvars_list, covars_formulas_list, fevars_formula_list, endogvars_list, instruments_formulas_list):
+            for depvar, covar, fval, endogvar, instrument in product(
+                depvars_list,
+                covars_formulas_list,
+                fevars_formula_list,
+                endogvars_list,
+                instruments_formulas_list,
+            ):
                 self.add_to_FixestFormulaDict(depvar, covar, fval, endogvar, instrument)
         else:
-            for depvar, covar, fval in product(depvars_list, covars_formulas_list, fevars_formula_list):
+            for depvar, covar, fval in product(
+                depvars_list, covars_formulas_list, fevars_formula_list
+            ):
                 self.add_to_FixestFormulaDict(depvar, covar, fval)
 
 
@@ -118,12 +148,11 @@ class FixestFormula:
     def get_first_and_second_stage_fml(self):
 
         self.fml_second_stage, self.fml_first_stage = _get_first_and_second_stage_fml(
-                depvar = self._depvar,
-                covar = self._covar,
-                fval = self._fval,
-                endogvar = self._endogvars,
-                instruments = self._instruments,
-
+            depvar=self._depvar,
+            covar=self._covar,
+            fval=self._fval,
+            endogvar=self._endogvars,
+            instruments=self._instruments,
         )
 
     def get_fml(self):
@@ -147,7 +176,6 @@ class FixestFormula:
 
         self.fml = fml.replace(" ", "")
 
-
     def check_syntax(self):
 
         instruments = self._instruments
@@ -155,7 +183,11 @@ class FixestFormula:
 
         if instruments is not None:
 
-            instruments_as_covars = [element for element in instruments.split("+") if element in covars.split("+")]
+            instruments_as_covars = [
+                element
+                for element in instruments.split("+")
+                if element in covars.split("+")
+            ]
 
             if instruments_as_covars:
                 raise InstrumentsAsCovarsError(
@@ -164,8 +196,6 @@ class FixestFormula:
                     covariates in the first part of the three-part formula. This is not allowed.
                     """
                 )
-
-
 
 
 def _get_first_and_second_stage_fml(
@@ -185,7 +215,6 @@ def _get_first_and_second_stage_fml(
     fml_first_stage = f"{fml_iv}+{covar}-{endogvar} + 1" if endogvar else None
 
     return fml_second_stage, fml_first_stage
-
 
 
 def get_fml(
@@ -246,6 +275,7 @@ def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
         fml_dict[fevar] = res
 
     return fml_dict
+
 
 def deparse_fml(fml):
 
