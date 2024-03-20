@@ -6,11 +6,6 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 
-#from formulaic.errors import FactorEvaluationError
-from pyfixest.errors import (
-    EndogVarsAsCovarsError,
-    InstrumentsAsCovarsError,
-)
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
 
@@ -101,11 +96,11 @@ def model_matrix_fixest(
     """
     # check if weights are valid
 
+    FixestFormula.check_syntax()
 
     fml_second_stage = FixestFormula.fml_second_stage
     fml_first_stage = FixestFormula.fml_first_stage
     fval = FixestFormula._fval
-    #_check_syntax(covars, instruments, endogvars)
     _check_weights(weights, data)
 
     pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
@@ -218,24 +213,6 @@ def model_matrix_fixest(
         _icovars,
         X_is_empty,
     )
-
-
-def _check_syntax(covars, instruments, endogvars):
-
-    if instruments is not None:
-        if any(
-            element in covars.split("+") for element in endogvars.split("+")
-            ):
-            raise EndogVarsAsCovarsError(
-                "Endogenous variables are specified as covariates in the first part of the three-part formula. This is not allowed."
-                )
-
-        if any(
-            element in covars.split("+") for element in instruments.split("+")
-            ):
-            raise InstrumentsAsCovarsError(
-                "Instruments are specified as covariates in the first part of the three-part formula. This is not allowed."
-            )
 
 def _get_columns_to_drop(_list_of_ivars_dict, X):
 

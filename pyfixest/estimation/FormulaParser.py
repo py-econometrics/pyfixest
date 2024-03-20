@@ -6,8 +6,8 @@ from pyfixest.errors import (
     DuplicateKeyError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
+    InstrumentsAsCovarsError
 )
-
 
 class FixestFormulaParser:
     """
@@ -146,6 +146,25 @@ class FixestFormula:
             fml += fml_iv
 
         self.fml = fml.replace(" ", "")
+
+
+    def check_syntax(self):
+
+        instruments = self._instruments
+        covars = self._covar
+
+        if instruments is not None:
+
+            instruments_as_covars = [element for element in instruments.split("+") if element in covars.split("+")]
+
+            if instruments_as_covars:
+                raise InstrumentsAsCovarsError(
+                    f"""
+                    The instrument(s) {",".join(instruments_as_covars)} are specified as
+                    covariates in the first part of the three-part formula. This is not allowed.
+                    """
+                )
+
 
 
 
