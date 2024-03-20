@@ -112,9 +112,9 @@ def model_matrix_fixest(
 
     _list_of_ivars_dict = _get_ivars_dict(fml_all, pattern)
 
-    fml_second_stage = re.sub(pattern, transform_i_to_C, fml_second_stage)
+    fml_second_stage = re.sub(pattern, _transform_i_to_C, fml_second_stage)
     fml_first_stage = (
-        re.sub(pattern, transform_i_to_C, fml_first_stage)
+        re.sub(pattern, _transform_i_to_C, fml_first_stage)
         if fml_first_stage is not None
         else fml_first_stage
     )
@@ -249,7 +249,7 @@ def _check_ivars(_ivars, data):
         )
 
 
-def transform_i_to_C(match):
+def _transform_i_to_C(match):
     # Extracting the matched groups
     var1 = match.group("var1")
     var2 = match.group("var2")

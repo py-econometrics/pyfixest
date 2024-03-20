@@ -4,9 +4,9 @@ from typing import Optional
 
 from pyfixest.errors import (
     DuplicateKeyError,
+    InstrumentsAsCovarsError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
-    InstrumentsAsCovarsError,
 )
 
 
@@ -40,7 +40,7 @@ class FixestFormulaParser:
             None
 
         """
-        depvars, covars, fevars, endogvars, instruments = deparse_fml(fml)
+        depvars, covars, fevars, endogvars, instruments = _deparse_fml(fml)
 
         # Parse all individual formula components that allow for
         # multiple estimations into dictionaries that separate a 'constant'
@@ -95,7 +95,37 @@ class FixestFormulaParser:
         endogvar: Optional[str] = None,
         instrument: Optional[str] = None,
     ):
+        """
+        Add a FixestFormula object to the FixestFormulaDict.
 
+        This method initializes a FixestFormula object with the specified
+        dependent variable, covariates, fixed effect variable, optional endogenous
+        variable, and optional instrument. It then generates both first and
+        second stage formulas, as well as the combined formula,
+        and adds the FixestFormula object to the FixestFormulaDict
+        under the key specified by the `fval` parameter.
+        If the `fval` key does not exist in the dictionary, it is created.
+
+        Parameters
+        ----------
+        depvar : str
+            The name of the dependent variable.
+        covar : str
+            The covariates included in the model, formatted as a string. E.g. X1+X2.
+        fval : str
+            The fixed effect variable included in the model.
+        endogvar : Optional[str], optional
+            The endogenous variable, if applicable.
+        instrument : Optional[str], optional
+            The instrument for the endogenous variable, if applicable.
+
+        Notes
+        -----
+        - This method does not return any value.
+        - It updates the `FixestFormulaDict` attribute of the instance by
+          appending a new FixestFormula object or creating a new list for
+          a previously unused `fval`.
+        """
         FixestFML = FixestFormula(
             depvar=depvar,
             covar=covar,
@@ -118,7 +148,41 @@ class FixestFormulaParser:
         endogvars_list,
         instruments_formulas_list,
     ):
+        """
+        Populate the FixestFormulaDict with FixestFormula objects.
 
+        Iterates through all combinations of provided lists of dependent
+        variables, covariate formulas, fixed effect variables, endogenous
+        variables (if applicable), and instrument formulas (if applicable)
+        to populate the `FixestFormulaDict` with corresponding FixestFormula
+        objects. This method supports models with and without instrumental
+        variables (IV).
+
+        Parameters
+        ----------
+        depvars_list : list
+            A list of dependent variable names.
+        covars_formulas_list : list
+            A list of covariate formulas.
+        fevars_formula_list : list
+            A list of fixed effect variable formulas.
+        endogvars_list : list
+            A list of endogenous variables, used if the model is an IV model.
+        instruments_formulas_list : list
+            A list of instrument formulas, used if the model is an IV model.
+
+        Notes
+        -----
+        - This method does not return any value.
+        - It conditionally processes combinations based on whether the model is
+          identified as an IV model, indicated by the `is_iv` attribute of the
+          instance.
+        - For IV models, it combines variables from `depvars_list`,
+          `covars_formulas_list`, `fevars_formula_list`,
+          `endogvars_list`, and `instruments_formulas_list`.
+        - For non-IV models, it combines variables from `depvars_list`,
+          `covars_formulas_list`, and `fevars_formula_list` only.
+        """
         if self.is_iv:
             for depvar, covar, fval, endogvar, instrument in product(
                 depvars_list,
@@ -136,6 +200,43 @@ class FixestFormulaParser:
 
 
 class FixestFormula:
+    """
+    A class with information confainted in model formulas.
+
+    Attributes
+    ----------
+    _depvar : str
+        The dependent variable in the model.
+    _covar : str
+        The covariates in the model, separated by '+'.
+    _fval : str
+        An optional fixed effect variable included in the model.
+        Separated by "+". "0" if no fixed effect in th emodel.
+    _endogvars : str, optional
+        Endogenous variables in the model, separated by '+'.
+    _instruments : str, optional
+        Instrumental variables for the endogenous variables, separated by '+'.
+
+    Methods
+    -------
+    get_first_and_second_stage_fml(self):
+        Assigns first and second stage formulas for IV models
+        to instance variables.
+
+    get_fml(self):
+        Constructs and stores a formula based on instance attributes.
+
+    check_syntax(self):
+        Validates the formula by checking if instruments are incorrectly
+        specified as covariates.
+
+    Raises
+    ------
+    InstrumentsAsCovarsError
+        If any instrumental variables are also specified as covariates
+        in the model formula.
+
+    """
 
     def __init__(self, depvar, covar, fval, endogvars, instruments):
 
@@ -146,7 +247,7 @@ class FixestFormula:
         self._instruments = instruments
 
     def get_first_and_second_stage_fml(self):
-
+        """Assign first and second stage formulas."""
         self.fml_second_stage, self.fml_first_stage = _get_first_and_second_stage_fml(
             depvar=self._depvar,
             covar=self._covar,
@@ -156,7 +257,40 @@ class FixestFormula:
         )
 
     def get_fml(self):
+        """
+        Construct and stores a Wilkinson formula..
 
+        This method combines dependent variable, covariates, endogenous variables,
+        instrumentalvariables, and an optional fixed value to construct a statistical
+        model formula. This formula is then stored in the instance's `fml` attribute.
+        The general structure of the formula is
+        `depvar ~ covar | fval | endogvars ~ instruments`.
+        Spaces in the formula are removed before storing.
+
+        Attributes Used
+        ---------------
+        _depvar : str
+            The dependent variable in the model.
+        _covar : str
+            The covariates in the model, separated by '+'.
+        _fval : str
+            An optional fixed value to be included in the model.
+            If set to "0", it is ignored.
+        _endogvars : str, optional
+            Endogenous variables in the model, separated by '+'.
+            If `None`, this part of the formula is omitted.
+        _instruments : str, optional
+            Instrumental variables in the model, separated by '+'.
+            Relevant only if `_endogvars` is not `None`.
+
+        Notes
+        -----
+        - The method does not return any value but updates the instance's `fml`
+          attribute with the constructed formula.
+        - This method assumes that `_depvar`, `_covar`, and `_fval` are always
+          provided and treats `_endogvars` and `_instruments` as optional components
+          of the formula.
+        """
         depvar = self._depvar
         covar = self._covar
         fval = self._fval
@@ -168,16 +302,38 @@ class FixestFormula:
 
         fml_fval = f"| {fval}" if fval != "0" else None
 
-        if fml_fval is not None:
-            fml += fml_fval
-
         if fml_iv is not None:
             fml += fml_iv
+
+        if fml_fval is not None:
+            fml += fml_fval
 
         self.fml = fml.replace(" ", "")
 
     def check_syntax(self):
+        """
+        Check if any instrument variables are mistakenly specified as covariates.
 
+        This method processes the instrument and covariate strings stored in
+        the instance's `_instruments` and `_covar` attributes, respectively.
+        It splits these strings by '+' to identify individual variables. If any
+        variable is found to be listed as both an instrument and a covariate,
+        an `InstrumentsAsCovarsError` is raised, indicating that
+        instrument variables cannot be specified as covariates.
+
+        Raises
+        ------
+        InstrumentsAsCovarsError
+            If any instrument variables are also specified as covariates.
+            The error message includes the names of the variables causing
+            this conflict.
+
+        Notes
+        -----
+        - The `_instruments` and `_covar` attributes must be strings containing variable
+          names separated by '+'. If either attribute is `None`, this check is skipped.
+        - This method does not return any value but raises an error if the check fails.
+        """
         instruments = self._instruments
         covars = self._covar
 
@@ -205,7 +361,31 @@ def _get_first_and_second_stage_fml(
     endogvar,
     instruments,
 ):
+    """
+    Generate first and second stage formulas for OLS and IV regression models.
 
+    Parameters
+    ----------
+    depvar : str
+        Dependent variable.
+    covar : str
+        Covariates.
+    fval : str, optional
+        Fixed effect variable, defaults to "0" if None.
+    endogvar : str, optional
+        Endogenous variable.
+    instruments : str
+        Instrumental variables.
+
+    Returns
+    -------
+    tuple
+        (Second stage formula, First stage formula).
+
+    Notes
+    -----
+    First stage formula is None if `endogvar` is not provided.
+    """
     if fval is None:
         fval = "0"
 
@@ -217,52 +397,23 @@ def _get_first_and_second_stage_fml(
     return fml_second_stage, fml_first_stage
 
 
-def get_fml(
-    depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None
-) -> str:
+def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
     """
-    Stitches together the formula string for the regression.
+    Create a nested dictionary mapping fixed effects to depvar-covariate formulas.
 
     Parameters
     ----------
-    depvar : str
-        The dependent variable.
-    covar : str
-        The covariates. E.g. "X1+X2+X3"
-    fval : str
-        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-    endogvars : str, optional
-        The endogenous variables.
-    instruments : str, optional
-        The instruments. E.g. "Z1+Z2+Z3"
+    fevars_formula : list
+        Fixed effects variables formulas.
+    depvars_dict : dict
+        Mapping of dependent variables to their properties.
+    covars_formula : list
+        Covariate formulas.
 
     Returns
     -------
-    str
-        The formula string for the regression.
-    """
-    fml = f"{depvar} ~ {covar}"
-    fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
-
-    fml_fval = f"| {fval}" if fval != "0" else None
-
-    if fml_fval is not None:
-        fml += fml_fval
-
-    if fml_iv is not None:
-        fml += fml_iv
-
-    fml = fml.replace(" ", "")
-
-    return fml
-
-
-def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
-    """
-    Condense the formulas into a nested dictionary.
-
-    Parameters
-    ----------
+    dict
+        Nested dict of fevar to depvar to list of covariate formulas.
     """
     fml_dict = {}
 
@@ -277,8 +428,54 @@ def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
     return fml_dict
 
 
-def deparse_fml(fml):
+def _deparse_fml(fml):
+    """
+    Decompose a formula string into its constituent parts.
 
+    This function takes a formula string and splits it into its components based on
+    the presence of '~' and '|' characters. The formula string is expected to follow
+    the format 'depvars ~ covars | fevars | endogvars ~ instruments'.
+
+    Parameters
+    ----------
+    fml : str
+        The formula string to be decomposed.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the decomposed parts of the formula as strings:
+        (depvars, covars, fevars,endogvars, instruments).
+        `endogvars` and `instruments` may be `None` if not applicable.
+
+    Raises
+    ------
+    UnderDeterminedIVError
+        If the number of instruments is less than the number of endogenous variables,
+        indicating an underdetermined IV system.
+
+    Notes
+    -----
+    - The function cleans the formula string of spaces before processing.
+    - Fixed effects variables are set to "0" if not explicitly provided in
+      the formula.
+    - The function automatically adds endogenous variables to the covariates
+      list, a behavior indicated by the comment on potentially misleading
+      naming conventions.
+
+    Examples
+    --------
+    ```{python}
+    fml = "y ~ x1+x2|z1+z2|w1 ~ w2+w3"
+    _deparse_fml(fml)
+    ('y', 'w1+x1+x2', 'z1+z2', 'w1', 'w2+w3')
+    ```
+
+    Here, `y` is the dependent variable, `x1+x2` are the covariates
+    (with `w1` added due to it being an endogenous variable), `z1+z2` are
+    the fixed effects variables, and `w1` is the endogenous
+    variable with `w2+w3` as its instruments.
+    """
     # Clean up the formula string
     fml = "".join(fml.split())
 
@@ -409,7 +606,7 @@ def _input_formula_to_dict(x):
 
 def _dict_to_list_of_formulas(unpacked):
     """
-    Generate a list of formula strings from a dictionary of "unpacked" formula variables.
+    Generate a list of formula strings from a dictionary of "unpacked" fml vars.
 
     Given a dictionary of "unpacked" formula variables, returns a string containing
     formulas. An "unpacked" formula is a deparsed formula that allows for multiple

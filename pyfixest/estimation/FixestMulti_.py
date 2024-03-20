@@ -13,7 +13,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _polars_to_pandas, _to_list
+from pyfixest.utils.dev_utils import _polars_to_pandas
 
 
 class FixestMulti:
@@ -156,7 +156,6 @@ class FixestMulti:
         -------
             None
         """
-
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
@@ -366,7 +365,6 @@ class FixestMulti:
         Returns:
             None
         """
-
         if len(self.all_fitted_models) > 1:
             self._is_multiple_estimation = True
             if self._is_iv:
@@ -646,7 +644,6 @@ def get_fml(
     str
         The formula string for the regression.
     """
-
     fml = f"{depvar} ~ {covar}"
     fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
 

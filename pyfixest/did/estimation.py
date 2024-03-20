@@ -161,6 +161,7 @@ def did2s(
         The name of the treatment variable.
     cluster : str
         The name of the cluster variable.
+
     Returns
     -------
     object

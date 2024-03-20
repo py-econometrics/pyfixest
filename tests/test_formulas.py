@@ -1,6 +1,6 @@
 from pyfixest.estimation.FormulaParser import (
-    _find_multiple_estimation_syntax,
     _dict_to_list_of_formulas,
+    _find_multiple_estimation_syntax,
     _input_formula_to_dict,
 )
 

@@ -4,7 +4,6 @@ import pytest
 
 from pyfixest.errors import (
     DuplicateKeyError,
-    EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
     MultiEstNotSupportedError,
     NanInClusterVarError,

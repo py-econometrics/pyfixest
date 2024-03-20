@@ -25,7 +25,6 @@ def data():
 
 def test_event_study(data):
     """Test the event_study() function."""
-
     fit_did2s = event_study(
         data=data,
         yname="dep_var",
@@ -54,7 +53,6 @@ def test_event_study(data):
 
 def test_did2s(data):
     """Test the did2s() function."""
-
     rng = np.random.default_rng(12345)
     data["X"] = rng.normal(size=len(data))
 

@@ -146,9 +146,6 @@ def _to_integer(x):
 
 
 def _to_list(x):
-    """
-    Ensure that x is a list.
-    """
     if x is not None and not isinstance(x, list):
         return [x]
     return x
