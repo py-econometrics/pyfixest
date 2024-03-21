@@ -5,10 +5,12 @@ import pytest
 from pyfixest.errors import (
     DuplicateKeyError,
     InstrumentsAsCovarsError,
+    EndogVarsAsCovarsError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
+    FeatureDeprecationError,
 )
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
@@ -84,15 +86,8 @@ def test_iv_errors():
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
     # endogenous variable specified as covariate
-    # with pytest.raises(EndogVarsAsCovarsError):
-    #    feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
-    # test equivalence
-    fit1 = feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
-    fit2 = feols(fml="Y ~ 1 | Z1  ~ X1", data=data)
-    np.testing.assert_allclose(fit1.coef().values, fit2.coef().values)
-    fit3 = feols(fml="Y ~ X2 + Z1 | Z1  ~ X1", data=data)
-    fit4 = feols(fml="Y ~ X2  | Z1  ~ X1", data=data)
-    np.testing.assert_allclose(fit3.coef().values, fit4.coef().values)
+    with pytest.raises(EndogVarsAsCovarsError):
+       feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -305,3 +300,12 @@ def test_errors_confint():
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
         fit.confint(alpha=0.5, keep=["abababa"])
+
+
+def test_deprecation_errors():
+
+    data = get_data()
+    with pytest.raises(FeatureDeprecationError):
+        feols("Y ~ i(f1)", data, i_ref1 = 1)
+    with pytest.raises(FeatureDeprecationError):
+        fepois("Y ~ i(f1)", data, i_ref1 = 1)
