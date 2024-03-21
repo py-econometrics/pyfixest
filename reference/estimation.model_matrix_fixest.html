@@ -306,7 +306,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.estimation.model_matrix_fixest" class="level1">
 <h1>estimation.model_matrix_fixest</h1>
-<p><code>estimation.model_matrix_fixest(fml, data, drop_singletons=False, weights=None, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
+<p><code>estimation.model_matrix_fixest(FixestFormula, data, drop_singletons=False, weights=None, drop_intercept=False)</code></p>
 <p>Create model matrices for fixed effects estimation.</p>
 <p>This function processes the data and then calls <code>formulaic.Formula.get_model_matrix()</code> to create the model matrices.</p>
 <section id="parameters" class="level2">
@@ -362,18 +362,6 @@ ul.task-list li input[type="checkbox"] {
 <td>bool</td>
 <td>Whether to drop the intercept from the model matrix. Default is False. If True, the intercept is dropped ex post from the model matrix created by formulaic.</td>
 <td><code>False</code></td>
-</tr>
-<tr class="odd">
-<td><code>i_ref1</code></td>
-<td>str or list</td>
-<td>The reference level for the first variable in the i() syntax.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>i_ref2</code></td>
-<td>str or list</td>
-<td>The reference level for the second variable in the i() syntax.</td>
-<td><code>None</code></td>
 </tr>
 </tbody>
 </table>

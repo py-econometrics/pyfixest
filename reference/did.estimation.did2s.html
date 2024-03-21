@@ -357,16 +357,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster, i_ref1=None, i_ref2=None)</code></p>
+<p><code>did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster)</code></p>
 <p>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
-<col style="width: 9%">
 <col style="width: 14%">
-<col style="width: 68%">
-<col style="width: 7%">
+<col style="width: 23%">
+<col style="width: 50%">
+<col style="width: 11%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -413,18 +413,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>The name of the cluster variable.</td>
 <td><em>required</em></td>
 </tr>
-<tr class="odd">
-<td><code>i_ref1</code></td>
-<td>(int, str, list)</td>
-<td>The reference value(s) for the first variable used with “i()” syntax in the second stage formula. Default is None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td><code>i_ref2</code></td>
-<td>(int, str, list)</td>
-<td>The reference value(s) for the second variable used with “i()” syntax in the second stage formula. Default is None.</td>
-<td><code>None</code></td>
-</tr>
 </tbody>
 </table>
 </section>
@@ -451,7 +439,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="675e576c" class="cell" data-execution_count="1">
+<div id="aa730dfa" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s</span>
@@ -461,7 +449,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="XUMEM3"></div>
+            <div id="hpEPNL"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -485,9 +473,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("XUMEM3").appendChild(div);
+                        document.getElementById("hpEPNL").appendChild(div);
                     };
-                    var e = document.getElementById("XUMEM3");
+                    var e = document.getElementById("hpEPNL");
                     e.appendChild(script);
                 })()
             </script>
@@ -612,19 +600,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>In a first step, we estimate a classical event study model:</p>
-<div id="1a21a6ae" class="cell" data-execution_count="2">
+<div id="9489aa44" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year)"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year, ref=-1.0)"</span>,</span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span>[<span class="op">-</span><span class="fl">1.0</span>, np.inf],</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 <div>
@@ -653,7 +640,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">C(rel_year,contr.treatment(base=-1.0))[T.-20.0]</td>
+<td data-quarto-table-cell-role="th">C(rel_year, contr.treatment(base=-1.0))[T.-20.0]</td>
 <td>-0.058226</td>
 <td>0.035809</td>
 <td>-1.626011</td>
@@ -662,7 +649,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>0.011960</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">C(rel_year,contr.treatment(base=-1.0))[T.-19.0]</td>
+<td data-quarto-table-cell-role="th">C(rel_year, contr.treatment(base=-1.0))[T.-19.0]</td>
 <td>-0.006032</td>
 <td>0.030341</td>
 <td>-0.198816</td>
@@ -671,7 +658,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>0.053436</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">C(rel_year,contr.treatment(base=-1.0))[T.-18.0]</td>
+<td data-quarto-table-cell-role="th">C(rel_year, contr.treatment(base=-1.0))[T.-18.0]</td>
 <td>-0.006152</td>
 <td>0.035094</td>
 <td>-0.175310</td>
@@ -680,7 +667,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>0.062632</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">C(rel_year,contr.treatment(base=-1.0))[T.-17.0]</td>
+<td data-quarto-table-cell-role="th">C(rel_year, contr.treatment(base=-1.0))[T.-17.0]</td>
 <td>-0.012533</td>
 <td>0.024834</td>
 <td>-0.504689</td>
@@ -689,7 +676,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>0.036141</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">C(rel_year,contr.treatment(base=-1.0))[T.-16.0]</td>
+<td data-quarto-table-cell-role="th">C(rel_year, contr.treatment(base=-1.0))[T.-16.0]</td>
 <td>-0.034698</td>
 <td>0.029806</td>
 <td>-1.164128</td>
@@ -705,19 +692,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can also inspect the model visually:</p>
-<div id="167b6be4" class="cell" data-execution_count="3">
+<div id="ea25b997" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="fgILIw"></div>
+   <div id="zhc72o"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
 "data":{
-"Model":["dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)","dep_var_hat~i(rel_year)"],
-"Coefficient":["C(rel_year,contr.treatment(base=-1.0))[T.-20.0]","C(rel_year,contr.treatment(base=-1.0))[T.-19.0]","C(rel_year,contr.treatment(base=-1.0))[T.-18.0]","C(rel_year,contr.treatment(base=-1.0))[T.-17.0]","C(rel_year,contr.treatment(base=-1.0))[T.-16.0]","C(rel_year,contr.treatment(base=-1.0))[T.-15.0]","C(rel_year,contr.treatment(base=-1.0))[T.-14.0]","C(rel_year,contr.treatment(base=-1.0))[T.-13.0]","C(rel_year,contr.treatment(base=-1.0))[T.-12.0]","C(rel_year,contr.treatment(base=-1.0))[T.-11.0]","C(rel_year,contr.treatment(base=-1.0))[T.-10.0]","C(rel_year,contr.treatment(base=-1.0))[T.-9.0]","C(rel_year,contr.treatment(base=-1.0))[T.-8.0]","C(rel_year,contr.treatment(base=-1.0))[T.-7.0]","C(rel_year,contr.treatment(base=-1.0))[T.-6.0]","C(rel_year,contr.treatment(base=-1.0))[T.-5.0]","C(rel_year,contr.treatment(base=-1.0))[T.-4.0]","C(rel_year,contr.treatment(base=-1.0))[T.-3.0]","C(rel_year,contr.treatment(base=-1.0))[T.-2.0]","C(rel_year,contr.treatment(base=-1.0))[T.0.0]","C(rel_year,contr.treatment(base=-1.0))[T.1.0]","C(rel_year,contr.treatment(base=-1.0))[T.2.0]","C(rel_year,contr.treatment(base=-1.0))[T.3.0]","C(rel_year,contr.treatment(base=-1.0))[T.4.0]","C(rel_year,contr.treatment(base=-1.0))[T.5.0]","C(rel_year,contr.treatment(base=-1.0))[T.6.0]","C(rel_year,contr.treatment(base=-1.0))[T.7.0]","C(rel_year,contr.treatment(base=-1.0))[T.8.0]","C(rel_year,contr.treatment(base=-1.0))[T.9.0]","C(rel_year,contr.treatment(base=-1.0))[T.10.0]","C(rel_year,contr.treatment(base=-1.0))[T.11.0]","C(rel_year,contr.treatment(base=-1.0))[T.12.0]","C(rel_year,contr.treatment(base=-1.0))[T.13.0]","C(rel_year,contr.treatment(base=-1.0))[T.14.0]","C(rel_year,contr.treatment(base=-1.0))[T.15.0]","C(rel_year,contr.treatment(base=-1.0))[T.16.0]","C(rel_year,contr.treatment(base=-1.0))[T.17.0]","C(rel_year,contr.treatment(base=-1.0))[T.18.0]","C(rel_year,contr.treatment(base=-1.0))[T.19.0]","C(rel_year,contr.treatment(base=-1.0))[T.20.0]"],
-"Estimate":[-0.05822583123897514,-0.00603221732066148,-0.006152342798184045,-0.012533281423170145,-0.03469759575835955,0.03782822911704116,2.131551080240848E-4,-0.001126732136243905,0.02653016582736613,-0.02684165619610552,0.007378430125950474,0.002339766828174979,0.009000046824501586,0.03275229921071828,2.5898768543797723E-4,-0.03932609663936738,0.00563043604808311,0.024642896748837257,0.0011694580442883796,1.3730783362807615,1.602102099215368,1.6657197999639688,1.7874633607018418,1.9149127581340715,2.059203329407784,2.147498951693235,2.2340156176588626,2.3275664995343,2.3463791279279325,2.501338353651892,2.553442440691899,2.60440295572619,2.5785087342838495,2.7234332919385382,2.9097391719780377,2.8597896010903003,2.9084076146429667,2.8741426256232145,2.8832716967009673,2.9119654644504394],
-"2.5%":[-0.1284120087387008,-0.06550049115087159,-0.07493711298021902,-0.06120768517607929,-0.09311711156334004,-0.025495390101903465,-0.07125403467904004,-0.05398936876465926,-0.03741495644974506,-0.10584306963205822,-0.038256457383576706,-0.04116796485249551,-0.03643119004885258,-0.015536976741422667,-0.039086686860295435,-0.08535189821302805,-0.03330702681857267,-0.01710956913171403,-0.04801602014026123,1.2955886226740634,1.5030995264186366,1.5769579264766571,1.6884147341467193,1.839404826087053,1.9763795867308886,2.0531688656435008,2.146700607510345,2.244984099652176,2.2635821134549663,2.417336377220213,2.429880974801347,2.465801310129224,2.4348096215638173,2.5982728450730543,2.773330641389642,2.72922498907896,2.7939655261353082,2.7193726339614406,2.7402493355336035,2.7768018404602985],
-"97.5%":[0.011960346260750515,0.05343605650954863,0.06263242738385094,0.036141122329739,0.023721920046620937,0.10115184833598578,0.0716803448950882,0.051735904492171456,0.09047528810447732,0.05215975723984719,0.05301331763547766,0.04584749850884547,0.05443128369785574,0.08104157516285923,0.03960466223117139,0.006699704934293282,0.04456789891473889,0.06639536262938854,0.050354936228837986,1.4505680498874596,1.7011046720120995,1.7544816734512805,1.8865119872569642,1.99042069018109,2.142027072084679,2.2418290377429693,2.32133062780738,2.4101488994164244,2.4291761424008986,2.5853403300835707,2.677003906582451,2.743004601323156,2.7222078470038817,2.848593738804022,3.0461477025664334,2.9903542131016407,3.022849703150625,3.0289126172849885,3.026294057868331,3.04712908844058]
 },
 "mapping":{
 "x":"Coefficient",
@@ -771,7 +753,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("fgILIw");
+           var plotContainer = document.getElementById("zhc72o");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
@@ -780,7 +762,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>To estimate a pooled effect, we need to slightly update the second stage formula:</p>
-<div id="f4556b91" class="cell" data-execution_count="4">
+<div id="c97bbaed" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> did2s(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>

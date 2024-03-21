@@ -357,15 +357,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None, i_ref2=None)</code></p>
+<p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None)</code></p>
 <p>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
 <col style="width: 3%">
-<col style="width: 9%">
-<col style="width: 84%">
+<col style="width: 8%">
+<col style="width: 85%">
 <col style="width: 2%">
 </colgroup>
 <thead>
@@ -431,18 +431,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
-<td><code>i_ref1</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
-<td>Reference category for the first set of categorical variables interacted via “i()”, by default None.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td><code>i_ref2</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
-<td>Reference category for the second set of categorical variables interacted via “i()”, by default None.</td>
-<td><code>None</code></td>
-</tr>
 </tbody>
 </table>
 </section>
@@ -470,7 +458,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="148f3efd" class="cell" data-execution_count="1">
+<div id="86ed4811" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -478,7 +466,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="t5GftQ"></div>
+            <div id="Q9Dl8o"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -502,22 +490,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("t5GftQ").appendChild(div);
+                        document.getElementById("Q9Dl8o").appendChild(div);
                     };
-                    var e = document.getElementById("t5GftQ");
+                    var e = document.getElementById("Q9Dl8o");
                     e.appendChild(script);
                 })()
             </script>
             
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1677: UserWarning:
-
-
-            The '^' character in the cluster variable name is replaced by '_'.
-            In consequence, the clustering variable(s) is (are) named ['f1'].
-            
-</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
