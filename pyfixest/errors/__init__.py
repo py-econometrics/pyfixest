@@ -57,6 +57,8 @@ class MatrixNotFullRankError(Exception):  # noqa: D101
 class EmptyDesignMatrixError(Exception):  # noqa: D101
     pass
 
+class FeatureDeprecationError(Exception): # noqa: D101
+    pass
 
 __all__ = [
     "FixedEffectInteractionError",
@@ -74,4 +76,5 @@ __all__ = [
     "NonConvergenceError",
     "MatrixNotFullRankError",
     "EmptyDesignMatrixError",
+    "FeatureDeprecationError",
 ]
