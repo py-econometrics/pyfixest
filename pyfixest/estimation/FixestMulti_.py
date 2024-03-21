@@ -620,46 +620,6 @@ class FixestMulti:
         return model
 
 
-def get_fml(
-    depvar: str, covar: str, fval: str, endogvars: str = None, instruments: str = None
-) -> str:
-    """
-    Stitches together the formula string for the regression.
-
-    Parameters
-    ----------
-    depvar : str
-        The dependent variable.
-    covar : str
-        The covariates. E.g. "X1+X2+X3"
-    fval : str
-        The fixed effects. E.g. "X1+X2". "0" if no fixed effects.
-    endogvars : str, optional
-        The endogenous variables.
-    instruments : str, optional
-        The instruments. E.g. "Z1+Z2+Z3"
-
-    Returns
-    -------
-    str
-        The formula string for the regression.
-    """
-    fml = f"{depvar} ~ {covar}"
-    fml_iv = f"| {endogvars} ~ {instruments}" if endogvars is not None else None
-
-    fml_fval = f"| {fval}" if fval != "0" else None
-
-    if fml_fval is not None:
-        fml += fml_fval
-
-    if fml_iv is not None:
-        fml += fml_iv
-
-    fml = fml.replace(" ", "")
-
-    return fml
-
-
 def _get_vcov_type(vcov, fval):
     """
     Pass the specified vcov type.
