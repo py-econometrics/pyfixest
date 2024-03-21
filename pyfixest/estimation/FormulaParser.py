@@ -4,6 +4,7 @@ from typing import Optional
 
 from pyfixest.errors import (
     DuplicateKeyError,
+    EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
     UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
@@ -492,7 +493,7 @@ def _deparse_fml(fml):
             fevars = "0"
             endogvars, instruments = fml_split[1].split("~")
             # add endogenous variable to "covars" - yes, bad naming
-
+            _check_endogvars_as_covars(endogvars, covars)
             covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
         else:
             fevars = fml_split[1]
@@ -501,6 +502,7 @@ def _deparse_fml(fml):
     elif len(fml_split) == 3:
         fevars = fml_split[1]
         endogvars, instruments = fml_split[2].split("~")
+        _check_endogvars_as_covars(endogvars, covars)
 
         # add endogenous variable to "covars" - yes, bad naming
         covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
@@ -518,6 +520,40 @@ def _deparse_fml(fml):
             pass
 
     return depvars, covars, fevars, endogvars, instruments
+
+
+def _check_endogvars_as_covars(endogvars: str, covars: str):
+    """
+    Check if one or more endogenous variables are included in the covariates.
+
+    Parameters
+    ----------
+    endogvars : str
+        A string representing the endogenous variables in the model,
+        separated by "+".
+    covars : str
+        A string representing the covariates in the model, separated by "+".
+
+    Raises
+    ------
+    EndogVarsAsCovarsError
+        If any of the specified endogenous variables are also listed as covariates.
+
+    Returns
+    -------
+    None
+    """
+    endogvars_as_covars = [
+        element for element in endogvars.split("+") if element in covars.split("+")
+    ]
+
+    if endogvars_as_covars:
+        raise EndogVarsAsCovarsError(
+            f"""
+                The endogeneous variable(s) {",".join(endogvars_as_covars)} are specified as
+                covariates in the first part of the three-part formula. This is not allowed.
+                """
+        )
 
 
 def _input_formula_to_dict(x):

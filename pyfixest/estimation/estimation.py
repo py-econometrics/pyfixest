@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 import pandas as pd
 
+from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -18,6 +19,7 @@ def feols(
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
+    i_ref1=None,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -55,6 +57,11 @@ def feols(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
+
+    i_ref1: None
+        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
+        feols('Y~ i(f1, ref=1)', data = data) instead of the former
+        feols('Y~ i(f1)', data = data, i_ref=1).
 
     Returns
     -------
@@ -230,6 +237,16 @@ def feols(
     ```
 
     """
+    if i_ref1 is not None:
+
+        raise FeatureDeprecationError(
+            """
+            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
+            Please use i-syntax instead, i.e. feols('Y~ i(f1, ref=1)', data = data)
+            instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
+            """
+        )
+
     _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)
 
     fixest = FixestMulti(data=data)
@@ -256,6 +273,7 @@ def fepois(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
+    i_ref1=None,
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -323,6 +341,15 @@ def fepois(
     For more examples, please take a look at the documentation of the `feols()`
     function.
     """
+    if i_ref1 is not None:
+
+        raise FeatureDeprecationError(
+            """
+            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
+            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
+            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
+            """
+        )
     weights = None
 
     _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)

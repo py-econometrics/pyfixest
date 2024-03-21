@@ -1672,7 +1672,7 @@ def _deparse_vcov_input(vcov, has_fixef, is_iv):
     clustervar = deparse_vcov if is_clustered else None
 
     # loop over clustervar to change "^" to "_"
-    if clustervar:
+    if clustervar and "^" in clustervar:
         clustervar = [x.replace("^", "_") for x in clustervar]
         warnings.warn(
             f"""
