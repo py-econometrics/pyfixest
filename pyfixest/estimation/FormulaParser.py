@@ -523,40 +523,38 @@ def _deparse_fml(fml):
 
 
 def _check_endogvars_as_covars(endogvars: str, covars: str):
+    """
+    Check if one or more endogenous variables are included in the covariates.
 
-        """
-        Check if one or more endogenous variables are included in the covariates.
+    Parameters
+    ----------
+    endogvars : str
+        A string representing the endogenous variables in the model,
+        separated by "+".
+    covars : str
+        A string representing the covariates in the model, separated by "+".
 
-        Parameters
-        ----------
-        endogvars : str
-            A string representing the endogenous variables in the model, separated by "+".
-        covars : str
-            A string representing the covariates in the model, separated by "+".
+    Raises
+    ------
+    EndogVarsAsCovarsError
+        If any of the specified endogenous variables are also listed as covariates.
 
-        Raises
-        ------
-        EndogVarsAsCovarsError
-            If any of the specified endogenous variables are also listed as covariates.
+    Returns
+    -------
+    None
+    """
+    endogvars_as_covars = [
+        element for element in endogvars.split("+") if element in covars.split("+")
+    ]
 
-        Returns
-        -------
-        None
-        """
-
-        endogvars_as_covars = [
-            element
-            for element in endogvars.split("+")
-            if element in covars.split("+")
-        ]
-
-        if endogvars_as_covars:
-            raise EndogVarsAsCovarsError(
-                f"""
+    if endogvars_as_covars:
+        raise EndogVarsAsCovarsError(
+            f"""
                 The endogeneous variable(s) {",".join(endogvars_as_covars)} are specified as
                 covariates in the first part of the three-part formula. This is not allowed.
                 """
-            )
+        )
+
 
 def _input_formula_to_dict(x):
     """

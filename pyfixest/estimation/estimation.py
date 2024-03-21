@@ -2,12 +2,12 @@ from typing import Optional, Union
 
 import pandas as pd
 
+from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import ssc
-from pyfixest.errors import FeatureDeprecationError
 
 
 def feols(
@@ -19,7 +19,7 @@ def feols(
     fixef_rm: str = "none",
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
-    i_ref1 = None
+    i_ref1=None,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -237,7 +237,6 @@ def feols(
     ```
 
     """
-
     if i_ref1 is not None:
 
         raise FeatureDeprecationError(
@@ -274,7 +273,7 @@ def fepois(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
-    i_ref1 = None
+    i_ref1=None,
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -342,7 +341,6 @@ def fepois(
     For more examples, please take a look at the documentation of the `feols()`
     function.
     """
-
     if i_ref1 is not None:
 
         raise FeatureDeprecationError(

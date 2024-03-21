@@ -4,13 +4,13 @@ import pytest
 
 from pyfixest.errors import (
     DuplicateKeyError,
-    InstrumentsAsCovarsError,
     EndogVarsAsCovarsError,
+    FeatureDeprecationError,
+    InstrumentsAsCovarsError,
     MultiEstNotSupportedError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
-    FeatureDeprecationError,
 )
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
@@ -87,7 +87,7 @@ def test_iv_errors():
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
     # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
-       feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
+        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -306,6 +306,6 @@ def test_deprecation_errors():
 
     data = get_data()
     with pytest.raises(FeatureDeprecationError):
-        feols("Y ~ i(f1)", data, i_ref1 = 1)
+        feols("Y ~ i(f1)", data, i_ref1=1)
     with pytest.raises(FeatureDeprecationError):
-        fepois("Y ~ i(f1)", data, i_ref1 = 1)
+        fepois("Y ~ i(f1)", data, i_ref1=1)
