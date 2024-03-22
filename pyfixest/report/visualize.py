@@ -34,10 +34,10 @@ def iplot(
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
-    coord_flip: Optional[bool] = True,
+    coord_flip: bool = True,
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
-    exact_match: Optional[bool] = False,
+    exact_match: bool = False,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -148,10 +148,10 @@ def coefplot(
     xintercept: float = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
-    coord_flip: Optional[bool] = True,
+    coord_flip: bool = True,
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
-    exact_match: Optional[bool] = False,
+    exact_match: bool = False,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -218,7 +218,7 @@ def coefplot(
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
 
-    df = pd.concat(df_all, axis=0)
+    df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
     if keep or drop:
         idxs = _select_order_coefs(df.index, keep, drop, exact_match)
     else:
