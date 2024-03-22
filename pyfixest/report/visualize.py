@@ -148,10 +148,10 @@ def coefplot(
     xintercept: float = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
-    coord_flip: Optional[bool] = True,
+    coord_flip: bool = True,
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
-    exact_match: Optional[bool] = False,
+    exact_match: bool = False,
 ):
     r"""
     Plot model coefficients with confidence intervals.
