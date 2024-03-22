@@ -210,7 +210,6 @@ def coefplot(
     pf.coefplot([fit1, fit2, fit3])
     ```
     """
-
     models = _post_processing_input_checks(models)
     df_all = []
     for fxst in models:
