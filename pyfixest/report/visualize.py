@@ -34,10 +34,10 @@ def iplot(
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
-    coord_flip: Optional[bool] = True,
-    keep: Optional[Union[list, str]] = [],
-    drop: Optional[Union[list, str]] = [],
-    exact_match: Optional[bool] = False,
+    coord_flip: bool = True,
+    keep: Optional[Union[list, str]] = None,
+    drop: Optional[Union[list, str]] = None,
+    exact_match: bool = False,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -210,6 +210,12 @@ def coefplot(
     pf.coefplot([fit1, fit2, fit3])
     ```
     """
+
+    if isinstance(keep, str):
+        keep = [keep]
+    if isinstance(drop, str):
+        drop = [drop]
+
     models = _post_processing_input_checks(models)
     df_all = []
     for fxst in models:
@@ -218,7 +224,7 @@ def coefplot(
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
 
-    df = pd.concat(df_all, axis=0)
+    df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
     if keep or drop:
         idxs = _select_order_coefs(df.index, keep, drop, exact_match)
     else:
