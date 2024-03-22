@@ -35,8 +35,8 @@ def iplot(
     rotate_xticks: int = 0,
     title: Optional[str] = None,
     coord_flip: bool = True,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
+    keep: Optional[Union[list, str]] = [],
+    drop: Optional[Union[list, str]] = [],
     exact_match: bool = False,
 ):
     r"""
@@ -210,11 +210,6 @@ def coefplot(
     pf.coefplot([fit1, fit2, fit3])
     ```
     """
-
-    if isinstance(keep, str):
-        keep = [keep]
-    if isinstance(drop, str):
-        drop = [drop]
 
     models = _post_processing_input_checks(models)
     df_all = []
