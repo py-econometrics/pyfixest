@@ -131,11 +131,7 @@ def model_matrix_fixest(
 
     FML = Formula(**fml_kwargs)
 
-    mm = FML.get_model_matrix(
-        data,
-        output="pandas",
-        context={"factorize": factorize}
-    )
+    mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
 
     endogvar = Z = weights_df = fe = None
 

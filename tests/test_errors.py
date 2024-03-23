@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import FactorEvaluationError
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -18,7 +19,6 @@ from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.utils import get_data
 
-from formulaic.errors import FactorEvaluationError
 
 def test_formula_parser2():
     with pytest.raises(DuplicateKeyError):
