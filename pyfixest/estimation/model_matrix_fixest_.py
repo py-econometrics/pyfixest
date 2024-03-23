@@ -131,7 +131,11 @@ def model_matrix_fixest(
 
     FML = Formula(**fml_kwargs)
 
-    mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
+    mm = FML.get_model_matrix(
+        data,
+        output="pandas",
+        context={"factorize": factorize}
+    )
 
     endogvar = Z = weights_df = fe = None
 
@@ -159,7 +163,7 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    columns_to_drop = _get_columns_to_drop(_list_of_ivars_dict, X)
+    columns_to_drop = _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data)
 
     if columns_to_drop and not X_is_empty:
         X.drop(columns_to_drop, axis=1, inplace=True)
@@ -222,7 +226,7 @@ def model_matrix_fixest(
     )
 
 
-def _get_columns_to_drop(_list_of_ivars_dict, X):
+def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
 
     columns_to_drop = []
     for _i_ref in _list_of_ivars_dict:
@@ -231,6 +235,14 @@ def _get_columns_to_drop(_list_of_ivars_dict, X):
             var1 = _i_ref.get("var1")
             var2 = _i_ref.get("var2")
             ref = _i_ref.get("ref")
+
+            if not pd.api.types.is_float_dtype(data[var2]):
+                raise ValueError(
+                    f"The second variable in the i() syntax must be of type float, but it is of type {data[var2].dtype}."
+                )
+            else:
+                if ref and "_" in ref:
+                    ref = ref.replace("_", "")
 
             pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
             if ref:
