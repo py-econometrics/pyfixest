@@ -3,12 +3,26 @@
 ## PyFixest 0.18.0
 
 - Large Refactoring of Interal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`. As a results, the code should be cleaner and more robust.
+- Thanks to the refactoring, we can now bump the required `formulaic` version to the stable `1.0.0` release.
 - The `fml` argument of `model_matrix_fixest` is deprecated. Instead, `model_matrix_fixest`
   now asks for a `FixestFormula`, which is essentially a dictionary with information on model
   specifications like a first stage formula (if applicable), dependent variables, fixed effects,
   etc.
 - Additionally, `model_matrix_fixest` now returns a dictionary instead of a tuple.
-- Brings back fixed effects reference setting via `i(var1, var2, ref)` syntax. Deprecates the `i_ref1`, `i_ref2` function arguments.
+- Brings back fixed effects reference setting via `i(var1, var2, ref)` syntax. Deprecates the `i_ref1`, `i_ref2` function arguments. I.e. it is again possible to e.g. run
+
+```python
+import pyfixest as pf
+data = pf.get_data()
+
+fit1 = pf.feols("Y ~ i(f1, X2)", data=data)
+fit1.coef()[0:8]
+```
+Via the `ref` syntax, via can set the reference level:
+```python
+fit2 = pf.feols("Y ~ i(f1, X2, ref = 1)", data=data)
+fit2.coef()[0:8]
+
 
 ## PyFixest 0.17.0
 
