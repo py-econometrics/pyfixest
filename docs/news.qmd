@@ -22,7 +22,7 @@ Via the `ref` syntax, via can set the reference level:
 ```python
 fit2 = pf.feols("Y ~ i(f1, X2, ref = 1)", data=data)
 fit2.coef()[0:8]
-
+```
 
 ## PyFixest 0.17.0
 
