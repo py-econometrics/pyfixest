@@ -264,20 +264,23 @@ def _did2s_vcov(
     FixestFormulaDict1 = FML1.FixestFormulaDict
     FixestFormulaDict2 = FML2.FixestFormulaDict
 
-    _, X1, _, _, _, _, _, _, _, _ = model_matrix_fixest(
+    mm_dict_first_stage = model_matrix_fixest(
         FixestFormula=next(iter(FixestFormulaDict1.values()))[0],
         data=data,
         weights=None,
         drop_singletons=False,
         drop_intercept=False,
     )
-    _, X2, _, _, _, _, _, _, _, _ = model_matrix_fixest(
+    X1 = mm_dict_first_stage.get("X")
+
+    mm_second_stage = model_matrix_fixest(
         FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
         data=data,
         weights=None,
         drop_singletons=False,
         drop_intercept=True,
     )  # reference values not dropped, multicollinearity error
+    X2 = mm_second_stage.get("X")
 
     X1 = csr_matrix(X1.values)
     X2 = csr_matrix(X2.values)
