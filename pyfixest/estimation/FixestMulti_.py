@@ -178,6 +178,27 @@ class FixestMulti:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 
+                mm_dict = model_matrix_fixest(
+                    # fml=fml,
+                    FixestFormula=FixestFormula,
+                    data=_data,
+                    drop_singletons=_drop_singletons,
+                    drop_intercept=_drop_intercept,
+                    weights=_weights,
+                )
+
+                mm_dict_keys = [
+                    "Y",
+                    "X",
+                    "fe",
+                    "endogvar",
+                    "Z",
+                    "weights_df",
+                    "na_index",
+                    "na_index_str",
+                    "_icovars",
+                    "X_is_empty",
+                ]
                 (
                     Y,
                     X,
@@ -189,14 +210,7 @@ class FixestMulti:
                     na_index_str,
                     _icovars,
                     X_is_empty,
-                ) = model_matrix_fixest(
-                    # fml=fml,
-                    FixestFormula=FixestFormula,
-                    data=_data,
-                    drop_singletons=_drop_singletons,
-                    drop_intercept=_drop_intercept,
-                    weights=_weights,
-                )
+                ) = (mm_dict[key] for key in mm_dict_keys)
 
                 if _weights is not None:
                     weights = weights_df.to_numpy()

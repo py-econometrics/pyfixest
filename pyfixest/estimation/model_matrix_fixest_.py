@@ -11,25 +11,12 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 def model_matrix_fixest(
-    # fml: str,
     FixestFormula: FixestFormula,
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
-) -> tuple[
-    pd.DataFrame,  # Y
-    pd.DataFrame,  # X
-    Optional[pd.DataFrame],  # I
-    Optional[pd.DataFrame],  # fe
-    np.ndarray,  # na_index
-    np.ndarray,  # fe_na
-    str,  # na_index_str
-    Optional[list[str]],  # z_names
-    Optional[str],  # weights
-    bool,  # has_weights,
-    Optional[list[str]],  # icovars (list of variables interacted with i() syntax)
-]:
+) -> dict:
     """
     Create model matrices for fixed effects estimation.
 
@@ -38,8 +25,10 @@ def model_matrix_fixest(
 
     Parameters
     ----------
-    fml : str
-        A two-sided formula string using fixest formula syntax.
+    FixestFormula : A pyfixest.estimation.FormulaParser.FixestFormula object
+        that contains information on the model formula, the formula of the first
+        and second stage, dependent variable, covariates, fixed effects, endogenous
+        variables (if any), and instruments (if any).
     data : pd.DataFrame
         The input DataFrame containing the data.
     drop_singletons : bool
@@ -55,46 +44,31 @@ def model_matrix_fixest(
 
     Returns
     -------
-    tuple
-        A tuple of the following elements:
-        - Y : pd.DataFrame
-            A DataFrame of the dependent variable.
-        - X : pd.DataFrame
-            A DataFrame of the covariates. If `combine = True`, contains covariates
-            and fixed effects as dummies.
-        - I : Optional[pd.DataFrame]
-            A DataFrame of the Instruments, None if no IV.
-        - fe : Optional[pd.DataFrame]
-            A DataFrame of the fixed effects, None if no fixed effects specified.
-            Only applicable if `combine = False`.
-        - na_index : np.array
-            An array with indices of dropped columns.
-        - fe_na : np.array
-            An array with indices of dropped columns due to fixed effect singletons
-            or NaNs in the fixed effects.
-        - na_index_str : str
-            na_index, but as a comma-separated string. Used for caching of demeaned
-            variables.
-        - z_names : Optional[list[str]]
-            Names of all covariates, minus the endogenous variables,
-            plus the instruments.
-            None if no IV.
-        - weights : Optional[str]
-            Weights as a string if provided, or None if no weights, e.g., "weights".
-        - has_weights : bool
-            A boolean indicating whether weights are used.
-        - icovars : Optional[list[str]]
-            A list of interaction variables provided via `i()`. None if no interaction
-            variables via `i()` provided.
-
-    Attributes
-    ----------
-    list or None
-        icovars - A list of interaction variables. None if no interaction variables
-        via `i()` provided.
+    dict
+        A dictionary with the following keys and value types:
+        - 'Y' : pd.DataFrame
+            The dependent variable.
+        - 'X' : pd.DataFrame
+            The Design Matrix.
+        - 'fe' : Optional[pd.DataFrame]
+            The model's fixed effects. None if not applicable.
+        - 'endogvar' : Optional[pd.DataFrame]
+            The model's endogenous variable(s), None if not applicable.
+        - 'Z' : np.ndarray
+            The model's set of instruments (exogenous covariates plus instruments).
+            None if not applicable.
+        - 'weights_df' : Optional[pd.DataFrame]
+            DataFrame containing weights, None if weights are not used.
+        - 'na_index' : np.ndarray
+            Array indicating rows droppled beause of NA values or singleton
+            fixed effects.
+        - 'na_index_str' : str
+            String representation of 'na_index'.
+        - '_icovars' : Optional[list[str]]
+            List of variables interacted with i() syntax, None if not applicable.
+        - 'X_is_empty' : bool
+            Flag indicating whether X is empty.
     """
-    # check if weights are valid
-
     FixestFormula.check_syntax()
 
     fml_second_stage = FixestFormula.fml_second_stage
@@ -159,7 +133,7 @@ def model_matrix_fixest(
     if endogvar is not None and endogvar.shape[1] > 1:
         raise TypeError("The endogenous variable must be numeric.")
 
-    columns_to_drop = _get_columns_to_drop(_list_of_ivars_dict, X)
+    columns_to_drop = _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data)
 
     if columns_to_drop and not X_is_empty:
         X.drop(columns_to_drop, axis=1, inplace=True)
@@ -208,21 +182,21 @@ def model_matrix_fixest(
     na_index = list(set(range(data.shape[0])).difference(Y.index))
     na_index_str = ",".join(str(x) for x in na_index)
 
-    return (
-        Y,
-        X,
-        fe,
-        endogvar,
-        Z,
-        weights_df,
-        na_index,
-        na_index_str,
-        _icovars,
-        X_is_empty,
-    )
+    return {
+        "Y": Y,
+        "X": X,
+        "fe": fe,
+        "endogvar": endogvar,
+        "Z": Z,
+        "weights_df": weights_df,
+        "na_index": na_index,
+        "na_index_str": na_index_str,
+        "_icovars": _icovars,
+        "X_is_empty": X_is_empty,
+    }
 
 
-def _get_columns_to_drop(_list_of_ivars_dict, X):
+def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
 
     columns_to_drop = []
     for _i_ref in _list_of_ivars_dict:
@@ -231,6 +205,19 @@ def _get_columns_to_drop(_list_of_ivars_dict, X):
             var1 = _i_ref.get("var1")
             var2 = _i_ref.get("var2")
             ref = _i_ref.get("ref")
+
+            if pd.api.types.is_categorical_dtype(
+                data[var2]
+            ) or pd.api.types.is_object_dtype(data[var2]):
+                raise ValueError(
+                    f"""
+                    The second variable in the i() syntax cannot be of type "category" or "object", but
+                    but it is of type {data[var2].dtype}.
+                    """
+                )
+            else:
+                if ref and "_" in ref:
+                    ref = ref.replace("_", "")
 
             pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
             if ref:

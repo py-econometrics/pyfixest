@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import FactorEvaluationError
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -309,3 +310,19 @@ def test_deprecation_errors():
         feols("Y ~ i(f1)", data, i_ref1=1)
     with pytest.raises(FeatureDeprecationError):
         fepois("Y ~ i(f1)", data, i_ref1=1)
+
+
+def test_i_error():
+
+    data = get_data()
+    data["f2"] = pd.Categorical(data["f2"])
+
+    with pytest.raises(ValueError):
+        feols("Y ~ i(f1, f2)", data)
+
+    data["f2"] = data["f2"].astype("object")
+    with pytest.raises(ValueError):
+        feols("Y ~ i(f1, f2)", data)
+
+    with pytest.raises(FactorEvaluationError):
+        feols("Y ~ i(f1, X1, ref=a)", data)
