@@ -232,9 +232,12 @@ def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
             var2 = _i_ref.get("var2")
             ref = _i_ref.get("ref")
 
-            if not pd.api.types.is_float_dtype(data[var2]):
+            if pd.api.types.is_categorical_dtype(data[var2]) or pd.api.types.is_object_dtype(data[var2]):
                 raise ValueError(
-                    f"The second variable in the i() syntax must be of type float, but it is of type {data[var2].dtype}."
+                    f"""
+                    The second variable in the i() syntax cannot be of type "category" or "object", but
+                    but it is of type {data[var2].dtype}.
+                    """
                 )
             else:
                 if ref and "_" in ref:

@@ -320,5 +320,10 @@ def test_i_error():
     with pytest.raises(ValueError):
         feols("Y ~ i(f1, f2)", data)
 
+    data['f2'] = data['f2'].astype('object')
+    with pytest.raises(ValueError):
+        feols("Y ~ i(f1, f2)", data)
+
     with pytest.raises(FactorEvaluationError):
         feols("Y ~ i(f1, X1, ref=a)", data)
+
