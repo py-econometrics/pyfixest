@@ -30,6 +30,7 @@ pyarrow = ">=14.0.2"
 wildboottest = ">=0.2.0"
 pre-commit = "^3.6.0"
 doubleml = "^0.7.1"
+marginaleffects = "^0.0.10"
 
 [tool.poetry.group.docs.dependencies]
 quartodoc = ">=0.7.2"
