@@ -352,15 +352,6 @@ class Feols:
 
         _u_hat = self._u_hat
 
-        _check_vcov_input(vcov, _data)
-
-        (
-            self._vcov_type,
-            self._vcov_type_detail,
-            self._is_clustered,
-            self._clustervar,
-        ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
-
         if _is_iv:
             bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
         else:
@@ -433,11 +424,12 @@ class Feols:
 
         elif self._vcov_type == "CRV":
 
-            assert all(
-                col.replace(" ", "") in _data.columns for col in self._clustervar
-            ), "vcov dict value must be a column in the data"
+            #assert all(
+            #    col.replace(" ", "") in _data.columns for col in self._clustervar
+            #), "vcov dict value must be a column in the data"
 
-            cluster_df = _data[self._clustervar]
+            #import pdb; pdb.set_trace()
+            cluster_df = self._cluster_df
             if cluster_df.isna().any().any():
                 raise NanInClusterVarError(
                     "CRV inference not supported with missing values in the cluster variable."
@@ -617,6 +609,11 @@ class Feols:
         _k_fe: int,
         fval: str,
         na_index: np.ndarray,
+        vcov_type: dict,
+        vcov_type_detail: str,
+        is_clustered: bool,
+        clustervar: str,
+        store_data: bool,
     ) -> None:
         """
         Enrich Feols object.
@@ -642,6 +639,17 @@ class Feols:
             The fixed effects formula.
         na_index : np.ndarray
             An array with the indices of missing values.
+        vcov_type : dict
+            A dictionary specifying the type of variance-covariance matrix to use. For example
+            {"CRV1": "clustervar"} for CRV1 inference.
+        vcov_type_detail : str
+            A string specifying the detailed variance-covariance matrix type.
+        is_clustered : bool
+            Indicates whether clustering is used in the variance-covariance calculation.
+        clustervar : str
+            The variable used for clustering in the variance-covariance calculation.
+        store_data : bool
+            Indicates whether to save the data used for estimation in the object
 
         Returns
         -------
@@ -651,7 +659,18 @@ class Feols:
         self._fml = fml
         self._depvar = depvar
         self._Y_untransformed = Y
-        self._data = _data.iloc[~_data.index.isin(na_index)]
+
+
+        self._vcov_type = vcov_type
+        self._vcov_type_detail = vcov_type_detail
+        self._is_clustered = is_clustered
+        self._clustervar = clustervar
+
+        if store_data:
+            self._data = _data.iloc[~_data.index.isin(na_index)]
+
+        if self._clustervar is not None:
+            self._cluster_df = _data[self._clustervar].iloc[~_data.index.isin(na_index)]
         self._ssc_dict = _ssc_dict
         self._k_fe = _k_fe
         if fval != "0":
@@ -1570,118 +1589,6 @@ class Feols:
             A np.ndarray with the residuals of the estimated regression model.
         """
         return self._u_hat
-
-
-def _check_vcov_input(vcov, data):
-    """
-    Check the input for the vcov argument in the Feols class.
-
-    Parameters
-    ----------
-    vcov : dict, str, list
-        The vcov argument passed to the Feols class.
-    data : pd.DataFrame
-        The data passed to the Feols class.
-
-    Returns
-    -------
-    None
-    """
-    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
-    if isinstance(vcov, dict):
-        assert list(vcov.keys())[0] in [
-            "CRV1",
-            "CRV3",
-        ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(
-            list(vcov.values())[0], str
-        ), "vcov dict value must be a string"
-        deparse_vcov = list(vcov.values())[0].split("+")
-        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
-
-    if isinstance(vcov, list):
-        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(
-            v in data.columns for v in vcov
-        ), "vcov list must contain columns in the data"
-    if isinstance(vcov, str):
-        assert vcov in [
-            "iid",
-            "hetero",
-            "HC1",
-            "HC2",
-            "HC3",
-        ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
-
-
-def _deparse_vcov_input(vcov, has_fixef, is_iv):
-    """
-    Deparse the vcov argument passed to the Feols class.
-
-    Parameters
-    ----------
-    vcov : dict, str, list
-        The vcov argument passed to the Feols class.
-    has_fixef : bool
-        Whether the regression has fixed effects.
-    is_iv : bool
-        Whether the regression is an IV regression.
-
-    Returns
-    -------
-    vcov_type : str
-        The type of vcov to be used. Either "iid", "hetero", or "CRV".
-    vcov_type_detail : str or list
-        The type of vcov to be used, with more detail. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3".
-    is_clustered : bool
-        Indicates whether the vcov is clustered.
-    clustervar : str
-        The name of the cluster variable.
-    """
-    if isinstance(vcov, dict):
-        vcov_type_detail = list(vcov.keys())[0]
-        deparse_vcov = list(vcov.values())[0].split("+")
-        if isinstance(deparse_vcov, str):
-            deparse_vcov = [deparse_vcov]
-        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
-    elif isinstance(vcov, (list, str)):
-        vcov_type_detail = vcov
-    else:
-        assert False, "arg vcov needs to be a dict, string or list"
-
-    if vcov_type_detail == "iid":
-        vcov_type = "iid"
-        is_clustered = False
-    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-        vcov_type = "hetero"
-        is_clustered = False
-        if vcov_type_detail in ["HC2", "HC3"]:
-            if has_fixef:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
-                )
-            if is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
-                )
-    elif vcov_type_detail in ["CRV1", "CRV3"]:
-        vcov_type = "CRV"
-        is_clustered = True
-
-    clustervar = deparse_vcov if is_clustered else None
-
-    # loop over clustervar to change "^" to "_"
-    if clustervar and "^" in clustervar:
-        clustervar = [x.replace("^", "_") for x in clustervar]
-        warnings.warn(
-            f"""
-            The '^' character in the cluster variable name is replaced by '_'.
-            In consequence, the clustering variable(s) is (are) named {clustervar}.
-            """
-        )
-
-    return vcov_type, vcov_type_detail, is_clustered, clustervar
 
 
 def _feols_input_checks(Y, X, weights):

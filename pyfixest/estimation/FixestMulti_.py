@@ -1,4 +1,5 @@
 import functools
+import time
 import warnings
 from importlib import import_module
 from typing import Optional, Union
@@ -19,7 +20,7 @@ from pyfixest.utils.dev_utils import _polars_to_pandas
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, data: pd.DataFrame) -> None:
+    def __init__(self, data: pd.DataFrame, copy_data:bool, store_data:bool) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
@@ -27,16 +28,27 @@ class FixestMulti:
         ----------
         data : panda.DataFrame
             The input DataFrame for the object.
+        copy_data : bool
+            Whether to copy the data or not.
+        store_data : bool
+            Whether to store the data in the resulting model object or not.
 
         Returns
         -------
             None
         """
         self._data = None
+        self._copy_data = copy_data
+        self._store_data = store_data
 
         data = _polars_to_pandas(data)
 
-        self._data = data.copy()
+        tic = time.time()
+        if self._copy_data:
+            self._data = data.copy()
+        else:
+            self._data = data
+        print(f"Copy data set: {time.time()-tic:.2f}s")
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
@@ -163,6 +175,7 @@ class FixestMulti:
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
         _weights = self._weights
+        _has_fixef = False
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -178,6 +191,7 @@ class FixestMulti:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 
+                tic = time.time()
                 mm_dict = model_matrix_fixest(
                     # fml=fml,
                     FixestFormula=FixestFormula,
@@ -186,6 +200,7 @@ class FixestMulti:
                     drop_intercept=_drop_intercept,
                     weights=_weights,
                 )
+                print(f"full model matrix steps: {time.time()-tic:.2f}s")
 
                 mm_dict_keys = [
                     "Y",
@@ -230,9 +245,14 @@ class FixestMulti:
                 if _method == "feols":
                     # demean Y, X, Z, if not already done in previous estimation
 
+                    if fe is not None:
+                        _has_fixef = True
+
+                    tic = time.time()
                     Yd, Xd = demean_model(
                         Y, X, fe, weights, lookup_demeaned_data, na_index_str
                     )
+                    print(f"demean model: {time.time()-tic:.2f}s")
 
                     if _is_iv:
                         endogvard, Zd = demean_model(
@@ -304,6 +324,7 @@ class FixestMulti:
                     N = X.shape[0]
 
                     if fe is not None:
+                        _has_fixef = True
                         fe = fe.to_numpy()
                         if fe.ndim == 1:
                             fe = fe.reshape((N, 1))
@@ -336,6 +357,18 @@ class FixestMulti:
                     )
 
                     # enrich FIT with model info obtained outside of the model class
+
+                vcov_type = _get_vcov_type(vcov, fval)
+                _check_vcov_input(vcov_type, _data)
+
+                (
+                    _vcov_type,
+                    _vcov_type_detail,
+                    _is_clustered,
+                    _clustervar,
+                ) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
+
+                tic = time.time()
                 FIT.add_fixest_multi_context(
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
@@ -345,19 +378,23 @@ class FixestMulti:
                     _k_fe=_k_fe,
                     fval=fval,
                     na_index=na_index,
+                    vcov_type = _vcov_type,
+                    vcov_type_detail = _vcov_type_detail,
+                    is_clustered = _is_clustered,
+                    clustervar = _clustervar,
+                    store_data = self._store_data,
                 )
+                print(f"Add context: {time.time()-tic:.2f}s")
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
-                    vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type)
                     FIT.get_inference()
 
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
-
                     if _icovars is not None:
                         FIT._icovars = _icovars
                     else:
@@ -686,3 +723,116 @@ def _drop_singletons(fixef_rm: bool) -> bool:
         drop_singletons (bool) : Whether to drop singletons.
     """
     return fixef_rm == "singleton"
+
+
+
+def _check_vcov_input(vcov, data):
+    """
+    Check the input for the vcov argument in the Feols class.
+
+    Parameters
+    ----------
+    vcov : dict, str, list
+        The vcov argument passed to the Feols class.
+    data : pd.DataFrame
+        The data passed to the Feols class.
+
+    Returns
+    -------
+    None
+    """
+    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
+    if isinstance(vcov, dict):
+        assert list(vcov.keys())[0] in [
+            "CRV1",
+            "CRV3",
+        ], "vcov dict key must be CRV1 or CRV3"
+        assert isinstance(
+            list(vcov.values())[0], str
+        ), "vcov dict value must be a string"
+        deparse_vcov = list(vcov.values())[0].split("+")
+        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
+
+    if isinstance(vcov, list):
+        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
+        assert all(
+            v in data.columns for v in vcov
+        ), "vcov list must contain columns in the data"
+    if isinstance(vcov, str):
+        assert vcov in [
+            "iid",
+            "hetero",
+            "HC1",
+            "HC2",
+            "HC3",
+        ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
+
+
+def _deparse_vcov_input(vcov, has_fixef, is_iv):
+    """
+    Deparse the vcov argument passed to the Feols class.
+
+    Parameters
+    ----------
+    vcov : dict, str, list
+        The vcov argument passed to the Feols class.
+    has_fixef : bool
+        Whether the regression has fixed effects.
+    is_iv : bool
+        Whether the regression is an IV regression.
+
+    Returns
+    -------
+    vcov_type : str
+        The type of vcov to be used. Either "iid", "hetero", or "CRV".
+    vcov_type_detail : str or list
+        The type of vcov to be used, with more detail. Options include "iid",
+        "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3".
+    is_clustered : bool
+        Indicates whether the vcov is clustered.
+    clustervar : str
+        The name of the cluster variable.
+    """
+    if isinstance(vcov, dict):
+        vcov_type_detail = list(vcov.keys())[0]
+        deparse_vcov = list(vcov.values())[0].split("+")
+        if isinstance(deparse_vcov, str):
+            deparse_vcov = [deparse_vcov]
+        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
+    elif isinstance(vcov, (list, str)):
+        vcov_type_detail = vcov
+    else:
+        assert False, "arg vcov needs to be a dict, string or list"
+
+    if vcov_type_detail == "iid":
+        vcov_type = "iid"
+        is_clustered = False
+    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
+        vcov_type = "hetero"
+        is_clustered = False
+        if vcov_type_detail in ["HC2", "HC3"]:
+            if has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+    elif vcov_type_detail in ["CRV1", "CRV3"]:
+        vcov_type = "CRV"
+        is_clustered = True
+
+    clustervar = deparse_vcov if is_clustered else None
+
+    # loop over clustervar to change "^" to "_"
+    if clustervar and "^" in clustervar:
+        clustervar = [x.replace("^", "_") for x in clustervar]
+        warnings.warn(
+            f"""
+            The '^' character in the cluster variable name is replaced by '_'.
+            In consequence, the clustering variable(s) is (are) named {clustervar}.
+            """
+        )
+
+    return vcov_type, vcov_type_detail, is_clustered, clustervar
