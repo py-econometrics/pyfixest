@@ -501,11 +501,16 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
       NaNs are not removed but set to -1.
     """
 
-    if fe.dtype != "category":
-        fe = fe.astype("category")
-    res = fe.cat.codes
-    res[res == -1] = np.nan
-    return res
+    if pd.api.types.is_integer_dtype(fe):
+        return fe
+    elif pd.api.types.is_float_dtype(fe):
+        return fe
+    else:
+        if fe.dtype != "category":
+            fe = fe.astype("category")
+        res = fe.cat.codes
+        res[res == -1] = np.nan
+        return res
 
 def wrap_factorize(pattern):
     """
