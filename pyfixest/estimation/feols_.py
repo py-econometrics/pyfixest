@@ -468,7 +468,7 @@ class Feols:
                     self._cluster_df.iloc[:, 1], sep="-"
                 )
 
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             if self._cluster_df.shape[0] != self._N:
                 raise ValueError(
                     "The cluster variable must have the same length as the data set."

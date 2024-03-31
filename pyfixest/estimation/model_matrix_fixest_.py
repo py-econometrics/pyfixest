@@ -135,8 +135,6 @@ def model_matrix_fixest(
     toc = time.time()
     print(f"Time to get values out of model matrix: {toc - tic}")
 
-    #import pdb; pdb.set_trace()
-
 
     tic = time.time()
     for df in [Y, X, Z, endogvar, weights_df]:

@@ -298,6 +298,8 @@ class FixestMulti:
                             weights_name=_weights,
                         )
 
+                    FIT.na_index = na_index
+
                     # special case: sometimes it is useful to fit models as
                     # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                     if FIT._X_is_empty:
@@ -348,7 +350,7 @@ class FixestMulti:
                     FIT.na_index = na_index
                     FIT.n_separation_na = None
                     if na_separation:
-                        FIT.na_index += na_separation
+                        FIT.na_index = np.concatenate([FIT.na_index, np.array(na_separation)])
                         FIT.n_separation_na = len(na_separation)
 
                 else:
@@ -368,7 +370,7 @@ class FixestMulti:
                 #    _clustervar,
                 #) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
 
-                _data_clean = _drop_cols(_data, na_index)
+                _data_clean = _drop_cols(_data, FIT.na_index)
 
                 tic = time.time()
                 FIT.add_fixest_multi_context(

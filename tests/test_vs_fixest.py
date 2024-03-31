@@ -138,6 +138,8 @@ def test_single_fit(
         data = get_data(
             N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
         )
+        if weights is not None:
+            pytest.skip("Poisson does not support weights.")
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
@@ -201,10 +203,9 @@ def test_single_fit(
         #    return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
-            is_iv = True
+            pytest.skip("IV regression not supported for Poisson.")
             run_test = False
         else:
-            is_iv = False  # noqa: F841
             run_test = True
 
             # if formula does not contain "i(" or "C(", add, separation:
@@ -231,6 +232,12 @@ def test_single_fit(
 
             try:
                 pyfixest = fepois(fml=fml, data=data, vcov=inference)
+            except ValueError as exception:
+                if "dependent variable must be a weakly positive" in str(exception):
+                    return pytest.skip(
+                        "Poisson model requires strictly positive dependent variable."
+                    )
+                raise
             except RuntimeError as exception:
                 if "Failed to converge after 1000000 iterations." in str(exception):
                     return pytest.skip(

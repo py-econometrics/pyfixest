@@ -288,7 +288,6 @@ def summary(
     ```
     """
 
-    #import pdb; pdb.set_trace()
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
