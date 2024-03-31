@@ -152,7 +152,6 @@ def _to_list(x):
 
 
 def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
-
     """
     Drop columns from data based on the indices in na_index.
 

@@ -14,13 +14,13 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _polars_to_pandas, _drop_cols
+from pyfixest.utils.dev_utils import _drop_cols, _polars_to_pandas
 
 
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, data: pd.DataFrame, copy_data:bool, store_data:bool) -> None:
+    def __init__(self, data: pd.DataFrame, copy_data: bool, store_data: bool) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
@@ -350,7 +350,9 @@ class FixestMulti:
                     FIT.na_index = na_index
                     FIT.n_separation_na = None
                     if na_separation:
-                        FIT.na_index = np.concatenate([FIT.na_index, np.array(na_separation)])
+                        FIT.na_index = np.concatenate(
+                            [FIT.na_index, np.array(na_separation)]
+                        )
                         FIT.n_separation_na = len(na_separation)
 
                 else:
@@ -360,15 +362,15 @@ class FixestMulti:
 
                     # enrich FIT with model info obtained outside of the model class
 
-                #vcov_type = _get_vcov_type(vcov, fval)
-                #_check_vcov_input(vcov_type, _data)
+                # vcov_type = _get_vcov_type(vcov, fval)
+                # _check_vcov_input(vcov_type, _data)
 
-                #(
+                # (
                 #    _vcov_type,
                 #    _vcov_type_detail,
                 #    _is_clustered,
                 #    _clustervar,
-                #) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
+                # ) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
 
                 _data_clean = _drop_cols(_data, FIT.na_index)
 
@@ -381,16 +383,15 @@ class FixestMulti:
                     _ssc_dict=_ssc_dict,
                     _k_fe=_k_fe,
                     fval=fval,
-                    store_data = self._store_data,
+                    store_data=self._store_data,
                 )
                 print(f"Add context: {time.time()-tic:.2f}s")
-
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov = vcov_type, data = _data_clean)
+                    FIT.vcov(vcov=vcov_type, data=_data_clean)
                     FIT.get_inference()
 
                     # other regression stats
@@ -400,7 +401,6 @@ class FixestMulti:
                         FIT._icovars = _icovars
                     else:
                         FIT._icovars = None
-
 
                     # store fitted model
                 self.all_fitted_models[FixestFormula.fml] = FIT

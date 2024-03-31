@@ -125,16 +125,15 @@ def model_matrix_fixest(
         Z = mm["fml_first_stage"]["rhs"]
     if fval != "0":
         fe = mm["fe"]
-        #tic1 = time.time()
-        #fe_names = fe.columns
-        #factorize(fe)
-        #toc1 = time.time()
-        #print(f"Time to factorize fixed effects: {toc1 - tic1}")
+        # tic1 = time.time()
+        # fe_names = fe.columns
+        # factorize(fe)
+        # toc1 = time.time()
+        # print(f"Time to factorize fixed effects: {toc1 - tic1}")
     if weights is not None:
         weights_df = mm["weights"]
     toc = time.time()
     print(f"Time to get values out of model matrix: {toc - tic}")
-
 
     tic = time.time()
     for df in [Y, X, Z, endogvar, weights_df]:
@@ -175,46 +174,37 @@ def model_matrix_fixest(
     print(f"Some other checks: {toc - tic}")
 
     # handle NaNs in fixed effects & singleton fixed effects
-    if fe is not None:
+    if fe is not None and drop_singletons:
 
-        # find values where fe == -1, these are the NaNs
-        # see the pd.factorize() documentation for more details
-        #fe_values = fe.values  # Convert to NumPy array if not already
-        #fe_na = np.any(fe_values == -1, axis=1)
-        #keep_cols = ~fe_na
-        #keep_indices = np.where(keep_cols)[0]
+        tic = time.time()
+        dropped_singleton_bool = detect_singletons(fe.to_numpy())
 
-        if drop_singletons:
+        keep_idx = ~dropped_singleton_bool
 
+        toc = time.time()
+        print(f"Time to detect singleton fixed effects: {toc - tic}")
+
+        if np.any(dropped_singleton_bool == True):  # noqa: E712
+            warnings.warn(
+                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+            )
+
+        if not np.all(keep_idx):
             tic = time.time()
-            dropped_singleton_bool = detect_singletons(fe.to_numpy())
-
-            keep_idx = ~dropped_singleton_bool
+            Y = Y[keep_idx]
+            if not X_is_empty:
+                X = X.iloc[keep_idx]
+            fe = fe[keep_idx]
+            if _is_iv:
+                Z = Z[keep_idx]
+                endogvar = endogvar[keep_idx]
+            if weights_df is not None:
+                weights_df = weights_df[keep_idx]
 
             toc = time.time()
-            print(f"Time to detect singleton fixed effects: {toc - tic}")
-
-            if np.any(dropped_singleton_bool == True):  # noqa: E712
-                warnings.warn(
-                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
-                )
-
-            if not np.all(keep_idx):
-                tic = time.time()
-                Y = Y[keep_idx]
-                if not X_is_empty:
-                    X = X.iloc[keep_idx]
-                fe = fe[keep_idx]
-                if _is_iv:
-                    Z = Z[keep_idx]
-                    endogvar = endogvar[keep_idx]
-                if weights_df is not None:
-                    weights_df = weights_df[keep_idx]
-
-                toc = time.time()
-                print(f"Time to DROP NaNs in fixed effects & singleton fixed effects: {toc - tic}")
-
-
+            print(
+                f"Time to DROP NaNs in fixed effects & singleton fixed effects: {toc - tic}"
+            )
 
     tic = time.time()
     na_index = _get_na_index(data.shape[0], Y.index)
@@ -249,6 +239,7 @@ def _get_na_index(N, Y_index):
     mask[Y_index] = False
     na_index = np.nonzero(mask)[0]
     return na_index
+
 
 def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
 
@@ -494,10 +485,7 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
     - A DataFrame of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
-
-    if pd.api.types.is_integer_dtype(fe):
-        return fe
-    elif pd.api.types.is_float_dtype(fe):
+    if pd.api.types.is_integer_dtype(fe) or pd.api.types.is_float_dtype(fe):
         return fe
     else:
         if fe.dtype != "category":
@@ -505,6 +493,7 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
         res = fe.cat.codes
         res[res == -1] = np.nan
         return res
+
 
 def wrap_factorize(pattern):
     """

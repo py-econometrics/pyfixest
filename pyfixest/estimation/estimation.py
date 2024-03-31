@@ -267,7 +267,9 @@ def feols(
             """
         )
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data)
+    _estimation_input_checks(
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+    )
 
     print("Initiate Model")
     tic = time.time()
@@ -404,7 +406,9 @@ def fepois(
         )
     weights = None
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data)
+    _estimation_input_checks(
+        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+    )
 
     fixest = FixestMulti(data=data, copy_data=copy_data, store_data=store_data)
 
@@ -429,7 +433,9 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data):
+def _estimation_input_checks(
+    fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
