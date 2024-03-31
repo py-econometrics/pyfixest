@@ -181,16 +181,18 @@ def model_matrix_fixest(
 
         # find values where fe == -1, these are the NaNs
         # see the pd.factorize() documentation for more details
-        fe_values = fe.values  # Convert to NumPy array if not already
-        fe_na = np.any(fe_values == -1, axis=1)
-        keep_cols = ~fe_na
-        keep_indices = np.where(keep_cols)[0]
+        #fe_values = fe.values  # Convert to NumPy array if not already
+        #fe_na = np.any(fe_values == -1, axis=1)
+        #keep_cols = ~fe_na
+        #keep_indices = np.where(keep_cols)[0]
 
         if drop_singletons:
 
             tic = time.time()
             dropped_singleton_bool = detect_singletons(fe.to_numpy())
-            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+
+            keep_idx = ~dropped_singleton_bool
+
             toc = time.time()
             print(f"Time to detect singleton fixed effects: {toc - tic}")
 
@@ -199,28 +201,22 @@ def model_matrix_fixest(
                     f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
                 )
 
-            tic = time.time()
+            if not np.all(keep_idx):
+                tic = time.time()
+                Y = Y[keep_idx]
+                if not X_is_empty:
+                    X = X.iloc[keep_idx]
+                fe = fe[keep_idx]
+                if _is_iv:
+                    Z = Z[keep_idx]
+                    endogvar = endogvar[keep_idx]
+                if weights_df is not None:
+                    weights_df = weights_df[keep_idx]
 
-            keep_indices = np.intersect1d(keep_indices, keep_singleton_indices)
-            fe_na = fe_na + dropped_singleton_bool
-            toc = time.time()
-            print(f"Time to intersect keep_indices and keep_singleton_indices: {toc - tic}")
+                toc = time.time()
+                print(f"Time to DROP NaNs in fixed effects & singleton fixed effects: {toc - tic}")
 
-        if not np.all(keep_cols):
-            tic = time.time()
-            Y = Y[keep_cols]
-            if not X_is_empty:
-                X = X.iloc[keep_cols]
-            fe = fe[keep_cols]
-            if _is_iv:
-                Z = Z[keep_cols]
-                endogvar = endogvar[keep_cols]
-            if weights_df is not None:
-                weights_df = weights_df[keep_cols]
 
-            toc = time.time()
-            print(f"Time to DROP NaNs in fixed effects & singleton fixed effects: {toc - tic}")
-    # overwrite na_index
 
     tic = time.time()
     na_index = _get_na_index(data.shape[0], Y.index)
@@ -249,10 +245,14 @@ def model_matrix_fixest(
 def _get_na_index(N, Y_index):
 
     all_indices = np.arange(N)
-    max_index = all_indices.max() + 1  # Assuming all_indices is a NumPy array
-    mask = np.ones(max_index, dtype=bool)  # Initialize a mask of True values
-    mask[Y_index.to_numpy()] = False  # Set positions present in Y.index to False
-    na_index = np.nonzero(mask)[0]  # Find indices where mask is True
+    max_index = all_indices.max() + 1
+    mask = np.ones(max_index, dtype=bool)
+    if not isinstance(Y_index, np.ndarray):
+        Y_index = Y_index.to_numpy()
+    else:
+        Y_index = Y_index
+    mask[Y_index] = False
+    na_index = np.nonzero(mask)[0]
 
     return na_index
 

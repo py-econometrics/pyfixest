@@ -69,8 +69,9 @@ def feols(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `feols`.
-        As far as I know, the only relevant case where this could happen is
+        may lead to unintended changes in the input data outside of `fepois`.
+        For example, the input data set is re-index within the function.
+        As far as I know, the only other relevant case is
         when using interacted fixed effects, in which case you'll find
         a column with interacted fixed effects in the data set.
 
@@ -356,7 +357,8 @@ def fepois(
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
         may lead to unintended changes in the input data outside of `fepois`.
-        As far as I know, the only relevant case where this could happen is
+        For example, the input data set is re-index within the function.
+        As far as I know, the only other relevant case is
         when using interacted fixed effects, in which case you'll find
         a column with interacted fixed effects in the data set.
 
