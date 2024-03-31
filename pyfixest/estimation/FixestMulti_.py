@@ -368,14 +368,14 @@ class FixestMulti:
                 #    _clustervar,
                 #) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
 
-                _data = _drop_cols(_data, na_index)
+                _data_clean = _drop_cols(_data, na_index)
 
                 tic = time.time()
                 FIT.add_fixest_multi_context(
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
                     Y=Y,
-                    _data=_data,
+                    _data=_data_clean,
                     _ssc_dict=_ssc_dict,
                     _k_fe=_k_fe,
                     fval=fval,
@@ -388,7 +388,7 @@ class FixestMulti:
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov = vcov_type, data = _data)
+                    FIT.vcov(vcov = vcov_type, data = _data_clean)
                     FIT.get_inference()
 
                     # other regression stats

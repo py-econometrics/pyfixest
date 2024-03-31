@@ -22,7 +22,6 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
-call_counter = 0
 
 class Feols:
     """
@@ -469,8 +468,8 @@ class Feols:
                     self._cluster_df.iloc[:, 1], sep="-"
                 )
 
-            # make sure that cluster_df is of same length as self._X
-            if len(self._cluster_df) != self._N:
+            import pdb; pdb.set_trace()
+            if self._cluster_df.shape[0] != self._N:
                 raise ValueError(
                     "The cluster variable must have the same length as the data set."
                 )

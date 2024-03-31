@@ -231,18 +231,6 @@ def test_single_fit(
 
             try:
                 pyfixest = fepois(fml=fml, data=data, vcov=inference)
-            except NotImplementedError as exception:
-                if "inference is not supported" in str(exception):
-                    return pytest.skip(
-                        "'iid' inference is not supported for Poisson regression."
-                    )
-                raise
-            except ValueError as exception:
-                if "dependent variable must be a weakly positive" in str(exception):
-                    return pytest.skip(
-                        "Poisson model requires strictly positive dependent variable."
-                    )
-                raise
             except RuntimeError as exception:
                 if "Failed to converge after 1000000 iterations." in str(exception):
                     return pytest.skip(

@@ -168,7 +168,6 @@ def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
     pd.DataFrame
         The input DataFrame with NAs dropped.
     """
-
     if na_index.size > 0:
         all_indices = np.arange(_data.shape[0])
         max_index = all_indices.max() + 1

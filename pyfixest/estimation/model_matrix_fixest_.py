@@ -247,13 +247,9 @@ def _get_na_index(N, Y_index):
     all_indices = np.arange(N)
     max_index = all_indices.max() + 1
     mask = np.ones(max_index, dtype=bool)
-    if not isinstance(Y_index, np.ndarray):
-        Y_index = Y_index.to_numpy()
-    else:
-        Y_index = Y_index
+    Y_index = Y_index.to_numpy()
     mask[Y_index] = False
     na_index = np.nonzero(mask)[0]
-
     return na_index
 
 def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
