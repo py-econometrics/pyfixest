@@ -23,7 +23,6 @@ from pyfixest.utils.dev_utils import (
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
-
 class Feols:
     """
     Non user-facing class to estimate a liner regression via OLS.
@@ -306,9 +305,7 @@ class Feols:
         self._tXZ = None
         self._tZZinv = None
 
-    def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
-    ) -> "Feols":
+    def vcov(self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
 
@@ -332,6 +329,7 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
+
         _data = self._data
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
@@ -365,6 +363,7 @@ class Feols:
             self._is_clustered,
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
+
 
         if _is_iv:
             bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
@@ -438,9 +437,9 @@ class Feols:
 
         elif self._vcov_type == "CRV":
 
-            # assert all(
+            #assert all(
             #    col.replace(" ", "") in _data.columns for col in self._clustervar
-            # ), "vcov dict value must be a column in the data"
+            #), "vcov dict value must be a column in the data"
 
             if data is not None:
                 self._cluster_df = data[self._clustervar]
@@ -453,7 +452,7 @@ class Feols:
                     the regression. Alternatively, provide the data set as an argument
                     to the `vcov` function.
                     """
-                )
+                    )
 
             if self._cluster_df.isna().any().any():
                 raise NanInClusterVarError(
@@ -465,11 +464,10 @@ class Feols:
                 # paste both columns together
                 # set cluster_df to string
                 self._cluster_df = self._cluster_df.astype(str)
-                self._cluster_df["cluster_intersection"] = self._cluster_df.iloc[
-                    :, 0
-                ].str.cat(self._cluster_df.iloc[:, 1], sep="-")
+                self._cluster_df["cluster_intersection"] = self._cluster_df.iloc[:, 0].str.cat(
+                    self._cluster_df.iloc[:, 1], sep="-"
+                )
 
-            # import pdb; pdb.set_trace()
             if self._cluster_df.shape[0] != self._N:
                 raise ValueError(
                     "The cluster variable must have the same length as the data set."
@@ -674,6 +672,7 @@ class Feols:
         self._fml = fml
         self._depvar = depvar
         self._Y_untransformed = Y
+        self._data = None
 
         if store_data:
             self._data = _data
