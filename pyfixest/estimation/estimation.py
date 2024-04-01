@@ -18,6 +18,7 @@ def feols(
     weights: Union[None, str] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
+    fixef_tol=1e-08,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
     i_ref1=None,
@@ -57,6 +58,9 @@ def feols(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    fixef_tol: float, optional
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -268,12 +272,23 @@ def feols(
         )
 
     _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+        fml,
+        data,
+        vcov,
+        weights,
+        ssc,
+        fixef_rm,
+        collin_tol,
+        copy_data,
+        store_data,
+        fixef_tol,
     )
 
     print("Initiate Model")
     tic = time.time()
-    fixest = FixestMulti(data=data, copy_data=copy_data, store_data=store_data)
+    fixest = FixestMulti(
+        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+    )
     toc = time.time()
     print(f"Initiate Model: {toc - tic}")
 
@@ -299,6 +314,7 @@ def fepois(
     vcov: Optional[Union[str, dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
+    fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
@@ -337,6 +353,9 @@ def fepois(
     fixef_rm : str
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
+
+    fixef_tol: float, optional
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -407,10 +426,21 @@ def fepois(
     weights = None
 
     _estimation_input_checks(
-        fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+        fml,
+        data,
+        vcov,
+        weights,
+        ssc,
+        fixef_rm,
+        collin_tol,
+        copy_data,
+        store_data,
+        fixef_tol,
     )
 
-    fixest = FixestMulti(data=data, copy_data=copy_data, store_data=store_data)
+    fixest = FixestMulti(
+        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+    )
 
     fixest._prepare_estimation(
         "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
@@ -434,7 +464,16 @@ def fepois(
 
 
 def _estimation_input_checks(
-    fml, data, vcov, weights, ssc, fixef_rm, collin_tol, copy_data, store_data
+    fml,
+    data,
+    vcov,
+    weights,
+    ssc,
+    fixef_rm,
+    collin_tol,
+    copy_data,
+    store_data,
+    fixef_tol,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -472,3 +511,24 @@ def _estimation_input_checks(
 
     if not isinstance(store_data, bool):
         raise TypeError("store_data must be a boolean")
+
+    if not isinstance(fixef_tol, float):
+        raise TypeError(
+            """The function argument `fixef_tol` needs to be of
+            type float.
+            """
+        )
+    if fixef_tol <= 0:
+        raise ValueError(
+            """
+            The function argument `fixef_tol` needs to be of
+            strictly larger than 0.
+            """
+        )
+    if fixef_tol >= 1:
+        raise ValueError(
+            """
+            The function argument `fixef_tol` needs to be of
+            strictly smaller than 1.
+            """
+        )

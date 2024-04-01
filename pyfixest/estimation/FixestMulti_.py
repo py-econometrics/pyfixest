@@ -20,7 +20,9 @@ from pyfixest.utils.dev_utils import _drop_cols, _polars_to_pandas
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, data: pd.DataFrame, copy_data: bool, store_data: bool) -> None:
+    def __init__(
+        self, data: pd.DataFrame, copy_data: bool, store_data: bool, fixef_tol: float
+    ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
@@ -32,6 +34,8 @@ class FixestMulti:
             Whether to copy the data or not.
         store_data : bool
             Whether to store the data in the resulting model object or not.
+        fixef_tol: float
+            The tolerance for the convergence of the demeaning algorithm.
 
         Returns
         -------
@@ -40,6 +44,7 @@ class FixestMulti:
         self._data = None
         self._copy_data = copy_data
         self._store_data = store_data
+        self._fixef_tol = fixef_tol
 
         data = _polars_to_pandas(data)
 
@@ -176,6 +181,7 @@ class FixestMulti:
         _drop_intercept = self._drop_intercept
         _weights = self._weights
         _has_fixef = False
+        _fixef_tol = self._fixef_tol
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -250,7 +256,13 @@ class FixestMulti:
 
                     tic = time.time()
                     Yd, Xd = demean_model(
-                        Y, X, fe, weights, lookup_demeaned_data, na_index_str
+                        Y,
+                        X,
+                        fe,
+                        weights,
+                        lookup_demeaned_data,
+                        na_index_str,
+                        _fixef_tol,
                     )
                     print(f"demean model: {time.time()-tic:.2f}s")
 
@@ -262,6 +274,7 @@ class FixestMulti:
                             weights,
                             lookup_demeaned_data,
                             na_index_str,
+                            _fixef_tol,
                         )
                     else:
                         endogvard, Zd = None, None
@@ -343,6 +356,7 @@ class FixestMulti:
                         tol=iwls_tol,
                         collin_tol=collin_tol,
                         weights_name=None,
+                        fixef_tol=_fixef_tol,
                     )
 
                     FIT.get_fit()
