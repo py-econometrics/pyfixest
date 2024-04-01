@@ -1,5 +1,6 @@
-import pyfixest as pf
 import numpy as np
+
+import pyfixest as pf
 from pyfixest.utils.utils import get_data
 
 
@@ -17,9 +18,7 @@ def test_api():
     pf.coefplot([fit1, fit2])
 
 
-
 def test_feols_args():
-
     """
     Check feols function arguments.
 
@@ -28,28 +27,14 @@ def test_feols_args():
     - store_data
     - fixef_tol
     """
-
     df = pf.get_data()
 
-    fit1 = pf.feols(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        copy_data = True
-    )
-    fit2 = pf.feols(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        copy_data = False
-    )
+    fit1 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, copy_data=True)
+    fit2 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, copy_data=False)
 
     assert (fit1.coef() == fit2.coef()).all()
 
-    fit3 = pf.feols(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        store_data = False,
-        fixef_tol = 1e-02
-    )
+    fit3 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, store_data=False, fixef_tol=1e-02)
     assert fit3._data is None
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
@@ -57,7 +42,6 @@ def test_feols_args():
 
 
 def test_fepois_args():
-
     """
     Check feols function arguments.
 
@@ -66,35 +50,15 @@ def test_fepois_args():
     - store_data
     - fixef_tol
     """
+    df = pf.get_data(model="Fepois")
 
-    df = pf.get_data(model = "Fepois")
-
-    fit1 = pf.fepois(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        copy_data = True
-    )
-    fit2 = pf.fepois(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        copy_data = False
-    )
+    fit1 = pf.fepois(fml="Y ~ X1 | f1 + f2", data=df, copy_data=True)
+    fit2 = pf.fepois(fml="Y ~ X1 | f1 + f2", data=df, copy_data=False)
 
     assert (fit1.coef() == fit2.coef()).all()
 
-    fit3 = pf.fepois(
-        fml = "Y ~ X1 | f1 + f2",
-        data = df,
-        store_data = False,
-        fixef_tol = 1e-02
-    )
+    fit3 = pf.fepois(fml="Y ~ X1 | f1 + f2", data=df, store_data=False, fixef_tol=1e-02)
     assert fit3._data is None
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
-
-
-
-
-
-
