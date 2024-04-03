@@ -2,7 +2,7 @@
 
 ## PyFixest 0.19.0-beta1
 
-- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 20 seconds to run (... if my laptopt is connected to a power charger)!
+- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
 
 ```{python}
 #| eval: False
