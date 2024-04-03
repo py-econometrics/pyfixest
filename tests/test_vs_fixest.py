@@ -37,7 +37,7 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("beta_type", ["2"])
 @pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
-@pytest.mark.parametrize("model", ["Feols","Fepois"])
+@pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
@@ -222,7 +222,7 @@ def test_single_fit(
         else:
             run_test = True
 
-            #if "i(" in fml:
+            # if "i(" in fml:
             #    pytest.skip("Don't test interactions for Poisson.")
 
             if "^" in fml:

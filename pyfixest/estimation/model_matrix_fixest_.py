@@ -1,5 +1,4 @@
 import re
-import time
 import warnings
 from typing import Optional, Union
 
@@ -70,7 +69,6 @@ def model_matrix_fixest(
         - 'X_is_empty' : bool
             Flag indicating whether X is empty.
     """
-    tic = time.time()
     FixestFormula.check_syntax()
 
     fml_second_stage = FixestFormula.fml_second_stage
@@ -106,17 +104,9 @@ def model_matrix_fixest(
     }
 
     FML = Formula(**fml_kwargs)
-    toc = time.time()
-    print(f"Time to create formula object: {toc - tic}")
-
-    tic = time.time()
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
-    toc = time.time()
-    print(f"Time to get mm: {toc - tic}")
-
     endogvar = Z = weights_df = fe = None
 
-    tic = time.time()
     Y = mm["fml_second_stage"]["lhs"]
     X = mm["fml_second_stage"]["rhs"]
     X_is_empty = not X.shape[1] > 0
@@ -125,17 +115,9 @@ def model_matrix_fixest(
         Z = mm["fml_first_stage"]["rhs"]
     if fval != "0":
         fe = mm["fe"]
-        # tic1 = time.time()
-        # fe_names = fe.columns
-        # factorize(fe)
-        # toc1 = time.time()
-        # print(f"Time to factorize fixed effects: {toc1 - tic1}")
     if weights is not None:
         weights_df = mm["weights"]
-    toc = time.time()
-    print(f"Time to get values out of model matrix: {toc - tic}")
 
-    tic = time.time()
     for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
             cols_to_convert = df.select_dtypes(exclude=["int64", "float64"]).columns
@@ -143,10 +125,7 @@ def model_matrix_fixest(
                 df[cols_to_convert] = df[cols_to_convert].astype("float64")
     if fe is not None:
         fe = fe.astype("int32")
-    toc = time.time()
-    print(f"Time to convert data types: {toc - tic}")
 
-    tic = time.time()
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
         raise TypeError("The dependent variable must be numeric.")
@@ -170,19 +149,12 @@ def model_matrix_fixest(
         if _is_iv and "Intercept" in Z.columns:
             Z.drop("Intercept", axis=1, inplace=True)
 
-    toc = time.time()
-    print(f"Some other checks: {toc - tic}")
-
     # handle NaNs in fixed effects & singleton fixed effects
     if fe is not None and drop_singletons:
 
-        tic = time.time()
         dropped_singleton_bool = detect_singletons(fe.to_numpy())
 
         keep_idx = ~dropped_singleton_bool
-
-        toc = time.time()
-        print(f"Time to detect singleton fixed effects: {toc - tic}")
 
         if np.any(dropped_singleton_bool == True):  # noqa: E712
             warnings.warn(
@@ -190,7 +162,6 @@ def model_matrix_fixest(
             )
 
         if not np.all(keep_idx):
-            tic = time.time()
             Y = Y[keep_idx]
             if not X_is_empty:
                 X = X.iloc[keep_idx]
@@ -201,20 +172,8 @@ def model_matrix_fixest(
             if weights_df is not None:
                 weights_df = weights_df[keep_idx]
 
-            toc = time.time()
-            print(
-                f"Time to DROP NaNs in fixed effects & singleton fixed effects: {toc - tic}"
-            )
-
-    tic = time.time()
     na_index = _get_na_index(data.shape[0], Y.index)
-    toc = time.time()
-    print(f"Time to create na_index: {toc - tic}")
-
-    tic = time.time()
     na_index_str = ",".join(str(x) for x in na_index)
-    toc = time.time()
-    print(f"Time to create na_index_str: {toc - tic}")
 
     return {
         "Y": Y,

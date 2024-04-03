@@ -1,5 +1,4 @@
 import functools
-import time
 import warnings
 from importlib import import_module
 from typing import Optional, Union
@@ -48,12 +47,10 @@ class FixestMulti:
 
         data = _polars_to_pandas(data)
 
-        tic = time.time()
         if self._copy_data:
             self._data = data.copy()
         else:
             self._data = data
-        print(f"Copy data set: {time.time()-tic:.2f}s")
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
@@ -197,7 +194,6 @@ class FixestMulti:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 
-                tic = time.time()
                 mm_dict = model_matrix_fixest(
                     # fml=fml,
                     FixestFormula=FixestFormula,
@@ -206,7 +202,6 @@ class FixestMulti:
                     drop_intercept=_drop_intercept,
                     weights=_weights,
                 )
-                print(f"full model matrix steps: {time.time()-tic:.2f}s")
 
                 mm_dict_keys = [
                     "Y",
@@ -254,7 +249,6 @@ class FixestMulti:
                     if fe is not None:
                         _has_fixef = True
 
-                    tic = time.time()
                     Yd, Xd = demean_model(
                         Y,
                         X,
@@ -264,7 +258,6 @@ class FixestMulti:
                         na_index_str,
                         _fixef_tol,
                     )
-                    print(f"demean model: {time.time()-tic:.2f}s")
 
                     if _is_iv:
                         endogvard, Zd = demean_model(
@@ -388,7 +381,6 @@ class FixestMulti:
 
                 _data_clean = _drop_cols(_data, FIT.na_index)
 
-                tic = time.time()
                 FIT.add_fixest_multi_context(
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
@@ -399,7 +391,6 @@ class FixestMulti:
                     fval=fval,
                     store_data=self._store_data,
                 )
-                print(f"Add context: {time.time()-tic:.2f}s")
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:

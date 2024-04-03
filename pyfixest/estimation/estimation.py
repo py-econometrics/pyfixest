@@ -1,4 +1,3 @@
-import time
 from typing import Optional, Union
 
 import pandas as pd
@@ -284,20 +283,13 @@ def feols(
         fixef_tol,
     )
 
-    print("Initiate Model")
-    tic = time.time()
     fixest = FixestMulti(
         data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
     )
-    toc = time.time()
-    print(f"Initiate Model: {toc - tic}")
 
-    print("Prepare Estimation")
-    tic = time.time()
     fixest._prepare_estimation(
         "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
-    toc = time.time()
 
     # demean all models: based on fixed effects x split x missing value combinations
     fixest._estimate_all_models(vcov, collin_tol=collin_tol)

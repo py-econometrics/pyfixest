@@ -235,7 +235,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
         df.loc[idx[1], "f2"] = np.max(df["f2"]) + 1
         df.loc[idx[2], "f3"] = np.max(df["f3"]) + 1
 
-
     return df
 
 
