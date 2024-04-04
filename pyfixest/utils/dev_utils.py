@@ -149,3 +149,29 @@ def _to_list(x):
     if x is not None and not isinstance(x, list):
         return [x]
     return x
+
+
+def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
+    """
+    Drop columns from data based on the indices in na_index.
+
+    Parameters
+    ----------
+    _data : pd.DataFrame
+        The input DataFrame.
+    na_index : np.ndarray
+        An array of indices to drop.
+
+    Returns
+    -------
+    pd.DataFrame
+        The input DataFrame with NAs dropped.
+    """
+    if na_index.size > 0:
+        all_indices = np.arange(_data.shape[0])
+        max_index = all_indices.max() + 1
+        keep = np.ones(max_index, dtype=bool)
+        keep[na_index] = False
+        return _data[keep]
+    else:
+        return _data

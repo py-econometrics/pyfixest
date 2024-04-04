@@ -227,6 +227,14 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     df["weights"] = rng.uniform(0, 1, N)
     # df["weights"].iloc[]
 
+    if model == "Fepois":
+
+        # add separation
+        idx = np.array([10, 11, 12])
+        df.loc[idx[0], "f1"] = np.max(df["f1"]) + 1
+        df.loc[idx[1], "f2"] = np.max(df["f2"]) + 1
+        df.loc[idx[2], "f3"] = np.max(df["f3"]) + 1
+
     return df
 
 

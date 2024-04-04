@@ -10,7 +10,6 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
 
@@ -41,6 +40,7 @@ rng = np.random.default_rng(8760985)
 @pytest.mark.parametrize("model", ["Feols", "Fepois"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize(
     "fml",
     [
@@ -118,7 +118,7 @@ rng = np.random.default_rng(8760985)
     ],
 )
 def test_single_fit(
-    N, seed, beta_type, error_type, dropna, model, inference, weights, fml
+    N, seed, beta_type, error_type, dropna, model, inference, weights, f3_type, fml
 ):
     """
     Test pyfixest against fixest via rpy2 (OLS, IV, Poisson).
@@ -138,6 +138,8 @@ def test_single_fit(
         data = get_data(
             N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
         )
+        if weights is not None:
+            pytest.skip("Poisson does not support weights.")
 
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
@@ -145,6 +147,20 @@ def test_single_fit(
 
     if dropna:
         data = data.dropna()
+
+    # test fixed effects that are not floats, but ints or categoricals, etc
+    if f3_type == "categorical":
+        data["f3"] = pd.Categorical(data["f3"])
+    elif f3_type == "int" and dropna:
+        data["f3"] = data["f3"].astype(np.int32)
+    elif f3_type == "str":
+        data["f3"] = data["f3"].astype(str)
+    elif f3_type == "object":
+        data["f3"] = data["f3"].astype(object)
+    elif f3_type == "float":
+        data["f3"] = data["f3"].astype(float)
+    else:
+        pass
 
     data_r = get_data_r(fml, data)
 
@@ -201,26 +217,13 @@ def test_single_fit(
         #    return pytest.skip("Poisson does not support iid inference")
 
         if iv_check._is_iv:
-            is_iv = True
+            pytest.skip("IV regression not supported for Poisson.")
             run_test = False
         else:
-            is_iv = False  # noqa: F841
             run_test = True
 
-            # if formula does not contain "i(" or "C(", add, separation:
-            if "i(" not in fml and "C(" not in fml:
-                where_zeros = np.where(data["Y"] == 0)[  # noqa: F841
-                    0
-                ]  # because np.where evaluates to a tuple
-                # draw three random indices
-                # idx = rng.choice(where_zeros, 3, True)
-                idx = np.array([10, 11, 12])
-                data.loc[idx[0], "f1"] = np.max(data["f1"]) + 1
-                data.loc[idx[1], "f2"] = np.max(data["f2"]) + 1
-                data.loc[idx[2], "f3"] = np.max(data["f3"]) + 1
-
-            if "i(" in fml:
-                pytest.skip("Don't test interactions for Poisson.")
+            # if "i(" in fml:
+            #    pytest.skip("Don't test interactions for Poisson.")
 
             if "^" in fml:
                 pytest.skip("Don't test '^' for Poisson.")
@@ -231,12 +234,6 @@ def test_single_fit(
 
             try:
                 pyfixest = fepois(fml=fml, data=data, vcov=inference)
-            except NotImplementedError as exception:
-                if "inference is not supported" in str(exception):
-                    return pytest.skip(
-                        "'iid' inference is not supported for Poisson regression."
-                    )
-                raise
             except ValueError as exception:
                 if "dependent variable must be a weakly positive" in str(exception):
                     return pytest.skip(

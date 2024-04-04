@@ -1,5 +1,71 @@
 # News
 
+## PyFixest 0.19.0-beta1
+
+- Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
+
+```{python}
+#| eval: False
+
+%load_ext autoreload
+%autoreload 2
+
+import duckdb
+import time
+import numpy as np
+import pyfixest as pf
+
+# %%
+nyc = duckdb.sql(
+    '''
+    FROM 'C:/Users/alexa/Documents/nyc-taxi/**/*.parquet'
+    SELECT
+        tip_amount, trip_distance, passenger_count,
+        vendor_id, payment_type, dropoff_at,
+        dayofweek(dropoff_at) AS dofw
+    WHERE year = 2012 AND month <= 3
+    '''
+    ).df()
+
+# convert dowf, vendor_id, payment_type to categorical
+tic = time.time()
+nyc["dofw"] = nyc["dofw"].astype(int)
+nyc["vendor_id"] = nyc["vendor_id"].astype("category")
+nyc["payment_type"] = nyc["payment_type"].astype("category")
+print(f"""
+    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+    of the regression, hence I am cheating a bit. This saves {np.round(time.time() - tic)} seconds.
+    """
+)
+#    I am convering columns of type 'objects' to 'categories' and 'int'data types outside
+#    of the regression, hence I am cheating a bit. This saves 7.0 seconds.
+
+run = True
+if run:
+
+    # mock regression for JIT compilation
+    fit = pf.feols(
+        fml = "tip_amount ~ trip_distance + passenger_count | vendor_id + payment_type + dofw",
+        data = nyc.iloc[1:10_000],
+        copy_data = False,
+        store_data = False
+        )
+
+    import time
+    tic = time.time()
+    fit = pf.feols(
+        fml = "tip_amount ~ trip_distance + passenger_count | vendor_id + payment_type + dofw",
+        data = nyc,
+        copy_data = False, # saves a few seconds
+        store_data = False # saves a few second
+        )
+    passed = time.time() - tic
+    print(f"Passed time is {np.round(passed)}.")
+    # Passed time is 22.
+```
+
+- Adds three new function arguments to `feols()` and `fepois()`: `copy_data`, `store_data`, and `fixef_tol`.
+
 ## PyFixest 0.18.0
 
 - Large Refactoring of Interal Processing of Model Formulas, in particular `FixestFormulaParser` and `model_matrix_fixest`. As a results, the code should be cleaner and more robust.
@@ -11,7 +77,9 @@
 - Additionally, `model_matrix_fixest` now returns a dictionary instead of a tuple.
 - Brings back fixed effects reference setting via `i(var1, var2, ref)` syntax. Deprecates the `i_ref1`, `i_ref2` function arguments. I.e. it is again possible to e.g. run
 
-```python
+```{python}
+#| eval: False
+
 import pyfixest as pf
 data = pf.get_data()
 
@@ -19,7 +87,8 @@ fit1 = pf.feols("Y ~ i(f1, X2)", data=data)
 fit1.coef()[0:8]
 ```
 Via the `ref` syntax, via can set the reference level:
-```python
+```{python, eval=FALSE}
+#| eval: False
 fit2 = pf.feols("Y ~ i(f1, X2, ref = 1)", data=data)
 fit2.coef()[0:8]
 ```

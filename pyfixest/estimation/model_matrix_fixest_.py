@@ -104,9 +104,7 @@ def model_matrix_fixest(
     }
 
     FML = Formula(**fml_kwargs)
-
     mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
-
     endogvar = Z = weights_df = fe = None
 
     Y = mm["fml_second_stage"]["lhs"]
@@ -123,9 +121,10 @@ def model_matrix_fixest(
     for df in [Y, X, Z, endogvar, weights_df]:
         if df is not None:
             cols_to_convert = df.select_dtypes(exclude=["int64", "float64"]).columns
-            df[cols_to_convert] = df[cols_to_convert].astype("float64")
+            if cols_to_convert.size > 0:
+                df[cols_to_convert] = df[cols_to_convert].astype("float64")
     if fe is not None:
-        fe = fe.astype("int64")
+        fe = fe.astype("int32")
 
     # check if Y, endogvar have dimension (N, 1) - else they are non-numeric
     if Y.shape[1] > 1:
@@ -151,35 +150,29 @@ def model_matrix_fixest(
             Z.drop("Intercept", axis=1, inplace=True)
 
     # handle NaNs in fixed effects & singleton fixed effects
-    if fe is not None:
+    if fe is not None and drop_singletons:
 
-        # find values where fe == -1, these are the NaNs
-        # see the pd.factorize() documentation for more details
-        fe_na = np.any(fe == -1, axis=1)
-        keep_indices = np.where(~fe_na)[0]
+        dropped_singleton_bool = detect_singletons(fe.to_numpy())
 
-        if drop_singletons:
-            dropped_singleton_bool = detect_singletons(fe.to_numpy())
-            keep_singleton_indices = np.where(~dropped_singleton_bool)[0]
+        keep_idx = ~dropped_singleton_bool
 
-            if np.any(dropped_singleton_bool == True):  # noqa: E712
-                warnings.warn(
-                    f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
-                )
-            keep_indices = np.intersect1d(keep_indices, keep_singleton_indices)
+        if np.any(dropped_singleton_bool == True):  # noqa: E712
+            warnings.warn(
+                f"{np.sum(dropped_singleton_bool)} singleton fixed effect(s) detected. These observations are dropped from the model."
+            )
 
-        Y = Y.iloc[keep_indices]
-        if not X_is_empty:
-            X = X.iloc[keep_indices]
-        fe = fe.iloc[keep_indices]
-        if _is_iv:
-            Z = Z.iloc[keep_indices]
-            endogvar = endogvar.iloc[keep_indices]
-        if weights_df is not None:
-            weights_df = weights_df.iloc[keep_indices]
+        if not np.all(keep_idx):
+            Y = Y[keep_idx]
+            if not X_is_empty:
+                X = X.iloc[keep_idx]
+            fe = fe[keep_idx]
+            if _is_iv:
+                Z = Z[keep_idx]
+                endogvar = endogvar[keep_idx]
+            if weights_df is not None:
+                weights_df = weights_df[keep_idx]
 
-    # overwrite na_index
-    na_index = list(set(range(data.shape[0])).difference(Y.index))
+    na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
 
     return {
@@ -194,6 +187,17 @@ def model_matrix_fixest(
         "_icovars": _icovars,
         "X_is_empty": X_is_empty,
     }
+
+
+def _get_na_index(N, Y_index):
+
+    all_indices = np.arange(N)
+    max_index = all_indices.max() + 1
+    mask = np.ones(max_index, dtype=bool)
+    Y_index = Y_index.to_numpy()
+    mask[Y_index] = False
+    na_index = np.nonzero(mask)[0]
+    return na_index
 
 
 def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
@@ -440,7 +444,14 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
     - A DataFrame of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
-    return pd.factorize(fe)[0]
+    if pd.api.types.is_integer_dtype(fe) or pd.api.types.is_float_dtype(fe):
+        return fe
+    else:
+        if fe.dtype != "category":
+            fe = fe.astype("category")
+        res = fe.cat.codes
+        res[res == -1] = np.nan
+        return res
 
 
 def wrap_factorize(pattern):

@@ -12,6 +12,7 @@ def demean_model(
     weights: Optional[np.ndarray],
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
+    fixef_tol: float,
 ) -> tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Demean a regression model.
@@ -39,6 +40,8 @@ def demean_model(
     na_index_str : str
         A string with indices of dropped columns. Used for caching of demeaned
         variables.
+    fixef_tol: float
+        The tolerance for the demeaning algorithm.
 
     Returns
     -------
@@ -83,7 +86,9 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new, success = demean(var_diff, fe, weights)
+                YX_demean_new, success = demean(
+                    x=var_diff, flist=fe, weights=weights, tol=fixef_tol
+                )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -102,7 +107,9 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            YX_demeaned, success = demean(x=YX, flist=fe, weights=weights)
+            YX_demeaned, success = demean(
+                x=YX, flist=fe, weights=weights, tol=fixef_tol
+            )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -240,6 +247,123 @@ def demean(
                 break
 
             xk_prev[:] = xk_curr[:]
+        else:
+            not_converged += 1
+
+        res[:, k] = xk_curr[:]
+
+    success = not not_converged
+    return (res, success)
+
+
+@nb.njit(parallel=True)
+def demean_accelerated(
+    x: np.ndarray,
+    flist: np.ndarray,
+    weights: np.ndarray,
+    tol: float = 1e-08,
+    maxiter: int = 100_000,
+) -> tuple[np.ndarray, bool]:
+    """
+    Demean an array.
+
+    Workhorse for demeaning an input array `x` based on the specified fixed
+    effects and weights via the alternating projections algorithm.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input array of shape (n_samples, n_features). Needs to be of type float.
+    flist : numpy.ndarray
+        Array of shape (n_samples, n_factors) specifying the fixed effects.
+        Needs to already be converted to integers.
+    weights : numpy.ndarray
+        Array of shape (n_samples,) specifying the weights.
+    tol : float, optional
+        Tolerance criterion for convergence. Defaults to 1e-08.
+    maxiter : int, optional
+        Maximum number of iterations. Defaults to 100_000.
+
+    Returns
+    -------
+    tuple[numpy.ndarray, bool]
+        A tuple containing the demeaned array of shape (n_samples, n_features)
+        and a boolean indicating whether the algorithm converged successfully.
+    """
+    n_samples, n_features = x.shape
+    n_factors = flist.shape[1]
+
+    if x.flags.f_contiguous:
+        res = np.empty((n_features, n_samples), dtype=x.dtype).T
+    else:
+        res = np.empty((n_samples, n_features), dtype=x.dtype)
+
+    n_threads = nb.get_num_threads()
+
+    n_groups = flist.max() + 1
+    group_weights = _calc_group_weights(weights, flist, n_groups)
+    _group_weighted_sums = np.empty((n_threads, n_groups), dtype=x.dtype)
+
+    x_curr = np.empty((n_threads, n_samples), dtype=x.dtype)
+    x_prev = np.empty((n_threads, n_samples), dtype=x.dtype)
+    x_curr2 = np.empty((n_threads, n_samples), dtype=x.dtype)
+
+    # import pdb; pdb.set_trace()
+
+    not_converged = 0
+    for k in nb.prange(n_features):
+        tid = nb.get_thread_id()
+
+        xk_curr = x_curr[tid, :]
+        xk_prev = x_prev[tid, :]
+        xk_curr2 = x_curr2[tid, :]
+        for i in range(n_samples):
+            xk_curr[i] = x[i, k]
+            xk_prev[i] = x[i, k] - 1.0
+
+        for i in range(maxiter):
+
+            if i == 0:
+                for j in range(n_factors):
+                    # first mapping X(n+1) = g(X(x)) = X(n) - mean(X(n))
+                    _subtract_weighted_group_mean(
+                        xk_curr,
+                        weights,
+                        flist[:, j],
+                        group_weights[:, j],
+                        _group_weighted_sums[tid, :],
+                    )
+            else:
+                # import pdb; pdb.set_trace()
+                # set in previous iteration
+                xk_curr = xk_curr2
+
+            # import pdb; pdb.set_trace()
+            # second mapping g(X(n+1)) = g(g(X(n))) = g(X(n) - mean(X(n)))
+            xk_curr2 = xk_curr.copy()
+            for j in range(n_factors):
+                _subtract_weighted_group_mean(
+                    xk_curr2,
+                    weights,
+                    flist[:, j],
+                    group_weights[:, j],
+                    _group_weighted_sums[tid, :],
+                )
+
+            if _sad_converged(xk_curr, xk_prev, tol):
+                break
+
+            # xk_delta = xk_curr - xk_prev
+            xk_G_delta = xk_curr2 - xk_curr
+            xk_delta2 = xk_G_delta - (xk_curr - xk_prev)
+
+            norm_delta2 = np.linalg.norm(xk_delta2)
+            multiplier = (xk_G_delta * xk_delta2 * xk_G_delta) / norm_delta2
+            # np.subtract(xk_curr2, multiplier, xk_prev)
+            xk_prev[:] = xk_curr2[:] - multiplier[:]
+            # xk_prev[:] = xk_curr2[:] - (xk_G_delta[:] * xk_delta2[:] * xk_G_delta[:])
+            # / np.linalg.norm(xk_delta2[:])
+
         else:
             not_converged += 1
 
