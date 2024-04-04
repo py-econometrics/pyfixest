@@ -13,13 +13,15 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _polars_to_pandas
+from pyfixest.utils.dev_utils import _drop_cols, _polars_to_pandas
 
 
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
-    def __init__(self, data: pd.DataFrame) -> None:
+    def __init__(
+        self, data: pd.DataFrame, copy_data: bool, store_data: bool, fixef_tol: float
+    ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
@@ -27,16 +29,28 @@ class FixestMulti:
         ----------
         data : panda.DataFrame
             The input DataFrame for the object.
+        copy_data : bool
+            Whether to copy the data or not.
+        store_data : bool
+            Whether to store the data in the resulting model object or not.
+        fixef_tol: float
+            The tolerance for the convergence of the demeaning algorithm.
 
         Returns
         -------
             None
         """
         self._data = None
+        self._copy_data = copy_data
+        self._store_data = store_data
+        self._fixef_tol = fixef_tol
 
         data = _polars_to_pandas(data)
 
-        self._data = data.copy()
+        if self._copy_data:
+            self._data = data.copy()
+        else:
+            self._data = data
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
@@ -163,6 +177,8 @@ class FixestMulti:
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
         _weights = self._weights
+        _has_fixef = False
+        _fixef_tol = self._fixef_tol
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -230,8 +246,17 @@ class FixestMulti:
                 if _method == "feols":
                     # demean Y, X, Z, if not already done in previous estimation
 
+                    if fe is not None:
+                        _has_fixef = True
+
                     Yd, Xd = demean_model(
-                        Y, X, fe, weights, lookup_demeaned_data, na_index_str
+                        Y,
+                        X,
+                        fe,
+                        weights,
+                        lookup_demeaned_data,
+                        na_index_str,
+                        _fixef_tol,
                     )
 
                     if _is_iv:
@@ -242,6 +267,7 @@ class FixestMulti:
                             weights,
                             lookup_demeaned_data,
                             na_index_str,
+                            _fixef_tol,
                         )
                     else:
                         endogvard, Zd = None, None
@@ -278,6 +304,8 @@ class FixestMulti:
                             weights_name=_weights,
                         )
 
+                    FIT.na_index = na_index
+
                     # special case: sometimes it is useful to fit models as
                     # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                     if FIT._X_is_empty:
@@ -304,6 +332,7 @@ class FixestMulti:
                     N = X.shape[0]
 
                     if fe is not None:
+                        _has_fixef = True
                         fe = fe.to_numpy()
                         if fe.ndim == 1:
                             fe = fe.reshape((N, 1))
@@ -320,6 +349,7 @@ class FixestMulti:
                         tol=iwls_tol,
                         collin_tol=collin_tol,
                         weights_name=None,
+                        fixef_tol=_fixef_tol,
                     )
 
                     FIT.get_fit()
@@ -327,7 +357,9 @@ class FixestMulti:
                     FIT.na_index = na_index
                     FIT.n_separation_na = None
                     if na_separation:
-                        FIT.na_index += na_separation
+                        FIT.na_index = np.concatenate(
+                            [FIT.na_index, np.array(na_separation)]
+                        )
                         FIT.n_separation_na = len(na_separation)
 
                 else:
@@ -336,28 +368,40 @@ class FixestMulti:
                     )
 
                     # enrich FIT with model info obtained outside of the model class
+
+                # vcov_type = _get_vcov_type(vcov, fval)
+                # _check_vcov_input(vcov_type, _data)
+
+                # (
+                #    _vcov_type,
+                #    _vcov_type_detail,
+                #    _is_clustered,
+                #    _clustervar,
+                # ) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
+
+                _data_clean = _drop_cols(_data, FIT.na_index)
+
                 FIT.add_fixest_multi_context(
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
                     Y=Y,
-                    _data=_data,
+                    _data=_data_clean,
                     _ssc_dict=_ssc_dict,
                     _k_fe=_k_fe,
                     fval=fval,
-                    na_index=na_index,
+                    store_data=self._store_data,
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type)
+                    FIT.vcov(vcov=vcov_type, data=_data_clean)
                     FIT.get_inference()
 
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
-
                     if _icovars is not None:
                         FIT._icovars = _icovars
                     else:

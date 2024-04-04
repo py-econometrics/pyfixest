@@ -8,13 +8,13 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
-      - reference/estimation.multcomp.bonferroni.qmd
-      - reference/estimation.multcomp.rwolf.qmd
+      - reference/estimation.bonferroni.qmd
+      - reference/estimation.rwolf.qmd
       section: Estimation Functions
     - contents:
-      - reference/estimation.feols.Feols.qmd
-      - reference/estimation.fepois.Fepois.qmd
-      - reference/estimation.feiv.Feiv.qmd
+      - reference/estimation.Feols.qmd
+      - reference/estimation.Fepois.qmd
+      - reference/estimation.Feiv.qmd
       section: Estimation Classes
     - contents:
       - reference/report.summary.qmd
@@ -23,9 +23,9 @@ website:
       - reference/report.iplot.qmd
       section: Summarize and Visualize
     - contents:
-      - reference/estimation.demean.demean.qmd
-      - reference/estimation.detect_singletons.detect_singletons.qmd
-      - reference/estimation.model_matrix_fixest.model_matrix_fixest.qmd
+      - reference/estimation.demean.qmd
+      - reference/estimation.detect_singletons.qmd
+      - reference/estimation.model_matrix_fixest.qmd
       section: Misc / Utilities
     id: reference
   - id: dummy-sidebar

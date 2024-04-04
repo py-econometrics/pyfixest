@@ -50,6 +50,14 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
+def test_cluster_but_no_data():
+    """Test if AttributeError if self._data is not stored."""
+    data = get_data()
+    fit = feols("Y ~ X1", data=data, store_data=False)
+    with pytest.raises(AttributeError):
+        fit.vcov({"CRV1": "f2"})
+
+
 def test_error_hc23_fe():
     """
     Test if HC2 & HC3 inference with fixed effects regressions raises an error.

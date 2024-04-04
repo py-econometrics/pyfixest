@@ -17,9 +17,12 @@ def feols(
     weights: Union[None, str] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
+    fixef_tol=1e-08,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
     i_ref1=None,
+    copy_data: bool = True,
+    store_data: bool = True,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -55,6 +58,9 @@ def feols(
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
 
+    fixef_tol: float, optional
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -62,6 +68,23 @@ def feols(
         Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
         feols('Y~ i(f1, ref=1)', data = data) instead of the former
         feols('Y~ i(f1)', data = data, i_ref=1).
+
+    copy_data : bool, optional
+        Whether to copy the data before estimation, by default True.
+        If set to False, the data is not copied, which can save memory but
+        may lead to unintended changes in the input data outside of `fepois`.
+        For example, the input data set is re-index within the function.
+        As far as I know, the only other relevant case is
+        when using interacted fixed effects, in which case you'll find
+        a column with interacted fixed effects in the data set.
+
+    store_data : bool, optional
+        Whether to store the data in the model object, by default True.
+        If set to False, the data is not stored in the model object, which can
+        improve performance and save memory. However, it will no longer be possible
+        to access the data via the `data` attribute of the model object. This has
+        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
+        or `vcov()`.
 
     Returns
     -------
@@ -247,9 +270,23 @@ def feols(
             """
         )
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)
+    _estimation_input_checks(
+        fml,
+        data,
+        vcov,
+        weights,
+        ssc,
+        fixef_rm,
+        collin_tol,
+        copy_data,
+        store_data,
+        fixef_tol,
+    )
 
-    fixest = FixestMulti(data=data)
+    fixest = FixestMulti(
+        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+    )
+
     fixest._prepare_estimation(
         "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
@@ -269,11 +306,14 @@ def fepois(
     vcov: Optional[Union[str, dict[str, str]]] = None,
     ssc=ssc(),
     fixef_rm: str = "none",
+    fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
     i_ref1=None,
+    copy_data: bool = True,
+    store_data: bool = True,
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -306,6 +346,9 @@ def fepois(
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
+    fixef_tol: float, optional
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
 
@@ -317,6 +360,28 @@ def fepois(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
+
+    i_ref1: None
+        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
+        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
+        fepois('Y~ i(f1)', data = data, i_ref=1).
+
+    copy_data : bool, optional
+        Whether to copy the data before estimation, by default True.
+        If set to False, the data is not copied, which can save memory but
+        may lead to unintended changes in the input data outside of `fepois`.
+        For example, the input data set is re-index within the function.
+        As far as I know, the only other relevant case is
+        when using interacted fixed effects, in which case you'll find
+        a column with interacted fixed effects in the data set.
+
+    store_data : bool, optional
+        Whether to store the data in the model object, by default True.
+        If set to False, the data is not stored in the model object, which can
+        improve performance and save memory. However, it will no longer be possible
+        to access the data via the `data` attribute of the model object. This has
+        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
+        or `vcov()`.
 
     Returns
     -------
@@ -352,9 +417,22 @@ def fepois(
         )
     weights = None
 
-    _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol)
+    _estimation_input_checks(
+        fml,
+        data,
+        vcov,
+        weights,
+        ssc,
+        fixef_rm,
+        collin_tol,
+        copy_data,
+        store_data,
+        fixef_tol,
+    )
 
-    fixest = FixestMulti(data=data)
+    fixest = FixestMulti(
+        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+    )
 
     fixest._prepare_estimation(
         "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
@@ -377,7 +455,18 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
-def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol):
+def _estimation_input_checks(
+    fml,
+    data,
+    vcov,
+    weights,
+    ssc,
+    fixef_rm,
+    collin_tol,
+    copy_data,
+    store_data,
+    fixef_tol,
+):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
@@ -408,3 +497,30 @@ def _estimation_input_checks(fml, data, vcov, weights, ssc, fixef_rm, collin_tol
     # assert that weights is a column in data
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
+
+    if not isinstance(copy_data, bool):
+        raise TypeError("copy_data must be a boolean")
+
+    if not isinstance(store_data, bool):
+        raise TypeError("store_data must be a boolean")
+
+    if not isinstance(fixef_tol, float):
+        raise TypeError(
+            """The function argument `fixef_tol` needs to be of
+            type float.
+            """
+        )
+    if fixef_tol <= 0:
+        raise ValueError(
+            """
+            The function argument `fixef_tol` needs to be of
+            strictly larger than 0.
+            """
+        )
+    if fixef_tol >= 1:
+        raise ValueError(
+            """
+            The function argument `fixef_tol` needs to be of
+            strictly smaller than 1.
+            """
+        )

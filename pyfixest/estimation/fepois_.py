@@ -48,6 +48,8 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
+    fixef_tol: float, default = 1e-08.
+        Tolerance level for the convergence of the demeaning algorithm.
     weights_name : Optional[str]
         Name of the weights variable.
     """
@@ -63,6 +65,7 @@ class Fepois(Feols):
         collin_tol: float,
         maxiter: Optional[int] = 25,
         tol: Optional[float] = 1e-08,
+        fixef_tol: float = 1e-08,
         weights_name: Optional[str] = None,
     ):
         super().__init__(
@@ -80,6 +83,7 @@ class Fepois(Feols):
         self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
+        self.fixef_tol = fixef_tol
         self._drop_singletons = drop_singletons
         self._method = "fepois"
         self.convergence = False
@@ -142,6 +146,7 @@ class Fepois(Feols):
         _maxiter = self.maxiter
         _iwls_maxiter = 25
         _tol = self.tol
+        _fixef_tol = self.fixef_tol
 
         def compute_deviance(_Y, mu):
             with warnings.catch_warnings():
@@ -197,7 +202,9 @@ class Fepois(Feols):
 
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
-                ZX_resid, success = demean(x=ZX, flist=_fe, weights=mu.flatten())
+                ZX_resid, success = demean(
+                    x=ZX, flist=_fe, weights=mu.flatten(), tol=_fixef_tol
+                )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
             else:
