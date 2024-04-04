@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.551">
+<meta name="generator" content="quarto-1.4.553">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -357,15 +357,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None)</code></p>
+<p><code>estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', fixef_tol=1e-08, iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None, copy_data=True, store_data=True)</code></p>
 <p>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
 <col style="width: 3%">
-<col style="width: 8%">
-<col style="width: 85%">
+<col style="width: 7%">
+<col style="width: 86%">
 <col style="width: 2%">
 </colgroup>
 <thead>
@@ -408,28 +408,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>'none'</code></td>
 </tr>
 <tr class="even">
+<td><code>fixef_tol</code></td>
+<td>float</td>
+<td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.</td>
+<td><code>1e-08</code></td>
+</tr>
+<tr class="odd">
 <td><code>iwls_tol</code></td>
 <td>typing.Optional[float]</td>
 <td>Tolerance for IWLS convergence, by default 1e-08.</td>
 <td><code>1e-08</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>iwls_maxiter</code></td>
 <td>typing.Optional[float]</td>
 <td>Maximum number of iterations for IWLS convergence, by default 25.</td>
 <td><code>25</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>collin_tol</code></td>
 <td>float</td>
 <td>Tolerance for collinearity check, by default 1e-10.</td>
 <td><code>1e-10</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>drop_intercept</code></td>
 <td>bool</td>
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>i_ref1</code></td>
+<td></td>
+<td>Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.&nbsp;fepois(‘Y~ i(f1, ref=1)’, data = data) instead of the former fepois(‘Y~ i(f1)’, data = data, i_ref=1).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>copy_data</code></td>
+<td>bool</td>
+<td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="odd">
+<td><code>store_data</code></td>
+<td>bool</td>
+<td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
+<td><code>True</code></td>
 </tr>
 </tbody>
 </table>
@@ -458,7 +482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="1e847334" class="cell" data-execution_count="1">
+<div id="394ff52e" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -466,7 +490,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="rfXzkI"></div>
+            <div id="s9wJ6p"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -490,9 +514,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("rfXzkI").appendChild(div);
+                        document.getElementById("s9wJ6p").appendChild(div);
                     };
-                    var e = document.getElementById("rfXzkI");
+                    var e = document.getElementById("s9wJ6p");
                     e.appendChild(script);
                 })()
             </script>
@@ -508,10 +532,10 @@ Observations:  997
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.008 |        0.035 |    -0.239 |      0.811 | -0.076 |   0.060 |
-| X2            |     -0.015 |        0.010 |    -1.471 |      0.141 | -0.035 |   0.005 |
+| X1            |     -0.007 |        0.035 |    -0.190 |      0.850 | -0.075 |   0.062 |
+| X2            |     -0.015 |        0.010 |    -1.449 |      0.147 | -0.035 |   0.005 |
 ---
-Deviance: 1068.836</code></pre>
+Deviance: 1068.169</code></pre>
 </div>
 </div>
 <p>For more examples, please take a look at the documentation of the <code>feols()</code> function.</p>

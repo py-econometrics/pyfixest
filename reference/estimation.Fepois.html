@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.551">
+<meta name="generator" content="quarto-1.4.553">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -306,7 +306,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.estimation.Fepois" class="level1">
 <h1>estimation.Fepois</h1>
-<p><code>estimation.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, weights_name=None)</code></p>
+<p><code>estimation.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, fixef_tol=1e-08, weights_name=None)</code></p>
 <p>Estimate a Poisson regression model.</p>
 <p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
 <p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
@@ -315,9 +315,9 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 30%">
-<col style="width: 54%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 56%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -373,6 +373,11 @@ ul.task-list li input[type="checkbox"] {
 <td>Tolerance level for the convergence of the IRLS algorithm.</td>
 </tr>
 <tr class="even">
+<td>fixef_tol</td>
+<td>float, default = 1e-08.</td>
+<td>Tolerance level for the convergence of the demeaning algorithm.</td>
+</tr>
+<tr class="odd">
 <td>weights_name</td>
 <td>typing.Optional[str]</td>
 <td>Name of the weights variable.</td>
