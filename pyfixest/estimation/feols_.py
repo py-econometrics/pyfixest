@@ -163,12 +163,14 @@ class Feols:
         collin_tol: float,
         coefnames: list[str],
         weights_name: Optional[str],
+        weights_type: Optional[str],
     ) -> None:
         self._method = "feols"
         self._is_iv = False
 
         self._weights = weights
         self._weights_name = weights_name
+        self._weights_type = weights_type
         self._has_weights = False
         if weights_name is not None:
             self._has_weights = True
@@ -199,7 +201,7 @@ class Feols:
 
         self._Z = self._X
 
-        self._N, self._k = self._X.shape
+        _ , self._k = self._X.shape
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -353,6 +355,7 @@ class Feols:
         _weights = self._weights
         _ssc_dict = self._ssc_dict
         _N = self._N
+        _N_rows = self._N_rows
         _k = self._k
 
         _u_hat = self._u_hat
@@ -429,7 +432,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
-                    u = u.reshape((_N, 1))
+                    u = u.reshape((-1, 1))
                 Omega = (
                     transformed_scores.transpose() @ transformed_scores
                 )  # np.transpose( self._Z) @ ( self._Z * (u**2))  # k x k
@@ -469,7 +472,7 @@ class Feols:
                     :, 0
                 ].str.cat(self._cluster_df.iloc[:, 1], sep="-")
 
-            if self._cluster_df.shape[0] != self._N:
+            if self._cluster_df.shape[0] != _N_rows:
                 raise ValueError(
                     "The cluster variable must have the same length as the data set."
                 )
@@ -516,7 +519,7 @@ class Feols:
 
                     meat = _crv1_meat_loop(
                         _Z=_Z.astype(np.float64),
-                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((_N, 1)),
+                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
                         clustid=clustid,
                         cluster_col=cluster_col,
                     )
@@ -1332,7 +1335,12 @@ class Feols:
         -------
         None
         """
-        self._N = len(self._Y)
+        self._N_rows = len(self._Y)
+        if self._weights_type == "aweights":
+            self._N = self._N_rows
+        elif self._weights_type == "fweights":
+            self._N = np.sum(self._weights)
+
 
     def get_performance(self) -> None:
         """
