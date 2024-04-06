@@ -20,7 +20,12 @@ class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
     def __init__(
-        self, data: pd.DataFrame, copy_data: bool, store_data: bool, fixef_tol: float
+        self,
+        data: pd.DataFrame,
+        copy_data: bool,
+        store_data: bool,
+        fixef_tol: float,
+        weights_type: str,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -35,6 +40,10 @@ class FixestMulti:
             Whether to store the data in the resulting model object or not.
         fixef_tol: float
             The tolerance for the convergence of the demeaning algorithm.
+        weights_type: str
+            The type of weights employed in the estimation. Either analytical /
+            precision weights are employed (`aweights`) or
+            frequency weights (`fweights`).
 
         Returns
         -------
@@ -44,6 +53,7 @@ class FixestMulti:
         self._copy_data = copy_data
         self._store_data = store_data
         self._fixef_tol = fixef_tol
+        self._weights_type = weights_type
 
         data = _polars_to_pandas(data)
 
@@ -179,6 +189,7 @@ class FixestMulti:
         _weights = self._weights
         _has_fixef = False
         _fixef_tol = self._fixef_tol
+        _weights_type = self._weights_type
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -281,6 +292,7 @@ class FixestMulti:
                     )
 
                     if _is_iv:
+
                         coefnames_z = Z.columns.tolist()
                         FIT = Feiv(
                             Y=Yd,
@@ -291,6 +303,7 @@ class FixestMulti:
                             coefnames_z=coefnames_z,
                             collin_tol=collin_tol,
                             weights_name=_weights,
+                            weights_type=_weights_type,
                         )
                     else:
                         # initiate OLS class
@@ -302,6 +315,7 @@ class FixestMulti:
                             coefnames=coefnames,
                             collin_tol=collin_tol,
                             weights_name=_weights,
+                            weights_type=_weights_type,
                         )
 
                     FIT.na_index = na_index
@@ -350,6 +364,7 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         weights_name=None,
                         fixef_tol=_fixef_tol,
+                        weights_type=_weights_type,
                     )
 
                     FIT.get_fit()
@@ -368,16 +383,6 @@ class FixestMulti:
                     )
 
                     # enrich FIT with model info obtained outside of the model class
-
-                # vcov_type = _get_vcov_type(vcov, fval)
-                # _check_vcov_input(vcov_type, _data)
-
-                # (
-                #    _vcov_type,
-                #    _vcov_type_detail,
-                #    _is_clustered,
-                #    _clustervar,
-                # ) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
 
                 _data_clean = _drop_cols(_data, FIT.na_index)
 

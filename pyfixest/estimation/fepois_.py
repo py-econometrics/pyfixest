@@ -52,6 +52,8 @@ class Fepois(Feols):
         Tolerance level for the convergence of the demeaning algorithm.
     weights_name : Optional[str]
         Name of the weights variable.
+    weights_type : Optional[str]
+        Type of weights variable.
     """
 
     def __init__(
@@ -67,6 +69,7 @@ class Fepois(Feols):
         tol: Optional[float] = 1e-08,
         fixef_tol: float = 1e-08,
         weights_name: Optional[str] = None,
+        weights_type: Optional[str] = None,
     ):
         super().__init__(
             Y=Y,
@@ -75,6 +78,7 @@ class Fepois(Feols):
             coefnames=coefnames,
             collin_tol=collin_tol,
             weights_name=weights_name,
+            weights_type=weights_type,
         )
 
         # input checks

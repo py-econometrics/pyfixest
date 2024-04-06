@@ -33,6 +33,9 @@ class Feiv(Feols):
         Tolerance for collinearity check.
     weights_name : Optional[str]
         Name of the weights variable.
+    weights_type : Optional[str]
+        Type of the weights variable. Either "aweights" for analytic weights
+        or "fweights" for frequency weights.
 
     Attributes
     ----------
@@ -90,6 +93,7 @@ class Feiv(Feols):
         coefnames_z: list,
         collin_tol: float,
         weights_name: Optional[str],
+        weights_type: Optional[str],
     ) -> None:
         super().__init__(
             Y=Y,
@@ -98,6 +102,7 @@ class Feiv(Feols):
             coefnames=coefnames_x,
             collin_tol=collin_tol,
             weights_name=weights_name,
+            weights_type=weights_type,
         )
 
         if self._has_weights:

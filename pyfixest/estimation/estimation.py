@@ -23,6 +23,7 @@ def feols(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
+    weights_type: str = "aweights",
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -85,6 +86,12 @@ def feols(
         to access the data via the `data` attribute of the model object. This has
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`.
+
+    weights_type: str, optional
+        Options include `aweights` or `fweights`. `aweights` implement analytic or
+        precision weights, while `fweights` implement frequency weights. For details
+        see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
 
     Returns
     -------
@@ -271,20 +278,25 @@ def feols(
         )
 
     _estimation_input_checks(
-        fml,
-        data,
-        vcov,
-        weights,
-        ssc,
-        fixef_rm,
-        collin_tol,
-        copy_data,
-        store_data,
-        fixef_tol,
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest = FixestMulti(
-        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest._prepare_estimation(
@@ -415,23 +427,31 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+
+    # WLS currently not supported for Poisson regression
     weights = None
+    weights_type = "aweights"
 
     _estimation_input_checks(
-        fml,
-        data,
-        vcov,
-        weights,
-        ssc,
-        fixef_rm,
-        collin_tol,
-        copy_data,
-        store_data,
-        fixef_tol,
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest = FixestMulti(
-        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest._prepare_estimation(
@@ -466,6 +486,7 @@ def _estimation_input_checks(
     copy_data,
     store_data,
     fixef_tol,
+    weights_type,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -491,10 +512,10 @@ def _estimation_input_checks(
     if collin_tol >= 1:
         raise ValueError("collin_tol must be less than one")
 
-    # check that weights is either None or an np.array of length nrow(data) x 1
-    assert isinstance(weights, str) or weights is None
-
-    # assert that weights is a column in data
+    if not (isinstance(weights, str) or weights is None):
+        raise ValueError(
+            f"weights must be a string or None but you provided weights = {weights}."
+        )
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
 
@@ -522,5 +543,14 @@ def _estimation_input_checks(
             """
             The function argument `fixef_tol` needs to be of
             strictly smaller than 1.
+            """
+        )
+
+    if weights_type not in ["aweights", "fweights"]:
+        raise ValueError(
+            f"""
+            The `weights_type` argument must be of type `aweights`
+            (for analytical / precision weights) or `fweights`
+            (for frequency weights) but it is {weights_type}.
             """
         )

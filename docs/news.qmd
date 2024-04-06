@@ -1,6 +1,6 @@
 # News
 
-## PyFixest 0.19.0-beta1
+## PyFixest 0.19.0-beta2
 
 - Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
 
@@ -65,6 +65,33 @@ if run:
 ```
 
 - Adds three new function arguments to `feols()` and `fepois()`: `copy_data`, `store_data`, and `fixef_tol`.
+- Adds support for frequency weights with the `weights_type` function argument.
+```{python}
+import pyfixest as pf
+
+data = pf.get_data(N = 10000, model = "Fepois")
+df_weighted = data[["Y", "X1", "f1"]].groupby(["Y", "X1", "f1"]).size().reset_index().rename(columns={0: "count"})
+df_weighted["id"] = list(range(df_weighted.shape[0]))
+
+print("Dimension of the aggregated df:", df_weighted.shape)
+print(df_weighted.head())
+
+fit = pf.feols(
+    "Y ~ X1 | f1",
+    data = data
+)
+fit_weighted = pf.feols(
+    "Y ~ X1 | f1",
+    data = df_weighted,
+    weights = "count",
+    weights_type = "fweights"
+)
+pf.etable([fit, fit_weighted], coef_fmt = "b(se) \n (t) \n (p)")
+```
+
+- Bugfix: Wild Cluster Bootstrap Inference with Weights would compute unweighted standard errors. Sorry about that! WLS is not supported for the WCB.
+- Adds support for CRV3 inference with weights.
+
 
 ## PyFixest 0.18.0
 

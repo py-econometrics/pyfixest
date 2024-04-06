@@ -95,6 +95,68 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
     if not np.allclose(res_crv3a["t value"], res_crv3b["t value"]):
         raise ValueError("HC3 and CRV3 t values are not the same.")
 
+    # with weights:
+    fit3 = feols(
+        fml="Y~X1 + C(f2)",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights="weights",
+        weights_type="aweights",
+    )
+
+    fit4 = feols(
+        fml="Y~X1 |f2",
+        data=data,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights="weights",
+        weights_type="aweights",
+    )
+
+    res_crv3c = fit3.tidy().reset_index().set_index("Coefficient").xs("X1")
+    res_crv3d = fit4.tidy()
+
+    if not np.allclose(res_crv3c["Std. Error"], res_crv3d["Std. Error"]):
+        raise ValueError("HC3 and CRV3 ses with aweights and weights are not the same.")
+    if not np.allclose(res_crv3c["t value"], res_crv3d["t value"]):
+        raise ValueError(
+            "HC3 and CRV3 t values with aweights and weights are not the same."
+        )
+
+    # fweights
+    data2_w = (
+        data[["Y", "X1", "f1"]]
+        .groupby(["Y", "X1", "f1"])
+        .size()
+        .reset_index()
+        .rename(columns={0: "count"})
+    )
+    fit5 = feols(
+        fml="Y~X1 + C(f1)",
+        data=data2_w,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights="count",
+        weights_type="fweights",
+    )
+    fit6 = feols(
+        fml="Y~X1 |f1",
+        data=data2_w,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights="count",
+        weights_type="fweights",
+    )
+
+    res_crv3e = fit5.tidy().reset_index().set_index("Coefficient").xs("X1")
+    res_crv3f = fit6.tidy()
+
+    if not np.allclose(res_crv3e["Std. Error"], res_crv3f["Std. Error"]):
+        raise ValueError("HC3 and CRV3 ses with fweights are not the same.")
+    if not np.allclose(res_crv3e["t value"], res_crv3f["t value"]):
+        raise ValueError("HC3 and CRV3 t values with fweights are not the same.")
+
 
 def run_crv3_poisson():
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
