@@ -306,17 +306,17 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.estimation.Feiv" class="level1">
 <h1>estimation.Feiv</h1>
-<p><code>estimation.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name)</code></p>
+<p><code>estimation.Feiv(self, Y, X, Z, weights, coefnames_x, coefnames_z, collin_tol, weights_name, weights_type)</code></p>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
 <p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="table">
 <colgroup>
+<col style="width: 10%">
 <col style="width: 15%">
-<col style="width: 23%">
-<col style="width: 50%">
-<col style="width: 11%">
+<col style="width: 67%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -373,6 +373,12 @@ ul.task-list li input[type="checkbox"] {
 <td><code>weights_name</code></td>
 <td>typing.Optional[str]</td>
 <td>Name of the weights variable.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>weights_type</code></td>
+<td>typing.Optional[str]</td>
+<td>Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
 <td><em>required</em></td>
 </tr>
 </tbody>

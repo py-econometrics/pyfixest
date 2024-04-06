@@ -306,7 +306,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.estimation.Fepois" class="level1">
 <h1>estimation.Fepois</h1>
-<p><code>estimation.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, fixef_tol=1e-08, weights_name=None)</code></p>
+<p><code>estimation.Fepois(self, Y, X, fe, weights, coefnames, drop_singletons, collin_tol, maxiter=25, tol=1e-08, fixef_tol=1e-08, weights_name=None, weights_type=None)</code></p>
 <p>Estimate a Poisson regression model.</p>
 <p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
 <p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
@@ -381,6 +381,11 @@ ul.task-list li input[type="checkbox"] {
 <td>weights_name</td>
 <td>typing.Optional[str]</td>
 <td>Name of the weights variable.</td>
+</tr>
+<tr class="even">
+<td>weights_type</td>
+<td>typing.Optional[str]</td>
+<td>Type of weights variable.</td>
 </tr>
 </tbody>
 </table>
