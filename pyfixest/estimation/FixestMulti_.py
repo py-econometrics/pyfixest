@@ -20,7 +20,12 @@ class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
 
     def __init__(
-        self, data: pd.DataFrame, copy_data: bool, store_data: bool, fixef_tol: float, weights_type: str
+        self,
+        data: pd.DataFrame,
+        copy_data: bool,
+        store_data: bool,
+        fixef_tol: float,
+        weights_type: str,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -297,7 +302,7 @@ class FixestMulti:
                             coefnames_z=coefnames_z,
                             collin_tol=collin_tol,
                             weights_name=_weights,
-                            weights_type = _weights_type
+                            weights_type=_weights_type,
                         )
                     else:
                         # initiate OLS class
@@ -309,7 +314,7 @@ class FixestMulti:
                             coefnames=coefnames,
                             collin_tol=collin_tol,
                             weights_name=_weights,
-                            weights_type = _weights_type
+                            weights_type=_weights_type,
                         )
 
                     FIT.na_index = na_index
@@ -358,6 +363,7 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         weights_name=None,
                         fixef_tol=_fixef_tol,
+                        weights_type=_weights_type,
                     )
 
                     FIT.get_fit()

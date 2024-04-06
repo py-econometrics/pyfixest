@@ -23,7 +23,7 @@ def feols(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
-    weights_type:str = "aweights",
+    weights_type: str = "aweights",
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -278,21 +278,25 @@ def feols(
         )
 
     _estimation_input_checks(
-        fml,
-        data,
-        vcov,
-        weights,
-        ssc,
-        fixef_rm,
-        collin_tol,
-        copy_data,
-        store_data,
-        fixef_tol,
-        weights_type
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest = FixestMulti(
-        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol, weights_type = weights_type
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest._prepare_estimation(
@@ -322,7 +326,7 @@ def fepois(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
-    weights_type = "aweights"
+    weights_type="aweights",
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -432,21 +436,25 @@ def fepois(
     weights = None
 
     _estimation_input_checks(
-        fml,
-        data,
-        vcov,
-        weights,
-        ssc,
-        fixef_rm,
-        collin_tol,
-        copy_data,
-        store_data,
-        fixef_tol,
-        weights_type
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest = FixestMulti(
-        data=data, copy_data=copy_data, store_data=store_data, fixef_tol=fixef_tol, weights_type = weights_type
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
     )
 
     fixest._prepare_estimation(
@@ -481,7 +489,7 @@ def _estimation_input_checks(
     copy_data,
     store_data,
     fixef_tol,
-    weights_type
+    weights_type,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -507,10 +515,10 @@ def _estimation_input_checks(
     if collin_tol >= 1:
         raise ValueError("collin_tol must be less than one")
 
-    # check that weights is either None or an np.array of length nrow(data) x 1
-    assert isinstance(weights, str) or weights is None
-
-    # assert that weights is a column in data
+    if not (isinstance(weights, str) or weights is None):
+        raise ValueError(
+            f"weights must be a string or None but you provided weights = {weights}."
+        )
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
 
