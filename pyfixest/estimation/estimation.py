@@ -326,7 +326,6 @@ def fepois(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
-    weights_type="aweights",
 ) -> Union[Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -396,11 +395,6 @@ def fepois(
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`.
 
-    weights_type: str, optional
-        Options include `aweights` or `fweights`. `aweights` implement analytic or
-        precision weights, while `fweights` implement frequency weights. For details
-        see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
-
     Returns
     -------
     object
@@ -433,7 +427,10 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+
+    # WLS currently not supported for Poisson regression
     weights = None
+    weights_type = "aweights"
 
     _estimation_input_checks(
         fml=fml,
