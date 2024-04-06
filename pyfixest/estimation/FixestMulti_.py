@@ -384,22 +384,7 @@ class FixestMulti:
 
                     # enrich FIT with model info obtained outside of the model class
 
-                # vcov_type = _get_vcov_type(vcov, fval)
-                # _check_vcov_input(vcov_type, _data)
-
-                # (
-                #    _vcov_type,
-                #    _vcov_type_detail,
-                #    _is_clustered,
-                #    _clustervar,
-                # ) = _deparse_vcov_input(vcov_type, _has_fixef, _is_iv)
-
                 _data_clean = _drop_cols(_data, FIT.na_index)
-
-                if self._weights_type == "fweights":
-                    FIT._N = np.sum(weights)
-                else:
-                    FIT._N = X.shape[0]
 
                 FIT.add_fixest_multi_context(
                     fml=FixestFormula.fml,
