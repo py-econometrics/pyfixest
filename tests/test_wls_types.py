@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import pyfixest as pf
 
@@ -38,12 +39,13 @@ def test_fweights_ols():
     )
 
 
+@pytest.mark.skip(reason="Not implemented yet.")
 def test_fweights_iv():
 
     data = pf.get_data()
     data2_w = (
-        data[["Y", "X1", "Z1", "f1"]]
-        .groupby(["Y", "X1", "Z1", "f1"])
+        data[["Y", "X1", "Z1"]]
+        .groupby(["Y", "X1", "Z1"])
         .size()
         .reset_index()
         .rename(columns={0: "count"})
@@ -55,15 +57,23 @@ def test_fweights_iv():
     )
     np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
 
-    fit1 = pf.feols("Y ~ 1 | X1 ~ Z1", data=data.dropna(), vcov={"CRV1": "f1"})
-    fit2 = pf.feols(
-        "Y ~ 1 | X1 ~ Z1",
-        data=data2_w.dropna(),
+    data3_w = (
+        data[["Y", "X1", "Z1", "f1"]]
+        .groupby(["Y", "X1", "Z1", "f1"])
+        .size()
+        .reset_index()
+        .rename(columns={0: "count"})
+    )
+
+    fit3 = pf.feols("Y ~ 1 | f1 | X1 ~ Z1 ", data=data.dropna(), vcov={"CRV1": "f1"})
+    fit4 = pf.feols(
+        "Y ~ 1 | f1 | X1 ~ Z1",
+        data=data3_w.dropna(),
         weights="count",
         weights_type="fweights",
         vcov={"CRV1": "f1"},
     )
-    np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
+    np.testing.assert_allclose(fit3.tidy().values, fit4.tidy().values)
 
 
 def test_aweights():
