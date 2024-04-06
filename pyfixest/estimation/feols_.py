@@ -46,6 +46,11 @@ class Feols:
         Tolerance level for collinearity checks.
     coefnames : list[str]
         Names of the coefficients (of the design matrix X).
+    weights_name : Optional[str]
+        Name of the weights variable.
+    weights_type : Optional[str]
+        Type of the weights variable. Either "aweights" for analytic weights or
+        "fweights" for frequency weights.
 
     Attributes
     ----------
@@ -163,12 +168,14 @@ class Feols:
         collin_tol: float,
         coefnames: list[str],
         weights_name: Optional[str],
+        weights_type: Optional[str],
     ) -> None:
         self._method = "feols"
         self._is_iv = False
 
         self._weights = weights
         self._weights_name = weights_name
+        self._weights_type = weights_type
         self._has_weights = False
         if weights_name is not None:
             self._has_weights = True
@@ -199,11 +206,11 @@ class Feols:
 
         self._Z = self._X
 
-        self._N, self._k = self._X.shape
+        _, self._k = self._X.shape
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
-            self._support_crv3_inference = False
+            self._supports_wildboottest = False
         self._support_iid_inference = True
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
@@ -338,6 +345,7 @@ class Feols:
         _method = self._method
         _support_iid_inference = self._support_iid_inference
         _support_crv3_inference = self._support_crv3_inference
+        _weights_name = self._weights_name
 
         _beta_hat = self._beta_hat
 
@@ -351,8 +359,10 @@ class Feols:
         _scores = self._scores
 
         _weights = self._weights
+        _weights_type = self._weights_type
         _ssc_dict = self._ssc_dict
         _N = self._N
+        _N_rows = self._N_rows
         _k = self._k
 
         _u_hat = self._u_hat
@@ -429,7 +439,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
             else:
                 if u.ndim == 1:
-                    u = u.reshape((_N, 1))
+                    u = u.reshape((-1, 1))
                 Omega = (
                     transformed_scores.transpose() @ transformed_scores
                 )  # np.transpose( self._Z) @ ( self._Z * (u**2))  # k x k
@@ -469,7 +479,7 @@ class Feols:
                     :, 0
                 ].str.cat(self._cluster_df.iloc[:, 1], sep="-")
 
-            if self._cluster_df.shape[0] != self._N:
+            if self._cluster_df.shape[0] != _N_rows:
                 raise ValueError(
                     "The cluster variable must have the same length as the data set."
                 )
@@ -516,7 +526,7 @@ class Feols:
 
                     meat = _crv1_meat_loop(
                         _Z=_Z.astype(np.float64),
-                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((_N, 1)),
+                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
                         clustid=clustid,
                         cluster_col=cluster_col,
                     )
@@ -534,7 +544,7 @@ class Feols:
 
                     if not _support_crv3_inference:
                         raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV regression or WLS."
+                            "CRV3 inference is not supported with IV regression."
                         )
 
                     beta_jack = np.zeros((len(clustid), _k))
@@ -570,7 +580,13 @@ class Feols:
                         for ixg, g in enumerate(clustid):
                             # direct leave one cluster out implementation
                             data = _data[~np.equal(g, cluster_col)]
-                            fit = fit_(fml=self._fml, data=data, vcov="iid")
+                            fit = fit_(
+                                fml=self._fml,
+                                data=data,
+                                vcov="iid",
+                                weights=_weights_name,
+                                weights_type=_weights_type,
+                            )
                             beta_jack[ixg, :] = fit.coef().to_numpy()
 
                     # optional: beta_bar in MNW (2022)
@@ -1332,7 +1348,11 @@ class Feols:
         -------
         None
         """
-        self._N = len(self._Y)
+        self._N_rows = len(self._Y)
+        if self._weights_type == "aweights":
+            self._N = self._N_rows
+        elif self._weights_type == "fweights":
+            self._N = np.sum(self._weights)
 
     def get_performance(self) -> None:
         """
