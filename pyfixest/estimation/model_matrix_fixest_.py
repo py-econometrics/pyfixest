@@ -433,7 +433,7 @@ def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
 
 def factorize(fe: pd.DataFrame) -> pd.DataFrame:
     """
-    Factorize fixed effects into integers.
+    Factorize / Convert fixed effects into integers.
 
     Parameters
     ----------
