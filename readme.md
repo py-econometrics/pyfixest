@@ -9,36 +9,30 @@ Version](https://img.shields.io/pypi/pyversions/pyfixest.svg) ![PyPI -
 Downloads](https://img.shields.io/pypi/dm/pyfixest.png)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python implementation of the formidable
-[fixest](https://github.com/lrberge/fixest) package for fast
-high-dimensional fixed effects regression. The package aims to mimic
-`fixest` syntax and functionality as closely as Python allows: if you
-know `fixest` well, the goal is that you won't have to read the docs to
-get started! In particular, this means that all of `fixest's` defaults
-are mirrored by `PyFixest` - currently with only [one small
-exception](https://github.com/s3alfisc/pyfixest/issues/260).
-Nevertheless, for a quick introduction, you can take a look at the
-[tutorial](https://s3alfisc.github.io/pyfixest/quickstart/) or the
-regression chapter of [Arthur Turrell's](https://github.com/aeturrell)
-book on [Coding for
-Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression. 
+
+The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest` - currently with only [one small exception](https://github.com/s3alfisc/pyfixest/issues/260).
+
+Nevertheless, for a quick introduction, you can take a look at the [tutorial](https://s3alfisc.github.io/pyfixest/quickstart/) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
 ## Features
 
--   OLS and IV Regression
--   Poisson Regression following the [ppmlhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
+-   **OLS**, **WLS** and **IV** Regression
+-   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
--   Several Robust and Cluster Robust Variance-Covariance Types
--   Wild Cluster Bootstrap Inference (via
+-   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+-   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/s3alfisc/wildboottest))
--   Difference-in-Difference Estimators:
+-   **Difference-in-Differences** Estimators:
     -   The canonical Two-Way Fixed Effects Estimator
     -   [Gardner's two-stage
         ("`Did2s`")](https://jrgcmu.github.io/2sdd_current.pdf)
         estimator
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
-- Multiple Hypothesis Corrections following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314)
+- **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
+- The **Causal Cluster Variance Estimator** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
+
 
 ## Installation
 
@@ -53,10 +47,6 @@ or the development version from github by running
 ``` py
 pip install git+https://github.com/s3alfisc/pyfixest.git
 ```
-
-## News
-
-`PyFixest` `0.15.2` adds support for Romano-Wolf Corrected p-values via the [rwolf()](https://s3alfisc.github.io/pyfixest/reference/multcomp.rwolf.html#pyfixest.multcomp.rwolf) function.
 
 ## Benchmarks
 
@@ -102,7 +92,7 @@ syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html
 # OLS Estimation: estimate multiple models at once
 fit = pf.feols("Y + Y2 ~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_id'})
 # Print the results
-pf.etable([fit.fetch_model(i) for i in range(6)])
+pf.etable([fit.to_list()])
 ```
 
     Model:  Y~X1
