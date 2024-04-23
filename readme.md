@@ -9,36 +9,30 @@ Version](https://img.shields.io/pypi/pyversions/pyfixest.svg) ![PyPI -
 Downloads](https://img.shields.io/pypi/dm/pyfixest.png)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python implementation of the formidable
-[fixest](https://github.com/lrberge/fixest) package for fast
-high-dimensional fixed effects regression. The package aims to mimic
-`fixest` syntax and functionality as closely as Python allows: if you
-know `fixest` well, the goal is that you won't have to read the docs to
-get started! In particular, this means that all of `fixest's` defaults
-are mirrored by `PyFixest` - currently with only [one small
-exception](https://github.com/s3alfisc/pyfixest/issues/260).
-Nevertheless, for a quick introduction, you can take a look at the
-[tutorial](https://s3alfisc.github.io/pyfixest/quickstart/) or the
-regression chapter of [Arthur Turrell's](https://github.com/aeturrell)
-book on [Coding for
-Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression. 
+
+The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest` - currently with only [one small exception](https://github.com/s3alfisc/pyfixest/issues/260).
+
+Nevertheless, for a quick introduction, you can take a look at the [documentation](https://s3alfisc.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
 ## Features
 
--   OLS and IV Regression
--   Poisson Regression following the [ppmlhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
+-   **OLS**, **WLS** and **IV** Regression
+-   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
--   Several Robust and Cluster Robust Variance-Covariance Types
--   Wild Cluster Bootstrap Inference (via
+-   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+-   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/s3alfisc/wildboottest))
--   Difference-in-Difference Estimators:
+-   **Difference-in-Differences** Estimators:
     -   The canonical Two-Way Fixed Effects Estimator
     -   [Gardner's two-stage
         ("`Did2s`")](https://jrgcmu.github.io/2sdd_current.pdf)
         estimator
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
-- Multiple Hypothesis Corrections following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314)
+- **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
+- The **Causal Cluster Variance Estimator** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
+
 
 ## Installation
 
@@ -53,10 +47,6 @@ or the development version from github by running
 ``` py
 pip install git+https://github.com/s3alfisc/pyfixest.git
 ```
-
-## News
-
-`PyFixest` `0.15.2` adds support for Romano-Wolf Corrected p-values via the [rwolf()](https://s3alfisc.github.io/pyfixest/reference/multcomp.rwolf.html#pyfixest.multcomp.rwolf) function.
 
 ## Benchmarks
 
@@ -77,6 +67,41 @@ data = pf.get_data()
 pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
+
+
+<div id="vaLhnd"></div>
+<script type="text/javascript" data-lets-plot-script="library">
+    if(!window.letsPlotCallQueue) {
+        window.letsPlotCallQueue = [];
+    }; 
+    window.letsPlotCall = function(f) {
+        window.letsPlotCallQueue.push(f);
+    };
+    (function() {
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.0/js-package/distr/lets-plot.min.js";
+        script.onload = function() {
+            window.letsPlotCall = function(f) {f();};
+            window.letsPlotCallQueue.forEach(function(f) {f();});
+            window.letsPlotCallQueue = [];
+
+        };
+        script.onerror = function(event) {
+            window.letsPlotCall = function(f) {};    // noop
+            window.letsPlotCallQueue = [];
+            var div = document.createElement("div");
+            div.style.color = 'darkred';
+            div.textContent = 'Error loading Lets-Plot JS';
+            document.getElementById("vaLhnd").appendChild(div);
+        };
+        var e = document.getElementById("vaLhnd");
+        e.appendChild(script);
+    })()
+</script>
+
+
+
     ###
     
     Estimation:  OLS
@@ -84,9 +109,9 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
     Inference:  CRV1
     Observations:  997
     
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-    |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-    | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 |  -1.053 |   -0.786 |
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
     
@@ -102,29 +127,23 @@ syntax](https://aeturrell.github.io/coding-for-economists/econmt-regression.html
 # OLS Estimation: estimate multiple models at once
 fit = pf.feols("Y + Y2 ~X1 | csw0(f1, f2)", data = data, vcov = {'CRV1':'group_id'})
 # Print the results
-pf.etable([fit.fetch_model(i) for i in range(6)])
+fit.etable()
 ```
 
-    Model:  Y~X1
-    Model:  Y2~X1
-    Model:  Y~X1|f1
-    Model:  Y2~X1|f1
-    Model:  Y~X1|f1+f2
-    Model:  Y2~X1|f1+f2
-                              est1               est2               est3               est4               est5               est6
-    ------------  ----------------  -----------------  -----------------  -----------------  -----------------  -----------------
-    depvar                       Y                 Y2                  Y                 Y2                  Y                 Y2
-    -----------------------------------------------------------------------------------------------------------------------------
-    Intercept     0.919*** (0.121)   1.064*** (0.232)
-    X1             -1.0*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)
-    -----------------------------------------------------------------------------------------------------------------------------
-    f2                           -                  -                  -                  -                  x                  x
-    f1                           -                  -                  x                  x                  x                  x
-    -----------------------------------------------------------------------------------------------------------------------------
-    R2                       0.123              0.037              0.437              0.115              0.609              0.168
-    S.E. type         by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id
-    Observations               998                999                997                998                997                998
-    -----------------------------------------------------------------------------------------------------------------------------
+                               est1               est2               est3               est4               est5               est6
+    ------------  -----------------  -----------------  -----------------  -----------------  -----------------  -----------------
+    depvar                        Y                 Y2                  Y                 Y2                  Y                 Y2
+    ------------------------------------------------------------------------------------------------------------------------------
+    Intercept      0.919*** (0.121)   1.064*** (0.232)
+    X1            -1.000*** (0.117)  -1.322*** (0.211)  -0.949*** (0.087)  -1.266*** (0.212)  -0.919*** (0.069)  -1.228*** (0.194)
+    ------------------------------------------------------------------------------------------------------------------------------
+    f2                            -                  -                  -                  -                  x                  x
+    f1                            -                  -                  x                  x                  x                  x
+    ------------------------------------------------------------------------------------------------------------------------------
+    R2                        0.123              0.037              0.437              0.115              0.609              0.168
+    S.E. type          by: group_id       by: group_id       by: group_id       by: group_id       by: group_id       by: group_id
+    Observations                998                999                997                998                997                998
+    ------------------------------------------------------------------------------------------------------------------------------
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
     Format of coefficient cell:
     Coefficient (Std. Error)
@@ -150,10 +169,10 @@ fit1.vcov("hetero").summary()
     Inference:  hetero
     Observations:  998
     
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-    |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-    | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |   0.699 |    1.138 |
-    | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 |  -1.162 |   -0.838 |
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |  0.699 |   1.138 |
+    | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 | -1.162 |  -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
     
@@ -175,12 +194,12 @@ pf.fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
     Inference:  CRV1
     Observations:  997
     
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-    |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-    | X1            |     -0.008 |        0.035 |    -0.239 |      0.811 |  -0.076 |    0.060 |
-    | X2            |     -0.015 |        0.010 |    -1.471 |      0.141 |  -0.035 |    0.005 |
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | X1            |     -0.007 |        0.035 |    -0.190 |      0.850 | -0.075 |   0.062 |
+    | X2            |     -0.015 |        0.010 |    -1.449 |      0.147 | -0.035 |   0.005 |
     ---
-    Deviance: 1068.836
+    Deviance: 1068.169
     
 
 ### IV Estimation via three-part formulas
@@ -201,8 +220,8 @@ fit_iv.summary()
     Inference:  CRV1
     Observations:  997
     
-    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5 % |   97.5 % |
-    |:--------------|-----------:|-------------:|----------:|-----------:|--------:|---------:|
-    | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 |  -1.259 |   -0.790 |
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
     
