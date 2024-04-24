@@ -268,7 +268,6 @@ def feols(
 
     """
     if i_ref1 is not None:
-
         raise FeatureDeprecationError(
             """
             The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
@@ -419,7 +418,6 @@ def fepois(
     function.
     """
     if i_ref1 is not None:
-
         raise FeatureDeprecationError(
             """
             The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.

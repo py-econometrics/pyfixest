@@ -4,7 +4,6 @@ from pyfixest.utils.utils import get_data
 
 
 def test_visualize():
-
     data = get_data()
     fit1 = feols("Y ~ X1 + X2 | f1", data=data)
     coefplot(fit1)

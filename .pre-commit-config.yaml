@@ -1,11 +1,14 @@
 repos:
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
+      - id: debug-statements
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-toml
+      - id: check-added-large-files
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.27.3
@@ -14,12 +17,8 @@ repos:
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.2.1
+    rev: v0.4.1
     hooks:
       - id: ruff
-        name: ruff
-
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.1.1
-    hooks:
-      - id: black
+        args: ["--fix", "--output-format=full"]
+      - id: ruff-format

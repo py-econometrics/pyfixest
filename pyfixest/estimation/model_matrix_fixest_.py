@@ -151,7 +151,6 @@ def model_matrix_fixest(
 
     # handle NaNs in fixed effects & singleton fixed effects
     if fe is not None and drop_singletons:
-
         dropped_singleton_bool = detect_singletons(fe.to_numpy())
 
         keep_idx = ~dropped_singleton_bool
@@ -190,7 +189,6 @@ def model_matrix_fixest(
 
 
 def _get_na_index(N, Y_index):
-
     all_indices = np.arange(N)
     max_index = all_indices.max() + 1
     mask = np.ones(max_index, dtype=bool)
@@ -201,11 +199,9 @@ def _get_na_index(N, Y_index):
 
 
 def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
-
     columns_to_drop = []
     for _i_ref in _list_of_ivars_dict:
         if _i_ref.get("var2"):
-
             var1 = _i_ref.get("var1")
             var2 = _i_ref.get("var2")
             ref = _i_ref.get("ref")
@@ -233,7 +229,6 @@ def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
 
 
 def _check_ivars(_ivars, data):
-
     if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
         raise ValueError(
             f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
@@ -290,7 +285,6 @@ def _fixef_interactions(fval, data):
 
 
 def _get_ivars_dict(fml, pattern):
-
     matches = re.finditer(pattern, fml)
 
     res = []
@@ -330,7 +324,6 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
         A list of interacted variables or None.
     """
     if _list_of_ivars_dict:
-
         _ivars = [
             (
                 (d.get("var1"),)
@@ -361,7 +354,6 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
         _icovars = list(_icovars_set)
 
     else:
-
         _icovars = None
 
     return _icovars

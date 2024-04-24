@@ -259,7 +259,6 @@ def test_errors_etable():
 
 
 def test_errors_ccv():
-
     data = get_data().dropna()
     data["D"] = np.random.choice([0, 1], size=len(data))
 
@@ -306,7 +305,6 @@ def test_errors_ccv():
 
 
 def test_errors_confint():
-
     data = get_data()
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
@@ -314,7 +312,6 @@ def test_errors_confint():
 
 
 def test_deprecation_errors():
-
     data = get_data()
     with pytest.raises(FeatureDeprecationError):
         feols("Y ~ i(f1)", data, i_ref1=1)
@@ -323,7 +320,6 @@ def test_deprecation_errors():
 
 
 def test_i_error():
-
     data = get_data()
     data["f2"] = pd.Categorical(data["f2"])
 

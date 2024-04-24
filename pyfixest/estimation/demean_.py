@@ -322,7 +322,6 @@ def demean_accelerated(
             xk_prev[i] = x[i, k] - 1.0
 
         for i in range(maxiter):
-
             if i == 0:
                 for j in range(n_factors):
                     # first mapping X(n+1) = g(X(x)) = X(n) - mean(X(n))
