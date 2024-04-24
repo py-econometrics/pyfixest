@@ -447,7 +447,6 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-
             # assert all(
             #    col.replace(" ", "") in _data.columns for col in self._clustervar
             # ), "vcov dict value must be a column in the data"
@@ -1029,8 +1028,8 @@ class Feols:
         data = get_data()
         data["D1"] = np.random.choice([0, 1], size=data.shape[0])
 
-        fit = feols("Y ~ D", data=data, vcov = {"CRV1": "group_id"})
-        fit.ccv(treatment="D", pk = 0.05, gk = 0.5, n_splits = 8, seed = 123).head()
+        fit = feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk=0.05, gk=0.5, n_splits=8, seed=123).head()
         ```
         """
         assert (
@@ -1108,7 +1107,6 @@ class Feols:
 
         vcov_splits = 0.0
         for _ in range(n_splits):
-
             vcov_ccv = _compute_CCV(
                 fml=fml,
                 Y=Y,
@@ -1554,9 +1552,9 @@ class Feols:
         from pyfixest.estimation import feols
 
         data = get_data()
-        fit = feols("Y ~ C(f1)", data = data)
-        fit.confint(alpha = 0.10).head()
-        fit.confint(alpha = 0.10, joint = True, nboot = 9999).head()
+        fit = feols("Y ~ C(f1)", data=data)
+        fit.confint(alpha=0.10).head()
+        fit.confint(alpha=0.10, joint=True, nboot=9999).head()
         ```
         """
         tidy_df = self.tidy()
@@ -1575,7 +1573,6 @@ class Feols:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
         if not joint:
-
             if self._vcov_type in ["iid", "hetero"]:
                 df = self._N - self._k
             else:
@@ -1588,7 +1585,6 @@ class Feols:
             else:
                 crit_val = np.abs(norm.ppf(alpha / 2))
         else:
-
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv

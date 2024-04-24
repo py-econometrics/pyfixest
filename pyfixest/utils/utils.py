@@ -228,7 +228,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     # df["weights"].iloc[]
 
     if model == "Fepois":
-
         # add separation
         idx = np.array([10, 11, 12])
         df.loc[idx[0], "f1"] = np.max(df["f1"]) + 1
