@@ -174,7 +174,6 @@ def test_did2s(data):
 
 
 def test_errors(data):
-
     # test expected errors: treatment
 
     # boolean strings cannot be converted

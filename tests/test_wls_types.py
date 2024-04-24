@@ -5,7 +5,6 @@ import pyfixest as pf
 
 
 def test_fweights_ols():
-
     data = pf.get_data()
     data2_w = (
         data[["Y", "X1"]]
@@ -41,7 +40,6 @@ def test_fweights_ols():
 
 @pytest.mark.skip(reason="Not implemented yet.")
 def test_fweights_iv():
-
     data = pf.get_data()
     data2_w = (
         data[["Y", "X1", "Z1"]]
@@ -77,7 +75,6 @@ def test_fweights_iv():
 
 
 def test_aweights():
-
     data = pf.get_data()
     data["weights"] = np.ones(data.shape[0])
 
