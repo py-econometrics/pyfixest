@@ -31,7 +31,7 @@ Nevertheless, for a quick introduction, you can take a look at the [documentatio
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
 - **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
-- The **Causal Cluster Variance Estimator** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
+- The **Causal Cluster Variance Estimator (CCV)** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
 
 
 ## Installation
@@ -66,41 +66,6 @@ import pyfixest as pf
 data = pf.get_data()
 pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
-
-
-
-<div id="vaLhnd"></div>
-<script type="text/javascript" data-lets-plot-script="library">
-    if(!window.letsPlotCallQueue) {
-        window.letsPlotCallQueue = [];
-    }; 
-    window.letsPlotCall = function(f) {
-        window.letsPlotCallQueue.push(f);
-    };
-    (function() {
-        var script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.0/js-package/distr/lets-plot.min.js";
-        script.onload = function() {
-            window.letsPlotCall = function(f) {f();};
-            window.letsPlotCallQueue.forEach(function(f) {f();});
-            window.letsPlotCallQueue = [];
-
-        };
-        script.onerror = function(event) {
-            window.letsPlotCall = function(f) {};    // noop
-            window.letsPlotCallQueue = [];
-            var div = document.createElement("div");
-            div.style.color = 'darkred';
-            div.textContent = 'Error loading Lets-Plot JS';
-            document.getElementById("vaLhnd").appendChild(div);
-        };
-        var e = document.getElementById("vaLhnd");
-        e.appendChild(script);
-    })()
-</script>
-
-
 
     ###
     
