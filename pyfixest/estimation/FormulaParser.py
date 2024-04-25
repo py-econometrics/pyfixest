@@ -240,7 +240,6 @@ class FixestFormula:
     """
 
     def __init__(self, depvar, covar, fval, endogvars, instruments):
-
         self._depvar = depvar
         self._covar = covar
         self._fval = fval
@@ -339,7 +338,6 @@ class FixestFormula:
         covars = self._covar
 
         if instruments is not None:
-
             instruments_as_covars = [
                 element
                 for element in instruments.split("+")

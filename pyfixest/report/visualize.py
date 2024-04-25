@@ -1,8 +1,6 @@
 from typing import Optional, Union
 
 import pandas as pd
-
-# from lets_plot import *
 from lets_plot import (
     LetsPlot,
     aes,

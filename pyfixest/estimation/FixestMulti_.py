@@ -292,7 +292,6 @@ class FixestMulti:
                     )
 
                     if _is_iv:
-
                         coefnames_z = Z.columns.tolist()
                         FIT = Feiv(
                             Y=Yd,

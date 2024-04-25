@@ -6,10 +6,10 @@
 Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 ![PyPI - Python
 Version](https://img.shields.io/pypi/pyversions/pyfixest.svg) ![PyPI -
-Downloads](https://img.shields.io/pypi/dm/pyfixest.png)
+Downloads](https://img.shields.io/pypi/dm/pyfixest.svg)
 [![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
 
-`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression. 
+`PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
 
 The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest` - currently with only [one small exception](https://github.com/s3alfisc/pyfixest/issues/260).
 
@@ -68,18 +68,18 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 ```
 
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-    
+
 
 ### Multiple Estimation
 
@@ -112,7 +112,7 @@ fit.etable()
     Significance levels: * p < 0.05, ** p < 0.01, *** p < 0.001
     Format of coefficient cell:
     Coefficient (Std. Error)
-    
+
 
 
 
@@ -128,19 +128,19 @@ fit1.vcov("hetero").summary()
 
     Model:  Y~X1
     ###
-    
+
     Estimation:  OLS
     Dep. var.: Y
     Inference:  hetero
     Observations:  998
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |  0.699 |   1.138 |
     | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 | -1.162 |  -0.838 |
     ---
     RMSE: 2.158   R2: 0.123
-    
+
 
 ### Poisson Regression via `fepois()`
 
@@ -153,19 +153,19 @@ pf.fepois("Y ~ X1 + X2 | f1 + f2", data = poisson_data).summary()
 ```
 
     ###
-    
+
     Estimation:  Poisson
     Dep. var.: Y, Fixed effects: f1+f2
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | X1            |     -0.007 |        0.035 |    -0.190 |      0.850 | -0.075 |   0.062 |
     | X2            |     -0.015 |        0.010 |    -1.449 |      0.147 | -0.035 |   0.005 |
     ---
     Deviance: 1068.169
-    
+
 
 ### IV Estimation via three-part formulas
 
@@ -179,14 +179,13 @@ fit_iv.summary()
 ```
 
     ###
-    
+
     Estimation:  IV
     Dep. var.: Y, Fixed effects: f1
     Inference:  CRV1
     Observations:  997
-    
+
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
-    

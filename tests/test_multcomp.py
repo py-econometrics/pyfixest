@@ -17,7 +17,6 @@ broom = importr("broom")
 
 
 def test_bonferroni():
-
     data = get_data().dropna()
     rng = np.random.default_rng(989)
     data = get_data()
@@ -39,7 +38,6 @@ def test_bonferroni():
 
     pvalues_r = np.zeros(3)
     for i, x in enumerate([fit1_r, fit2_r, fit3_r]):
-
         df_tidy = broom.tidy_fixest(x)
         df_r = pd.DataFrame(df_tidy).T
         df_r.columns = ["term", "estimate", "std.error", "statistic", "p.value"]
@@ -53,7 +51,6 @@ def test_bonferroni():
 
 
 def test_wildrwolf():
-
     rng = np.random.default_rng(12345)
     data = get_data()
     data["Y2"] = data["Y"] * rng.normal(0, 0.5, size=len(data))
@@ -99,7 +96,6 @@ def test_wildrwolf():
 
 
 def test_stepwise_function():
-
     B = 1000
     S = 5
 

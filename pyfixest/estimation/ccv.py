@@ -47,7 +47,6 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
     tau_ms = np.zeros(G)
     N = 0
     for i, m in enumerate(unique_clusters):
-
         ind_m = cluster_vec == m
         Nm = np.sum(ind_m)
         N += Nm

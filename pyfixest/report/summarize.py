@@ -159,9 +159,7 @@ def etable(
 
     etable_list = []
     for i, model in enumerate(models):
-        model = (
-            model.tidy().reset_index()
-        )  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
+        model = model.tidy().reset_index()  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
         model["stars"] = (
             np.where(
                 model["Pr(>|t|)"] < signif_code[0],
@@ -195,8 +193,8 @@ def etable(
                     _number_formatter, **kwargs
                 )
             elif element in custom_stats:
-                assert len(custom_stats[element][i]) == len(
-                    model["Estimate"]
+                assert (
+                    len(custom_stats[element][i]) == len(model["Estimate"])
                 ), f"custom_stats {element} has unequal length to the number of coefficients in model {i}"
                 model[coef_fmt_title] += pd.Series(custom_stats[element][i]).apply(
                     _number_formatter, **kwargs
