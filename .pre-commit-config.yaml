@@ -1,3 +1,6 @@
+ci:
+  autofix_prs: false
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -26,6 +29,6 @@ repos:
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.8.5
     hooks:
-    - id: nbqa-ruff
-      args: ["--fix", "--output-format=full"]
-      files: ^docs/.*\.ipynb$
+      - id: nbqa-ruff
+        args: ["--fix", "--output-format=full"]
+        files: ^docs/.*\.ipynb$
