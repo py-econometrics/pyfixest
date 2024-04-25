@@ -38,6 +38,14 @@ jupyterlab = "^4.0.12"
 jupytext = "^1.16.1"
 
 [tool.pytest.ini_options]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pyfixest",
+    "--cov-report=term-missing",
+    "--color=yes",
+]
 markers = [
     "extended: mark test to be part of the extended test suite"
 ]
