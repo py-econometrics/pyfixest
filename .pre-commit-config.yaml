@@ -22,3 +22,10 @@ repos:
       - id: ruff
         args: ["--fix", "--output-format=full"]
       - id: ruff-format
+
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.8.5
+    hooks:
+    - id: nbqa-ruff
+      args: ["--fix", "--output-format=full"]
+      files: ^docs/.*\.ipynb$
