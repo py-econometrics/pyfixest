@@ -333,6 +333,7 @@ def test_i_error():
     with pytest.raises(FactorEvaluationError):
         feols("Y ~ i(f1, X1, ref=a)", data)
 
+
 def visualization_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
