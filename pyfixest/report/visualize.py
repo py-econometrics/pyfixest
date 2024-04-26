@@ -1,6 +1,8 @@
 from typing import Optional, Union
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn.objects as so
 from lets_plot import (
     LetsPlot,
     aes,
@@ -36,6 +38,7 @@ def iplot(
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
     exact_match: bool = False,
+    plot_backend: str = "lets_plot",
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -77,6 +80,8 @@ def iplot(
         Whether to use exact match for `keep` and `drop`. Default is False.
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
+    plot_backend: str, optional
+        The plotting backend to use between "lets_plot" (default) and "matplotlib".
 
     Returns
     -------
@@ -126,16 +131,23 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    return _coefplot(
-        df=df,
-        figsize=figsize,
-        alpha=alpha,
-        yintercept=yintercept,
-        xintercept=xintercept,
-        rotate_xticks=rotate_xticks,
-        title=title,
-        flip_coord=coord_flip,
-    )
+    plot_kwargs = {
+        "df": df,
+        "figsize": figsize,
+        "alpha": alpha,
+        "yintercept": yintercept,
+        "xintercept": xintercept,
+        "rotate_xticks": rotate_xticks,
+        "title": title,
+        "flip_coord": coord_flip,
+    }
+
+    if plot_backend == "lets_plot":
+        return _coefplot_lets_plot(**plot_kwargs)
+    elif plot_backend == "matplotlib":
+        return _coefplot_matplotlib(**plot_kwargs)
+    else:
+        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
 
 
 def coefplot(
@@ -150,6 +162,7 @@ def coefplot(
     keep: Optional[Union[list, str]] = [],
     drop: Optional[Union[list, str]] = [],
     exact_match: bool = False,
+    plot_backend: str = "lets_plot",
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -189,6 +202,8 @@ def coefplot(
         Whether to use exact match for `keep` and `drop`. Default is False.
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
+    plot_backend: str, optional
+        The plotting backend to use between "lets_plot" (default) and "matplotlib".
 
     Returns
     -------
@@ -223,19 +238,26 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    return _coefplot(
-        df=df,
-        figsize=figsize,
-        alpha=alpha,
-        yintercept=yintercept,
-        xintercept=xintercept,
-        rotate_xticks=rotate_xticks,
-        title=title,
-        flip_coord=coord_flip,
-    )
+    plot_kwargs = {
+        "df": df,
+        "figsize": figsize,
+        "alpha": alpha,
+        "yintercept": yintercept,
+        "xintercept": xintercept,
+        "rotate_xticks": rotate_xticks,
+        "title": title,
+        "flip_coord": coord_flip,
+    }
+
+    if plot_backend == "lets_plot":
+        return _coefplot_lets_plot(**plot_kwargs)
+    elif plot_backend == "matplotlib":
+        return _coefplot_matplotlib(**plot_kwargs)
+    else:
+        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
 
 
-def _coefplot(
+def _coefplot_lets_plot(
     df: pd.DataFrame,
     figsize: tuple[int, int],
     alpha: float,
@@ -250,8 +272,8 @@ def _coefplot(
 
     Parameters
     ----------
-    models : list
-        A list of fitted models indices.
+    df : pandas.DataFrame
+        The dataframe containing the data used for the model fitting.
     figsize : tuple
         The size of the figure.
     alpha : float
@@ -260,8 +282,6 @@ def _coefplot(
         The value at which to draw a horizontal line on the plot.
     xintercept : int or None, optional
         The value at which to draw a vertical line on the plot.
-    df : pandas.DataFrame
-        The dataframe containing the data used for the model fitting.
     rotate_xticks : float, optional
         The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     title : str, optional
@@ -299,4 +319,61 @@ def _coefplot(
     if title is not None:
         plot += ggtitle(title)
 
+    return plot
+
+
+def _coefplot_matplotlib(
+    df: pd.DataFrame,
+    figsize: tuple[int, int],
+    alpha: float,
+    yintercept: Optional[int] = None,
+    xintercept: Optional[int] = None,
+    rotate_xticks: float = 0,
+    title: Optional[str] = None,
+    flip_coord: Optional[bool] = True,
+):
+    """
+    Plot model coefficients with confidence intervals.
+
+    Parameters
+    ----------
+    df pandas.DataFrame
+        The dataframe containing the data used for the model fitting.
+    figsize : tuple
+        The size of the figure.
+    alpha : float
+        The significance level for the confidence intervals.
+    yintercept : int or None, optional
+        The value at which to draw a horizontal line on the plot.
+    xintercept : int or None, optional
+        The value at which to draw a vertical line on the plot.
+    rotate_xticks : float, optional
+        The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
+    title : str, optional
+        The title of the plot.
+    flip_coord : bool, optional
+        Whether to flip the coordinates of the plot. Default is True.
+
+    Returns
+    -------
+    ...
+    """
+    title = title if title is not None else "Coefficient Plot"
+
+    _, ax = plt.subplots(figsize=figsize)
+    ax.axvline(x=0, color="black", linestyle="--")
+
+    plot = (
+        so.Plot(df, x="Estimate", y="Coefficient", color="fml")
+        .add(so.Dot(), so.Dodge(empty="drop"))
+        .add(so.Range(), so.Dodge(empty="drop"), xmin="2.5%", xmax="97.5%")
+        .label(
+            title=title,
+            x=r"Estimate and 95% Confidence Interval",
+            y="Coefficient",
+            color="Model",
+        )
+        .on(ax)
+    )
+    plt.close()
     return plot
