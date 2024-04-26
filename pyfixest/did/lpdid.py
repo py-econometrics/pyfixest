@@ -5,7 +5,7 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import _coefplot_lets_plot, _coefplot_matplotlib
+from pyfixest.report.visualize import _coefplot
 
 
 class LPDID(DID):
@@ -166,23 +166,17 @@ class LPDID(DID):
         df = self._coeftable
         df["fml"] = "lpdid"
 
-        plot_kwargs = {
-            "df": df,
-            "figsize": figsize,
-            "alpha": alpha,
-            "yintercept": yintercept,
-            "xintercept": xintercept,
-            "rotate_xticks": rotate_xticks,
-            "title": title,
-            "flip_coord": coord_flip,
-        }
-
-        if plot_backend == "lets_plot":
-            return _coefplot_lets_plot(**plot_kwargs)
-        elif plot_backend == "matplotlib":
-            return _coefplot_matplotlib(**plot_kwargs)
-        else:
-            raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+        _coefplot(
+            plot_backend=plot_backend,
+            df=df,
+            figsize=figsize,
+            alpha=alpha,
+            yintercept=yintercept,
+            xintercept=xintercept,
+            rotate_xticks=rotate_xticks,
+            title=title,
+            flip_coord=coord_flip,
+        )
 
     def tidy(self):  # noqa: D102
         return self._coeftable

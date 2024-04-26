@@ -35,8 +35,8 @@ def iplot(
     rotate_xticks: int = 0,
     title: Optional[str] = None,
     coord_flip: bool = True,
-    keep: Optional[Union[list, str]] = [],
-    drop: Optional[Union[list, str]] = [],
+    keep: Optional[Union[list, str]] = None,
+    drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
 ):
@@ -106,6 +106,12 @@ def iplot(
     df_all = []
     all_icovars = []
 
+    if keep is None:
+        keep = []
+
+    if drop is None:
+        drop = []
+
     for x, fxst in enumerate(list(models)):
         if fxst._icovars is None:
             raise ValueError(
@@ -131,23 +137,17 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    plot_kwargs = {
-        "df": df,
-        "figsize": figsize,
-        "alpha": alpha,
-        "yintercept": yintercept,
-        "xintercept": xintercept,
-        "rotate_xticks": rotate_xticks,
-        "title": title,
-        "flip_coord": coord_flip,
-    }
-
-    if plot_backend == "lets_plot":
-        return _coefplot_lets_plot(**plot_kwargs)
-    elif plot_backend == "matplotlib":
-        return _coefplot_matplotlib(**plot_kwargs)
-    else:
-        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+    _coefplot(
+        plot_backend=plot_backend,
+        df=df,
+        figsize=figsize,
+        alpha=alpha,
+        yintercept=yintercept,
+        xintercept=xintercept,
+        rotate_xticks=rotate_xticks,
+        title=title,
+        flip_coord=coord_flip,
+    )
 
 
 def coefplot(
@@ -159,8 +159,8 @@ def coefplot(
     rotate_xticks: int = 0,
     title: Optional[str] = None,
     coord_flip: bool = True,
-    keep: Optional[Union[list, str]] = [],
-    drop: Optional[Union[list, str]] = [],
+    keep: Optional[Union[list, str]] = None,
+    drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
 ):
@@ -224,6 +224,13 @@ def coefplot(
     ```
     """
     models = _post_processing_input_checks(models)
+
+    if keep is None:
+        keep = []
+
+    if drop is None:
+        drop = []
+
     df_all = []
     for fxst in models:
         df_model = fxst.tidy().reset_index()
@@ -238,17 +245,21 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    plot_kwargs = {
-        "df": df,
-        "figsize": figsize,
-        "alpha": alpha,
-        "yintercept": yintercept,
-        "xintercept": xintercept,
-        "rotate_xticks": rotate_xticks,
-        "title": title,
-        "flip_coord": coord_flip,
-    }
+    _coefplot(
+        plot_backend=plot_backend,
+        df=df,
+        figsize=figsize,
+        alpha=alpha,
+        yintercept=yintercept,
+        xintercept=xintercept,
+        rotate_xticks=rotate_xticks,
+        title=title,
+        flip_coord=coord_flip,
+    )
 
+
+def _coefplot(plot_backend, **plot_kwargs):
+    """Coefplot function that dispatches to the correct plotting backend."""
     if plot_backend == "lets_plot":
         return _coefplot_lets_plot(**plot_kwargs)
     elif plot_backend == "matplotlib":
