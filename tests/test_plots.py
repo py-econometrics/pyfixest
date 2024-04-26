@@ -37,7 +37,8 @@ def test_iplot(data):
     fit_multi.iplot()
 
 
-def test_coefplot(data):
+@pytest.mark.parametrize("plot_backend", ["lets_plot", "matplotlib"])
+def test_coefplot(data, plot_backend):
     fit1 = feols(fml="Y ~ i(f2, X1) | f1", vcov="iid", data=data)
     fit2 = feols(fml="Y ~ i(f2, X1) | f1", vcov="iid", data=data)
     fit3 = feols(fml="Y ~ X1 + X2", vcov="iid", data=data)
@@ -45,11 +46,11 @@ def test_coefplot(data):
     fit1.coefplot()
     fit2.coefplot()
     fit3.coefplot()
-    coefplot(fit1)
-    coefplot([fit1, fit2])
-    coefplot([fit1, fit2], yintercept=0)
-    coefplot([fit1, fit2], keep="X")
-    coefplot([fit1, fit2], drop="X")
+    coefplot(fit1, plot_backend=plot_backend)
+    coefplot([fit1, fit2], plot_backend=plot_backend)
+    coefplot([fit1, fit2], yintercept=0, plot_backend=plot_backend)
+    coefplot([fit1, fit2], keep="X", plot_backend=plot_backend)
+    coefplot([fit1, fit2], drop="X", plot_backend=plot_backend)
 
     fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
     fit_multi.coefplot()
