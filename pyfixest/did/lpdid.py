@@ -5,7 +5,7 @@ import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import _coefplot
+from pyfixest.report.visualize import _coefplot_lets_plot, _coefplot_matplotlib
 
 
 class LPDID(DID):
@@ -132,6 +132,7 @@ class LPDID(DID):
         rotate_xticks=0,
         title="LPDID Event Study Estimate",
         coord_flip=False,
+        plot_backend="lets_plot",
     ):
         """
         Create coefficient plots.
@@ -154,6 +155,8 @@ class LPDID(DID):
             Title of the plot.
         coord_flip : bool, optional
             Whether to flip the coordinates of the plot. Defaults to False.
+        plot_backend: str, optional
+            The plotting backend to use between "lets_plot" (default) and "matplotlib".
 
         Returns
         -------
@@ -163,16 +166,23 @@ class LPDID(DID):
         df = self._coeftable
         df["fml"] = "lpdid"
 
-        return _coefplot(
-            df=df,
-            figsize=figsize,
-            alpha=alpha,
-            yintercept=yintercept,
-            xintercept=xintercept,
-            rotate_xticks=rotate_xticks,
-            title=title,
-            flip_coord=coord_flip,
-        )
+        plot_kwargs = {
+            "df": df,
+            "figsize": figsize,
+            "alpha": alpha,
+            "yintercept": yintercept,
+            "xintercept": xintercept,
+            "rotate_xticks": rotate_xticks,
+            "title": title,
+            "flip_coord": coord_flip,
+        }
+
+        if plot_backend == "lets_plot":
+            return _coefplot_lets_plot(**plot_kwargs)
+        elif plot_backend == "matplotlib":
+            return _coefplot_matplotlib(**plot_kwargs)
+        else:
+            raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
 
     def tidy(self):  # noqa: D102
         return self._coeftable
