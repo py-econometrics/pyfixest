@@ -1,7 +1,4 @@
 ![](figures/pyfixest-logo.png)
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
@@ -10,7 +7,8 @@ Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/p
 ![PyPI - Python
 Version](https://img.shields.io/pypi/pyversions/pyfixest.svg) ![PyPI -
 Downloads](https://img.shields.io/pypi/dm/pyfixest.svg)
-[![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest)
+[![image](https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/s3alfisc/pyfixest) [![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+
 
 `PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
 
