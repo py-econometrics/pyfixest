@@ -334,8 +334,7 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref=a)", data)
 
 def visualization_error():
-
     df = get_data()
     fit = feols("Y ~ X1", data=df)
     with pytest.raises(ValueError):
-        fit.coefplot(plot_backend = "plotnine")
+        fit.coefplot(plot_backend="plotnine")
