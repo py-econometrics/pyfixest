@@ -356,12 +356,18 @@ def _coefplot_matplotlib(
 
     Returns
     -------
-    ...
+    object
+        A seaborn Plot object.
     """
+    yintercept = yintercept if yintercept is not None else 0
     title = title if title is not None else "Coefficient Plot"
 
     _, ax = plt.subplots(figsize=figsize)
-    ax.axvline(x=0, color="black", linestyle="--")
+
+    ax.axvline(x=yintercept, color="black", linestyle="--")
+
+    if xintercept is not None:
+        ax.axhline(y=xintercept, color="black", linestyle="--")
 
     plot = (
         so.Plot(df, x="Estimate", y="Coefficient", color="fml")
@@ -375,5 +381,10 @@ def _coefplot_matplotlib(
         )
         .on(ax)
     )
+    ax.tick_params(axis="x", rotation=rotate_xticks)
+
+    if flip_coord:
+        ax.invert_yaxis()
+
     plt.close()
     return plot
