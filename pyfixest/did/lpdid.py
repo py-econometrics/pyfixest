@@ -132,6 +132,7 @@ class LPDID(DID):
         rotate_xticks=0,
         title="LPDID Event Study Estimate",
         coord_flip=False,
+        plot_backend="lets_plot",
     ):
         """
         Create coefficient plots.
@@ -154,6 +155,8 @@ class LPDID(DID):
             Title of the plot.
         coord_flip : bool, optional
             Whether to flip the coordinates of the plot. Defaults to False.
+        plot_backend: str, optional
+            The plotting backend to use between "lets_plot" (default) and "matplotlib".
 
         Returns
         -------
@@ -164,6 +167,7 @@ class LPDID(DID):
         df["fml"] = "lpdid"
 
         return _coefplot(
+            plot_backend=plot_backend,
             df=df,
             figsize=figsize,
             alpha=alpha,
