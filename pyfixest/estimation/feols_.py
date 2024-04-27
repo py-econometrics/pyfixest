@@ -247,8 +247,10 @@ class Feols:
         self._is_clustered = False
         self._clustervar = ""
         self._G = None
-        self._ssc = np.ndarray([])
+        self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
+        self.na_index = np.array([])  # initiated outside of the class
+        self.n_separation_na = np.array([])
 
         # set in get_inference()
         self._se = None
@@ -514,7 +516,10 @@ class Feols:
                     vcov_type="CRV",
                 )
 
-                self._ssc[x] = ssc
+                if len(self._ssc) == 0:
+                    self._ssc = np.array([ssc])
+                else:
+                    self._ssc = np.append(self._ssc, ssc)
 
                 if self._vcov_type_detail == "CRV1":
                     k_instruments = _Z.shape[1]
@@ -653,7 +658,7 @@ class Feols:
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
-        _ssc_dict: dict,
+        _ssc_dict: dict[str, Union[str, bool]],
         _k_fe: int,
         fval: str,
         store_data: bool,

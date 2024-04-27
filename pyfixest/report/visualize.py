@@ -240,7 +240,7 @@ def coefplot(
 
     df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
     if keep or drop:
-        idxs = _select_order_coefs(df.index, keep, drop, exact_match)
+        idxs = _select_order_coefs(df.index.tolist(), keep, drop, exact_match)
     else:
         idxs = df.index
     df = df.loc[idxs, :].reset_index()

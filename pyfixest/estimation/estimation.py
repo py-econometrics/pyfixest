@@ -325,7 +325,7 @@ def fepois(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
-) -> Union[Fepois, FixestMulti]:
+) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
 

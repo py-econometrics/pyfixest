@@ -60,7 +60,7 @@ class Fepois(Feols):
         self,
         Y: np.ndarray,
         X: np.ndarray,
-        fe: np.ndarray,
+        fe: Union[np.ndarray, None],
         weights: np.ndarray,
         coefnames: list[str],
         drop_singletons: bool,
