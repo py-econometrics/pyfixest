@@ -64,7 +64,7 @@ def get_ssc(
     N: int,
     k: int,
     G: int,
-    vcov_sign: np.ndarray,
+    vcov_sign: int,
     vcov_type: "str",
     is_twoway: bool = False,
 ) -> np.ndarray:

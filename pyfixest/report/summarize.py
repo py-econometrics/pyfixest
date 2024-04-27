@@ -14,15 +14,15 @@ from pyfixest.utils.dev_utils import _select_order_coefs
 
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-    type: Optional[str] = "md",
-    signif_code: Optional[list] = [0.001, 0.01, 0.05],
-    coef_fmt: Optional[str] = "b (se)",
+    type: str = "md",
+    signif_code: list = [0.001, 0.01, 0.05],
+    coef_fmt: str = "b (se)",
     custom_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     **kwargs,
-) -> Union[pd.DataFrame, str]:
+) -> Union[pd.DataFrame, str, None]:
     r"""
     Create an esttab-like table from a list of models.
 
@@ -113,11 +113,11 @@ def etable(
 
     dep_var_list = []
     nobs_list = []
-    fixef_list = []
+    fixef_list: list[str] = []
     n_coefs = []
     se_type_list = []
     r2_list = []
-    r2_within_list = []  # noqa: F841
+    r2_within_list: list[float] = []  # noqa: F841
 
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
@@ -128,7 +128,7 @@ def etable(
         _nobs_kwargs["scientific_notation"] = False
         nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
 
-        if model._method == "feols" and not model._is_iv and not model._has_weights:
+        if model._r2 is not None:
             r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
             r2_list.append("-")
@@ -166,61 +166,67 @@ def etable(
 
     etable_list = []
     for i, model in enumerate(models):
-        model = model.tidy().reset_index()  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
-        model["stars"] = (
+        model_tidy_df = model.tidy()
+        model_tidy_df.reset_index(
+            inplace=True
+        )  # If rounding here and p = 0.0499, it will be rounded to 0.05 and miss threshold.
+        model_tidy_df["stars"] = (
             np.where(
-                model["Pr(>|t|)"] < signif_code[0],
+                model_tidy_df["Pr(>|t|)"] < signif_code[0],
                 "***",
                 np.where(
-                    model["Pr(>|t|)"] < signif_code[1],
+                    model_tidy_df["Pr(>|t|)"] < signif_code[1],
                     "**",
-                    np.where(model["Pr(>|t|)"] < signif_code[2], "*", ""),
+                    np.where(model_tidy_df["Pr(>|t|)"] < signif_code[2], "*", ""),
                 ),
             )
             if signif_code
             else ""
         )
-        model[coef_fmt_title] = ""
+        model_tidy_df[coef_fmt_title] = ""
         for element in coef_fmt_elements:
             if element == "b":
-                model[coef_fmt_title] += (
-                    model["Estimate"].apply(_number_formatter, **kwargs)
-                    + model["stars"]
+                model_tidy_df[coef_fmt_title] += (
+                    model_tidy_df["Estimate"].apply(_number_formatter, **kwargs)
+                    + model_tidy_df["stars"]
                 )
             elif element == "se":
-                model[coef_fmt_title] += model["Std. Error"].apply(
+                model_tidy_df[coef_fmt_title] += model_tidy_df["Std. Error"].apply(
                     _number_formatter, **kwargs
                 )
             elif element == "t":
-                model[coef_fmt_title] += model["t value"].apply(
+                model_tidy_df[coef_fmt_title] += model_tidy_df["t value"].apply(
                     _number_formatter, **kwargs
                 )
             elif element == "p":
-                model[coef_fmt_title] += model["Pr(>|t|)"].apply(
+                model_tidy_df[coef_fmt_title] += model_tidy_df["Pr(>|t|)"].apply(
                     _number_formatter, **kwargs
                 )
             elif element in custom_stats:
                 assert (
-                    len(custom_stats[element][i]) == len(model["Estimate"])
-                ), f"custom_stats {element} has unequal length to the number of coefficients in model {i}"
-                model[coef_fmt_title] += pd.Series(custom_stats[element][i]).apply(
-                    _number_formatter, **kwargs
-                )
+                    len(custom_stats[element][i]) == len(model_tidy_df["Estimate"])
+                ), f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
+                model_tidy_df[coef_fmt_title] += pd.Series(
+                    custom_stats[element][i]
+                ).apply(_number_formatter, **kwargs)
             elif element == "\n" and type == "tex":
                 raise ValueError("Newline is currently not supported for LaTeX output.")
             else:
-                model[coef_fmt_title] += element
-        model[coef_fmt_title] = pd.Categorical(model[coef_fmt_title])
-        model = model[["Coefficient", coef_fmt_title]]
-        model = pd.melt(
-            model, id_vars=["Coefficient"], var_name="Metric", value_name=f"est{i+1}"
+                model_tidy_df[coef_fmt_title] += element
+        model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
+        model_tidy_df = model_tidy_df[["Coefficient", coef_fmt_title]]
+        model_tidy_df = pd.melt(
+            model_tidy_df,
+            id_vars=["Coefficient"],
+            var_name="Metric",
+            value_name=f"est{i+1}",
         )
-        model = model.drop("Metric", axis=1).set_index("Coefficient")
-        etable_list.append(model)
+        model_tidy_df = model_tidy_df.drop("Metric", axis=1).set_index("Coefficient")
+        etable_list.append(model_tidy_df)
 
     res = pd.concat(etable_list, axis=1)
     if keep or drop:
-        idxs = _select_order_coefs(res.index, keep, drop, exact_match)
+        idxs = _select_order_coefs(res.index.tolist(), keep, drop, exact_match)
     else:
         idxs = res.index
     res = res.loc[idxs, :].reset_index()
@@ -255,12 +261,13 @@ def etable(
                 f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
             )
         print(f"Format of coefficient cell:\n{coef_fmt_title}")
+        return None
     else:
         return res_all
 
 
 def summary(
-    models: Union[Feols, Fepois, Feiv, list], digits: Optional[int] = 3
+    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti], digits: int = 3
 ) -> None:
     """
     Print a summary of estimation results for each estimated model.
@@ -271,6 +278,8 @@ def summary(
 
     Parameters
     ----------
+    models : list[Union[Feols, Fepois, Feiv]] or FixestMulti.
+            The models to be summarized.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
 
@@ -322,33 +331,38 @@ def summary(
         print("")
         print(df.to_markdown(floatfmt=f".{digits}f"))
         print("---")
-        if fxst._method == "feols":
-            if not fxst._is_iv and not fxst._has_weights:
-                if fxst._has_fixef:
-                    print(
-                        f"RMSE: {np.round(fxst._rmse, digits)}   R2: {np.round(fxst._r2, digits)}   R2 Within: {np.round(fxst._r2_within, digits)}"
-                    )
-                else:
-                    print(
-                        f"RMSE: {np.round(fxst._rmse, digits)}   R2: {np.round(fxst._r2, digits)}"
-                    )
-        elif fxst._method == "fepois":
-            print(f"Deviance: {np.round(fxst.deviance[0], digits)}")
-        else:
-            pass
+
+        to_print = ""
+
+        if fxst._rmse is not None:
+            to_print += f"RMSE: {np.round(fxst._rmse, digits)}"
+        if fxst._r2 is not None:
+            to_print += f"R2: {np.round(fxst._r2, digits)}"
+        if fxst._r2_within is not None:
+            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)}"
+        if fxst.deviance is not None:
+            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)}"
+
+        print(to_print)
 
 
-def _post_processing_input_checks(models):
+def _post_processing_input_checks(
+    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
+) -> list[Union[Feols, Fepois]]:
     """
     Perform input checks for post-processing models.
 
     Parameters
     ----------
-        models (Feols, Fepois, list, dict): The models to be checked.
+        models : Union[List[Union[Feols, Fepois, Feiv]], FixestMulti]
+                The models to be checked. This can either be a list of models
+                (Feols, Fepois, Feiv) or a single FixestMulti object.
 
     Returns
     -------
-        models (Feols, Fepois, list, dict): The checked models.
+        List[Union[Feols, Fepois]]
+            A list of checked and validated models. The returned list contains only
+            Feols and Fepois types.
 
     Raises
     ------
@@ -421,7 +435,7 @@ def _tabulate_etable(df, n_models, n_fixef):
     return formatted_table
 
 
-def _parse_coef_fmt(coef_fmt: str, custom_stats: Optional[dict] = None):
+def _parse_coef_fmt(coef_fmt: str, custom_stats: dict):
     """
     Parse the coef_fmt string.
 
@@ -429,7 +443,7 @@ def _parse_coef_fmt(coef_fmt: str, custom_stats: Optional[dict] = None):
     ----------
     coef_fmt: str
         The coef_fmt string.
-    custom_stats: dict, optional
+    custom_stats: dict
         A dictionary of custom statistics. Key should be lowercased (e.g., simul_intv).
         If you provide "b", "se", "t", or "p" as a key, it will overwrite the default
         values.
@@ -514,10 +528,10 @@ def _number_formatter(x: float, **kwargs) -> str:
     if scientific_notation and x > scientific_notation_threshold:
         return f"%.{digits}E" % x
 
-    x = f"{x:,}" if thousands_sep else str(x)
+    x_str = f"{x:,}" if thousands_sep else str(x)
 
-    if "." not in x:
-        x += ".0"  # Add a decimal point if it's an integer
-    _int, _float = str(x).split(".")
+    if "." not in x_str:
+        x_str += ".0"  # Add a decimal point if it's an integer
+    _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"

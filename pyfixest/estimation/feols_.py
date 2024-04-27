@@ -247,7 +247,7 @@ class Feols:
         self._is_clustered = False
         self._clustervar = ""
         self._G = None
-        self._ssc = None
+        self._ssc = np.ndarray([])
         self._vcov = np.array([])
 
         # set in get_inference()
@@ -269,6 +269,9 @@ class Feols:
         self._r2_within = None
         self._adj_r2 = None
         self._adj_r2_within = None
+
+        # special for poisson
+        self.deviance = None
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
@@ -473,10 +476,11 @@ class Feols:
             if self._cluster_df.shape[1] > 1:
                 # paste both columns together
                 # set cluster_df to string
-                self._cluster_df = self._cluster_df.astype(str)
-                self._cluster_df["cluster_intersection"] = self._cluster_df.iloc[
-                    :, 0
-                ].str.cat(self._cluster_df.iloc[:, 1], sep="-")
+                cluster_one = self._cluster_df.iloc[:, 0].astype(str)
+                cluster_two = self._cluster_df.iloc[:, 1].astype(str)
+                self._cluster_df["cluster_intersection"] = cluster_one.str.cat(
+                    cluster_two, sep="-"
+                )
 
             if self._cluster_df.shape[0] != _N_rows:
                 raise ValueError(
@@ -492,7 +496,6 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
-            self._ssc = []
             self._G = G
 
             self._vcov = np.zeros((self._k, self._k))
@@ -511,7 +514,7 @@ class Feols:
                     vcov_type="CRV",
                 )
 
-                self._ssc.append(ssc)
+                self._ssc[x] = ssc
 
                 if self._vcov_type_detail == "CRV1":
                     k_instruments = _Z.shape[1]
