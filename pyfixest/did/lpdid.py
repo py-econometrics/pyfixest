@@ -166,7 +166,7 @@ class LPDID(DID):
         df = self._coeftable
         df["fml"] = "lpdid"
 
-        _coefplot(
+        return _coefplot(
             plot_backend=plot_backend,
             df=df,
             figsize=figsize,

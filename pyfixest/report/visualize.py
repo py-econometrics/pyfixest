@@ -137,7 +137,7 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    _coefplot(
+    return _coefplot(
         plot_backend=plot_backend,
         df=df,
         figsize=figsize,
@@ -245,7 +245,7 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    _coefplot(
+    return _coefplot(
         plot_backend=plot_backend,
         df=df,
         figsize=figsize,
