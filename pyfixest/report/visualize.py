@@ -342,7 +342,7 @@ def _coefplot_matplotlib(
     rotate_xticks: float = 0,
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
-):
+) -> so.Plot:
     """
     Plot model coefficients with confidence intervals.
 
@@ -369,6 +369,10 @@ def _coefplot_matplotlib(
     -------
     object
         A seaborn Plot object.
+
+    See Also
+    --------
+    - https://seaborn.pydata.org/tutorial/objects_interface.html
     """
     yintercept = yintercept if yintercept is not None else 0
     title = title if title is not None else "Coefficient Plot"

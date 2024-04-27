@@ -13,28 +13,61 @@ def data():
     return data
 
 
-def test_iplot(data):
+@pytest.mark.parametrize(
+    argnames="plot_backend",
+    argvalues=["lets_plot", "matplotlib"],
+    ids=["lets_plot", "matplotlib"],
+)
+@pytest.mark.parametrize(
+    argnames="figsize", argvalues=[(10, 6), None], ids=["figsize", "no_figsize"]
+)
+@pytest.mark.parametrize(
+    argnames="yintercept", argvalues=[1.0, None], ids=["yintercept", "no_yintercept"]
+)
+@pytest.mark.parametrize(
+    argnames="xintercept", argvalues=[2.0, None], ids=["xintercept", "no_xintercept"]
+)
+@pytest.mark.parametrize(
+    argnames="drop", argvalues=[None, "T.12"], ids=["drop", "no_drop"]
+)
+@pytest.mark.parametrize(
+    argnames="title", argvalues=[None, "Title"], ids=["no_title", "title"]
+)
+@pytest.mark.parametrize(
+    argnames="coord_flip", argvalues=[True, False], ids=["coord_flip", "no_coord_flip"]
+)
+def test_iplot(
+    data, plot_backend, figsize, yintercept, xintercept, drop, title, coord_flip
+):
     fit1 = feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
     fit2 = feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
     fit3 = feols(fml="Y ~ i(f2, X1, ref=1.0)", data=data, vcov="iid")
 
-    fit1.iplot()
-    fit2.iplot()
-    fit1.iplot(yintercept=0)
+    plot_kwargs = {
+        "plot_backend": plot_backend,
+        "figsize": figsize,
+        "yintercept": yintercept,
+        "xintercept": xintercept,
+        "drop": drop,
+        "title": title,
+        "coord_flip": coord_flip,
+    }
 
-    iplot(fit1)
-    iplot([fit1, fit2])
-    iplot([fit1, fit2], yintercept=0)
+    fit1.iplot(**plot_kwargs)
+    fit2.iplot(**plot_kwargs)
+    fit3.iplot(**plot_kwargs)
 
+    iplot(fit1, **plot_kwargs)
+    iplot([fit1, fit2], **plot_kwargs)
     iplot([fit1, fit2], drop="T.12")
 
     with pytest.raises(ValueError):
         fit3 = feols(fml="Y ~ X1", data=data, vcov="iid")
-        fit3.iplot()
-        iplot(fit3)
+        fit3.iplot(**plot_kwargs)
+        iplot(fit3, **plot_kwargs)
 
     fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
-    fit_multi.iplot()
+    fit_multi.iplot(**plot_kwargs)
 
 
 @pytest.mark.parametrize(
