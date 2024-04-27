@@ -332,3 +332,12 @@ def test_i_error():
 
     with pytest.raises(FactorEvaluationError):
         feols("Y ~ i(f1, X1, ref=a)", data)
+
+
+def test_coefplot_backend_error():
+    df = get_data()
+    fit = feols("Y ~ X1", data=df)
+    with pytest.raises(
+        ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
+    ):
+        fit.coefplot(plot_backend="plotnine")
