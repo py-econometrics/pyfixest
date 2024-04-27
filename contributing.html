@@ -154,6 +154,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="overview" class="level1">
 <h1>Overview</h1>
 <p>Thanks for showing interest in contributing to <code>pyfixest</code>! We appreciate all contributions and constructive feedback, whether that be reporting bugs, requesting new features, or suggesting improvements to documentation.</p>
+<p>If you’d like to get involved, but are not yet sure how, please feel free to send us an <a href="alexander-fischer1801@t-online.de">email</a>. Some familiarity with either Python or econometrics will help, but you really don’t need to be a <code>numpy</code> core developer or have published in <a href="https://onlinelibrary.wiley.com/journal/14680262">Econometrica</a> =) We’d be more than happy to invest time to help you get started!</p>
 <section id="reporting-bugs" class="level2">
 <h2 class="anchored" data-anchor-id="reporting-bugs">Reporting bugs</h2>
 <p>We use <a href="https://github.com/s3alfisc/pyfixest/issues">GitHub issues</a> to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if related to the bug you are reporting.</p>
@@ -204,6 +205,15 @@ sudo gdebi quarto-linux-amd64.deb</code></pre>
 <pre class="{bash}"><code>scoop bucket add extras
 scoop install extras/quarto</code></pre>
 </section>
+<section id="code-style" class="level3">
+<h3 class="anchored" data-anchor-id="code-style">Code Style</h3>
+<p>We use <code>ruff</code> and <code>pre-commit</code> to ensure a consistent code style.</p>
+<p>You can install <code>pre-commit</code> from <code>pip</code> by running</p>
+<pre class="{bash}"><code>pip install pre-commit</code></pre>
+<p>To install the required hooks, run</p>
+<pre class="{bash}"><code>pre-commit install</code></pre>
+<p>and you’re ready to go!</p>
+</section>
 <section id="justfile" class="level3">
 <h3 class="anchored" data-anchor-id="justfile">Justfile</h3>
 <p>There are several command line targets that assist with development included in the <code>justfile</code>. <a href="https://just.systems/">Just</a> can be installed to help run these command line targets.</p>
@@ -212,6 +222,20 @@ scoop install extras/quarto</code></pre>
 <p>On Windows:</p>
 <pre class="{bash}"><code>scoop bucket add main
 scoop install main/just</code></pre>
+<p>The justfile includes multiple helpful shorthands to help with development. Note that if you are not using windows/powershell, you will have to uncomment the first line of the justfile <code>set shell := ["powershell.exe", "-c"]</code>.</p>
+<pre class="{bash}"><code># install all development dependencies
+just install-dev
+# install all R development dependencies
+just install-r
+# run all tests via pytest
+just tests</code></pre>
+<p>To rebuild the documentation locally, you can run</p>
+<pre class="{bash}"><code># Build documentation and website
+just docs-build
+# render the docs
+just render
+# preview the docs
+just preview</code></pre>
 
 
 </section>
