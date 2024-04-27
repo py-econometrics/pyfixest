@@ -192,13 +192,12 @@ fit_iv.summary()
 
 ## Call for Contributions
 
-We're always looking for enthusiastic people who want to contribute!
-
-There are multiple ways to do so: you can submit bug reports, suggest documentation improvements, and you can of course contribute code =)
-Additionally, we'd also be excited to learn about your use cases and any new feature requests.
+Thanks for showing interest in contributing to `pyfixest`! We appreciate all
+contributions and constructive feedback, whether that be reporting bugs, requesting
+new features, or suggesting improvements to documentation.
 
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
-either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262). We'd be more than happy to invest time to help you get started!
+either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
 ## Contributors ✨
 
