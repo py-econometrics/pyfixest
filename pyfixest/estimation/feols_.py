@@ -222,7 +222,7 @@ class Feols:
         self._data = pd.DataFrame()
         self._fml = ""
         self._has_fixef = False
-        self._fixef = None
+        self._fixef = ""
         # self._coefnames = None
         self._icovars = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
@@ -246,7 +246,7 @@ class Feols:
         self._vcov_type_detail = ""
         self._is_clustered = False
         self._clustervar = ""
-        self._G = None
+        self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
         self.na_index = np.array([])  # initiated outside of the class
@@ -256,7 +256,7 @@ class Feols:
         self._se = None
         self._tstat = None
         self._pvalue = None
-        self._conf_int = None
+        self._conf_int = np.array([])
 
         # set in get_Ftest()
         self._F_stat = None
@@ -457,7 +457,8 @@ class Feols:
             # ), "vcov dict value must be a column in the data"
 
             if data is not None:
-                self._cluster_df = data[self._clustervar]
+                data_pandas = _polars_to_pandas(data)
+                self._cluster_df = data_pandas[self._clustervar]
             elif self._data is not None:
                 self._cluster_df = self._data[self._clustervar]
             else:
@@ -478,10 +479,14 @@ class Feols:
             if self._cluster_df.shape[1] > 1:
                 # paste both columns together
                 # set cluster_df to string
-                cluster_one = self._cluster_df.iloc[:, 0].astype(str)
-                cluster_two = self._cluster_df.iloc[:, 1].astype(str)
-                self._cluster_df["cluster_intersection"] = cluster_one.str.cat(
-                    cluster_two, sep="-"
+
+                cluster_one = self._clustervar[0]
+                cluster_two = self._clustervar[1]
+
+                cluster_df_one_str = self._cluster_df[cluster_one].astype(str)
+                cluster_df_two_str = self._cluster_df[cluster_two].astype(str)
+                self._cluster_df["cluster_intersection"] = cluster_df_one_str.str.cat(
+                    cluster_df_two_str, sep="-"
                 )
 
             if self._cluster_df.shape[0] != _N_rows:
@@ -696,7 +701,7 @@ class Feols:
         self._fml = fml
         self._depvar = depvar
         self._Y_untransformed = Y
-        self._data = None
+        self._data = pd.DataFrame()
 
         if store_data:
             self._data = _data
@@ -1105,7 +1110,7 @@ class Feols:
         cluster_vec = data[cluster].values
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = self.coef().xs(treatment)
+        tau_full = np.array(self.coef().xs(treatment))
 
         N = self._N
         G = len(unique_clusters)
@@ -1145,16 +1150,17 @@ class Feols:
         z_se = z * se
         conf_int = np.array([tau_full - z_se, tau_full + z_se])
 
-        res_ccv = pd.Series(
-            {
-                "Estimate": tau_full,
-                "Std. Error": se,
-                "t value": tstat,
-                "Pr(>|t|)": pvalue,
-                "2.5%": conf_int[0],
-                "97.5%": conf_int[1],
-            }
-        )
+        res_ccv_dict: dict[str, Union[float, np.ndarray]] = {
+            "Estimate": tau_full,
+            "Std. Error": se,
+            "t value": tstat,
+            "Pr(>|t|)": pvalue,
+            "2.5%": conf_int[0],
+            "97.5%": conf_int[1],
+        }
+
+        res_ccv = pd.Series(res_ccv_dict)
+
         res_ccv.name = "CCV"
 
         res_crv1 = self.tidy().xs(treatment)
