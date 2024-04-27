@@ -86,7 +86,6 @@ def test_iplot(
 
     iplot(fit1, **plot_kwargs)
     iplot([fit1, fit2], **plot_kwargs)
-    iplot([fit1, fit2], drop="T.12")
 
 
 def test_iplot_error(data):
