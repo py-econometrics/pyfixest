@@ -8,6 +8,8 @@ Thanks for showing interest in contributing to `pyfixest`! We appreciate all
 contributions and constructive feedback, whether that be reporting bugs, requesting
 new features, or suggesting improvements to documentation.
 
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262) =) We'd be more than happy to invest time to help you get started!
 
 ## Reporting bugs
 
@@ -116,6 +118,23 @@ scoop bucket add extras
 scoop install extras/quarto
 ```
 
+### Code Style
+
+We use `ruff` and `pre-commit` to ensure a consistent code style.
+
+You can install `pre-commit` from `pip` by running
+
+```{bash}
+pip install pre-commit
+```
+
+To install the required hooks, run
+
+```{bash}
+pre-commit install
+```
+
+and you're ready to go!
 
 ### Justfile
 
@@ -134,4 +153,28 @@ On Windows:
 ```{bash}
 scoop bucket add main
 scoop install main/just
+```
+
+The justfile includes multiple helpful shorthands to help with development. Note that
+if you are not using windows/powershell, you will have to uncomment the first line of the justfile
+`set shell := ["powershell.exe", "-c"]`.
+
+```{bash}
+# install all development dependencies
+just install-dev
+# install all R development dependencies
+just install-r
+# run all tests via pytest
+just tests
+```
+
+To rebuild the documentation locally, you can run
+
+```{bash}
+# Build documentation and website
+just docs-build
+# render the docs
+just render
+# preview the docs
+just preview
 ```
