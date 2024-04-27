@@ -198,8 +198,7 @@ There are multiple ways to do so: you can submit bug reports, suggest documentat
 Additionally, we'd also be excited to learn about your use cases and any new feature requests.
 
 If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
-either Python or econometrics will help, but you don't need to be a 10x engineers or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262).
-We'd be more than happy to invest some time to help you get started!
+either Python or econometrics will help, but you really don't need to be a `numpy` core developer or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262). We'd be more than happy to invest time to help you get started!
 
 ## Contributors ✨
 
