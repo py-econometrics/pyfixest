@@ -13,6 +13,26 @@ def data():
     return data
 
 
+@pytest.fixture
+def fit1(data):
+    return feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
+
+
+@pytest.fixture
+def fit2(data):
+    return feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
+
+
+@pytest.fixture
+def fit3(data):
+    return feols(fml="Y ~ i(f2, X1, ref=1.0)", data=data, vcov="iid")
+
+
+@pytest.fixture
+def fit_multi(data):
+    return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
+
+
 @pytest.mark.parametrize(
     argnames="plot_backend",
     argvalues=["lets_plot", "matplotlib"],
@@ -37,12 +57,18 @@ def data():
     argnames="coord_flip", argvalues=[True, False], ids=["coord_flip", "no_coord_flip"]
 )
 def test_iplot(
-    data, plot_backend, figsize, yintercept, xintercept, drop, title, coord_flip
+    fit1,
+    fit2,
+    fit3,
+    fit_multi,
+    plot_backend,
+    figsize,
+    yintercept,
+    xintercept,
+    drop,
+    title,
+    coord_flip,
 ):
-    fit1 = feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
-    fit2 = feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
-    fit3 = feols(fml="Y ~ i(f2, X1, ref=1.0)", data=data, vcov="iid")
-
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -56,18 +82,18 @@ def test_iplot(
     fit1.iplot(**plot_kwargs)
     fit2.iplot(**plot_kwargs)
     fit3.iplot(**plot_kwargs)
+    fit_multi.iplot(**plot_kwargs)
 
     iplot(fit1, **plot_kwargs)
     iplot([fit1, fit2], **plot_kwargs)
     iplot([fit1, fit2], drop="T.12")
 
-    with pytest.raises(ValueError):
-        fit3 = feols(fml="Y ~ X1", data=data, vcov="iid")
-        fit3.iplot(**plot_kwargs)
-        iplot(fit3, **plot_kwargs)
 
-    fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
-    fit_multi.iplot(**plot_kwargs)
+def test_iplot_error(data):
+    with pytest.raises(ValueError):
+        fit4 = feols(fml="Y ~ X1", data=data, vcov="iid")
+        fit4.iplot()
+        iplot(fit4)
 
 
 @pytest.mark.parametrize(
@@ -97,12 +123,19 @@ def test_iplot(
     argnames="coord_flip", argvalues=[True, False], ids=["coord_flip", "no_coord_flip"]
 )
 def test_coefplot(
-    data, plot_backend, figsize, yintercept, xintercept, keep, drop, title, coord_flip
+    fit1,
+    fit2,
+    fit3,
+    fit_multi,
+    plot_backend,
+    figsize,
+    yintercept,
+    xintercept,
+    keep,
+    drop,
+    title,
+    coord_flip,
 ):
-    fit1 = feols(fml="Y ~ i(f2, X1) | f1", vcov="iid", data=data)
-    fit2 = feols(fml="Y ~ i(f2, X1) | f1", vcov="iid", data=data)
-    fit3 = feols(fml="Y ~ X1 + X2", vcov="iid", data=data)
-
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -119,6 +152,4 @@ def test_coefplot(
     fit3.coefplot(**plot_kwargs)
     coefplot(fit1, **plot_kwargs)
     coefplot([fit1, fit2], **plot_kwargs)
-
-    fit_multi = feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
     fit_multi.coefplot(**plot_kwargs)
