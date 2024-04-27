@@ -357,7 +357,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>report.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=[], drop=[], exact_match=False)</code></p>
+<p><code>report.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=None, drop=None, exact_match=False, plot_backend='lets_plot')</code></p>
 <p>Plot model coefficients with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -429,19 +429,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>keep</code></td>
 <td>typing.Optional[typing.Union[list, str]]</td>
 <td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
-<td><code>[]</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>drop</code></td>
 <td>typing.Optional[typing.Union[list, str]]</td>
 <td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
-<td><code>[]</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>exact_match</code></td>
 <td>bool</td>
 <td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
 <td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>plot_backend</code></td>
+<td>str</td>
+<td>The plotting backend to use between “lets_plot” (default) and “matplotlib”.</td>
+<td><code>'lets_plot'</code></td>
 </tr>
 </tbody>
 </table>
@@ -465,7 +471,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="7f9d1764" class="cell" data-execution_count="1">
+<div id="0ee17fb8" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
@@ -476,7 +482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="sKzGoK"></div>
+            <div id="agLzkJ"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -500,16 +506,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("sKzGoK").appendChild(div);
+                        document.getElementById("agLzkJ").appendChild(div);
                     };
-                    var e = document.getElementById("sKzGoK");
+                    var e = document.getElementById("agLzkJ");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="f8KwWo"></div>
+   <div id="d6z7wg"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -587,7 +593,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("f8KwWo");
+           var plotContainer = document.getElementById("d6z7wg");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
