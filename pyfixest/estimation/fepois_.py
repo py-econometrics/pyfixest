@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -65,8 +65,8 @@ class Fepois(Feols):
         coefnames: list[str],
         drop_singletons: bool,
         collin_tol: float,
-        maxiter: Optional[int] = 25,
-        tol: Optional[float] = 1e-08,
+        maxiter: int = 25,
+        tol: float = 1e-08,
         fixef_tol: float = 1e-08,
         weights_name: Optional[str] = None,
         weights_type: Optional[str] = None,
@@ -109,9 +109,9 @@ class Fepois(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
 
-        self._Y_hat_response = None
+        self._Y_hat_response = np.array([])
         self.deviance = None
-        self._Xbeta = None
+        self._Xbeta = np.array([])
 
     def get_fit(self) -> None:
         """
@@ -160,7 +160,7 @@ class Fepois(Feols):
                 ).flatten()
             return deviance
 
-        accelerate = True
+        accelerate = False
         # inner_tol = 1e-04
         stop_iterating = False
         crit = 1
@@ -321,7 +321,9 @@ class Fepois(Feols):
         return y_hat
 
 
-def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") -> list:
+def _check_for_separation(
+    Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe"
+) -> Union[list, None]:
     """
     Check for separation.
 
@@ -348,7 +350,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
         else:
             Y_help = (Y > 0).astype(int).squeeze()
 
-            separation_na = set()
+            separation_na: set[int] = set()
             # loop over all elements of fe
             for x in fe.columns:
                 ctab = pd.crosstab(Y_help, fe[x])
@@ -367,9 +369,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame, check: str = "fe") 
                     dropset = set(fe[x][fe_in_droplist].index)
                     separation_na = separation_na.union(dropset)
 
-            separation_na = list(separation_na)
-
-            return separation_na
+            return list(separation_na)
 
     else:
         raise NotImplementedError(

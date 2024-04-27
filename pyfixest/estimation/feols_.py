@@ -96,7 +96,7 @@ class Feols:
     _icovars : Any
         Internal covariates, to be enriched outside of the class.
     _ssc_dict : dict
-        Dictionary for sum of squares and cross products matrices.
+        dictionary for sum of squares and cross products matrices.
     _tZX : np.ndarray
         Transpose of Z multiplied by X, set in get_fit().
     _tXZ : np.ndarray
@@ -144,7 +144,7 @@ class Feols:
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
     _fixef_dict : dict
-        Dictionary containing fixed effects estimates.
+        dictionary containing fixed effects estimates.
     _sumFE : np.ndarray
         Sum of all fixed effects for each observation.
     _rmse : float
@@ -219,36 +219,36 @@ class Feols:
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._data = None
-        self._fml = None
+        self._data = pd.DataFrame()
+        self._fml = ""
         self._has_fixef = False
         self._fixef = None
         # self._coefnames = None
         self._icovars = None
-        self._ssc_dict = None
+        self._ssc_dict: dict[str, Union[str, bool]] = {}
 
         # set in get_fit()
-        self._tZX = None
+        self._tZX = np.array([])
         # self._tZXinv = None
-        self._tXZ = None
-        self._tZy = None
-        self._tZZinv = None
-        self._beta_hat = None
-        self._Y_hat_link = None
-        self._Y_hat_response = None
-        self._u_hat = None
-        self._scores = None
-        self._hessian = None
-        self._bread = None
+        self._tXZ = np.array([])
+        self._tZy = np.array([])
+        self._tZZinv = np.array([])
+        self._beta_hat = np.array([])
+        self._Y_hat_link = np.array([])
+        self._Y_hat_response = np.array([])
+        self._u_hat = np.array([])
+        self._scores = np.array([])
+        self._hessian = np.array([])
+        self._bread = np.array([])
 
         # set in vcov()
-        self._vcov_type = None
-        self._vcov_type_detail = None
-        self._is_clustered = None
-        self._clustervar = None
+        self._vcov_type = ""
+        self._vcov_type_detail = ""
+        self._is_clustered = False
+        self._clustervar = ""
         self._G = None
         self._ssc = None
-        self._vcov = None
+        self._vcov = np.array([])
 
         # set in get_inference()
         self._se = None
@@ -310,8 +310,8 @@ class Feols:
         self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
-        self._tXZ = None
-        self._tZZinv = None
+        self._tXZ = np.array([])
+        self._tZZinv = np.array([])
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
@@ -1201,8 +1201,8 @@ class Feols:
         depvars, res = _fml.split("~")
         covars, fixef_vars = res.split("|")
 
-        fixef_vars = fixef_vars.split("+")
-        fixef_vars_C = [f"C({x})" for x in fixef_vars]
+        fixef_vars_list = fixef_vars.split("+")
+        fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
         fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
@@ -1681,7 +1681,7 @@ def _get_vcov_type(vcov, fval):
 
 def _drop_multicollinear_variables(
     X: np.ndarray, names: list[str], collin_tol: float
-) -> None:
+) -> tuple[np.ndarray, str, str, list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
 
@@ -1720,9 +1720,9 @@ def _drop_multicollinear_variables(
             """
         )
 
+    names_array = np.array(names)
     if res["n_excl"] > 0:
-        names = np.array(names)
-        collin_vars = names[res["id_excl"]]
+        collin_vars = names_array[res["id_excl"]]
         warnings.warn(
             f"""
             The following variables are collinear: {collin_vars}.
@@ -1731,11 +1731,10 @@ def _drop_multicollinear_variables(
         )
 
         X = np.delete(X, res["id_excl"], axis=1)
-        names = np.delete(names, res["id_excl"])
-        names = names.tolist()
+        names_array = np.delete(names_array, res["id_excl"])
         collin_index = res["id_excl"]
 
-    return X, names, collin_vars, collin_index
+    return X, names_array.tolist(), collin_vars, collin_index
 
 
 def _find_collinear_variables(X, tol=1e-10):

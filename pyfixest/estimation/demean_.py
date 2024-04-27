@@ -13,7 +13,7 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
-) -> tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
 
@@ -57,16 +57,16 @@ def demean_model(
     YX = pd.concat([Y, X], axis=1)
 
     yx_names = YX.columns
-    YX = YX.to_numpy()
+    YX_array = YX.to_numpy()
 
-    if YX.dtype != np.dtype("float64"):
-        YX = YX.astype(np.float64)
+    if YX_array.dtype != np.dtype("float64"):
+        YX_array = YX_array.astype(np.float64)
 
     if weights is not None and weights.ndim > 1:
         weights = weights.flatten()
 
     if fe is not None:
-        fe = fe.to_numpy()
+        fe_array = fe.to_numpy()
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index_str) is not None:
             # get data out of lookup table: list of [algo, data]
@@ -82,12 +82,12 @@ def demean_model(
                 yx_names_list = list(yx_names)
                 var_diff_index = [yx_names_list.index(item) for item in var_diff_names]
                 # var_diff_index = list(yx_names).index(var_diff_names)
-                var_diff = YX[:, var_diff_index]
+                var_diff = YX_array[:, var_diff_index]
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean(
-                    x=var_diff, flist=fe, weights=weights, tol=fixef_tol
+                    x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -100,7 +100,9 @@ def demean_model(
                 if isinstance(var_diff_names, str):
                     var_diff_names = [var_diff_names]
 
-                YX_demeaned.columns = list(YX_demeaned_old.columns) + var_diff_names
+                YX_demeaned.columns = pd.Index(
+                    list(YX_demeaned_old.columns) + var_diff_names
+                )
 
             else:
                 # all variables already demeaned
@@ -108,7 +110,7 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean(
-                x=YX, flist=fe, weights=weights, tol=fixef_tol
+                x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
             )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -122,7 +124,7 @@ def demean_model(
         # nothing to demean here
         pass
 
-        YX_demeaned = pd.DataFrame(YX)
+        YX_demeaned = pd.DataFrame(YX_array)
         YX_demeaned.columns = yx_names
 
     # get demeaned Y, X (if no fixef, equal to Y, X, I)

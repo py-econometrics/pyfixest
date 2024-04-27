@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,12 @@ from formulaic import Formula
 from pyfixest.utils.dev_utils import _create_rng
 
 
-def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
+def ssc(
+    adj: bool = True,
+    fixef_k: str = "none",
+    cluster_adj: bool = True,
+    cluster_df: str = "min",
+) -> dict[str, Union[str, bool]]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
 
@@ -54,7 +59,15 @@ def ssc(adj=True, fixef_k="none", cluster_adj=True, cluster_df="min"):
     }
 
 
-def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
+def get_ssc(
+    ssc_dict: dict[str, Union[str, bool]],
+    N: int,
+    k: int,
+    G: int,
+    vcov_sign: np.ndarray,
+    vcov_type: "str",
+    is_twoway: bool = False,
+) -> np.ndarray:
     """
     Compute small sample adjustment factors.
 
@@ -92,8 +105,8 @@ def get_ssc(ssc_dict, N, k, G, vcov_sign, vcov_type, is_twoway=False):
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 
-    cluster_adj_value = 1
-    adj_value = 1
+    cluster_adj_value = 1.0
+    adj_value = 1.0
 
     if vcov_type == "hetero":
         adj_value = N / (N - k) if adj else N / (N - 1)

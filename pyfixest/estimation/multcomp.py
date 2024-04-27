@@ -8,7 +8,7 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.report.summarize import _post_processing_input_checks
 
 
-def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.DataFrame:
+def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
@@ -58,13 +58,13 @@ def bonferroni(models: Union[list[Feols, Fepois], Fepois], param: str) -> pd.Dat
     adjusted_pvalues = np.minimum(1, pvalues * S)
 
     all_model_stats.loc["Bonferroni Pr(>|t|)"] = adjusted_pvalues
-    all_model_stats.columns = [f"est{i}" for i, _ in enumerate(models)]
+    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
 
     return all_model_stats
 
 
 def rwolf(
-    models: Union[list[Feols], Feols], param: str, B: int, seed: int
+    models: list[Union[Feols, Fepois]], param: str, B: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -142,7 +142,7 @@ def rwolf(
     pval = _get_rwolf_pval(t_stats, boot_t_stats)
 
     all_model_stats.loc["RW Pr(>|t|)"] = pval
-    all_model_stats.columns = [f"est{i}" for i, _ in enumerate(models)]
+    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
 
     return all_model_stats
 

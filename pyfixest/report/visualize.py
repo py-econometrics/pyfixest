@@ -152,10 +152,10 @@ def iplot(
 
 def coefplot(
     models: list,
-    alpha: int = 0.05,
+    alpha: float = 0.05,
     figsize: tuple = (500, 300),
     yintercept: float = 0,
-    xintercept: float = None,
+    xintercept: Union[float, None] = None,
     rotate_xticks: int = 0,
     title: Optional[str] = None,
     coord_flip: bool = True,

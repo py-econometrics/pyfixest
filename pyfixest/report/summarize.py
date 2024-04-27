@@ -8,17 +8,18 @@ from tabulate import tabulate
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 
 def etable(
-    models: Union[Feols, Fepois, Feiv, list],
+    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
     type: Optional[str] = "md",
     signif_code: Optional[list] = [0.001, 0.01, 0.05],
     coef_fmt: Optional[str] = "b (se)",
-    custom_stats: Optional[dict] = dict(),
-    keep: Optional[Union[list, str]] = [],
-    drop: Optional[Union[list, str]] = [],
+    custom_stats: Optional[dict] = None,
+    keep: Optional[Union[list, str]] = None,
+    drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str]:
@@ -86,6 +87,13 @@ def etable(
         ), "signif_code must be in increasing order"
     models = _post_processing_input_checks(models)
 
+    if custom_stats is None:
+        custom_stats = dict()
+    if keep is None:
+        keep = []
+    if drop is None:
+        drop = []
+
     if custom_stats:
         assert isinstance(custom_stats, dict), "custom_stats must be a dict"
         for key in custom_stats:
@@ -106,7 +114,6 @@ def etable(
     dep_var_list = []
     nobs_list = []
     fixef_list = []
-    nobs_list = []
     n_coefs = []
     se_type_list = []
     r2_list = []
@@ -236,7 +243,7 @@ def etable(
     depvars.columns = res.columns
 
     res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
-    res_all.columns = [""] + list(res_all.columns[1:])
+    res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
 
     if type == "tex":
         return res_all.to_latex()

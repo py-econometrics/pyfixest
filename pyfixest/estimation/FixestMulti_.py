@@ -13,7 +13,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _drop_cols, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _drop_cols, _polars_to_pandas
 
 
 class FixestMulti:
@@ -21,7 +21,7 @@ class FixestMulti:
 
     def __init__(
         self,
-        data: pd.DataFrame,
+        data: DataFrameType,
         copy_data: bool,
         store_data: bool,
         fixef_tol: float,
@@ -49,7 +49,6 @@ class FixestMulti:
         -------
             None
         """
-        self._data = None
         self._copy_data = copy_data
         self._store_data = store_data
         self._fixef_tol = fixef_tol
@@ -86,7 +85,7 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
-        weights: Union[None, np.ndarray] = None,
+        weights: Union[None, str] = None,
         ssc: dict[str, str] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
@@ -114,7 +113,7 @@ class FixestMulti:
         ssc : dict[str, str], optional
             A dictionary specifying the type of standard errors to use for inference.
             See `feols()` or `fepois()`.
-        fixef_rm : str, optional
+        fixef_rm : bool, optional
             A string specifying whether singleton fixed effects should be dropped.
             Options are "none" (default) and "singleton". If "singleton",
             singleton fixed effects are dropped.
@@ -286,7 +285,7 @@ class FixestMulti:
                     if not _is_iv:
                         Zd = Xd
 
-                    Yd, Xd, Zd, endogvard = (
+                    Yd_array, Xd_array, Zd_array, endogvard_array = (
                         x.to_numpy() if x is not None else x
                         for x in [Yd, Xd, Zd, endogvard]
                     )
@@ -294,9 +293,9 @@ class FixestMulti:
                     if _is_iv:
                         coefnames_z = Z.columns.tolist()
                         FIT = Feiv(
-                            Y=Yd,
-                            X=Xd,
-                            Z=Zd,
+                            Y=Yd_array,
+                            X=Xd_array,
+                            Z=Zd_array,
                             weights=weights,
                             coefnames_x=coefnames,
                             coefnames_z=coefnames_z,
@@ -308,8 +307,8 @@ class FixestMulti:
                         # initiate OLS class
 
                         FIT = Feols(
-                            Y=Yd,
-                            X=Xd,
+                            Y=Yd_array,
+                            X=Xd_array,
                             weights=weights,
                             coefnames=coefnames,
                             collin_tol=collin_tol,
@@ -322,7 +321,7 @@ class FixestMulti:
                     # special case: sometimes it is useful to fit models as
                     # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                     if FIT._X_is_empty:
-                        FIT._u_hat = Y.to_numpy() - Yd
+                        FIT._u_hat = Y.to_numpy() - Yd_array
                     else:
                         FIT.get_fit()
 
@@ -341,20 +340,21 @@ class FixestMulti:
                             X.drop(na_separation, axis=0, inplace=True)
                             fe.drop(na_separation, axis=0, inplace=True)
 
-                    Y, X = (x.to_numpy() for x in [Y, X])
-                    N = X.shape[0]
+                    Y_array, X_array = (x.to_numpy() for x in [Y, X])
+                    N = X_array.shape[0]
 
+                    fe_array = None
                     if fe is not None:
                         _has_fixef = True
-                        fe = fe.to_numpy()
-                        if fe.ndim == 1:
-                            fe = fe.reshape((N, 1))
+                        fe_array = fe.to_numpy()
+                        if fe_array.ndim == 1:
+                            fe_array = fe_array.reshape((N, 1))
 
                     # initiate OLS class
                     FIT = Fepois(
-                        Y=Y,
-                        X=X,
-                        fe=fe,
+                        Y=Y_array,
+                        X=X_array,
+                        fe=fe_array,
                         weights=weights,
                         coefnames=coefnames,
                         drop_singletons=_drop_singletons,
