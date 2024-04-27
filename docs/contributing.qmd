@@ -155,7 +155,9 @@ scoop bucket add main
 scoop install main/just
 ```
 
-The Justfile includes multiple helpful shorthands to help with development:
+The justfile includes multiple helpful shorthands to help with development. Note that
+if you are not using windows/powershell, you will have to uncomment the first line of the justfile
+`set shell := ["powershell.exe", "-c"]`.
 
 ```{bash}
 # install all development dependencies
