@@ -1,0 +1,16 @@
+coverage:
+  status:
+    project:
+      default:
+        # basic
+        target: auto
+        threshold: 2%
+        base: auto
+        paths:
+          - "pyfixest"
+        # advanced settings
+        branches:
+          - master
+        if_ci_failed: error
+        informational: false
+        only_pulls: false
