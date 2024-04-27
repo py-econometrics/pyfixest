@@ -342,9 +342,12 @@ def _coefplot_matplotlib(
     rotate_xticks: float = 0,
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
+    **fig_kwargs,
 ) -> so.Plot:
     """
     Plot model coefficients with confidence intervals.
+
+    We use the seaborn library to create the plot through the seaborn objects interface.
 
     Parameters
     ----------
@@ -364,6 +367,8 @@ def _coefplot_matplotlib(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
+    fig_kwargs : dict
+        Additional keyword arguments to pass to the matplotlib figure.
 
     Returns
     -------
@@ -377,7 +382,7 @@ def _coefplot_matplotlib(
     yintercept = yintercept if yintercept is not None else 0
     title = title if title is not None else "Coefficient Plot"
 
-    _, ax = plt.subplots(figsize=figsize)
+    _, ax = plt.subplots(figsize=figsize, **fig_kwargs)
 
     ax.axvline(x=yintercept, color="black", linestyle="--")
 
