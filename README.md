@@ -190,9 +190,20 @@ fit_iv.summary()
     | X1            |     -1.025 |        0.115 |    -8.930 |      0.000 | -1.259 |  -0.790 |
     ---
 
+## Call for Contributions
+
+We're always looking for enthusiastic people who want to contribute!
+
+There are multiple ways to do so: you can submit bug reports, suggest documentation improvements, and you can of course contribute code =)
+Additionally, we'd also be excited to learn about your use cases and any new feature requests.
+
+If you'd like to get involved, but are not yet sure how, please feel free to send us an [email](alexander-fischer1801@t-online.de). Some familiarity with
+either Python or econometrics will help, but you don't need to be a 10x engineers or have published in [Econometrica](https://onlinelibrary.wiley.com/journal/14680262).
+We'd be more than happy to invest some time to help you get started!
+
 ## Contributors ✨
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Thanks goes to these wonderful people:
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
