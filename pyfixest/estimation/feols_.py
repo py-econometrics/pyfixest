@@ -452,11 +452,10 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-            self._cluster_df: pd.Series = pd.Series()
             if data is not None:
                 data_pandas = _polars_to_pandas(data)
                 self._cluster_df = data_pandas[self._clustervar]
-            elif self._data is not None:
+            elif not self._data.empty:
                 self._cluster_df = self._data[self._clustervar]
             else:
                 raise AttributeError(
@@ -885,13 +884,22 @@ class Feols:
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
 
+        if cluster is not None and isinstance(cluster, str):
+            cluster = [cluster]
+
         if cluster is None and _clustervar is not None:
             cluster = _clustervar
 
-        if cluster is not None and len(cluster.split("+")) > 1:
-            raise ValueError(
+        run_heteroskedastic = cluster is None
+        onweway_clustering = len(cluster) == 1
+
+        if not run_heteroskedastic and not onweway_clustering:
+            raise NotImplementedError(
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
+
+        if not run_heteroskedastic and cluster[0] not in _data.columns:
+            raise ValueError(f"Cluster variable {cluster[0]} not found in the data.")
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -930,7 +938,7 @@ class Feols:
             R[_xnames.index(param)] = 0
         r = 0
 
-        if cluster is None:
+        if run_heteroskedastic:
             inference = "HC"
 
             boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=B, seed=seed)
@@ -944,10 +952,16 @@ class Feols:
         else:
             inference = f"CRV({cluster})"
 
-            cluster_df = _data[cluster]
+            cluster_array = _data[cluster].to_numpy().flatten()
 
             boot = WildboottestCL(
-                X=_X, Y=_Y, cluster=cluster_df, R=R, B=B, seed=seed, parallel=parallel
+                X=_X,
+                Y=_Y,
+                cluster=cluster_array,
+                R=R,
+                B=B,
+                seed=seed,
+                parallel=parallel,
             )
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
