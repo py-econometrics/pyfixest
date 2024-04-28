@@ -891,9 +891,8 @@ class Feols:
             cluster = _clustervar
 
         run_heteroskedastic = cluster is None
-        onweway_clustering = len(cluster) == 1
 
-        if not run_heteroskedastic and not onweway_clustering:
+        if not run_heteroskedastic and not len(cluster) == 1:
             raise NotImplementedError(
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
