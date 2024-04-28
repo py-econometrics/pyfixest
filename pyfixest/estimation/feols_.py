@@ -253,24 +253,24 @@ class Feols:
         self.n_separation_na = 0
 
         # set in get_inference()
-        self._se = None
-        self._tstat = None
-        self._pvalue = None
+        self._se = np.array([])
+        self._tstat = np.array([])
+        self._pvalue = np.array([])
         self._conf_int = np.array([])
 
         # set in get_Ftest()
         self._F_stat = None
 
         # set in fixef()
-        self._fixef_dict = None
+        self._fixef_dict = dict[str, dict[str, float]]
         self._sumFE = None
 
         # set in get_performance()
-        self._rmse = None
-        self._r2 = None
-        self._r2_within = None
-        self._adj_r2 = None
-        self._adj_r2_within = None
+        self._rmse = np.nan
+        self._r2 = np.nan
+        self._r2_within = np.nan
+        self._adj_r2 = np.nan
+        self._adj_r2_within = np.nan
 
         # special for poisson
         self.deviance = None
@@ -711,7 +711,6 @@ class Feols:
             self._fixef = fval
         else:
             self._has_fixef = False
-            self._fixef = None
 
     def wald_test(self, R=None, q=None, distribution="F") -> None:
         """
@@ -801,7 +800,7 @@ class Feols:
     def wildboottest(
         self,
         B: int,
-        cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: Optional[str] = "rademacher",
         impose_null: Optional[bool] = True,
@@ -819,13 +818,11 @@ class Feols:
         ----------
         B : int
             The number of bootstrap iterations to run.
-        cluster : Union[None, np.ndarray, pd.Series, pd.DataFrame], optional
-            If None (default), checks if the model's vcov type was CRV.
-            If yes, uses `self._clustervar` as cluster. If None and no clustering
-            was employed in the initial model, runs a heteroskedastic wild bootstrap.
-            If an argument is supplied, it is used as the cluster variable for the
-            wild cluster bootstrap. Requires a numpy array of dimension one, a
-            pandas Series, or DataFrame, containing the clustering variable.
+        cluster : Union[str, None], optional
+            The variable used for clustering. Defaults to None. If None, then
+            uses the variable specified in the model's `clustervar` attribute.
+            If no `_clustervar` attribute is found, runs a heteroskedasticity-
+            robust bootstrap.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
             Defaults to None.
@@ -890,8 +887,10 @@ class Feols:
         if cluster is None and _clustervar is not None:
             cluster = _clustervar
 
-        if isinstance(cluster, str):
-            cluster = [cluster]
+        if len(cluster.split("+")) > 1:
+            raise ValueError(
+                "Multiway clustering is currently not supported with the wild cluster bootstrap."
+            )
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -925,8 +924,9 @@ class Feols:
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
-        R = np.zeros(len(_xnames))
-        R[_xnames.index(param)] = 1
+        R = np.ones(len(_xnames))
+        if param is not None:
+            R[_xnames.index(param)] = 0
         r = 0
 
         if cluster is None:
@@ -943,12 +943,7 @@ class Feols:
         else:
             inference = f"CRV({cluster})"
 
-            if len(cluster) > 1:
-                raise ValueError(
-                    "Multiway clustering is currently not supported with the wild cluster bootstrap."
-                )
-
-            cluster = _data[cluster[0]]
+            cluster = _data[cluster]
 
             boot = WildboottestCL(
                 X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel
@@ -973,14 +968,14 @@ class Feols:
                 )
 
         if np.isscalar(boot.t_stat):
-            boot.t_stat = boot.t_stat
+            boot.t_stat = np.asarray(boot.t_stat)
         else:
             boot.t_stat = boot.t_stat[0]
 
         res = {
             "param": param,
             "t value": boot.t_stat.astype(np.float64),
-            "Pr(>|t|)": boot.pvalue.astype(np.float64),
+            "Pr(>|t|)": np.asarray(boot.pvalue).astype(np.float64),
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
@@ -1094,13 +1089,13 @@ class Feols:
 
         depvar = self._depvar
         fml = self._fml
-        xfml = fml.split("~")[1].split("+")
-        xfml = [x for x in xfml if x != treatment]
-        xfml = None if not xfml else "+".join(xfml)
+        xfml_list = fml.split("~")[1].split("+")
+        xfml_list = [x for x in xfml_list if x != treatment]
+        xfml = "" if not xfml_list else "+".join(xfml_list)
 
         data = self._data
         Y = self._Y.flatten()
-        W = data[treatment].values
+        W = data[treatment].to_numpy()
         assert np.all(
             np.isin(W, [0, 1])
         ), "Treatment variable must be binary with values 0 and 1"
@@ -1181,7 +1176,7 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def fixef(self) -> None:
+    def fixef(self) -> dict[str, dict[str, float]]:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
@@ -1210,8 +1205,8 @@ class Feols:
 
         # fixef_vars = self._fixef.split("+")[0]
 
-        depvars, res = _fml.split("~")
-        covars, fixef_vars = res.split("|")
+        depvars, rhs = _fml.split("~")
+        covars, fixef_vars = rhs.split("|")
 
         fixef_vars_list = fixef_vars.split("+")
         fixef_vars_C = [f"C({x})" for x in fixef_vars_list]
@@ -1234,7 +1229,7 @@ class Feols:
 
         alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
 
-        res = {}
+        res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
             matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
             if matches:
@@ -1386,7 +1381,8 @@ class Feols:
         computed on demeaned dependent variable.
         """
         _Y_within = self._Y
-        _Y = self._Y_untransformed.values
+        _Y = self._Y_untransformed.to_numpy()
+
         _u_hat = self._u_hat
         _N = self._N
         _k = self._k
@@ -1395,18 +1391,19 @@ class Feols:
         _has_weights = self._has_weights
 
         if _has_fixef:
-            _k_fe = np.sum(self._k_fe.values - 1) + 1
+            _k_fe = np.sum(self._k_fe - 1) + 1
             _adj_factor = (_N - _k_fe) / (_N - _k - _k_fe)
         else:
             _adj_factor = (_N) / (_N - 1)
 
         ssu = np.sum(_u_hat**2)
+
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
         if _has_weights:
-            self._rmse = None
-            self._r2 = None
-            self._adj_r2 = None
+            self._rmse = np.nan
+            self._r2 = np.nan
+            self._adj_r2 = np.nan
         else:
             self._rmse = np.sqrt(ssu / _N)
             self._r2 = 1 - (ssu / ssy)
@@ -1423,8 +1420,8 @@ class Feols:
         # overwrite self._adj_r2 and self._adj_r2_within
         # reason: currently I cannot match fixest dof correction, so
         # better not to report it
-        self._adj_r2 = None
-        self._adj_r2_within = None
+        self._adj_r2 = np.nan
+        self._adj_r2_within = np.nan
 
     def tidy(self) -> pd.DataFrame:
         """
@@ -1575,7 +1572,7 @@ class Feols:
                 keep = [keep]
             if isinstance(drop, str):
                 drop = [drop]
-            idxs = _select_order_coefs(tidy_df.index, keep, drop, exact_match)
+            idxs = _select_order_coefs(tidy_df.index.tolist(), keep, drop, exact_match)
             coefnames = tidy_df.loc[idxs, :].index.tolist()
         else:
             coefnames = self._coefnames
