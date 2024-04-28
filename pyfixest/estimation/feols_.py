@@ -452,10 +452,6 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
-            # assert all(
-            #    col.replace(" ", "") in _data.columns for col in self._clustervar
-            # ), "vcov dict value must be a column in the data"
-
             if data is not None:
                 data_pandas = _polars_to_pandas(data)
                 self._cluster_df = data_pandas[self._clustervar]
@@ -531,7 +527,7 @@ class Feols:
                     meat = np.zeros((k_instruments, k_instruments))
 
                     # deviance uniquely for Poisson
-                    if hasattr(self, "deviance"):
+                    if self._method == "fepois":
                         weighted_uhat = _weights.flatten() * _u_hat.flatten()
                     else:
                         weighted_uhat = _u_hat
@@ -638,7 +634,9 @@ class Feols:
         _vcov_type = self._vcov_type
         _N = self._N
         _k = self._k
-        _G = np.min(np.array(self._G))  # fixest default
+        _G = (
+            np.min(np.array(self._G)) if self._vcov_type == "CRV" else np.array(self._G)
+        )  # fixest default
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(_vcov))

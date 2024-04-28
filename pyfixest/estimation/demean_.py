@@ -70,7 +70,14 @@ def demean_model(
         # check if looked dict has data for na_index
         if lookup_demeaned_data.get(na_index_str) is not None:
             # get data out of lookup table: list of [algo, data]
-            _, YX_demeaned_old = lookup_demeaned_data.get(na_index_str)
+            value = lookup_demeaned_data.get(na_index_str)
+            if value is not None:
+                try:
+                    _, YX_demeaned_old = value
+                except ValueError:
+                    print("Error: Expected the value to be iterable with two elements.")
+            else:
+                pass
 
             # get not yet demeaned covariates
             var_diff_names = list(set(yx_names) - set(YX_demeaned_old.columns))
