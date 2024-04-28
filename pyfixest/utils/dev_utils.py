@@ -3,13 +3,9 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
-try:
-    import polars as pl
-
-    DataFrameType = Union[pd.DataFrame, pl.DataFrame]
-except ImportError:
-    DataFrameType = pd.DataFrame  # Falls back to pandas DataFrame
+DataFrameType = Union[pd.DataFrame, pl.DataFrame]
 
 
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
