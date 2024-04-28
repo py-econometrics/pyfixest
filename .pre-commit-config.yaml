@@ -39,4 +39,5 @@ repos:
   #    - id: mypy
   #      args: [--ignore-missing-imports]
   #      files: ^pyfixest/estimation/
+  #      exclude: ^tests/
   #      additional_dependencies: [numpy>=1.20, pandas-stubs]
