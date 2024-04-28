@@ -15,7 +15,7 @@ def feols(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[str, dict[str, str]]] = None,
     weights: Union[None, str] = None,
-    ssc=ssc(),
+    ssc: dict[str, Union[str, bool]] = ssc(),
     fixef_rm: str = "none",
     fixef_tol=1e-08,
     collin_tol: float = 1e-10,
@@ -315,7 +315,7 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[str, dict[str, str]]] = None,
-    ssc=ssc(),
+    ssc: dict[str, Union[str, bool]] = ssc(),
     fixef_rm: str = "none",
     fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,

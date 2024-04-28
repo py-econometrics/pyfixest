@@ -884,21 +884,29 @@ class Feols:
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
 
+        cluster_list = []
         if cluster is not None and isinstance(cluster, str):
-            cluster = [cluster]
+            cluster_list = [cluster]
+        if cluster is not None and isinstance(cluster, list):
+            cluster_list = cluster
 
         if cluster is None and _clustervar is not None:
-            cluster = _clustervar
+            if isinstance(_clustervar, str):
+                cluster_list = [_clustervar]
+            else:
+                cluster_list = _clustervar
 
-        run_heteroskedastic = cluster is None
+        run_heteroskedastic = cluster_list is None
 
-        if not run_heteroskedastic and not len(cluster) == 1:
+        if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
-        if not run_heteroskedastic and cluster[0] not in _data.columns:
-            raise ValueError(f"Cluster variable {cluster[0]} not found in the data.")
+        if not run_heteroskedastic and cluster_list[0] not in _data.columns:
+            raise ValueError(
+                f"Cluster variable {cluster_list[0]} not found in the data."
+            )
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -949,9 +957,9 @@ class Feols:
             full_enumeration_warn = False
 
         else:
-            inference = f"CRV({cluster})"
+            inference = f"CRV({cluster_list[0]})"
 
-            cluster_array = _data[cluster].to_numpy().flatten()
+            cluster_array = _data[cluster_list[0]].to_numpy().flatten()
 
             boot = WildboottestCL(
                 X=_X,
@@ -1733,8 +1741,8 @@ def _drop_multicollinear_variables(
     tXX = X.T @ X
     res = _find_collinear_variables(tXX, collin_tol)
 
-    collin_vars = None
-    collin_index = None
+    collin_vars = []
+    collin_index = []
 
     if res["all_removed"]:
         raise ValueError(
@@ -1745,7 +1753,7 @@ def _drop_multicollinear_variables(
 
     names_array = np.array(names)
     if res["n_excl"] > 0:
-        collin_vars = names_array[res["id_excl"]]
+        collin_vars = names_array[res["id_excl"]].tolist()
         warnings.warn(
             f"""
             The following variables are collinear: {collin_vars}.
@@ -1762,7 +1770,7 @@ def _drop_multicollinear_variables(
             )
 
         names_array = np.delete(names_array, res["id_excl"])
-        collin_index = res["id_excl"]
+        collin_index = res["id_excl"].tolist()
 
     return X, names_array.tolist(), collin_vars, collin_index
 

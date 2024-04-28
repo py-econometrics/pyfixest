@@ -86,7 +86,7 @@ class FixestMulti:
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
         weights: Union[None, str] = None,
-        ssc: dict[str, str] = {},
+        ssc: dict[str, Union[str, bool]] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
     ) -> None:
@@ -128,7 +128,7 @@ class FixestMulti:
         self._is_iv = None
         self._fml_dict = None
         self._fml_dict_iv = None
-        self._ssc_dict = None
+        self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
         self._is_multiple_estimation = None
         self._drop_intercept = None
