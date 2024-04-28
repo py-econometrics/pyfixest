@@ -888,7 +888,7 @@ class Feols:
         if cluster is None and _clustervar is not None:
             cluster = _clustervar
 
-        if len(cluster.split("+")) > 1:
+        if cluster is not None and len(cluster.split("+")) > 1:
             raise ValueError(
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
