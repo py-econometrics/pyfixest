@@ -10,7 +10,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols
-from pyfixest.utils.dev_utils import _to_integer
+from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
 class Fepois(Feols):
@@ -160,8 +160,6 @@ class Fepois(Feols):
                 ).flatten()
             return deviance
 
-        accelerate = False
-        # inner_tol = 1e-04
         stop_iterating = False
         crit = 1
 
@@ -182,15 +180,8 @@ class Fepois(Feols):
                 mu = (_Y + _mean) / 2
                 eta = np.log(mu)
                 Z = eta + _Y / mu - 1
-                last_Z = Z.copy()
                 reg_Z = Z.copy()
                 last = compute_deviance(_Y, mu)
-
-            elif accelerate:
-                last_Z = Z.copy()
-                Z = eta + _Y / mu - 1
-                reg_Z = Z - last_Z + Z_resid  # noqa: F821
-                X = X_resid.copy()  # noqa: F821, F841
 
             else:
                 # update w and Z
@@ -271,7 +262,7 @@ class Fepois(Feols):
             self._convergence = True
 
     def predict(
-        self, newdata: Optional[pd.DataFrame] = None, type="link"
+        self, newdata: Optional[DataFrameType] = None, type: str = "link"
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -314,7 +305,7 @@ class Fepois(Feols):
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
-        y_hat = super().predict(data=newdata)
+        y_hat = super().predict(newdata=newdata)
         if type == "link":
             y_hat = np.exp(y_hat)
 
@@ -344,7 +335,6 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
     if not (Y > 0).all(axis=0).all():
         Y_help = (Y > 0).astype(int).squeeze()
 
-        separation_na: set[int] = set()
         # loop over all elements of fe
         for x in fe.columns:
             ctab = pd.crosstab(Y_help, fe[x])
@@ -353,7 +343,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
             # fixed effect level has only observations with Y > 0
             sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
                 null_column > 0
-            ).values.flatten()
+            ).to_numpy().flatten()
             # droplist: list of levels to drop
             droplist = ctab.xs(0)[sep_candidate].index.tolist()
 
