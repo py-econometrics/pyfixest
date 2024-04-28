@@ -517,7 +517,7 @@ class Feols:
                     vcov_type="CRV",
                 )
 
-                if len(self._ssc) == 0:
+                if x == 0:
                     self._ssc = np.array([ssc])
                 else:
                     self._ssc = np.append(self._ssc, ssc)
