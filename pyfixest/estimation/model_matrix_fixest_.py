@@ -338,11 +338,11 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
         for _ivar in _ivars:
             if len(_ivar) == 1:
                 _icovars_set.update(
-                    [col for col in X.columns if f"C({_ivar[0]})" in col]
+                    [col for col in X.columns if f"C({_ivar[0]}" in col]
                 )
-            if len(_ivar) == 2:
+            else:
                 var1, var2 = _ivar
-                pattern = rf"C\({var1},.*\)\[.*\]:{var2}"
+                pattern = rf"C\({var1}(,.*)?\)\[.*\]:{var2}"
                 _icovars_set.update(
                     [
                         match.group()
