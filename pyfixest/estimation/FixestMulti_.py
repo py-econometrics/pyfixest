@@ -332,7 +332,7 @@ class FixestMulti:
 
                     na_separation: list[int] = []
                     if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, fe=fe, check="fe")
+                        na_separation = _check_for_separation(Y=Y, fe=fe)
                         if na_separation:
                             warnings.warn(
                                 f"{str(len(na_separation))} observations removed because of separation."
