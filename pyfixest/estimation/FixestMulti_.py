@@ -511,10 +511,10 @@ class FixestMulti:
             df["fml"] = fxst._fml
             res.append(df)
 
-        res = pd.concat(res, axis=0)
-        res.set_index(["fml", "Coefficient"], inplace=True)
+        res_df = pd.concat(res, axis=0)
+        res_df.set_index(["fml", "Coefficient"], inplace=True)
 
-        return res
+        return res_df
 
     def coef(self) -> pd.Series:
         """
@@ -625,7 +625,7 @@ class FixestMulti:
             A pd.DataFrame with bootstrapped t-statistic and p-value.
             The index indicates which model the estimated statistic derives from.
         """
-        res = []
+        res_df = pd.DataFrame()
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
 
@@ -644,15 +644,18 @@ class FixestMulti:
             pvalue = boot_res["Pr(>|t|)"]
             tstat = boot_res["t value"]
 
-            res.append(
-                pd.Series(
-                    {"fml": x, "param": param, "t value": tstat, "Pr(>|t|)": pvalue}
-                )
-            )
+            result_dict = {
+                "fml": x,
+                "param": param,
+                "t value": tstat,
+                "Pr(>|t|)": pvalue,
+            }
 
-        res = pd.concat(res, axis=1).T.set_index("fml")
+            res_df = pd.concat([res_df, pd.DataFrame(result_dict)], axis=1)
 
-        return res
+        res_df = res_df.T.set_index("fml")
+
+        return res_df
 
     def fetch_model(
         self, i: Union[int, str], print_fml: Optional[bool] = True

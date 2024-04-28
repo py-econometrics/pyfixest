@@ -250,7 +250,7 @@ class Feols:
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
         self.na_index = np.array([])  # initiated outside of the class
-        self.n_separation_na = np.array([])
+        self.n_separation_na = 0
 
         # set in get_inference()
         self._se = None
