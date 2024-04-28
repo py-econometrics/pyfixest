@@ -9,7 +9,7 @@ import pandas as pd
 from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feiv_ import Feiv
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -478,7 +478,15 @@ class FixestMulti:
         """
         for model in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[model]
-            fxst._vcov_type = vcov
+            _data = fxst._data
+
+            _check_vcov_input(vcov, _data)
+            (
+                fxst._vcov_type,
+                fxst._vcov_type_detail,
+                _,
+                _,
+            ) = _deparse_vcov_input(vcov, False, False)
 
             fxst.vcov(vcov=vcov)
             fxst.get_inference()
@@ -581,7 +589,7 @@ class FixestMulti:
     def wildboottest(
         self,
         B: int,
-        cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
@@ -600,7 +608,11 @@ class FixestMulti:
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
             Default is None.
-        cluster : Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        cluster : Union[str, None], optional
+            The name of the cluster variable. Default is None. If None, uses
+            the `self._clustervar` attribute as the cluster variable. If the
+            `self._clustervar` attribute is None, a heteroskedasticity-robust
+            wild bootstrap is run.
         weights_type : str, optional
             The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
             or 'normal'. Default is 'rademacher'.
