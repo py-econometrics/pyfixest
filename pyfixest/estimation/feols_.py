@@ -262,7 +262,7 @@ class Feols:
         self._F_stat = None
 
         # set in fixef()
-        self._fixef_dict = dict[str, dict[str, float]]
+        self._fixef_dict: dict[str, dict[str, float]] = {}
         self._sumFE = None
 
         # set in get_performance()
@@ -452,6 +452,7 @@ class Feols:
                 self._vcov = self._ssc * bread @ meat @ bread
 
         elif self._vcov_type == "CRV":
+            self._cluster_df: pd.Series = pd.Series()
             if data is not None:
                 data_pandas = _polars_to_pandas(data)
                 self._cluster_df = data_pandas[self._clustervar]
@@ -466,7 +467,7 @@ class Feols:
                     """
                 )
 
-            if self._cluster_df.isna().any().any():
+            if np.any(self._cluster_df.isna().any()):
                 raise NanInClusterVarError(
                     "CRV inference not supported with missing values in the cluster variable."
                     "Please drop missing values before running the regression."
@@ -605,12 +606,12 @@ class Feols:
                     #    beta_center = np.mean(beta_jack, axis = 0)
                     beta_center = _beta_hat
 
-                    vcov = np.zeros((_k, _k))
+                    vcov_mat = np.zeros((_k, _k))
                     for ixg, g in enumerate(clustid):
                         beta_centered = beta_jack[ixg, :] - beta_center
-                        vcov += np.outer(beta_centered, beta_centered)
+                        vcov_mat += np.outer(beta_centered, beta_centered)
 
-                    self._vcov += self._ssc[x] * vcov
+                    self._vcov += self._ssc[x] * vcov_mat
 
         self.get_inference()
 
@@ -943,10 +944,10 @@ class Feols:
         else:
             inference = f"CRV({cluster})"
 
-            cluster = _data[cluster]
+            cluster_df = _data[cluster]
 
             boot = WildboottestCL(
-                X=_X, Y=_Y, cluster=cluster, R=R, B=B, seed=seed, parallel=parallel
+                X=_X, Y=_Y, cluster=cluster_df, R=R, B=B, seed=seed, parallel=parallel
             )
             boot.get_scores(
                 bootstrap_type=bootstrap_type,
@@ -1100,7 +1101,7 @@ class Feols:
             np.isin(W, [0, 1])
         ), "Treatment variable must be binary with values 0 and 1"
         X = self._X
-        cluster_vec = data[cluster].values
+        cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
         tau_full = np.array(self.coef().xs(treatment))
@@ -1280,7 +1281,7 @@ class Feols:
         _beta_hat = self._beta_hat
         _is_iv = self._is_iv
 
-        _Y_untransformed = self._Y_untransformed.values.flatten()
+        _Y_untransformed = self._Y_untransformed.to_numpy().flatten()
 
         if _is_iv:
             raise NotImplementedError(
@@ -1690,7 +1691,7 @@ def _get_vcov_type(vcov, fval):
 
 def _drop_multicollinear_variables(
     X: np.ndarray, names: list[str], collin_tol: float
-) -> tuple[np.ndarray, str, str, list[int]]:
+) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
 
@@ -1740,6 +1741,13 @@ def _drop_multicollinear_variables(
         )
 
         X = np.delete(X, res["id_excl"], axis=1)
+        if X.ndim == 2 and X.shape[1] == 0:
+            raise ValueError(
+                """
+                All variables are collinear. Please check your model specification.
+                """
+            )
+
         names_array = np.delete(names_array, res["id_excl"])
         collin_index = res["id_excl"]
 

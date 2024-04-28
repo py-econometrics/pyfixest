@@ -125,7 +125,7 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    return adj_value * cluster_adj_value * vcov_sign
+    return np.array([adj_value * cluster_adj_value * vcov_sign])
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):

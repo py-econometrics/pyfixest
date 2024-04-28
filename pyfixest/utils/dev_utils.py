@@ -9,7 +9,7 @@ try:
 
     DataFrameType = Union[pd.DataFrame, pl.DataFrame]
 except ImportError:
-    DataFrameType = pd.DataFrame
+    DataFrameType = pd.DataFrame  # Falls back to pandas DataFrame
 
 
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
