@@ -152,7 +152,7 @@ class Fepois(Feols):
         _tol = self.tol
         _fixef_tol = self.fixef_tol
 
-        def compute_deviance(_Y, mu):
+        def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 deviance = (
@@ -356,14 +356,16 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
     return list(separation_na)
 
 
-def _fepois_input_checks(fe, drop_singletons, tol, maxiter):
+def _fepois_input_checks(
+    fe: Union[np.ndarray, None], drop_singletons: bool, tol: float, maxiter: int
+):
     """
     Perform input checks for Fepois constructor arguments.
 
     Parameters
     ----------
-    fe : Any
-        Fixed effects.
+    fe : Union[np.ndarray, None]
+        Fixed effects. None if no fixed effects are used.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
     tol : float
