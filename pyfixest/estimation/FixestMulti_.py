@@ -9,11 +9,11 @@ import pandas as pd
 from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feiv_ import Feiv
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import _drop_cols, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _drop_cols, _polars_to_pandas
 
 
 class FixestMulti:
@@ -21,7 +21,7 @@ class FixestMulti:
 
     def __init__(
         self,
-        data: pd.DataFrame,
+        data: DataFrameType,
         copy_data: bool,
         store_data: bool,
         fixef_tol: float,
@@ -49,7 +49,6 @@ class FixestMulti:
         -------
             None
         """
-        self._data = None
         self._copy_data = copy_data
         self._store_data = store_data
         self._fixef_tol = fixef_tol
@@ -64,7 +63,7 @@ class FixestMulti:
         # reindex: else, potential errors when pd.DataFrame.dropna()
         # -> drops indices, but formulaic model_matrix starts from 0:N...
         self._data.reset_index(drop=True, inplace=True)
-        self.all_fitted_models = {}
+        self.all_fitted_models: dict[str, Union[Feols, Fepois, Feiv]] = {}
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
@@ -86,8 +85,8 @@ class FixestMulti:
         estimation: str,
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
-        weights: Union[None, np.ndarray] = None,
-        ssc: dict[str, str] = {},
+        weights: Union[None, str] = None,
+        ssc: dict[str, Union[str, bool]] = {},
         fixef_rm: str = "none",
         drop_intercept: bool = False,
     ) -> None:
@@ -114,7 +113,7 @@ class FixestMulti:
         ssc : dict[str, str], optional
             A dictionary specifying the type of standard errors to use for inference.
             See `feols()` or `fepois()`.
-        fixef_rm : str, optional
+        fixef_rm : bool, optional
             A string specifying whether singleton fixed effects should be dropped.
             Options are "none" (default) and "singleton". If "singleton",
             singleton fixed effects are dropped.
@@ -129,8 +128,8 @@ class FixestMulti:
         self._is_iv = None
         self._fml_dict = None
         self._fml_dict_iv = None
-        self._ssc_dict = None
-        self._drop_singletons = None
+        self._ssc_dict: dict[str, Union[str, bool]] = {}
+        self._drop_singletons = False
         self._is_multiple_estimation = None
         self._drop_intercept = None
         self._weights = weights
@@ -199,7 +198,7 @@ class FixestMulti:
 
             # dictionary to cache demeaned data with index: na_index_str,
             # only relevant for `.feols()`
-            lookup_demeaned_data = {}
+            lookup_demeaned_data: dict[str, pd.DataFrame] = {}
 
             for FixestFormula in fixef_key_models:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
@@ -254,6 +253,8 @@ class FixestMulti:
 
                 _k_fe = fe.nunique(axis=0) if fe is not None else None
 
+                FIT: Union[Feols, Feiv, Fepois]
+
                 if _method == "feols":
                     # demean Y, X, Z, if not already done in previous estimation
 
@@ -286,17 +287,17 @@ class FixestMulti:
                     if not _is_iv:
                         Zd = Xd
 
-                    Yd, Xd, Zd, endogvard = (
-                        x.to_numpy() if x is not None else x
+                    Yd_array, Xd_array, Zd_array, endogvard_array = (
+                        x.to_numpy() if x is not None else np.array([])
                         for x in [Yd, Xd, Zd, endogvard]
                     )
 
                     if _is_iv:
                         coefnames_z = Z.columns.tolist()
                         FIT = Feiv(
-                            Y=Yd,
-                            X=Xd,
-                            Z=Zd,
+                            Y=Yd_array,
+                            X=Xd_array,
+                            Z=Zd_array,
                             weights=weights,
                             coefnames_x=coefnames,
                             coefnames_z=coefnames_z,
@@ -308,8 +309,8 @@ class FixestMulti:
                         # initiate OLS class
 
                         FIT = Feols(
-                            Y=Yd,
-                            X=Xd,
+                            Y=Yd_array,
+                            X=Xd_array,
                             weights=weights,
                             coefnames=coefnames,
                             collin_tol=collin_tol,
@@ -322,16 +323,16 @@ class FixestMulti:
                     # special case: sometimes it is useful to fit models as
                     # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                     if FIT._X_is_empty:
-                        FIT._u_hat = Y.to_numpy() - Yd
+                        FIT._u_hat = Y.to_numpy() - Yd_array
                     else:
                         FIT.get_fit()
 
                 elif _method == "fepois":
                     # check for separation and drop separated variables
 
-                    na_separation = []
+                    na_separation: list[int] = []
                     if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, fe=fe, check="fe")
+                        na_separation = _check_for_separation(Y=Y, fe=fe)
                         if na_separation:
                             warnings.warn(
                                 f"{str(len(na_separation))} observations removed because of separation."
@@ -341,20 +342,21 @@ class FixestMulti:
                             X.drop(na_separation, axis=0, inplace=True)
                             fe.drop(na_separation, axis=0, inplace=True)
 
-                    Y, X = (x.to_numpy() for x in [Y, X])
-                    N = X.shape[0]
+                    Y_array, X_array = (x.to_numpy() for x in [Y, X])
+                    N = X_array.shape[0]
 
+                    fe_array = None
                     if fe is not None:
                         _has_fixef = True
-                        fe = fe.to_numpy()
-                        if fe.ndim == 1:
-                            fe = fe.reshape((N, 1))
+                        fe_array = fe.to_numpy()
+                        if fe_array.ndim == 1:
+                            fe_array = fe_array.reshape((N, 1))
 
                     # initiate OLS class
                     FIT = Fepois(
-                        Y=Y,
-                        X=X,
-                        fe=fe,
+                        Y=Y_array,
+                        X=X_array,
+                        fe=fe_array,
                         weights=weights,
                         coefnames=coefnames,
                         drop_singletons=_drop_singletons,
@@ -369,7 +371,6 @@ class FixestMulti:
                     FIT.get_fit()
 
                     FIT.na_index = na_index
-                    FIT.n_separation_na = None
                     if na_separation:
                         FIT.na_index = np.concatenate(
                             [FIT.na_index, np.array(na_separation)]
@@ -477,7 +478,15 @@ class FixestMulti:
         """
         for model in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[model]
-            fxst._vcov_type = vcov
+            _data = fxst._data
+
+            _check_vcov_input(vcov, _data)
+            (
+                fxst._vcov_type,
+                fxst._vcov_type_detail,
+                _,
+                _,
+            ) = _deparse_vcov_input(vcov, False, False)
 
             fxst.vcov(vcov=vcov)
             fxst.get_inference()
@@ -510,9 +519,10 @@ class FixestMulti:
             df["fml"] = fxst._fml
             res.append(df)
 
-        res = pd.concat(res, axis=0).set_index(["fml", "Coefficient"])
+        res_df = pd.concat(res, axis=0)
+        res_df.set_index(["fml", "Coefficient"], inplace=True)
 
-        return res
+        return res_df
 
     def coef(self) -> pd.Series:
         """
@@ -564,7 +574,7 @@ class FixestMulti:
         """
         return self.tidy()["Pr(>|t|)"]
 
-    def confint(self) -> pd.Series:
+    def confint(self) -> pd.DataFrame:
         """
         Obtain confidence intervals for the fitted models.
 
@@ -579,12 +589,12 @@ class FixestMulti:
     def wildboottest(
         self,
         B: int,
-        cluster: Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
         bootstrap_type: str = "11",
-        seed: Optional[str] = None,
+        seed: Optional[int] = None,
         adj: bool = True,
         cluster_adj: bool = True,
     ) -> pd.DataFrame:
@@ -598,7 +608,11 @@ class FixestMulti:
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
             Default is None.
-        cluster : Optional[Union[np.ndarray, pd.Series, pd.DataFrame]] = None,
+        cluster : Union[str, None], optional
+            The name of the cluster variable. Default is None. If None, uses
+            the `self._clustervar` attribute as the cluster variable. If the
+            `self._clustervar` attribute is None, a heteroskedasticity-robust
+            wild bootstrap is run.
         weights_type : str, optional
             The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
             or 'normal'. Default is 'rademacher'.
@@ -623,7 +637,7 @@ class FixestMulti:
             A pd.DataFrame with bootstrapped t-statistic and p-value.
             The index indicates which model the estimated statistic derives from.
         """
-        res = []
+        res_df = pd.DataFrame()
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
 
@@ -642,15 +656,18 @@ class FixestMulti:
             pvalue = boot_res["Pr(>|t|)"]
             tstat = boot_res["t value"]
 
-            res.append(
-                pd.Series(
-                    {"fml": x, "param": param, "t value": tstat, "Pr(>|t|)": pvalue}
-                )
-            )
+            result_dict = {
+                "fml": x,
+                "param": param,
+                "t value": tstat,
+                "Pr(>|t|)": pvalue,
+            }
 
-        res = pd.concat(res, axis=1).T.set_index("fml")
+            res_df = pd.concat([res_df, pd.DataFrame(result_dict)], axis=1)
 
-        return res
+        res_df = res_df.T.set_index("fml")
+
+        return res_df
 
     def fetch_model(
         self, i: Union[int, str], print_fml: Optional[bool] = True
@@ -716,7 +733,7 @@ def _get_vcov_type(vcov, fval):
     return vcov_type
 
 
-def _drop_singletons(fixef_rm: bool) -> bool:
+def _drop_singletons(fixef_rm: str) -> bool:
     """
     Drop singleton fixed effects.
 
@@ -726,7 +743,7 @@ def _drop_singletons(fixef_rm: bool) -> bool:
     Parameters
     ----------
     fixef_rm : str
-        The fixef_rm argument.
+        The fixef_rm argument. Either "none" or "singleton".
 
     Returns
     -------
