@@ -136,7 +136,7 @@ def model_matrix_fixest(
 
     if columns_to_drop and not X_is_empty:
         X.drop(columns_to_drop, axis=1, inplace=True)
-        if _is_iv:
+        if Z is not None:
             Z.drop(columns_to_drop, axis=1, inplace=True)
 
     _icovars = _get_icovars(_list_of_ivars_dict, X)
@@ -146,7 +146,7 @@ def model_matrix_fixest(
     if drop_intercept or fe is not None:
         if "Intercept" in X.columns:
             X.drop("Intercept", axis=1, inplace=True)
-        if _is_iv and "Intercept" in Z.columns:
+        if Z is not None and "Intercept" in Z.columns:
             Z.drop("Intercept", axis=1, inplace=True)
 
     # handle NaNs in fixed effects & singleton fixed effects
@@ -165,8 +165,9 @@ def model_matrix_fixest(
             if not X_is_empty:
                 X = X.iloc[keep_idx]
             fe = fe[keep_idx]
-            if _is_iv:
+            if Z is not None:
                 Z = Z[keep_idx]
+            if endogvar is not None:
                 endogvar = endogvar[keep_idx]
             if weights_df is not None:
                 weights_df = weights_df[keep_idx]
@@ -338,11 +339,11 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
         for _ivar in _ivars:
             if len(_ivar) == 1:
                 _icovars_set.update(
-                    [col for col in X.columns if f"C({_ivar[0]})" in col]
+                    [col for col in X.columns if f"C({_ivar[0]}" in col]
                 )
-            if len(_ivar) == 2:
+            else:
                 var1, var2 = _ivar
-                pattern = rf"C\({var1},.*\)\[.*\]:{var2}"
+                pattern = rf"C\({var1}(,.*)?\)\[.*\]:{var2}"
                 _icovars_set.update(
                     [
                         match.group()
