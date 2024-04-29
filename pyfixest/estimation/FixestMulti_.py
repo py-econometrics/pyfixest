@@ -699,7 +699,9 @@ class FixestMulti:
         return model
 
 
-def _get_vcov_type(vcov, fval):
+def _get_vcov_type(
+    vcov: Union[str, dict[str, str], None], fval: str
+) -> Union[str, dict[str, str]]:
     """
     Pass the specified vcov type.
 
@@ -709,7 +711,7 @@ def _get_vcov_type(vcov, fval):
 
     Parameters
     ----------
-    vcov : str
+    vcov : Union[str, dict[str, str], None]
         The specified vcov type.
     fval : str
         The specified fixed effects. (i.e. "X1+X2")
@@ -722,15 +724,15 @@ def _get_vcov_type(vcov, fval):
     if vcov is None:
         # iid if no fixed effects
         if fval == "0":
-            vcov_type = "iid"
+            vcov_type = "iid"  # type: ignore
         else:
             # CRV1 inference, clustered by first fixed effect
             first_fe = fval.split("+")[0]
-            vcov_type = {"CRV1": first_fe}
+            vcov_type = {"CRV1": first_fe}  # type: ignore
     else:
-        vcov_type = vcov
+        vcov_type = vcov  # type: ignore
 
-    return vcov_type
+    return vcov_type  # type: ignore
 
 
 def _drop_singletons(fixef_rm: str) -> bool:
