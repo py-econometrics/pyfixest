@@ -474,17 +474,17 @@ def fepois(
 
 
 def _estimation_input_checks(
-    fml,
-    data,
-    vcov,
-    weights,
-    ssc,
-    fixef_rm,
-    collin_tol,
-    copy_data,
-    store_data,
-    fixef_tol,
-    weights_type,
+    fml: str,
+    data: DataFrameType,
+    vcov: Optional[Union[str, dict[str, str]]],
+    weights: Union[None, str],
+    ssc: dict[str, Union[str, bool]],
+    fixef_rm: str,
+    collin_tol: float,
+    copy_data: bool,
+    store_data: bool,
+    fixef_tol: float,
+    weights_type: str,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
