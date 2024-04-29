@@ -1,9 +1,22 @@
 import numpy as np
+import pandas as pd
+from numpy.random import Generator
 
 from pyfixest.estimation.estimation import feols
 
 
-def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
+def _compute_CCV(
+    fml: str,
+    Y: np.ndarray,
+    X: np.ndarray,
+    W: np.ndarray,
+    rng: Generator,
+    data: pd.DataFrame,
+    treatment: str,
+    cluster_vec: np.ndarray,
+    pk: float,
+    tau_full: float,
+) -> float:
     """
     Compute the causal cluster variance estimator following Abadie et al (QJE 2023).
 
@@ -38,7 +51,7 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
     Z = rng.choice([False, True], size=N)
     # compute alpha, tau using Z == 0
     fit_split1 = feols(fml, data[Z])
-    coefs_split = fit_split1._beta_hat
+    coefs_split = fit_split1.coef().to_numpy()
     tau = fit_split1.coef().xs(treatment)
 
     # estimate treatment effect for each cluster
@@ -61,7 +74,7 @@ def _compute_CCV(fml, Y, X, W, rng, data, treatment, cluster_vec, pk, tau_full):
             aux_tau_full = tau_full
         else:
             fit_m_full = feols(fml, data[ind_m])
-            aux_tau_full = fit_m_full.coef().xs(treatment)
+            aux_tau_full = float(fit_m_full.coef().xs(treatment))
 
         # treatment effect in cluster for subsample
         if treatment_nested_in_cluster_split:
