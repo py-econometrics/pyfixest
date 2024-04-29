@@ -306,7 +306,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.etable" class="level1">
 <h1>report.etable</h1>
-<p><code>report.etable(models, type='md', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=dict(), keep=[], drop=[], exact_match=False, **kwargs)</code></p>
+<p><code>report.etable(models, type='md', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, **kwargs)</code></p>
 <p>Create an esttab-like table from a list of models.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -354,19 +354,19 @@ ul.task-list li input[type="checkbox"] {
 <td><code>custom_stats</code></td>
 <td>typing.Optional[dict]</td>
 <td>A dictionary of custom statistics. “b”, “se”, “t”, or “p” are reserved.</td>
-<td><code>dict()</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>keep</code></td>
 <td>typing.Optional[typing.Union[list, str]]</td>
 <td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
-<td><code>[]</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>drop</code></td>
 <td>typing.Optional[typing.Union[list, str]]</td>
 <td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
-<td><code>[]</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>exact_match</code></td>
