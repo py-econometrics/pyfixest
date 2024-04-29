@@ -35,7 +35,7 @@ def test_feols_args():
     assert (fit1.coef() == fit2.coef()).all()
 
     fit3 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, store_data=False, fixef_tol=1e-02)
-    assert fit3._data is None
+    assert fit3._data.empty
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
@@ -58,7 +58,7 @@ def test_fepois_args():
     assert (fit1.coef() == fit2.coef()).all()
 
     fit3 = pf.fepois(fml="Y ~ X1 | f1 + f2", data=df, store_data=False, fixef_tol=1e-02)
-    assert fit3._data is None
+    assert fit3._data.empty
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01

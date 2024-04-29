@@ -3,13 +3,9 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
-try:
-    import polars as pl
-
-    DataFrameType = Union[pd.DataFrame, pl.DataFrame]
-except ImportError:
-    DataFrameType = pd.DataFrame
+DataFrameType = Union[pd.DataFrame, pl.DataFrame]
 
 
 def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
@@ -48,8 +44,8 @@ def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
 
 def _select_order_coefs(
     coefs: list,
-    keep: Optional[Union[list, str]] = [],
-    drop: Optional[Union[list, str]] = [],
+    keep: Optional[Union[list, str]] = None,
+    drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
 ):
     r"""
@@ -82,6 +78,11 @@ def _select_order_coefs(
     res: list
         The filtered and ordered coefficient names.
     """
+    if keep is None:
+        keep = []
+    if drop is None:
+        drop = []
+
     if isinstance(keep, str):
         keep = [keep]
     if isinstance(drop, str):

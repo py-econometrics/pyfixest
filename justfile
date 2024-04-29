@@ -28,6 +28,9 @@ install-r:
 tests:
 	poetry run pytest -n 4 --cov-report=term tests
 
+rerun-tests:
+	poetry run pytest --lf
+
 # Build the package
 build: tests
 	poetry build
