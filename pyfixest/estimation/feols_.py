@@ -885,6 +885,7 @@ class Feols:
                 )
 
         cluster_list = []
+
         if cluster is not None and isinstance(cluster, str):
             cluster_list = [cluster]
         if cluster is not None and isinstance(cluster, list):
@@ -896,7 +897,7 @@ class Feols:
             else:
                 cluster_list = _clustervar
 
-        run_heteroskedastic = cluster_list is None
+        run_heteroskedastic = not cluster_list
 
         if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
