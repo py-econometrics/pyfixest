@@ -44,3 +44,10 @@ __all__ = [
     "report",
     "utils",
 ]
+
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("pyfixest")
+except PackageNotFoundError:
+    __version__ = "unknown"
