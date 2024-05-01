@@ -518,13 +518,16 @@ def _deparse_fml(
         # add endogenous variable to "covars" - yes, bad naming
         covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
+    endogvars_list = []
+    instruments_list = []
+
     if endogvars is not None and not isinstance(endogvars, list):
         endogvars_list = endogvars.split("+")
 
     if instruments is not None and not isinstance(instruments, list):
         instruments_list = instruments.split("+")
 
-    if endogvars_list is not None and instruments_list is not None:
+    if endogvars_list and instruments_list:
         if len(endogvars_list) > len(instruments_list):
             raise UnderDeterminedIVError(
                 """
@@ -726,7 +729,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
                 if variable_fml[i] != "0"
             ]
             if variable_type in ["sw0", "csw0"]:
-                fml_list.append(const_fml)
+                fml_list.insert(0, const_fml)
         else:
             fml_list = variable_fml
     elif const_fml:
