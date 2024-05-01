@@ -42,18 +42,18 @@ class LPDID(DID):
 
     def __init__(
         self,
-        data,
-        yname,
-        idname,
-        tname,
-        gname,
-        xfml,
-        att,
-        cluster,
-        vcov,
-        pre_window,
-        post_window,
-        never_treated,
+        data: pd.DataFrame,
+        yname: str,
+        idname: str,
+        tname: str,
+        gname: str,
+        xfml: str,
+        att: bool,
+        cluster: str,
+        vcov: Optional[Union[str, dict[str, str]]] = None,
+        pre_window: Optional[int] = None,
+        post_window: Optional[int] = None,
+        never_treated: Optional[int] = 0,
     ):
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
@@ -125,14 +125,14 @@ class LPDID(DID):
 
     def iplot(
         self,
-        alpha=0.05,
-        figsize=(500, 300),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
-        title="LPDID Event Study Estimate",
-        coord_flip=False,
-        plot_backend="lets_plot",
+        alpha: float = 0.05,
+        figsize: tuple[int, int] = (500, 300),
+        yintercept: Optional[int] = None,
+        xintercept: Optional[int] = None,
+        rotate_xticks: int = 0,
+        title: str = "LPDID Event Study Estimate",
+        coord_flip: bool = False,
+        plot_backend: str = "lets_plot",
     ):
         """
         Create coefficient plots.
@@ -194,7 +194,7 @@ def _lpdid_estimate(
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     att: bool = True,
-    xfml=None,
+    xfml: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -301,7 +301,7 @@ def _lpdid_estimate(
     return res
 
 
-def _pooled_adjustment(df, y, pool_lead, idname):
+def _pooled_adjustment(df: pd.DataFrame, y: str, pool_lead: int, idname: str):
     """
     Calculate post-treatment means rather than just using a single y value from t+h.
 

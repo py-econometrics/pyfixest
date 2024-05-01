@@ -9,15 +9,15 @@ from pyfixest.errors import NotImplementedError
 
 
 def event_study(
-    data,
-    yname,
-    idname,
-    tname,
-    gname,
-    xfml=None,
-    estimator="twfe",
-    att=True,
-    cluster="idname",
+    data: pd.DataFrame,
+    yname: str,
+    idname: str,
+    tname: str,
+    gname: str,
+    xfml: Optional[str] = None,
+    estimator: Optional[str] = "twfe",
+    att: Optional[bool] = True,
+    cluster: Optional[str] = "idname",
 ):
     """
     Estimate Event Study Model.

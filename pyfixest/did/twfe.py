@@ -1,3 +1,7 @@
+from typing import Optional
+
+import pandas as pd
+
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 
@@ -35,7 +39,17 @@ class TWFE(DID):
         The name of the cluster variable.
     """
 
-    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        yname: str,
+        idname: str,
+        tname: str,
+        gname: str,
+        xfml: str,
+        att: bool,
+        cluster: str,
+    ) -> None:
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
         self._estimator = "twfe"
@@ -69,13 +83,13 @@ class TWFE(DID):
 
     def iplot(
         self,
-        alpha=0.05,
-        figsize=(500, 300),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
-        title="TWFE Event Study Estimate",
-        coord_flip=False,
+        alpha: float = 0.05,
+        figsize: tuple[int, int] = (500, 300),
+        yintercept: Optional[int] = None,
+        xintercept: Optional[int] = None,
+        rotate_xticks: int = 0,
+        title: str = "TWFE Event Study Estimate",
+        coord_flip: bool = False,
     ):
         """Plot TWFE estimates."""
         self.iplot(
