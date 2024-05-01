@@ -256,9 +256,7 @@ def _transform_i_to_C(match: re.Match) -> str:
         return f"C({var1}{base})"
 
 
-def _fixef_interactions(
-    fval: Union[str, None], data: pd.DataFrame
-) -> tuple[str, pd.DataFrame]:
+def _fixef_interactions(fval: str, data: pd.DataFrame) -> tuple[str, pd.DataFrame]:
     """
     Add interacted fixed effects to the input data".
 

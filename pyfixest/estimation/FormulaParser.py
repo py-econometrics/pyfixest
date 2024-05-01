@@ -69,7 +69,7 @@ class FixestFormulaParser:
         self.condensed_fml_dict_iv = None
         endogvars_list = []
         instruments_formulas_list = []
-        if endogvars is not None:
+        if endogvars is not None and instruments is not None:
             self.is_iv = True
             endogvars_list = endogvars.split("+")
             instruments_dict = _input_formula_to_dict(instruments)
@@ -78,7 +78,7 @@ class FixestFormulaParser:
                 fevars_formula_list, endogvars_list, instruments_formulas_list
             )
 
-        self.FixestFormulaDict = {}
+        self.FixestFormulaDict: dict[str, list[FixestFormula]] = {}
         self.populate_fixest_formula_dict(
             depvars_list=depvars_list,
             covars_formulas_list=covars_formulas_list,
@@ -248,6 +248,8 @@ class FixestFormula:
     ):
         self._depvar = depvar
         self._covar = covar
+        if fval is None:
+            fval = "0"
         self._fval = fval
         self._endogvars = endogvars
         self._instruments = instruments
@@ -437,7 +439,7 @@ def collect_fml_dict(
 
 def _deparse_fml(
     fml: str,
-) -> tuple[str, str, Union[str, None], Union[str, None], Union[str, None]]:
+) -> tuple[str, str, str, Union[str, None], Union[str, None]]:
     """
     Decompose a formula string into its constituent parts.
 
@@ -696,7 +698,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
         res["variable"] = []
         variable_type = None
 
-    const_fml = "+".join(res["constant"]) if res["constant"] else []
+    const_fml = "+".join(res["constant"]) if res["constant"] else ""
 
     variable_fml = []
     if res["variable"]:
@@ -718,11 +720,11 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
                 if variable_fml[i] != "0"
             ]
             if variable_type in ["sw0", "csw0"]:
-                fml_list = [const_fml] + fml_list
+                fml_list.append(const_fml)
         else:
             fml_list = variable_fml
     elif const_fml:
-        fml_list = const_fml
+        fml_list.append(const_fml)
     else:
         raise AttributeError("Not a valid formula provided.")
 

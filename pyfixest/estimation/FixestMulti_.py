@@ -191,6 +191,7 @@ class FixestMulti:
         _weights_type = self._weights_type
 
         FixestFormulaDict = self.FixestFormulaDict
+        # dict[str, list[FixestFormula]]
         _fixef_keys = list(FixestFormulaDict.keys())
 
         for _, fval in enumerate(_fixef_keys):
@@ -200,7 +201,7 @@ class FixestMulti:
             # only relevant for `.feols()`
             lookup_demeaned_data: dict[str, pd.DataFrame] = {}
 
-            for FixestFormula in fixef_key_models:
+            for FixestFormula in fixef_key_models:  # type: ignore
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 

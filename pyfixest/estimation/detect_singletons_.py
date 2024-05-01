@@ -31,7 +31,7 @@ def _ol_preproc_fixed_effects(ary):
 
 
 @nb.njit
-def detect_singletons(ids):
+def detect_singletons(ids: np.ndarray) -> np.ndarray:
     """
     Detect singleton fixed effects in a dataset.
 

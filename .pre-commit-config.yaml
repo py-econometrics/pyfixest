@@ -14,13 +14,13 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.27.3
+    rev: 0.28.2
     hooks:
       - id: check-github-workflows
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.1
+    rev: v0.4.2
     hooks:
       - id: ruff
         args: ["--fix", "--output-format=full"]
@@ -32,3 +32,12 @@ repos:
       - id: nbqa-ruff
         args: ["--fix", "--output-format=full"]
         files: ^docs/.*\.ipynb$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports]
+        files: ^pyfixest/estimation/
+        exclude: ^tests/
+        additional_dependencies: [numpy>=1.20, pandas-stubs]
