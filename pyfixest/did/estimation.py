@@ -275,7 +275,7 @@ def lpdid(
     never_treated: int = 0,
     att: bool = True,
     xfml=None,
-) -> pd.DataFrame:
+) -> LPDID:
     """
     Local projections approach to estimation.
 

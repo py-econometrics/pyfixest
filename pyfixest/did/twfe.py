@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, cast
 
 import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.feols_ import Feols
 
 
 class TWFE(DID):
@@ -46,9 +47,9 @@ class TWFE(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
-        att: bool,
-        cluster: str,
+        xfml: Optional[str] = None,
+        att: Optional[bool] = True,
+        cluster: Optional[str] = "idname",
     ) -> None:
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
@@ -64,7 +65,7 @@ class TWFE(DID):
         _fml = self._fml
         _data = self._data
 
-        fit = feols(fml=_fml, data=_data)
+        fit = cast(Feols, feols(fml=_fml, data=_data))
         self._fit = fit
 
         return fit

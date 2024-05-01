@@ -54,9 +54,9 @@ class DID2S(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
-        att: bool,
         cluster: str,
+        xfml: Optional[str] = None,
+        att: Optional[bool] = True,
     ):
         super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
 
@@ -68,6 +68,10 @@ class DID2S(DID):
         else:
             self._fml1 = f" ~ 0 | {idname} + {tname}"
             self._fml2 = " ~ 0 + ATT"
+
+        # first and second stage residuals
+        self._first_u = np.array([])
+        self._second_u = np.array([])
 
     def estimate(self):
         """Estimate the two-step DID2S model."""
