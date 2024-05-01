@@ -142,7 +142,7 @@ def demean_model(
 
 
 @nb.njit
-def _sad_converged(a, b, tol):
+def _sad_converged(a: np.ndarray, b: np.ndarray, tol: float) -> bool:
     for i in range(a.size):
         if np.abs(a[i] - b[i]) >= tol:
             return False
@@ -151,12 +151,12 @@ def _sad_converged(a, b, tol):
 
 @nb.njit(locals=dict(id=nb.uint32))
 def _subtract_weighted_group_mean(
-    x,
-    sample_weights,
-    group_ids,
-    group_weights,
-    _group_weighted_sums,
-):
+    x: np.ndarray,
+    sample_weights: np.ndarray,
+    group_ids: np.ndarray,
+    group_weights: np.ndarray,
+    _group_weighted_sums: np.ndarray,
+) -> None:
     _group_weighted_sums[:] = 0
 
     for i in range(x.size):
@@ -169,7 +169,9 @@ def _subtract_weighted_group_mean(
 
 
 @nb.njit
-def _calc_group_weights(sample_weights, group_ids, n_groups):
+def _calc_group_weights(
+    sample_weights: np.ndarray, group_ids: np.ndarray, n_groups: np.ndarray
+):
     n_samples, n_factors = group_ids.shape
     dtype = sample_weights.dtype
     group_weights = np.zeros((n_factors, n_groups), dtype=dtype).T
@@ -317,8 +319,6 @@ def demean_accelerated(
     x_prev = np.empty((n_threads, n_samples), dtype=x.dtype)
     x_curr2 = np.empty((n_threads, n_samples), dtype=x.dtype)
 
-    # import pdb; pdb.set_trace()
-
     not_converged = 0
     for k in nb.prange(n_features):
         tid = nb.get_thread_id()
@@ -342,11 +342,9 @@ def demean_accelerated(
                         _group_weighted_sums[tid, :],
                     )
             else:
-                # import pdb; pdb.set_trace()
                 # set in previous iteration
                 xk_curr = xk_curr2
 
-            # import pdb; pdb.set_trace()
             # second mapping g(X(n+1)) = g(g(X(n))) = g(X(n) - mean(X(n)))
             xk_curr2 = xk_curr.copy()
             for j in range(n_factors):
