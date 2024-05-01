@@ -1,6 +1,6 @@
 import re
 from itertools import product
-from typing import Optional
+from typing import Optional, Union
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -26,7 +26,7 @@ class FixestFormulaParser:
 
     """
 
-    def __init__(self, fml):
+    def __init__(self, fml: str):
         """
         Initialize the object with a given formula using constructor method.
 
@@ -70,7 +70,7 @@ class FixestFormulaParser:
         self.condensed_fml_dict_iv = None
         endogvars_list = []
         instruments_formulas_list = []
-        if endogvars is not None:
+        if endogvars is not None and instruments is not None:
             self.is_iv = True
             endogvars_list = endogvars.split("+")
             instruments_dict = _input_formula_to_dict(instruments)
@@ -79,7 +79,7 @@ class FixestFormulaParser:
                 fevars_formula_list, endogvars_list, instruments_formulas_list
             )
 
-        self.FixestFormulaDict = {}
+        self.FixestFormulaDict: dict[str, list[FixestFormula]] = {}
         self.populate_fixest_formula_dict(
             depvars_list=depvars_list,
             covars_formulas_list=covars_formulas_list,
@@ -143,11 +143,11 @@ class FixestFormulaParser:
 
     def populate_fixest_formula_dict(
         self,
-        depvars_list,
-        covars_formulas_list,
-        fevars_formula_list,
-        endogvars_list,
-        instruments_formulas_list,
+        depvars_list: list[str],
+        covars_formulas_list: list[str],
+        fevars_formula_list: list[str],
+        endogvars_list: list[str],
+        instruments_formulas_list: list[str],
     ):
         """
         Populate the FixestFormulaDict with FixestFormula objects.
@@ -239,9 +239,18 @@ class FixestFormula:
 
     """
 
-    def __init__(self, depvar, covar, fval, endogvars, instruments):
+    def __init__(
+        self,
+        depvar: str,
+        covar: str,
+        fval: Optional[str] = None,
+        endogvars: Optional[str] = None,
+        instruments: Optional[str] = None,
+    ):
         self._depvar = depvar
         self._covar = covar
+        if fval is None:
+            fval = "0"
         self._fval = fval
         self._endogvars = endogvars
         self._instruments = instruments
@@ -354,12 +363,12 @@ class FixestFormula:
 
 
 def _get_first_and_second_stage_fml(
-    depvar,
-    covar,
-    fval,
-    endogvar,
-    instruments,
-):
+    depvar: str,
+    covar: str,
+    fval: str,
+    endogvar: Optional[str] = None,
+    instruments: Optional[str] = None,
+) -> tuple:
     """
     Generate first and second stage formulas for OLS and IV regression models.
 
@@ -396,7 +405,9 @@ def _get_first_and_second_stage_fml(
     return fml_second_stage, fml_first_stage
 
 
-def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
+def collect_fml_dict(
+    fevars_formula: list[str], depvars_dict: list[str], covars_formula: list[str]
+):
     """
     Create a nested dictionary mapping fixed effects to depvar-covariate formulas.
 
@@ -414,10 +425,10 @@ def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
     dict
         Nested dict of fevar to depvar to list of covariate formulas.
     """
-    fml_dict = {}
+    fml_dict: dict[str, dict[str, list[str]]] = {}
 
     for fevar in fevars_formula:
-        res = {}
+        res: dict[str, list[str]] = {}
         for depvar in depvars_dict:
             res[depvar] = []
             for covar in covars_formula:
@@ -427,7 +438,9 @@ def collect_fml_dict(fevars_formula, depvars_dict, covars_formula):
     return fml_dict
 
 
-def _deparse_fml(fml):
+def _deparse_fml(
+    fml: str,
+) -> tuple[str, str, str, Union[str, None], Union[str, None]]:
     """
     Decompose a formula string into its constituent parts.
 
@@ -505,14 +518,22 @@ def _deparse_fml(fml):
         # add endogenous variable to "covars" - yes, bad naming
         covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
-    if endogvars is not None:
-        if not isinstance(endogvars, list):
-            endogvars_list = endogvars.split("+")
-        if not isinstance(instruments, list):
-            instruments_list = instruments.split("+")
+    endogvars_list = []
+    instruments_list = []
+
+    if endogvars is not None and not isinstance(endogvars, list):
+        endogvars_list = endogvars.split("+")
+
+    if instruments is not None and not isinstance(instruments, list):
+        instruments_list = instruments.split("+")
+
+    if endogvars_list and instruments_list:
         if len(endogvars_list) > len(instruments_list):
             raise UnderDeterminedIVError(
-                "The IV system is underdetermined. Please provide as many or more instruments as endogenous variables."
+                """
+                The IV system is underdetermined. Please provide as many or
+                more instruments as endogenous variables.
+                """
             )
         else:
             pass
@@ -554,7 +575,7 @@ def _check_endogvars_as_covars(endogvars: str, covars: str):
         )
 
 
-def _input_formula_to_dict(x):
+def _input_formula_to_dict(x: str) -> dict[str, list[str]]:
     """
     Parse a formula string.
 
@@ -613,7 +634,7 @@ def _input_formula_to_dict(x):
     # Split the formula into its constituent variables
     var_split = x.split("+")
 
-    res_s = {"constant": []}
+    res_s: dict[str, list[str]] = {"constant": []}
     for var in var_split:
         # Check if this variable contains a switch
         varlist, sw_type = _find_multiple_estimation_syntax(var)
@@ -638,7 +659,7 @@ def _input_formula_to_dict(x):
     return res_s
 
 
-def _dict_to_list_of_formulas(unpacked):
+def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
     """
     Generate a list of formula strings from a dictionary of "unpacked" fml vars.
 
@@ -686,7 +707,7 @@ def _dict_to_list_of_formulas(unpacked):
         res["variable"] = []
         variable_type = None
 
-    const_fml = "+".join(res["constant"]) if res["constant"] else []
+    const_fml = "+".join(res["constant"]) if res["constant"] else ""
 
     variable_fml = []
     if res["variable"]:
@@ -708,11 +729,11 @@ def _dict_to_list_of_formulas(unpacked):
                 if variable_fml[i] != "0"
             ]
             if variable_type in ["sw0", "csw0"]:
-                fml_list = [const_fml] + fml_list
+                fml_list.insert(0, const_fml)
         else:
             fml_list = variable_fml
     elif const_fml:
-        fml_list = const_fml
+        fml_list.append(const_fml)
     else:
         raise AttributeError("Not a valid formula provided.")
 
@@ -722,7 +743,7 @@ def _dict_to_list_of_formulas(unpacked):
     return fml_list
 
 
-def _find_multiple_estimation_syntax(x):
+def _find_multiple_estimation_syntax(x: str):
     """
     Search for matches of multiple estimation syntax in a string.
 
@@ -771,7 +792,7 @@ def _find_multiple_estimation_syntax(x):
         return x, None
 
 
-def _check_duplicate_key(my_dict, key):
+def _check_duplicate_key(my_dict: dict, key: str):
     """
     Identify duplicate keys.
 

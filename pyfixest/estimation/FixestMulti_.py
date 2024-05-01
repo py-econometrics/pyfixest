@@ -200,7 +200,7 @@ class FixestMulti:
             # only relevant for `.feols()`
             lookup_demeaned_data: dict[str, pd.DataFrame] = {}
 
-            for FixestFormula in fixef_key_models:
+            for FixestFormula in fixef_key_models:  # type: ignore
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 
