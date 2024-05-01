@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import pandas as pd
+
 
 class DID(ABC):
     """
@@ -32,7 +34,17 @@ class DID(ABC):
     """
 
     @abstractmethod
-    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        yname: str,
+        idname: str,
+        tname: str,
+        gname: str,
+        xfml: str,
+        att: bool,
+        cluster: str,
+    ):
         # do some checks here
 
         self._data = data.copy()

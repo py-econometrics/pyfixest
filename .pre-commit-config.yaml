@@ -38,6 +38,6 @@ repos:
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
-        files: ^pyfixest/estimation/
+        files: ^pyfixest/
         exclude: ^tests/
         additional_dependencies: [numpy>=1.20, pandas-stubs]
