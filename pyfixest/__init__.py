@@ -48,8 +48,6 @@ __all__ = [
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    # Replace 'foo' with the name of your package
     __version__ = version("pyfixest")
 except PackageNotFoundError:
-    # Package is not installed
     __version__ = "unknown"
