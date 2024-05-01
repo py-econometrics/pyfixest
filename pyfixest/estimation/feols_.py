@@ -1527,8 +1527,8 @@ class Feols:
     def confint(
         self,
         alpha: float = 0.05,
-        keep: Optional[Union[list, str]] = [],
-        drop: Optional[Union[list, str]] = [],
+        keep: Optional[Union[list, str]] = None,
+        drop: Optional[Union[list, str]] = None,
         exact_match: Optional[bool] = False,
         joint: bool = False,
         seed: Optional[int] = None,
@@ -1589,6 +1589,11 @@ class Feols:
         fit.confint(alpha=0.10, joint=True, nboot=9999).head()
         ```
         """
+        if keep is None:
+            keep = []
+        if drop is None:
+            drop = []
+
         tidy_df = self.tidy()
         if keep or drop:
             if isinstance(keep, str):
@@ -1646,7 +1651,7 @@ class Feols:
         return self._u_hat
 
 
-def _feols_input_checks(Y, X, weights):
+def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
     """
     Perform basic checks on the input matrices Y and X for the FEOLS.
 
@@ -1656,6 +1661,8 @@ def _feols_input_checks(Y, X, weights):
         FEOLS input matrix Y.
     X : np.ndarray
         FEOLS input matrix X.
+    weights : np.ndarray
+        FEOLS weights.
 
     Returns
     -------
@@ -1676,7 +1683,7 @@ def _feols_input_checks(Y, X, weights):
         raise ValueError("weights must be a 2D array")
 
 
-def _get_vcov_type(vcov, fval):
+def _get_vcov_type(vcov: str, fval: str):
     """
     Get variance-covariance matrix type.
 
@@ -1740,12 +1747,12 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    res = _find_collinear_variables(tXX, collin_tol)
+    id_excl, n_excl, all_removed = _find_collinear_variables(tXX, collin_tol)
 
     collin_vars = []
     collin_index = []
 
-    if res["all_removed"]:
+    if all_removed:
         raise ValueError(
             """
             All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
@@ -1753,8 +1760,8 @@ def _drop_multicollinear_variables(
         )
 
     names_array = np.array(names)
-    if res["n_excl"] > 0:
-        collin_vars = names_array[res["id_excl"]].tolist()
+    if n_excl > 0:
+        collin_vars = names_array[id_excl].tolist()
         warnings.warn(
             f"""
             The following variables are collinear: {collin_vars}.
@@ -1762,7 +1769,7 @@ def _drop_multicollinear_variables(
             """
         )
 
-        X = np.delete(X, res["id_excl"], axis=1)
+        X = np.delete(X, id_excl, axis=1)
         if X.ndim == 2 and X.shape[1] == 0:
             raise ValueError(
                 """
@@ -1770,13 +1777,15 @@ def _drop_multicollinear_variables(
                 """
             )
 
-        names_array = np.delete(names_array, res["id_excl"])
-        collin_index = res["id_excl"].tolist()
+        names_array = np.delete(names_array, id_excl)
+        collin_index = id_excl.tolist()
 
     return X, names_array.tolist(), collin_vars, collin_index
 
 
-def _find_collinear_variables(X, tol=1e-10):
+def _find_collinear_variables(
+    X: np.ndarray, tol: float = 1e-10
+) -> tuple[np.ndarray, int, bool]:
     """
     Detect multicollinear variables.
 
@@ -1792,14 +1801,11 @@ def _find_collinear_variables(X, tol=1e-10):
 
     Returns
     -------
-    res : dict
-        A dictionary containing:
-        - id_excl (numpy.ndarray): A boolean array, where True indicates a collinear
+    - id_excl (numpy.ndarray): A boolean array, where True indicates a collinear
         variable.
-        - n_excl (int): The number of collinear variables.
-        - all_removed (bool): True if all variables are identified as collinear.
+    - n_excl (int): The number of collinear variables.
+    - all_removed (bool): True if all variables are identified as collinear.
     """
-    res = {}
     K = X.shape[1]
     R = np.zeros((K, K))
     id_excl = np.zeros(K, dtype=bool)
@@ -1818,8 +1824,8 @@ def _find_collinear_variables(X, tol=1e-10):
             id_excl[j] = True
 
             if n_excl == K:
-                res["all_removed"] = True
-                return res
+                all_removed = True
+                return id_excl, n_excl, all_removed
 
             continue
 
@@ -1837,11 +1843,7 @@ def _find_collinear_variables(X, tol=1e-10):
                 value -= R[k, i] * R[k, j]
             R[j, i] = value / R_jj
 
-    res["id_excl"] = id_excl
-    res["n_excl"] = n_excl
-    res["all_removed"] = False
-
-    return res
+    return id_excl, n_excl, False
 
 
 # CODE from Styfen Schaer (@styfenschaer)
@@ -1925,13 +1927,13 @@ def _crv1_meat_loop(
     return meat
 
 
-def _check_vcov_input(vcov, data):
+def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
     """
     Check the input for the vcov argument in the Feols class.
 
     Parameters
     ----------
-    vcov : dict, str, list
+    vcov : Union[str, dict[str, str]]
         The vcov argument passed to the Feols class.
     data : pd.DataFrame
         The data passed to the Feols class.
@@ -1967,13 +1969,13 @@ def _check_vcov_input(vcov, data):
         ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
 
 
-def _deparse_vcov_input(vcov, has_fixef, is_iv):
+def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
     """
     Deparse the vcov argument passed to the Feols class.
 
     Parameters
     ----------
-    vcov : dict, str, list
+    vcov : Union[str, dict[str, str]]
         The vcov argument passed to the Feols class.
     has_fixef : bool
         Whether the regression has fixed effects.
