@@ -189,54 +189,57 @@ def model_matrix_fixest(
     }
 
 
-def _get_na_index(N, Y_index):
+def _get_na_index(N: int, Y_index: pd.Series) -> np.ndarray:
     all_indices = np.arange(N)
     max_index = all_indices.max() + 1
     mask = np.ones(max_index, dtype=bool)
-    Y_index = Y_index.to_numpy()
-    mask[Y_index] = False
+    Y_index_arr = Y_index.to_numpy()
+    mask[Y_index_arr] = False
     na_index = np.nonzero(mask)[0]
     return na_index
 
 
-def _get_columns_to_drop_and_check_ivars(_list_of_ivars_dict, X, data):
+def _get_columns_to_drop_and_check_ivars(
+    _list_of_ivars_dict: Union[list[dict], None], X: pd.DataFrame, data: pd.DataFrame
+) -> list[str]:
     columns_to_drop = []
-    for _i_ref in _list_of_ivars_dict:
-        if _i_ref.get("var2"):
-            var1 = _i_ref.get("var1")
-            var2 = _i_ref.get("var2")
-            ref = _i_ref.get("ref")
+    if _list_of_ivars_dict:
+        for _i_ref in _list_of_ivars_dict:
+            if _i_ref.get("var2"):
+                var1 = _i_ref.get("var1", "")
+                var2 = _i_ref.get("var2", "")
+                ref = _i_ref.get("ref", "")
 
-            if pd.api.types.is_categorical_dtype(
-                data[var2]
-            ) or pd.api.types.is_object_dtype(data[var2]):
-                raise ValueError(
-                    f"""
-                    The second variable in the i() syntax cannot be of type "category" or "object", but
-                    but it is of type {data[var2].dtype}.
-                    """
-                )
-            else:
-                if ref and "_" in ref:
-                    ref = ref.replace("_", "")
+                if pd.api.types.is_categorical_dtype(  # type: ignore
+                    data[var2]  # type: ignore
+                ) or pd.api.types.is_object_dtype(data[var2]):  # type: ignore
+                    raise ValueError(
+                        f"""
+                        The second variable in the i() syntax cannot be of type "category" or "object", but
+                        but it is of type {data[var2].dtype}.
+                        """
+                    )
+                else:
+                    if ref and "_" in ref:
+                        ref = ref.replace("_", "")
 
-            pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
-            if ref:
-                for column in X.columns:
-                    if var1 in column and re.search(pattern, column):
-                        columns_to_drop.append(column)
+                pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
+                if ref:
+                    for column in X.columns:
+                        if var1 in column and re.search(pattern, column):
+                            columns_to_drop.append(column)
 
     return columns_to_drop
 
 
-def _check_ivars(_ivars, data):
+def _check_ivars(_ivars: list[str], data: pd.DataFrame) -> None:
     if _ivars and len(_ivars) == 2 and not _is_numeric(data[_ivars[1]]):
         raise ValueError(
             f"The second variable in the i() syntax must be numeric, but it is of type {data[_ivars[1]].dtype}."
         )
 
 
-def _transform_i_to_C(match):
+def _transform_i_to_C(match: re.Match) -> str:
     # Extracting the matched groups
     var1 = match.group("var1")
     var2 = match.group("var2")
@@ -253,7 +256,9 @@ def _transform_i_to_C(match):
         return f"C({var1}{base})"
 
 
-def _fixef_interactions(fval, data):
+def _fixef_interactions(
+    fval: Union[str, None], data: pd.DataFrame
+) -> tuple[str, pd.DataFrame]:
     """
     Add interacted fixed effects to the input data".
 
@@ -285,7 +290,7 @@ def _fixef_interactions(fval, data):
     return fval.replace("^", "_"), data
 
 
-def _get_ivars_dict(fml, pattern):
+def _get_ivars_dict(fml: str, pattern: str) -> Union[list[dict]]:
     matches = re.finditer(pattern, fml)
 
     res = []
@@ -299,13 +304,13 @@ def _get_ivars_dict(fml, pattern):
             if match.group("ref"):
                 match_dict["ref"] = match.group("ref")
             res.append(match_dict)
-    else:
-        res = None
 
     return res
 
 
-def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[str]]:
+def _get_icovars(
+    _list_of_ivars_dict: Union[None, list], X: pd.DataFrame
+) -> Optional[list[str]]:
     """
     Get interacted variables.
 
@@ -360,7 +365,7 @@ def _get_icovars(_list_of_ivars_dict: list, X: pd.DataFrame) -> Optional[list[st
     return _icovars
 
 
-def _is_numeric(column):
+def _is_numeric(column: pd.Series) -> bool:
     """
     Check if a column is numeric.
 
@@ -380,7 +385,7 @@ def _is_numeric(column):
         return False
 
 
-def _check_weights(weights, data):
+def _check_weights(weights: Union[str, None], data: pd.DataFrame) -> None:
     """
     Check if valid weights are in data.
 
@@ -412,16 +417,15 @@ def _check_weights(weights, data):
             )
 
 
-def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]):
+def _is_finite_positive(x: Union[pd.DataFrame, pd.Series, np.ndarray]) -> bool:
     """Check if a column is finite and positive."""
     if isinstance(x, (pd.DataFrame, pd.Series)):
         x = x.to_numpy()
 
-    if x.any() in [np.inf, -np.inf]:
+    if np.isinf(x).any():
         return False
-    else:
-        if (x[~np.isnan(x)] > 0).all():
-            return True
+
+    return (x[~np.isnan(x)] > 0).all()
 
 
 def factorize(fe: pd.DataFrame) -> pd.DataFrame:
@@ -447,7 +451,7 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
         return res
 
 
-def wrap_factorize(pattern):
+def wrap_factorize(pattern: str) -> str:
     """
     Transform fixed effect formula.
 
