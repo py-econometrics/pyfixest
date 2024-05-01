@@ -6,6 +6,7 @@ from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
     InstrumentsAsCovarsError,
+    UnderDeterminedIVError,
     UnsupportedMultipleEstimationSyntax,
 )
 
@@ -517,17 +518,22 @@ def _deparse_fml(
         # add endogenous variable to "covars" - yes, bad naming
         covars = endogvars if covars == "1" else f"{endogvars}+{covars}"
 
-    # if endogvars is not None and not isinstance(endogvars, list):
-    #        endogvars_list = endogvars.split("+")
-    # if instruments is not None and not isinstance(instruments, list):
-    #        instruments_list = instruments.split("+")
-    #    if len(endogvars_list) > len(instruments_list):
-    #        raise UnderDeterminedIVError(
-    #            "The IV system is underdetermined. Please provide as many or
-    #  more instruments as endogenous variables."
-    #        )
-    #    else:
-    #        pass
+    if endogvars is not None and not isinstance(endogvars, list):
+        endogvars_list = endogvars.split("+")
+
+    if instruments is not None and not isinstance(instruments, list):
+        instruments_list = instruments.split("+")
+
+    if endogvars_list is not None and instruments_list is not None:
+        if len(endogvars_list) > len(instruments_list):
+            raise UnderDeterminedIVError(
+                """
+                The IV system is underdetermined. Please provide as many or
+                more instruments as endogenous variables.
+                """
+            )
+        else:
+            pass
 
     return depvars, covars, fevars, endogvars, instruments
 

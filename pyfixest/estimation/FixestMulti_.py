@@ -191,7 +191,6 @@ class FixestMulti:
         _weights_type = self._weights_type
 
         FixestFormulaDict = self.FixestFormulaDict
-        # dict[str, list[FixestFormula]]
         _fixef_keys = list(FixestFormulaDict.keys())
 
         for _, fval in enumerate(_fixef_keys):
