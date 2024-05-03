@@ -454,9 +454,9 @@ class Feols:
         elif self._vcov_type == "CRV":
             if data is not None:
                 data_pandas = _polars_to_pandas(data)
-                self._cluster_df = data_pandas[self._clustervar]
+                self._cluster_df = data_pandas[self._clustervar].copy()
             elif not self._data.empty:
-                self._cluster_df = self._data[self._clustervar]
+                self._cluster_df = self._data[self._clustervar].copy()
             else:
                 raise AttributeError(
                     """The input data set needs to be stored in the model object if
@@ -481,8 +481,8 @@ class Feols:
 
                 cluster_df_one_str = self._cluster_df[cluster_one].astype(str)
                 cluster_df_two_str = self._cluster_df[cluster_two].astype(str)
-                self._cluster_df["cluster_intersection"] = cluster_df_one_str.str.cat(
-                    cluster_df_two_str, sep="-"
+                self._cluster_df.loc[:, "cluster_intersection"] = (
+                    cluster_df_one_str.str.cat(cluster_df_two_str, sep="-")
                 )
 
             if self._cluster_df.shape[0] != _N_rows:
