@@ -336,7 +336,7 @@ def _pooled_adjustment(df: pd.DataFrame, y: str, pool_lead: int, idname: str):
 
     # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
-        x += float(df.groupby(idname)[y].shift(-k))
+        x += df.groupby(idname)[y].shift(-k)
 
     # Average the lead sum
     x /= pool_lead + 1
