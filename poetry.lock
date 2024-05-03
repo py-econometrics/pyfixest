@@ -1402,13 +1402,13 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "joblib"
-version = "1.4.0"
+version = "1.4.2"
 description = "Lightweight pipelining with Python functions"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "joblib-1.4.0-py3-none-any.whl", hash = "sha256:42942470d4062537be4d54c83511186da1fc14ba354961a2114da91efa9a4ed7"},
-    {file = "joblib-1.4.0.tar.gz", hash = "sha256:1eb0dc091919cd384490de890cb5dfd538410a6d4b3b54eef09fb8c50b409b1c"},
+    {file = "joblib-1.4.2-py3-none-any.whl", hash = "sha256:06d478d5674cbc267e7496a410ee875abd68e4340feff4490bcb7afb88060ae6"},
+    {file = "joblib-1.4.2.tar.gz", hash = "sha256:2382c5816b2636fbd20a09e0f4e9dad4736765fdfb7dca582943b9c1366b3f0e"},
 ]
 
 [[package]]
@@ -3687,13 +3687,13 @@ full = ["numpy"]
 
 [[package]]
 name = "referencing"
-version = "0.35.0"
+version = "0.35.1"
 description = "JSON Referencing + Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "referencing-0.35.0-py3-none-any.whl", hash = "sha256:8080727b30e364e5783152903672df9b6b091c926a146a759080b62ca3126cd6"},
-    {file = "referencing-0.35.0.tar.gz", hash = "sha256:191e936b0c696d0af17ad7430a3dc68e88bc11be6514f4757dc890f04ab05889"},
+    {file = "referencing-0.35.1-py3-none-any.whl", hash = "sha256:eda6d3234d62814d1c64e305c1331c9a3a6132da475ab6382eaa997b21ee75de"},
+    {file = "referencing-0.35.1.tar.gz", hash = "sha256:25b42124a6c8b632a425174f24087783efb348a6f1e0008e63cd4466fedf703c"},
 ]
 
 [package.dependencies]
