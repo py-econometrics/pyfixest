@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import pandas as pd
 
@@ -41,9 +42,9 @@ class DID(ABC):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
-        att: bool,
-        cluster: str,
+        cluster: Optional[str] = None,
+        xfml: Optional[str] = None,
+        att: bool = True,
     ):
         # do some checks here
 
@@ -55,21 +56,6 @@ class DID(ABC):
         self._xfml = xfml
         self._att = att
         self._cluster = cluster
-
-        # if self._xfml is not None:
-        #    raise NotImplementedError("Covariates are not yet supported.")
-        # if self._att is False:
-        #    raise NotImplementedError(
-        #        "Event study design with leads and lags is not yet supported."
-        #    )
-
-        # check if idname, tname and gname are in data
-        # if self._idname not in self._data.columns:
-        #    raise ValueError(f"The variable {self._idname} is not in the data.")
-        # if self._tname not in self._data.columns:
-        #    raise ValueError(f"The variable {self._tname} is not in the data.")
-        # if self._gname not in self._data.columns:
-        #    raise ValueError(f"The variable {self._gname} is not in the data.")
 
         # check if tname and gname are of type int (either int 64, 32, 8)
         if self._data[self._tname].dtype not in [

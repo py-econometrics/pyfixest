@@ -59,7 +59,16 @@ class LPDID(DID):
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
 
-        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
+        super().__init__(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
         assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
 
         data = data.copy()
@@ -189,10 +198,10 @@ def _lpdid_estimate(
     yname: str,
     idname: str,
     tname: str,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
-    pre_window: Optional[int] = None,
-    post_window: Optional[int] = None,
+    pre_window: int,
+    post_window: int,
     att: bool = True,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     xfml: Optional[str] = None,
 ) -> pd.DataFrame:
     """
@@ -323,11 +332,11 @@ def _pooled_adjustment(df: pd.DataFrame, y: str, pool_lead: int, idname: str):
         The average of all future values in the analysis.
     """
     # Initialize lead variable
-    x = 0
+    x = 0.0
 
     # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
-        x += df.groupby(idname)[y].shift(-k)
+        x += float(df.groupby(idname)[y].shift(-k))
 
     # Average the lead sum
     x /= pool_lead + 1

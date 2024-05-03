@@ -55,10 +55,19 @@ class DID2S(DID):
         tname: str,
         gname: str,
         cluster: str,
+        att: bool = True,
         xfml: Optional[str] = None,
-        att: Optional[bool] = True,
     ):
-        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
+        super().__init__(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
 
         self._estimator = "did2s"
 
@@ -307,7 +316,7 @@ def _did2s_vcov(
     X1 = csr_matrix(X1.to_numpy())
     X2 = csr_matrix(X2.to_numpy())
 
-    X10 = X1.copy().tocsr()
+    X10 = X1.copy().tocsr()  # type: ignore
     treated_rows = np.where(data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
@@ -315,22 +324,23 @@ def _did2s_vcov(
     X2X1 = X2.T.dot(X1)
     X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T  # type: ignore
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))
 
     X10 = X10.tocsr()
-    X2 = X2.tocsr()
+    X2 = X2.tocsr()  # type: ignore
 
     for (
         _,
         g,
     ) in enumerate(clustid):
-        X10g = X10[cluster_col == g, :]
-        X2g = X2[cluster_col == g, :]
-        first_u_g = first_u[cluster_col == g]
-        second_u_g = second_u[cluster_col == g]
+        idx_g: np.ndarray = cluster_col.values == g
+        X10g = X10[idx_g, :]
+        X2g = X2[idx_g, :]
+        first_u_g = first_u[idx_g]
+        second_u_g = second_u[idx_g]
 
         W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
         score = spsolve(X2X2, W_g)

@@ -364,7 +364,7 @@ def lpdid(
         idname=idname,
         tname=tname,
         gname=gname,
-        cluster={"CRV1": idname},  # just something to pass DID input checks
+        cluster="",  # just something to pass DID input checks
         vcov=vcov,
         pre_window=pre_window,
         post_window=post_window,

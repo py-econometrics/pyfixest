@@ -48,10 +48,19 @@ class TWFE(DID):
         tname: str,
         gname: str,
         xfml: Optional[str] = None,
-        att: Optional[bool] = True,
+        att: bool = True,
         cluster: Optional[str] = "idname",
     ) -> None:
-        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
+        super().__init__(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
 
         self._estimator = "twfe"
 
