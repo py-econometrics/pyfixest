@@ -330,11 +330,11 @@ def _pooled_adjustment(
 
     Returns
     -------
-    pandas.Series
+    np.ndarray
         The average of all future values in the analysis.
     """
     # Initialize lead variable
-    x = np.zeros(1)
+    x = np.zeros(df.shape[0])
 
     # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
