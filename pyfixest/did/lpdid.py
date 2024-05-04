@@ -1,10 +1,11 @@
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.feols_ import Feols
 from pyfixest.report.visualize import _coefplot
 
 
@@ -42,23 +43,32 @@ class LPDID(DID):
 
     def __init__(
         self,
-        data,
-        yname,
-        idname,
-        tname,
-        gname,
-        xfml,
-        att,
-        cluster,
-        vcov,
-        pre_window,
-        post_window,
-        never_treated,
+        data: pd.DataFrame,
+        yname: str,
+        idname: str,
+        tname: str,
+        gname: str,
+        xfml: str,
+        att: bool,
+        cluster: str,
+        vcov: Optional[Union[str, dict[str, str]]] = None,
+        pre_window: Optional[int] = None,
+        post_window: Optional[int] = None,
+        never_treated: Optional[int] = 0,
     ):
         # if att:
         #    raise NotImplementedError("ATT is not yet supported.")
 
-        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
+        super().__init__(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
         assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
 
         data = data.copy()
@@ -82,26 +92,24 @@ class LPDID(DID):
         rel_years = np.unique(data["rel_year"])
         rel_years = rel_years[np.isfinite(rel_years)]
 
-        if pre_window is None:
-            pre_window = int(np.min(rel_years))
-        if post_window is None:
-            post_window = int(np.max(rel_years))
+        pre_window_int = int(np.min(rel_years)) if pre_window is None else pre_window
+        post_window_int = int(np.max(rel_years)) if post_window is None else post_window
 
         # check that pre_window is in rel_years
-        if pre_window not in rel_years:
+        if pre_window_int not in rel_years:
             raise ValueError(f"pre_window must be in {rel_years}")
         # check that post_window is in rel_years
-        if post_window not in rel_years:
+        if post_window_int not in rel_years:
             raise ValueError(f"post_window must be in {rel_years}")
 
-        pre_window = np.abs(pre_window)
+        pre_window_int = np.abs(pre_window_int)
 
         if vcov is None:
             vcov = {"CRV1": idname}
 
         self._vcov = vcov
-        self._pre_window = pre_window
-        self._post_window = post_window
+        self._pre_window = pre_window_int
+        self._post_window = post_window_int
         self._never_treated = never_treated
         self._xfml = xfml
         self._estimator = "lpdid"
@@ -125,14 +133,14 @@ class LPDID(DID):
 
     def iplot(
         self,
-        alpha=0.05,
-        figsize=(500, 300),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
-        title="LPDID Event Study Estimate",
-        coord_flip=False,
-        plot_backend="lets_plot",
+        alpha: float = 0.05,
+        figsize: tuple[int, int] = (500, 300),
+        yintercept: Optional[int] = None,
+        xintercept: Optional[int] = None,
+        rotate_xticks: int = 0,
+        title: str = "LPDID Event Study Estimate",
+        coord_flip: bool = False,
+        plot_backend: str = "lets_plot",
     ):
         """
         Create coefficient plots.
@@ -190,11 +198,11 @@ def _lpdid_estimate(
     yname: str,
     idname: str,
     tname: str,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
-    pre_window: Optional[int] = None,
-    post_window: Optional[int] = None,
+    pre_window: int,
+    post_window: int,
     att: bool = True,
-    xfml=None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
+    xfml: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
@@ -253,12 +261,13 @@ def _lpdid_estimate(
 
     if att:
         # post window
+
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
         data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
         sample_idx_post = (data["treat_diff"] == 1) | (
             data.groupby(idname)["treat"].shift(-post_window) == 0
         )
-        fit_post = feols(fml=fml, data=data[sample_idx_post], vcov=vcov)
+        fit_post = cast(Feols, feols(fml=fml, data=data[sample_idx_post], vcov=vcov))
         fit_tidy_post = fit_post.tidy().xs("treat_diff")
         fit_tidy_post["N"] = int(fit_post._N)
 
@@ -272,7 +281,7 @@ def _lpdid_estimate(
                 data.groupby(idname)["treat"].shift(-h) == 0
             )
 
-            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+            fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = fit.tidy().xs("treat_diff")
             fit_tidy["N"] = int(fit._N)
@@ -287,7 +296,7 @@ def _lpdid_estimate(
             data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
             sample_idx = (data["treat_diff"] == 1) | (data["treat"] == 0)
 
-            fit = feols(fml=fml, data=data[sample_idx], vcov=vcov)
+            fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = fit.tidy().xs("treat_diff")
             fit_tidy["N"] = int(fit._N)
@@ -301,7 +310,9 @@ def _lpdid_estimate(
     return res
 
 
-def _pooled_adjustment(df, y, pool_lead, idname):
+def _pooled_adjustment(
+    df: pd.DataFrame, y: str, pool_lead: int, idname: str
+) -> np.ndarray:
     """
     Calculate post-treatment means rather than just using a single y value from t+h.
 
@@ -319,15 +330,15 @@ def _pooled_adjustment(df, y, pool_lead, idname):
 
     Returns
     -------
-    pandas.Series
+    np.ndarray
         The average of all future values in the analysis.
     """
     # Initialize lead variable
-    x = 0
+    x = np.zeros(df.shape[0])
 
     # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
-        x += df.groupby(idname)[y].shift(-k)
+        x += df.groupby(idname)[y].shift(-k).to_numpy()
 
     # Average the lead sum
     x /= pool_lead + 1

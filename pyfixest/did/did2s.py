@@ -1,4 +1,5 @@
 import warnings
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 
@@ -45,8 +47,27 @@ class DID2S(DID):
         The name of the cluster variable.
     """
 
-    def __init__(self, data, yname, idname, tname, gname, xfml, att, cluster):
-        super().__init__(data, yname, idname, tname, gname, xfml, att, cluster)
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        yname: str,
+        idname: str,
+        tname: str,
+        gname: str,
+        cluster: str,
+        att: bool = True,
+        xfml: Optional[str] = None,
+    ):
+        super().__init__(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
 
         self._estimator = "did2s"
 
@@ -56,6 +77,10 @@ class DID2S(DID):
         else:
             self._fml1 = f" ~ 0 | {idname} + {tname}"
             self._fml2 = " ~ 0 + ATT"
+
+        # first and second stage residuals
+        self._first_u = np.array([])
+        self._second_u = np.array([])
 
     def estimate(self):
         """Estimate the two-step DID2S model."""
@@ -92,13 +117,13 @@ class DID2S(DID):
 
     def iplot(
         self,
-        alpha=0.05,
-        figsize=(500, 300),
-        yintercept=None,
-        xintercept=None,
-        rotate_xticks=0,
-        title="DID2S Event Study Estimate",
-        coord_flip=False,
+        alpha: float = 0.05,
+        figsize: tuple[int, int] = (500, 300),
+        yintercept: Optional[int] = None,
+        xintercept: Optional[int] = None,
+        rotate_xticks: int = 0,
+        title: str = "DID2S Event Study Estimate",
+        coord_flip: bool = False,
     ):
         """Plot DID estimates."""
         self.iplot(
@@ -178,10 +203,13 @@ def _did2s_estimate(
         raise ValueError("Second stage formula must not contain fixed effects.")
 
     # estimate first stage
-    fit1 = feols(
-        fml=_first_stage_full,
-        data=_not_yet_treated_data,
-        vcov="iid",
+    fit1 = cast(
+        Feols,
+        feols(
+            fml=_first_stage_full,
+            data=_not_yet_treated_data,
+            vcov="iid",
+        ),
     )  # iid as it might be faster than CRV
 
     # obtain estimated fixed effects
@@ -193,11 +221,14 @@ def _did2s_estimate(
     data[f"{yname}_hat"] = _first_u
 
     # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage  # noqa: W505
-    fit2 = feols(
-        _second_stage_full,
-        data=data,
-        vcov="iid",
-        drop_intercept=True,
+    fit2 = cast(
+        Feols,
+        feols(
+            _second_stage_full,
+            data=data,
+            vcov="iid",
+            drop_intercept=True,
+        ),
     )
     _second_u = fit2.resid()
 
@@ -250,9 +281,9 @@ def _did2s_vcov(
 
     # some formula parsing to get the correct formula for the first and second stage model matrix  # noqa: W505
     first_stage_x, first_stage_fe = first_stage.split("|")
-    first_stage_fe = [f"C({i})" for i in first_stage_fe.split("+")]
-    first_stage_fe = "+".join(first_stage_fe)
-    first_stage = f"{first_stage_x}+{first_stage_fe}"
+    first_stage_fe_list = [f"C({i})" for i in first_stage_fe.split("+")]
+    first_stage_fe_fml = "+".join(first_stage_fe_list)
+    first_stage = f"{first_stage_x}+{first_stage_fe_fml}"
 
     second_stage = f"{second_stage}"
 
@@ -271,7 +302,7 @@ def _did2s_vcov(
         drop_singletons=False,
         drop_intercept=False,
     )
-    X1 = mm_dict_first_stage.get("X")
+    X1 = cast(pd.DataFrame, mm_dict_first_stage.get("X"))
 
     mm_second_stage = model_matrix_fixest(
         FixestFormula=next(iter(FixestFormulaDict2.values()))[0],
@@ -280,12 +311,12 @@ def _did2s_vcov(
         drop_singletons=False,
         drop_intercept=True,
     )  # reference values not dropped, multicollinearity error
-    X2 = mm_second_stage.get("X")
+    X2 = cast(pd.DataFrame, mm_second_stage.get("X"))
 
-    X1 = csr_matrix(X1.values)
-    X2 = csr_matrix(X2.values)
+    X1 = csr_matrix(X1.to_numpy())
+    X2 = csr_matrix(X2.to_numpy())
 
-    X10 = X1.copy().tocsr()
+    X10 = X1.copy().tocsr()  # type: ignore
     treated_rows = np.where(data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
@@ -293,22 +324,23 @@ def _did2s_vcov(
     X2X1 = X2.T.dot(X1)
     X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T  # type: ignore
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))
 
     X10 = X10.tocsr()
-    X2 = X2.tocsr()
+    X2 = X2.tocsr()  # type: ignore
 
     for (
         _,
         g,
     ) in enumerate(clustid):
-        X10g = X10[cluster_col == g, :]
-        X2g = X2[cluster_col == g, :]
-        first_u_g = first_u[cluster_col == g]
-        second_u_g = second_u[cluster_col == g]
+        idx_g: np.ndarray = cluster_col.values == g
+        X10g = X10[idx_g, :]
+        X2g = X2[idx_g, :]
+        first_u_g = first_u[idx_g]
+        second_u_g = second_u[idx_g]
 
         W_g = X2g.T.dot(second_u_g) - V @ X10g.T.dot(first_u_g)
         score = spsolve(X2X2, W_g)
