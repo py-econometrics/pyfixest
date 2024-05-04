@@ -310,7 +310,9 @@ def _lpdid_estimate(
     return res
 
 
-def _pooled_adjustment(df: pd.DataFrame, y: str, pool_lead: int, idname: str):
+def _pooled_adjustment(
+    df: pd.DataFrame, y: str, pool_lead: int, idname: str
+) -> np.ndarray:
     """
     Calculate post-treatment means rather than just using a single y value from t+h.
 
@@ -332,11 +334,11 @@ def _pooled_adjustment(df: pd.DataFrame, y: str, pool_lead: int, idname: str):
         The average of all future values in the analysis.
     """
     # Initialize lead variable
-    x = 0.0
+    x = np.zeros(1)
 
     # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
-        x += df.groupby(idname)[y].shift(-k)
+        x += df.groupby(idname)[y].shift(-k).to_numpy()
 
     # Average the lead sum
     x /= pool_lead + 1
