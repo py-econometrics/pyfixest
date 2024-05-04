@@ -39,5 +39,5 @@ repos:
       - id: mypy
         args: [--ignore-missing-imports]
         files: ^pyfixest/
-        exclude: ^tests/
+        exclude: ^pyfixest/did/
         additional_dependencies: [numpy>=1.20, pandas-stubs]
