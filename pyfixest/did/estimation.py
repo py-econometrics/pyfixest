@@ -9,15 +9,15 @@ from pyfixest.errors import NotImplementedError
 
 
 def event_study(
-    data,
-    yname,
-    idname,
-    tname,
-    gname,
-    xfml=None,
-    estimator="twfe",
-    att=True,
-    cluster="idname",
+    data: pd.DataFrame,
+    yname: str,
+    idname: str,
+    tname: str,
+    gname: str,
+    xfml: Optional[str] = None,
+    estimator: Optional[str] = "twfe",
+    att: Optional[bool] = True,
+    cluster: Optional[str] = "idname",
 ):
     """
     Estimate Event Study Model.
@@ -275,7 +275,7 @@ def lpdid(
     never_treated: int = 0,
     att: bool = True,
     xfml=None,
-) -> pd.DataFrame:
+) -> LPDID:
     """
     Local projections approach to estimation.
 
@@ -364,7 +364,7 @@ def lpdid(
         idname=idname,
         tname=tname,
         gname=gname,
-        cluster={"CRV1": idname},  # just something to pass DID input checks
+        cluster="",  # just something to pass DID input checks
         vcov=vcov,
         pre_window=pre_window,
         post_window=post_window,
