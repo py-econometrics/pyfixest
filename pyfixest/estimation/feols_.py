@@ -16,6 +16,11 @@ from pyfixest.errors import (
     NanInClusterVarError,
     VcovTypeNotSupportedError,
 )
+from pyfixest.estimation.ritest import (
+    _get_ritest_coefs,
+    _get_ritest_confint,
+    _get_ritest_pvalue,
+)
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _polars_to_pandas,
@@ -1649,6 +1654,60 @@ class Feols:
             A np.ndarray with the residuals of the estimated regression model.
         """
         return self._u_hat
+
+    def ritest(
+        self, resampvar: str, reps: int = 100, method: str = "rk", alpha: float = 0.05
+    ) -> pd.Series:
+        """
+        Conduct Randomization Inference (RI) test against a null hypothesis of
+        `resampvar = 0`.
+
+        Parameters
+        ----------
+        resampvar : str
+            The name of the variable to be resampled.
+        reps : int, optional
+            The number of randomization iterations. Defaults to 100.
+        method : str, optional
+            The method to compute the p-value. Defaults to "rk".
+        alpha: float, optional
+            The significance level for the confidence interval. Defaults to 0.05.
+
+        Returns
+        -------
+        A pd.Series with the regression coefficient of `resampvar`, the p-value
+        of the RI test, and the (1-alpha)% confidence interval.
+        """
+        _fml = self._fml
+        _data = self._data
+        sample_coef = self.coef().xs(resampvar).to_numpy()
+
+        ri_coefs = _get_ritest_coefs(
+            data=_data,
+            resampvar=resampvar,
+            fml=_fml,
+            reps=reps,
+            strata=None,
+            cluster=None,
+        )
+        ri_pvalue = _get_ritest_pvalue(
+            sample_coef=sample_coef, ri_coefs=ri_coefs, method=method
+        )
+        ri_confint = _get_ritest_confint(
+            alpha=alpha, sample_coef=sample_coef, ri_coefs=ri_coefs
+        )
+
+        res = pd.Series(
+            {
+                "Coefficient": resampvar,  # type: ignore
+                "Estimate": sample_coef,  # type: ignore
+                "Pr(>|t|)": ri_pvalue,  # type: ignore
+                f"{alpha/2}%": ri_confint[0],
+                f"{1-alpha/2}%": ri_confint[1],
+            }
+        )
+
+        return res
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
