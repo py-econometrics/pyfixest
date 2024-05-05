@@ -439,14 +439,11 @@ def factorize(fe: pd.DataFrame) -> pd.DataFrame:
     - A DataFrame of fixed effects where each unique value is replaced by an integer.
       NaNs are not removed but set to -1.
     """
-    if pd.api.types.is_integer_dtype(fe) or pd.api.types.is_float_dtype(fe):
-        return fe
-    else:
-        if fe.dtype != "category":
-            fe = fe.astype("category")
-        res = fe.cat.codes
-        res[res == -1] = np.nan
-        return res
+    if fe.dtype != "category":
+        fe = fe.astype("category")
+    res = fe.cat.codes
+    res[res == -1] = np.nan
+    return res
 
 
 def wrap_factorize(pattern: str) -> str:
