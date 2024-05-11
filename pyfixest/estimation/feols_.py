@@ -1660,13 +1660,13 @@ class Feols:
         self,
         resampvar: str,
         reps: int = 100,
-        method: str = "rk",
         type: str = "randomization-t",
         rng: Optional[np.random.Generator] = None,
         vcov: Optional[Union[str, dict[str, str]]] = None,
         algo_iterations: Optional[int] = None,
         choose_algorithm: str = "auto",
         include_plot: bool = False,
+        store_ritest_statistics: bool = False,
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -1678,8 +1678,6 @@ class Feols:
             The name of the variable to be resampled.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
-        method : str, optional
-            The method to compute the p-value. Defaults to "rk".
         vcov, str, optional
             The type of variance-covariance matrix to use. Defaults to None.
             If None, the default variance-covariance matrix of the
@@ -1698,6 +1696,11 @@ class Feols:
             for any input errors from the user! So please don't use it =)
         include_plot: bool, optional
             Whether to include a plot of the distribution p-values. Defaults to False.
+        store_ritest_statistics: bool, optional
+            Whether to store the simulated statistics of the RI procedure.
+            Defaults to False. If True, the simulated statistics are stored
+            in the model object via the `ritest_statistics` attribute as a
+            numpy array.
 
         Returns
         -------
@@ -1729,9 +1732,9 @@ class Feols:
             _has_fixef = self._has_fixef
 
             _weights = self._weights.flatten()
-            _fval = self._fixef.split("+")
             _data = self._data
-            _fval_df = _data[_fval]
+            _fval_df = _data[self._fixef.split("+")] if _has_fixef else None
+
             _D = self._data[resampvar].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(
@@ -1749,15 +1752,15 @@ class Feols:
             )
 
         else:
-            vcov_input: Union[str, dict[str, str]]
-            _vcov_type_detail = None
-            if type == "randomization-t" and vcov is None:
-                _vcov_type_detail = self._vcov_type_detail
-                if _vcov_type_detail in ["CRV1", "CRV3"]:
-                    _clustervar = self._clustervar[0]
-                    vcov_input = {_vcov_type_detail: _clustervar}
-                else:
-                    vcov_input = _vcov_type_detail
+            _vcov_type_detail = self._vcov_type_detail
+            vcov_input: Union[str, dict[str, str]] = _vcov_type_detail
+            if self._vcov_type_detail in ["CRV1", "CRV3"]:
+                _clustervar = self._clustervar[0]
+                vcov_input = {_vcov_type_detail: _clustervar}
+
+            # for performance reasons
+            if type == "randomization-c":
+                vcov_input = "iid"
 
             ri_stats = _get_ritest_stats_slow(
                 data=_data,
@@ -1776,6 +1779,9 @@ class Feols:
 
         if include_plot:
             _plot_ritest_pvalue(ri_stats=ri_stats, sample_stat=sample_stat)
+
+        if store_ritest_statistics:
+            self.ritest_statistics = ri_stats
 
         res = pd.Series(
             {

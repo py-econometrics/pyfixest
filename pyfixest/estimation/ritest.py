@@ -1,5 +1,5 @@
 from importlib import import_module
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -31,16 +31,19 @@ def _get_ritest_stats_slow(
     rng: np.random.Generator,
     vcov: Union[str, dict[str, str]],
 ) -> np.ndarray:
+    data_resampled = data.copy()
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
     fixest_module = import_module("pyfixest.estimation")
     fit_ = getattr(fixest_module, model)
 
+    resampvar_arr = data[resampvar].dropna().to_numpy()
+
     ri_stats = np.zeros(reps)
     for i in tqdm(range(reps)):
-        data_resampled = _resample(
-            data=data, resampvar=resampvar, rng=rng, cluster=None
-        )
+        D_treat = _resample(resampvar_arr=resampvar_arr, rng=rng, iterations=1)
+
+        data_resampled[f"{resampvar}_resampled"] = D_treat
         fit = fit_(fml_update, data=data_resampled, vcov=vcov)
         if type == "randomization-c":
             ri_stats[i] = fit.coef().xs(f"{resampvar}_resampled")
@@ -65,15 +68,16 @@ def _get_ritest_stats_fast(
 ):
     X_demean = X
     Y_demean = Y.flatten()
-    coefnames = coefnames
-    has_fixef = has_fixef
 
-    fval = np.zeros_like(fval_df)
-    for i, col in enumerate(fval_df.columns):
-        fval[:, i] = pd.factorize(fval_df[col].to_numpy())[0]
+    if has_fixef:
+        fval = np.zeros_like(fval_df)
+        for i, col in enumerate(fval_df.columns):
+            fval[:, i] = pd.factorize(fval_df[col].to_numpy())[0]
 
-    if fval.dtype != int:
-        fval = fval.astype(int)
+        if fval.dtype != int:
+            fval = fval.astype(int)
+
+        fval = fval.reshape(-1, 1) if fval.ndim == 1 else fval
 
     idx = coefnames.index(resampvar)
     bool_idx = np.ones(len(coefnames), dtype=bool)
@@ -83,11 +87,6 @@ def _get_ritest_stats_fast(
 
     D = D.reshape(-1, 1) if D.ndim == 1 else D
     X_demean2 = X_demean2.reshape(-1, 1) if X_demean2.ndim == 1 else X_demean2
-    fval = fval.reshape(-1, 1) if fval.ndim == 1 else fval
-
-    # fwl step 1:
-    unique_D = np.unique(D)
-    N = D.shape[0]
 
     # FWL Stage 1 on "constant" data
     fwl_error_1 = (
@@ -97,19 +96,30 @@ def _get_ritest_stats_fast(
     iteration_length = reps // algo_iterations
     last_iteration = reps % algo_iterations
 
+    resampvar_arr = D
+
     def _run_ri(
-        algo_iterations, iteration_length, last_iteration, unique_D, N, fwl_error_1, rng
+        algo_iterations,
+        iteration_length,
+        last_iteration,
+        resampvar_arr,
+        fwl_error_1,
+        rng,
     ):
+        is_last_iteration = False
         ri_coefs = np.zeros(reps)
 
         for i in tqdm(range(algo_iterations)):
-            if i == (algo_iterations - 1) and last_iteration > 0:
-                D2 = rng.choice(unique_D, N * last_iteration, True).reshape(
-                    (N, last_iteration)
+            if last_iteration > 0 and i == (algo_iterations - 1):
+                is_last_iteration = True
+                D2 = _resample(
+                    resampvar_arr=resampvar_arr,
+                    rng=rng,
+                    iterations=iteration_length + last_iteration,
                 )
             else:
-                D2 = rng.choice(unique_D, N * iteration_length, True).reshape(
-                    (N, iteration_length)
+                D2 = _resample(
+                    resampvar_arr=resampvar_arr, rng=rng, iterations=iteration_length
                 )
 
             if has_fixef:
@@ -122,9 +132,14 @@ def _get_ritest_stats_fast(
                 - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean, rcond=None)[0]
             )
 
-            ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
-                np.linalg.lstsq(fwl_error_2, fwl_error_1, rcond=None)[0]
-            )
+            if is_last_iteration:
+                ri_coefs[(i * iteration_length) :] = np.linalg.lstsq(
+                    fwl_error_2, fwl_error_1, rcond=None
+                )[0]
+            else:
+                ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
+                    np.linalg.lstsq(fwl_error_2, fwl_error_1, rcond=None)[0]
+                )
 
         return ri_coefs
 
@@ -132,8 +147,7 @@ def _get_ritest_stats_fast(
         algo_iterations=algo_iterations,
         iteration_length=iteration_length,
         last_iteration=last_iteration,
-        unique_D=unique_D,
-        N=N,
+        resampvar_arr=resampvar_arr,
         fwl_error_1=fwl_error_1,
         rng=rng,
     )
@@ -185,27 +199,12 @@ def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
 
 
 def _resample(
-    data: pd.DataFrame, resampvar: str, rng, cluster: Optional[str] = None
-) -> pd.DataFrame:
-    if cluster is None:
-        resampvar_values = data[resampvar].dropna().unique()
-        N = data.shape[0]
-        D_treat = rng.choice(resampvar_values, N, replace=True)
-    else:
-        # check that all observations in the same cluster have the same resampvar value
-        G = data[cluster].dropna().unique()
-        unique_counts = data.groupby(cluster)[resampvar].nunique()
-        all_unique = np.all(unique_counts == 1)
-        if not all_unique:
-            raise ValueError(
-                "The resampling variable must be unique within each cluster for clustered sampling."
-            )
+    resampvar_arr: np.ndarray, rng: np.random.Generator, iterations: int = 1
+) -> np.ndarray:
+    N = resampvar_arr.shape[0]
+    resampvar_values = np.unique(resampvar_arr)
+    D_treat = rng.choice(resampvar_values, N * iterations, replace=True).reshape(
+        (N, iterations)
+    )
 
-        resampvar_values = data[resampvar].dropna().unique()
-        N = data.shape[0]
-        D_treat = rng.choice(resampvar_values, G, replace=True)
-        D_treat = np.repeat(D_treat, unique_counts)
-
-    data[f"{resampvar}_resampled"] = D_treat
-
-    return data
+    return D_treat
