@@ -3,9 +3,22 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from lets_plot import (
+    LetsPlot,
+    aes,
+    geom_density,
+    geom_vline,
+    ggplot,
+    ggtitle,
+    theme_bw,
+    xlab,
+    ylab,
+)
 from tqdm import tqdm
 
 from pyfixest.estimation.demean_ import demean
+
+LetsPlot.setup_html()
 
 
 def _get_ritest_stats_slow(
@@ -155,10 +168,20 @@ def _get_ritest_confint(
     return np.array([lower, upper])
 
 
-def _plot_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, method: str, ax=None, **kwargs
-):
-    pass
+def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
+    df = pd.DataFrame({"ri_stats": ri_stats})
+
+    plot = (
+        ggplot(df, aes(x="ri_stats"))
+        + geom_density(fill="blue", alpha=0.5)
+        + theme_bw()
+        + geom_vline(xintercept=sample_stat, color="red")
+        + ggtitle("Permutation distribution of the test statistic")
+        + xlab("Test statistic")
+        + ylab("Density")
+    )
+
+    return plot.show()
 
 
 def _resample(

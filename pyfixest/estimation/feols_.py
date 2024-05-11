@@ -20,6 +20,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_pvalue,
     _get_ritest_stats_fast,
     _get_ritest_stats_slow,
+    _plot_ritest_pvalue,
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -1665,6 +1666,7 @@ class Feols:
         vcov: Optional[Union[str, dict[str, str]]] = None,
         algo_iterations: Optional[int] = None,
         choose_algorithm: str = "auto",
+        include_plot: bool = False,
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -1694,6 +1696,8 @@ class Feols:
             The alternative is "fast" and "slow", and should only be used
             for running CI tests. Ironically, this argument is not tested
             for any input errors from the user! So please don't use it =)
+        include_plot: bool, optional
+            Whether to include a plot of the distribution p-values. Defaults to False.
 
         Returns
         -------
@@ -1702,8 +1706,8 @@ class Feols:
         """
         _fml = self._fml
         _data = self._data
-        sample_coef = self.coef().xs(resampvar)
-        sample_tstat = self.tstat().xs(resampvar)
+        sample_coef = np.array(self.coef().xs(resampvar))
+        sample_tstat = np.array(self.tstat().xs(resampvar))
         _method = self._method
         _is_iv = self._is_iv
 
@@ -1767,8 +1771,11 @@ class Feols:
             )
 
         ri_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat.to_numpy(), ri_stats=ri_stats, method="rk_abs"
+            sample_stat=sample_stat, ri_stats=ri_stats, method="rk_abs"
         )
+
+        if include_plot:
+            _plot_ritest_pvalue(ri_stats=ri_stats, sample_stat=sample_stat)
 
         res = pd.Series(
             {
