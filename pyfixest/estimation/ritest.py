@@ -169,9 +169,7 @@ def _get_ritest_stats_fast(
 def _get_ritest_pvalue(
     sample_stat: np.ndarray, ri_stats: np.ndarray, method: str
 ) -> np.ndarray:
-    if method == "rk":
-        p_value = (ri_stats <= sample_stat).mean()
-    elif method == "rk_abs":
+    if method == "two-sided":
         p_value = (np.abs(ri_stats) >= np.abs(sample_stat)).mean()
     elif method in ["right", "left"]:
         p_value_rk = (ri_stats <= sample_stat).mean()
@@ -179,7 +177,7 @@ def _get_ritest_pvalue(
         p_value = 1 - p_value_rk / M if method == "right" else p_value_rk / M
     else:
         raise ValueError(
-            "The `method` argument must be one of 'rk', 'rk_abs', 'right', 'left'."
+            "The `method` argument must be one of 'two-sided', 'right', 'left'."
         )
 
     return p_value

@@ -1783,7 +1783,7 @@ class Feols:
             )
 
         ri_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat, ri_stats=ri_stats, method="rk_abs"
+            sample_stat=sample_stat, ri_stats=ri_stats, method="two-sided"
         )
 
         if include_plot:
