@@ -1659,6 +1659,7 @@ class Feols:
     def ritest(
         self,
         resampvar: str,
+        cluster: Optional[str] = None,
         reps: int = 100,
         type: str = "randomization-t",
         rng: Optional[np.random.Generator] = None,
@@ -1676,6 +1677,10 @@ class Feols:
         ----------
         resampvar : str
             The name of the variable to be resampled.
+        cluster : str, optional
+            The name of the cluster variable in case of cluster random assignment.
+            If provided, `resampvar` is held constant within each `cluster`.
+            Defaults to None.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
         vcov, str, optional
@@ -1714,6 +1719,8 @@ class Feols:
         _method = self._method
         _is_iv = self._is_iv
 
+        clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+
         algo_iterations = reps if algo_iterations is None else algo_iterations
 
         rng = np.random.default_rng() if rng is None else rng
@@ -1743,6 +1750,7 @@ class Feols:
                 D=_D,
                 coefnames=_coefnames,
                 resampvar=resampvar,
+                clustervar_arr=clustervar_arr,
                 reps=reps,
                 rng=rng,
                 has_fixef=_has_fixef,
@@ -1765,6 +1773,7 @@ class Feols:
             ri_stats = _get_ritest_stats_slow(
                 data=_data,
                 resampvar=resampvar,
+                clustervar_arr=clustervar_arr,
                 fml=_fml,
                 reps=reps,
                 vcov=vcov_input,

@@ -1,5 +1,5 @@
 from importlib import import_module
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -30,6 +30,7 @@ def _get_ritest_stats_slow(
     model: str,
     rng: np.random.Generator,
     vcov: Union[str, dict[str, str]],
+    clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     data_resampled = data.copy()
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
@@ -41,7 +42,12 @@ def _get_ritest_stats_slow(
 
     ri_stats = np.zeros(reps)
     for i in tqdm(range(reps)):
-        D_treat = _resample(resampvar_arr=resampvar_arr, rng=rng, iterations=1)
+        D_treat = _resample(
+            resampvar_arr=resampvar_arr,
+            clustervar_arr=clustervar_arr,
+            rng=rng,
+            iterations=1,
+        )
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
         fit = fit_(fml_update, data=data_resampled, vcov=vcov)
@@ -65,6 +71,7 @@ def _get_ritest_stats_fast(
     fval_df,
     algo_iterations,
     weights,
+    clustervar_arr: Optional[np.ndarray] = None,
 ):
     X_demean = X
     Y_demean = Y.flatten()
@@ -103,6 +110,7 @@ def _get_ritest_stats_fast(
         iteration_length,
         last_iteration,
         resampvar_arr,
+        clustervar_arr,
         fwl_error_1,
         rng,
     ):
@@ -114,12 +122,16 @@ def _get_ritest_stats_fast(
                 is_last_iteration = True
                 D2 = _resample(
                     resampvar_arr=resampvar_arr,
+                    clustervar_arr=clustervar_arr,
                     rng=rng,
                     iterations=iteration_length + last_iteration,
                 )
             else:
                 D2 = _resample(
-                    resampvar_arr=resampvar_arr, rng=rng, iterations=iteration_length
+                    resampvar_arr=resampvar_arr,
+                    clustervar_arr=clustervar_arr,
+                    rng=rng,
+                    iterations=iteration_length,
                 )
 
             if has_fixef:
@@ -148,6 +160,7 @@ def _get_ritest_stats_fast(
         iteration_length=iteration_length,
         last_iteration=last_iteration,
         resampvar_arr=resampvar_arr,
+        clustervar_arr=clustervar_arr,
         fwl_error_1=fwl_error_1,
         rng=rng,
     )
@@ -199,12 +212,25 @@ def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
 
 
 def _resample(
-    resampvar_arr: np.ndarray, rng: np.random.Generator, iterations: int = 1
+    resampvar_arr: np.ndarray,
+    rng: np.random.Generator,
+    iterations: int = 1,
+    clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     N = resampvar_arr.shape[0]
     resampvar_values = np.unique(resampvar_arr)
-    D_treat = rng.choice(resampvar_values, N * iterations, replace=True).reshape(
-        (N, iterations)
-    )
+
+    if clustervar_arr is not None:
+        clustervar_values = np.unique(clustervar_arr)
+        D_treat = np.zeros((N, iterations))
+
+        for i, _ in enumerate(clustervar_values):
+            idx = (clustervar_arr == clustervar_values[i]).flatten()
+            D_treat[idx, :] = rng.choice(resampvar_values, 1 * iterations, replace=True)
+
+    else:
+        D_treat = rng.choice(resampvar_values, N * iterations, replace=True).reshape(
+            (N, iterations)
+        )
 
     return D_treat
