@@ -185,16 +185,6 @@ def _get_ritest_pvalue(
     return p_value
 
 
-def _get_ritest_confint(
-    alpha: float, sample_stat: np.ndarray, ri_stats: np.ndarray
-) -> np.ndarray:
-    ri_stats_centered = sample_stat - ri_stats
-    lower = np.quantile(ri_stats_centered, alpha / 2)
-    upper = np.quantile(ri_stats_centered, 1 - alpha / 2)
-
-    return np.array([lower, upper])
-
-
 def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
     df = pd.DataFrame({"ri_stats": ri_stats})
 
