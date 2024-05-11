@@ -1661,7 +1661,7 @@ class Feols:
         resampvar: str,
         cluster: Optional[str] = None,
         reps: int = 100,
-        type: str = "randomization-t",
+        type: str = "randomization-c",
         rng: Optional[np.random.Generator] = None,
         vcov: Optional[Union[str, dict[str, str]]] = None,
         algo_iterations: Optional[int] = None,
@@ -1688,8 +1688,12 @@ class Feols:
             If None, the default variance-covariance matrix of the
             is used. Only relevant for the "randomization-t" type.
         type: str
-            The type of the randomization inference test. Defaults to "randomization-t".
-            Can be "randomization-t" or "randomization-c"
+            The type of the randomization inference test.
+            Can be "randomization-c" or "randomization-t".
+            Defaults to "randomization-c", mostly to performance reasons.
+            Note that Wu & Ding (2021, JASA) recommend the randomization-t.
+            This default is bound to change in the future once the performance
+            gap has been closed.
         rng : np.random.Generator, optional
             A random number generator. Defaults to None.
         algo_iterations : int, optional
