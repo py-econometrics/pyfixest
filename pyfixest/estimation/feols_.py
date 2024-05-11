@@ -17,9 +17,9 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation.ritest import (
-    _get_ritest_coefs,
-    _get_ritest_confint,
     _get_ritest_pvalue,
+    _get_ritest_stats_fast,
+    _get_ritest_stats_slow,
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -1656,7 +1656,15 @@ class Feols:
         return self._u_hat
 
     def ritest(
-        self, resampvar: str, reps: int = 100, method: str = "rk", alpha: float = 0.05
+        self,
+        resampvar: str,
+        reps: int = 100,
+        method: str = "rk",
+        type: str = "randomization-t",
+        rng: Optional[np.random.Generator] = None,
+        vcov: Optional[Union[str, dict[str, str]]] = None,
+        algo_iterations: Optional[int] = None,
+        choose_algorithm: str = "auto",
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -1670,8 +1678,22 @@ class Feols:
             The number of randomization iterations. Defaults to 100.
         method : str, optional
             The method to compute the p-value. Defaults to "rk".
-        alpha: float, optional
-            The significance level for the confidence interval. Defaults to 0.05.
+        vcov, str, optional
+            The type of variance-covariance matrix to use. Defaults to None.
+            If None, the default variance-covariance matrix of the
+            is used. Only relevant for the "randomization-t" type.
+        type: str
+            The type of the randomization inference test. Defaults to "randomization-t".
+            Can be "randomization-t" or "randomization-c"
+        rng : np.random.Generator, optional
+            A random number generator. Defaults to None.
+        algo_iterations : int, optional
+            The number of iterations to run the algorithm. Defaults to None.
+        choose_algorithm: str, optional
+            The algorithm to use for the computation. Defaults to "auto".
+            The alternative is "fast" and "slow", and should only be used
+            for running CI tests. Ironically, this argument is not tested
+            for any input errors from the user! So please don't use it =)
 
         Returns
         -------
@@ -1680,30 +1702,79 @@ class Feols:
         """
         _fml = self._fml
         _data = self._data
-        sample_coef = self.coef().xs(resampvar).to_numpy()
+        sample_coef = self.coef().xs(resampvar)
+        sample_tstat = self.tstat().xs(resampvar)
+        _method = self._method
+        _is_iv = self._is_iv
 
-        ri_coefs = _get_ritest_coefs(
-            data=_data,
-            resampvar=resampvar,
-            fml=_fml,
-            reps=reps,
-            strata=None,
-            cluster=None,
-        )
+        algo_iterations = reps if algo_iterations is None else algo_iterations
+
+        rng = np.random.default_rng() if rng is None else rng
+
+        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
+        if (
+            choose_algorithm == "fast"
+            or _method == "feols"
+            and not _is_iv
+            and not "randomization-t"
+        ):
+            _Y = self._Y
+            _X = self._X
+            _coefnames = self._coefnames
+            _has_fixef = self._has_fixef
+
+            _weights = self._weights.flatten()
+            _fval = self._fixef.split("+")
+            _data = self._data
+            _fval_df = _data[_fval]
+            _D = self._data[resampvar].to_numpy()
+
+            ri_stats = _get_ritest_stats_fast(
+                Y=_Y,
+                X=_X,
+                D=_D,
+                coefnames=_coefnames,
+                resampvar=resampvar,
+                reps=reps,
+                rng=rng,
+                has_fixef=_has_fixef,
+                fval_df=_fval_df,
+                algo_iterations=algo_iterations,
+                weights=_weights,
+            )
+
+        else:
+            vcov_input: Union[str, dict[str, str]]
+            _vcov_type_detail = None
+            if type == "randomization-t" and vcov is None:
+                _vcov_type_detail = self._vcov_type_detail
+                if _vcov_type_detail in ["CRV1", "CRV3"]:
+                    _clustervar = self._clustervar[0]
+                    vcov_input = {_vcov_type_detail: _clustervar}
+                else:
+                    vcov_input = _vcov_type_detail
+
+            ri_stats = _get_ritest_stats_slow(
+                data=_data,
+                resampvar=resampvar,
+                fml=_fml,
+                reps=reps,
+                vcov=vcov_input,
+                type=type,
+                rng=rng,
+                model=_method,
+            )
+
         ri_pvalue = _get_ritest_pvalue(
-            sample_coef=sample_coef, ri_coefs=ri_coefs, method=method
-        )
-        ri_confint = _get_ritest_confint(
-            alpha=alpha, sample_coef=sample_coef, ri_coefs=ri_coefs
+            sample_stat=sample_stat.to_numpy(), ri_stats=ri_stats, method="rk_abs"
         )
 
         res = pd.Series(
             {
-                "Coefficient": resampvar,  # type: ignore
-                "Estimate": sample_coef,  # type: ignore
-                "Pr(>|t|)": ri_pvalue,  # type: ignore
-                f"{alpha/2}%": ri_confint[0],
-                f"{1-alpha/2}%": ri_confint[1],
+                "Coefficient": resampvar,
+                "Estimate": sample_coef,
+                "Pr(>|t|)": ri_pvalue,
             }
         )
 
