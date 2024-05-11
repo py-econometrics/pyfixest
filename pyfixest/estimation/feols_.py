@@ -1714,10 +1714,19 @@ class Feols:
         """
         _fml = self._fml
         _data = self._data
-        sample_coef = np.array(self.coef().xs(resampvar))
-        sample_tstat = np.array(self.tstat().xs(resampvar))
         _method = self._method
         _is_iv = self._is_iv
+        _coefnames = self._coefnames
+
+        # check that resampvar in _coefnames
+        if resampvar not in _coefnames:
+            raise ValueError(f"{resampvar} not found in the model's coefficients.")
+
+        if cluster is not None and cluster not in _data:
+            raise ValueError(f"The variable {cluster} is not found in the data.")
+
+        sample_coef = np.array(self.coef().xs(resampvar))
+        sample_tstat = np.array(self.tstat().xs(resampvar))
 
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
 
@@ -1726,6 +1735,33 @@ class Feols:
         rng = np.random.default_rng() if rng is None else rng
 
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
+        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+            raise ValueError("""
+            The cluster variable contains missing values. This is not allowed
+            for randomization inference via `ritest()`.
+            """)
+
+        if type not in ["randomization-t", "randomization-c"]:
+            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
+
+        assert (
+            algo_iterations <= reps
+            and isinstance(algo_iterations, int)
+            and algo_iterations > 0
+        ), "`algo_iterations` needs to be a positive integer and weakly smaller than `reps`."
+
+        if vcov is not None:
+            _check_vcov_input(vcov=vcov, data=self._data)
+
+        if self._has_weights:
+            raise NotImplementedError(
+                """
+                Regression Weights are not supported with Randomization Inference.
+                """
+            )
 
         if (
             choose_algorithm == "fast"

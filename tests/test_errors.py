@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
 
+import pyfixest as pf
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
@@ -18,6 +19,11 @@ from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.utils import get_data
+
+
+@pytest.fixture
+def data():
+    return pf.get_data()
 
 
 def test_formula_parser2():
@@ -341,3 +347,27 @@ def test_coefplot_backend_error():
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
         fit.coefplot(plot_backend="plotnine")
+
+
+def test_ritest_error(data):
+    fit = pf.feols("Y ~ X1", data=data)
+
+    with pytest.raises(ValueError, match="X2 not found in the model's coefficients."):
+        fit.ritest(resampvar="X2", reps=1000)
+
+    with pytest.raises(ValueError, match="CLUST is not found in the data"):
+        fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
+
+    with pytest.raises(
+        ValueError, match="type must be 'randomization-t' or 'randomization-c."
+    ):
+        fit.ritest(resampvar="X1", reps=1000, type="a")
+
+    with pytest.raises(AssertionError):
+        fit.ritest(resampvar="X1", reps=100.4)
+
+    with pytest.raises(AssertionError):
+        fit.ritest(resampvar="X1", reps=100, algo_iterations=200)
+
+    with pytest.raises(ValueError):
+        fit.ritest(resampvar="X1", cluster="f1", reps=100)
