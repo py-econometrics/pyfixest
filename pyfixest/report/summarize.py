@@ -335,13 +335,13 @@ def summary(
         to_print = ""
 
         if not np.isnan(fxst._rmse):
-            to_print += f"RMSE: {np.round(fxst._rmse, digits)}"
+            to_print += f"RMSE: {np.round(fxst._rmse, digits)} "
         if not np.isnan(fxst._r2):
-            to_print += f"R2: {np.round(fxst._r2, digits)}"
+            to_print += f"R2: {np.round(fxst._r2, digits)} "
         if not np.isnan(fxst._r2_within):
-            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)}"
+            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
         if fxst.deviance is not None:
-            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)}"
+            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)} "
 
         print(to_print)
 
