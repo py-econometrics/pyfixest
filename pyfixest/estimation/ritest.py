@@ -245,6 +245,6 @@ def random_choice(arr, size, rng):
     n = len(arr)
     result = np.empty(size, dtype=arr.dtype)
     for i in range(size):
-        idx = rng.integers(0, n)  # Generate a random index
+        idx = rng.integers(0, n)
         result[i] = arr[idx]
     return result
