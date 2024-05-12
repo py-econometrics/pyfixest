@@ -1,6 +1,7 @@
 from importlib import import_module
 from typing import Optional, Union
 
+import numba as nb
 import numpy as np
 import pandas as pd
 from lets_plot import (
@@ -32,6 +33,7 @@ def _get_ritest_stats_slow(
     vcov: Union[str, dict[str, str]],
     clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
+    """Compute tests statistics using randomization inference (slow)."""
     data_resampled = data.copy()
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
@@ -60,26 +62,26 @@ def _get_ritest_stats_slow(
 
 
 def _get_ritest_stats_fast(
-    Y,
-    X,
-    D,
-    coefnames,
-    resampvar,
-    reps,
-    rng,
-    has_fixef,
-    fval_df,
-    algo_iterations,
-    weights,
+    Y: np.ndarray,
+    X: np.ndarray,
+    D: np.ndarray,
+    coefnames: list,
+    resampvar: str,
+    reps: int,
+    rng: np.random.Generator,
+    has_fixef: bool,
+    algo_iterations: int,
+    weights: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
-):
+    fval_df: Optional[pd.DataFrame] = None,
+) -> np.ndarray:
     X_demean = X
     Y_demean = Y.flatten()
 
-    if has_fixef:
+    if fval_df is not None:
         fval = np.zeros_like(fval_df)
         for i, col in enumerate(fval_df.columns):
-            fval[:, i] = pd.factorize(fval_df[col].to_numpy())[0]
+            fval[:, i] = pd.factorize(fval_df[col])[0]
 
         if fval.dtype != int:
             fval = fval.astype(int)
@@ -105,63 +107,18 @@ def _get_ritest_stats_fast(
 
     resampvar_arr = D
 
-    def _run_ri(
-        algo_iterations,
-        iteration_length,
-        last_iteration,
-        resampvar_arr,
-        clustervar_arr,
-        fwl_error_1,
-        rng,
-    ):
-        is_last_iteration = False
-        ri_coefs = np.zeros(reps)
-
-        for i in tqdm(range(algo_iterations)):
-            if last_iteration > 0 and i == (algo_iterations - 1):
-                is_last_iteration = True
-                D2 = _resample(
-                    resampvar_arr=resampvar_arr,
-                    clustervar_arr=clustervar_arr,
-                    rng=rng,
-                    iterations=iteration_length + last_iteration,
-                )
-            else:
-                D2 = _resample(
-                    resampvar_arr=resampvar_arr,
-                    clustervar_arr=clustervar_arr,
-                    rng=rng,
-                    iterations=iteration_length,
-                )
-
-            if has_fixef:
-                D2_demean, _ = demean(D2, fval, weights)
-            else:
-                D2_demean = D2
-
-            fwl_error_2 = (
-                D2_demean
-                - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean, rcond=None)[0]
-            )
-
-            if is_last_iteration:
-                ri_coefs[(i * iteration_length) :] = np.linalg.lstsq(
-                    fwl_error_2, fwl_error_1, rcond=None
-                )[0]
-            else:
-                ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
-                    np.linalg.lstsq(fwl_error_2, fwl_error_1, rcond=None)[0]
-                )
-
-        return ri_coefs
-
     return _run_ri(
+        reps=reps,
         algo_iterations=algo_iterations,
         iteration_length=iteration_length,
         last_iteration=last_iteration,
         resampvar_arr=resampvar_arr,
         clustervar_arr=clustervar_arr,
         fwl_error_1=fwl_error_1,
+        X_demean2=X_demean2,
+        has_fixef=has_fixef,
+        fval=fval,
+        weights=weights,
         rng=rng,
     )
 
@@ -199,6 +156,61 @@ def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
     return plot.show()
 
 
+@nb.njit(parallel=True)
+def _run_ri(
+    reps: int,
+    algo_iterations: int,
+    iteration_length: int,
+    last_iteration: int,
+    resampvar_arr: np.ndarray,
+    fwl_error_1: np.ndarray,
+    rng: np.random.Generator,
+    has_fixef: bool,
+    fval: str,
+    weights: np.ndarray,
+    X_demean2: np.ndarray,
+    clustervar_arr: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    is_last_iteration = False
+    ri_coefs = np.zeros(reps)
+
+    for i in nb.prange(algo_iterations):
+        if last_iteration > 0 and i == (algo_iterations - 1):
+            is_last_iteration = True
+            D2 = _resample(
+                resampvar_arr=resampvar_arr,
+                clustervar_arr=clustervar_arr,
+                rng=rng,
+                iterations=iteration_length + last_iteration,
+            )
+        else:
+            D2 = _resample(
+                resampvar_arr=resampvar_arr,
+                clustervar_arr=clustervar_arr,
+                rng=rng,
+                iterations=iteration_length,
+            )
+
+        if has_fixef:
+            D2_demean, _ = demean(D2, fval, weights)
+        else:
+            D2_demean = D2
+
+        fwl_error_2 = D2_demean - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean)[0]
+
+        if is_last_iteration:
+            ri_coefs[(i * iteration_length) :] = np.linalg.lstsq(
+                fwl_error_2, fwl_error_1
+            )[0]
+        else:
+            ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
+                np.linalg.lstsq(fwl_error_2, fwl_error_1)[0]
+            )
+
+    return ri_coefs
+
+
+@nb.njit
 def _resample(
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
@@ -214,11 +226,25 @@ def _resample(
 
         for i, _ in enumerate(clustervar_values):
             idx = (clustervar_arr == clustervar_values[i]).flatten()
-            D_treat[idx, :] = rng.choice(resampvar_values, 1 * iterations, replace=True)
+            D_treat[idx, :] = random_choice(resampvar_values, 1 * iterations, rng)
 
     else:
-        D_treat = rng.choice(resampvar_values, N * iterations, replace=True).reshape(
+        D_treat = random_choice(resampvar_values, N * iterations, rng).reshape(
             (N, iterations)
         )
 
     return D_treat
+
+
+@nb.njit
+def random_choice(arr, size, rng):
+    """
+    Simulate numpy.random.choice without replacement probabilities.
+    Select 'size' elements from 'arr' with replacement.
+    """
+    n = len(arr)
+    result = np.empty(size, dtype=arr.dtype)
+    for i in range(size):
+        idx = rng.integers(0, n)  # Generate a random index
+        result[i] = arr[idx]
+    return result

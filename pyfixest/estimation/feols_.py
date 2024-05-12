@@ -1765,10 +1765,9 @@ class Feols:
             )
 
         if (
-            choose_algorithm == "fast"
-            or _method == "feols"
-            and not _is_iv
-            and not "randomization-t"
+            (choose_algorithm == "fast" or _method == "feols")
+            and (not _is_iv)
+            and (type != "randomization-t")
         ):
             _Y = self._Y
             _X = self._X
@@ -1840,6 +1839,11 @@ class Feols:
                 "Pr(>|t|)": ri_pvalue,
             }
         )
+
+        print("resampvar:", resampvar)
+        if cluster is not None:
+            print("cluster", cluster)
+        print("type:", type)
 
         return res
 
