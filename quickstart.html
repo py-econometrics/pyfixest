@@ -189,7 +189,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>In a first step, we load the module and some example data:</p>
-<div id="cell-2" class="cell" data-execution_count="1">
+<div id="cell-2" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lets_plot <span class="im">import</span> LetsPlot</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -201,50 +201,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext watermark</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>watermark <span class="op">--</span>iversions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-
-            <div id="ELjLek"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.2/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ELjLek").appendChild(div);
-                    };
-                    var e = document.getElementById("ELjLek");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>pyfixest: 0.19.3
+<pre><code>The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload
+The watermark extension is already loaded. To reload it, use:
+  %reload_ext watermark
+pyfixest: 0.19.5
 pandas  : 2.2.2
 </code></pre>
 </div>
 </div>
-<div id="cell-3" class="cell" data-execution_count="2">
+<div id="cell-3" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>data.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<div class="cell-output cell-output-display" data-execution_count="21">
 <div>
 <div>
 
@@ -347,17 +317,17 @@ pandas  : 2.2.2
 <section id="ols-estimation" class="level2">
 <h2 class="anchored" data-anchor-id="ols-estimation">OLS Estimation</h2>
 <p>We can estimate a fixed effects regression via the <code>feols()</code> function. <code>feols()</code> has three arguments: a two-sided model formula, the data, and optionally, the type of inference.</p>
-<div id="cell-6" class="cell" data-execution_count="3">
+<div id="cell-6" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y~X1 | f1"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">type</span>(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<div class="cell-output cell-output-display" data-execution_count="22">
 <pre><code>pyfixest.estimation.feols_.Feols</code></pre>
 </div>
 </div>
 <p>The first part of the formula contains the dependent variable and “regular” covariates, while the second part contains fixed effects.</p>
 <p><code>feols()</code> returns an instance of the <code>Fixest</code> class.</p>
 <p>To inspect the results, we can use a summary function or method:</p>
-<div id="cell-9" class="cell" data-execution_count="4">
+<div id="cell-9" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -371,11 +341,11 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.066 |   -14.311 |      0.000 | -1.080 |  -0.819 |
 ---
-RMSE: 1.73R2: 0.437R2 Within: 0.161</code></pre>
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 </code></pre>
 </div>
 </div>
 <p>Alternatively, the <code>.summarize</code> module contains a <code>summary</code> function, which can be applied on instances of regression model objects or lists of regression model objects.</p>
-<div id="cell-11" class="cell" data-execution_count="5">
+<div id="cell-11" class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.summary(fit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -389,21 +359,21 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.066 |   -14.311 |      0.000 | -1.080 |  -0.819 |
 ---
-RMSE: 1.73R2: 0.437R2 Within: 0.161</code></pre>
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 </code></pre>
 </div>
 </div>
 <p>You can access individual elements of the summary via dedicated methods: <code>.tidy()</code> returns a “tidy” <code>pd.DataFrame</code>, <code>.coef()</code> returns estimated parameters, and <code>se()</code> estimated standard errors. Other methods include <code>pvalue()</code>, <code>confint()</code> and <code>tstat()</code>.</p>
-<div id="cell-13" class="cell" data-execution_count="6">
+<div id="cell-13" class="cell" data-execution_count="25">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit.coef()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="6">
+<div class="cell-output cell-output-display" data-execution_count="25">
 <pre><code>Coefficient
 X1   -0.949441
 Name: Estimate, dtype: float64</code></pre>
 </div>
 </div>
-<div id="cell-14" class="cell" data-execution_count="7">
+<div id="cell-14" class="cell" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit.se()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div class="cell-output cell-output-display" data-execution_count="26">
 <pre><code>Coefficient
 X1    0.066343
 Name: Std. Error, dtype: float64</code></pre>
@@ -413,7 +383,7 @@ Name: Std. Error, dtype: float64</code></pre>
 <section id="standard-errors-and-inference" class="level2">
 <h2 class="anchored" data-anchor-id="standard-errors-and-inference">Standard Errors and Inference</h2>
 <p>Supported covariance types are “iid”, “HC1-3”, CRV1 and CRV3 (up to two-way clustering). Inference can be adjusted “on-the-fly” via the <code>.vcov()</code> method:</p>
-<div id="cell-17" class="cell" data-execution_count="8">
+<div id="cell-17" class="cell" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit.vcov({<span class="st">"CRV1"</span>: <span class="st">"group_id + f1"</span>}).summary()</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fit.vcov({<span class="st">"CRV3"</span>: <span class="st">"group_id"</span>}).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -428,7 +398,7 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.088 |   -10.839 |      0.000 | -1.133 |  -0.765 |
 ---
-RMSE: 1.73R2: 0.437R2 Within: 0.161
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 
 ###
 
 Estimation:  OLS
@@ -440,14 +410,14 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.095 |   -10.005 |      0.000 | -1.149 |  -0.750 |
 ---
-RMSE: 1.73R2: 0.437R2 Within: 0.161</code></pre>
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 </code></pre>
 </div>
 </div>
 <p>It is also possible to run a wild (cluster) bootstrap after estimation (via the <a href="https://github.com/s3alfisc/wildboottest">wildboottest module</a>):</p>
-<div id="cell-19" class="cell" data-execution_count="9">
+<div id="cell-19" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y~ X1"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit2.wildboottest(param<span class="op">=</span><span class="st">"X1"</span>, B<span class="op">=</span><span class="dv">999</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="9">
+<div class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>param                            X1
 t value           7.568059291000728
 Pr(&gt;|t|)                        0.0
@@ -458,11 +428,11 @@ dtype: object</code></pre>
 </div>
 </div>
 <p>Additionally, <code>PyFixest</code> supports the causal cluster variance estimator following <a href="https://academic.oup.com/qje/article/138/1/1/6750017">Abadie et al.&nbsp;(2023)</a>.</p>
-<div id="cell-21" class="cell" data-execution_count="10">
+<div id="cell-21" class="cell" data-execution_count="29">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_stata(<span class="st">"C:/Users/alexa/Downloads/census2000_5pc.dta"</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"ln_earnings ~ college"</span>, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>}, data<span class="op">=</span>df)</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>fit3.ccv(treatment<span class="op">=</span><span class="st">"college"</span>, pk<span class="op">=</span><span class="fl">0.05</span>, n_splits<span class="op">=</span><span class="dv">2</span>, seed<span class="op">=</span><span class="dv">929</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="10">
+<div class="cell-output cell-output-display" data-execution_count="29">
 <div>
 <div>
 
@@ -506,9 +476,9 @@ dtype: object</code></pre>
 </div>
 </div>
 <p>To correct for multiple testing, p-values can be adjusted via either the Bonferroni or the method by Romano and Wolf (2005).</p>
-<div id="cell-23" class="cell" data-execution_count="11">
+<div id="cell-23" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>pf.bonferroni([fit, fit2], param<span class="op">=</span><span class="st">"X1"</span>).<span class="bu">round</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="11">
+<div class="cell-output cell-output-display" data-execution_count="30">
 <div>
 <div>
 
@@ -564,9 +534,9 @@ dtype: object</code></pre>
 </div>
 </div>
 </div>
-<div id="cell-24" class="cell" data-execution_count="12">
+<div id="cell-24" class="cell" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>pf.rwolf([fit, fit2], param<span class="op">=</span><span class="st">"X1"</span>, B<span class="op">=</span><span class="dv">9999</span>, seed<span class="op">=</span><span class="dv">1234</span>).<span class="bu">round</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="12">
+<div class="cell-output cell-output-display" data-execution_count="31">
 <div>
 <div>
 
@@ -626,7 +596,7 @@ dtype: object</code></pre>
 <section id="iv-estimation" class="level2">
 <h2 class="anchored" data-anchor-id="iv-estimation">IV Estimation</h2>
 <p>It is also possible to estimate instrumental variable models with <em>one</em> endogenous variable and (potentially multiple) instruments:</p>
-<div id="cell-26" class="cell" data-execution_count="13">
+<div id="cell-26" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>iv_fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y2~ 1 | f1 + f2 | X1 ~ Z1 + Z2"</span>, data<span class="op">=</span>data)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>iv_fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -645,7 +615,7 @@ Observations:  998
 </div>
 </div>
 <p>If the model does not contain any fixed effects, just drop the second part of the formula above:</p>
-<div id="cell-28" class="cell" data-execution_count="14">
+<div id="cell-28" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>pf.feols(fml<span class="op">=</span><span class="st">"Y~ 1 | X1 ~ Z1 + Z2"</span>, data<span class="op">=</span>data).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -668,7 +638,7 @@ Observations:  998
 <section id="poisson-regression" class="level2">
 <h2 class="anchored" data-anchor-id="poisson-regression">Poisson Regression</h2>
 <p>With version <code>0.8.4</code>, it is possible to estimate Poisson Regressions (not yet on PyPi):</p>
-<div id="cell-31" class="cell" data-execution_count="15">
+<div id="cell-31" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>pois_data <span class="op">=</span> pf.get_data(model<span class="op">=</span><span class="st">"Fepois"</span>)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>pois_fit <span class="op">=</span> pf.fepois(fml<span class="op">=</span><span class="st">"Y~X1 | f1+f2"</span>, data<span class="op">=</span>pois_data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>pois_fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -684,21 +654,21 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.006 |        0.032 |    -0.181 |      0.856 | -0.068 |   0.057 |
 ---
-Deviance: 1070.014</code></pre>
+Deviance: 1070.014 </code></pre>
 </div>
 </div>
 </section>
 <section id="multiple-estimation" class="level2">
 <h2 class="anchored" data-anchor-id="multiple-estimation">Multiple Estimation</h2>
 <p><code>PyFixest</code> supports a range of multiple estimation functionality: <code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, and multiple dependent variables. If multiple regression syntax is used, <code>feols()</code> and <code>fepois</code> returns an instance of a <code>FixestMulti</code> object, which essentially consists of a dicionary of <code>Fepois</code> or [Feols(/reference/Feols.qmd) instances.</p>
-<div id="cell-33" class="cell" data-execution_count="16">
+<div id="cell-33" class="cell" data-execution_count="35">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>multi_fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y~X1 | csw0(f1, f2)"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>multi_fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="16">
-<pre><code>&lt;pyfixest.estimation.FixestMulti_.FixestMulti at 0x1d5c0c198d0&gt;</code></pre>
+<div class="cell-output cell-output-display" data-execution_count="35">
+<pre><code>&lt;pyfixest.estimation.FixestMulti_.FixestMulti at 0x1e782989cc0&gt;</code></pre>
 </div>
 </div>
-<div id="cell-34" class="cell" data-execution_count="17">
+<div id="cell-34" class="cell" data-execution_count="36">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>multi_fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -713,7 +683,7 @@ Observations:  998
 | Intercept     |      0.919 |        0.112 |     8.223 |      0.000 |  0.699 |   1.138 |
 | X1            |     -1.000 |        0.082 |   -12.134 |      0.000 | -1.162 |  -0.838 |
 ---
-RMSE: 2.158R2: 0.123
+RMSE: 2.158 R2: 0.123 
 ###
 
 Estimation:  OLS
@@ -725,7 +695,7 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.066 |   -14.311 |      0.000 | -1.080 |  -0.819 |
 ---
-RMSE: 1.73R2: 0.437R2 Within: 0.161
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 
 ###
 
 Estimation:  OLS
@@ -737,11 +707,11 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.919 |        0.058 |   -15.918 |      0.000 | -1.033 |  -0.806 |
 ---
-RMSE: 1.441R2: 0.609R2 Within: 0.2</code></pre>
+RMSE: 1.441 R2: 0.609 R2 Within: 0.2 </code></pre>
 </div>
 </div>
 <p>Alternatively, you can look at the estimation results via the <code>etable()</code> method:</p>
-<div id="cell-36" class="cell" data-execution_count="18">
+<div id="cell-36" class="cell" data-execution_count="37">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>multi_fit.etable()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                           est1               est2               est3
@@ -751,9 +721,8 @@ depvar                        Y                  Y                  Y
 Intercept      0.919*** (0.112)
 X1            -1.000*** (0.082)  -0.949*** (0.066)  -0.919*** (0.058)
 ---------------------------------------------------------------------
-f2                            -                  -                  x
 f1                            -                  x                  x
-                              x                  -                  -
+f2                            -                  -                  x
 ---------------------------------------------------------------------
 R2                        0.123              0.437              0.609
 S.E. type                hetero             hetero             hetero
@@ -762,71 +731,443 @@ Observations                998                997                997
 Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
 Format of coefficient cell:
 Coefficient (Std. Error)</code></pre>
-</div>
-</div>
-<p>If you are only insterested in some parameters, e.g.&nbsp;“X1”, you can use the following syntax:</p>
-<div id="cell-38" class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>multi_fit.etable().xs(<span class="st">"X1"</span>, level<span class="op">=</span><span class="dv">1</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                           est1               est2               est3
-------------  -----------------  -----------------  -----------------
-depvar                        Y                  Y                  Y
----------------------------------------------------------------------
-Intercept      0.919*** (0.112)
-X1            -1.000*** (0.082)  -0.949*** (0.066)  -0.919*** (0.058)
----------------------------------------------------------------------
-f2                            -                  -                  x
-f1                            -                  x                  x
-                              x                  -                  -
----------------------------------------------------------------------
-R2                        0.123              0.437              0.609
-S.E. type                hetero             hetero             hetero
-Observations                998                997                997
----------------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
-Format of coefficient cell:
-Coefficient (Std. Error)</code></pre>
-</div>
-<div class="cell-output cell-output-error">
-<pre><code>AttributeError: 'NoneType' object has no attribute 'xs'</code></pre>
 </div>
 </div>
 <p>You can access an individual model by its name - i.e.&nbsp;a formula - via the <code>all_fitted_models</code> attribure.</p>
-<div id="cell-40" class="cell">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>multi_fit.all_fitted_models[<span class="st">"Y~X1"</span>].tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-38" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>multi_fit.all_fitted_models[<span class="st">"Y~X1"</span>].tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="38">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Estimate</th>
+<th data-quarto-table-cell-role="th">Std. Error</th>
+<th data-quarto-table-cell-role="th">t value</th>
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
+<th data-quarto-table-cell-role="th">2.5%</th>
+<th data-quarto-table-cell-role="th">97.5%</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Coefficient</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Intercept</td>
+<td>0.918518</td>
+<td>0.111707</td>
+<td>8.222580</td>
+<td>6.661338e-16</td>
+<td>0.699310</td>
+<td>1.137725</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">X1</td>
+<td>-1.000086</td>
+<td>0.082420</td>
+<td>-12.134086</td>
+<td>0.000000e+00</td>
+<td>-1.161822</td>
+<td>-0.838350</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
 </div>
 <p>or equivalently via the <code>fetch_model</code> method:</p>
-<div id="cell-42" class="cell">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>multi_fit.fetch_model(<span class="dv">0</span>).tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-40" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>multi_fit.fetch_model(<span class="dv">0</span>).tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Model:  Y~X1</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="39">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Estimate</th>
+<th data-quarto-table-cell-role="th">Std. Error</th>
+<th data-quarto-table-cell-role="th">t value</th>
+<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
+<th data-quarto-table-cell-role="th">2.5%</th>
+<th data-quarto-table-cell-role="th">97.5%</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Coefficient</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Intercept</td>
+<td>0.918518</td>
+<td>0.111707</td>
+<td>8.222580</td>
+<td>6.661338e-16</td>
+<td>0.699310</td>
+<td>1.137725</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">X1</td>
+<td>-1.000086</td>
+<td>0.082420</td>
+<td>-12.134086</td>
+<td>0.000000e+00</td>
+<td>-1.161822</td>
+<td>-0.838350</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
 </div>
 <p>Here, <code>0</code> simply fetches the first model stored in the <code>all_fitted_models</code> dictionary, <code>1</code> the second etc.</p>
 <p>Objects of type <code>Fixest</code> come with a range of additional methods: <code>tidy()</code>, <code>coef()</code>, <code>vcov()</code> etc, which essentially loop over the equivalent methods of all fitted models. E.g. <code>Fixest.vcov()</code> updates inference for all models stored in <code>Fixest</code>.</p>
-<div id="cell-45" class="cell">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>multi_fit.vcov(<span class="st">"iid"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-43" class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>multi_fit.vcov(<span class="st">"iid"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 
+Inference:  iid
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.919 |        0.112 |     8.214 |      0.000 |  0.699 |   1.138 |
+| X1            |     -1.000 |        0.085 |   -11.802 |      0.000 | -1.166 |  -0.834 |
+---
+RMSE: 2.158 R2: 0.123 
+###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1
+Inference:  iid
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.949 |        0.069 |   -13.846 |      0.000 | -1.084 |  -0.815 |
+---
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161 
+###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  iid
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.919 |        0.058 |   -15.797 |      0.000 | -1.033 |  -0.805 |
+---
+RMSE: 1.441 R2: 0.609 R2 Within: 0.2 </code></pre>
+</div>
 </div>
 <p>If you have estimated multiple models without multiple estimation syntax and still want to compare them, you can use the <code>etable()</code> function:</p>
-<div id="cell-47" class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-45" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                           est1               est2
+------------  -----------------  -----------------
+depvar                        Y                  Y
+--------------------------------------------------
+X1            -0.949*** (0.095)  -1.000*** (0.117)
+Intercept                         0.919*** (0.121)
+--------------------------------------------------
+f1                            x                  -
+--------------------------------------------------
+R2                        0.437              0.123
+S.E. type          by: group_id       by: group_id
+Observations                997                998
+--------------------------------------------------
+Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
+Format of coefficient cell:
+Coefficient (Std. Error)</code></pre>
+</div>
 </div>
 </section>
 <section id="visualization" class="level2">
 <h2 class="anchored" data-anchor-id="visualization">Visualization</h2>
 <p><code>PyFixest</code> provides two functions to visualize the results of a regression: <code>coefplot</code> and <code>iplot</code>.</p>
-<div id="cell-49" class="cell">
+<div id="cell-47" class="cell" data-execution_count="42">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>LetsPlot.setup_html()</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>multi_fit.coefplot().show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+            <div id="TOAIRv"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.2/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("TOAIRv").appendChild(div);
+                    };
+                    var e = document.getElementById("TOAIRv");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+   <div id="QB0Qbx"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+       (function() {
+           var plotSpec={
+"data":{
+"Coefficient":["Intercept","X1","X1","X1","X1","X1","X1","X1","X1","X1"],
+"Model":["Y~X1","Y~X1","Y~X1|f1","Y~X1|f1+f2","Y~X1","Y~X1|f1","Y~X1|f1+f2","Y~X1","Y~X1|f1","Y~X1|f1+f2"],
+"Estimate":[0.9185177588356426,-1.000085840074156,-0.9494410591286258,-0.9192548853827908,-1.000085840074156,-0.9494410591286258,-0.9192548853827908,-1.000085840074156,-0.9494410591286258,-0.9192548853827908],
+"2.5%":[0.6990856170653885,-1.1663660739416457,-1.0839997603783968,-1.0334504235222999,-1.1663660739416457,-1.0839997603783968,-1.0334504235222999,-1.1663660739416457,-1.0839997603783968,-1.0334504235222999],
+"97.5%":[1.1379499006058966,-0.8338056062066661,-0.8148823578788547,-0.8050593472432815,-0.8338056062066661,-0.8148823578788547,-0.8050593472432815,-0.8338056062066661,-0.8148823578788547,-0.8050593472432815]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+},
+"coord":{
+"name":"flip",
+"flip":true
+},
+"ggsize":{
+"width":500.0,
+"height":300.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"kind":"plot",
+"scales":[{
+"name":"Estimate and 95% Confidence Interval",
+"aesthetic":"y"
+}],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+},{
+"geom":"hline",
+"mapping":{
+},
+"data_meta":{
+},
+"yintercept":0.0,
+"linetype":"dashed",
+"color":"black",
+"data":{
+}
+}],
+"metainfo_list":[]
+};
+           var plotContainer = document.getElementById("QB0Qbx");
+           window.letsPlotCall(function() {{
+               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
+           }});
+       })();
+   </script>
+</div>
 </div>
 </section>
 <section id="difference-in-differences-event-study-designs" class="level2">
 <h2 class="anchored" data-anchor-id="difference-in-differences-event-study-designs">Difference-in-Differences / Event Study Designs</h2>
 <p><code>PyFixest</code> supports eventy study designs via two-way fixed effects and Gardner’s 2-stage estimator.</p>
-<div id="cell-51" class="cell">
+<div id="cell-49" class="cell" data-execution_count="43">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="43">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">unit</th>
+<th data-quarto-table-cell-role="th">state</th>
+<th data-quarto-table-cell-role="th">group</th>
+<th data-quarto-table-cell-role="th">unit_fe</th>
+<th data-quarto-table-cell-role="th">g</th>
+<th data-quarto-table-cell-role="th">year</th>
+<th data-quarto-table-cell-role="th">year_fe</th>
+<th data-quarto-table-cell-role="th">treat</th>
+<th data-quarto-table-cell-role="th">rel_year</th>
+<th data-quarto-table-cell-role="th">rel_year_binned</th>
+<th data-quarto-table-cell-role="th">error</th>
+<th data-quarto-table-cell-role="th">te</th>
+<th data-quarto-table-cell-role="th">te_dynamic</th>
+<th data-quarto-table-cell-role="th">dep_var</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1</td>
+<td>33</td>
+<td>Group 2</td>
+<td>7.043016</td>
+<td>2010</td>
+<td>1990</td>
+<td>0.066159</td>
+<td>False</td>
+<td>-20.0</td>
+<td>-6</td>
+<td>-0.086466</td>
+<td>0</td>
+<td>0.0</td>
+<td>7.022709</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1</td>
+<td>33</td>
+<td>Group 2</td>
+<td>7.043016</td>
+<td>2010</td>
+<td>1991</td>
+<td>-0.030980</td>
+<td>False</td>
+<td>-19.0</td>
+<td>-6</td>
+<td>0.766593</td>
+<td>0</td>
+<td>0.0</td>
+<td>7.778628</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>1</td>
+<td>33</td>
+<td>Group 2</td>
+<td>7.043016</td>
+<td>2010</td>
+<td>1992</td>
+<td>-0.119607</td>
+<td>False</td>
+<td>-18.0</td>
+<td>-6</td>
+<td>1.512968</td>
+<td>0</td>
+<td>0.0</td>
+<td>8.436377</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>1</td>
+<td>33</td>
+<td>Group 2</td>
+<td>7.043016</td>
+<td>2010</td>
+<td>1993</td>
+<td>0.126321</td>
+<td>False</td>
+<td>-17.0</td>
+<td>-6</td>
+<td>0.021870</td>
+<td>0</td>
+<td>0.0</td>
+<td>7.191207</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>1</td>
+<td>33</td>
+<td>Group 2</td>
+<td>7.043016</td>
+<td>2010</td>
+<td>1994</td>
+<td>-0.106921</td>
+<td>False</td>
+<td>-16.0</td>
+<td>-6</td>
+<td>-0.017603</td>
+<td>0</td>
+<td>0.0</td>
+<td>6.918492</td>
+</tr>
+</tbody>
+</table>
+
 </div>
-<div id="cell-52" class="cell">
+</div>
+</div>
+</div>
+<div id="cell-50" class="cell" data-execution_count="44">
 <div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> did2s(</span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -845,9 +1186,83 @@ Coefficient (Std. Error)</code></pre>
 <span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a>pf.iplot(</span>
 <span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a>    [fit_did2s, fit_twfe], coord_flip<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">900</span>, <span class="dv">400</span>), title<span class="op">=</span><span class="st">"TWFE vs DID2S"</span></span>
 <span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="44">
+   <div id="uICKKA"></div>
+   <script type="text/javascript" data-lets-plot-script="plot">
+       (function() {
+           var plotSpec={
+"data":{
+"Model":["dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var_hat~i(rel_year,ref=-1.0)","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year"],
+"Coefficient":["C(rel_year, contr.treatment(base=-1.0))[T.-20.0]","C(rel_year, contr.treatment(base=-1.0))[T.-19.0]","C(rel_year, contr.treatment(base=-1.0))[T.-18.0]","C(rel_year, contr.treatment(base=-1.0))[T.-17.0]","C(rel_year, contr.treatment(base=-1.0))[T.-16.0]","C(rel_year, contr.treatment(base=-1.0))[T.-15.0]","C(rel_year, contr.treatment(base=-1.0))[T.-14.0]","C(rel_year, contr.treatment(base=-1.0))[T.-13.0]","C(rel_year, contr.treatment(base=-1.0))[T.-12.0]","C(rel_year, contr.treatment(base=-1.0))[T.-11.0]","C(rel_year, contr.treatment(base=-1.0))[T.-10.0]","C(rel_year, contr.treatment(base=-1.0))[T.-9.0]","C(rel_year, contr.treatment(base=-1.0))[T.-8.0]","C(rel_year, contr.treatment(base=-1.0))[T.-7.0]","C(rel_year, contr.treatment(base=-1.0))[T.-6.0]","C(rel_year, contr.treatment(base=-1.0))[T.-5.0]","C(rel_year, contr.treatment(base=-1.0))[T.-4.0]","C(rel_year, contr.treatment(base=-1.0))[T.-3.0]","C(rel_year, contr.treatment(base=-1.0))[T.-2.0]","C(rel_year, contr.treatment(base=-1.0))[T.0.0]","C(rel_year, contr.treatment(base=-1.0))[T.1.0]","C(rel_year, contr.treatment(base=-1.0))[T.2.0]","C(rel_year, contr.treatment(base=-1.0))[T.3.0]","C(rel_year, contr.treatment(base=-1.0))[T.4.0]","C(rel_year, contr.treatment(base=-1.0))[T.5.0]","C(rel_year, contr.treatment(base=-1.0))[T.6.0]","C(rel_year, contr.treatment(base=-1.0))[T.7.0]","C(rel_year, contr.treatment(base=-1.0))[T.8.0]","C(rel_year, contr.treatment(base=-1.0))[T.9.0]","C(rel_year, contr.treatment(base=-1.0))[T.10.0]","C(rel_year, contr.treatment(base=-1.0))[T.11.0]","C(rel_year, contr.treatment(base=-1.0))[T.12.0]","C(rel_year, contr.treatment(base=-1.0))[T.13.0]","C(rel_year, contr.treatment(base=-1.0))[T.14.0]","C(rel_year, contr.treatment(base=-1.0))[T.15.0]","C(rel_year, contr.treatment(base=-1.0))[T.16.0]","C(rel_year, contr.treatment(base=-1.0))[T.17.0]","C(rel_year, contr.treatment(base=-1.0))[T.18.0]","C(rel_year, contr.treatment(base=-1.0))[T.19.0]","C(rel_year, contr.treatment(base=-1.0))[T.20.0]","C(rel_year, contr.treatment(base=-1.0))[T.inf]","C(rel_year, contr.treatment(base=-1.0))[T.-20.0]","C(rel_year, contr.treatment(base=-1.0))[T.-19.0]","C(rel_year, contr.treatment(base=-1.0))[T.-18.0]","C(rel_year, contr.treatment(base=-1.0))[T.-17.0]","C(rel_year, contr.treatment(base=-1.0))[T.-16.0]","C(rel_year, contr.treatment(base=-1.0))[T.-15.0]","C(rel_year, contr.treatment(base=-1.0))[T.-14.0]","C(rel_year, contr.treatment(base=-1.0))[T.-13.0]","C(rel_year, contr.treatment(base=-1.0))[T.-12.0]","C(rel_year, contr.treatment(base=-1.0))[T.-11.0]","C(rel_year, contr.treatment(base=-1.0))[T.-10.0]","C(rel_year, contr.treatment(base=-1.0))[T.-9.0]","C(rel_year, contr.treatment(base=-1.0))[T.-8.0]","C(rel_year, contr.treatment(base=-1.0))[T.-7.0]","C(rel_year, contr.treatment(base=-1.0))[T.-6.0]","C(rel_year, contr.treatment(base=-1.0))[T.-5.0]","C(rel_year, contr.treatment(base=-1.0))[T.-4.0]","C(rel_year, contr.treatment(base=-1.0))[T.-3.0]","C(rel_year, contr.treatment(base=-1.0))[T.-2.0]","C(rel_year, contr.treatment(base=-1.0))[T.0.0]","C(rel_year, contr.treatment(base=-1.0))[T.1.0]","C(rel_year, contr.treatment(base=-1.0))[T.2.0]","C(rel_year, contr.treatment(base=-1.0))[T.3.0]","C(rel_year, contr.treatment(base=-1.0))[T.4.0]","C(rel_year, contr.treatment(base=-1.0))[T.5.0]","C(rel_year, contr.treatment(base=-1.0))[T.6.0]","C(rel_year, contr.treatment(base=-1.0))[T.7.0]","C(rel_year, contr.treatment(base=-1.0))[T.8.0]","C(rel_year, contr.treatment(base=-1.0))[T.9.0]","C(rel_year, contr.treatment(base=-1.0))[T.10.0]","C(rel_year, contr.treatment(base=-1.0))[T.11.0]","C(rel_year, contr.treatment(base=-1.0))[T.12.0]","C(rel_year, contr.treatment(base=-1.0))[T.13.0]","C(rel_year, contr.treatment(base=-1.0))[T.14.0]","C(rel_year, contr.treatment(base=-1.0))[T.15.0]","C(rel_year, contr.treatment(base=-1.0))[T.16.0]","C(rel_year, contr.treatment(base=-1.0))[T.17.0]","C(rel_year, contr.treatment(base=-1.0))[T.18.0]","C(rel_year, contr.treatment(base=-1.0))[T.19.0]","C(rel_year, contr.treatment(base=-1.0))[T.20.0]","C(rel_year, contr.treatment(base=-1.0))[T.inf]"],
+"Estimate":[-0.07930892379170669,-0.027115309873244755,-0.027235435350764316,-0.03361637397576204,-0.05578068831093835,0.01674513656446518,-0.02086993744456097,-0.022209824688845536,0.005447073274778881,-0.04792474874869773,-0.03247855934296003,-0.03751722264066751,-0.030856942644321275,-0.007104690258118683,-0.039598001783394315,-0.07918308610819687,-0.03422655342074936,-0.015214092720010685,-0.038687531424549226,1.3044622847590652,1.5334860476936707,1.5971037484422894,1.718847309180147,1.8462967066123768,1.9905872778860922,2.0788829001715436,2.1653995661371632,2.258950448012607,2.2777630764062358,2.4147668193865734,2.4563352194604438,2.5072957344947397,2.4814015130523845,2.626326070707077,2.8126319507465785,2.762682379858839,2.811300393411503,2.7770354043917562,2.7861644754695067,2.8148582432189846,0.030505181948300618,-0.09944466441181407,6.23519975400307E-4,0.0041247661867057995,0.021899085459484872,-0.03693340882836111,0.06957783836542085,0.03773442317032304,0.06177914337449611,0.08991270466792296,9.822487465557272E-4,-0.11303282051981747,-0.06922462711945501,-0.061289513093629025,-0.0020224309370890357,-0.05580979472634313,-0.06500868193865345,-0.009849959807181893,0.04633807990097424,0.015947312893775302,1.406404490822593,1.6605518884804105,1.7287900538935237,1.8548389960027065,1.9586760781129549,2.082161283635855,2.1910619949213292,2.279072842371443,2.3645934393351222,2.372162693677256,2.6492711880908235,2.753590871536464,2.81393547422749,2.756069650642772,2.8634270216427646,2.9866523455332556,2.9630322165965404,2.972596421114107,2.9350513290126417,2.9187065136810078,2.979701202491609,0.12805306243573136],
+"2.5%":[-0.1695600913438541,-0.13130815610041208,-0.12259738225267744,-0.1175645163481524,-0.15943222422456108,-0.08271384506652281,-0.11742994692058029,-0.10020049059609207,-0.08409592792949198,-0.16435158427962726,-0.09941164460147212,-0.09715638905461493,-0.09367244147088058,-0.07832139368493432,-0.09281052913292714,-0.1388263127648801,-0.08904078728121567,-0.07493744182060509,-0.10202240184199105,1.194594346575011,1.4072836249567104,1.4860049540989104,1.6001299023272977,1.7528192639692397,1.8801608387434234,1.9527955114720021,2.050837966769707,2.1453420283383227,2.173300068852982,2.2970296208225083,2.2958801505463473,2.3509943789870746,2.315656867630969,2.489639041038913,2.650494736809072,2.601104141911765,2.6557354064354373,2.61676210244634,2.6094181968232464,2.6520847796434914,-0.00971897358507584,-0.2646972304933436,-0.16769018688345885,-0.17734940744468852,-0.15141773681724854,-0.23297450453669644,-0.09484387010242608,-0.13746745521816428,-0.10683560211191703,-0.08181351401233818,-0.15902123698075604,-0.2443506562456939,-0.18461172525475777,-0.18338272511269268,-0.1326928866666348,-0.1866256631156605,-0.1960991761768802,-0.11725094987359078,-0.0809912241439136,-0.11642114159510045,1.2938600189553549,1.5290095619722583,1.613915005015477,1.7368859662793261,1.814774185790572,1.9530023735556978,2.052486677327441,2.1273424786361748,2.2460668440010703,2.257759442916459,2.5356414801659573,2.6008255523798414,2.6534963681556536,2.5975551692265255,2.664416143565802,2.7979163360468178,2.7902393404784664,2.7857206716995413,2.7446638314603145,2.7484109878126053,2.8021561430453152,-0.030754737319463377],
+"97.5%":[0.010942243760440729,0.07707753635392256,0.06812651155114882,0.05033176839662833,0.04787084760268437,0.11620411819545316,0.07569007203145836,0.05578084121840099,0.09499007447904974,0.0685020867822318,0.034454525915552044,0.022121943773279917,0.03195855618223803,0.06411201316869697,0.013614525566138513,-0.019539859451513618,0.02058768043971696,0.04450925638058373,0.024647338992892592,1.4143302229431194,1.659688470430631,1.7082025427856684,1.8375647160329964,1.9397741492555138,2.1010137170287613,2.204970288871085,2.2799611655046195,2.3725588676868914,2.3822260839594893,2.5325040179506386,2.61679028837454,2.663597090002405,2.6471461584738,2.7630131003752405,2.974769164684085,2.924260617805913,2.966865380387569,2.9373087063371726,2.962910754115767,2.9776317067944778,0.07072933748167708,0.06580790166971548,0.16893722683425946,0.1855989398181001,0.1952159077362183,0.15910768687997423,0.2339995468332678,0.21293630155881038,0.23039388886090925,0.2616389233481841,0.1609857344738675,0.018285015206058963,0.04616247101584775,0.060803698925434635,0.12864802479245674,0.07500607366297427,0.0660818122995733,0.09755103025922698,0.1736673839458621,0.14831576738265104,1.5189489626898312,1.7920942149885626,1.8436651027715705,1.972792025726087,2.1025779704353376,2.2113201937160123,2.3296373125152177,2.4308032061067113,2.483120034669174,2.486565944438053,2.7629008960156898,2.9063561906930864,2.9743745802993264,2.914584132059019,3.0624378997197272,3.1753883550196935,3.1358250927146143,3.1594721705286726,3.125438826564969,3.08900203954941,3.157246261937903,0.2868608621909261]
+},
+"mapping":{
+"x":"Coefficient",
+"y":"Estimate",
+"color":"Model"
+},
+"data_meta":{
+},
+"ggsize":{
+"width":900.0,
+"height":400.0
+},
+"theme":{
+"axis_text_x":{
+"angle":0.0,
+"blank":false
+}
+},
+"ggtitle":{
+"text":"TWFE vs DID2S"
+},
+"kind":"plot",
+"scales":[{
+"name":"Estimate and 95% Confidence Interval",
+"aesthetic":"y"
+}],
+"layers":[{
+"geom":"point",
+"mapping":{
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"data":{
+}
+},{
+"geom":"errorbar",
+"mapping":{
+"ymin":"2.5%",
+"ymax":"97.5%"
+},
+"position":{
+"name":"dodge",
+"width":0.5
+},
+"data_meta":{
+},
+"width":0.05,
+"data":{
+}
+}],
+"metainfo_list":[]
+};
+           var plotContainer = document.getElementById("uICKKA");
+           window.letsPlotCall(function() {{
+               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
+           }});
+       })();
+   </script>
+</div>
 </div>
 <p>The <code>event_study()</code> function provides a common API for several event study estimators.</p>
-<div id="cell-54" class="cell">
+<div id="cell-52" class="cell" data-execution_count="45">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> event_study(</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_het,</span>
 <span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -867,6 +1282,24 @@ Coefficient (Std. Error)</code></pre>
 <span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_twfe, fit_did2s])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                          est1              est2
+------------  ----------------  ----------------
+depvar                 dep_var       dep_var_hat
+------------------------------------------------
+ATT           2.135*** (0.044)  2.152*** (0.048)
+------------------------------------------------
+state                        x                 -
+year                         x                 -
+------------------------------------------------
+R2                       0.758             0.338
+S.E. type            by: state              CRV1
+Observations             46500             46500
+------------------------------------------------
+Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
+Format of coefficient cell:
+Coefficient (Std. Error)</code></pre>
+</div>
 </div>
 
 
