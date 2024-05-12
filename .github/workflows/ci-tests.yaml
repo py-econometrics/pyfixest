@@ -40,7 +40,7 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf"));  install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf"))'
         shell: bash
 
       - name: Run tests

@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pytest
 import rpy2.robjects as ro
@@ -64,6 +66,10 @@ def test_algos_internally(data, fml, resampvar, reps, algo_iterations, cluster):
 )
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skip this test on GitHub Actions. It takes too long.",
+)
 def test_vs_r(data, fml, resampvar, cluster):
     fit = pf.feols(fml, data=data)
     reps = 10_000
