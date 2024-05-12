@@ -1663,7 +1663,6 @@ class Feols:
         reps: int = 100,
         type: str = "randomization-c",
         rng: Optional[np.random.Generator] = None,
-        vcov: Optional[Union[str, dict[str, str]]] = None,
         algo_iterations: Optional[int] = None,
         choose_algorithm: str = "auto",
         include_plot: bool = False,
@@ -1683,17 +1682,17 @@ class Feols:
             Defaults to None.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
-        vcov, str, optional
-            The type of variance-covariance matrix to use. Defaults to None.
-            If None, the default variance-covariance matrix of the
-            is used. Only relevant for the "randomization-t" type.
         type: str
             The type of the randomization inference test.
             Can be "randomization-c" or "randomization-t".
             Defaults to "randomization-c", mostly to performance reasons.
             Note that Wu & Ding (2021, JASA) recommend the randomization-t.
             This default is bound to change in the future once the performance
-            gap has been closed.
+            gap has been closed. If "bootstrap-t", uses "iid" vcovs when computing
+            the t-statistics when assignment is at the individual level and the
+            model has no controls, "HC1" if the assignment is at the ind. level
+            and the model has control, and uses CRV1 inference clustered at the
+            `cluster` level for cluster random assignment.
         rng : np.random.Generator, optional
             A random number generator. Defaults to None.
         algo_iterations : int, optional
@@ -1721,6 +1720,7 @@ class Feols:
         _method = self._method
         _is_iv = self._is_iv
         _coefnames = self._coefnames
+        _has_fixef = self._has_fixef
 
         # check that resampvar in _coefnames
         if resampvar not in _coefnames:
@@ -1757,9 +1757,6 @@ class Feols:
             and algo_iterations > 0
         ), "`algo_iterations` needs to be a positive integer and weakly smaller than `reps`."
 
-        if vcov is not None:
-            _check_vcov_input(vcov=vcov, data=self._data)
-
         if self._has_weights:
             raise NotImplementedError(
                 """
@@ -1776,7 +1773,6 @@ class Feols:
             _Y = self._Y
             _X = self._X
             _coefnames = self._coefnames
-            _has_fixef = self._has_fixef
 
             _weights = self._weights.flatten()
             _data = self._data
@@ -1800,11 +1796,16 @@ class Feols:
             )
 
         else:
-            _vcov_type_detail = self._vcov_type_detail
-            vcov_input: Union[str, dict[str, str]] = _vcov_type_detail
-            if self._vcov_type_detail in ["CRV1", "CRV3"]:
-                _clustervar = self._clustervar[0]
-                vcov_input = {_vcov_type_detail: _clustervar}
+            vcov_input: Union[str, dict[str, str]]
+            if cluster is not None:
+                vcov_input = {"CRV1": cluster}
+            else:
+                # "iid" for models without controls, else HC1
+                vcov_input = (
+                    "hetero"
+                    if (_has_fixef and len(_coefnames) > 1) or len(_coefnames) > 2
+                    else "iid"
+                )
 
             # for performance reasons
             if type == "randomization-c":
