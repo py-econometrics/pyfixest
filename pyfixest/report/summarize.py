@@ -128,7 +128,7 @@ def etable(
         _nobs_kwargs["scientific_notation"] = False
         nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
 
-        if model._r2 is not None:
+        if not np.isnan(model._r2):
             r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
             r2_list.append("-")
