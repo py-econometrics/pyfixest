@@ -1084,13 +1084,13 @@ files = [
 
 [[package]]
 name = "griffe"
-version = "0.44.0"
+version = "0.45.0"
 description = "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "griffe-0.44.0-py3-none-any.whl", hash = "sha256:8a4471c469ba980b87c843f1168850ce39d0c1d0c7be140dca2480f76c8e5446"},
-    {file = "griffe-0.44.0.tar.gz", hash = "sha256:34aee1571042f9bf00529bc715de4516fb6f482b164e90d030300601009e0223"},
+    {file = "griffe-0.45.0-py3-none-any.whl", hash = "sha256:90fe5c90e1b0ca7dd6fee78f9009f4e01b37dbc9ab484a9b2c1578915db1e571"},
+    {file = "griffe-0.45.0.tar.gz", hash = "sha256:85cb2868d026ea51c89bdd589ad3ccc94abc5bd8d5d948e3d4450778a2a05b4a"},
 ]
 
 [package.dependencies]
@@ -2099,13 +2099,13 @@ traitlets = "*"
 
 [[package]]
 name = "mdit-py-plugins"
-version = "0.4.0"
+version = "0.4.1"
 description = "Collection of plugins for markdown-it-py"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mdit_py_plugins-0.4.0-py3-none-any.whl", hash = "sha256:b51b3bb70691f57f974e257e367107857a93b36f322a9e6d44ca5bf28ec2def9"},
-    {file = "mdit_py_plugins-0.4.0.tar.gz", hash = "sha256:d8ab27e9aed6c38aa716819fedfde15ca275715955f8a185a8e1cf90fb1d2c1b"},
+    {file = "mdit_py_plugins-0.4.1-py3-none-any.whl", hash = "sha256:1020dfe4e6bfc2c79fb49ae4e3f5b297f5ccd20f010187acc52af2921e27dc6a"},
+    {file = "mdit_py_plugins-0.4.1.tar.gz", hash = "sha256:834b8ac23d1cd60cec703646ffd22ae97b7955a6d596eb1d304be1e251ae499c"},
 ]
 
 [package.dependencies]
@@ -2794,13 +2794,13 @@ files = [
 
 [[package]]
 name = "plum-dispatch"
-version = "2.3.5"
+version = "2.3.6"
 description = "Multiple dispatch in Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "plum_dispatch-2.3.5-py3-none-any.whl", hash = "sha256:4d1038455ad562e677a161ae9a28a4867af1bfc7c47cc7a97e2021b3043f14fd"},
-    {file = "plum_dispatch-2.3.5.tar.gz", hash = "sha256:7ad89cc2029d87b0e3bacc7cc773f196ae329ce115f308b62f2d06c68b18a38d"},
+    {file = "plum_dispatch-2.3.6-py3-none-any.whl", hash = "sha256:ad0e6f1aa40f6b0bd286e0c24bc5928545095e61dc7b07d19455a7f3b064c907"},
+    {file = "plum_dispatch-2.3.6.tar.gz", hash = "sha256:664e79003076aac754127fe9d667f43cf22e448a179d46ddfe298f18c012551d"},
 ]
 
 [package.dependencies]
@@ -2809,7 +2809,7 @@ rich = ">=10.0"
 typing-extensions = {version = "*", markers = "python_version <= \"3.10\""}
 
 [package.extras]
-dev = ["black (==23.9.0)", "build", "coveralls", "ghp-import", "ipython", "jupyter-book", "mypy", "numpy", "pre-commit", "pyright (>=1.1.331)", "pytest (>=6)", "pytest-cov", "ruff (==0.1.0)", "tox", "wheel"]
+dev = ["black (==23.9.0)", "build", "coveralls", "ghp-import", "ipython", "jupyter-book", "mypy", "numpy", "pre-commit", "pyright (>=1.1.331)", "pytest (>=6)", "pytest-cov", "ruff (==0.1.0)", "sybil", "tox", "wheel"]
 
 [[package]]
 name = "poetry"
