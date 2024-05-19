@@ -69,7 +69,6 @@ def _get_ritest_stats_fast(
     resampvar: str,
     reps: int,
     rng: np.random.Generator,
-    has_fixef: bool,
     algo_iterations: int,
     weights: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
@@ -87,6 +86,8 @@ def _get_ritest_stats_fast(
             fval = fval.astype(int)
 
         fval = fval.reshape(-1, 1) if fval.ndim == 1 else fval
+    else:
+        fval = None
 
     idx = coefnames.index(resampvar)
     bool_idx = np.ones(len(coefnames), dtype=bool)
@@ -116,7 +117,6 @@ def _get_ritest_stats_fast(
         clustervar_arr=clustervar_arr,
         fwl_error_1=fwl_error_1,
         X_demean2=X_demean2,
-        has_fixef=has_fixef,
         fval=fval,
         weights=weights,
         rng=rng,
@@ -156,7 +156,7 @@ def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
     return plot.show()
 
 
-@nb.njit(parallel=True)
+# @nb.njit
 def _run_ri(
     reps: int,
     algo_iterations: int,
@@ -165,8 +165,7 @@ def _run_ri(
     resampvar_arr: np.ndarray,
     fwl_error_1: np.ndarray,
     rng: np.random.Generator,
-    has_fixef: bool,
-    fval: str,
+    fval: np.ndarray,
     weights: np.ndarray,
     X_demean2: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
@@ -191,10 +190,7 @@ def _run_ri(
                 iterations=iteration_length,
             )
 
-        if has_fixef:
-            D2_demean, _ = demean(D2, fval, weights)
-        else:
-            D2_demean = D2
+        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
 
         fwl_error_2 = D2_demean - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean)[0]
 

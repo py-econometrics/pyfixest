@@ -1,8 +1,6 @@
-import os
-
 import numpy as np
+import pandas as pd
 import pytest
-import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
@@ -17,12 +15,10 @@ ritest = importr("ritest")
 
 @pytest.fixture
 def data():
-    return pf.get_data(N=10000)
+    return pf.get_data(N=1000)
 
 
-@pytest.mark.parametrize(
-    "fml", ["Y ~ X1 + f3", "Y ~ X1 + f3 | f1", "Y ~ X1 + f3 | f1 + f2"]
-)
+@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
 @pytest.mark.parametrize("algo_iterations", [None, 10])
@@ -61,18 +57,21 @@ def test_algos_internally(data, fml, resampvar, reps, algo_iterations, cluster):
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-3, rtol=1e-3)
 
 
-@pytest.mark.parametrize(
-    "fml", ["Y ~ X1 + f3", "Y ~ X1 + f3 | f1", "Y ~ X1 + f3 | f1 + f2"]
-)
+@pytest.fixture
+def ritest_results():
+    # Load the CSV file into a pandas DataFrame
+    file_path = "tests/data/ritest_results.csv"
+    results_df = pd.read_csv(file_path)
+    results_df.set_index(["formula", "resampvar", "cluster"], inplace=True)
+    return results_df
+
+
+@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
-@pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
-    reason="Skip this test on GitHub Actions. It takes too long.",
-)
-def test_vs_r(data, fml, resampvar, cluster):
+def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 10_000
+    reps = 20_000
 
     rng1 = np.random.default_rng(1234)
 
@@ -89,14 +88,14 @@ def test_vs_r(data, fml, resampvar, cluster):
     kwargs1["rng"] = rng1
 
     res1 = fit.ritest(**kwargs1)
-    # fit via rpy2
-    r_fixest = fixest.feols(ro.Formula(fml), data=data)
 
     if cluster is not None:
-        res_r = ritest.ritest(
-            object=r_fixest, resampvar=resampvar, cluster=cluster, reps=reps, seed=123
-        )
+        pval = ritest_results.xs(
+            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
+        )["pval"].to_numpy()
     else:
-        res_r = ritest.ritest(object=r_fixest, resampvar=resampvar, reps=reps, seed=123)
+        pval = ritest_results.xs(
+            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
+        )["pval"].to_numpy()
 
-    assert np.allclose(res1["Pr(>|t|)"], res_r.rx2("pval"), rtol=1e-02, atol=1e-02)
+    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-02, atol=1e-02)

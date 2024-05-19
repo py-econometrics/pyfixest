@@ -1788,7 +1788,6 @@ class Feols:
                 clustervar_arr=clustervar_arr,
                 reps=reps,
                 rng=rng,
-                has_fixef=_has_fixef,
                 fval_df=_fval_df,
                 algo_iterations=algo_iterations,
                 weights=_weights,

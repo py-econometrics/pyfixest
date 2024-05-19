@@ -179,3 +179,5 @@ just render
 # preview the docs
 just preview
 ```
+
+To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run `just update-tests-data`.
