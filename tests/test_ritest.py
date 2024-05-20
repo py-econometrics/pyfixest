@@ -1,16 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from rpy2.robjects import pandas2ri
-from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-
-pandas2ri.activate()
-
-fixest = importr("fixest")
-stats = importr("stats")
-ritest = importr("ritest")
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
