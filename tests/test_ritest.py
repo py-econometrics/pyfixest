@@ -107,4 +107,4 @@ def test_fepois_ritest():
     fit.ritest(resampvar="f3", reps=2000, store_ritest_statistics=True)
 
     assert fit._ritest_statistics is not None
-    assert np.allclose(fit.pvalue().xs("X1"), fit._ritest_pvalue, rtol=1e-01, atol=0.01)
+    assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=1e-01, atol=0.01)
