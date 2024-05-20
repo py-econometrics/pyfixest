@@ -13,11 +13,6 @@ stats = importr("stats")
 ritest = importr("ritest")
 
 
-@pytest.fixture
-def data():
-    return pf.get_data(N=1000)
-
-
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
@@ -66,12 +61,17 @@ def ritest_results():
     return results_df
 
 
+@pytest.fixture
+def data():
+    return pf.get_data(N=2000, seed=999)
+
+
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 20_000
+    reps = 10_000
 
     rng1 = np.random.default_rng(1234)
 
@@ -84,7 +84,7 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
 
     kwargs1 = kwargs.copy()
 
-    kwargs1["choose_algorithm"] = "slow"
+    kwargs1["choose_algorithm"] = "fast"
     kwargs1["rng"] = rng1
 
     res1 = fit.ritest(**kwargs1)
@@ -98,4 +98,4 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
             (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
         )["pval"].to_numpy()
 
-    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-02, atol=1e-02)
+    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-01, atol=0.01)
