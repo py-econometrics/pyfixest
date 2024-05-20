@@ -99,3 +99,9 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
         )["pval"].to_numpy()
 
     assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-01, atol=0.01)
+
+
+def test_fepois_ritest():
+    data = pf.get_data(model="Fepois")
+    fit = pf.fepois("Y ~ X1", data=data)
+    fit.ritest(resampvar="X1", reps=100)

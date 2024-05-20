@@ -33,7 +33,40 @@ def _get_ritest_stats_slow(
     vcov: Union[str, dict[str, str]],
     clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Compute tests statistics using randomization inference (slow)."""
+    """
+    Compute tests statistics using randomization inference (slow).
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The input data set.
+    resampvar : str
+        The name of the treatment variable.
+    fml : str
+        The formula of the regression model.
+    type : str
+        The type of the test statistic. Must be one of 'randomization-c'
+        or 'randomization-t'. If 'randomization-c', the statistic
+        is the regression coefficient.
+        If 'randomization-t', the statistic is the t-statistic.
+    reps : int
+        The number of repetitions.
+    model : str
+        The model to estimate. Must be one of 'feols' or 'fepois'.
+    rng : np.random.Generator
+        The random number generator.
+    vcov : str or dict[str, str]
+        The type of covarianc estimator. See `feols` or `fepois` for details.
+    clustervar_arr : np.ndarray, optional
+        Array containing the cluster variable. Defaults to None.
+
+    Returns
+    -------
+    np.ndarray
+        The test statistics. For this algorithm, regression coefficients are returned if
+        `type` is 'randomization-c', otherwise t-statistics are returned.
+
+    """
     data_resampled = data.copy()
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
@@ -74,6 +107,44 @@ def _get_ritest_stats_fast(
     clustervar_arr: Optional[np.ndarray] = None,
     fval_df: Optional[pd.DataFrame] = None,
 ) -> np.ndarray:
+    """
+    Compute tests statistics using randomization inference (fast).
+
+    Parameters
+    ----------
+    Y : np.ndarray
+        The dependent variable. If the model has fixed effects, the dependent
+        variable must be demeaned.
+    X : np.ndarray
+        The design matrix. If the model has fixed effects, the design matrix
+        must be demeaned.
+    D : np.ndarray
+        The treatment variable.
+    coefnames : list
+        The names of the coefficients in the regression model.
+    resampvar : str
+        The name of the treatment variable.
+    reps : int
+        The number of repetitions.
+    rng : np.random.Generator
+        The random number generator.
+    algo_iterations : int
+        The number of iterations for the algorithm. If bigger than 1,
+        core steps of the algorithm are vectorized, which may speed up
+        the computation.
+    weights : np.ndarray
+        The sample weights.
+    clustervar_arr : np.ndarray, optional
+        Array containing the cluster variable. Defaults to None.
+    fval_df : pd.DataFrame, optional
+        The fixed effects. Defaults to None.
+
+    Returns
+    -------
+    np.ndarray
+        The test statistics. For this algorithm, regression coefficients are
+        returned.
+    """
     X_demean = X
     Y_demean = Y.flatten()
 
@@ -126,6 +197,7 @@ def _get_ritest_stats_fast(
 def _get_ritest_pvalue(
     sample_stat: np.ndarray, ri_stats: np.ndarray, method: str
 ) -> np.ndarray:
+    """Compute the p-value of the test statistic."""
     if method == "two-sided":
         p_value = (np.abs(ri_stats) >= np.abs(sample_stat)).mean()
     elif method in ["right", "left"]:
@@ -141,6 +213,7 @@ def _get_ritest_pvalue(
 
 
 def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
+    """Plot the permutation distribution of the test statistic."""
     df = pd.DataFrame({"ri_stats": ri_stats})
 
     plot = (
@@ -170,6 +243,43 @@ def _run_ri(
     X_demean2: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
+    """
+    Run the randomization inference.
+
+    Parameters
+    ----------
+    reps : int
+        The number of repetitions.
+    algo_iterations : int
+        The number of iterations for the algorithm. If bigger than 1,
+        core steps of the algorithm are vectorized, which may speed up
+        the computation.
+    iteration_length : int
+        The number of repetitions per iteration.
+    last_iteration : int
+        The number of repetitions for the last iteration.
+    resampvar_arr : np.ndarray
+        Array containing the treatment variable.
+    fwl_error_1 : np.ndarray
+        The FWL residuals from the first stage of the FWL algorithm.
+    rng : np.random.Generator
+        The random number generator.
+    fval : np.ndarray
+        The fixed effects decoded as integers.
+    weights : np.ndarray
+        The sample weights.
+    X_demean2 : np.ndarray
+        The demeaned design matrix.
+    clustervar_arr : np.ndarray, optional
+        Array containing the cluster variable. Defaults to None.
+
+    Returns
+    -------
+    np.ndarray
+        The coefficients of the randomization inference.
+        For this algorithm, regression coefficients are
+        returned.
+    """
     is_last_iteration = False
     ri_coefs = np.zeros(reps)
 
@@ -213,6 +323,29 @@ def _resample(
     iterations: int = 1,
     clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
+    """
+    Random resampling of the treatment variable.
+
+    Parameters
+    ----------
+    resampvar_arr : np.ndarray
+        Array containing the treatment variable.
+    rng : np.random.Generator
+        The random number generator.
+    iterations : int, optional
+        The number of iterations. Defaults to 1. If bigger than 1,
+        return `iterations` resampled treatment variables. Basically,
+        this argument allows to vectorize the resampling process.
+    clustervar_arr : np.ndarray, optional
+        Array containing the cluster variable. Defaults to None.
+
+    Returns
+    -------
+    np.ndarray
+        The resampled treatment variable(s). If `iterations` is bigger
+        than 1, the array has shape (N, iterations), where N is the
+        number of observations. Otherwise, the array has shape (N,1).
+    """
     N = resampvar_arr.shape[0]
     resampvar_values = np.unique(resampvar_arr)
 
@@ -233,10 +366,23 @@ def _resample(
 
 
 @nb.njit
-def random_choice(arr, size, rng):
+def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
     """
-    Simulate numpy.random.choice without replacement probabilities.
-    Select 'size' elements from 'arr' with replacement.
+    Randomly sample from an array.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        The array from which to sample.
+    size : int
+        The number of samples.
+    rng : np.random.Generator
+        The random number generator.
+
+    Returns
+    -------
+    np.ndarray
+        The sampled array (with replacement) of size `size`.
     """
     n = len(arr)
     result = np.empty(size, dtype=arr.dtype)

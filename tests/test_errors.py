@@ -371,3 +371,7 @@ def test_ritest_error(data):
 
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
+
+    with pytest.raises(NotImplementedError):
+        fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+        fit_iv.ritest(resampvar="X1", reps=100)

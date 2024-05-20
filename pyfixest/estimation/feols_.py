@@ -12,10 +12,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.errors import (
-    NanInClusterVarError,
-    VcovTypeNotSupportedError,
-)
+from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
     _get_ritest_pvalue,
     _get_ritest_stats_fast,
@@ -1721,6 +1718,11 @@ class Feols:
         _is_iv = self._is_iv
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
+
+        if _is_iv:
+            raise NotImplementedError(
+                "Randomization Inference is not supported for IV models."
+            )
 
         # check that resampvar in _coefnames
         if resampvar not in _coefnames:
