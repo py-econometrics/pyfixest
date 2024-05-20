@@ -302,15 +302,17 @@ def _run_ri(
 
         D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
 
-        fwl_error_2 = D2_demean - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean)[0]
+        fwl_error_2 = (
+            D2_demean - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean, rcond=None)[0]
+        )
 
         if is_last_iteration:
             ri_coefs[(i * iteration_length) :] = np.linalg.lstsq(
-                fwl_error_2, fwl_error_1
+                fwl_error_2, fwl_error_1, rcond=None
             )[0]
         else:
             ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
-                np.linalg.lstsq(fwl_error_2, fwl_error_1)[0]
+                np.linalg.lstsq(fwl_error_2, fwl_error_1, rcond=None)[0]
             )
 
     return ri_coefs
