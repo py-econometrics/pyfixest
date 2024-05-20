@@ -128,7 +128,7 @@ def etable(
         _nobs_kwargs["scientific_notation"] = False
         nobs_list.append(_number_formatter(model._N, **_nobs_kwargs))
 
-        if model._r2 is not None:
+        if not np.isnan(model._r2):
             r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
             r2_list.append("-")
@@ -142,6 +142,9 @@ def etable(
             fixef_list += model._fixef.split("+")
 
     # find all fixef variables
+    # drop "" from fixef_list
+    fixef_list = [x for x in fixef_list if x]
+    # keep only unique values
     fixef_list = list(set(fixef_list))
     n_fixef = len(fixef_list)
 
@@ -152,11 +155,12 @@ def etable(
 
     if fixef_list:  # only when at least one model has a fixed effect
         for fixef in fixef_list:
-            nobs_fixef_df[fixef] = "-"
-
-            for i, model in enumerate(models):
-                if model._fixef is not None and fixef in model._fixef.split("+"):
-                    nobs_fixef_df.loc[i, fixef] = "x"
+            # check if not empty string
+            if fixef:
+                nobs_fixef_df[fixef] = "-"
+                for i, model in enumerate(models):
+                    if model._fixef is not None and fixef in model._fixef.split("+"):
+                        nobs_fixef_df.loc[i, fixef] = "x"
 
     colnames = nobs_fixef_df.columns.tolist()
     colnames.reverse()
@@ -335,13 +339,13 @@ def summary(
         to_print = ""
 
         if not np.isnan(fxst._rmse):
-            to_print += f"RMSE: {np.round(fxst._rmse, digits)}"
+            to_print += f"RMSE: {np.round(fxst._rmse, digits)} "
         if not np.isnan(fxst._r2):
-            to_print += f"R2: {np.round(fxst._r2, digits)}"
+            to_print += f"R2: {np.round(fxst._r2, digits)} "
         if not np.isnan(fxst._r2_within):
-            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)}"
+            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
         if fxst.deviance is not None:
-            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)}"
+            to_print += f"Deviance: {np.round(fxst.deviance[0], digits)} "
 
         print(to_print)
 
