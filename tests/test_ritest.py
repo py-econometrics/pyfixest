@@ -103,5 +103,8 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
 
 def test_fepois_ritest():
     data = pf.get_data(model="Fepois")
-    fit = pf.fepois("Y ~ X1", data=data)
-    fit.ritest(resampvar="X1", reps=100)
+    fit = pf.fepois("Y ~ X1*f3", data=data)
+    fit.ritest(resampvar="f3", reps=2000, store_ritest_statistics=True)
+
+    assert fit._ritest_statistics is not None
+    assert np.allclose(fit.pvalue().xs("X1"), fit._ritest_pvalue, rtol=1e-01, atol=0.01)

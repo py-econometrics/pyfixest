@@ -1831,7 +1831,8 @@ class Feols:
             _plot_ritest_pvalue(ri_stats=ri_stats, sample_stat=sample_stat)
 
         if store_ritest_statistics:
-            self.ritest_statistics = ri_stats
+            self._ritest_statistics = ri_stats
+            self._ritest_pvalue = ri_pvalue
 
         res = pd.Series(
             {
