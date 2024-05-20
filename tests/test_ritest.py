@@ -63,7 +63,7 @@ def ritest_results():
 
 @pytest.fixture
 def data():
-    return pf.get_data(N=2000, seed=999)
+    return pf.get_data(N=1000, seed=1999)
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
@@ -71,7 +71,7 @@ def data():
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 10_000
+    reps = 25_000
 
     rng1 = np.random.default_rng(1234)
 
