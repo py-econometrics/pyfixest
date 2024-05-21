@@ -40,7 +40,9 @@ run_tests_ritest <- function(data) {
           formula = fml,
           resampvar = resampvar,
           cluster = ifelse(is.na(cluster), "none", cluster),
-          pval = res_r$pval
+          pval = res_r$pval,
+          se = res_r$se,
+          ci_lower = res_r$ci[1]
         ))
       }
     }

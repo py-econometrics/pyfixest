@@ -34,10 +34,10 @@ def test_algos_internally(data, fml, resampvar, reps, algo_iterations, cluster):
     kwargs2["rng"] = rng2
 
     res1 = fit.ritest(**kwargs1)
-    ritest_stats1 = fit.ritest_statistics.copy()
+    ritest_stats1 = fit._ritest_statistics.copy()
 
     res2 = fit.ritest(**kwargs2)
-    ritest_stats2 = fit.ritest_statistics.copy()
+    ritest_stats2 = fit._ritest_statistics.copy()
 
     assert np.allclose(res1.Estimate, res2.Estimate, atol=1e-3, rtol=1e-3)
     assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-3, rtol=1e-3)
@@ -85,12 +85,26 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
         pval = ritest_results.xs(
             (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
         )["pval"].to_numpy()
+        se = ritest_results.xs(
+            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
+        )["se"].to_numpy()
+        ci_lower = ritest_results.xs(
+            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
+        )["ci_lower"].to_numpy()
     else:
         pval = ritest_results.xs(
             (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
         )["pval"].to_numpy()
+        se = ritest_results.xs(
+            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
+        )["se"].to_numpy()
+        ci_lower = ritest_results.xs(
+            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
+        )["ci_lower"].to_numpy()
 
     assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-01, atol=0.01)
+    assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=1e-01, atol=0.01)
+    assert np.allclose(res1["0.025% (Pr(>|t|))"], ci_lower, rtol=1e-01, atol=0.01)
 
 
 def test_fepois_ritest():

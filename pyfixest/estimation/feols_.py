@@ -1664,6 +1664,8 @@ class Feols:
         choose_algorithm: str = "auto",
         include_plot: bool = False,
         store_ritest_statistics: bool = False,
+        level: float = 0.95,
+        digits: int = 6,
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -1706,11 +1708,15 @@ class Feols:
             Defaults to False. If True, the simulated statistics are stored
             in the model object via the `ritest_statistics` attribute as a
             numpy array.
+        level: float, optional
+            The level for the confidence interval of the randomization inference
+            p-value. Defaults to 0.95.
 
         Returns
         -------
-        A pd.Series with the regression coefficient of `resampvar`, the p-value
-        of the RI test, and the (1-alpha)% confidence interval.
+        A pd.Series with the regression coefficient of `resampvar` and the p-value
+        of the RI test. Additionally, reports the standard error and the confidence
+        interval of the p-value.
         """
         _fml = self._fml
         _data = self._data
@@ -1823,8 +1829,8 @@ class Feols:
                 model=_method,
             )
 
-        ri_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat, ri_stats=ri_stats, method="two-sided"
+        ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
+            sample_stat=sample_stat, ri_stats=ri_stats, method="two-sided", level=level
         )
 
         if include_plot:
@@ -1839,8 +1845,15 @@ class Feols:
                 "Coefficient": resampvar,
                 "Estimate": sample_coef,
                 "Pr(>|t|)": ri_pvalue,
+                "Std. Error (Pr(>|t|))": se_pvalue,
             }
         )
+
+        alpha = 1.0 - level
+        ci_lower_name = str(f"{alpha/2}% (Pr(>|t|))")
+        ci_upper_name = str(f"{1-alpha/2}% (Pr(>|t|))")
+        res[ci_lower_name] = ci_pvalue[0]
+        res[ci_upper_name] = ci_pvalue[1]
 
         print("resampvar:", resampvar)
         if cluster is not None:

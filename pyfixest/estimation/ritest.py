@@ -15,6 +15,7 @@ from lets_plot import (
     xlab,
     ylab,
 )
+from scipy.stats import norm
 from tqdm import tqdm
 
 from pyfixest.estimation.demean_ import demean
@@ -195,21 +196,34 @@ def _get_ritest_stats_fast(
 
 
 def _get_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, method: str
-) -> np.ndarray:
-    """Compute the p-value of the test statistic."""
+    sample_stat: np.ndarray, ri_stats: np.ndarray, method: str, level: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute the p-value of the test statistic and
+    standard error and CI of the p-value.
+    """
+    reps = len(ri_stats)
+
     if method == "two-sided":
-        p_value = (np.abs(ri_stats) >= np.abs(sample_stat)).mean()
+        probs = np.abs(ri_stats) >= np.abs(sample_stat)
+        p_value = probs.mean()
+        ci_sides = [0, 1]
     elif method in ["right", "left"]:
-        p_value_rk = (ri_stats <= sample_stat).mean()
+        probs = ri_stats <= sample_stat
+        p_value_rk = probs.mean()
         M = len(ri_stats)
         p_value = 1 - p_value_rk / M if method == "right" else p_value_rk / M
+        ci_sides = [0] if method == "right" else [1]
     else:
         raise ValueError(
             "The `method` argument must be one of 'two-sided', 'right', 'left'."
         )
 
-    return p_value
+    se_pval = norm.ppf(level) * np.std(probs) / np.sqrt(reps)
+    ci_margin = norm.ppf(level) * se_pval
+    ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
+
+    return p_value, se_pval, ci_pval
 
 
 def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
