@@ -31,6 +31,7 @@ Nevertheless, for a quick introduction, you can take a look at the [documentatio
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
 - **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
+- Fast **Randomization Inference** as in the [ritest Stata package](https://hesss.org/ritest.pdf)
 - The **Causal Cluster Variance Estimator (CCV)** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
 
 
