@@ -410,7 +410,7 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
     return result
 
 
-def _decode_resampvar(resampvar: str) -> tuple[str, float, str]:
+def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
     """
     Decode the resampling variable.
 
@@ -424,22 +424,27 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str]:
     -------
     str
         The name of the resampling variable, h0_value (float),
+        transformed hypothesis,
         and test_type (two-sided, greater, lower).
     """
-    h0_value_float = 0.0
-    # check if resampvar contains "="
     if "=" in resampvar:
-        resampvar_, h0_value = resampvar.split("=")
+        resampvar_, h0_value_str = resampvar.split("=")
         test_type = "two-sided"
+        hypothesis = f"{resampvar_}={h0_value_str}"
     elif ">" in resampvar:
-        resampvar_, h0_value = resampvar.split(">")
+        resampvar_, h0_value_str = resampvar.split(">")
         test_type = "greater"
+        hypothesis = f"{resampvar_}>{h0_value_str}"
     elif "<" in resampvar:
-        resampvar_, h0_value = resampvar.split("<")
+        resampvar_, h0_value_str = resampvar.split("<")
         test_type = "lower"
+        hypothesis = f"{resampvar_}<{h0_value_str}"
     else:
+        resampvar_ = resampvar
         test_type = "two-sided"
+        hypothesis = f"{resampvar_}=0"
+        h0_value_str = "0"
 
-    h0_value_float = float(h0_value)
+    h0_value_float = float(h0_value_str)
 
-    return resampvar_, h0_value_float, test_type
+    return resampvar_, h0_value_float, hypothesis, test_type

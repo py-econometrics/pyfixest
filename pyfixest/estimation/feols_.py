@@ -1685,14 +1685,7 @@ class Feols:
         type: str
             The type of the randomization inference test.
             Can be "randomization-c" or "randomization-t".
-            Defaults to "randomization-c", mostly to performance reasons.
-            Note that Wu & Ding (2021, JASA) recommend the randomization-t.
-            This default is bound to change in the future once the performance
-            gap has been closed. If "bootstrap-t", uses "iid" vcovs when computing
-            the t-statistics when assignment is at the individual level and the
-            model has no controls, "HC1" if the assignment is at the ind. level
-            and the model has control, and uses CRV1 inference clustered at the
-            `cluster` level for cluster random assignment.
+            Currently, only the "randomization-c" is supported.
         rng : np.random.Generator, optional
             A random number generator. Defaults to None.
         algo_iterations : int, optional
@@ -1726,16 +1719,13 @@ class Feols:
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
 
-        resampvar_, h0_value, test_type = _decode_resampvar(resampvar)
+        resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        # allowing this will require to rewrite the pvalue function
-        if h0_value != 0 and type == "randomization-t":
+        if type == "randomization-t":
             raise NotImplementedError(
                 """
-                The randomization-t test is currently only supported
-                for null hypothesis against h0_value of 0. Please contact
-                the package authors if you need support for other null hypotheses,
-                the implementation should be straightforward.
+                The randomization-t test is not yet supported. Please contact
+                the package authors if you need it =)
                 """
             )
 
@@ -1860,8 +1850,8 @@ class Feols:
 
         res = pd.Series(
             {
-                "H0": resampvar,
-                "Coefficient": resampvar_,
+                "H0": hypothesis,
+                "ri-type": type,
                 "Estimate": sample_coef,
                 "Pr(>|t|)": ri_pvalue,
                 "Std. Error (Pr(>|t|))": se_pvalue,
@@ -1874,10 +1864,8 @@ class Feols:
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 
-        print("resampvar:", resampvar)
         if cluster is not None:
-            print("cluster", cluster)
-        print("type:", type)
+            res["Cluster"] = cluster
 
         return res
 

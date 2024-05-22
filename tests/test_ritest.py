@@ -6,7 +6,7 @@ import pyfixest as pf
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
 @pytest.mark.parametrize("reps", [111, 212])
 @pytest.mark.parametrize("algo_iterations", [None, 10])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
@@ -114,3 +114,33 @@ def test_fepois_ritest():
 
     assert fit._ritest_statistics is not None
     assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=1e-01, atol=0.01)
+
+
+@pytest.fixture
+def data_r_vs_t():
+    return pf.get_data(N=5000, seed=2999)
+
+
+@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
+@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize("cluster", [None, "group_id"])
+@pytest.mark.skip(reason="This feature is not yet fully implemented.")
+def test_randomisation_c_vs_t(data_r_vs_t, fml, resampvar, cluster):
+    """Test that the randomization-c and randomization-t tests give similar results."""
+    reps = 1000
+    fit = pf.feols(fml, data=data_r_vs_t)
+
+    rng = np.random.default_rng(1234)
+
+    ri1 = fit.ritest(
+        resampvar=resampvar, reps=reps, type="randomization-c", rng=rng, cluster=cluster
+    )
+    ri2 = fit.ritest(
+        resampvar=resampvar, reps=reps, type="randomization-t", rng=rng, cluster=cluster
+    )
+
+    assert np.allclose(ri1.Estimate, ri2.Estimate, rtol=0.01, atol=0.01)
+    assert np.allclose(ri1["Pr(>|t|)"], ri2["Pr(>|t|)"], rtol=0.01, atol=0.01)
+    assert np.allclose(
+        ri1["Std. Error (Pr(>|t|))"], ri2["Std. Error (Pr(>|t|))"], rtol=0.01, atol=0.01
+    )
