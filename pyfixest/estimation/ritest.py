@@ -196,29 +196,31 @@ def _get_ritest_stats_fast(
 
 
 def _get_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, method: str, level: float
+    sample_stat: np.ndarray,
+    ri_stats: np.ndarray,
+    method: str,
+    level: float,
+    h0_value: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute the p-value of the test statistic and
     standard error and CI of the p-value.
     """
     reps = len(ri_stats)
+    ci_sides = [0, 1]
 
     if method == "two-sided":
-        probs = np.abs(ri_stats) >= np.abs(sample_stat)
-        p_value = probs.mean()
-        ci_sides = [0, 1]
-    elif method in ["right", "left"]:
-        probs = ri_stats <= sample_stat
-        p_value_rk = probs.mean()
-        M = len(ri_stats)
-        p_value = 1 - p_value_rk / M if method == "right" else p_value_rk / M
-        ci_sides = [0] if method == "right" else [1]
+        probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
+    elif method == "greater":
+        probs = ri_stats <= sample_stat - h0_value
+    elif method == "lower":
+        probs = ri_stats >= sample_stat - h0_value
     else:
         raise ValueError(
             "The `method` argument must be one of 'two-sided', 'right', 'left'."
         )
 
+    p_value = probs.mean()
     se_pval = norm.ppf(level) * np.std(probs) / np.sqrt(reps)
     ci_margin = norm.ppf(level) * se_pval
     ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
@@ -406,3 +408,38 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
         idx = rng.integers(0, n)
         result[i] = arr[idx]
     return result
+
+
+def _decode_resampvar(resampvar: str) -> tuple[str, float, str]:
+    """
+    Decode the resampling variable.
+
+    Parameters
+    ----------
+    resampvar : str
+        The resampling variable. It can be of the form "var=value",
+        "var>value", or "var<value".
+
+    Returns
+    -------
+    str
+        The name of the resampling variable, h0_value (float),
+        and test_type (two-sided, greater, lower).
+    """
+    h0_value_float = 0.0
+    # check if resampvar contains "="
+    if "=" in resampvar:
+        resampvar_, h0_value = resampvar.split("=")
+        test_type = "two-sided"
+    elif ">" in resampvar:
+        resampvar_, h0_value = resampvar.split(">")
+        test_type = "greater"
+    elif "<" in resampvar:
+        resampvar_, h0_value = resampvar.split("<")
+        test_type = "lower"
+    else:
+        test_type = "two-sided"
+
+    h0_value_float = float(h0_value)
+
+    return resampvar_, h0_value_float, test_type

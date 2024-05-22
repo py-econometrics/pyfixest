@@ -14,6 +14,7 @@ from scipy.stats import f, norm, t
 
 from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
+    _decode_resampvar,
     _get_ritest_pvalue,
     _get_ritest_stats_fast,
     _get_ritest_stats_slow,
@@ -1725,20 +1726,33 @@ class Feols:
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
 
+        resampvar_, h0_value, test_type = _decode_resampvar(resampvar)
+
+        # allowing this will require to rewrite the pvalue function
+        if h0_value != 0 and type == "randomization-t":
+            raise NotImplementedError(
+                """
+                The randomization-t test is currently only supported
+                for null hypothesis against h0_value of 0. Please contact
+                the package authors if you need support for other null hypotheses,
+                the implementation should be straightforward.
+                """
+            )
+
         if _is_iv:
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
 
         # check that resampvar in _coefnames
-        if resampvar not in _coefnames:
-            raise ValueError(f"{resampvar} not found in the model's coefficients.")
+        if resampvar_ not in _coefnames:
+            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
         if cluster is not None and cluster not in _data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
-        sample_coef = np.array(self.coef().xs(resampvar))
-        sample_tstat = np.array(self.tstat().xs(resampvar))
+        sample_coef = np.array(self.coef().xs(resampvar_))
+        sample_tstat = np.array(self.tstat().xs(resampvar_))
 
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
 
@@ -1785,14 +1799,14 @@ class Feols:
             _data = self._data
             _fval_df = _data[self._fixef.split("+")] if _has_fixef else None
 
-            _D = self._data[resampvar].to_numpy()
+            _D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(
                 Y=_Y,
                 X=_X,
                 D=_D,
                 coefnames=_coefnames,
-                resampvar=resampvar,
+                resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
                 reps=reps,
                 rng=rng,
@@ -1819,7 +1833,7 @@ class Feols:
 
             ri_stats = _get_ritest_stats_slow(
                 data=_data,
-                resampvar=resampvar,
+                resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
                 fml=_fml,
                 reps=reps,
@@ -1830,7 +1844,11 @@ class Feols:
             )
 
         ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat, ri_stats=ri_stats, method="two-sided", level=level
+            sample_stat=sample_stat,
+            ri_stats=ri_stats,
+            method=test_type,
+            h0_value=h0_value,
+            level=level,
         )
 
         if include_plot:
@@ -1842,16 +1860,17 @@ class Feols:
 
         res = pd.Series(
             {
-                "Coefficient": resampvar,
+                "H0": resampvar,
+                "Coefficient": resampvar_,
                 "Estimate": sample_coef,
                 "Pr(>|t|)": ri_pvalue,
                 "Std. Error (Pr(>|t|))": se_pvalue,
             }
         )
 
-        alpha = 1.0 - level
-        ci_lower_name = str(f"{alpha/2}% (Pr(>|t|))")
-        ci_upper_name = str(f"{1-alpha/2}% (Pr(>|t|))")
+        alpha = 1 - level
+        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 

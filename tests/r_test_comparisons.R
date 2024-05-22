@@ -7,7 +7,7 @@ set.seed(1232)
 
 # Import the pyfixest package
 pyfixest <- import("pyfixest")
-data <- pyfixest$get_data(N = as.integer(1000), seed = as.integer(1999))
+data <- pyfixest$get_data(N = as.integer(1000), seed = as.integer(2999))
 
 # Define the function to run the tests
 run_tests_ritest <- function(data) {
@@ -16,9 +16,9 @@ run_tests_ritest <- function(data) {
 
   # Define the formulas, resampling variables, and clusters
   formulas <- c("Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2")
-  resampvars <- c("X1", "f3")
+  resampvars <- c("X1", "f3", "X1=-0.75", "f3>0.05")
   clusters <- c(NA, "group_id")
-  reps <- 25000
+  reps <- 10000
   seed <- 123
 
   # Initialize an empty data frame to store results

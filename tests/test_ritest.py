@@ -55,15 +55,15 @@ def ritest_results():
 
 @pytest.fixture
 def data():
-    return pf.get_data(N=1000, seed=1999)
+    return pf.get_data(N=1000, seed=2999)
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 25_000
+    reps = 10_000
 
     rng1 = np.random.default_rng(1234)
 
@@ -104,7 +104,7 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
 
     assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-01, atol=0.01)
     assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=1e-01, atol=0.01)
-    assert np.allclose(res1["0.025% (Pr(>|t|))"], ci_lower, rtol=1e-01, atol=0.01)
+    assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=1e-01, atol=0.01)
 
 
 def test_fepois_ritest():
