@@ -340,4 +340,4 @@ def test_coefplot_backend_error():
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
-        fit.coefplot(plot_backend="plotnine")
+        fit.coefplot(plot_backend="plotline")

@@ -52,7 +52,7 @@ def set_figsize(
     elif plot_backend == "lets_plot":
         return (500, 300)
     else:
-        raise ValueError("plot_backend must be 'matplotlib' or 'lets_plot'.")
+        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
 
 
 def iplot(

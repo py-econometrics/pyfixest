@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
@@ -61,7 +63,7 @@ def test_set_figsize_not_none_bad_backend():
 
 def test_set_figsize_none_bad_backend():
     with pytest.raises(
-        ValueError, match="plot_backend must be 'matplotlib' or 'lets_plot'."
+        ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
         set_figsize(None, "bad_backend")
 
@@ -185,3 +187,19 @@ def test_coefplot(
     coefplot(fit1, **plot_kwargs)
     coefplot([fit1, fit2], **plot_kwargs)
     fit_multi.coefplot(**plot_kwargs)
+
+
+@patch("pyfixest.report.visualize._coefplot_matplotlib")
+def test_coefplot_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
+    fit1.coefplot()
+    coefplot(fit1, plot_backend="matplotlib")
+    _, kwargs = _coefplot_matplotlib_mock.call_args
+    assert kwargs.get("figsize") == (10, 6)
+
+
+@patch("pyfixest.report.visualize._coefplot_lets_plot")
+def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    fit1.coefplot()
+    coefplot(fit1, plot_backend="lets_plot")
+    _, kwargs = _coefplot_lets_plot_mock.call_args
+    assert kwargs.get("figsize") == (500, 300)
