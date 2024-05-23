@@ -1776,36 +1776,7 @@ class Feols:
                 """
             )
 
-        if (
-            (choose_algorithm == "fast" or _method == "feols")
-            and (not _is_iv)
-            and (type != "randomization-t")
-        ):
-            _Y = self._Y
-            _X = self._X
-            _coefnames = self._coefnames
-
-            _weights = self._weights.flatten()
-            _data = self._data
-            _fval_df = _data[self._fixef.split("+")] if _has_fixef else None
-
-            _D = self._data[resampvar_].to_numpy()
-
-            ri_stats = _get_ritest_stats_fast(
-                Y=_Y,
-                X=_X,
-                D=_D,
-                coefnames=_coefnames,
-                resampvar=resampvar_,
-                clustervar_arr=clustervar_arr,
-                reps=reps,
-                rng=rng,
-                fval_df=_fval_df,
-                algo_iterations=algo_iterations,
-                weights=_weights,
-            )
-
-        else:
+        if choose_algorithm == "slow" or _method == "fepois":
             vcov_input: Union[str, dict[str, str]]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -1831,6 +1802,31 @@ class Feols:
                 type=type,
                 rng=rng,
                 model=_method,
+            )
+
+        else:
+            _Y = self._Y
+            _X = self._X
+            _coefnames = self._coefnames
+
+            _weights = self._weights.flatten()
+            _data = self._data
+            _fval_df = _data[self._fixef.split("+")] if _has_fixef else None
+
+            _D = self._data[resampvar_].to_numpy()
+
+            ri_stats = _get_ritest_stats_fast(
+                Y=_Y,
+                X=_X,
+                D=_D,
+                coefnames=_coefnames,
+                resampvar=resampvar_,
+                clustervar_arr=clustervar_arr,
+                reps=reps,
+                rng=rng,
+                fval_df=_fval_df,
+                algo_iterations=algo_iterations,
+                weights=_weights,
             )
 
         ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(

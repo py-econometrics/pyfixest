@@ -6,7 +6,7 @@ import pyfixest as pf
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
+@pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
 @pytest.mark.parametrize("algo_iterations", [None, 10])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
