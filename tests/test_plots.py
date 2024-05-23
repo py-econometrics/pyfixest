@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import coefplot, iplot
+from pyfixest.report.visualize import coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
 
@@ -31,6 +31,39 @@ def fit3(data):
 @pytest.fixture
 def fit_multi(data):
     return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
+
+
+@pytest.mark.parametrize(
+    argnames="figsize",
+    argvalues=[(10, 6), None],
+)
+@pytest.mark.parametrize(
+    argnames="plot_backend",
+    argvalues=["lets_plot", "matplotlib"],
+    ids=["lets_plot", "matplotlib"],
+)
+def test_set_figsize(figsize, plot_backend):
+    figsize_not_none = set_figsize(figsize, plot_backend)
+
+    if figsize is None:
+        if plot_backend == "lets_plot":
+            assert figsize_not_none == (500, 300)
+        elif plot_backend == "matplotlib":
+            assert figsize_not_none == (10, 6)
+    else:
+        assert figsize_not_none == figsize
+
+
+def test_set_figsize_not_none_bad_backend():
+    figsize_not_none = set_figsize((10, 6), "bad_backend")
+    assert figsize_not_none == (10, 6)
+
+
+def test_set_figsize_none_bad_backend():
+    with pytest.raises(
+        ValueError, match="plot_backend must be 'matplotlib' or 'lets_plot'."
+    ):
+        set_figsize(None, "bad_backend")
 
 
 @pytest.mark.parametrize(
