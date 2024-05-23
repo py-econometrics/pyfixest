@@ -357,7 +357,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>report.coefplot(models, alpha=0.05, figsize=(500, 300), yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=None, drop=None, exact_match=False, plot_backend='lets_plot')</code></p>
+<p><code>report.coefplot(models, alpha=0.05, figsize=None, yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=None, drop=None, exact_match=False, plot_backend='lets_plot')</code></p>
 <p>Plot model coefficients with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -385,9 +385,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td><code>figsize</code></td>
-<td>tuple</td>
-<td>The size of the figure.</td>
-<td><code>(500, 300)</code></td>
+<td>tuple or None</td>
+<td>The size of the figure. If None, the default size is used.</td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>alpha</code></td>
@@ -471,7 +471,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="a5ed2c32" class="cell" data-execution_count="1">
+<div id="2911bbc7" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
@@ -482,7 +482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="NEpaHx"></div>
+            <div id="ofs29x"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -506,16 +506,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("NEpaHx").appendChild(div);
+                        document.getElementById("ofs29x").appendChild(div);
                     };
-                    var e = document.getElementById("NEpaHx");
+                    var e = document.getElementById("ofs29x");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="iFGtJ4"></div>
+   <div id="j5skdb"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -593,7 +593,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("iFGtJ4");
+           var plotContainer = document.getElementById("j5skdb");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});

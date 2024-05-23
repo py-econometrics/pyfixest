@@ -251,7 +251,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>watermark <span class="op">--</span>iversions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="FrFEgS"></div>
+            <div id="t5mFHy"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -275,9 +275,9 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("FrFEgS").appendChild(div);
+                        document.getElementById("t5mFHy").appendChild(div);
                     };
-                    var e = document.getElementById("FrFEgS");
+                    var e = document.getElementById("t5mFHy");
                     e.appendChild(script);
                 })()
             </script>
@@ -285,7 +285,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="PgJ2nN"></div>
+            <div id="va6hyP"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -309,17 +309,17 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("PgJ2nN").appendChild(div);
+                        document.getElementById("va6hyP").appendChild(div);
                     };
-                    var e = document.getElementById("PgJ2nN");
+                    var e = document.getElementById("va6hyP");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>matplotlib: 3.8.4
-pandas    : 2.2.2
+<pre><code>pandas    : 2.2.2
+matplotlib: 3.8.4
 pyfixest  : 0.20.0
 </code></pre>
 </div>
@@ -1172,7 +1172,7 @@ Deviance: 1126.202 </code></pre>
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>multi_fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y ~ X1 | csw0(f1, f2)"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>multi_fit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="26">
-<pre><code>&lt;pyfixest.estimation.FixestMulti_.FixestMulti at 0x135347ed0&gt;</code></pre>
+<pre><code>&lt;pyfixest.estimation.FixestMulti_.FixestMulti at 0x140864e50&gt;</code></pre>
 </div>
 </div>
 <div id="cell-57" class="cell" data-execution_count="27">
@@ -1426,7 +1426,7 @@ Coefficient (Std. Error)</code></pre>
 <div id="cell-70" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>multi_fit.coefplot().show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="za1K9l"></div>
+   <div id="EyBrcA"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -1504,7 +1504,7 @@ Coefficient (Std. Error)</code></pre>
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("za1K9l");
+           var plotContainer = document.getElementById("EyBrcA");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
@@ -1512,13 +1512,13 @@ Coefficient (Std. Error)</code></pre>
    </script>
 </div>
 </div>
-<p>You can use a <code>matplotlib</code> backend as well (<strong>tip</strong> make sure to specify the <code>figsize</code> as the <code>LetsPlot</code> defaults are very large):</p>
+<p>You can use a <code>matplotlib</code> backend as well:</p>
 <div id="cell-72" class="cell" data-execution_count="34">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>multi_fit.coefplot(plot_backend<span class="op">=</span><span class="st">"matplotlib"</span>, figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="dv">5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>multi_fit.coefplot(plot_backend<span class="op">=</span><span class="st">"matplotlib"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="34">
 <div>
 <figure class="figure">
-<p><img src="quickstart_files/figure-html/cell-35-output-1.png" width="808" height="449" class="figure-img"></p>
+<p><img src="quickstart_files/figure-html/cell-35-output-1.png" width="1054" height="523" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -1670,7 +1670,7 @@ Coefficient (Std. Error)</code></pre>
 <span id="cb59-17"><a href="#cb59-17" aria-hidden="true" tabindex="-1"></a>    [fit_did2s, fit_twfe], coord_flip<span class="op">=</span><span class="va">False</span>, figsize<span class="op">=</span>(<span class="dv">900</span>, <span class="dv">400</span>), title<span class="op">=</span><span class="st">"TWFE vs DID2S"</span></span>
 <span id="cb59-18"><a href="#cb59-18" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="36">
-   <div id="E9XXmQ"></div>
+   <div id="y0EFFF"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -1736,7 +1736,7 @@ Coefficient (Std. Error)</code></pre>
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("E9XXmQ");
+           var plotContainer = document.getElementById("y0EFFF");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
@@ -1772,8 +1772,8 @@ depvar                 dep_var       dep_var_hat
 ------------------------------------------------
 ATT           2.135*** (0.044)  2.152*** (0.048)
 ------------------------------------------------
-year                         x                 -
 state                        x                 -
+year                         x                 -
 ------------------------------------------------
 R2                       0.758             0.338
 S.E. type            by: state              CRV1
