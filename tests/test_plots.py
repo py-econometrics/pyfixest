@@ -191,15 +191,27 @@ def test_coefplot(
 
 @patch("pyfixest.report.visualize._coefplot_matplotlib")
 def test_coefplot_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
-    fit1.coefplot()
     coefplot(fit1, plot_backend="matplotlib")
     _, kwargs = _coefplot_matplotlib_mock.call_args
     assert kwargs.get("figsize") == (10, 6)
 
 
+@patch("pyfixest.report.visualize._coefplot_matplotlib")
+def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
+    coefplot(fit1, figsize=(12, 7), plot_backend="matplotlib")
+    _, kwargs = _coefplot_matplotlib_mock.call_args
+    assert kwargs.get("figsize") == (12, 7)
+
+
 @patch("pyfixest.report.visualize._coefplot_lets_plot")
 def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
-    fit1.coefplot()
     coefplot(fit1, plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (500, 300)
+
+
+@patch("pyfixest.report.visualize._coefplot_lets_plot")
+def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
+    _, kwargs = _coefplot_lets_plot_mock.call_args
+    assert kwargs.get("figsize") == (600, 400)
