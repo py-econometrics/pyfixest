@@ -134,7 +134,7 @@ class LPDID(DID):
     def iplot(
         self,
         alpha: float = 0.05,
-        figsize: tuple[int, int] = (500, 300),
+        figsize: Optional[tuple[int, int]] = None,
         yintercept: Optional[int] = None,
         xintercept: Optional[int] = None,
         rotate_xticks: int = 0,
