@@ -26,10 +26,39 @@ from pyfixest.utils.dev_utils import _select_order_coefs
 LetsPlot.setup_html()
 
 
+def set_figsize(
+    figsize: Optional[tuple[int, int]], plot_backend: str
+) -> tuple[int, int]:
+    """
+    Set the figure size based on the plot backend.
+
+    Parameters
+    ----------
+    figsize: tuple[int, int], optional
+        The size of the figure. Default is None.
+    plot_backend: str
+        The plot backend. Must be one of 'matplotlib' or 'lets_plot'.
+
+    Returns
+    -------
+    tuple[int, int]
+        The size of the figure.
+    """
+    if figsize is not None:
+        return figsize
+
+    if plot_backend == "matplotlib":
+        return (10, 6)
+    elif plot_backend == "lets_plot":
+        return (500, 300)
+    else:
+        raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+
+
 def iplot(
     models,
     alpha: float = 0.05,
-    figsize: tuple = (500, 300),
+    figsize: Optional[tuple[int, int]] = None,
     yintercept: Union[int, str, None] = None,
     xintercept: Union[int, str, None] = None,
     rotate_xticks: int = 0,
@@ -49,8 +78,8 @@ def iplot(
     models : list or object
         A list of fitted models of type `Feols` or
         `Fepois`, or just a single model.
-    figsize : tuple
-        The size of the figure.
+    figsize : tuple or None, optional
+        The size of the figure. If None, the default size is used.
     alpha : float
         The significance level for the confidence intervals.
     yintercept : int or None, optional
@@ -153,7 +182,7 @@ def iplot(
 def coefplot(
     models: list,
     alpha: float = 0.05,
-    figsize: tuple = (500, 300),
+    figsize: Optional[tuple[int, int]] = None,
     yintercept: float = 0,
     xintercept: Union[float, None] = None,
     rotate_xticks: int = 0,
@@ -171,8 +200,8 @@ def coefplot(
     ----------
     models : list or object
         A list of fitted models of type `Feols` or `Fepois`, or just a single model.
-    figsize : tuple
-        The size of the figure.
+    figsize : tuple or None, optional
+        The size of the figure. If None, the default size is used.
     alpha : float
         The significance level for the confidence intervals.
     yintercept : float or None, optional
@@ -258,12 +287,13 @@ def coefplot(
     )
 
 
-def _coefplot(plot_backend, **plot_kwargs):
+def _coefplot(plot_backend, *, figsize, **plot_kwargs):
     """Coefplot function that dispatches to the correct plotting backend."""
+    figsize = set_figsize(figsize, plot_backend)
     if plot_backend == "lets_plot":
-        return _coefplot_lets_plot(**plot_kwargs)
+        return _coefplot_lets_plot(figsize=figsize, **plot_kwargs)
     elif plot_backend == "matplotlib":
-        return _coefplot_matplotlib(**plot_kwargs)
+        return _coefplot_matplotlib(figsize=figsize, **plot_kwargs)
     else:
         raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
 
