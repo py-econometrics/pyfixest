@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import coefplot, iplot
+from pyfixest.report.visualize import coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
 
@@ -31,6 +33,39 @@ def fit3(data):
 @pytest.fixture
 def fit_multi(data):
     return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
+
+
+@pytest.mark.parametrize(
+    argnames="figsize",
+    argvalues=[(10, 6), None],
+)
+@pytest.mark.parametrize(
+    argnames="plot_backend",
+    argvalues=["lets_plot", "matplotlib"],
+    ids=["lets_plot", "matplotlib"],
+)
+def test_set_figsize(figsize, plot_backend):
+    figsize_not_none = set_figsize(figsize, plot_backend)
+
+    if figsize is None:
+        if plot_backend == "lets_plot":
+            assert figsize_not_none == (500, 300)
+        elif plot_backend == "matplotlib":
+            assert figsize_not_none == (10, 6)
+    else:
+        assert figsize_not_none == figsize
+
+
+def test_set_figsize_not_none_bad_backend():
+    figsize_not_none = set_figsize((10, 6), "bad_backend")
+    assert figsize_not_none == (10, 6)
+
+
+def test_set_figsize_none_bad_backend():
+    with pytest.raises(
+        ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
+    ):
+        set_figsize(None, "bad_backend")
 
 
 @pytest.mark.parametrize(
@@ -152,3 +187,31 @@ def test_coefplot(
     coefplot(fit1, **plot_kwargs)
     coefplot([fit1, fit2], **plot_kwargs)
     fit_multi.coefplot(**plot_kwargs)
+
+
+@patch("pyfixest.report.visualize._coefplot_matplotlib")
+def test_coefplot_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
+    coefplot(fit1, plot_backend="matplotlib")
+    _, kwargs = _coefplot_matplotlib_mock.call_args
+    assert kwargs.get("figsize") == (10, 6)
+
+
+@patch("pyfixest.report.visualize._coefplot_matplotlib")
+def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
+    coefplot(fit1, figsize=(12, 7), plot_backend="matplotlib")
+    _, kwargs = _coefplot_matplotlib_mock.call_args
+    assert kwargs.get("figsize") == (12, 7)
+
+
+@patch("pyfixest.report.visualize._coefplot_lets_plot")
+def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    coefplot(fit1, plot_backend="lets_plot")
+    _, kwargs = _coefplot_lets_plot_mock.call_args
+    assert kwargs.get("figsize") == (500, 300)
+
+
+@patch("pyfixest.report.visualize._coefplot_lets_plot")
+def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
+    _, kwargs = _coefplot_lets_plot_mock.call_args
+    assert kwargs.get("figsize") == (600, 400)
