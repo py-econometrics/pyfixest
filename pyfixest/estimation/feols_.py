@@ -1715,6 +1715,7 @@ class Feols:
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
 
+        resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
         if _is_iv:
