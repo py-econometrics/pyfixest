@@ -1681,8 +1681,9 @@ class Feols:
             The number of randomization iterations. Defaults to 100.
         type: str
             The type of the randomization inference test.
-            Can be "randomization-c" or "randomization-t".
-            Currently, only the "randomization-c" is supported.
+            Can be "randomization-c" or "randomization-t". Note that
+            the "randomization-c" is much faster, while the
+            "randomization-t" is recommended by Wu & Ding (JASA, 2021).
         rng : np.random.Generator, optional
             A random number generator. Defaults to None.
         choose_algorithm: str, optional
@@ -1715,14 +1716,6 @@ class Feols:
         _has_fixef = self._has_fixef
 
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
-
-        if type == "randomization-t":
-            raise NotImplementedError(
-                """
-                The randomization-t test is not yet supported. Please contact
-                the package authors if you need it =)
-                """
-            )
 
         if _is_iv:
             raise NotImplementedError(

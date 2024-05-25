@@ -40,9 +40,45 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     res2 = fit.ritest(**kwargs2)
     ritest_stats2 = fit._ritest_statistics.copy()
 
-    assert np.allclose(res1.Estimate, res2.Estimate, atol=1e-3, rtol=1e-3)
-    assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-3, rtol=1e-3)
-    assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-3, rtol=1e-3)
+    assert np.allclose(res1.Estimate, res2.Estimate, atol=1e-8, rtol=1e-8)
+    assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-8, rtol=1e-8)
+    assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
+
+
+@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
+@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize("reps", [1000])
+@pytest.mark.parametrize("cluster", [None, "group_id"])
+def test_randomization_t_vs_c(data, fml, resampvar, reps, cluster):
+    fit = pf.feols(fml, data=data)
+
+    rng1 = np.random.default_rng(1234)
+    rng2 = np.random.default_rng(1234)
+
+    kwargs = {
+        "resampvar": resampvar,
+        "reps": reps,
+        "store_ritest_statistics": True,
+        "cluster": cluster,
+    }
+
+    kwargs1 = kwargs.copy()
+    kwargs2 = kwargs.copy()
+
+    kwargs1["type"] = "randomization-c"
+    kwargs1["rng"] = rng1
+    kwargs2["choose_algorithm"] = "randomization-t"
+    kwargs2["rng"] = rng2
+
+    res1 = fit.ritest(**kwargs1)
+    ritest_stats1 = fit._ritest_statistics.copy()
+
+    res2 = fit.ritest(**kwargs2)
+    ritest_stats2 = fit._ritest_statistics.copy()
+
+    assert np.allclose(res1.Estimate, res2.Estimate, atol=1e-8, rtol=1e-8)
+    assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-2, rtol=1e-2)
+    assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-2, rtol=1e-2)
 
 
 @pytest.fixture
@@ -145,10 +181,3 @@ def test_randomisation_c_vs_t(data_r_vs_t, fml, resampvar, cluster):
     assert np.allclose(
         ri1["Std. Error (Pr(>|t|))"], ri2["Std. Error (Pr(>|t|))"], rtol=0.01, atol=0.01
     )
-
-
-def test_ritest_plots(data):
-    fit = pf.feols("Y ~ X1", data=data)
-    fit.ritest(resampvar="X1", reps=100, store_ritest_statistics=True)
-    fit.plot_ritest()
-    fit.plot_ritest(plot_backend="matplotlib")

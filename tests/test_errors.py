@@ -374,9 +374,6 @@ def test_ritest_error(data):
         fit_iv.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(NotImplementedError):
-        fit.ritest(resampvar="X1=1", reps=100, type="randomization-t")
-
-    with pytest.raises(NotImplementedError):
         fit_wls = pf.feols("Y ~ X1", data=data, weights="weights")
         fit_wls.ritest(resampvar="X1", reps=100)
 
