@@ -1,8 +1,11 @@
+import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
+
+matplotlib.use("Agg")  # Use a non-interactive backend
 
 
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
@@ -142,3 +145,10 @@ def test_randomisation_c_vs_t(data_r_vs_t, fml, resampvar, cluster):
     assert np.allclose(
         ri1["Std. Error (Pr(>|t|))"], ri2["Std. Error (Pr(>|t|))"], rtol=0.01, atol=0.01
     )
+
+
+def test_ritest_plots(data):
+    fit = pf.feols("Y ~ X1", data=data)
+    fit.ritest(resampvar="X1", reps=100, store_ritest_statistics=True)
+    fit.plot_ritest()
+    fit.plot_ritest(plot_backend="matplotlib")

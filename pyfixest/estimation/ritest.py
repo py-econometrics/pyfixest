@@ -1,9 +1,11 @@
 from importlib import import_module
 from typing import Optional, Union
 
+import matplotlib.pyplot as plt
 import numba as nb
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from lets_plot import (
     LetsPlot,
     aes,
@@ -360,21 +362,40 @@ def _get_ritest_pvalue(
     return p_value, se_pval, ci_pval
 
 
-def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
+def _plot_ritest_pvalue(
+    sample_stat: np.ndarray, ri_stats: np.ndarray, plot_backend: str
+):
     """Plot the permutation distribution of the test statistic."""
     df = pd.DataFrame({"ri_stats": ri_stats})
 
-    plot = (
-        ggplot(df, aes(x="ri_stats"))
-        + geom_density(fill="blue", alpha=0.5)
-        + theme_bw()
-        + geom_vline(xintercept=sample_stat, color="red")
-        + ggtitle("Permutation distribution of the test statistic")
-        + xlab("Test statistic")
-        + ylab("Density")
-    )
+    title = "Permutation distribution of the test statistic"
+    x_lab = "Test statistic"
+    y_lab = "Density"
 
-    return plot.show()
+    if plot_backend == "lets_plot":
+        plot = (
+            ggplot(df, aes(x="ri_stats"))
+            + geom_density(fill="blue", alpha=0.5)
+            + theme_bw()
+            + geom_vline(xintercept=sample_stat, color="red")
+            + ggtitle(title)
+            + xlab(x_lab)
+            + ylab(y_lab)
+        )
+
+        return plot.show()
+
+    elif plot_backend == "matplotlib":
+        plt.figure(figsize=(10, 6))
+        sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
+        plt.axvline(x=sample_stat, color="red", linestyle="--")
+        plt.title(title)
+        plt.xlabel(x_lab)
+        plt.ylabel(y_lab)
+        plt.show()
+
+    else:
+        raise ValueError(f"Unsupported plot backend: {plot_backend}")
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:

@@ -1662,10 +1662,8 @@ class Feols:
         type: str = "randomization-c",
         rng: Optional[np.random.Generator] = None,
         choose_algorithm: str = "auto",
-        include_plot: bool = False,
         store_ritest_statistics: bool = False,
         level: float = 0.95,
-        digits: int = 6,
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -1825,12 +1823,10 @@ class Feols:
             level=level,
         )
 
-        if include_plot:
-            _plot_ritest_pvalue(ri_stats=ri_stats, sample_stat=sample_stat)
-
         if store_ritest_statistics:
             self._ritest_statistics = ri_stats
             self._ritest_pvalue = ri_pvalue
+            self._ritest_sample_stat = sample_stat
 
         res = pd.Series(
             {
@@ -1852,6 +1848,35 @@ class Feols:
             res["Cluster"] = cluster
 
         return res
+
+    def plot_ritest(self, plot_backend="lets_plot"):
+        """
+        Plot the distribution of the Randomization Inference Statistics.
+
+        Parameters
+        ----------
+        plot_backend : str, optional
+            The plotting backend to use. Defaults to "lets_plot". Alternatively,
+            "matplotlib" is available.
+
+        Returns
+        -------
+        A lets_plot or matplotlib figure with the distribution of the Randomization
+        Inference Statistics.
+        """
+        if not hasattr(self, "_ritest_statistics"):
+            raise ValueError("""
+                            The randomization inference statistics have not been stored
+                            in the model object. Please set `store_ritest_statistics=True`
+                            when calling `ritest()`
+                            """)
+
+        ri_stats = self._ritest_statistics
+        sample_stat = self._ritest_sample_stat
+
+        return _plot_ritest_pvalue(
+            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+        )
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
