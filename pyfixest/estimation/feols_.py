@@ -12,9 +12,13 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.errors import (
-    NanInClusterVarError,
-    VcovTypeNotSupportedError,
+from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
+from pyfixest.estimation.ritest import (
+    _decode_resampvar,
+    _get_ritest_pvalue,
+    _get_ritest_stats_fast,
+    _get_ritest_stats_slow,
+    _plot_ritest_pvalue,
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -1649,6 +1653,223 @@ class Feols:
             A np.ndarray with the residuals of the estimated regression model.
         """
         return self._u_hat
+
+    def ritest(
+        self,
+        resampvar: str,
+        cluster: Optional[str] = None,
+        reps: int = 100,
+        type: str = "randomization-c",
+        rng: Optional[np.random.Generator] = None,
+        choose_algorithm: str = "auto",
+        store_ritest_statistics: bool = False,
+        level: float = 0.95,
+    ) -> pd.Series:
+        """
+        Conduct Randomization Inference (RI) test against a null hypothesis of
+        `resampvar = 0`.
+
+        Parameters
+        ----------
+        resampvar : str
+            The name of the variable to be resampled.
+        cluster : str, optional
+            The name of the cluster variable in case of cluster random assignment.
+            If provided, `resampvar` is held constant within each `cluster`.
+            Defaults to None.
+        reps : int, optional
+            The number of randomization iterations. Defaults to 100.
+        type: str
+            The type of the randomization inference test.
+            Can be "randomization-c" or "randomization-t". Note that
+            the "randomization-c" is much faster, while the
+            "randomization-t" is recommended by Wu & Ding (JASA, 2021).
+        rng : np.random.Generator, optional
+            A random number generator. Defaults to None.
+        choose_algorithm: str, optional
+            The algorithm to use for the computation. Defaults to "auto".
+            The alternative is "fast" and "slow", and should only be used
+            for running CI tests. Ironically, this argument is not tested
+            for any input errors from the user! So please don't use it =)
+        include_plot: bool, optional
+            Whether to include a plot of the distribution p-values. Defaults to False.
+        store_ritest_statistics: bool, optional
+            Whether to store the simulated statistics of the RI procedure.
+            Defaults to False. If True, the simulated statistics are stored
+            in the model object via the `ritest_statistics` attribute as a
+            numpy array.
+        level: float, optional
+            The level for the confidence interval of the randomization inference
+            p-value. Defaults to 0.95.
+
+        Returns
+        -------
+        A pd.Series with the regression coefficient of `resampvar` and the p-value
+        of the RI test. Additionally, reports the standard error and the confidence
+        interval of the p-value.
+        """
+        _fml = self._fml
+        _data = self._data
+        _method = self._method
+        _is_iv = self._is_iv
+        _coefnames = self._coefnames
+        _has_fixef = self._has_fixef
+
+        resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
+
+        if _is_iv:
+            raise NotImplementedError(
+                "Randomization Inference is not supported for IV models."
+            )
+
+        # check that resampvar in _coefnames
+        if resampvar_ not in _coefnames:
+            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
+
+        if cluster is not None and cluster not in _data:
+            raise ValueError(f"The variable {cluster} is not found in the data.")
+
+        sample_coef = np.array(self.coef().xs(resampvar_))
+        sample_tstat = np.array(self.tstat().xs(resampvar_))
+
+        clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+
+        rng = np.random.default_rng() if rng is None else rng
+
+        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
+        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+            raise ValueError("""
+            The cluster variable contains missing values. This is not allowed
+            for randomization inference via `ritest()`.
+            """)
+
+        if type not in ["randomization-t", "randomization-c"]:
+            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
+
+        if self._has_weights:
+            raise NotImplementedError(
+                """
+                Regression Weights are not supported with Randomization Inference.
+                """
+            )
+
+        if choose_algorithm == "slow" or _method == "fepois":
+            vcov_input: Union[str, dict[str, str]]
+            if cluster is not None:
+                vcov_input = {"CRV1": cluster}
+            else:
+                # "iid" for models without controls, else HC1
+                vcov_input = (
+                    "hetero"
+                    if (_has_fixef and len(_coefnames) > 1) or len(_coefnames) > 2
+                    else "iid"
+                )
+
+            # for performance reasons
+            if type == "randomization-c":
+                vcov_input = "iid"
+
+            ri_stats = _get_ritest_stats_slow(
+                data=_data,
+                resampvar=resampvar_,
+                clustervar_arr=clustervar_arr,
+                fml=_fml,
+                reps=reps,
+                vcov=vcov_input,
+                type=type,
+                rng=rng,
+                model=_method,
+            )
+
+        else:
+            _Y = self._Y
+            _X = self._X
+            _coefnames = self._coefnames
+
+            _weights = self._weights.flatten()
+            _data = self._data
+            _fval_df = _data[self._fixef.split("+")] if _has_fixef else None
+
+            _D = self._data[resampvar_].to_numpy()
+
+            ri_stats = _get_ritest_stats_fast(
+                Y=_Y,
+                X=_X,
+                D=_D,
+                coefnames=_coefnames,
+                resampvar=resampvar_,
+                clustervar_arr=clustervar_arr,
+                reps=reps,
+                rng=rng,
+                fval_df=_fval_df,
+                weights=_weights,
+            )
+
+        ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
+            sample_stat=sample_stat,
+            ri_stats=ri_stats[1:],
+            method=test_type,
+            h0_value=h0_value,
+            level=level,
+        )
+
+        if store_ritest_statistics:
+            self._ritest_statistics = ri_stats
+            self._ritest_pvalue = ri_pvalue
+            self._ritest_sample_stat = sample_stat
+
+        res = pd.Series(
+            {
+                "H0": hypothesis,
+                "ri-type": type,
+                "Estimate": sample_coef,
+                "Pr(>|t|)": ri_pvalue,
+                "Std. Error (Pr(>|t|))": se_pvalue,
+            }
+        )
+
+        alpha = 1 - level
+        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
+        res[ci_lower_name] = ci_pvalue[0]
+        res[ci_upper_name] = ci_pvalue[1]
+
+        if cluster is not None:
+            res["Cluster"] = cluster
+
+        return res
+
+    def plot_ritest(self, plot_backend="lets_plot"):
+        """
+        Plot the distribution of the Randomization Inference Statistics.
+
+        Parameters
+        ----------
+        plot_backend : str, optional
+            The plotting backend to use. Defaults to "lets_plot". Alternatively,
+            "matplotlib" is available.
+
+        Returns
+        -------
+        A lets_plot or matplotlib figure with the distribution of the Randomization
+        Inference Statistics.
+        """
+        if not hasattr(self, "_ritest_statistics"):
+            raise ValueError("""
+                            The randomization inference statistics have not been stored
+                            in the model object. Please set `store_ritest_statistics=True`
+                            when calling `ritest()`
+                            """)
+
+        ri_stats = self._ritest_statistics
+        sample_stat = self._ritest_sample_stat
+
+        return _plot_ritest_pvalue(
+            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+        )
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):

@@ -89,9 +89,10 @@ Tests run with R require the following packages:
 - fixest
 - stats
 - wildrwolf
+- ritest
 
 ```{bash}
-Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com")'
+Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'
 ```
 
 Documentation for `pyfixest` is written, compiled, and published using Quarto.
@@ -178,3 +179,5 @@ just render
 # preview the docs
 just preview
 ```
+
+To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run `just update-tests-data`.
