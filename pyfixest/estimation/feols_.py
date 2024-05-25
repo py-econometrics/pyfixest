@@ -1661,7 +1661,6 @@ class Feols:
         reps: int = 100,
         type: str = "randomization-c",
         rng: Optional[np.random.Generator] = None,
-        algo_iterations: Optional[int] = None,
         choose_algorithm: str = "auto",
         include_plot: bool = False,
         store_ritest_statistics: bool = False,
@@ -1688,8 +1687,6 @@ class Feols:
             Currently, only the "randomization-c" is supported.
         rng : np.random.Generator, optional
             A random number generator. Defaults to None.
-        algo_iterations : int, optional
-            The number of iterations to run the algorithm. Defaults to None.
         choose_algorithm: str, optional
             The algorithm to use for the computation. Defaults to "auto".
             The alternative is "fast" and "slow", and should only be used
@@ -1746,8 +1743,6 @@ class Feols:
 
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
 
-        algo_iterations = reps if algo_iterations is None else algo_iterations
-
         rng = np.random.default_rng() if rng is None else rng
 
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
@@ -1762,12 +1757,6 @@ class Feols:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        assert (
-            algo_iterations <= reps
-            and isinstance(algo_iterations, int)
-            and algo_iterations > 0
-        ), "`algo_iterations` needs to be a positive integer and weakly smaller than `reps`."
 
         if self._has_weights:
             raise NotImplementedError(
@@ -1825,13 +1814,12 @@ class Feols:
                 reps=reps,
                 rng=rng,
                 fval_df=_fval_df,
-                algo_iterations=algo_iterations,
                 weights=_weights,
             )
 
         ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
             sample_stat=sample_stat,
-            ri_stats=ri_stats,
+            ri_stats=ri_stats[1:],
             method=test_type,
             h0_value=h0_value,
             level=level,

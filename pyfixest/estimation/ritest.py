@@ -74,23 +74,25 @@ def _get_ritest_stats_slow(
     fixest_module = import_module("pyfixest.estimation")
     fit_ = getattr(fixest_module, model)
 
-    resampvar_arr = data[resampvar].dropna().to_numpy()
+    resampvar_arr = data_resampled[resampvar].to_numpy()
 
     ri_stats = np.zeros(reps)
+
     for i in tqdm(range(reps)):
         D_treat = _resample(
             resampvar_arr=resampvar_arr,
             clustervar_arr=clustervar_arr,
             rng=rng,
             iterations=1,
-        )
+        ).flatten()
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
-        fit = fit_(fml_update, data=data_resampled, vcov=vcov)
+
+        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
         if type == "randomization-c":
-            ri_stats[i] = fit.coef().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:
-            ri_stats[i] = fit.tstat().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.tstat().xs(f"{resampvar}_resampled")
 
     return ri_stats
 
@@ -103,7 +105,6 @@ def _get_ritest_stats_fast(
     resampvar: str,
     reps: int,
     rng: np.random.Generator,
-    algo_iterations: int,
     weights: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
     fval_df: Optional[pd.DataFrame] = None,
@@ -129,10 +130,6 @@ def _get_ritest_stats_fast(
         The number of repetitions.
     rng : np.random.Generator
         The random number generator.
-    algo_iterations : int
-        The number of iterations for the algorithm. If bigger than 1,
-        core steps of the algorithm are vectorized, which may speed up
-        the computation.
     weights : np.ndarray
         The sample weights.
     clustervar_arr : np.ndarray, optional
@@ -170,24 +167,13 @@ def _get_ritest_stats_fast(
     D = D.reshape(-1, 1) if D.ndim == 1 else D
     X_demean2 = X_demean2.reshape(-1, 1) if X_demean2.ndim == 1 else X_demean2
 
-    # FWL Stage 1 on "constant" data
-    fwl_error_1 = (
-        Y_demean - X_demean2 @ np.linalg.lstsq(X_demean2, Y_demean, rcond=None)[0]
-    )
-
-    iteration_length = reps // algo_iterations
-    last_iteration = reps % algo_iterations
-
     resampvar_arr = D
 
     return _run_ri(
         reps=reps,
-        algo_iterations=algo_iterations,
-        iteration_length=iteration_length,
-        last_iteration=last_iteration,
         resampvar_arr=resampvar_arr,
         clustervar_arr=clustervar_arr,
-        fwl_error_1=fwl_error_1,
+        Y_demean=Y_demean,
         X_demean2=X_demean2,
         fval=fval,
         weights=weights,
@@ -195,67 +181,14 @@ def _get_ritest_stats_fast(
     )
 
 
-def _get_ritest_pvalue(
-    sample_stat: np.ndarray,
-    ri_stats: np.ndarray,
-    method: str,
-    level: float,
-    h0_value: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute the p-value of the test statistic and
-    standard error and CI of the p-value.
-    """
-    reps = len(ri_stats)
-    ci_sides = [0, 1]
-
-    if method == "two-sided":
-        probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
-    elif method == "greater":
-        probs = ri_stats <= sample_stat - h0_value
-    elif method == "lower":
-        probs = ri_stats >= sample_stat - h0_value
-    else:
-        raise ValueError(
-            "The `method` argument must be one of 'two-sided', 'right', 'left'."
-        )
-
-    p_value = probs.mean()
-    se_pval = norm.ppf(level) * np.std(probs) / np.sqrt(reps)
-    ci_margin = norm.ppf(level) * se_pval
-    ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
-
-    return p_value, se_pval, ci_pval
-
-
-def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
-    """Plot the permutation distribution of the test statistic."""
-    df = pd.DataFrame({"ri_stats": ri_stats})
-
-    plot = (
-        ggplot(df, aes(x="ri_stats"))
-        + geom_density(fill="blue", alpha=0.5)
-        + theme_bw()
-        + geom_vline(xintercept=sample_stat, color="red")
-        + ggtitle("Permutation distribution of the test statistic")
-        + xlab("Test statistic")
-        + ylab("Density")
-    )
-
-    return plot.show()
-
-
-# @nb.njit
+@nb.njit()
 def _run_ri(
     reps: int,
-    algo_iterations: int,
-    iteration_length: int,
-    last_iteration: int,
     resampvar_arr: np.ndarray,
-    fwl_error_1: np.ndarray,
     rng: np.random.Generator,
     fval: np.ndarray,
     weights: np.ndarray,
+    Y_demean: np.ndarray,
     X_demean2: np.ndarray,
     clustervar_arr: Optional[np.ndarray] = None,
 ) -> np.ndarray:
@@ -266,18 +199,8 @@ def _run_ri(
     ----------
     reps : int
         The number of repetitions.
-    algo_iterations : int
-        The number of iterations for the algorithm. If bigger than 1,
-        core steps of the algorithm are vectorized, which may speed up
-        the computation.
-    iteration_length : int
-        The number of repetitions per iteration.
-    last_iteration : int
-        The number of repetitions for the last iteration.
     resampvar_arr : np.ndarray
         Array containing the treatment variable.
-    fwl_error_1 : np.ndarray
-        The FWL residuals from the first stage of the FWL algorithm.
     rng : np.random.Generator
         The random number generator.
     fval : np.ndarray
@@ -286,6 +209,7 @@ def _run_ri(
         The sample weights.
     X_demean2 : np.ndarray
         The demeaned design matrix.
+    Y_demean : np.ndarray
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -296,40 +220,23 @@ def _run_ri(
         For this algorithm, regression coefficients are
         returned.
     """
-    is_last_iteration = False
     ri_coefs = np.zeros(reps)
 
-    for i in nb.prange(algo_iterations):
-        if last_iteration > 0 and i == (algo_iterations - 1):
-            is_last_iteration = True
-            D2 = _resample(
-                resampvar_arr=resampvar_arr,
-                clustervar_arr=clustervar_arr,
-                rng=rng,
-                iterations=iteration_length + last_iteration,
-            )
-        else:
-            D2 = _resample(
-                resampvar_arr=resampvar_arr,
-                clustervar_arr=clustervar_arr,
-                rng=rng,
-                iterations=iteration_length,
-            )
+    X_demean2 = np.ascontiguousarray(X_demean2)
+
+    for i in range(reps):
+        D2 = _resample(
+            resampvar_arr=resampvar_arr,
+            clustervar_arr=clustervar_arr,
+            rng=rng,
+            iterations=1,
+        )
 
         D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
 
-        fwl_error_2 = (
-            D2_demean - X_demean2 @ np.linalg.lstsq(X_demean2, D2_demean, rcond=None)[0]
-        )
-
-        if is_last_iteration:
-            ri_coefs[(i * iteration_length) :] = np.linalg.lstsq(
-                fwl_error_2, fwl_error_1, rcond=None
-            )[0]
-        else:
-            ri_coefs[i * iteration_length : (i + 1) * iteration_length] = (
-                np.linalg.lstsq(fwl_error_2, fwl_error_1, rcond=None)[0]
-            )
+        ri_coefs[i] = lstsq_numba(
+            np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
+        )[0]
 
     return ri_coefs
 
@@ -408,6 +315,66 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
         idx = rng.integers(0, n)
         result[i] = arr[idx]
     return result
+
+
+@nb.njit()
+def lstsq_numba(A, B):
+    """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
+    U, s, VT = np.linalg.svd(A, full_matrices=False)
+    c = np.dot(U.T, B)
+    w = np.linalg.solve(np.diag(s), c)
+    x = np.dot(VT.T, w)
+    return x
+
+
+def _get_ritest_pvalue(
+    sample_stat: np.ndarray,
+    ri_stats: np.ndarray,
+    method: str,
+    level: float,
+    h0_value: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute the p-value of the test statistic and
+    standard error and CI of the p-value.
+    """
+    reps = len(ri_stats)
+    ci_sides = [0, 1]
+
+    if method == "two-sided":
+        probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
+    elif method == "greater":
+        probs = ri_stats <= sample_stat - h0_value
+    elif method == "lower":
+        probs = ri_stats >= sample_stat - h0_value
+    else:
+        raise ValueError(
+            "The `method` argument must be one of 'two-sided', 'right', 'left'."
+        )
+
+    p_value = probs.mean()
+    se_pval = norm.ppf(level) * np.std(probs) / np.sqrt(reps)
+    ci_margin = norm.ppf(level) * se_pval
+    ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
+
+    return p_value, se_pval, ci_pval
+
+
+def _plot_ritest_pvalue(sample_stat: np.ndarray, ri_stats: np.ndarray):
+    """Plot the permutation distribution of the test statistic."""
+    df = pd.DataFrame({"ri_stats": ri_stats})
+
+    plot = (
+        ggplot(df, aes(x="ri_stats"))
+        + geom_density(fill="blue", alpha=0.5)
+        + theme_bw()
+        + geom_vline(xintercept=sample_stat, color="red")
+        + ggtitle("Permutation distribution of the test statistic")
+        + xlab("Test statistic")
+        + ylab("Density")
+    )
+
+    return plot.show()
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:

@@ -8,9 +8,8 @@ import pyfixest as pf
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
-@pytest.mark.parametrize("algo_iterations", [None, 10])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
-def test_algos_internally(data, fml, resampvar, reps, algo_iterations, cluster):
+def test_algos_internally(data, fml, resampvar, reps, cluster):
     fit = pf.feols(fml, data=data)
 
     rng1 = np.random.default_rng(1234)
@@ -20,7 +19,6 @@ def test_algos_internally(data, fml, resampvar, reps, algo_iterations, cluster):
         "resampvar": resampvar,
         "reps": reps,
         "type": "randomization-c",
-        "algo_iterations": algo_iterations,
         "store_ritest_statistics": True,
         "cluster": cluster,
     }
@@ -63,7 +61,7 @@ def data():
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 10_000
+    reps = 4000
 
     rng1 = np.random.default_rng(1234)
 
@@ -102,9 +100,9 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
             (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
         )["ci_lower"].to_numpy()
 
-    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=1e-01, atol=0.01)
-    assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=1e-01, atol=0.01)
-    assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=1e-01, atol=0.01)
+    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=0.005, atol=0.005)
+    assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=0.005, atol=0.005)
+    assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=0.005, atol=0.005)
 
 
 def test_fepois_ritest():
@@ -113,7 +111,7 @@ def test_fepois_ritest():
     fit.ritest(resampvar="f3", reps=2000, store_ritest_statistics=True)
 
     assert fit._ritest_statistics is not None
-    assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=1e-01, atol=0.01)
+    assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=0.01, atol=0.01)
 
 
 @pytest.fixture
