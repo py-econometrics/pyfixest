@@ -266,6 +266,39 @@ def feols(
     fit.coefplot()
     ```
 
+    Objects of type `Feols` support a range of other methods to conduct inference.
+    For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
+
+    ```{python}
+    fit.wildboottest(param = "X1", B=1000)
+    ```
+    would run a wild bootstrap test for the coefficient of `X1` with 1000
+    bootstrap repetitions.
+
+    For a wild cluster bootstrap, you can specify the cluster variable
+      via the `cluster` argument:
+
+    ```{python}
+    fit.wildboottest(param = "X1", B=1000, cluster="group_id")
+    ```
+
+    The `ritest()` method can be used to conduct randomization inference:
+
+    ```{python}
+    fit.ritest(resampvar = "X1", reps=1000)
+    ```
+
+    Last, you can compute the cluster causal variance estimator by Athey et
+    al by using the `ccv()` method:
+
+    ```{python}
+    import numpy as np
+    rng = np.random.default_rng(1234)
+    data["D"] = rng.choice([0, 1], size = data.shape[0])
+    fit_D = pf.feols("Y ~ D", data = data)
+    fit_D.ccv(treatment = "D", cluster = "group_id")
+    ```
+
     """
     if i_ref1 is not None:
         raise FeatureDeprecationError(

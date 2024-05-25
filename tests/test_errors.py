@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
 
+import pyfixest as pf
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
@@ -18,6 +19,11 @@ from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.utils import get_data
+
+
+@pytest.fixture
+def data():
+    return pf.get_data()
 
 
 def test_formula_parser2():
@@ -340,4 +346,43 @@ def test_coefplot_backend_error():
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
-        fit.coefplot(plot_backend="plotline")
+        fit.coefplot(plot_backend="plotnine")
+
+
+def test_ritest_error(data):
+    fit = pf.feols("Y ~ X1", data=data)
+
+    with pytest.raises(ValueError, match="X2 not found in the model's coefficients."):
+        fit.ritest(resampvar="X2", reps=1000)
+
+    with pytest.raises(ValueError, match="CLUST is not found in the data"):
+        fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
+
+    with pytest.raises(
+        ValueError, match="type must be 'randomization-t' or 'randomization-c."
+    ):
+        fit.ritest(resampvar="X1", reps=1000, type="a")
+
+    with pytest.raises(AssertionError):
+        fit.ritest(resampvar="X1", reps=100.4)
+
+    with pytest.raises(ValueError):
+        fit.ritest(resampvar="X1", cluster="f1", reps=100)
+
+    with pytest.raises(NotImplementedError):
+        fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+        fit_iv.ritest(resampvar="X1", reps=100)
+
+    with pytest.raises(NotImplementedError):
+        fit_wls = pf.feols("Y ~ X1", data=data, weights="weights")
+        fit_wls.ritest(resampvar="X1", reps=100)
+
+    with pytest.raises(ValueError):
+        "No test_statistics found in the model."
+        fit.ritest(resampvar="X1", reps=100)
+        fit.plot_ritest()
+
+    with pytest.raises(ValueError):
+        "Incorrect plot backend."
+        fit.ritest(resampvar="X1", reps=100, store_ritest_statistics=True)
+        fit.plot_ritest(plot_backend="a")

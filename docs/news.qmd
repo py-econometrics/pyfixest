@@ -1,5 +1,22 @@
 # News
 
+## PyFixest 0.21.0 (to be released)
+
+- Add support for randomization inference via the `ritest()` method:
+
+```{python}
+#| eval: False
+import pyfixest as pf
+data = pf.get_data()
+
+fit = pf.feols("Y ~ X1", data = data)
+fit.ritest(resampvar="X1=0", reps = 1000)
+```
+
+## PyFixest 0.20.0
+
+- This version introduces MyPy type checks to the entire pyfixest codebase. Thanks to @juanitorduz for nudging me to get started with this =). It also fixes a handful of smaller bugs.
+
 ## PyFixest 0.19.0
 
 - Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (... if my laptopt is connected to a power charger)!
