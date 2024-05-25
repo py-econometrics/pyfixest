@@ -292,7 +292,9 @@ def feols(
     al by using the `ccv()` method:
 
     ```{python}
-    data["D"] = np.random.choice([0, 1], size = data.shape[0])
+    import numpy as np
+    rng = np.random.default_rng(1234)
+    data["D"] = rng.choice([0, 1], size = data.shape[0])
     fit_D = pf.feols("Y ~ D", data = data)
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
