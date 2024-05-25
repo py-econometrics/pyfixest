@@ -192,8 +192,8 @@ cd pyfixest</code></pre>
 <pre class="{bash}"><code>sudo apt install gcc-11 cmake</code></pre>
 <p>On Windows using <a href="https://winget.run/pkg/RProject/R">Winget</a>:</p>
 <pre class="{bash}"><code>winget install -e --id RProject.R</code></pre>
-<p>Tests run with R require the following packages: - base - broom - clubSandwich - did2s - fixest - stats - wildrwolf</p>
-<pre class="{bash}"><code>Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com")'</code></pre>
+<p>Tests run with R require the following packages: - base - broom - clubSandwich - did2s - fixest - stats - wildrwolf - ritest</p>
+<pre class="{bash}"><code>Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'</code></pre>
 <p>Documentation for <code>pyfixest</code> is written, compiled, and published using Quarto.</p>
 <p>To install Quarto, run:</p>
 <p>On MacOS via <a href="https://formulae.brew.sh/cask/quarto#default">Homebrew</a>:</p>
@@ -236,6 +236,7 @@ just docs-build
 just render
 # preview the docs
 just preview</code></pre>
+<p>To re-create the csv files in <code>tests/data</code> that contain results from R packages for testing, you can run <code>just update-tests-data</code>.</p>
 
 
 </section>
