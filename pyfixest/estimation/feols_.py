@@ -1662,7 +1662,7 @@ class Feols:
         type: str = "randomization-c",
         rng: Optional[np.random.Generator] = None,
         choose_algorithm: str = "auto",
-        store_ritest_statistics: bool = True,
+        store_ritest_statistics: bool = False,
         level: float = 0.95,
     ) -> pd.Series:
         """
@@ -1695,7 +1695,7 @@ class Feols:
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to True, in which case the simulated statistics are stored
+            Defaults to False. If True, stores the simulated statistics
             in the model object via the `ritest_statistics` attribute as a
             numpy array.
         level: float, optional
