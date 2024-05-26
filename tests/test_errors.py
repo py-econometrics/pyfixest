@@ -378,11 +378,12 @@ def test_ritest_error(data):
         fit_wls.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
-        "No test_statistics found in the model."
-        fit.ritest(resampvar="X1", reps=100)
-        fit.plot_ritest()
-
-    with pytest.raises(ValueError):
         "Incorrect plot backend."
         fit.ritest(resampvar="X1", reps=100, store_ritest_statistics=True)
         fit.plot_ritest(plot_backend="a")
+
+    with pytest.raises(ValueError):
+        "No test_statistics found in the model."
+        fit = pf.feols("Y ~ X1", data=data)
+        fit.ritest(resampvar="X1", reps=100)
+        fit.plot_ritest()

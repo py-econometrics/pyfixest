@@ -1695,7 +1695,7 @@ class Feols:
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, the simulated statistics are stored
+            Defaults to False. If True, stores the simulated statistics
             in the model object via the `ritest_statistics` attribute as a
             numpy array.
         level: float, optional
@@ -1715,6 +1715,7 @@ class Feols:
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
 
+        resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
         if _is_iv:
@@ -1819,7 +1820,7 @@ class Feols:
         if store_ritest_statistics:
             self._ritest_statistics = ri_stats
             self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat
+            self._ritest_sample_stat = sample_stat - h0_value
 
         res = pd.Series(
             {
