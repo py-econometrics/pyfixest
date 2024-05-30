@@ -59,7 +59,7 @@ def event_study(
     import pandas as pd
     from pyfixest.did.estimation import event_study
 
-    url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
+    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
     fit_twfe = event_study(
@@ -174,7 +174,7 @@ def did2s(
     import numpy as np
     from pyfixest.did.estimation import did2s
 
-    url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
+    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
     df_het.head()
     ```
@@ -322,7 +322,7 @@ def lpdid(
     import pandas as pd
     from pyfixest.did.estimation import lpdid
 
-    url = "https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"
+    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
     fit = lpdid(
