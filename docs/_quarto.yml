@@ -11,11 +11,11 @@ website:
     favicon: "figures/pyfixest-logo.png"
     #page-footer:
     #  center: |
-    #    Developed by [Alexander Fischer](https://github.com/s3alfisc) and [Styfen Schär](https://github.com/styfenschaer)
+    #    Developed by [Alexander Fischer](https://github.com/py-econometrics) and [Styfen Schär](https://github.com/styfenschaer)
     search: true
     right:
       - icon: github
-        href: https://github.com/s3alfisc/pyfixest/
+        href: https://github.com/py-econometrics/pyfixest/
     left:
       - text: "PyFixest"
         file: pyfixest.md

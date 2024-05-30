@@ -216,27 +216,27 @@ from pyfixest.did.estimation import did2s, lpdid, event_study
 
 ### Enhancements:
 
-- Good performance improvements for singleton fixed effects detection. Thanks to [@styfenschaer](https://github.com/styfenschaer) for the PR! See [#229](https://github.com/s3alfisc/pyfixest/issues/229).
+- Good performance improvements for singleton fixed effects detection. Thanks to [@styfenschaer](https://github.com/styfenschaer) for the PR! See [#229](https://github.com/py-econometrics/pyfixest/issues/229).
 - Uses the [r2u project](https://github.com/eddelbuettel/r2u) for installing R and R packages on github actions, with great performance improvements.
-- Allows to pass `polars` data frames to `feols()`, `fepois()` and `predict()`. [#232](https://github.com/s3alfisc/pyfixest/issues/232). Thanks to [@vincentarelbundock](https://github.com/s3alfisc/pyfixest/issues/232) for the suggestion!
+- Allows to pass `polars` data frames to `feols()`, `fepois()` and `predict()`. [#232](https://github.com/py-econometrics/pyfixest/issues/232). Thanks to [@vincentarelbundock](https://github.com/py-econometrics/pyfixest/issues/232) for the suggestion!
 
 ### Bug Fixes:
 
-- Missing variables in features were not always handled correctly in `predict()` with `newdata` not `None` in the presence of missing data, which would lead to an error. See [#246](https://github.com/s3alfisc/pyfixest/issues/246) for details.
-- Categorical variables were not always handled correctly in `predict()` with `newdata` not `None`, because the number of fixed effects levels in `newdata` might be smaller than in `data`. In consequence, some levels were not found, which lead to an error. See [#245](https://github.com/s3alfisc/pyfixest/issues/245) for details. Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
-- Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See [#236](https://github.com/s3alfisc/pyfixest/issues/236) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
-- The number of degrees of freedom `k` was computed incorrectly if columns were dropped from the design matrix `X` in the presence of multicollinearity. See [#235](https://github.com/s3alfisc/pyfixest/issues/235) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
-- If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See [#228](https://github.com/s3alfisc/pyfixest/issues/228) for details. Thanks to [@manferdinig](https://github.com/manferdinig) for the pointer!
-- If selection `fixef_rm = 'singleton'`, `feols()` and `fepois()` would fail, which has been fixed. [#192](https://github.com/s3alfisc/pyfixest/issues/192)
+- Missing variables in features were not always handled correctly in `predict()` with `newdata` not `None` in the presence of missing data, which would lead to an error. See [#246](https://github.com/py-econometrics/pyfixest/issues/246) for details.
+- Categorical variables were not always handled correctly in `predict()` with `newdata` not `None`, because the number of fixed effects levels in `newdata` might be smaller than in `data`. In consequence, some levels were not found, which lead to an error. See [#245](https://github.com/py-econometrics/pyfixest/issues/245) for details. Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- Multicollinearity checks for over-identified IV was not implemented correctly, which lead to a dimension error. See [#236](https://github.com/py-econometrics/pyfixest/issues/236) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- The number of degrees of freedom `k` was computed incorrectly if columns were dropped from the design matrix `X` in the presence of multicollinearity. See [#235](https://github.com/py-econometrics/pyfixest/issues/235) for details.  Thanks to [@jiafengkevinchen](https://github.com/jiafengkevinchen) for the pointer!
+- If all variables were dropped due to multicollinearity, an unclear and imprecise error message was produced. See [#228](https://github.com/py-econometrics/pyfixest/issues/228) for details. Thanks to [@manferdinig](https://github.com/manferdinig) for the pointer!
+- If selection `fixef_rm = 'singleton'`, `feols()` and `fepois()` would fail, which has been fixed. [#192](https://github.com/py-econometrics/pyfixest/issues/192)
 
 ### Dependency Requirements
 
-- For now, sets `formulaic` versions to be `0.6.6` or lower as version `1.0.0` seems to have introduced a problem with the `i()` operator, See [#244](https://github.com/s3alfisc/pyfixest/issues/244) for details.
+- For now, sets `formulaic` versions to be `0.6.6` or lower as version `1.0.0` seems to have introduced a problem with the `i()` operator, See [#244](https://github.com/py-econometrics/pyfixest/issues/244) for details.
 - Drops dependency on `pyhdfe`.
 
 ## PyFixest 0.11.1
 
-- Fixes some bugs around the computation of R-squared values (see [issue #103](https://github.com/s3alfisc/pyfixest/issues/103)).
+- Fixes some bugs around the computation of R-squared values (see [issue #103](https://github.com/py-econometrics/pyfixest/issues/103)).
 - Reports R-squared values again when calling `.summary()`.
 
 ## PyFixest 0.11.0
@@ -253,7 +253,7 @@ Fixes bugs with i(var1, var2) syntax introduced with PyFixest 0.10.10.
 
 ## PyFixest 0.10.10
 
-Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/s3alfisc/pyfixest/issues/211).
+Fixes a bug with variable interactions via `i(var)` syntax. See [issue #221](https://github.com/py-econometrics/pyfixest/issues/211).
 
 ## PyFixest 0.10.9
 
@@ -275,7 +275,7 @@ from pyfixest.visualize import iplot
 import pandas as pd
 import numpy as np
 
-df_het = pd.read_csv("https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv")
+df_het = pd.read_csv("https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv")
 
 fit = did2s(
     df_het,
@@ -345,7 +345,7 @@ pf.etable([fit_twfe, fit_did2s])
 
 ## PyFixest 0.10.5
 
-- Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/s3alfisc/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
+- Fixes a big in IV estimation that would trigger an error. See [here](https://github.com/py-econometrics/pyfixest/issues/197) for details. Thanks to @aeturrell for reporting!
 
 ## PyFixest 0.10.4
 
@@ -420,7 +420,7 @@ np.allclose(res_pyhdfe , res_pyfixest)
 
 ## PyFixest 0.9.10
 
-- Fixes a big in the `wildboottest` method (see [#158](https://github.com/s3alfisc/pyfixest/issues/158)).
+- Fixes a big in the `wildboottest` method (see [#158](https://github.com/py-econometrics/pyfixest/issues/158)).
 - Allows to run a wild bootstrap after fixed effect estimation.
 
 ## PyFixest 0.9.9
@@ -438,7 +438,7 @@ Fixes a bug in `predict()` produced when multicollinear variables are dropped.
 
 ## PyFixest 0.9.6
 
-Improved Collinearity handling. See [#145](https://github.com/s3alfisc/pyfixest/issues/145)
+Improved Collinearity handling. See [#145](https://github.com/py-econometrics/pyfixest/issues/145)
 
 ## PyFixest 0.9.5
 
