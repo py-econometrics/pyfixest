@@ -179,7 +179,7 @@ window.Quarto = {
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -639,7 +639,7 @@ RMSE: 2.141 R2: 0.137 R2 Within: 0.126 </code></pre>
 </div>
 </div>
 <p><strong>Inference via the Wild Bootstrap</strong></p>
-<p>It is also possible to run a wild (cluster) bootstrap after estimation (via the <a href="https://github.com/s3alfisc/wildboottest">wildboottest module</a>, see <a href="http://qed.econ.queensu.ca/pub/faculty/mackinnon/working-papers/qed_wp_1485.pdf">MacKinnon, J. G., Nielsen, M. Ø., &amp; Webb, M. D. (2023). Fast and reliable jackknife and bootstrap methods for cluster-robust inference. Journal of Applied Econometrics, 38(5), 671–694.</a>):</p>
+<p>It is also possible to run a wild (cluster) bootstrap after estimation (via the <a href="https://github.com/py-econometrics/wildboottest">wildboottest module</a>, see <a href="http://qed.econ.queensu.ca/pub/faculty/mackinnon/working-papers/qed_wp_1485.pdf">MacKinnon, J. G., Nielsen, M. Ø., &amp; Webb, M. D. (2023). Fast and reliable jackknife and bootstrap methods for cluster-robust inference. Journal of Applied Econometrics, 38(5), 671–694.</a>):</p>
 <div id="cell-33" class="cell" data-execution_count="53">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>fit2.wildboottest(param<span class="op">=</span><span class="st">"X1"</span>, B<span class="op">=</span><span class="dv">999</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1564,7 +1564,7 @@ Coefficient (Std. Error)</code></pre>
 <h2 class="anchored" data-anchor-id="difference-in-differences-event-study-designs">Difference-in-Differences / Event Study Designs</h2>
 <p><code>PyFixest</code> supports eventy study designs via two-way fixed effects and Gardner’s 2-stage estimator.</p>
 <div id="cell-82" class="cell" data-execution_count="76">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/s3alfisc/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
 <span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
 <span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1820,7 +1820,7 @@ Format of coefficient cell:
 Coefficient (Std. Error)</code></pre>
 </div>
 </div>
-<p>For more details see the vignette on <a href="https://s3alfisc.github.io/pyfixest/difference-in-differences.html">Difference-in-Differences Estimation</a>.</p>
+<p>For more details see the vignette on <a href="https://py-econometrics.github.io/pyfixest/difference-in-differences.html">Difference-in-Differences Estimation</a>.</p>
 
 
 </section>

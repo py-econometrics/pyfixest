@@ -147,7 +147,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/s3alfisc/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -172,10 +172,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><img src="figures/pyfixest-logo.png" class="img-fluid"></p>
 <section id="pyfixest-fast-high-dimensional-fixed-effects-regression-in-python" class="level1">
 <h1>PyFixest: Fast High-Dimensional Fixed Effects Regression in Python</h1>
-<p><a href="https://pypi.org/project/pyfixest/"><img src="https://img.shields.io/pypi/v/pyfixest.svg" class="img-fluid" alt="PyPI - Version"></a> <img src="https://img.shields.io/pypi/pyversions/pyfixest.svg" class="img-fluid" alt="PyPI - Python Version"> <img src="https://img.shields.io/pypi/dm/pyfixest.svg" class="img-fluid" alt="PyPI - Downloads"> <a href="https://codecov.io/gh/s3alfisc/pyfixest"><img src="https://codecov.io/gh/s3alfisc/pyfixest/branch/master/graph/badge.svg" class="img-fluid" alt="image"></a> <a href="#contributors-"><img src="https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square" class="img-fluid" alt="All Contributors"></a></p>
+<p><a href="https://pypi.org/project/pyfixest/"><img src="https://img.shields.io/pypi/v/pyfixest.svg" class="img-fluid" alt="PyPI - Version"></a> <img src="https://img.shields.io/pypi/pyversions/pyfixest.svg" class="img-fluid" alt="PyPI - Python Version"> <img src="https://img.shields.io/pypi/dm/pyfixest.svg" class="img-fluid" alt="PyPI - Downloads"> <a href="https://codecov.io/gh/py-econometrics/pyfixest"><img src="https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg" class="img-fluid" alt="image"></a> <a href="#contributors-"><img src="https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square" class="img-fluid" alt="All Contributors"></a></p>
 <p><code>PyFixest</code> is a Python implementation of the formidable <a href="https://github.com/lrberge/fixest">fixest</a> package for fast high-dimensional fixed effects regression.</p>
-<p>The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows: if you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this means that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code> - currently with only <a href="https://github.com/s3alfisc/pyfixest/issues/260">one small exception</a>.</p>
-<p>Nevertheless, for a quick introduction, you can take a look at the <a href="https://s3alfisc.github.io/pyfixest/quickstart.html">quickstart</a> or the regression chapter of <a href="https://github.com/aeturrell">Arthur Turrell’s</a> book on <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>.</p>
+<p>The package aims to mimic <code>fixest</code> syntax and functionality as closely as Python allows: if you know <code>fixest</code> well, the goal is that you won’t have to read the docs to get started! In particular, this means that all of <code>fixest's</code> defaults are mirrored by <code>PyFixest</code> - currently with only <a href="https://github.com/py-econometrics/pyfixest/issues/260">one small exception</a>.</p>
+<p>Nevertheless, for a quick introduction, you can take a look at the <a href="https://py-econometrics.github.io/pyfixest/quickstart.html">quickstart</a> or the regression chapter of <a href="https://github.com/aeturrell">Arthur Turrell’s</a> book on <a href="https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports">Coding for Economists</a>.</p>
 <section id="features" class="level2">
 <h2 class="anchored" data-anchor-id="features">Features</h2>
 <ul>
@@ -183,7 +183,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Poisson Regression</strong> following the <a href="https://journals.sagepub.com/doi/full/10.1177/1536867X20909691">pplmhdfe algorithm</a></li>
 <li>Multiple Estimation Syntax</li>
 <li>Several <strong>Robust</strong> and <strong>Cluster Robust Variance-Covariance</strong> Estimators</li>
-<li><strong>Wild Cluster Bootstrap</strong> Inference (via <a href="https://github.com/s3alfisc/wildboottest">wildboottest</a>)</li>
+<li><strong>Wild Cluster Bootstrap</strong> Inference (via <a href="https://github.com/py-econometrics/wildboottest">wildboottest</a>)</li>
 <li><strong>Difference-in-Differences</strong> Estimators:
 <ul>
 <li>The canonical Two-Way Fixed Effects Estimator</li>
@@ -199,7 +199,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>You can install the release version from <code>PyPi</code> by running</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pip install <span class="op">-</span>U pyfixest</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or the development version from github by running</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pip install git<span class="op">+</span>https:<span class="op">//</span>github.com<span class="op">/</span>s3alfisc<span class="op">/</span>pyfixest.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pip install git<span class="op">+</span>https:<span class="op">//</span>github.com<span class="op">/</span>py<span class="op">-</span>econometrics<span class="op">/</span>pyfixest.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="benchmarks" class="level2">
 <h2 class="anchored" data-anchor-id="benchmarks">Benchmarks</h2>
@@ -321,25 +321,25 @@ Observations:  997
 <tbody>
 <tr>
 <td align="center" valign="top" width="14.28%">
-<a href="https://github.com/styfenschaer"><img src="https://avatars.githubusercontent.com/u/79762922?v=4?s=100" width="100px;" alt="styfenschaer"><br><sub><b>styfenschaer</b></sub></a><br><a href="https://github.com/s3alfisc/pyfixest/commits?author=styfenschaer" title="Code">💻</a>
+<a href="https://github.com/styfenschaer"><img src="https://avatars.githubusercontent.com/u/79762922?v=4?s=100" width="100px;" alt="styfenschaer"><br><sub><b>styfenschaer</b></sub></a><br><a href="https://github.com/py-econometrics/pyfixest/commits?author=styfenschaer" title="Code">💻</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="https://www.nkeleher.com/"><img src="https://avatars.githubusercontent.com/u/5607589?v=4?s=100" width="100px;" alt="Niall Keleher"><br><sub><b>Niall Keleher</b></sub></a><br><a href="#infra-NKeleher" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/s3alfisc/pyfixest/commits?author=NKeleher" title="Code">💻</a>
+<a href="https://www.nkeleher.com/"><img src="https://avatars.githubusercontent.com/u/5607589?v=4?s=100" width="100px;" alt="Niall Keleher"><br><sub><b>Niall Keleher</b></sub></a><br><a href="#infra-NKeleher" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=NKeleher" title="Code">💻</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="http://wenzhi-ding.com"><img src="https://avatars.githubusercontent.com/u/30380959?v=4?s=100" width="100px;" alt="Wenzhi Ding"><br><sub><b>Wenzhi Ding</b></sub></a><br><a href="https://github.com/s3alfisc/pyfixest/commits?author=Wenzhi-Ding" title="Code">💻</a>
+<a href="http://wenzhi-ding.com"><img src="https://avatars.githubusercontent.com/u/30380959?v=4?s=100" width="100px;" alt="Wenzhi Ding"><br><sub><b>Wenzhi Ding</b></sub></a><br><a href="https://github.com/py-econometrics/pyfixest/commits?author=Wenzhi-Ding" title="Code">💻</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="https://apoorvalal.github.io/"><img src="https://avatars.githubusercontent.com/u/12086926?v=4?s=100" width="100px;" alt="Apoorva Lal"><br><sub><b>Apoorva Lal</b></sub></a><br><a href="https://github.com/s3alfisc/pyfixest/commits?author=apoorvalal" title="Code">💻</a> <a href="https://github.com/s3alfisc/pyfixest/issues?q=author%3Aapoorvalal" title="Bug reports">🐛</a>
+<a href="https://apoorvalal.github.io/"><img src="https://avatars.githubusercontent.com/u/12086926?v=4?s=100" width="100px;" alt="Apoorva Lal"><br><sub><b>Apoorva Lal</b></sub></a><br><a href="https://github.com/py-econometrics/pyfixest/commits?author=apoorvalal" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aapoorvalal" title="Bug reports">🐛</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="https://juanitorduz.github.io"><img src="https://avatars.githubusercontent.com/u/22996444?v=4?s=100" width="100px;" alt="Juan Orduz"><br><sub><b>Juan Orduz</b></sub></a><br><a href="#infra-juanitorduz" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/s3alfisc/pyfixest/commits?author=juanitorduz" title="Code">💻</a>
+<a href="https://juanitorduz.github.io"><img src="https://avatars.githubusercontent.com/u/22996444?v=4?s=100" width="100px;" alt="Juan Orduz"><br><sub><b>Juan Orduz</b></sub></a><br><a href="#infra-juanitorduz" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=juanitorduz" title="Code">💻</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="https://s3alfisc.github.io/blog/"><img src="https://avatars.githubusercontent.com/u/19531450?v=4?s=100" width="100px;" alt="Alexander Fischer"><br><sub><b>Alexander Fischer</b></sub></a><br><a href="https://github.com/s3alfisc/pyfixest/commits?author=s3alfisc" title="Code">💻</a> <a href="#infra-s3alfisc" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a>
+<a href="https://py-econometrics.github.io/blog/"><img src="https://avatars.githubusercontent.com/u/19531450?v=4?s=100" width="100px;" alt="Alexander Fischer"><br><sub><b>Alexander Fischer</b></sub></a><br><a href="https://github.com/py-econometrics/pyfixest/commits?author=py-econometrics" title="Code">💻</a> <a href="#infra-py-econometrics" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a>
 </td>
 <td align="center" valign="top" width="14.28%">
-<a href="http://www.aeturrell.com"><img src="https://avatars.githubusercontent.com/u/11294320?v=4?s=100" width="100px;" alt="aeturrell"><br><sub><b>aeturrell</b></sub></a><br><a href="#tutorial-aeturrell" title="Tutorials">✅</a> <a href="https://github.com/s3alfisc/pyfixest/commits?author=aeturrell" title="Documentation">📖</a> <a href="#promotion-aeturrell" title="Promotion">📣</a>
+<a href="http://www.aeturrell.com"><img src="https://avatars.githubusercontent.com/u/11294320?v=4?s=100" width="100px;" alt="aeturrell"><br><sub><b>aeturrell</b></sub></a><br><a href="#tutorial-aeturrell" title="Tutorials">✅</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=aeturrell" title="Documentation">📖</a> <a href="#promotion-aeturrell" title="Promotion">📣</a>
 </td>
 </tr>
 </tbody>
