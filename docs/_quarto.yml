@@ -21,12 +21,14 @@ website:
         file: pyfixest.md
       - text: "Quickstart"
         file: quickstart.ipynb
-      - text: "Publication-Ready Regression Tables with `Stargazer`"
-        file: stargazer.ipynb
       - text: "Difference-in-Differences Estimation"
         file: difference-in-differences.ipynb
       - text: "Replicating 'The Effect' with PyFixest"
         file: replicating-the-effect.ipynb
+      - text: "Publication-Ready Regression Tables with `Stargazer`"
+        file: stargazer.ipynb
+      - text: "Hypothesis testing and Marginal Effects with `py-marginaleffects`"
+        file: marginaleffects.ipynb
       - text: "Documentation"
         file: reference/index.qmd
       - text: "Contributing"
