@@ -62,7 +62,7 @@ def test_wildrwolf():
     fit2 = feols("Y2 ~ X1", data=data)
     fit3 = feols("Y3 ~ X1", data=data)
 
-    rwolf_py = rwolf([fit1, fit2, fit3], "X1", B=9999, seed=12345)
+    rwolf_py = rwolf([fit1, fit2, fit3], "X1", reps=9999, seed=12345)
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1"), data=data)
@@ -81,7 +81,7 @@ def test_wildrwolf():
     fit2 = feols("Y2 ~ X1 | f1 + f2", data=data)
     fit3 = feols("Y3 ~ X1 | f1 + f2", data=data)
 
-    rwolf_py = rwolf([fit1, fit2, fit3], "X1", B=9999, seed=12345)
+    rwolf_py = rwolf([fit1, fit2, fit3], "X1", reps=9999, seed=12345)
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1 + f2"), data=data)

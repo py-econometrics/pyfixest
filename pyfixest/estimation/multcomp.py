@@ -64,7 +64,7 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: list[Union[Feols, Fepois]], param: str, B: int, seed: int
+    models: list[Union[Feols, Fepois]], param: str, reps: int, seed: int
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -81,7 +81,7 @@ def rwolf(
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
         The parameter for which the p-values should be computed.
-    B : int
+    reps : int
         The number of bootstrap replications.
     seed : int
         The seed for the random number generator.
@@ -101,11 +101,11 @@ def rwolf(
 
     data = get_data().dropna()
     fit = feols("Y ~ Y2 + X1 + X2", data=data)
-    rwolf(fit.to_list(), "X1", B=9999, seed=123)
+    rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2", data=data)
-    rwolf_df = rwolf([fit1, fit2], "X1", B=9999, seed=123)
+    rwolf_df = rwolf([fit1, fit2], "X1", reps=9999, seed=123)
     rwolf_df
     ```
     """
@@ -125,14 +125,14 @@ def rwolf(
 
     t_stats = all_model_stats.xs("t value").values
     t_stats = np.zeros(S)
-    boot_t_stats = np.zeros((B, S))
+    boot_t_stats = np.zeros((reps, S))
 
     for i in range(S):
         model = models[i]
 
         wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
             param=param,
-            B=B,
+            reps=reps,
             return_bootstrapped_t_stats=True,
             seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
         )

@@ -588,7 +588,7 @@ class FixestMulti:
 
     def wildboottest(
         self,
-        B: int,
+        reps: int,
         cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: str = "rademacher",
@@ -642,7 +642,7 @@ class FixestMulti:
             fxst = self.all_fitted_models[x]
 
             boot_res = fxst.wildboottest(
-                B,
+                reps,
                 cluster,
                 param,
                 weights_type,

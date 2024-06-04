@@ -803,7 +803,7 @@ class Feols:
 
     def wildboottest(
         self,
-        B: int,
+        reps: int,
         cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: Optional[str] = "rademacher",
@@ -820,7 +820,7 @@ class Feols:
 
         Parameters
         ----------
-        B : int
+        reps : int
             The number of bootstrap iterations to run.
         cluster : Union[str, None], optional
             The variable used for clustering. Defaults to None. If None, then
@@ -953,7 +953,7 @@ class Feols:
         if run_heteroskedastic:
             inference = "HC"
 
-            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=B, seed=seed)
+            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=reps, seed=seed)
             boot.get_adjustments(bootstrap_type=bootstrap_type)
             boot.get_uhat(impose_null=impose_null)
             boot.get_tboot(weights_type=weights_type)
@@ -971,7 +971,7 @@ class Feols:
                 Y=_Y,
                 cluster=cluster_array,
                 R=R,
-                B=B,
+                B=reps,
                 seed=seed,
                 parallel=parallel,
             )
@@ -1536,7 +1536,7 @@ class Feols:
         exact_match: Optional[bool] = False,
         joint: bool = False,
         seed: Optional[int] = None,
-        nboot: int = 10_000,
+        reps: int = 10_000,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -1568,7 +1568,7 @@ class Feols:
             Whether to use exact match for `keep` and `drop`. Default is False.
             If True, the pattern will be matched exactly to the coefficient name
             instead of using regular expressions.
-        nboot : int, optional
+        reps : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
@@ -1590,7 +1590,7 @@ class Feols:
         data = get_data()
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, joint=True, nboot=9999).head()
+        fit.confint(alpha=0.10, joint=True, reps=9999).head()
         ```
         """
         if keep is None:
@@ -1629,7 +1629,7 @@ class Feols:
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
-            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha, seed=seed)
+            crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
         ub = pd.Series(
             self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
