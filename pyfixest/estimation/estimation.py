@@ -270,7 +270,7 @@ def feols(
     For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
 
     ```{python}
-    fit.wildboottest(param = "X1", B=1000)
+    fit.wildboottest(param = "X1", reps=1000)
     ```
     would run a wild bootstrap test for the coefficient of `X1` with 1000
     bootstrap repetitions.
@@ -279,7 +279,7 @@ def feols(
       via the `cluster` argument:
 
     ```{python}
-    fit.wildboottest(param = "X1", B=1000, cluster="group_id")
+    fit.wildboottest(param = "X1", reps=1000, cluster="group_id")
     ```
 
     The `ritest()` method can be used to conduct randomization inference:
