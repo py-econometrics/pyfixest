@@ -66,7 +66,7 @@ def test_wildrwolf():
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", reps=9999, seed=12345)
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
 
     np.testing.assert_allclose(
         rwolf_py.iloc[6].values,
@@ -85,7 +85,7 @@ def test_wildrwolf():
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1 + f2"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", reps=9999, seed=12345)
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
 
     np.testing.assert_allclose(
         rwolf_py.iloc[6].values,
