@@ -69,6 +69,6 @@ def test_against_doubleml():
     m = feols(
         f"y ~ -1 + {'+'.join(['X_'+str(x) for x in range(n_vars)])}", df, vcov="hetero"
     )
-    pyfixest_res = m.confint(keep="X_.$", nboot=10_000, joint=True)
+    pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 
     assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)

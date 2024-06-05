@@ -163,7 +163,7 @@ def feols(
     The `ssc` argument specifies the small sample correction for inference. In
     general, `feols()` uses all of `fixest::feols()` defaults, but sets the
     `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
-    See here for more details: [link to github](https://github.com/s3alfisc/pyfixest/issues/260).
+    See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
 
     `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
     multiple models in one call. The following example estimates two models, one with
@@ -270,7 +270,7 @@ def feols(
     For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
 
     ```{python}
-    fit.wildboottest(param = "X1", B=1000)
+    fit.wildboottest(param = "X1", reps=1000)
     ```
     would run a wild bootstrap test for the coefficient of `X1` with 1000
     bootstrap repetitions.
@@ -279,7 +279,7 @@ def feols(
       via the `cluster` argument:
 
     ```{python}
-    fit.wildboottest(param = "X1", B=1000, cluster="group_id")
+    fit.wildboottest(param = "X1", reps=1000, cluster="group_id")
     ```
 
     The `ritest()` method can be used to conduct randomization inference:

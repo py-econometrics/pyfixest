@@ -803,7 +803,7 @@ class Feols:
 
     def wildboottest(
         self,
-        B: int,
+        reps: int,
         cluster: Optional[str] = None,
         param: Optional[str] = None,
         weights_type: Optional[str] = "rademacher",
@@ -820,7 +820,7 @@ class Feols:
 
         Parameters
         ----------
-        B : int
+        reps : int
             The number of bootstrap iterations to run.
         cluster : Union[str, None], optional
             The variable used for clustering. Defaults to None. If None, then
@@ -953,7 +953,7 @@ class Feols:
         if run_heteroskedastic:
             inference = "HC"
 
-            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=B, seed=seed)
+            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=reps, seed=seed)
             boot.get_adjustments(bootstrap_type=bootstrap_type)
             boot.get_uhat(impose_null=impose_null)
             boot.get_tboot(weights_type=weights_type)
@@ -971,7 +971,7 @@ class Feols:
                 Y=_Y,
                 cluster=cluster_array,
                 R=R,
-                B=B,
+                B=reps,
                 seed=seed,
                 parallel=parallel,
             )
@@ -1536,7 +1536,7 @@ class Feols:
         exact_match: Optional[bool] = False,
         joint: bool = False,
         seed: Optional[int] = None,
-        nboot: int = 10_000,
+        reps: int = 10_000,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -1568,7 +1568,7 @@ class Feols:
             Whether to use exact match for `keep` and `drop`. Default is False.
             If True, the pattern will be matched exactly to the coefficient name
             instead of using regular expressions.
-        nboot : int, optional
+        reps : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
@@ -1590,7 +1590,7 @@ class Feols:
         data = get_data()
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, joint=True, nboot=9999).head()
+        fit.confint(alpha=0.10, joint=True, reps=9999).head()
         ```
         """
         if keep is None:
@@ -1629,7 +1629,7 @@ class Feols:
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
-            crit_val = simultaneous_crit_val(C_coefs, nboot, alpha=alpha, seed=seed)
+            crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
         ub = pd.Series(
             self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
@@ -1695,7 +1695,7 @@ class Feols:
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, the simulated statistics are stored
+            Defaults to False. If True, stores the simulated statistics
             in the model object via the `ritest_statistics` attribute as a
             numpy array.
         level: float, optional
@@ -1715,6 +1715,7 @@ class Feols:
         _coefnames = self._coefnames
         _has_fixef = self._has_fixef
 
+        resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
         if _is_iv:
@@ -1819,7 +1820,7 @@ class Feols:
         if store_ritest_statistics:
             self._ritest_statistics = ri_stats
             self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat
+            self._ritest_sample_stat = sample_stat - h0_value
 
         res = pd.Series(
             {

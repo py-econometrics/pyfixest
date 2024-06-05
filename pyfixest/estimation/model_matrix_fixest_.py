@@ -278,11 +278,14 @@ def _fixef_interactions(fval: str, data: pd.DataFrame) -> tuple[str, pd.DataFram
         for val in fval.split("+"):
             if "^" in val:
                 vars = val.split("^")
-                data[val.replace("^", "_")] = data[vars].apply(
-                    lambda x: (
-                        "^".join(x.dropna().astype(str)) if x.notna().all() else np.nan
-                    ),
-                    axis=1,
+                data[val.replace("^", "_")] = (
+                    data[vars[0]]
+                    .astype(pd.StringDtype())
+                    .str.cat(
+                        data[vars[1:]].astype(pd.StringDtype()),
+                        sep="^",
+                        na_rep=None,  # a row containing a missing value in any of the columns (before concatenation) will have a missing value in the result: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html
+                    )
                 )
 
     return fval.replace("^", "_"), data

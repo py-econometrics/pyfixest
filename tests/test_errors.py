@@ -117,7 +117,7 @@ def test_iv_errors():
         feols(fml="Y ~ 1 | Z1 ~ X1 ", vcov={"CRV3": "group_id"}, data=data)
     # wild bootstrap
     with pytest.raises(NotImplementedError):
-        feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", B=999)
+        feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # multi estimation error
     with pytest.raises(MultiEstNotSupportedError):
         feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
@@ -159,7 +159,7 @@ def test_wls_errors():
     data.loc[0, "weights"] = np.nan
     with pytest.raises(NotImplementedError):
         feols("Y ~ X1", data=data, weights="weights").wildboottest(
-            cluster="f1", param="X1", B=999, seed=12
+            cluster="f1", param="X1", reps=999, seed=12
         )
 
     # test for ValueError when weights are not positive
@@ -175,7 +175,7 @@ def test_wls_errors():
 
     data = get_data()
     with pytest.raises(NotImplementedError):
-        feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(B=999)
+        feols("Y ~ X1", data=data, weights="weights", vcov="iid").wildboottest(reps=999)
 
 
 def test_multcomp_errors():
@@ -184,14 +184,14 @@ def test_multcomp_errors():
     # param not in model
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     with pytest.raises(ValueError):
-        rwolf(fit1.to_list(), param="X2", B=999, seed=92)
+        rwolf(fit1.to_list(), param="X2", reps=999, seed=92)
 
 
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
-        fit.wildboottest(param="X2", B=999, seed=213)
+        fit.wildboottest(param="X2", reps=999, seed=213)
 
 
 def test_summary_errors():
@@ -378,11 +378,12 @@ def test_ritest_error(data):
         fit_wls.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
-        "No test_statistics found in the model."
-        fit.ritest(resampvar="X1", reps=100)
-        fit.plot_ritest()
-
-    with pytest.raises(ValueError):
         "Incorrect plot backend."
         fit.ritest(resampvar="X1", reps=100, store_ritest_statistics=True)
         fit.plot_ritest(plot_backend="a")
+
+    with pytest.raises(ValueError):
+        "No test_statistics found in the model."
+        fit = pf.feols("Y ~ X1", data=data)
+        fit.ritest(resampvar="X1", reps=100)
+        fit.plot_ritest()
