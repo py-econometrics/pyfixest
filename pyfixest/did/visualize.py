@@ -44,7 +44,7 @@ def panelview(
     df_het = pd.read_csv("pd.read_csv("pyfixest/did/data/df_het.csv")
     panelview(
         data = df_het,
-        unit = "id",
+        unit = "unit",
         time = "year",
         treat = "treat",
         subsamp = 50,
