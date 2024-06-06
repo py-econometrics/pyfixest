@@ -1,3 +1,6 @@
+import pandas as pd
+
+from pyfixest.did.visualize import panelview
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.visualize import coefplot, iplot
 from pyfixest.utils.utils import get_data
@@ -27,3 +30,17 @@ def test_visualize():
     # FixestMulti
     fit6 = feols("Y + Y2 ~ X1 + X2 | f1", data=data)
     fit6.coefplot()
+
+
+def test_panelview():
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_het.head()
+
+    panelview(
+        data=df_het,
+        unit="unit",
+        time="year",
+        treat="treat",
+        subsamp=50,
+        title="Treatment Assignment",
+    )
