@@ -37,16 +37,17 @@ Nevertheless, for a quick introduction, you can take a look at the [documentatio
 
 ## Installation
 
-You can install the release version from `PyPi` by running
+You can install the release version from `PyPI` by running
 
-``` py
-pip install -U pyfixest
+```py
+# inside an active virtual environment
+python -m pip install pyfixest
 ```
 
 or the development version from github by running
 
-``` py
-pip install git+https://github.com/py-econometrics/pyfixest.git
+```py
+python -m pip install git+https://github.com/py-econometrics/pyfixest
 ```
 
 ## Benchmarks
