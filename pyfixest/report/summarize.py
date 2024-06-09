@@ -36,7 +36,8 @@ class Stargazer(BaseStargazer):
             A list of regression model objects to be included in the table.
         """
         super().__init__(models)
-        self.add_fixef()
+        if any([x._fixef is not None for x in self.models]):
+            self.add_fixef()
 
     def add_fixef(self):
         """
