@@ -1,5 +1,6 @@
 import warnings
-from typing import Optional, Union
+from importlib import import_module
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -312,24 +313,74 @@ class Fepois(Feols):
         return y_hat
 
 
-def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
+def _check_for_separation(
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    methods: list[str] | None = None,
+) -> list[int]:
     """
     Check for separation.
 
     Check for separation of Poisson Regression. For details, see the ppmlhdfe
-    documentation on separation checks. Currently, only the "fe" check is implemented.
+    documentation on separation checks.
 
     Parameters
     ----------
     Y : pd.DataFrame
         Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    method: list[str], optional
+        Method to check for separation. Executes ``fe`` and ``ir`` by default.
 
     Returns
     -------
     list
         List of indices of observations that are removed due to separation.
+    """
+    valid_methods: dict[
+        str, Callable[[pd.DataFrame, pd.DataFrame, pd.DataFrame], set[int]]
+    ] = {
+        "fe": _check_for_separation_fe,
+        "ir": _check_for_separation_ir,
+    }
+    if methods is None:
+        methods = list(valid_methods)
+    invalid_methods = [method for method in methods if method not in valid_methods]
+    if invalid_methods:
+        raise ValueError(
+            f"Invalid separation method. Expecting {valid_methods}. Got {invalid_methods}"
+        )
+
+    separation_na: set[int] = set()
+    for method in methods:
+        separation_na = separation_na.union(valid_methods[method](Y, X, fe))
+
+    return list(separation_na)
+
+
+def _check_for_separation_fe(
+    Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+) -> set[int]:
+    """
+    Check for separation using the "fe" check.
+
+    Parameters
+    ----------
+    Y : pd.DataFrame
+        Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
+    fe : pd.DataFrame
+        Fixed effects.
+
+    Returns
+    -------
+    set
+        Set of indices of observations that are removed due to separation.
     """
     separation_na: set[int] = set()
     if not (Y > 0).all(axis=0).all():
@@ -353,7 +404,59 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
                 dropset = set(fe[x][fe_in_droplist].index)
                 separation_na = separation_na.union(dropset)
 
-    return list(separation_na)
+    return separation_na
+
+
+def _check_for_separation_ir(
+    Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+) -> set[int]:
+    """
+    Check for separation using the "iterative rectifier" check.
+
+    For details see http://arxiv.org/abs/1903.01633
+
+    Parameters
+    ----------
+    Y : pd.DataFrame
+        Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
+    fe : pd.DataFrame
+        Fixed effects.
+
+    Returns
+    -------
+    set
+        Set of indices of observations that are removed due to separation.
+    """
+    tol = 1e-5
+    maxiter = 10_000
+    # lazy loading to avoid circular import
+    fixest_module = import_module("pyfixest.estimation")
+    feols = getattr(fixest_module, "feols")
+
+    U = (Y == 0).astype(int)
+    N0 = (Y > 0).sum()
+    K = N0 / tol**2
+    omega = U.where(U > 0, K)
+    data = pd.concat([U, X, fe], axis=1)
+    fml = f"U ~ {'+'.join(X.columns)}"
+
+    iter = 0
+    while iter < maxiter:
+        iter += 1
+        # regress U on X
+        # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
+        Uhat = feols(fml, data=data, weights=omega).predict()
+        Uhat = np.where(Uhat.abs() < tol, 0, Uhat)
+        if (Uhat >= 0).all():
+            # all separated observations have been identified
+            break
+
+        data["U"] = np.fmax(Uhat, 0)  # rectified linear unit (ReLU)
+
+    separation_na = set(Y[Uhat > 0].index)
+    return separation_na
 
 
 def _fepois_input_checks(
