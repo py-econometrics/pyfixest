@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from stargazer.stargazer import Stargazer as Stargazer_
+from stargazer.stargazer import Stargazer as BaseStargazer
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
@@ -13,7 +13,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 
-class Stargazer(Stargazer_):
+class Stargazer(BaseStargazer):
     """
     A wrapper around the Stargazer class from the stargazer package.
     Adds fixed effects to the regression table. For details,

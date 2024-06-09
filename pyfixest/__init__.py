@@ -14,12 +14,7 @@ from pyfixest.estimation import (
     fepois,
     rwolf,
 )
-from pyfixest.report import (
-    coefplot,
-    etable,
-    iplot,
-    summary,
-)
+from pyfixest.report import Stargazer, coefplot, etable, iplot, summary
 from pyfixest.utils import (
     get_data,
     get_ssc,
