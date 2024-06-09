@@ -18,3 +18,13 @@ def test_separation():
         UserWarning, match="2 observations removed because of separation."
     ):
         mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero")  # noqa: F841
+
+
+# def test_separation_ir():
+#     """Test iterative rectifier separation detection."""
+#     fns = [
+#         'ppmlhdfe_separation_example1.csv',
+#         'ppmlhdfe_separation_example2.csv',
+#     ]
+#     dfs = [pd.read_csv('data', fn) for fn in fns]
+#     raise NotImplementedError
