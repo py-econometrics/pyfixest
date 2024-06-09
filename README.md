@@ -37,16 +37,17 @@ Nevertheless, for a quick introduction, you can take a look at the [documentatio
 
 ## Installation
 
-You can install the release version from `PyPi` by running
+You can install the release version from `PyPI` by running
 
-``` py
-pip install -U pyfixest
+```py
+# inside an active virtual environment
+python -m pip install pyfixest
 ```
 
 or the development version from github by running
 
-``` py
-pip install git+https://github.com/py-econometrics/pyfixest.git
+```py
+python -m pip install git+https://github.com/py-econometrics/pyfixest
 ```
 
 ## Benchmarks
@@ -220,6 +221,7 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/leostimpfle"><img src="https://avatars.githubusercontent.com/u/31652181?v=4?s=100" width="100px;" alt="leostimpfle"/><br /><sub><b>leostimpfle</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=leostimpfle" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/baggiponte"><img src="https://avatars.githubusercontent.com/u/57922983?v=4?s=100" width="100px;" alt="baggiponte"/><br /><sub><b>baggiponte</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=baggiponte" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
