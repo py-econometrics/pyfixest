@@ -1,9 +1,14 @@
+import sys
+
+import doubleml as dml
 import numpy as np
 import pandas as pd
+import pytest
+from sklearn.base import clone
+from sklearn.linear_model import LinearRegression
 
 from pyfixest.estimation.estimation import feols
 from pyfixest.utils.utils import get_data
-from tests.py_test_comparisons import _get_data_doubleml_test
 
 
 def test_confint():
@@ -45,14 +50,29 @@ def test_confint():
     assert np.all(confint1 != confint3)
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 12), reason="requires python3.11 or lower.")
 def test_against_doubleml():
     """Test joint CIs against DoubleML."""
-    _, _, df, n_vars = _get_data_doubleml_test()
-    dml_res = pd.read_csv("tests/data/dml_res.csv")
+    rng = np.random.default_rng(2002)
+    n_obs = 5_000
+    n_vars = 100
+    X = rng.normal(size=(n_obs, n_vars))
+    theta = np.array([3.0, 3.0, 3.0])
+    y = np.dot(X[:, :3], theta) + rng.standard_normal(size=(n_obs,))
 
+    dml_data = dml.DoubleMLData.from_arrays(X[:, 10:], y, X[:, :10])
+    learner = LinearRegression()
+    ml_l = clone(learner)
+    ml_m = clone(learner)
+    dml_plr = dml.DoubleMLPLR(dml_data, ml_l, ml_m)
+    dml_res = dml_plr.fit().bootstrap(n_rep_boot=10_000).confint(joint=True)
+
+    df = pd.DataFrame(
+        np.c_[y, X], columns=["y"] + ["X_" + str(x) for x in range(n_vars)]
+    )
     m = feols(
         f"y ~ -1 + {'+'.join(['X_'+str(x) for x in range(n_vars)])}", df, vcov="hetero"
     )
     pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 
-    assert np.all(np.abs(dml_res.iloc[:, 1:].values - pyfixest_res.values) < 1e-2)
+    assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)

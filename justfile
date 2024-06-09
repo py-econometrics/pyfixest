@@ -27,8 +27,6 @@ install-r:
 # Create R and Py test data sets
 update-tests-data-r:
 	poetry run Rscript tests/r_test_comparisons.R
-update-tests-data-py:
-	poetry run python tests/py_test_comparisons.py
 
 # Run pytest
 tests:
