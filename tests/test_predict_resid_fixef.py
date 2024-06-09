@@ -162,7 +162,7 @@ def test_vs_fixest(data, fml):
 
 
 def test_predict_nas():
-    # tests to fix #246: https://github.com/s3alfisc/pyfixest/issues/246
+    # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
     # NaNs in depvar, covar and fixed effects
     data = get_data()
