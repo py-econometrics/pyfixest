@@ -29,6 +29,7 @@ from pyfixest.utils import (
 __all__ = [
     "feols",
     "fepois",
+    "Stargazer",
     "etable",
     "summary",
     "iplot",
