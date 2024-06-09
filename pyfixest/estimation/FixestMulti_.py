@@ -343,22 +343,57 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
-                            solver=solver,
-                            collin_tol=collin_tol,
-                            fixef_tol=_fixef_tol,
-                            lookup_demeaned_data=lookup_demeaned_data,
-                            store_data=_store_data,
-                            copy_data=_copy_data,
-                            lean=_lean,
-                            reps=self._reps,
-                            seed=self._seed,
-                            sample_split_value=sample_split_value,
-                            sample_split_var=_splitvar,
                         )
-                        FIT.prepare_model_matrix()
-                        FIT.to_array()
-                        FIT.drop_multicol_vars()
-                        FIT.wls_transform()
+
+                    FIT.na_index = na_index
+
+                    # special case: sometimes it is useful to fit models as
+                    # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
+                    if FIT._X_is_empty:
+                        FIT._u_hat = Y.to_numpy() - Yd_array
+                    else:
+                        FIT.get_fit()
+
+                elif _method == "fepois":
+                    # check for separation and drop separated variables
+
+                    na_separation: list[int] = []
+                    if fe is not None:
+                        na_separation = _check_for_separation(Y=Y, X=X, fe=fe)
+                        if na_separation:
+                            warnings.warn(
+                                f"{str(len(na_separation))} observations removed because of separation."
+                            )
+
+                            Y.drop(na_separation, axis=0, inplace=True)
+                            X.drop(na_separation, axis=0, inplace=True)
+                            fe.drop(na_separation, axis=0, inplace=True)
+
+                    Y_array, X_array = (x.to_numpy() for x in [Y, X])
+                    N = X_array.shape[0]
+
+                    fe_array = None
+                    if fe is not None:
+                        _has_fixef = True
+                        fe_array = fe.to_numpy()
+                        if fe_array.ndim == 1:
+                            fe_array = fe_array.reshape((N, 1))
+
+                    # initiate OLS class
+                    FIT = Fepois(
+                        Y=Y_array,
+                        X=X_array,
+                        fe=fe_array,
+                        weights=weights,
+                        coefnames=coefnames,
+                        drop_singletons=_drop_singletons,
+                        maxiter=iwls_maxiter,
+                        tol=iwls_tol,
+                        collin_tol=collin_tol,
+                        weights_name=None,
+                        fixef_tol=_fixef_tol,
+                        weights_type=_weights_type,
+                    )
 
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
