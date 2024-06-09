@@ -1,6 +1,6 @@
 import warnings
 from importlib import import_module
-from typing import Callable, Optional, Union
+from typing import Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -341,9 +341,7 @@ def _check_for_separation(
     list
         List of indices of observations that are removed due to separation.
     """
-    valid_methods: dict[
-        str, Callable[[pd.DataFrame, pd.DataFrame, pd.DataFrame], set[int]]
-    ] = {
+    valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
         "ir": _check_for_separation_ir,
     }
@@ -357,9 +355,31 @@ def _check_for_separation(
 
     separation_na: set[int] = set()
     for method in methods:
-        separation_na = separation_na.union(valid_methods[method](Y, X, fe))
+        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X, fe=fe))
 
     return list(separation_na)
+
+
+class _SeparationMethod(Protocol):
+    def __call__(self, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame) -> set[int]:
+        """
+        Check for separation using the "fe" check.
+
+        Parameters
+        ----------
+        Y : pd.DataFrame
+            Dependent variable.
+        X : pd.DataFrame
+            Independent variables.
+        fe : pd.DataFrame
+            Fixed effects.
+
+        Returns
+        -------
+        set
+            Set of indices of observations that are removed due to separation.
+        """
+        ...
 
 
 def _check_for_separation_fe(
