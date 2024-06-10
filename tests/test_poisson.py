@@ -19,7 +19,7 @@ def test_separation():
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        mod = fepois("Y ~ X  | fe1", data=example1, vcov="hetero", method=["fe"])  # noqa: F841
+        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
 
     example2 = pd.DataFrame.from_dict(
         {
@@ -28,7 +28,8 @@ def test_separation():
             "X2": [-1, 2, 0, 0, -10, -12],
         }
     )
+
     with pytest.warns(
         UserWarning, match="1 observations removed because of separation."
     ):
-        mod = fepois("Y ~ X1 + X2", data=example2, vcov="hetero", method=["ir"])  # noqa: F841
+        fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
