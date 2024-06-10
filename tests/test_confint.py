@@ -1,11 +1,8 @@
 import sys
 
-import doubleml as dml
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.base import clone
-from sklearn.linear_model import LinearRegression
 
 from pyfixest.estimation.estimation import feols
 from pyfixest.utils.utils import get_data
@@ -53,6 +50,10 @@ def test_confint():
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason="requires python3.11 or lower.")
 def test_against_doubleml():
     """Test joint CIs against DoubleML."""
+    import doubleml as dml
+    from sklearn.base import clone
+    from sklearn.linear_model import LinearRegression
+
     rng = np.random.default_rng(2002)
     n_obs = 5_000
     n_vars = 100
