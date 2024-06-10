@@ -335,17 +335,18 @@ class FixestMulti:
                     # check for separation and drop separated variables
 
                     na_separation: list[int] = []
-                    if fe is not None:
-                        na_separation = _check_for_separation(
-                            Y=Y, X=X, fe=fe, methods=separation_check
+                    # if fe is not None:
+                    na_separation = _check_for_separation(
+                        Y=Y, X=X, fe=fe, methods=separation_check
+                    )
+                    if na_separation:
+                        warnings.warn(
+                            f"{str(len(na_separation))} observations removed because of separation."
                         )
-                        if na_separation:
-                            warnings.warn(
-                                f"{str(len(na_separation))} observations removed because of separation."
-                            )
 
-                            Y.drop(na_separation, axis=0, inplace=True)
-                            X.drop(na_separation, axis=0, inplace=True)
+                        Y.drop(na_separation, axis=0, inplace=True)
+                        X.drop(na_separation, axis=0, inplace=True)
+                        if fe is not None:
                             fe.drop(na_separation, axis=0, inplace=True)
 
                     Y_array, X_array = (x.to_numpy() for x in [Y, X])

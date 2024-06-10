@@ -341,6 +341,7 @@ def _check_for_separation(
     list
         List of indices of observations that are removed due to separation.
     """
+    # import pdb; pdb.set_trace()
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
         "ir": _check_for_separation_ir,
@@ -404,7 +405,7 @@ def _check_for_separation_fe(
         Set of indices of observations that are removed due to separation.
     """
     separation_na: set[int] = set()
-    if not (Y > 0).all(axis=0).all():
+    if fe is not None and not (Y > 0).all(axis=0).all():
         Y_help = (Y > 0).astype(int).squeeze()
 
         # loop over all elements of fe
@@ -450,26 +451,26 @@ def _check_for_separation_ir(
     set
         Set of indices of observations that are removed due to separation.
     """
-    tol = 1e-5
+    tol = 1e-8
     maxiter = 10_000
     # lazy loading to avoid circular import
     fixest_module = import_module("pyfixest.estimation")
     feols = getattr(fixest_module, "feols")
 
-    U = (Y == 0).astype(int)
-    N0 = (Y > 0).sum()
+    U = (Y == 0).astype(int).squeeze().rename("U")
+    N0 = (Y > 0).squeeze().sum()
     K = N0 / tol**2
-    omega = U.where(U > 0, K)
-    data = pd.concat([U, X, fe], axis=1)
-    fml = f"U ~ {'+'.join(X.columns)}"
+    omega = U.where(U > 0, K).rename("omega")
+    data = pd.concat([U, X, omega], axis=1)
+    fml = f"U ~ {'+'.join(X.columns[X.columns!='Intercept'])}"
 
     iter = 0
     while iter < maxiter:
         iter += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        Uhat = feols(fml, data=data, weights=omega).predict()
-        Uhat = np.where(Uhat.abs() < tol, 0, Uhat)
+        Uhat = feols(fml, data=data, weights="omega").predict()
+        Uhat = np.where(np.abs(Uhat) < tol, 0, Uhat)
         if (Uhat >= 0).all():
             # all separated observations have been identified
             break
