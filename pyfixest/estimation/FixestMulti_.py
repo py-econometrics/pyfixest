@@ -32,7 +32,7 @@ class FixestMulti:
 
         Parameters
         ----------
-        data : panda.DataFrame
+        data : pandas.DataFrame
             The input DataFrame for the object.
         copy_data : bool
             Whether to copy the data or not.
@@ -154,6 +154,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
+        separation_check: list[str] | None = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -174,6 +175,9 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
 
         Returns
         -------
@@ -332,7 +336,9 @@ class FixestMulti:
 
                     na_separation: list[int] = []
                     if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, X=X, fe=fe)
+                        na_separation = _check_for_separation(
+                            Y=Y, X=X, fe=fe, methods=separation_check
+                        )
                         if na_separation:
                             warnings.warn(
                                 f"{str(len(na_separation))} observations removed because of separation."

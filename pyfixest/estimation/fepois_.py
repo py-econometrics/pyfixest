@@ -334,7 +334,7 @@ def _check_for_separation(
     fe : pd.DataFrame
         Fixed effects.
     method: list[str], optional
-        Method to check for separation. Executes ``fe`` and ``ir`` by default.
+        Methods to check for separation. Either "fe" or "ir". Executes both by default.
 
     Returns
     -------
@@ -347,6 +347,7 @@ def _check_for_separation(
     }
     if methods is None:
         methods = list(valid_methods)
+
     invalid_methods = [method for method in methods if method not in valid_methods]
     if invalid_methods:
         raise ValueError(
@@ -363,7 +364,7 @@ def _check_for_separation(
 class _SeparationMethod(Protocol):
     def __call__(self, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame) -> set[int]:
         """
-        Check for separation using the "fe" check.
+        Check for separation.
 
         Parameters
         ----------

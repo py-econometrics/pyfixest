@@ -354,6 +354,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
+    separation_check: list[str] | None = None,
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -401,6 +402,10 @@ def fepois(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    separation_check: list[str], optional
+        Methods to identify and drop separated observations.
+        Either "fe" or "ir". Executes both by default.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -498,6 +503,7 @@ def fepois(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
+        separation_check=separation_check,
     )
 
     if fixest._is_multiple_estimation:
