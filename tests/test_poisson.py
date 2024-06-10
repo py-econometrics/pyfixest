@@ -7,24 +7,28 @@ from pyfixest.estimation.estimation import fepois
 
 def test_separation():
     """Test separation detection."""
-    y = np.array([0, 0, 0, 1, 2, 3])
-    df1 = np.array(["a", "a", "b", "b", "b", "c"])
-    df2 = np.array(["c", "c", "d", "d", "d", "e"])
-    x = np.random.normal(0, 1, 6)
-
-    df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x": x})
+    example1 = pd.DataFrame.from_dict(
+        {
+            "Y": [0, 0, 0, 1, 2, 3],
+            "fe1": ["a", "a", "b", "b", "b", "c"],
+            "fe2": ["c", "c", "d", "d", "d", "e"],
+            "X": np.random.normal(0, 1, 6),
+        }
+    )
 
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero")  # noqa: F841
+        mod = fepois("Y ~ X  | fe1", data=example1, vcov="hetero", method=["fe"])  # noqa: F841
 
-
-# def test_separation_ir():
-#     """Test iterative rectifier separation detection."""
-#     fns = [
-#         'ppmlhdfe_separation_example1.csv',
-#         'ppmlhdfe_separation_example2.csv',
-#     ]
-#     dfs = [pd.read_csv('data', fn) for fn in fns]
-#     raise NotImplementedError
+    example2 = pd.DataFrame.from_dict(
+        {
+            "Y": [0, 0, 0, 1, 2, 3],
+            "X1": [2, -1, 0, 0, 5, 6],
+            "X2": [-1, 2, 0, 0, -10, -12],
+        }
+    )
+    with pytest.warns(
+        UserWarning, match="1 observations removed because of separation."
+    ):
+        mod = fepois("Y ~ X1 + X2", data=example2, vcov="hetero", method=["ir"])  # noqa: F841
