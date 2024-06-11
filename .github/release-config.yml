@@ -7,17 +7,17 @@ categories:
   - title: 'Breaking Changes'
     labels:
       - 'breaking changes'
-  - title: 'Maintainence'
+  - title: 'Maintenance'
     labels:
-      - 'maintainence'
+      - 'maintenance'
   - title: 'Documentation'
     labels:
       -'documentation'
   - title: 'Infrastructure'
     labels:
-      - 'infrastructure''
+      - 'infrastructure'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' 
+change-title-escapes: '\<*_&'
 version-resolver:
   major:
     labels:
