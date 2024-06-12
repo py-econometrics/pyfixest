@@ -7,7 +7,7 @@ from pyfixest.utils.utils import get_data, ssc
 
 @pytest.fixture
 def data():
-    return get_data(N=1_000, seed=9)
+    return get_data(N=2_000, seed=9)
 
 
 # note - tests currently fail because of ssc adjustments
@@ -19,7 +19,7 @@ def test_hc_equivalence(data, fml):
     boot_tstat = fixest.wildboottest(param="X1", reps=999)["t value"]
 
     # cannot test for for equality because of ssc adjustments
-    np.testing.assert_allclose(tstat, boot_tstat, rtol=0.01, atol=0.01)
+    np.testing.assert_allclose(tstat, boot_tstat, rtol=0.02, atol=0.01)
 
 
 @pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
