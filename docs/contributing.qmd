@@ -119,6 +119,26 @@ scoop bucket add extras
 scoop install extras/quarto
 ```
 
+### Package Management
+
+`PyFixest` is using [poetry](https://github.com/python-poetry/poetry).
+
+Please follow the [installation instructions](https://python-poetry.org/docs/#installing-with-the-official-installer) from the poetry documentation.
+
+Afterwards, you can initiate the project environment and install all dependencies by running
+
+```{bash}
+cd path-to-pyfixest
+poetry install
+```
+
+If you type
+```{bash}
+poetry shell
+```
+
+you will see that you have activated a custom poetry environment for pyfixest.
+
 ### Code Style
 
 We use `ruff` and `pre-commit` to ensure a consistent code style.
