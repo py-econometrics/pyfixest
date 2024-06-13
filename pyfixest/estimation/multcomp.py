@@ -1,3 +1,4 @@
+import warnings
 from typing import Union
 
 import numpy as np
@@ -111,6 +112,7 @@ def rwolf(
     """
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
+    full_enumeration = False
 
     S = 0
     for model in models:
@@ -119,13 +121,23 @@ def rwolf(
                 f"Parameter '{param}' not found in the model {model._fml}."
             )
 
+        if model._is_clustered:
+            # model._G a list of length 3
+            # for oneway clusering: repeated three times
+            G = min(model._G)
+            if reps > 2**G:
+                warnings.warn(f"""
+                              2^(the number of clusters) < the number of boot iterations for at least one model,
+                              setting full_enumeration to True and reps = {2**G}.
+                              """)
+                full_enumeration = True
+
         model_tidy = model.tidy().xs(param)
         all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
         S += 1
 
-    t_stats = all_model_stats.xs("t value").values
     t_stats = np.zeros(S)
-    boot_t_stats = np.zeros((reps, S))
+    boot_t_stats = np.zeros((2**G, S)) if full_enumeration else np.zeros((reps, S))
 
     for i in range(S):
         model = models[i]

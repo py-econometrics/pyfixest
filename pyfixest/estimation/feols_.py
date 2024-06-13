@@ -945,9 +945,9 @@ class Feols:
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
-        R = np.ones(len(_xnames))
+        R = np.zeros(len(_xnames))
         if param is not None:
-            R[_xnames.index(param)] = 0
+            R[_xnames.index(param)] = 1
         r = 0
 
         if run_heteroskedastic:

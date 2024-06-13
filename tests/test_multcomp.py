@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
@@ -45,54 +46,89 @@ def test_bonferroni():
 
     bonferroni_r = stats.p_adjust(pvalues_r, method="bonferroni")
 
-    np.testing.assert_allclose(
-        bonferroni_py.iloc[6].values, bonferroni_r, atol=1e-8, rtol=np.inf
-    )
+    assert np.all(
+        np.abs(bonferroni_py.iloc[6].values - bonferroni_r) < 0.01
+    ), "bonferroni failed"
 
 
-def test_wildrwolf():
-    rng = np.random.default_rng(12345)
-    data = get_data()
-    data["Y2"] = data["Y"] * rng.normal(0, 0.5, size=len(data))
-    data["Y3"] = data["Y2"] + rng.normal(0, 0.5, size=len(data))
+@pytest.mark.parametrize("seed", [293, 912, 831])
+@pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
+def test_wildrwolf_hc(seed, sd):
+    rng = np.random.default_rng(seed)
+    data = get_data(N=1_000, seed=seed)
+    data["f1"] = rng.choice(range(100), len(data), True)
+    data["Y2"] = data["Y"] * rng.normal(0, sd, size=len(data))
+    data["Y3"] = data["Y2"] + rng.normal(0, sd, size=len(data))
 
     # test set 1
 
-    fit1 = feols("Y ~ X1", data=data)
-    fit2 = feols("Y2 ~ X1", data=data)
-    fit3 = feols("Y3 ~ X1", data=data)
-
-    rwolf_py = rwolf([fit1, fit2, fit3], "X1", reps=9999, seed=12345)
+    fit = feols("Y + Y2 + Y3~ X1", data=data)
+    rwolf_py = rwolf(fit.to_list(), "X1", reps=9999, seed=seed + 2)
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=seed + 2)
 
-    np.testing.assert_allclose(
-        rwolf_py.iloc[6].values,
-        pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
-        atol=1e-2,
-        rtol=np.inf,
-    )
+    try:
+        np.testing.assert_allclose(
+            rwolf_py.iloc[6].values,
+            pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
+            rtol=0,
+            atol=0.01,
+            err_msg="rwolf 1 failed",
+        )
+    except AssertionError:
+        rwolf_py = rwolf(fit.to_list(), "X1", reps=29999, seed=seed + 2)
+        rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=29999, seed=seed + 2)
+
+        np.testing.assert_allclose(
+            rwolf_py.iloc[6].values,
+            pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
+            rtol=0,
+            atol=0.01,
+            err_msg="rwolf 1 failed",
+        )
+
+
+@pytest.mark.parametrize("seed", [29090381, 32, 99932444])
+@pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
+def test_wildrwolf_crv(seed, sd):
+    rng = np.random.default_rng(seed)
+    data = get_data(N=4_000, seed=seed)
+    data["f1"] = rng.choice(range(200), len(data), True)
+    data["Y2"] = data["Y"] * rng.normal(0, sd, size=len(data))
+    data["Y3"] = data["Y2"] + rng.normal(0, sd, size=len(data))
 
     # test set 2
 
-    fit1 = feols("Y ~ X1 | f1 + f2", data=data)
-    fit2 = feols("Y2 ~ X1 | f1 + f2", data=data)
-    fit3 = feols("Y3 ~ X1 | f1 + f2", data=data)
+    fit = feols("Y + Y2 + Y3 ~ X1 | f1 + f2", data=data)
 
-    rwolf_py = rwolf([fit1, fit2, fit3], "X1", reps=9999, seed=12345)
+    rwolf_py = rwolf(fit.to_list(), "X1", reps=9999, seed=seed + 3)
 
     # R
     fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1 + f2"), data=data)
-    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=12345)
+    rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=seed + 3)
 
-    np.testing.assert_allclose(
-        rwolf_py.iloc[6].values,
-        pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
-        atol=1e-2,
-        rtol=np.inf,
-    )
+    try:
+        np.testing.assert_allclose(
+            rwolf_py.iloc[6].values,
+            pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
+            rtol=0,
+            atol=0.025,
+            err_msg="rwolf 2 failed",
+        )
+
+    except AssertionError:
+        rwolf_py = rwolf(fit.to_list(), "X1", reps=19999, seed=seed + 3)
+        rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=19999, seed=seed + 3)
+
+        np.testing.assert_allclose(
+            rwolf_py.iloc[6].values,
+            pd.DataFrame(rwolf_r).iloc[5].values.astype(float),
+            rtol=0,
+            atol=0.025,
+            err_msg="rwolf 2 failed",
+        )
 
 
 def test_stepwise_function():
