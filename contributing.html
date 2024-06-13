@@ -205,6 +205,17 @@ sudo gdebi quarto-linux-amd64.deb</code></pre>
 <pre class="{bash}"><code>scoop bucket add extras
 scoop install extras/quarto</code></pre>
 </section>
+<section id="package-management" class="level3">
+<h3 class="anchored" data-anchor-id="package-management">Package Management</h3>
+<p><code>PyFixest</code> is using <a href="https://github.com/python-poetry/poetry">poetry</a>.</p>
+<p>Please follow the <a href="https://python-poetry.org/docs/#installing-with-the-official-installer">installation instructions</a> from the poetry documentation.</p>
+<p>Afterwards, you can initiate the project environment and install all dependencies by running</p>
+<pre class="{bash}"><code>cd path-to-pyfixest
+poetry install</code></pre>
+<p>If you type</p>
+<pre class="{bash}"><code>poetry shell</code></pre>
+<p>you will see that you have activated a custom poetry environment for pyfixest.</p>
+</section>
 <section id="code-style" class="level3">
 <h3 class="anchored" data-anchor-id="code-style">Code Style</h3>
 <p>We use <code>ruff</code> and <code>pre-commit</code> to ensure a consistent code style.</p>
@@ -216,7 +227,7 @@ scoop install extras/quarto</code></pre>
 </section>
 <section id="justfile" class="level3">
 <h3 class="anchored" data-anchor-id="justfile">Justfile</h3>
-<p>There are several command line targets that assist with development included in the <code>justfile</code>. <a href="https://just.systems/">Just</a> can be installed to help run these command line targets.</p>
+<p>There are several command line targets that assist with development included in the <code>justfile</code>. <a href="https://just.systems/">Just</a> can be installed to help run these command line targets. Installing <code>just</code> is only recommended and not needed for development of pyfixest.</p>
 <p>On Mac/Linux via <a href="https://formulae.brew.sh/formula/just#default">Homebrew</a>:</p>
 <pre class="{bash}"><code>brew install just</code></pre>
 <p>On Windows:</p>

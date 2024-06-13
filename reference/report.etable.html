@@ -312,9 +312,9 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
+<col style="width: 6%">
 <col style="width: 5%">
-<col style="width: 8%">
-<col style="width: 81%">
+<col style="width: 83%">
 <col style="width: 4%">
 </colgroup>
 <thead>
@@ -352,25 +352,25 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td><code>custom_stats</code></td>
-<td>typing.Optional[dict]</td>
+<td>Optional[dict]</td>
 <td>A dictionary of custom statistics. “b”, “se”, “t”, or “p” are reserved.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>keep</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
+<td>Optional[Union[list, str]]</td>
 <td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>drop</code></td>
-<td>typing.Optional[typing.Union[list, str]]</td>
+<td>Optional[Union[list, str]]</td>
 <td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>exact_match</code></td>
-<td>typing.Optional[bool]</td>
+<td>Optional[bool]</td>
 <td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
 <td><code>False</code></td>
 </tr>
@@ -405,8 +405,8 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 26%">
-<col style="width: 73%">
+<col style="width: 20%">
+<col style="width: 79%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -416,7 +416,7 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td>pandas.pandas.DataFrame</td>
+<td>pandas.DataFrame</td>
 <td>A DataFrame with the coefficients and standard errors of the models.</td>
 </tr>
 </tbody>

@@ -347,10 +347,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 3%">
-<col style="width: 35%">
-<col style="width: 55%">
-<col style="width: 4%">
+<col style="width: 5%">
+<col style="width: 15%">
+<col style="width: 72%">
+<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -363,7 +363,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td><code>models</code></td>
-<td>list[pyfixest.estimation.feols_.Feols] or pyfixest.estimation.FixestMulti_.FixestMulti</td>
+<td>list[Feols] or FixestMulti</td>
 <td>A list of models for which the p-values should be computed, or a FixestMulti object. Models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</td>
 <td><em>required</em></td>
 </tr>
@@ -392,8 +392,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 21%">
-<col style="width: 78%">
+<col style="width: 13%">
+<col style="width: 86%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -403,7 +403,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>pandas.pandas.DataFrame</td>
+<td>pd.DataFrame</td>
 <td>A DataFrame containing estimation statistics, including the Romano-Wolf adjusted p-values.</td>
 </tr>
 </tbody>

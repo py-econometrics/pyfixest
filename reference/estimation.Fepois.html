@@ -329,22 +329,22 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>Y</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Dependent variable, a two-dimensional numpy array.</td>
 </tr>
 <tr class="even">
 <td>X</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Independent variables, a two-dimensional numpy array.</td>
 </tr>
 <tr class="odd">
 <td>fe</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Fixed effects, a two-dimensional numpy array or None.</td>
 </tr>
 <tr class="even">
 <td>weights</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Weights, a one-dimensional numpy array or None.</td>
 </tr>
 <tr class="odd">
@@ -379,18 +379,175 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td>weights_name</td>
-<td>typing.Optional[str]</td>
+<td>Optional[str]</td>
 <td>Name of the weights variable.</td>
 </tr>
 <tr class="even">
 <td>weights_type</td>
-<td>typing.Optional[str]</td>
+<td>Optional[str]</td>
 <td>Type of weights variable.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Fepois.get_fit">get_fit</a></td>
+<td>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.Fepois.predict">predict</a></td>
+<td>Return predicted values from regression model.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.estimation.Fepois.get_fit" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.get_fit">get_fit</h3>
+<p><code>estimation.Fepois.get_fit()</code></p>
+<p>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</p>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="attributes-1" class="level4">
+<h4 class="anchored" data-anchor-id="attributes-1">Attributes</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 11%">
+<col style="width: 78%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>beta_hat</td>
+<td>np.ndarray</td>
+<td>Estimated coefficients.</td>
+</tr>
+<tr class="even">
+<td>Y_hat</td>
+<td>np.ndarray</td>
+<td>Estimated dependent variable.</td>
+</tr>
+<tr class="odd">
+<td>u_hat</td>
+<td>np.ndarray</td>
+<td>Estimated residuals.</td>
+</tr>
+<tr class="even">
+<td>weights</td>
+<td>np.ndarray</td>
+<td>Weights (from the last iteration of the IRLS algorithm).</td>
+</tr>
+<tr class="odd">
+<td>X</td>
+<td>np.ndarray</td>
+<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
+</tr>
+<tr class="even">
+<td>Z</td>
+<td>np.ndarray</td>
+<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
+</tr>
+<tr class="odd">
+<td>Y</td>
+<td>np.ndarray</td>
+<td>Demeaned dependent variable (from the last iteration of the IRLS algorithm).</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="pyfixest.estimation.Fepois.predict" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.predict">predict</h3>
+<p><code>estimation.Fepois.predict(newdata=None, type='link')</code></p>
+<p>Return predicted values from regression model.</p>
+<p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 8%">
+<col style="width: 85%">
+<col style="width: 3%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>newdata</code></td>
+<td>Union[None, pd.DataFrame]</td>
+<td>A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>type</code></td>
+<td>str</td>
+<td>The type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.</td>
+<td><code>'link'</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4">
+<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 84%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>np.ndarray</td>
+<td>A flat array with the predicted values of the regression model.</td>
 </tr>
 </tbody>
 </table>
 
 
+</section>
+</section>
 </section>
 </section>
 

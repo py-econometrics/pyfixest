@@ -314,9 +314,9 @@ ul.task-list li input[type="checkbox"] {
 <table class="caption-top table">
 <colgroup>
 <col style="width: 7%">
-<col style="width: 13%">
-<col style="width: 71%">
-<col style="width: 7%">
+<col style="width: 10%">
+<col style="width: 74%">
+<col style="width: 8%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -329,19 +329,19 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><code>x</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>numpy.ndarray</td>
 <td>Input array of shape (n_samples, n_features). Needs to be of type float.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>flist</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>numpy.ndarray</td>
 <td>Array of shape (n_samples, n_factors) specifying the fixed effects. Needs to already be converted to integers.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td><code>weights</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>numpy.ndarray</td>
 <td>Array of shape (n_samples,) specifying the weights.</td>
 <td><em>required</em></td>
 </tr>
@@ -364,8 +364,8 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 20%">
-<col style="width: 79%">
+<col style="width: 17%">
+<col style="width: 82%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -375,7 +375,7 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td>tuple[numpy.numpy.ndarray, bool]</td>
+<td>tuple[numpy.ndarray, bool]</td>
 <td>A tuple containing the demeaned array of shape (n_samples, n_features) and a boolean indicating whether the algorithm converged successfully.</td>
 </tr>
 </tbody>

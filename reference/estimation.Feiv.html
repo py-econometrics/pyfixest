@@ -314,8 +314,8 @@ ul.task-list li input[type="checkbox"] {
 <table class="caption-top table">
 <colgroup>
 <col style="width: 10%">
-<col style="width: 15%">
-<col style="width: 67%">
+<col style="width: 11%">
+<col style="width: 70%">
 <col style="width: 7%">
 </colgroup>
 <thead>
@@ -329,25 +329,25 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><code>Y</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Dependent variable, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>X</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Independent variables, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td><code>Z</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Instruments, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td><code>weights</code></td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Weights, a one-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
@@ -371,13 +371,13 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>weights_name</code></td>
-<td>typing.Optional[str]</td>
+<td>Optional[str]</td>
 <td>Name of the weights variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td><code>weights_type</code></td>
-<td>typing.Optional[str]</td>
+<td>Optional[str]</td>
 <td>Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
 <td><em>required</em></td>
 </tr>
@@ -388,9 +388,9 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 22%">
-<col style="width: 19%">
-<col style="width: 57%">
+<col style="width: 25%">
+<col style="width: 12%">
+<col style="width: 63%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -402,7 +402,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>_Z</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Processed instruments after handling multicollinearity.</td>
 </tr>
 <tr class="even">
@@ -437,52 +437,52 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td>_tZX</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Transpose of Z times X.</td>
 </tr>
 <tr class="odd">
 <td>_tXZ</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Transpose of X times Z.</td>
 </tr>
 <tr class="even">
 <td>_tZy</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Transpose of Z times Y.</td>
 </tr>
 <tr class="odd">
 <td>_tZZinv</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Inverse of transpose of Z times Z.</td>
 </tr>
 <tr class="even">
 <td>_beta_hat</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Estimated regression coefficients.</td>
 </tr>
 <tr class="odd">
 <td>_Y_hat_link</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Predicted values of the regression model.</td>
 </tr>
 <tr class="even">
 <td>_u_hat</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Residuals of the regression model.</td>
 </tr>
 <tr class="odd">
 <td>_scores</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Scores used in the regression.</td>
 </tr>
 <tr class="even">
 <td>_hessian</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Hessian matrix used in the regression.</td>
 </tr>
 <tr class="odd">
 <td>_bread</td>
-<td>numpy.numpy.ndarray</td>
+<td>np.ndarray</td>
 <td>Bread matrix used in the regression.</td>
 </tr>
 </tbody>
@@ -504,8 +504,30 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Feiv.get_fit">get_fit</a></td>
+<td>Fit a IV model using a 2SLS estimator.</td>
+</tr>
+</tbody>
+</table>
+<section id="pyfixest.estimation.Feiv.get_fit" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.get_fit">get_fit</h3>
+<p><code>estimation.Feiv.get_fit()</code></p>
+<p>Fit a IV model using a 2SLS estimator.</p>
 
 
+</section>
 </section>
 </section>
 
