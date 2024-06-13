@@ -1,5 +1,28 @@
 # News
 
+## PyFixest 0.22.0
+
+### Changes
+
+- Fix bug in wildboottest method @s3alfisc (#506)
+- docs: add sanskriti2005 as a contributor for infra @allcontributors (#503)
+- Infra: added the release-drafter for automation of release notes @sanskriti2005 (#502)
+- Fix broken link in contributing.md @s3alfisc (#499)
+- docs: add leostimpfle as a contributor for bug @allcontributors (#495)
+- Update justfile @leostimpfle (#494)
+- docs: add baggiponte as a contributor for doc @allcontributors (#490)
+- docs: improve installation section @baggiponte (#489)
+- Bump tornado from 6.4 to 6.4.1 @dependabot (#487)
+- docs: add leostimpfle as a contributor for code @allcontributors (#478)
+- Feols: speed up the creation of interacted fixed effects via `fe1^fe2` syntax @leostimpfle (#475)
+- rename resampling iterations to 'reps' in all methods @s3alfisc (#474)
+- fix a lot of broken links throught the repo @s3alfisc (#472)
+- Multiple readme fixes required after package was moved to py-econometrics project @s3alfisc (#450)
+
+### Infrastructure
+
+- infrastructure: fix minor release drafter bugs @s3alfisc (#504)
+
 ## PyFixest 0.21.0
 
 - Add support for randomization inference via the `ritest()` method:
