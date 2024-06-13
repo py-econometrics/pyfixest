@@ -90,12 +90,12 @@ def test_wildrwolf_hc(seed, sd):
         )
 
 
-@pytest.mark.parametrize("seed", [29090381])
+@pytest.mark.parametrize("seed", [29090381, 32, 99932444])
 @pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
 def test_wildrwolf_crv(seed, sd):
     rng = np.random.default_rng(seed)
-    data = get_data(N=10_000, seed=seed)
-    data["f1"] = rng.choice(range(100), len(data), True)
+    data = get_data(N=4_000, seed=seed)
+    data["f1"] = rng.choice(range(200), len(data), True)
     data["Y2"] = data["Y"] * rng.normal(0, sd, size=len(data))
     data["Y3"] = data["Y2"] + rng.normal(0, sd, size=len(data))
 
