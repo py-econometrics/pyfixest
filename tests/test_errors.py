@@ -187,6 +187,18 @@ def test_multcomp_errors():
         rwolf(fit1.to_list(), param="X2", reps=999, seed=92)
 
 
+def test_rwolf_error():
+    rng = np.random.default_rng(123)
+
+    data = get_data()
+    data["f1"] = rng.choice(range(5), len(data), True)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+
+    # test for full enumeration warning
+    with pytest.warns(UserWarning):
+        pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
