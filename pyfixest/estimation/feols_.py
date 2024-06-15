@@ -87,8 +87,6 @@ class Feols:
         Number of independent variables (or features).
     _support_crv3_inference : bool
         Indicates support for CRV3 inference.
-    _support_iid_inference : bool
-        Indicates support for IID inference.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -215,7 +213,6 @@ class Feols:
         self._support_crv3_inference = True
         if self._weights_name is not None:
             self._supports_wildboottest = False
-        self._support_iid_inference = True
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
@@ -352,9 +349,7 @@ class Feols:
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
         _method = self._method
-        _support_iid_inference = self._support_iid_inference
         _support_crv3_inference = self._support_crv3_inference
-        _weights_name = self._weights_name
 
         _beta_hat = self._beta_hat
 
@@ -464,7 +459,7 @@ class Feols:
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
 
                 if self._vcov_type_detail == "CRV1":
-                    self._vcov += ssc[x] * self._vcov_crv1(
+                    self._vcov += self._ssc[x] * self._vcov_crv1(
                         clustid=clustid, cluster_col=cluster_col
                     )
 
@@ -483,11 +478,11 @@ class Feols:
                         and (_method == "feols")
                         and (_is_iv is False)
                     ):
-                        self._vcov += self._vcov_crv3_fast(
+                        self._vcov += self._ssc[x] * self._vcov_crv3_fast(
                             clustid=clustid, cluster_col=cluster_col
                         )
                     else:
-                        self._vcov += self._vcov_crv3_slow(
+                        self._vcov += self._ssc[x] * self._vcov_crv3_slow(
                             clustid=clustid, cluster_col=cluster_col
                         )
 
