@@ -63,6 +63,9 @@ winget install -e --id Python.Python.3.11
 
 ### Installing R
 
+Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation.
+You can also test against R by using github actions.
+
 On Mac/Linux:
 ```{bash}
 brew install r
