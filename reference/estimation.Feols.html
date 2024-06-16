@@ -493,186 +493,181 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Indicates support for CRV3 inference.</td>
 </tr>
 <tr class="odd">
-<td>_support_iid_inference</td>
-<td>bool</td>
-<td>Indicates support for IID inference.</td>
-</tr>
-<tr class="even">
 <td>_data</td>
 <td>Any</td>
 <td>Data used in the regression, to be enriched outside of the class.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_fml</td>
 <td>Any</td>
 <td>Formula used in the regression, to be enriched outside of the class.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_has_fixef</td>
 <td>bool</td>
 <td>Indicates whether fixed effects are used.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_fixef</td>
 <td>Any</td>
 <td>Fixed effects used in the regression.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_icovars</td>
 <td>Any</td>
 <td>Internal covariates, to be enriched outside of the class.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_ssc_dict</td>
 <td>dict</td>
 <td>dictionary for sum of squares and cross products matrices.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_tZX</td>
 <td>np.ndarray</td>
 <td>Transpose of Z multiplied by X, set in get_fit().</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_tXZ</td>
 <td>np.ndarray</td>
 <td>Transpose of X multiplied by Z, set in get_fit().</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_tZy</td>
 <td>np.ndarray</td>
 <td>Transpose of Z multiplied by Y, set in get_fit().</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_tZZinv</td>
 <td>np.ndarray</td>
 <td>Inverse of the transpose of Z multiplied by Z, set in get_fit().</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_beta_hat</td>
 <td>np.ndarray</td>
 <td>Estimated regression coefficients.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_Y_hat_link</td>
 <td>np.ndarray</td>
 <td>Predicted values of the dependent variable.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_Y_hat_response</td>
 <td>np.ndarray</td>
 <td>Response predictions of the model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_u_hat</td>
 <td>np.ndarray</td>
 <td>Residuals of the regression model.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_scores</td>
 <td>np.ndarray</td>
 <td>Scores used in the regression analysis.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_hessian</td>
 <td>np.ndarray</td>
 <td>Hessian matrix used in the regression.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_bread</td>
 <td>np.ndarray</td>
 <td>Bread matrix, used in calculating the variance-covariance matrix.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_vcov_type</td>
 <td>Any</td>
 <td>Type of variance-covariance matrix used.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_vcov_type_detail</td>
 <td>Any</td>
 <td>Detailed specification of the variance-covariance matrix type.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_is_clustered</td>
 <td>bool</td>
 <td>Indicates if clustering is used in the variance-covariance calculation.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_clustervar</td>
 <td>Any</td>
 <td>Variable used for clustering in the variance-covariance calculation.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_G</td>
 <td>Any</td>
 <td>Group information used in clustering.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_ssc</td>
 <td>Any</td>
 <td>Sum of squares and cross products matrix.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_vcov</td>
 <td>np.ndarray</td>
 <td>Variance-covariance matrix of the estimated coefficients.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_se</td>
 <td>np.ndarray</td>
 <td>Standard errors of the estimated coefficients.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_tstat</td>
 <td>np.ndarray</td>
 <td>T-statistics of the estimated coefficients.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_pvalue</td>
 <td>np.ndarray</td>
 <td>P-values associated with the t-statistics.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_conf_int</td>
 <td>np.ndarray</td>
 <td>Confidence intervals for the estimated coefficients.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_F_stat</td>
 <td>Any</td>
 <td>F-statistic for the model, set in get_Ftest().</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_fixef_dict</td>
 <td>dict</td>
 <td>dictionary containing fixed effects estimates.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_sumFE</td>
 <td>np.ndarray</td>
 <td>Sum of all fixed effects for each observation.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_rmse</td>
 <td>float</td>
 <td>Root mean squared error of the model.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_r2</td>
 <td>float</td>
 <td>R-squared value of the model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_r2_within</td>
 <td>float</td>
 <td>R-squared value computed on demeaned dependent variable.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_adj_r2</td>
 <td>float</td>
 <td>Adjusted R-squared value of the model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_adj_r2_within</td>
 <td>float</td>
 <td>Adjusted R-squared value computed on demeaned dependent variable.</td>
@@ -1554,7 +1549,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.tidy" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.tidy">tidy</h3>
-<p><code>estimation.Feols.tidy()</code></p>
+<p><code>estimation.Feols.tidy(alpha=0.05)</code></p>
 <p>Tidy model outputs.</p>
 <p>Return a tidy pd.DataFrame with the point estimates, standard errors, t-statistics, and p-values.</p>
 <section id="returns-15" class="level4">
