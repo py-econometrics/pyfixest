@@ -1,3 +1,5 @@
+from typing import Union
+
 import numba as nb
 import numpy as np
 import pandas as pd
@@ -47,7 +49,7 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
 
 
 def _count_G_for_ssc_correction(
-    cluster_df: pd.DataFrame, ssc_dict: dict[str, str | bool]
+    cluster_df: pd.DataFrame, ssc_dict: dict[str, Union[str, bool]]
 ):
     G = []
     for col in cluster_df.columns:
