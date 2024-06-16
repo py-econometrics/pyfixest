@@ -253,7 +253,7 @@ class Feols:
         self._vcov_type = ""
         self._vcov_type_detail = ""
         self._is_clustered = False
-        self._clustervar = ""
+        self._clustervar: list[str] = []
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
@@ -1129,7 +1129,7 @@ class Feols:
             )
 
         if cluster is None:
-            cluster = self._clustervar
+            cluster = self._clustervar[0]
             if cluster is None:
                 raise ValueError("No cluster variable found in the model fit.")
             elif len(cluster) > 1:
