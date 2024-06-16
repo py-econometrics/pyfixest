@@ -1,9 +1,65 @@
 import numba as nb
 import numpy as np
 
+from pyfixest.errors import NanInClusterVarError
+from pyfixest.utils.dev_utils import _polars_to_pandas
+
 
 def _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian):
     return np.linalg.inv(_tXZ @ _tZZinv @ _tZX) if _is_iv else np.linalg.inv(_hessian)
+
+
+def _get_cluster_df(data, clustervar):
+    if not data.empty:
+        data_pandas = _polars_to_pandas(data)
+        cluster_df = data_pandas[clustervar].copy()
+    else:
+        raise AttributeError(
+            """The input data set needs to be stored in the model object if
+            you call `vcov()` post estimation with a novel cluster variable.
+            Please set the function argument `store_data=True` when calling
+            the regression.
+            """
+        )
+
+    return cluster_df
+
+
+def _check_cluster_df(cluster_df, data):
+    if np.any(cluster_df.isna().any()):
+        raise NanInClusterVarError(
+            "CRV inference not supported with missing values in the cluster variable."
+            "Please drop missing values before running the regression."
+        )
+
+    N = data.shape[0]
+    if cluster_df.shape[0] != N:
+        raise ValueError(
+            "The cluster variable must have the same length as the data set."
+        )
+
+
+def _count_G_for_ssc_correction(cluster_df, ssc_dict):
+    G = []
+    for col in cluster_df.columns:
+        G.append(cluster_df[col].nunique())
+
+    if ssc_dict["cluster_df"] == "min":
+        G = [min(G)] * 3
+
+    return G
+
+
+def _prepare_twoway_clustering(clustervar, cluster_df):
+    cluster_one = clustervar[0]
+    cluster_two = clustervar
+    cluster_df_one_str = cluster_df[cluster_one].astype(str)
+    cluster_df_two_str = cluster_df[cluster_two].astype(str)
+    cluster_df.loc[:, "cluster_intersection"] = cluster_df_one_str.str.cat(
+        cluster_df_two_str, sep="-"
+    )
+
+    return cluster_df
 
 
 # CODE from Styfen Schaer (@styfenschaer)

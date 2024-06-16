@@ -11,7 +11,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
-from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
+from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -19,7 +19,14 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
-from pyfixest.estimation.vcov_utils import _compute_bread, _crv1_meat_loop
+from pyfixest.estimation.vcov_utils import (
+    _check_cluster_df,
+    _compute_bread,
+    _count_G_for_ssc_correction,
+    _crv1_meat_loop,
+    _get_cluster_df,
+    _prepare_twoway_clustering,
+)
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _polars_to_pandas,
@@ -351,25 +358,15 @@ class Feols:
         _method = self._method
         _support_crv3_inference = self._support_crv3_inference
 
-        _beta_hat = self._beta_hat
-
-        _X = self._X
-        _Z = self._Z
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         # _tZXinv = self._tZXinv
         _hessian = self._hessian
-        _scores = self._scores
 
-        _weights = self._weights
-        _weights_type = self._weights_type
         _ssc_dict = self._ssc_dict
         _N = self._N
-        _N_rows = self._N_rows
         _k = self._k
-
-        _u_hat = self._u_hat
 
         # deparse vcov input
         _check_vcov_input(vcov, _data)
@@ -384,62 +381,46 @@ class Feols:
 
         # compute vcov
         if self._vcov_type == "iid":
-            self._vcov, self._ssc = self._vcov_iid()
+            self._ssc = get_ssc(
+                ssc_dict=_ssc_dict,
+                N=_N,
+                k=_k,
+                G=1,
+                vcov_sign=1,
+                vcov_type="iid",
+            )
+
+            self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
-            self._vcov, self._ssc = self._vcov_hetero()
+            self._ssc = get_ssc(
+                ssc_dict=_ssc_dict,
+                N=_N,
+                k=_k,
+                G=1,
+                vcov_sign=1,
+                vcov_type="hetero",
+            )
+
+            self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
-            if data is not None:
-                data_pandas = _polars_to_pandas(data)
-                self._cluster_df = data_pandas[self._clustervar].copy()
-            elif not self._data.empty:
-                self._cluster_df = self._data[self._clustervar].copy()
-            else:
-                raise AttributeError(
-                    """The input data set needs to be stored in the model object if
-                    you call `vcov()` post estimation with a novel cluster variable.
-                    Please set the function argument `store_data=True` when calling
-                    the regression.
-                    """
-                )
-
-            if np.any(self._cluster_df.isna().any()):
-                raise NanInClusterVarError(
-                    "CRV inference not supported with missing values in the cluster variable."
-                    "Please drop missing values before running the regression."
-                )
+            self._cluster_df = _get_cluster_df(
+                data=self._data, clustervar=self._clustervar
+            )
+            _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
 
             if self._cluster_df.shape[1] > 1:
-                # paste both columns together
-                # set cluster_df to string
-
-                cluster_one = self._clustervar[0]
-                cluster_two = self._clustervar[1]
-
-                cluster_df_one_str = self._cluster_df[cluster_one].astype(str)
-                cluster_df_two_str = self._cluster_df[cluster_two].astype(str)
-                self._cluster_df.loc[:, "cluster_intersection"] = (
-                    cluster_df_one_str.str.cat(cluster_df_two_str, sep="-")
+                self._cluster_df = _prepare_twoway_clustering(
+                    clustervar=self._clustervar, cluster_df=self._cluster_df
                 )
 
-            if self._cluster_df.shape[0] != _N_rows:
-                raise ValueError(
-                    "The cluster variable must have the same length as the data set."
-                )
-
-            G = []
-            for col in self._cluster_df.columns:
-                G.append(self._cluster_df[col].nunique())
-
-            if _ssc_dict["cluster_df"] == "min":
-                G = [min(G)] * 3
-
-            self._G = G
+            self._G = _count_G_for_ssc_correction(
+                cluster_df=self._cluster_df, ssc_dict=_ssc_dict
+            )
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
-
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
@@ -492,21 +473,10 @@ class Feols:
         return self
 
     def _vcov_iid(self):
-        _ssc_dict = self._ssc_dict
         _N = self._N
-        _k = self._k
         _u_hat = self._u_hat
         _method = self._method
         _bread = self._bread
-
-        _ssc = get_ssc(
-            ssc_dict=_ssc_dict,
-            N=_N,
-            k=_k,
-            G=1,
-            vcov_sign=1,
-            vcov_type="iid",
-        )
 
         if _method == "feols":
             sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
@@ -517,14 +487,11 @@ class Feols:
                 f"'iid' inference is not supported for {_method} regressions."
             )
 
-        _vcov = _ssc * _bread * sigma2
+        _vcov = _bread * sigma2
 
-        return _vcov, _ssc
+        return _vcov
 
     def _vcov_hetero(self):
-        _ssc_dict = self._ssc_dict
-        _N = self._N
-        _k = self._k
         _u_hat = self._u_hat
         _scores = self._scores
         _vcov_type_detail = self._vcov_type_detail
@@ -534,15 +501,6 @@ class Feols:
         _X = self._X
         _is_iv = self._is_iv
         _bread = self._bread
-
-        _ssc = get_ssc(
-            ssc_dict=_ssc_dict,
-            N=_N,
-            k=_k,
-            G=1,
-            vcov_sign=1,
-            vcov_type="hetero",
-        )
 
         if _vcov_type_detail in ["hetero", "HC1"]:
             u = _u_hat
@@ -562,7 +520,7 @@ class Feols:
 
         if _is_iv is False:
             meat = transformed_scores.transpose() @ transformed_scores
-            _vcov = _ssc * _bread @ meat @ _bread
+            _vcov = _bread @ meat @ _bread
         else:
             if u.ndim == 1:
                 u = u.reshape((-1, 1))
@@ -570,9 +528,9 @@ class Feols:
                     transformed_scores.transpose() @ transformed_scores
                 )  # np.transpose( _Z) @ ( _Z * (u**2))  # k x k
             meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
-            _vcov = _ssc * _bread @ meat @ _bread
+            _vcov = _bread @ meat @ _bread
 
-        return _vcov, _ssc
+        return _vcov
 
     def _vcov_crv1(self, clustid, cluster_col):
         _Z = self._Z
