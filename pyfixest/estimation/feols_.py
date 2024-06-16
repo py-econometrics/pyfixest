@@ -405,10 +405,18 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
-            self._cluster_df = _get_cluster_df(
-                data=self._data, clustervar=self._clustervar
-            )
-            _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
+            if data is not None:
+                # use input data set
+                self._cluster_df = _get_cluster_df(
+                    data=data, clustervar=self._clustervar
+                )
+                _check_cluster_df(cluster_df=self._cluster_df, data=data)
+            else:
+                # use stored data
+                self._cluster_df = _get_cluster_df(
+                    data=self._data, clustervar=self._clustervar
+                )
+                _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
 
             if self._cluster_df.shape[1] > 1:
                 self._cluster_df = _prepare_twoway_clustering(
