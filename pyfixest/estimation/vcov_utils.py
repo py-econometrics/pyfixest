@@ -1,15 +1,24 @@
+from typing import Union
+
 import numba as nb
 import numpy as np
+import pandas as pd
 
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import _polars_to_pandas
 
 
-def _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian):
+def _compute_bread(
+    _is_iv: bool,
+    _tXZ: np.ndarray,
+    _tZZinv: np.ndarray,
+    _tZX: np.ndarray,
+    _hessian: np.ndarray,
+):
     return np.linalg.inv(_tXZ @ _tZZinv @ _tZX) if _is_iv else np.linalg.inv(_hessian)
 
 
-def _get_cluster_df(data, clustervar):
+def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
         data_pandas = _polars_to_pandas(data)
         cluster_df = data_pandas[clustervar].copy()
@@ -25,7 +34,7 @@ def _get_cluster_df(data, clustervar):
     return cluster_df
 
 
-def _check_cluster_df(cluster_df, data):
+def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
     if np.any(cluster_df.isna().any()):
         raise NanInClusterVarError(
             "CRV inference not supported with missing values in the cluster variable."
@@ -39,7 +48,9 @@ def _check_cluster_df(cluster_df, data):
         )
 
 
-def _count_G_for_ssc_correction(cluster_df, ssc_dict):
+def _count_G_for_ssc_correction(
+    cluster_df: pd.DataFrame, ssc_dict: dict[str, Union[str, bool]]
+):
     G = []
     for col in cluster_df.columns:
         G.append(cluster_df[col].nunique())
@@ -50,9 +61,9 @@ def _count_G_for_ssc_correction(cluster_df, ssc_dict):
     return G
 
 
-def _prepare_twoway_clustering(clustervar, cluster_df):
+def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
     cluster_one = clustervar[0]
-    cluster_two = clustervar
+    cluster_two = clustervar[1]
     cluster_df_one_str = cluster_df[cluster_one].astype(str)
     cluster_df_two_str = cluster_df[cluster_two].astype(str)
     cluster_df.loc[:, "cluster_intersection"] = cluster_df_one_str.str.cat(
