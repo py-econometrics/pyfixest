@@ -173,6 +173,7 @@ class Feols:
         coefnames: list[str],
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -193,7 +194,7 @@ class Feols:
             self._X = X
 
         self.get_nobs()
-
+        self._solver = solver
         _feols_input_checks(Y, X, weights)
 
         if self._X.shape[1] == 0:
@@ -302,12 +303,16 @@ class Feols:
         _X = self._X
         _Y = self._Y
         _Z = self._Z
-
+        _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
         # self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
+        if _solver == "np.linalg.lstsq":
+            self._beta_hat, _, _, _ = np.linalg.lstsq(self._tZX, self._tZy, rcond=None)
+        else:  # Default to np.linalg.solve
+            self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
+
         # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
 
         # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
