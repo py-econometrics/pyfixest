@@ -253,7 +253,7 @@ class Feols:
         self._vcov_type = ""
         self._vcov_type_detail = ""
         self._is_clustered = False
-        self._clustervar = ""
+        self._clustervar: list[str] = []
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
@@ -1129,15 +1129,14 @@ class Feols:
             )
 
         if cluster is None:
-            cluster = self._clustervar
-            if cluster is None:
+            if self._clustervar is None:
                 raise ValueError("No cluster variable found in the model fit.")
-            elif len(cluster) > 1:
+            elif len(self._clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance estimator."
                 )
             else:
-                cluster = cluster[0]
+                cluster = self._clustervar[0]
 
         # check that cluster is in data
         if cluster not in self._data.columns:
