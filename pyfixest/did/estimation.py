@@ -131,7 +131,7 @@ def event_study(
         raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
-    fit.get_inference()
+    fit.inference()
 
     return fit
 
@@ -253,7 +253,7 @@ def did2s(
 
     fit._vcov = vcov
     fit._G = _G
-    fit.get_inference()  # update inference with correct vcov matrix
+    fit.inference()  # update inference with correct vcov matrix
 
     fit._vcov_type = "CRV1"
     fit._vcov_type_detail = "CRV1 (GMM)"

@@ -107,13 +107,13 @@ class Feols:
     _ssc_dict : dict
         dictionary for sum of squares and cross products matrices.
     _tZX : np.ndarray
-        Transpose of Z multiplied by X, set in get_fit().
+        Transpose of Z multiplied by X, set in fit().
     _tXZ : np.ndarray
-        Transpose of X multiplied by Z, set in get_fit().
+        Transpose of X multiplied by Z, set in fit().
     _tZy : np.ndarray
-        Transpose of Z multiplied by Y, set in get_fit().
+        Transpose of Z multiplied by Y, set in fit().
     _tZZinv : np.ndarray
-        Inverse of the transpose of Z multiplied by Z, set in get_fit().
+        Inverse of the transpose of Z multiplied by Z, set in fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
@@ -197,7 +197,7 @@ class Feols:
             self._Y = Y
             self._X = X
 
-        self.get_nobs()
+        self.nobs()
 
         _feols_input_checks(Y, X, weights)
 
@@ -235,7 +235,7 @@ class Feols:
         self._icovars = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
 
-        # set in get_fit()
+        # set in fit()
         self._tZX = np.array([])
         # self._tZXinv = None
         self._tXZ = np.array([])
@@ -260,7 +260,7 @@ class Feols:
         self.na_index = np.array([])  # initiated outside of the class
         self.n_separation_na = 0
 
-        # set in get_inference()
+        # set in inference()
         self._se = np.array([])
         self._tstat = np.array([])
         self._pvalue = np.array([])
@@ -273,7 +273,7 @@ class Feols:
         self._fixef_dict: dict[str, dict[str, float]] = {}
         self._sumFE = None
 
-        # set in get_performance()
+        # set in performance()
         self._rmse = np.nan
         self._r2 = np.nan
         self._r2_within = np.nan
@@ -295,7 +295,7 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
-    def get_fit(self) -> None:
+    def fit(self) -> None:
         """
         Fit an OLS model.
 
@@ -476,7 +476,7 @@ class Feols:
                         )
 
         # update p-value, t-stat, standard error, confint
-        self.get_inference()
+        self.inference()
 
         return self
 
@@ -661,7 +661,7 @@ class Feols:
 
         return _vcov
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def inference(self, alpha: float = 0.95) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
@@ -1412,7 +1412,7 @@ class Feols:
 
         return y_hat.flatten()
 
-    def get_nobs(self):
+    def nobs(self):
         """
         Fetch the number of observations used in fitting the regression model.
 
@@ -1426,7 +1426,7 @@ class Feols:
         elif self._weights_type == "fweights":
             self._N = np.sum(self._weights)
 
-    def get_performance(self) -> None:
+    def performance(self) -> None:
         """
         Get Goodness-of-Fit measures.
 

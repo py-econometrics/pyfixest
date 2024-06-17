@@ -113,7 +113,7 @@ class Fepois(Feols):
         self.deviance = None
         self._Xbeta = np.array([])
 
-    def get_fit(self) -> None:
+    def fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
 

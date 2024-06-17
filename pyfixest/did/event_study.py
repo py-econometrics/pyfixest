@@ -118,6 +118,6 @@ def event_study(
         raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
-    fit.get_inference()
+    fit.inference()
 
     return fit

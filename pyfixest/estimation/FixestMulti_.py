@@ -325,7 +325,7 @@ class FixestMulti:
                     if FIT._X_is_empty:
                         FIT._u_hat = Y.to_numpy() - Yd_array
                     else:
-                        FIT.get_fit()
+                        FIT.fit()
 
                 elif _method == "fepois":
                     # check for separation and drop separated variables
@@ -368,7 +368,7 @@ class FixestMulti:
                         weights_type=_weights_type,
                     )
 
-                    FIT.get_fit()
+                    FIT.fit()
 
                     FIT.na_index = na_index
                     if na_separation:
@@ -402,11 +402,11 @@ class FixestMulti:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type, data=_data_clean)
-                    FIT.get_inference()
+                    FIT.inference()
 
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
-                        FIT.get_performance()
+                        FIT.performance()
                     if _icovars is not None:
                         FIT._icovars = _icovars
                     else:
@@ -489,7 +489,7 @@ class FixestMulti:
             ) = _deparse_vcov_input(vcov, False, False)
 
             fxst.vcov(vcov=vcov)
-            fxst.get_inference()
+            fxst.inference()
 
         return self
 
