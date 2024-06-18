@@ -33,7 +33,7 @@ from pyfixest.utils.dev_utils import (
     _polars_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import get_ssc, simultaneous_crit_val, ssc
 
 
 class Feols:
@@ -176,10 +176,11 @@ class Feols:
         X: np.ndarray,
         fe: Optional[np.ndarray] = None,
         weights: Optional[np.ndarray] = None,
-        collin_tol: float = 1e-08,
+        collin_tol: Optional[float] = 1e-08,
         coefnames: Optional[list[str]] = None,
         weights_name: Optional[str] = None,
         weights_type: Optional[str] = None,
+        ssc: dict[str, Union[str, bool]] = ssc(),
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -243,7 +244,7 @@ class Feols:
         self._fixef = ""
         # self._coefnames = None
         self._icovars = None
-        self._ssc_dict: dict[str, Union[str, bool]] = {}
+        self._ssc_dict: dict[str, Union[str, bool]] = ssc
 
         # set in fit()
         self._tZX = np.array([])
@@ -1988,7 +1989,7 @@ def _get_vcov_type(vcov: str, fval: str):
 
 
 def _drop_multicollinear_variables(
-    X: np.ndarray, names: list[str], collin_tol: float
+    X: np.ndarray, names: list[str], collin_tol: Optional[float] = 1e-08
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
@@ -2053,7 +2054,7 @@ def _drop_multicollinear_variables(
 
 
 def _find_collinear_variables(
-    X: np.ndarray, tol: float = 1e-10
+    X: np.ndarray, tol: Optional[float] = 1e-10
 ) -> tuple[np.ndarray, int, bool]:
     """
     Detect multicollinear variables.
