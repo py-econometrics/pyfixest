@@ -186,16 +186,20 @@ class Feols:
 
         coefnames_list = [] if coefnames is None else coefnames
 
-        self._weights = weights if weights is not None else np.ones(Y.shape[0])
+        self._weights = (
+            weights.flatten() if weights is not None else np.ones(Y.shape[0])
+        )
         self._weights_name = weights_name
         self._weights_type = weights_type
+
         self._has_weights = False
-        if weights_name is not None:
-            self._has_weights = True
-            Yd, _ = demean(Y, fe, weights)
-            Xd, _ = demean(X, fe, weights)
+        if fe is not None:
+            fe = fe.astype(np.int64)
+            self._has_fixef = True
+            Yd, _ = demean(Y, fe, self._weights)
+            Xd, _ = demean(X, fe, self._weights)
         else:
-            self._has_weights = False
+            self._has_fixef = False
             Yd = Y
             Xd = X
 
@@ -203,8 +207,6 @@ class Feols:
             w = np.sqrt(weights)
             Yd = Yd * w
             Xd = Xd * w
-
-        self.nobs()
 
         _feols_input_checks(Yd, Xd, weights)
 
@@ -224,7 +226,7 @@ class Feols:
         self._X = Xd
         self._Z = self._X
 
-        _, self._k = self._X.shape
+        self._N, self._k = self._X.shape
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -318,11 +320,7 @@ class Feols:
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        # self._tZXinv = np.linalg.inv(self._tZX)
         self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
-
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()

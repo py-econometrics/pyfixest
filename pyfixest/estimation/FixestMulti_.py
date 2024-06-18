@@ -311,6 +311,7 @@ class FixestMulti:
                         FIT = Feols(
                             Y=Yd_array,
                             X=Xd_array,
+                            fe=None,  # hack, demeaning happens outside!
                             weights=weights,
                             coefnames=coefnames,
                             collin_tol=collin_tol,
