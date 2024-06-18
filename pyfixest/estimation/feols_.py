@@ -173,23 +173,25 @@ class Feols:
         self,
         Y: np.ndarray,
         X: np.ndarray,
-        weights: np.ndarray,
-        collin_tol: float,
-        coefnames: list[str],
-        weights_name: Optional[str],
-        weights_type: Optional[str],
+        weights: Optional[np.ndarray] = None,
+        collin_tol: float = 1e-08,
+        coefnames: Optional[list[str]] = None,
+        weights_name: Optional[str] = None,
+        weights_type: Optional[str] = None,
     ) -> None:
         self._method = "feols"
         self._is_iv = False
 
-        self._weights = weights
+        coefnames_list = [] if coefnames is None else coefnames
+
+        self._weights = weights if weights is not None else np.ones(Y.shape[0])
         self._weights_name = weights_name
         self._weights_type = weights_type
         self._has_weights = False
         if weights_name is not None:
             self._has_weights = True
 
-        if self._has_weights:
+        if weights is not None:
             w = np.sqrt(weights)
             self._Y = Y * w
             self._X = X * w
@@ -211,7 +213,9 @@ class Feols:
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
-            ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+            ) = _drop_multicollinear_variables(
+                self._X, coefnames_list, self._collin_tol
+            )
 
         self._Z = self._X
 
@@ -1914,7 +1918,7 @@ class Feols:
         )
 
 
-def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
+def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: Optional[np.ndarray]):
     """
     Perform basic checks on the input matrices Y and X for the FEOLS.
 
@@ -1935,14 +1939,14 @@ def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
         raise TypeError("Y must be a numpy array.")
     if not isinstance(X, (np.ndarray)):
         raise TypeError("X must be a numpy array.")
-    if not isinstance(weights, (np.ndarray)):
+    if weights is not None and not isinstance(weights, (np.ndarray)):
         raise TypeError("weights must be a numpy array.")
 
     if Y.ndim != 2:
         raise ValueError("Y must be a 2D array")
     if X.ndim != 2:
         raise ValueError("X must be a 2D array")
-    if weights.ndim != 2:
+    if weights is not None and weights.ndim != 2:
         raise ValueError("weights must be a 2D array")
 
 
