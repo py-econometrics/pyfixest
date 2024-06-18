@@ -12,6 +12,7 @@ from scipy.sparse.linalg import spsolve
 from scipy.stats import f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -173,6 +174,7 @@ class Feols:
         self,
         Y: np.ndarray,
         X: np.ndarray,
+        fe: Optional[np.ndarray] = None,
         weights: Optional[np.ndarray] = None,
         collin_tol: float = 1e-08,
         coefnames: Optional[list[str]] = None,
@@ -190,33 +192,36 @@ class Feols:
         self._has_weights = False
         if weights_name is not None:
             self._has_weights = True
+            Yd, _ = demean(Y, fe, weights)
+            Xd, _ = demean(X, fe, weights)
+        else:
+            self._has_weights = False
+            Yd = Y
+            Xd = X
 
         if weights is not None:
             w = np.sqrt(weights)
-            self._Y = Y * w
-            self._X = X * w
-        else:
-            self._Y = Y
-            self._X = X
+            Yd = Yd * w
+            Xd = Xd * w
 
         self.nobs()
 
-        _feols_input_checks(Y, X, weights)
+        _feols_input_checks(Yd, Xd, weights)
 
-        if self._X.shape[1] == 0:
+        if Xd.shape[1] == 0:
             self._X_is_empty = True
         else:
             self._X_is_empty = False
             self._collin_tol = collin_tol
             (
-                self._X,
+                Xd,
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
-            ) = _drop_multicollinear_variables(
-                self._X, coefnames_list, self._collin_tol
-            )
+            ) = _drop_multicollinear_variables(Xd, coefnames_list, self._collin_tol)
 
+        self._Y = Yd
+        self._X = Xd
         self._Z = self._X
 
         _, self._k = self._X.shape
@@ -233,7 +238,6 @@ class Feols:
         # not really optimal code change later
         self._data = pd.DataFrame()
         self._fml = ""
-        self._has_fixef = False
         self._fixef = ""
         # self._coefnames = None
         self._icovars = None
