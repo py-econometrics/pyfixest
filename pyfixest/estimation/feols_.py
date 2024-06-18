@@ -185,7 +185,15 @@ class Feols:
         self._method = "feols"
         self._is_iv = False
 
-        coefnames_list = [] if coefnames is None else coefnames
+        self._coefnames = (
+            [str(i) for i in range(X.shape[1])] if coefnames is None else coefnames
+        )
+        self._has_fixef = True if fe is not None else True
+
+        self._X = X
+        self._Y = Y
+        self._fe = fe
+        self._collin_tol = collin_tol
 
         self._weights = (
             weights.flatten() if weights is not None else np.ones(Y.shape[0])
@@ -193,41 +201,7 @@ class Feols:
         self._weights_name = weights_name
         self._weights_type = weights_type
 
-        self._has_weights = False
-        if fe is not None:
-            fe = fe.astype(np.int64)
-            self._has_fixef = True
-            Yd, _ = demean(Y, fe, self._weights)
-            Xd, _ = demean(X, fe, self._weights)
-        else:
-            self._has_fixef = False
-            Yd = Y
-            Xd = X
-
-        if weights is not None:
-            w = np.sqrt(weights)
-            Yd = Yd * w
-            Xd = Xd * w
-
-        _feols_input_checks(Yd, Xd, weights)
-
-        if Xd.shape[1] == 0:
-            self._X_is_empty = True
-        else:
-            self._X_is_empty = False
-            self._collin_tol = collin_tol
-            (
-                Xd,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = _drop_multicollinear_variables(Xd, coefnames_list, self._collin_tol)
-
-        self._Y = Yd
-        self._X = Xd
-        self._Z = self._X
-
-        self._N, self._k = self._X.shape
+        self._has_weights = weights is None
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -306,6 +280,43 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def _prepare_fit(self):
+        """Prepare fitting, including demeaning."""
+        if self._fe is not None:
+            self._fe = self._fe.astype(np.int64)
+            YX = np.concatenate([self._Y, self._X], axis=1)
+            YX, _ = demean(YX, self._fe, self._weights)
+            self._Y = YX[:, 0]
+            self._X = YX[:, 1:]
+            if self._Y.ndim == 1:
+                self._Y = self._Y.reshape((-1, 1))
+            if self._X.ndim == 1:
+                self._X = self._X.reshape((-1, 1))
+
+        if self._weights is not None:
+            w = np.sqrt(self._weights).reshape((-1, 1))
+            self._Y = self._Y * w
+            self._X = self._X * w
+
+        _feols_input_checks(self._Y, self._X, self._weights.reshape((-1, 1)))
+
+        if self._X.shape[1] == 0:
+            self._X_is_empty = True
+        else:
+            self._X_is_empty = False
+            (
+                self._X,
+                self._coefnames,
+                self._collin_vars,
+                self._collin_index,
+            ) = _drop_multicollinear_variables(
+                self._X, self._coefnames, self._collin_tol
+            )
+
+        self._Z = self._X
+        self._N, self._k = self._X.shape
+        self._fe = None  # don't store it, just eats RAM
+
     def fit(self) -> None:
         """
         Fit an OLS model.
@@ -314,6 +325,8 @@ class Feols:
         -------
         None
         """
+        self._prepare_fit()
+
         _X = self._X
         _Y = self._Y
         _Z = self._Z
@@ -989,8 +1002,11 @@ class Feols:
             fml_dummies = f"{fml_linear} + {fixef_fml}"
 
             # make this sparse once wildboottest allows it
-            _, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
-            _xnames = _X.model_spec.column_names
+            _, _X_full = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
+            _xnames = _X_full.model_spec.column_names
+
+        else:
+            _X_full = _X
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1001,7 +1017,7 @@ class Feols:
         if run_heteroskedastic:
             inference = "HC"
 
-            boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=reps, seed=seed)
+            boot = WildboottestHC(X=_X_full, Y=_Y, R=R, r=r, B=reps, seed=seed)
             boot.get_adjustments(bootstrap_type=bootstrap_type)
             boot.get_uhat(impose_null=impose_null)
             boot.get_tboot(weights_type=weights_type)
@@ -1015,7 +1031,7 @@ class Feols:
             cluster_array = _data[cluster_list[0]].to_numpy().flatten()
 
             boot = WildboottestCL(
-                X=_X,
+                X=_X_full,
                 Y=_Y,
                 cluster=cluster_array,
                 R=R,
