@@ -83,6 +83,8 @@ class Fepois(Feols):
 
         # input checks
         _fepois_input_checks(fe, drop_singletons, tol, maxiter)
+        if fe is not None:
+            fe = fe.astype(np.int64)
 
         self.fe = fe
         self.maxiter = maxiter
