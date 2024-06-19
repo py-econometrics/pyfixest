@@ -340,17 +340,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="pyfixest.estimation.rwolf" class="level1">
 <h1>estimation.rwolf</h1>
-<p><code>estimation.rwolf(models, param, reps, seed)</code></p>
+<p><code>estimation.rwolf(models, param, reps, seed, sampling_method='wild-bootstrap')</code></p>
 <p>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</p>
 <p>For each model, it is assumed that tests to adjust are of the form “param = 0”. This function uses the <code>wildboottest()</code> method for running the bootstrap, hence models of type <code>Feiv</code> or <code>Fepois</code> are not supported.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 15%">
-<col style="width: 72%">
-<col style="width: 6%">
+<col style="width: 9%">
+<col style="width: 14%">
+<col style="width: 66%">
+<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -384,6 +384,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>int</td>
 <td>The seed for the random number generator.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>sampling_method</code></td>
+<td>str</td>
+<td>Sampling method for computing resampled statistics. Users can choose either bootstrap(‘wild-bootstrap’) or randomization inference(‘ri’)</td>
+<td><code>'wild-bootstrap'</code></td>
 </tr>
 </tbody>
 </table>
