@@ -187,6 +187,14 @@ def test_multcomp_errors():
         rwolf(fit1.to_list(), param="X2", reps=999, seed=92)
 
 
+def test_multcomp_sampling_errors():
+    data = get_data().dropna()
+    # Sampling method not supported in "rwolf"
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    with pytest.raises(ValueError):
+        rwolf(fit1.to_list(), param="X1", reps=999, seed=92, sampling_method="abc")
+
+
 def test_rwolf_error():
     rng = np.random.default_rng(123)
 

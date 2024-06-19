@@ -162,8 +162,10 @@ def rwolf(
             boot_t_stats[:, i] = bootstrapped_t_stats
 
         elif sampling_method == "ri":
+            rng = np.random.default_rng(seed)
             model.ritest(
                 resampvar=param,
+                rng=rng,
                 reps=reps,
                 type="randomization-t",
                 store_ritest_statistics=True,
