@@ -177,14 +177,14 @@ def rwolf(
     pval = _get_rwolf_pval(t_stats, boot_t_stats)
 
     all_model_stats.loc["RW Pr(>|t|)"] = pval
-    all_model_stats.loc["Sampling Method"] = sampling_method
+    # all_model_stats.loc["Sampling Method"] = sampling_method
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats
 
 
 def _get_rwolf_pval(t_stats, boot_t_stats):
     """
-    Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
+    Compute Romano-Wolf adjusted p-values based on bootstrapped(or "ri") t-statistics.
 
     Parameters
     ----------
@@ -192,7 +192,7 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
                         tested hypotheses - containing the original,
                         non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
-                            bootstrapped t-statistics.
+                            bootstrapped(or "ri") t-statistics.
 
     Returns
     -------

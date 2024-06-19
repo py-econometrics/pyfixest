@@ -143,3 +143,47 @@ def test_stepwise_function():
     stepwise_r = wildrwolf.get_rwolf_pval(t_stat, t_boot)
 
     np.testing.assert_allclose(stepwise_py, stepwise_r)
+
+
+# Import data from pyfixest
+
+
+@pytest.mark.parametrize("seed", [1000, 2000, 3000])
+@pytest.mark.parametrize("reps", [999, 1999])
+def test_sampling_scheme(seed, reps):
+    # Compare RW adjusted p-values from RI and WB resampling methods
+    # The p-values should be "largely" similar regardless of resampling methods
+
+    data = get_data().dropna()
+    rng = np.random.default_rng(seed)
+
+    # Perturb covariates(not treatment variable)
+    data["Y2"] = data["Y"] * rng.normal(0.2, 1, size=len(data))
+    data["X2"] = rng.normal(size=len(data))
+
+    fit1 = feols("Y ~ X1 + X2", data=data)
+    fit2 = feols("Y ~ X1 + X2 + Y2", data=data)
+
+    # Run rwolf with "ri" sampling method
+    rwolf_df_ri = rwolf([fit1, fit2], "X1", reps=reps, seed=seed, sampling_method="ri")
+
+    ri_pval = rwolf_df_ri["est1"]["RW Pr(>|t|)"]
+
+    # Run rwolf with "wild-bootstrap" sampling method
+    rwolf_df_wb = rwolf(
+        [fit1, fit2], "X1", reps=reps, seed=seed, sampling_method="wild-bootstrap"
+    )
+
+    wb_pval = rwolf_df_wb["est1"]["RW Pr(>|t|)"]
+
+    # Calculate percentage difference in p-values
+    percent_diff = 100 * (wb_pval - ri_pval) / ri_pval
+
+    print(
+        f"Percentage difference in p-values (seed={seed}, reps={reps}): {percent_diff}"
+    )
+
+    # Assert that the percentage difference is within an acceptable range
+    assert (
+        np.abs(percent_diff) < 1.0
+    ), f"Percentage difference is too large: {percent_diff}%"
