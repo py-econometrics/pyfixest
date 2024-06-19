@@ -177,7 +177,6 @@ def rwolf(
     pval = _get_rwolf_pval(t_stats, boot_t_stats)
 
     all_model_stats.loc["RW Pr(>|t|)"] = pval
-    # all_model_stats.loc["Sampling Method"] = sampling_method
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats
 
