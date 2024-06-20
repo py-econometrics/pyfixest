@@ -55,6 +55,9 @@ class Feols:
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
+     solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     Attributes
     ----------
@@ -79,6 +82,8 @@ class Feols:
         Indices of collinear variables.
     _Z : np.ndarray
         Alias for the _X array, used for calculations.
+    _solver: str
+        The solver used for the regression.
     _weights : np.ndarray
         Array of weights for each observation.
     _N : int
