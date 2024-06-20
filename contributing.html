@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -172,82 +206,92 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="setting-up-your-local-environment">Setting up your local environment</h3>
 <p><code>pyfixest</code> development flow relies on Python. Testing statistical and econometric models is implement using Python and R. Documents are written with Quarto and Jupyter.</p>
 <p>Start by forking the pyfixest GitHub repository, then clone your forked repository using <code>git</code>:</p>
-<pre class="{bash}"><code>git clone https://github.com/&lt;username&gt;/pyfixest.git
-cd pyfixest</code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/<span class="op">&lt;</span>username<span class="op">&gt;</span>/pyfixest.git</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> pyfixest</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>In order to work of <code>pyfixest</code>, you will need Python and R installed. If working on documentation, you will need Quarto installed.</p>
 <p>There are multiple ways of installing Python and R, but if you need to install them prior to development the following are potential options:</p>
 <section id="installing-python" class="level4">
 <h4 class="anchored" data-anchor-id="installing-python">Installing Python</h4>
 <p>On Mac/Linux via <a href="https://brew.sh/">Hombrew</a>:</p>
-<pre class="{bash}"><code>brew install python@3.11 # specify the version of python you prefer</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install python@3.11 <span class="co"># specify the version of python you prefer</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>On Windows via <a href="https://winget.run/pkg/Python/Python.3.11">Winget</a>:</p>
-<pre class="{bash}"><code>winget install -e --id Python.Python.3.11</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">winget</span> install <span class="at">-e</span> <span class="at">--id</span> Python.Python.3.11</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="installing-r" class="level3">
 <h3 class="anchored" data-anchor-id="installing-r">Installing R</h3>
 <p>Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation. You can also test against R by using github actions.</p>
 <p>On Mac/Linux:</p>
-<pre class="{bash}"><code>brew install r</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install r</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Depending on your local set up, you may need to install additional libraries, for example:</p>
-<pre class="{bash}"><code>sudo apt install gcc-11 cmake</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install gcc-11 cmake</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>On Windows using <a href="https://winget.run/pkg/RProject/R">Winget</a>:</p>
-<pre class="{bash}"><code>winget install -e --id RProject.R</code></pre>
-<p>Tests run with R require the following packages: - base - broom - clubSandwich - did2s - fixest - stats - wildrwolf - ritest</p>
-<pre class="{bash}"><code>Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">winget</span> install <span class="at">-e</span> <span class="at">--id</span> RProject.R</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Tests run with R require the following packages:</p>
+<ul>
+<li>base</li>
+<li>broom</li>
+<li>clubSandwich</li>
+<li>did2s</li>
+<li>fixest</li>
+<li>stats</li>
+<li>wildrwolf</li>
+<li>ritest</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('</span>ritest<span class="st">', repos = c('</span>https://grantmcdermott.r-universe.dev<span class="st">', '</span>https://cloud.r-project.org<span class="st">'))'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Documentation for <code>pyfixest</code> is written, compiled, and published using Quarto.</p>
 <p>To install Quarto, run:</p>
 <p>On MacOS via <a href="https://formulae.brew.sh/cask/quarto#default">Homebrew</a>:</p>
-<pre class="{bash}"><code>brew install --cask quarto</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install <span class="at">--cask</span> quarto</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>On Linux (Ubuntu using <code>gdebi</code>):</p>
-<pre class="{bash}"><code>sudo curl -o quarto-linux-amd64.deb -L &lt;https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb&gt;
-sudo gdebi quarto-linux-amd64.deb</code></pre>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> curl <span class="at">-o</span> quarto-linux-amd64.deb <span class="at">-L</span> <span class="op">&lt;</span>https://github.com/quarto-dev/quarto-cli/releases/download/v<span class="va">${QUARTO_VERSION}</span>/quarto-<span class="va">${QUARTO_VERSION}</span>-linux-amd64.deb<span class="op">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> gdebi quarto-linux-amd64.deb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>On Windows:</p>
-<pre class="{bash}"><code>scoop bucket add extras
-scoop install extras/quarto</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">scoop</span> bucket add extras</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">scoop</span> install extras/quarto</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="package-management" class="level3">
 <h3 class="anchored" data-anchor-id="package-management">Package Management</h3>
 <p><code>PyFixest</code> is using <a href="https://github.com/python-poetry/poetry">poetry</a>.</p>
 <p>Please follow the <a href="https://python-poetry.org/docs/#installing-with-the-official-installer">installation instructions</a> from the poetry documentation.</p>
 <p>Afterwards, you can initiate the project environment and install all dependencies by running</p>
-<pre class="{bash}"><code>cd path-to-pyfixest
-poetry install</code></pre>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> path-to-pyfixest</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">poetry</span> install</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>If you type</p>
-<pre class="{bash}"><code>poetry shell</code></pre>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">poetry</span> shell</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>you will see that you have activated a custom poetry environment for pyfixest.</p>
 </section>
 <section id="code-style" class="level3">
 <h3 class="anchored" data-anchor-id="code-style">Code Style</h3>
 <p>We use <code>ruff</code> and <code>pre-commit</code> to ensure a consistent code style.</p>
 <p>You can install <code>pre-commit</code> from <code>pip</code> by running</p>
-<pre class="{bash}"><code>pip install pre-commit</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install pre-commit</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>To install the required hooks, run</p>
-<pre class="{bash}"><code>pre-commit install</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pre-commit</span> install</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>and you’re ready to go!</p>
 </section>
 <section id="justfile" class="level3">
 <h3 class="anchored" data-anchor-id="justfile">Justfile</h3>
 <p>There are several command line targets that assist with development included in the <code>justfile</code>. <a href="https://just.systems/">Just</a> can be installed to help run these command line targets. Installing <code>just</code> is only recommended and not needed for development of pyfixest.</p>
 <p>On Mac/Linux via <a href="https://formulae.brew.sh/formula/just#default">Homebrew</a>:</p>
-<pre class="{bash}"><code>brew install just</code></pre>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">brew</span> install just</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>On Windows:</p>
-<pre class="{bash}"><code>scoop bucket add main
-scoop install main/just</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">scoop</span> bucket add main</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">scoop</span> install main/just</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The justfile includes multiple helpful shorthands to help with development. Note that if you are not using windows/powershell, you will have to uncomment the first line of the justfile <code>set shell := ["powershell.exe", "-c"]</code>.</p>
-<pre class="{bash}"><code># install all development dependencies
-just install-dev
-# install all R development dependencies
-just install-r
-# run all tests via pytest
-just tests</code></pre>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install all development dependencies</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> install-dev</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># install all R development dependencies</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> install-r</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co"># run all tests via pytest</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> tests</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>To rebuild the documentation locally, you can run</p>
-<pre class="{bash}"><code># Build documentation and website
-just docs-build
-# render the docs
-just render
-# preview the docs
-just preview</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build documentation and website</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> docs-build</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># render the docs</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> render</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co"># preview the docs</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="ex">just</span> preview</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>To re-create the csv files in <code>tests/data</code> that contain results from R packages for testing, you can run <code>just update-tests-data</code>.</p>
 
 
