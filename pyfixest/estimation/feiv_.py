@@ -73,6 +73,12 @@ class Feiv(Feols):
         Hessian matrix used in the regression.
     _bread : np.ndarray
         Bread matrix used in the regression.
+    _pi_hat : np.ndarray
+        Estimated coefficients from 1st stage regression
+    _X_hat : np.ndarray
+        Predicted values of the 1st stage regression
+    _v_hat : np.ndarray
+        Residuals of the 1st stage regression
 
     Raises
     ------
@@ -133,6 +139,27 @@ class Feiv(Feols):
         _Z = self._Z
         _Y = self._Y
 
+        #  Start First Stage
+
+        model1 = Feols(
+            Y=_X[:, -1].reshape(-1, 1),
+            X=_Z,
+            weights=np.ones(self._weights.shape[0]).reshape(-1, 1),
+            collin_tol=self._collin_tol,
+            coefnames=self._coefnames_z,
+            weights_name=None,
+            weights_type=None,
+        )
+        model1.get_fit()
+        # Store the first stage coefficients
+        self._pi_hat = model1._beta_hat
+
+        # Use fitted values from the first stage
+        self._X_hat = model1._Y_hat_link
+
+        # Residuals from the first stage
+        self._v_hat = model1._u_hat
+
         self._tZX = _Z.T @ _X
         self._tXZ = _X.T @ _Z
         self._tZy = _Z.T @ _Y
@@ -142,13 +169,19 @@ class Feiv(Feols):
         A = H @ self._tZX
         B = H @ self._tZy
 
+        # Start Second Stage
+
+        # Estimate coefficients (beta_hat)
         self._beta_hat = np.linalg.solve(A, B).flatten()
 
+        # Predicted values and residuals
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
+        # Compute scores and hessian
         self._scores = self._Z * self._u_hat[:, None]
-        self._hessian = self._Z.transpose() @ self._Z
+        self._hessian = self._Z.T @ self._Z
 
+        # Compute bread matrix
         D = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
-        self._bread = (H.T) @ D @ H
+        self._bread = H.T @ D @ H
