@@ -21,6 +21,8 @@ class Feiv(Feols):
         Dependent variable, a two-dimensional np.array.
     X : np.ndarray
         Independent variables, a two-dimensional np.array.
+    endgvar : np.ndarray
+        Endogenous Indenpendent variables, a two-dimensional np.array.
     Z : np.ndarray
         Instruments, a two-dimensional np.array.
     weights : np.ndarray
@@ -31,7 +33,8 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
-    weights_name : Optional[str]
+    weights_name : Op    endgvar : np.ndarray
+        Endogenous Indenpendent variables, a two-dimensional np.array. tional[str]
         Name of the weights variable.
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights
@@ -93,6 +96,7 @@ class Feiv(Feols):
         self,
         Y: np.ndarray,
         X: np.ndarray,
+        endogvar: np.ndarray,
         Z: np.ndarray,
         weights: np.ndarray,
         coefnames_x: list,
@@ -114,6 +118,7 @@ class Feiv(Feols):
         if self._has_weights:
             w = np.sqrt(weights)
             Z = Z * w
+            endogvar = endogvar * w
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
@@ -132,17 +137,19 @@ class Feiv(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._endogvar = endogvar
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         _X = self._X
         _Z = self._Z
         _Y = self._Y
+        _endogvar = self._endogvar
 
         #  Start First Stage
 
         model1 = Feols(
-            Y=_X[:, -1].reshape(-1, 1),
+            Y=_endogvar,
             X=_Z,
             weights=np.ones(self._weights.shape[0]).reshape(-1, 1),
             collin_tol=self._collin_tol,
