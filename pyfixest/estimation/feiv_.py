@@ -33,8 +33,7 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
-    weights_name : Op    endgvar : np.ndarray
-        Endogenous Indenpendent variables, a two-dimensional np.array. tional[str]
+    weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights
