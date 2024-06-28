@@ -478,7 +478,7 @@ class Feols:
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
-        return self
+        return self._vcov
 
     def _vcov_iid(self):
         _N = self._N
