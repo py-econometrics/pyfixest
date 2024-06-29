@@ -1524,8 +1524,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                f"{ub*100:.1f}%": _conf_int[0],
-                f"{lb*100:.1f}%": _conf_int[1],
+                f"{lb*100:.1f}%": _conf_int[0],
+                f"{ub*100:.1f}%": _conf_int[1],
             }
         )
 
