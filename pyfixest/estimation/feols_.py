@@ -1507,8 +1507,8 @@ class Feols:
             ub, lb = 0.975, 0.025
             self.get_inference()
         else:
+            ub, lb = 1 - alpha / 2, alpha / 2
             self.get_inference(alpha=1 - alpha)
-            ub, lb = alpha / 2, 1 - alpha / 2
 
         _coefnames = self._coefnames
         _se = self._se
