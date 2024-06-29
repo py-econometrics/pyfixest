@@ -337,7 +337,7 @@ def _coefplot_lets_plot(
     """
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
-    ub, lb = alpha / 2, 1 - alpha / 2
+    ub, lb = 1 - alpha / 2, alpha / 2
 
     plot = (
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
