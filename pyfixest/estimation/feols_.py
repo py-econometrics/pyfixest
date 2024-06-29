@@ -1504,8 +1504,8 @@ class Feols:
             estimates, standard errors, t-statistics, and p-values.
         """
         if alpha is None:
-            _conf_int = self._conf_int
             ub, lb = 0.975, 0.025
+            self.get_inference()
         else:
             self.get_inference(alpha=1 - alpha)
             ub, lb = alpha / 2, 1 - alpha / 2
