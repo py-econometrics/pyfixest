@@ -109,7 +109,7 @@ def get_ssc(
     adj_value = 1.0
 
     if vcov_type == "hetero":
-        adj_value = N / (N - k) if adj else N / (N - 1)
+        adj_value = N / (N - k)
     elif vcov_type in ["iid", "CRV"]:
         if adj:
             adj_value = (N - 1) / (N - k)
