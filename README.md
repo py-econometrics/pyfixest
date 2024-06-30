@@ -2,12 +2,14 @@
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
-[![PyPI -
-Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
-![PyPI - Python
-Version](https://img.shields.io/pypi/pyversions/pyfixest.svg) ![PyPI -
-Downloads](https://img.shields.io/pypi/dm/pyfixest.svg)
-[![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest) [![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/license/mit)
+[![PyPI -Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
+[![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
+[![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
+[![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 
 `PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
 
@@ -220,8 +222,11 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="14.28%"><a href="http://www.aeturrell.com"><img src="https://avatars.githubusercontent.com/u/11294320?v=4?s=100" width="100px;" alt="aeturrell"/><br /><sub><b>aeturrell</b></sub></a><br /><a href="#tutorial-aeturrell" title="Tutorials">✅</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=aeturrell" title="Documentation">📖</a> <a href="#promotion-aeturrell" title="Promotion">📣</a></td>
     </tr>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/leostimpfle"><img src="https://avatars.githubusercontent.com/u/31652181?v=4?s=100" width="100px;" alt="leostimpfle"/><br /><sub><b>leostimpfle</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=leostimpfle" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/leostimpfle"><img src="https://avatars.githubusercontent.com/u/31652181?v=4?s=100" width="100px;" alt="leostimpfle"/><br /><sub><b>leostimpfle</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=leostimpfle" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aleostimpfle" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/baggiponte"><img src="https://avatars.githubusercontent.com/u/57922983?v=4?s=100" width="100px;" alt="baggiponte"/><br /><sub><b>baggiponte</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=baggiponte" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sanskriti2005"><img src="https://avatars.githubusercontent.com/u/150411024?v=4?s=100" width="100px;" alt="Sanskriti"/><br /><sub><b>Sanskriti</b></sub></a><br /><a href="#infra-sanskriti2005" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Jayhyung"><img src="https://avatars.githubusercontent.com/u/40373774?v=4?s=100" width="100px;" alt="Jaehyung"/><br /><sub><b>Jaehyung</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=Jayhyung" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://alexstephenson.me"><img src="https://avatars.githubusercontent.com/u/24926205?v=4?s=100" width="100px;" alt="Alex"/><br /><sub><b>Alex</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=asteves" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>

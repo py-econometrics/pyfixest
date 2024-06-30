@@ -1,3 +1,4 @@
+import warnings
 from typing import Union
 
 import numpy as np
@@ -64,7 +65,11 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: list[Union[Feols, Fepois]], param: str, reps: int, seed: int
+    models: list[Union[Feols, Fepois]],
+    param: str,
+    reps: int,
+    seed: int,
+    sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
@@ -85,6 +90,10 @@ def rwolf(
         The number of bootstrap replications.
     seed : int
         The seed for the random number generator.
+    sampling_method : str
+        Sampling method for computing resampled statistics.
+        Users can choose either bootstrap('wild-bootstrap')
+        or randomization inference('ri')
 
     Returns
     -------
@@ -111,6 +120,7 @@ def rwolf(
     """
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
+    full_enumeration = False
 
     S = 0
     for model in models:
@@ -119,37 +129,63 @@ def rwolf(
                 f"Parameter '{param}' not found in the model {model._fml}."
             )
 
+        if model._is_clustered:
+            # model._G a list of length 3
+            # for oneway clusering: repeated three times
+            G = min(model._G)
+            if reps > 2**G:
+                warnings.warn(f"""
+                              2^(the number of clusters) < the number of boot iterations for at least one model,
+                              setting full_enumeration to True and reps = {2**G}.
+                              """)
+                full_enumeration = True
+
         model_tidy = model.tidy().xs(param)
         all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
         S += 1
 
-    t_stats = all_model_stats.xs("t value").values
     t_stats = np.zeros(S)
-    boot_t_stats = np.zeros((reps, S))
+    boot_t_stats = np.zeros((2**G, S)) if full_enumeration else np.zeros((reps, S))
 
     for i in range(S):
         model = models[i]
 
-        wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-            param=param,
-            reps=reps,
-            return_bootstrapped_t_stats=True,
-            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
-        )
-        t_stats[i] = wildboot_res_df["t value"]
-        boot_t_stats[:, i] = bootstrapped_t_stats
+        if sampling_method == "wild-bootstrap":
+            wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
+                param=param,
+                reps=reps,
+                return_bootstrapped_t_stats=True,
+                seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
+            )
+
+            t_stats[i] = wildboot_res_df["t value"]
+            boot_t_stats[:, i] = bootstrapped_t_stats
+
+        elif sampling_method == "ri":
+            rng = np.random.default_rng(seed)
+            model.ritest(
+                resampvar=param,
+                rng=rng,
+                reps=reps,
+                type="randomization-t",
+                store_ritest_statistics=True,
+            )
+
+            t_stats[i] = model._ritest_sample_stat
+            boot_t_stats[:, i] = model._ritest_statistics
+        else:
+            raise ValueError("Invalid sampling method specified")
 
     pval = _get_rwolf_pval(t_stats, boot_t_stats)
 
     all_model_stats.loc["RW Pr(>|t|)"] = pval
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
-
     return all_model_stats
 
 
 def _get_rwolf_pval(t_stats, boot_t_stats):
     """
-    Compute Romano-Wolf adjusted p-values based on bootstrapped t-statistics.
+    Compute Romano-Wolf adjusted p-values based on bootstrapped(or "ri") t-statistics.
 
     Parameters
     ----------
@@ -157,7 +193,7 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
                         tested hypotheses - containing the original,
                         non-bootstrappe t-statisics.
     boot_t_stats (np.ndarray): A (B x S) matrix containing the
-                            bootstrapped t-statistics.
+                            bootstrapped(or "ri") t-statistics.
 
     Returns
     -------

@@ -21,6 +21,8 @@ class Feiv(Feols):
         Dependent variable, a two-dimensional np.array.
     X : np.ndarray
         Independent variables, a two-dimensional np.array.
+    endgvar : np.ndarray
+        Endogenous Indenpendent variables, a two-dimensional np.array.
     Z : np.ndarray
         Instruments, a two-dimensional np.array.
     weights : np.ndarray
@@ -73,6 +75,12 @@ class Feiv(Feols):
         Hessian matrix used in the regression.
     _bread : np.ndarray
         Bread matrix used in the regression.
+    _pi_hat : np.ndarray
+        Estimated coefficients from 1st stage regression
+    _X_hat : np.ndarray
+        Predicted values of the 1st stage regression
+    _v_hat : np.ndarray
+        Residuals of the 1st stage regression
 
     Raises
     ------
@@ -87,6 +95,7 @@ class Feiv(Feols):
         self,
         Y: np.ndarray,
         X: np.ndarray,
+        endogvar: np.ndarray,
         Z: np.ndarray,
         weights: np.ndarray,
         coefnames_x: list,
@@ -110,6 +119,7 @@ class Feiv(Feols):
         if self._has_weights:
             w = np.sqrt(weights)
             Z = Z * w
+            endogvar = endogvar * w
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
@@ -128,6 +138,7 @@ class Feiv(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._endogvar = endogvar
 
     def solve_ols(self, tZX, tZY, solver):
         """
@@ -160,7 +171,30 @@ class Feiv(Feols):
         _X = self._X
         _Z = self._Z
         _Y = self._Y
+        _endogvar = self._endogvar
 
+        #  Start First Stage
+
+        model1 = Feols(
+            Y=_endogvar,
+            X=_Z,
+            weights=np.ones(self._weights.shape[0]).reshape(-1, 1),
+            collin_tol=self._collin_tol,
+            coefnames=self._coefnames_z,
+            weights_name=None,
+            weights_type=None,
+        )
+        model1.get_fit()
+        # Store the first stage coefficients
+        self._pi_hat = model1._beta_hat
+
+        # Use fitted values from the first stage
+        self._X_hat = model1._Y_hat_link
+
+        # Residuals from the first stage
+        self._v_hat = model1._u_hat
+
+        # Start Second Stage
         self._tZX = _Z.T @ _X
         self._tXZ = _X.T @ _Z
         self._tZy = _Z.T @ _Y
@@ -173,11 +207,15 @@ class Feiv(Feols):
 
         self._beta_hat = self.solve_ols(A, B, solver)
 
+
+        # Predicted values and residuals
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
+        # Compute scores and hessian
         self._scores = self._Z * self._u_hat[:, None]
-        self._hessian = self._Z.transpose() @ self._Z
+        self._hessian = self._Z.T @ self._Z
 
+        # Compute bread matrix
         D = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
-        self._bread = (H.T) @ D @ H
+        self._bread = H.T @ D @ H

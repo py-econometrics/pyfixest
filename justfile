@@ -22,8 +22,7 @@ install-dev:
 
 # Install R dependencies
 install-r:
-	Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'
-
+	Rscript -e "install.packages(c('broom', 'clubSandwich', 'did2s', 'fixest', 'wildrwolf', 'reticulate'), repos='https://cran.rstudio.com'); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 # Create R test data sets
 update-tests-data:
 	poetry run Rscript tests/r_test_comparisons.R
