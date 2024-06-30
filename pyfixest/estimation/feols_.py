@@ -322,7 +322,7 @@ class Feols:
         ValueError: If the specified solver is not supported.
         """
         if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0]
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
         elif solver == "np.linalg.solve":
             return np.linalg.solve(tZX, tZY).flatten()
         else:
@@ -342,12 +342,6 @@ class Feols:
         _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
-
-        # self._tZXinv = np.linalg.inv(self._tZX)
-        if _solver == "np.linalg.lstsq":
-            self._beta_hat, _, _, _ = np.linalg.lstsq(self._tZX, self._tZy, rcond=None)
-        else:  # Default to np.linalg.solve
-            self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
 
         self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
