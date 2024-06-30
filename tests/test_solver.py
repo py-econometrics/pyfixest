@@ -8,16 +8,26 @@ from pyfixest.estimation.fepois_ import Fepois
 
 
 @pytest.fixture()
-def data():
+def data_feols():
     data = pf.get_data()
     Y = data["Y"].to_numpy()
-    X = data[["X1", "X2"]]
+    X = data[["X1", "X2"]].to_numpy()
     Z = data[["Z1"]].to_numpy()
     weights = data["weights"].to_numpy()  # Define the variable "weights"
     return X, Y, Z, weights
 
 
-def test_solver_fepois(data):
+@pytest.fixture()
+def data_fepois():
+    data = pf.get_data(model="Fepois")
+    Y = data["Y"].to_numpy()
+    X = data[["X1", "X2"]].to_numpy()
+    Z = data[["Z1"]].to_numpy()
+    weights = data["weights"].to_numpy()  # Define the variable "weights"
+    return X, Y, Z, weights
+
+
+def test_solver_fepois(data_fepois):
     """
     Test the equivalence of different solvers for the fepois class.
     This function initializes an object with test data and compares the results
@@ -25,7 +35,7 @@ def test_solver_fepois(data):
     and np.linalg.solve. It asserts that
     the results are identical or very close within a tolerance.
     """
-    X, Y, Z, weights = data
+    X, Y, Z, weights = data_fepois
     obj = Fepois(
         X=X,
         Y=Y,
@@ -52,7 +62,7 @@ def test_solver_fepois(data):
     )
 
 
-def test_solver_feiv(data):
+def test_solver_feiv(data_feols):
     """
     Test the equivalence of different solvers for the feiv class.
     This function initializes an object with test data and compares the results
@@ -60,12 +70,13 @@ def test_solver_feiv(data):
     and np.linalg.solve. It asserts that
     the results are identical or very close within a tolerance.
     """
-    X, Y, Z, weights = data
+    X, Y, Z, weights = data_feols
 
     obj = Feiv(
         Y=Y,
         X=X,
         Z=Z,
+        endogvar=X[:, 0],
         weights=weights,
         coefnames_x=["X1", "X2"],
         collin_tol=1e-08,
@@ -91,7 +102,7 @@ def test_solver_feiv(data):
     )
 
 
-def test_solver_equivalence(data):
+def test_solver_feols(data_feols):
     """
     Test the equivalence of different solvers for the feols class.
     This function initializes an object with test data and compares the results
@@ -99,7 +110,7 @@ def test_solver_equivalence(data):
     and np.linalg.solve. It asserts that
     the results are identical or very close within a tolerance.
     """
-    X, Y, Z, weights = data
+    X, Y, Z, weights = data_feols
 
     obj = Feols(
         X=X,
