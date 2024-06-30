@@ -33,6 +33,8 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
+    solver: str, default is 'np.linalg.solve'
+        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -140,38 +142,13 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._endogvar = endogvar
 
-    def solve_ols(self, tZX, tZY, solver):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): The design matrix.
-        tZY (array-like): The response variable.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq"
-        and "np.linalg.solve".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0]
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         _X = self._X
         _Z = self._Z
         _Y = self._Y
         _endogvar = self._endogvar
+        _solver = self._solver
 
         #  Start First Stage
 
@@ -203,10 +180,7 @@ class Feiv(Feols):
         H = self._tXZ @ self._tZZinv
         A = H @ self._tZX
         B = H @ self._tZy
-        solver = self._solver
-
-        self._beta_hat = self.solve_ols(A, B, solver)
-
+        self._beta_hat = self.solve_ols(A, B, _solver)
 
         # Predicted values and residuals
         self._Y_hat_link = self._X @ self._beta_hat

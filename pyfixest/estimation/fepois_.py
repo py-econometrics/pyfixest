@@ -48,8 +48,11 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
+    solver: str, default is 'np.linalg.solve'
+        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
+    solver:
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -115,32 +118,6 @@ class Fepois(Feols):
         self.deviance = None
         self._Xbeta = np.array([])
 
-    def solve_ols(self, tZX, tZY, solver):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): The design matrix.
-        tZY (array-like): The response variable.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq"
-        and "np.linalg.solve".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0]
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def get_fit(self) -> None:
         """
         Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).
@@ -179,7 +156,7 @@ class Fepois(Feols):
         _iwls_maxiter = 25
         _tol = self.tol
         _fixef_tol = self.fixef_tol
-        solver = self._solver
+        _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
@@ -244,7 +221,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, solver)  # eq (10), delta_new -> reg_z
+            delta_new = self.solve_ols(XWX, XWZ, _solver)  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()
