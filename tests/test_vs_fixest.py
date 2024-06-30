@@ -161,25 +161,13 @@ def test_single_fit_feols(
     data[data == "nan"] = np.nan
 
     # test fixed effects that are not floats, but ints or categoricals, etc
-    if f3_type == "categorical":
-        data["f3"] = pd.Categorical(data["f3"])
-    elif f3_type == "int" and dropna:
-        data["f3"] = data["f3"].astype(np.int32)
-    elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
-    elif f3_type == "object":
-        data["f3"] = data["f3"].astype(object)
-    elif f3_type == "float":
-        data["f3"] = data["f3"].astype(float)
-    else:
-        pass
+
+    data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
-    if isinstance(inference, dict):
-        r_inference = ro.Formula("~" + inference["CRV1"])
-    else:
-        r_inference = inference
+
+    r_inference = _get_r_inference(inference)
 
     mod = pf.feols(fml=fml, data=data, vcov=inference, weights=weights, ssc=ssc_)
     if weights is not None:
@@ -209,19 +197,7 @@ def test_single_fit_feols(
     py_resid = mod._u_hat.flatten()  # noqa: F841
     # TODO: test residuals
 
-    fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
-    df_r = pd.DataFrame(fixest_df).T
-    df_r.columns = [
-        "term",
-        "estimate",
-        "std.error",
-        "statistic",
-        "p.value",
-        "conf.low",
-        "conf.high",
-    ]
-
-    df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
+    df_X1 = _get_r_df(r_fixest)
 
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
@@ -290,25 +266,11 @@ def test_single_fit_fepois(
     data[data == "nan"] = np.nan
 
     # test fixed effects that are not floats, but ints or categoricals, etc
-    if f3_type == "categorical":
-        data["f3"] = pd.Categorical(data["f3"])
-    elif f3_type == "int" and dropna:
-        data["f3"] = data["f3"].astype(np.int32)
-    elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
-    elif f3_type == "object":
-        data["f3"] = data["f3"].astype(object)
-    elif f3_type == "float":
-        data["f3"] = data["f3"].astype(float)
-    else:
-        pass
+    data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
-    if isinstance(inference, dict):
-        r_inference = ro.Formula("~" + inference["CRV1"])
-    else:
-        r_inference = inference
+    r_inference = _get_r_inference(inference)
 
     mod = pf.fepois(fml=fml, data=data, vcov=inference, ssc=ssc_)
     r_fixest = fixest.fepois(
@@ -330,19 +292,7 @@ def test_single_fit_fepois(
     py_resid = mod._u_hat.flatten()  # noqa: F841
     # TODO: test residuals
 
-    fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
-    df_r = pd.DataFrame(fixest_df).T
-    df_r.columns = [
-        "term",
-        "estimate",
-        "std.error",
-        "statistic",
-        "p.value",
-        "conf.low",
-        "conf.high",
-    ]
-
-    df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
+    df_X1 = _get_r_df(r_fixest)
 
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
@@ -410,25 +360,11 @@ def test_single_fit_iv(
     data[data == "nan"] = np.nan
 
     # test fixed effects that are not floats, but ints or categoricals, etc
-    if f3_type == "categorical":
-        data["f3"] = pd.Categorical(data["f3"])
-    elif f3_type == "int" and dropna:
-        data["f3"] = data["f3"].astype(np.int32)
-    elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
-    elif f3_type == "object":
-        data["f3"] = data["f3"].astype(object)
-    elif f3_type == "float":
-        data["f3"] = data["f3"].astype(float)
-    else:
-        pass
+    data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
-    if isinstance(inference, dict):
-        r_inference = ro.Formula("~" + inference["CRV1"])
-    else:
-        r_inference = inference
+    r_inference = _get_r_inference(inference)
 
     mod = pf.feols(fml=fml, data=data, vcov=inference, ssc=ssc_)
     if weights is not None:
@@ -458,19 +394,7 @@ def test_single_fit_iv(
     py_resid = mod._u_hat.flatten()  # noqa: F841
     # TODO: test residuals
 
-    fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
-    df_r = pd.DataFrame(fixest_df).T
-    df_r.columns = [
-        "term",
-        "estimate",
-        "std.error",
-        "statistic",
-        "p.value",
-        "conf.low",
-        "conf.high",
-    ]
-
-    df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
+    df_X1 = _get_r_df(r_fixest)
 
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
@@ -773,72 +697,6 @@ def get_data_r(fml, data):
     return data_r
 
 
-@pytest.mark.skip("Currently not supported.")
-def test_i_interaction():
-    """Test that interaction syntax via the `i()` operator works as in fixest."""
-    data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
-
-    fit1 = feols("Y ~ i(f1, X2)", data=data)
-    fit2 = feols("Y ~ X1 + i(f1, X2) | f2", data=data)
-    # fit3 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=1.0)
-    # fit4 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0])
-    # fit5 = feols("Y ~ X1 + i(f1, X2) | f2", data=data, i_ref=[2.0, 3.0])
-
-    fit1_r = fixest.feols(
-        ro.Formula("Y ~ i(f1, X2)"),
-        data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    )
-    fit2_r = fixest.feols(
-        ro.Formula("Y ~ X1 + i(f1, X2) | f2"),
-        data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    )
-    # fit3_r = fixest.feols(
-    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 1.0) | f2"),
-    #    data=data,
-    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    # )
-    # fit4_r = fixest.feols(
-    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = 2.0) | f2"),
-    #    data=data,
-    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    # )
-    # fit5_r = fixest.feols(
-    #    ro.Formula("Y ~ X1 + i(f1, X2, ref = c(2.0, 3.0)) | f2"),
-    #    data=data,
-    #    ssc=fixest.ssc(True, "none", True, "min", "min", False),
-    # )
-
-    # create tuples: (pyfixest, fixest)
-    fits = [
-        (fit1, fit1_r),
-        (fit2, fit2_r),
-        # (fit3, fit3_r),
-        # (fit4, fit4_r),
-        # (fit5, fit5_r),
-    ]
-
-    for fit in fits:
-        # test that coefficients match
-        coef_py = fit[0].coef().values
-        coef_r = stats.coef(fit[1])
-        np.testing.assert_allclose(
-            coef_py,
-            coef_r,
-            rtol=1e-04,
-            atol=1e-04,
-            err_msg="Coefficients do not match.",
-        )
-
-        # test that standard errors match
-        se_py = fit[0].se().values
-        se_r = fixest.se(fit[1])
-        np.testing.assert_allclose(
-            se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
-        )
-
-
 @pytest.mark.parametrize(
     "fml",
     [
@@ -916,3 +774,46 @@ def test_singleton_dropping():
     # np.testing.assert_allclose(
     #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
     # )
+
+
+def _convert_f3(data, f3_type):
+    """Convert f3 to the desired type."""
+    if f3_type == "categorical":
+        data["f3"] = pd.Categorical(data["f3"])
+    elif f3_type == "int":
+        data["f3"] = data["f3"].astype(np.int32)
+    elif f3_type == "str":
+        data["f3"] = data["f3"].astype(str)
+    elif f3_type == "object":
+        data["f3"] = data["f3"].astype(object)
+    elif f3_type == "float":
+        data["f3"] = data["f3"].astype(float)
+    else:
+        pass
+    return data
+
+
+def _get_r_inference(inference):
+    return (
+        ro.Formula("~" + inference["CRV1"])
+        if isinstance(inference, dict)
+        else inference
+    )
+
+
+def _get_r_df(r_fixest):
+    fixest_df = broom.tidy_fixest(r_fixest, conf_int=ro.BoolVector([True]))
+    df_r = pd.DataFrame(fixest_df).T
+    df_r.columns = [
+        "term",
+        "estimate",
+        "std.error",
+        "statistic",
+        "p.value",
+        "conf.low",
+        "conf.high",
+    ]
+
+    df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
+
+    return df_X1
