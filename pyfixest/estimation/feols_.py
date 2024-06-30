@@ -1656,7 +1656,7 @@ class Feols:
 
         if not joint:
             if self._vcov_type in ["iid", "hetero"]:
-                df = self._N - self._k - 1
+                df = self._N - self._k
             else:
                 _G = np.min(np.array(self._G))  # fixest default
                 df = _G - 1
