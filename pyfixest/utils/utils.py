@@ -108,15 +108,8 @@ def get_ssc(
     cluster_adj_value = 1.0
     adj_value = 1.0
 
-    if vcov_type == "hetero":
-        if adj:
-            adj_value = N / (N - k)
-            # adj_value = N / (N - 1)
-    elif vcov_type in ["iid", "CRV"]:
-        if adj:
-            adj_value = (N - 1) / (N - k)
-    else:
-        raise ValueError("vcov_type must be either iid, hetero or CRV.")
+    if adj:
+        adj_value = (N - 1) / (N - k)
 
     if vcov_type == "CRV" and cluster_adj:
         if cluster_df == "conventional":
