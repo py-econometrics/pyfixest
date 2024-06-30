@@ -68,6 +68,7 @@ class Fepois(Feols):
         maxiter: int = 25,
         tol: float = 1e-08,
         fixef_tol: float = 1e-08,
+        solver: str = "np.linalg.solve",
         weights_name: Optional[str] = None,
         weights_type: Optional[str] = None,
     ):
@@ -79,6 +80,7 @@ class Fepois(Feols):
             collin_tol=collin_tol,
             weights_name=weights_name,
             weights_type=weights_type,
+            solver=solver,
         )
 
         # input checks
@@ -112,6 +114,32 @@ class Fepois(Feols):
         self._Y_hat_response = np.array([])
         self.deviance = None
         self._Xbeta = np.array([])
+
+    def solve_ols(self, tZX, tZY, solver):
+        """
+        Solve the ordinary least squares problem using the specified solver.
+
+        Parameters
+        ----------
+        tZX (array-like): The design matrix.
+        tZY (array-like): The response variable.
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq"
+        and "np.linalg.solve".
+
+        Returns
+        -------
+        array-like: The solution to the ordinary least squares problem.
+
+        Raises
+        ------
+        ValueError: If the specified solver is not supported.
+        """
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0]
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        else:
+            raise ValueError(f"Solver {solver} not supported.")
 
     def get_fit(self) -> None:
         """
@@ -151,6 +179,7 @@ class Fepois(Feols):
         _iwls_maxiter = 25
         _tol = self.tol
         _fixef_tol = self.fixef_tol
+        solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
@@ -215,7 +244,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            delta_new = self.solve_ols(XWX, XWZ, solver)  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()
