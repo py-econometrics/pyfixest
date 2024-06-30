@@ -62,6 +62,9 @@ class Feols:
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     Attributes
     ----------
@@ -86,6 +89,8 @@ class Feols:
         Indices of collinear variables.
     _Z : np.ndarray
         Alias for the _X array, used for calculations.
+    _solver: str
+        The solver used for the regression.
     _weights : np.ndarray
         Array of weights for each observation.
     _N : int
@@ -166,7 +171,8 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-
+    _solver: str
+        The solver used to fit the normal equation.
     """
 
     def __init__(
@@ -178,6 +184,7 @@ class Feols:
         coefnames: list[str],
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -198,7 +205,7 @@ class Feols:
             self._X = X
 
         self.get_nobs()
-
+        self._solver = solver
         _feols_input_checks(Y, X, weights)
 
         if self._X.shape[1] == 0:
@@ -295,6 +302,32 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
+        """
+        Solve the ordinary least squares problem using the specified solver.
+
+        Parameters
+        ----------
+        tZX (array-like): Z'X.
+        tZY (array-like): Z'Y.
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq"
+        and "np.linalg.solve".
+
+        Returns
+        -------
+        array-like: The solution to the ordinary least squares problem.
+
+        Raises
+        ------
+        ValueError: If the specified solver is not supported.
+        """
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        else:
+            raise ValueError(f"Solver {solver} not supported.")
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -306,15 +339,11 @@ class Feols:
         _X = self._X
         _Y = self._Y
         _Z = self._Z
-
+        _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        # self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
-
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
+        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()

@@ -33,6 +33,8 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
+    solver: str, default is 'np.linalg.solve'
+        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -103,6 +105,7 @@ class Feiv(Feols):
         collin_tol: float,
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         super().__init__(
             Y=Y,
@@ -112,6 +115,7 @@ class Feiv(Feols):
             collin_tol=collin_tol,
             weights_name=weights_name,
             weights_type=weights_type,
+            solver=solver,
         )
 
         if self._has_weights:
@@ -144,6 +148,7 @@ class Feiv(Feols):
         _Z = self._Z
         _Y = self._Y
         _endogvar = self._endogvar
+        _solver = self._solver
 
         #  Start First Stage
 
@@ -175,9 +180,7 @@ class Feiv(Feols):
         H = self._tXZ @ self._tZZinv
         A = H @ self._tZX
         B = H @ self._tZy
-
-        # Estimate coefficients (beta_hat)
-        self._beta_hat = np.linalg.solve(A, B).flatten()
+        self._beta_hat = self.solve_ols(A, B, _solver)
 
         # Predicted values and residuals
         self._Y_hat_link = self._X @ self._beta_hat
