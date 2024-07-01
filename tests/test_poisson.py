@@ -25,11 +25,11 @@ def test_separation():
         {
             "Y": [0, 0, 0, 1, 2, 3],
             "X1": [2, -1, 0, 0, 5, 6],
-            "X2": [-1, 2, 0, 0, -10, -12],
+            "X2": [5, 10, 0, 0, -10, -12],
         }
     )
 
     with pytest.warns(
-        UserWarning, match="1 observations removed because of separation."
+        UserWarning, match="2 observations removed because of separation."
     ):
         fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
