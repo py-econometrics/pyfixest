@@ -256,7 +256,7 @@ class Feols:
         self._clustervar: list[str] = []
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
-        self._vcov = np.array([])
+        self.vcov= np.array([])
         self.na_index = np.array([])  # initiated outside of the class
         self.n_separation_na = 0
 
@@ -390,7 +390,7 @@ class Feols:
                 vcov_type="iid",
             )
 
-            self._vcov = self._ssc * self._vcov_iid()
+            self.vcov= self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
             self._ssc = get_ssc(
@@ -402,7 +402,7 @@ class Feols:
                 vcov_type="hetero",
             )
 
-            self._vcov = self._ssc * self._vcov_hetero()
+            self.vcov= self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
             if data is not None:
@@ -429,7 +429,7 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
-            self._vcov = np.zeros((self._k, self._k))
+            self.vcov= np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
                 cluster_col_pd = self._cluster_df[col]
@@ -448,7 +448,7 @@ class Feols:
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
 
                 if self._vcov_type_detail == "CRV1":
-                    self._vcov += self._ssc[x] * self._vcov_crv1(
+                    self.vcov+= self._ssc[x] * self._vcov_crv1(
                         clustid=clustid, cluster_col=cluster_col
                     )
 
@@ -467,18 +467,18 @@ class Feols:
                         and (_method == "feols")
                         and (_is_iv is False)
                     ):
-                        self._vcov += self._ssc[x] * self._vcov_crv3_fast(
+                        self.vcov+= self._ssc[x] * self._vcov_crv3_fast(
                             clustid=clustid, cluster_col=cluster_col
                         )
                     else:
-                        self._vcov += self._ssc[x] * self._vcov_crv3_slow(
+                        self.vcov+= self._ssc[x] * self._vcov_crv3_slow(
                             clustid=clustid, cluster_col=cluster_col
                         )
 
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
-        return self._vcov
+        return self
 
     def _vcov_iid(self):
         _N = self._N
@@ -674,7 +674,7 @@ class Feols:
         -------
         None
         """
-        _vcov = self._vcov
+        _vcov = self.vcov
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
         _N = self._N
@@ -783,7 +783,7 @@ class Feols:
         """
         raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
 
-        _vcov = self._vcov
+        _vcov = self.vcov
         _N = self._N
         _k = self._k
         _beta_hat = self._beta_hat
@@ -1198,7 +1198,7 @@ class Feols:
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = self.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1668,7 +1668,7 @@ class Feols:
                 crit_val = np.abs(norm.ppf(alpha / 2))
         else:
             D_inv = 1 / self._se[joint_indices]
-            V = self._vcov[np.ix_(joint_indices, joint_indices)]
+            V = self.vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
