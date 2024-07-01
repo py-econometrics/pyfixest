@@ -107,7 +107,7 @@ class LPDID(DID):
         if vcov is None:
             vcov = {"CRV1": idname}
 
-        self._vcov = vcov
+        self.vcov = vcov
         self._pre_window = pre_window_int
         self._post_window = post_window_int
         self._never_treated = never_treated
@@ -121,7 +121,7 @@ class LPDID(DID):
             yname=self._yname,
             idname=self._idname,
             tname=self._tname,
-            vcov=self._vcov,
+            vcov=self.vcov,
             pre_window=self._pre_window,
             post_window=self._post_window,
             att=self._att,
