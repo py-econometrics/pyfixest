@@ -341,7 +341,6 @@ def _check_for_separation(
     list
         List of indices of observations that are removed due to separation.
     """
-    # import pdb; pdb.set_trace()
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
         "ir": _check_for_separation_ir,
@@ -430,7 +429,11 @@ def _check_for_separation_fe(
 
 
 def _check_for_separation_ir(
-    Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    tol: float = 1e-4,
+    maxiter: int = 100,
 ) -> set[int]:
     """
     Check for separation using the "iterative rectifier" check.
@@ -445,24 +448,36 @@ def _check_for_separation_ir(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    tol : float
+        Tolerance to detect separated observation. Defaults to 1e-4.
+    maxiter : int
+        Maximum number of iterations. Defaults to 100.
 
     Returns
     -------
     set
         Set of indices of observations that are removed due to separation.
     """
-    tol = 1e-8
-    maxiter = 10_000
-    # lazy loading to avoid circular import
+    # lazy load and avoid circular import
     fixest_module = import_module("pyfixest.estimation")
     feols = getattr(fixest_module, "feols")
 
     U = (Y == 0).astype(int).squeeze().rename("U")
     N0 = (Y > 0).squeeze().sum()
     K = N0 / tol**2
-    omega = U.where(U > 0, K).rename("omega")
+    omega = pd.Series(np.where(Y.squeeze() > 0, K, 1), name="omega")
     data = pd.concat([U, X, omega], axis=1)
-    fml = f"U ~ {'+'.join(X.columns[X.columns!='Intercept'])}"
+    fml = "U"
+    if X is not None and not X.empty:
+        fml += f" ~ {' + '.join(X.columns[X.columns!='Intercept'])}"
+    if fe is not None and not fe.empty:
+        fml += f" | {' + '.join(fe.columns)}"
+
+    separation_na: set[int] = set()
+    if (Y.squeeze() > 0).all():
+        # no boundary sample, can exit
+        # TODO: check if algorithm can be sped up based on boundary sample
+        return separation_na
 
     iter = 0
     while iter < maxiter:
@@ -474,7 +489,6 @@ def _check_for_separation_ir(
         if (Uhat >= 0).all():
             # all separated observations have been identified
             break
-
         data["U"] = np.fmax(Uhat, 0)  # rectified linear unit (ReLU)
 
     separation_na = set(Y[Uhat > 0].index)
