@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import lsqr, spsolve
 from scipy.stats import f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -310,8 +310,8 @@ class Feols:
         ----------
         tZX (array-like): Z'X.
         tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq"
-        and "np.linalg.solve".
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
+        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
 
         Returns
         -------
@@ -325,6 +325,8 @@ class Feols:
             return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
         elif solver == "np.linalg.solve":
             return np.linalg.solve(tZX, tZY).flatten()
+        elif solver == "scipy.sparse.linalg.lsqr":
+            return lsqr(tZX, tZY)[0].flatten()
         else:
             raise ValueError(f"Solver {solver} not supported.")
 

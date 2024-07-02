@@ -150,7 +150,16 @@ def test_solver_feols(data_feols):
     obj.get_fit()
     beta_hat_solve = obj._beta_hat.copy()
 
+    # scipy.sparse.linalg.lsqr solver
+    obj._solver = "scipy.sparse.linalg.lsqr"
+    obj.get_fit()
+    beta_hat_lsqr = obj._beta_hat.copy()
+
     # Assert that the results are identical or very close within a tolerance
     np.testing.assert_array_almost_equal(
         beta_hat_lstsq, beta_hat_solve, decimal=6, err_msg="Solvers' results differ"
+    )
+
+    np.testing.assert_array_almost_equal(
+        beta_hat_lstsq, beta_hat_lsqr, decimal=6, err_msg="Solvers' results differ"
     )
