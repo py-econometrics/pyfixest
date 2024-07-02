@@ -221,7 +221,9 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, _solver)  # eq (10), delta_new -> reg_z
+            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+                (-1, 1)
+            )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()

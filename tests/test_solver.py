@@ -46,7 +46,7 @@ def test_solver_fepois(data_fepois):
         coefnames=["X1", "X2"],
         collin_tol=1e-08,
         weights_name="weights",
-        weights_type=None,
+        weights_type="aweights",
         solver="np.linalg.solve",
         fe=None,
         drop_singletons=False,
@@ -55,7 +55,21 @@ def test_solver_fepois(data_fepois):
     obj._solver = "np.linalg.lstsq"
     obj.get_fit()
     beta_hat_lstsq = obj._beta_hat.copy()
+
     # Use np.linalg.solve solver
+    X, Y, weights = data_fepois
+    obj = Fepois(
+        X=X,
+        Y=Y,
+        weights=weights,
+        coefnames=["X1", "X2"],
+        collin_tol=1e-08,
+        weights_name="weights",
+        weights_type="aweights",
+        solver="np.linalg.solve",
+        fe=None,
+        drop_singletons=False,
+    )
     obj._solver = "np.linalg.solve"
     obj.get_fit()
     beta_hat_solve = obj._beta_hat.copy()
@@ -84,7 +98,7 @@ def test_solver_feiv(data_feols):
         coefnames_x=["X1", "X2"],
         collin_tol=1e-08,
         weights_name="weights",
-        weights_type=None,
+        weights_type="aweights",
         solver="np.linalg.solve",
         coefnames_z=["Z1"],
     )
@@ -122,7 +136,7 @@ def test_solver_feols(data_feols):
         collin_tol=1e-08,
         coefnames=["X1", "X2"],
         weights_name="weights",
-        weights_type=None,
+        weights_type="aweights",
         solver="np.linalg.solve",
     )
 
