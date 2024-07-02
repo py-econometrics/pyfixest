@@ -48,8 +48,11 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
+    solver: str, default is 'np.linalg.solve'
+        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
+    solver:
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -68,6 +71,7 @@ class Fepois(Feols):
         maxiter: int = 25,
         tol: float = 1e-08,
         fixef_tol: float = 1e-08,
+        solver: str = "np.linalg.solve",
         weights_name: Optional[str] = None,
         weights_type: Optional[str] = None,
     ):
@@ -79,6 +83,7 @@ class Fepois(Feols):
             collin_tol=collin_tol,
             weights_name=weights_name,
             weights_type=weights_type,
+            solver=solver,
         )
 
         # input checks
@@ -151,6 +156,7 @@ class Fepois(Feols):
         _iwls_maxiter = 25
         _tol = self.tol
         _fixef_tol = self.fixef_tol
+        _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
@@ -215,7 +221,9 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+                (-1, 1)
+            )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()
