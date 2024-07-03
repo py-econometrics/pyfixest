@@ -661,14 +661,15 @@ class Feols:
 
         return _vcov
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def get_inference(self, alpha: float = 0.05) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for confidence intervals. Defaults to 0.95.
+            The significance level for confidence intervals. Defaults to 0.05, which
+            produces a 95% confidence interval.
 
         Returns
         -------
@@ -692,10 +693,10 @@ class Feols:
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
             self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf((1 - alpha) / 2, df))
+            z = np.abs(t.ppf(alpha / 2, df))
         else:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf((1 - alpha) / 2))
+            z = np.abs(norm.ppf(alpha / 2))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
