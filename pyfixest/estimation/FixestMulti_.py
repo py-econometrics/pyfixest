@@ -335,7 +335,6 @@ class FixestMulti:
                     # check for separation and drop separated variables
 
                     na_separation: list[int] = []
-                    # if fe is not None:
                     na_separation = _check_for_separation(
                         Y=Y, X=X, fe=fe, methods=separation_check
                     )

@@ -437,9 +437,8 @@ def _check_for_separation_ir(
     maxiter: int = 100,
 ) -> set[int]:
     """
-    Check for separation using the "iterative rectifier" check.
-
-    For details see http://arxiv.org/abs/1903.01633
+    Check for separation using the "iterative rectifier" algorithm
+    proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
 
     Parameters
     ----------
