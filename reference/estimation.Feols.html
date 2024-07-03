@@ -1145,16 +1145,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.get_inference" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.get_inference">get_inference</h3>
-<p><code>estimation.Feols.get_inference(alpha=0.95)</code></p>
+<p><code>estimation.Feols.get_inference(alpha=0.05)</code></p>
 <p>Compute standard errors, t-statistics, and p-values for the regression model.</p>
 <section id="parameters-4" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 8%">
-<col style="width: 70%">
-<col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 5%">
+<col style="width: 79%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1168,8 +1168,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>alpha</code></td>
 <td>float</td>
-<td>The significance level for confidence intervals. Defaults to 0.95.</td>
-<td><code>0.95</code></td>
+<td>The significance level for confidence intervals. Defaults to 0.05, which produces a 95% confidence interval.</td>
+<td><code>0.05</code></td>
 </tr>
 </tbody>
 </table>
@@ -1649,9 +1649,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.tidy" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.tidy">tidy</h3>
-<p><code>estimation.Feols.tidy(alpha=0.05)</code></p>
+<p><code>estimation.Feols.tidy(alpha=None)</code></p>
 <p>Tidy model outputs.</p>
 <p>Return a tidy pd.DataFrame with the point estimates, standard errors, t-statistics, and p-values.</p>
+<section id="parameters-9" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
+<p>alpha: Optional[float] The significance level for the confidence intervals. If None, computes a 95% confidence interval (<code>alpha = 0.05</code>).</p>
+</section>
 <section id="returns-16" class="level4">
 <h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
 <table class="caption-top table">
@@ -1704,8 +1708,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.vcov">vcov</h3>
 <p><code>estimation.Feols.vcov(vcov, data=None)</code></p>
 <p>Compute covariance matrices for an estimated regression model.</p>
-<section id="parameters-9" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
+<section id="parameters-10" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-10">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 1%">
@@ -1764,8 +1768,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><code>estimation.Feols.wald_test(R=None, q=None, distribution='F')</code></p>
 <p>Conduct Wald test.</p>
 <p>Compute a Wald test for a linear hypothesis of the form Rb = q. By default, tests the joint null hypothesis that all coefficients are zero.</p>
-<section id="parameters-10" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-10">Parameters</h4>
+<section id="parameters-11" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-11">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 12%">
@@ -1825,8 +1829,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.wildboottest">wildboottest</h3>
 <p><code>estimation.Feols.wildboottest(reps, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False, return_bootstrapped_t_stats=False)</code></p>
 <p>Run a wild cluster bootstrap based on an object of type “Feols”.</p>
-<section id="parameters-11" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-11">Parameters</h4>
+<section id="parameters-12" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-12">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 10%">
