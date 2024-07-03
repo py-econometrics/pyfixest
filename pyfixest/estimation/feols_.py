@@ -9,7 +9,7 @@ import pandas as pd
 from formulaic import Formula
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
-from scipy.stats import f, norm, t
+from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
@@ -407,10 +407,11 @@ class Feols:
         elif self._vcov_type == "CRV":
             if data is not None:
                 # use input data set
-                self._cluster_df = _get_cluster_df(
-                    data=data, clustervar=self._clustervar
-                )
-                _check_cluster_df(cluster_df=self._cluster_df, data=data)
+                self._cluster_df = _get_cluster_df(  #
+                    data=data,  # type: ignore
+                    clustervar=self._clustervar,
+                )  # type: ignore
+                _check_cluster_df(cluster_df=self._cluster_df, data=data)  # type: ignore
             else:
                 # use stored data
                 self._cluster_df = _get_cluster_df(
@@ -757,12 +758,26 @@ class Feols:
         else:
             self._has_fixef = False
 
-    def wald_test(self, R=None, q=None, distribution="F") -> None:
+    def wald_test(self, R=None, q=None, distribution="F"):
         """
         Conduct Wald test.
 
         Compute a Wald test for a linear hypothesis of the form Rb = q.
         By default, tests the joint null hypothesis that all coefficients are zero.
+
+        This method producues the following attriutes
+
+        _dfd : int
+            degree of freedom in denominator
+        _dfn : int
+            degree of freedom in numerator
+        _wald_statistic : scalar
+            Wald-statistics computed for hypothesis testing
+        _f_statistic : scalar
+            Wald-statistics(when R is an indentity matrix, and q being zero vector)
+            computed for hypothesis testing
+        _p_value : scalar
+            corresponding p-value for statistics
 
         Parameters
         ----------
@@ -781,64 +796,74 @@ class Feols:
         pd.Series
             A pd.Series with the Wald statistic and p-value.
         """
-        raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
-
         _vcov = self._vcov
         _N = self._N
         _k = self._k
         _beta_hat = self._beta_hat
         _k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
 
-        dfn = _N - _k_fe - _k
-        dfd = _k
-
-        # if R is not two dimensional, make it two dimensional
-        if R is not None:
-            if R.ndim == 1:
-                R = R.reshape((1, len(R)))
-            assert (
-                R.shape[1] == _k
-            ), "R must have the same number of columns as the number of coefficients."
-        else:
+        # If R is None, default to the identity matrix
+        if R is None:
             R = np.eye(_k)
 
-        if q is not None:
-            assert isinstance(
-                q, (int, float, np.ndarray)
-            ), "q must be a numeric scalar."
-            if isinstance(q, np.ndarray):
-                assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
-                assert (
-                    q.shape[0] == R.shape[0]
-                ), "q must have the same number of rows as R."
-            warnings.warn(
-                "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
-            )
-        else:
-            q = np.zeros(R.shape[0])
+        # Ensure R is two-dimensional
+        if R.ndim == 1:
+            R = R.reshape((1, len(R)))
 
-        assert distribution in [
-            "F",
-            "chi2",
-        ], "distribution must be either 'F' or 'chi2'."
+        if R.shape[1] != _k:
+            print(_k)
+            print(R.shape[1])
+            raise ValueError(
+                "The number of columns of R must be equal to the number of coefficients."
+            )
+
+        # If q is None, default to a vector of zeros
+        if q is None:
+            q = np.zeros(R.shape[0])
+        else:
+            if not isinstance(q, (int, float, np.ndarray)):
+                raise ValueError("q must be a numeric scalar or array.")
+            if isinstance(q, np.ndarray):
+                if q.ndim != 1:
+                    raise ValueError("q must be a one-dimensional array or a scalar.")
+                if q.shape[0] != R.shape[0]:
+                    raise ValueError("q must have the same number of rows as R.")
+
+        n_restriction = R.shape[0]
+        self._dfn = n_restriction
+
+        if self._is_clustered:
+            self._dfd = np.min(np.array(self._G)) - 1
+        else:
+            self._dfd = _N - _k_fe - _k
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
         W = bread.T @ meat @ bread
-
-        # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W
-        self._f_statistic = W / dfd
+
+        # Check if distribution is "F" and R is not identity matrix
+        # or q is not zero vector
+        if distribution == "F" and (
+            not np.array_equal(R, np.eye(_k)) or not np.all(q == 0)
+        ):
+            warnings.warn(
+                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+            )
+            distribution = "chi2"
 
         if distribution == "F":
-            self._f_statistic_pvalue = f.sf(self._f_statistic, dfn=dfn, dfd=dfd)
-            # self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
+            self._f_statistic = W / self._dfn
+            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
+            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
+        elif distribution == "chi2":
+            self._f_statistic = W / self._dfn
+            self._p_value = chi2.sf(self._wald_statistic, self._dfd)
             res = pd.Series(
-                {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
+                {"statistic": self._wald_statistic, "pvalue": self._p_value}
             )
         else:
-            raise NotImplementedError("chi2 distribution not yet implemented.")
-            # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+            raise ValueError("Distribution must be F or chi2")
 
         return res
 
