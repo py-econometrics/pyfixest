@@ -154,7 +154,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
-        separation_check: list[str] | None = None,
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.

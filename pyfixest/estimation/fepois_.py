@@ -317,7 +317,7 @@ def _check_for_separation(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
-    methods: list[str] | None = None,
+    methods: Optional[list[str]] = None,
 ) -> list[int]:
     """
     Check for separation.

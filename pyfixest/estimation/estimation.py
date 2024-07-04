@@ -354,7 +354,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    separation_check: list[str] | None = None,
+    separation_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
