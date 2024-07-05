@@ -698,14 +698,15 @@ class Feols:
 
         return _vcov
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def get_inference(self, alpha: float = 0.05) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for confidence intervals. Defaults to 0.95.
+            The significance level for confidence intervals. Defaults to 0.05, which
+            produces a 95% confidence interval.
 
         Returns
         -------
@@ -729,10 +730,10 @@ class Feols:
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
             self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf((1 - alpha) / 2, df))
+            z = np.abs(t.ppf(alpha / 2, df))
         else:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf((1 - alpha) / 2))
+            z = np.abs(norm.ppf(alpha / 2))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -1549,21 +1550,33 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self, alpha=0.05) -> pd.DataFrame:
+    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
         """
         Tidy model outputs.
 
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
 
+        Parameters 
+        ----------
+        alpha: Optional[float]
+            The significance level for the confidence intervals. If None, 
+            computes a 95% confidence interval (`alpha = 0.05`). 
+        
         Returns
         -------
         tidy_df : pd.DataFrame
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
-        _coefnames = self._coefnames
+        if alpha is None:
+            ub, lb = 0.975, 0.025
+            self.get_inference()
+        else:
+            ub, lb = 1 - alpha / 2, alpha / 2
+            self.get_inference(alpha=1 - alpha)
 
+        _coefnames = self._coefnames
         _se = self._se
         _tstat = self._tstat
         _pvalue = self._pvalue
@@ -1577,8 +1590,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5%": _conf_int[0],
-                "97.5%": _conf_int[1],
+                f"{lb*100:.1f}%": _conf_int[0],
+                f"{ub*100:.1f}%": _conf_int[1],
             }
         )
 
