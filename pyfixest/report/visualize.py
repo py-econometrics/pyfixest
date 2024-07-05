@@ -148,7 +148,7 @@ def iplot(
                 "In consequence, the '.iplot()' method is not supported."
             )
         all_icovars += fxst._icovars
-        df_model = fxst.tidy().reset_index()  # Coefficient -> simple column
+        df_model = fxst.tidy(alpha = alpha).reset_index()  # Coefficient -> simple column
         df_model["fml"] = fxst._fml
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
@@ -262,7 +262,7 @@ def coefplot(
 
     df_all = []
     for fxst in models:
-        df_model = fxst.tidy().reset_index()
+        df_model = fxst.tidy(alpha=alpha).reset_index()
         df_model["fml"] = fxst._fml
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
@@ -337,14 +337,17 @@ def _coefplot_lets_plot(
     """
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
+    ub, lb = 1 - alpha / 2, alpha / 2
 
     plot = (
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
         + geom_point(position=position_dodge(0.5))
         + geom_errorbar(
-            aes(ymin="2.5%", ymax="97.5%"), width=0.05, position=position_dodge(0.5)
+            aes(ymin=str(round(lb * 100, 1)) + "%", ymax=str(round(ub * 100, 1)) + "%"),
+            width=0.05,
+            position=position_dodge(0.5),
         )
-        + ylab("Estimate and 95% Confidence Interval")
+        + ylab(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
     )
 
     if flip_coord:
@@ -410,6 +413,7 @@ def _coefplot_matplotlib(
     - https://seaborn.pydata.org/tutorial/objects_interface.html
     """
     yintercept = yintercept if yintercept is not None else 0
+    ub, lb = alpha / 2, 1 - alpha / 2
     title = title if title is not None else "Coefficient Plot"
 
     _, ax = plt.subplots(figsize=figsize, **fig_kwargs)
@@ -422,10 +426,15 @@ def _coefplot_matplotlib(
     plot = (
         so.Plot(df, x="Estimate", y="Coefficient", color="fml")
         .add(so.Dot(), so.Dodge(empty="drop"))
-        .add(so.Range(), so.Dodge(empty="drop"), xmin="2.5%", xmax="97.5%")
+        .add(
+            so.Range(),
+            so.Dodge(empty="drop"),
+            xmin=str(round(lb * 100, 1)) + "%",
+            xmax=str(round(ub * 100, 1)) + "%",
+        )
         .label(
             title=title,
-            x=r"Estimate and 95% Confidence Interval",
+            x=rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval",
             y="Coefficient",
             color="Model",
         )
