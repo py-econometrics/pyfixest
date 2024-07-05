@@ -1336,7 +1336,9 @@ class Feols:
                 level = matches.group(2)
             else:
                 raise ValueError(
-                    "Something went wrong with the regex. Please open a PR in the github repo!"
+                    f"The fixef() method failed after regex encountered the following value: {col}."
+                    + " This may due to the presence of line separation and/or escape sequences within the string."
+                    + " If so, consider recoding the underlying string. Otherwise, please open a PR in the github repo!"
                 )
 
             # check if res already has a key variable
