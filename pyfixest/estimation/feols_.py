@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from formulaic import Formula
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import lsqr, spsolve
@@ -383,6 +384,10 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
+        # Assuming `data` is the DataFrame in question
+        if isinstance(data, pl.DataFrame):
+            data = _polars_to_pandas(data)
+
         _data = self._data
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
@@ -438,11 +443,11 @@ class Feols:
         elif self._vcov_type == "CRV":
             if data is not None:
                 # use input data set
-                self._cluster_df = _get_cluster_df(  #
-                    data=data,  # type: ignore
+                self._cluster_df = _get_cluster_df(
+                    data=data,
                     clustervar=self._clustervar,
-                )  # type: ignore
-                _check_cluster_df(cluster_df=self._cluster_df, data=data)  # type: ignore
+                )
+                _check_cluster_df(cluster_df=self._cluster_df, data=data)
             else:
                 # use stored data
                 self._cluster_df = _get_cluster_df(
@@ -842,8 +847,6 @@ class Feols:
             R = R.reshape((1, len(R)))
 
         if R.shape[1] != _k:
-            print(_k)
-            print(R.shape[1])
             raise ValueError(
                 "The number of columns of R must be equal to the number of coefficients."
             )
@@ -866,7 +869,7 @@ class Feols:
         if self._is_clustered:
             self._dfd = np.min(np.array(self._G)) - 1
         else:
-            self._dfd = _N - _k_fe - _k
+            self._dfd = _N - _k - _k_fe
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
@@ -889,7 +892,7 @@ class Feols:
             res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
         elif distribution == "chi2":
             self._f_statistic = W / self._dfn
-            self._p_value = chi2.sf(self._wald_statistic, self._dfd)
+            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
             res = pd.Series(
                 {"statistic": self._wald_statistic, "pvalue": self._p_value}
             )
