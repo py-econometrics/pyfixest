@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import lsqr, spsolve
 from scipy.stats import f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -62,6 +62,9 @@ class Feols:
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     Attributes
     ----------
@@ -86,6 +89,8 @@ class Feols:
         Indices of collinear variables.
     _Z : np.ndarray
         Alias for the _X array, used for calculations.
+    _solver: str
+        The solver used for the regression.
     _weights : np.ndarray
         Array of weights for each observation.
     _N : int
@@ -166,7 +171,8 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-
+    _solver: str
+        The solver used to fit the normal equation.
     """
 
     def __init__(
@@ -178,6 +184,7 @@ class Feols:
         coefnames: list[str],
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -198,7 +205,7 @@ class Feols:
             self._X = X
 
         self.get_nobs()
-
+        self._solver = solver
         _feols_input_checks(Y, X, weights)
 
         if self._X.shape[1] == 0:
@@ -295,6 +302,34 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
+        """
+        Solve the ordinary least squares problem using the specified solver.
+
+        Parameters
+        ----------
+        tZX (array-like): Z'X.
+        tZY (array-like): Z'Y.
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
+        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
+
+        Returns
+        -------
+        array-like: The solution to the ordinary least squares problem.
+
+        Raises
+        ------
+        ValueError: If the specified solver is not supported.
+        """
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        elif solver == "scipy.sparse.linalg.lsqr":
+            return lsqr(tZX, tZY)[0].flatten()
+        else:
+            raise ValueError(f"Solver {solver} not supported.")
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -306,15 +341,11 @@ class Feols:
         _X = self._X
         _Y = self._Y
         _Z = self._Z
-
+        _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        # self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
-
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
+        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
@@ -661,14 +692,15 @@ class Feols:
 
         return _vcov
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def get_inference(self, alpha: float = 0.05) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for confidence intervals. Defaults to 0.95.
+            The significance level for confidence intervals. Defaults to 0.05, which
+            produces a 95% confidence interval.
 
         Returns
         -------
@@ -692,10 +724,10 @@ class Feols:
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
             self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf((1 - alpha) / 2, df))
+            z = np.abs(t.ppf(alpha / 2, df))
         else:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf((1 - alpha) / 2))
+            z = np.abs(norm.ppf(alpha / 2))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -1490,21 +1522,33 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self, alpha=0.05) -> pd.DataFrame:
+    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
         """
         Tidy model outputs.
 
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
 
+        Parameters 
+        ----------
+        alpha: Optional[float]
+            The significance level for the confidence intervals. If None, 
+            computes a 95% confidence interval (`alpha = 0.05`). 
+        
         Returns
         -------
         tidy_df : pd.DataFrame
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
-        _coefnames = self._coefnames
+        if alpha is None:
+            ub, lb = 0.975, 0.025
+            self.get_inference()
+        else:
+            ub, lb = 1 - alpha / 2, alpha / 2
+            self.get_inference(alpha=1 - alpha)
 
+        _coefnames = self._coefnames
         _se = self._se
         _tstat = self._tstat
         _pvalue = self._pvalue
@@ -1518,8 +1562,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5%": _conf_int[0],
-                "97.5%": _conf_int[1],
+                f"{lb*100:.1f}%": _conf_int[0],
+                f"{ub*100:.1f}%": _conf_int[1],
             }
         )
 
