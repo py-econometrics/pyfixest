@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from stargazer.stargazer import LineLocation
 from stargazer.stargazer import Stargazer as BaseStargazer
 from tabulate import tabulate
 
@@ -51,8 +52,8 @@ class Stargazer(BaseStargazer):
             [x._fixef for x in self.models]
         )
 
-        for key in deparsed_fixef_lists:
-            self.add_line(key, deparsed_fixef_lists[key])
+        for _, key in enumerate(deparsed_fixef_lists):
+            self.add_line(key, deparsed_fixef_lists[key], LineLocation.FOOTER_TOP)
 
 
 def etable(
