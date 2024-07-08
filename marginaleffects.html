@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.5.53">
+<meta name="generator" content="quarto-1.5.54">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Marginal Effects and Hypothesis Tests via marginaleffecs</title>
+<title>Marginal Effects and Hypothesis Tests via marginaleffects</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -208,7 +208,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Marginal Effects and Hypothesis Tests via <code>marginaleffecs</code></h1>
+<h1 class="title">Marginal Effects and Hypothesis Tests via <code>marginaleffects</code></h1>
 </div>
 
 
@@ -414,7 +414,7 @@ window.Quarto = {
 </div>
 </div>
 </div>
-<p>And indeed, we reject the null of equality of coefficients.</p>
+<p>And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.</p>
 <section id="ratio-estimates" class="level2">
 <h2 class="anchored" data-anchor-id="ratio-estimates">Ratio Estimates</h2>
 <p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>

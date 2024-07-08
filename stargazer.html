@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.5.53">
+<meta name="generator" content="quarto-1.5.54">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -197,56 +197,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>The <a href="https://github.com/StatsReporting/stargazer">Stargazer</a> Python package support regression output for models from <code>PyFixest</code>. For details on stargazer’s functionality, please take a look at the <a href="https://github.com/StatsReporting/stargazer/blob/master/examples.ipynb">stargazer examples</a>.</p>
-<p>We have opened a PR to the <a href="https://github.com/StatsReporting/stargazer/pull/105">Stargazer repo</a>. Until it is merged, you can download the dev version from <code>py-econometrics</code> by typing</p>
+<p>We have opened a PR for <code>pyfixest</code> support to the <a href="https://github.com/StatsReporting/stargazer/pull/105">Stargazer repo</a>. Until it is merged, you can download the dev version from <code>py-econometrics</code> by typing</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install git+https://github.com/py-econometrics/stargazer.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>In a first step, we fit a few regression models via <code>PyFixest's</code> multiple estimation syntax:</p>
-<div id="cell-3" class="cell" data-execution_count="1">
+<div id="cell-3" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> stargazer.stargazer <span class="im">import</span> LineLocation, Stargazer</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> stargazer.stargazer <span class="im">import</span> LineLocation</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ csw(X1, X2) | csw0(f1, f2)"</span>, data<span class="op">=</span>pf.get_data())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-
-            <div id="H2N5jb"></div>
-            <script type="text/javascript" data-lets-plot-script="library">
-                if(!window.letsPlotCallQueue) {
-                    window.letsPlotCallQueue = [];
-                }; 
-                window.letsPlotCall = function(f) {
-                    window.letsPlotCallQueue.push(f);
-                };
-                (function() {
-                    var script = document.createElement("script");
-                    script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.0.1/js-package/distr/lets-plot.min.js";
-                    script.onload = function() {
-                        window.letsPlotCall = function(f) {f();};
-                        window.letsPlotCallQueue.forEach(function(f) {f();});
-                        window.letsPlotCallQueue = [];
-                        
-                    };
-                    script.onerror = function(event) {
-                        window.letsPlotCall = function(f) {};    // noop
-                        window.letsPlotCallQueue = [];
-                        var div = document.createElement("div");
-                        div.style.color = 'darkred';
-                        div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("H2N5jb").appendChild(div);
-                    };
-                    var e = document.getElementById("H2N5jb");
-                    e.appendChild(script);
-                })()
-            </script>
-            
-</div>
 </div>
 <p>We can now produce a html table with the results of the three regressions by simply passing a list of <code>Feols</code>, <code>Fepois</code> or <code>Feiv</code> objects to <code>Stargazer</code>:</p>
-<div id="cell-5" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result_table <span class="op">=</span> Stargazer(fit.to_list())</span>
+<div id="cell-5" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result_table <span class="op">=</span> pf.Stargazer(fit.to_list())</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<div class="cell-output cell-output-display" data-execution_count="9">
 <table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
 <tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
@@ -259,12 +225,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
 
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
+<tr><td style="text-align: left">f1</td><td>-</td><td>-</td><td>x</td><td>x</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">f2</td><td>-</td><td>-</td><td>-</td><td>-</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
 </div>
 </div>
 <p>Note that we could have achieved a similar result by using the pyfixest native <code>etable()</code> function.</p>
-<div id="cell-7" class="cell" data-execution_count="3">
+<div id="cell-7" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit.to_list())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                           est1               est2               est3               est4               est5               est6
@@ -275,8 +241,8 @@ Intercept      0.919*** (0.112)   0.889*** (0.108)
 X1            -1.000*** (0.085)  -0.993*** (0.082)  -0.949*** (0.069)  -0.950*** (0.067)  -0.919*** (0.065)  -0.924*** (0.061)
 X2                               -0.176*** (0.022)                     -0.174*** (0.018)                     -0.174*** (0.015)
 ------------------------------------------------------------------------------------------------------------------------------
-f1                            -                  -                  x                  x                  x                  x
 f2                            -                  -                  -                  -                  x                  x
+f1                            -                  -                  x                  x                  x                  x
 ------------------------------------------------------------------------------------------------------------------------------
 R2                        0.123              0.177              0.437              0.489              0.609              0.659
 S.E. type                   iid                iid             by: f1             by: f1             by: f1             by: f1
@@ -288,7 +254,7 @@ Coefficient (Std. Error)</code></pre>
 </div>
 </div>
 <p>Additionally, we can ask <code>Stargazer</code> to output the results in LaTeX format:</p>
-<div id="cell-9" class="cell" data-execution_count="4">
+<div id="cell-9" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result_table.render_latex())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>\begin{table}[!htbp] \centering
@@ -306,6 +272,8 @@ Coefficient (Std. Error)</code></pre>
  X2 &amp; &amp; -0.176$^{***}$ &amp; &amp; -0.174$^{***}$ &amp; &amp; -0.174$^{***}$ \\
 &amp; &amp; (0.022) &amp; &amp; (0.018) &amp; &amp; (0.015) \\
 \hline \\[-1.8ex]
+ f1 &amp; - &amp; - &amp; x &amp; x &amp; x &amp; x \\
+ f2 &amp; - &amp; - &amp; - &amp; - &amp; x &amp; x \\
  Observations &amp; 998 &amp; 998 &amp; 997 &amp; 997 &amp; 997 &amp; 997 \\
  $R^2$ &amp; 0.123 &amp; 0.177 &amp; 0.437 &amp; 0.489 &amp; 0.609 &amp; 0.659 \\
 \hline
@@ -317,22 +285,22 @@ Coefficient (Std. Error)</code></pre>
 </div>
 <p>And we can add custom statistics!</p>
 <p>For example, assume that we want to correct for multiple testing via the Romano-Wolf correction. We can do this as follows:</p>
-<div id="cell-11" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf(fit.to_list(), param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, B <span class="op">=</span> <span class="dv">9999</span>)</span>
+<div id="cell-11" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf(fit.to_list(), param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, reps <span class="op">=</span> <span class="dv">9999</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="cell-12" class="cell" data-execution_count="6">
+<div id="cell-12" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="6">
-<pre><code>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</code></pre>
+<div class="cell-output cell-output-display" data-execution_count="13">
+<pre><code>[0.234, 0.234, 0.234, 0.306, 0.753, 0.753]</code></pre>
 </div>
 </div>
-<div id="cell-13" class="cell" data-execution_count="7">
+<div id="cell-13" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'Fixed Effects'</span>, [x._fixef <span class="cf">for</span> x <span class="kw">in</span> fit.to_list()], LineLocation.FOOTER_TOP)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'X1: Romano-Wolf P-Value'</span>, rwolf_pvalues, LineLocation.FOOTER_TOP)</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div class="cell-output cell-output-display" data-execution_count="14">
 <table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
 <tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
@@ -345,7 +313,7 @@ Coefficient (Std. Error)</code></pre>
 <tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
 
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align: left">Fixed Effects</td><td>None</td><td>None</td><td>f1</td><td>f1</td><td>f1+f2</td><td>f1+f2</td></tr><tr><td style="text-align: left">X1: Romano-Wolf P-Value</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
+<tr><td style="text-align: left">f1</td><td>-</td><td>-</td><td>x</td><td>x</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">f2</td><td>-</td><td>-</td><td>-</td><td>-</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">Fixed Effects</td><td></td><td></td><td>f1</td><td>f1</td><td>f1+f2</td><td>f1+f2</td></tr><tr><td style="text-align: left">X1: Romano-Wolf P-Value</td><td>0.234</td><td>0.234</td><td>0.234</td><td>0.306</td><td>0.753</td><td>0.753</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
 <tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
 </div>
 </div>
