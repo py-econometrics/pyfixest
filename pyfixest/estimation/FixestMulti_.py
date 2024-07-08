@@ -25,6 +25,7 @@ class FixestMulti:
         copy_data: bool,
         store_data: bool,
         fixef_tol: float,
+        fixef_maxiter: int,
         weights_type: str,
     ) -> None:
         """
@@ -40,6 +41,8 @@ class FixestMulti:
             Whether to store the data in the resulting model object or not.
         fixef_tol: float
             The tolerance for the convergence of the demeaning algorithm.
+        fixef_maxiter: int
+            The maximum number of iterations for the demeaning algorithm.
         weights_type: str
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
@@ -52,6 +55,7 @@ class FixestMulti:
         self._copy_data = copy_data
         self._store_data = store_data
         self._fixef_tol = fixef_tol
+        self._fixef_maxiter = fixef_maxiter
         self._weights_type = weights_type
 
         data = _polars_to_pandas(data)
@@ -188,6 +192,7 @@ class FixestMulti:
         _weights = self._weights
         _has_fixef = False
         _fixef_tol = self._fixef_tol
+        _fixef_maxiter = self._fixef_maxiter
         _weights_type = self._weights_type
 
         FixestFormulaDict = self.FixestFormulaDict
@@ -269,6 +274,7 @@ class FixestMulti:
                         lookup_demeaned_data,
                         na_index_str,
                         _fixef_tol,
+                        _fixef_maxiter,
                     )
 
                     if _is_iv:
@@ -280,6 +286,7 @@ class FixestMulti:
                             lookup_demeaned_data,
                             na_index_str,
                             _fixef_tol,
+                            _fixef_maxiter,
                         )
                     else:
                         endogvard, Zd = None, None
@@ -366,6 +373,7 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         weights_name=None,
                         fixef_tol=_fixef_tol,
+                        fixef_maxiter=_fixef_maxiter,
                         weights_type=_weights_type,
                     )
 
@@ -396,6 +404,8 @@ class FixestMulti:
                     _k_fe=_k_fe,
                     fval=fval,
                     store_data=self._store_data,
+                    fixef_tol=_fixef_tol,
+                    fixef_maxiter=_fixef_maxiter,
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505

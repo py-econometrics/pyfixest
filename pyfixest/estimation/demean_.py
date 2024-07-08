@@ -13,6 +13,7 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
+    fixef_maxiter: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -42,6 +43,8 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
+    fixef_maxiter: int
+        The maximum number of iterations for the fixed effects demeaning algorithm.
 
     Returns
     -------
@@ -94,7 +97,11 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean(
-                    x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
+                    x=var_diff,
+                    flist=fe_array,
+                    weights=weights,
+                    tol=fixef_tol,
+                    maxiter=fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -117,7 +124,11 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean(
-                x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
+                x=YX_array,
+                flist=fe_array,
+                weights=weights,
+                tol=fixef_tol,
+                maxiter=fixef_maxiter,
             )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")

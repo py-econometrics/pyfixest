@@ -407,3 +407,8 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+def test_api_error(data):
+    with pytest.raises(ValueError):
+        pf.feols("Y ~ X1", data=data, fixef_maxiter=1.0)

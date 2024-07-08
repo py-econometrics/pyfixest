@@ -52,6 +52,8 @@ class Fepois(Feols):
         Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
+    fixef_maxiter: int
+        Maximum number of iterations for the demeaning algorithm.
     solver:
     weights_name : Optional[str]
         Name of the weights variable.
@@ -71,6 +73,7 @@ class Fepois(Feols):
         maxiter: int = 25,
         tol: float = 1e-08,
         fixef_tol: float = 1e-08,
+        fixef_maxiter: int = 10_000,
         solver: str = "np.linalg.solve",
         weights_name: Optional[str] = None,
         weights_type: Optional[str] = None,
@@ -93,6 +96,7 @@ class Fepois(Feols):
         self.maxiter = maxiter
         self.tol = tol
         self.fixef_tol = fixef_tol
+        self.fixef_maxiter = fixef_maxiter
         self._drop_singletons = drop_singletons
         self._method = "fepois"
         self.convergence = False
@@ -156,6 +160,7 @@ class Fepois(Feols):
         _iwls_maxiter = 25
         _tol = self.tol
         _fixef_tol = self.fixef_tol
+        _fixef_maxiter = self.fixef_maxiter
         _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
@@ -204,7 +209,11 @@ class Fepois(Feols):
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(
-                    x=ZX, flist=_fe, weights=mu.flatten(), tol=_fixef_tol
+                    x=ZX,
+                    flist=_fe,
+                    weights=mu.flatten(),
+                    tol=_fixef_tol,
+                    maxiter=_fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")

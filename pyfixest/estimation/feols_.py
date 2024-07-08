@@ -742,6 +742,8 @@ class Feols:
         _k_fe: int,
         fval: str,
         store_data: bool,
+        fixef_tol: float,
+        fixef_maxiter: int,
     ) -> None:
         """
         Enrich Feols object.
@@ -767,6 +769,10 @@ class Feols:
             The fixed effects formula.
         store_data : bool
             Indicates whether to save the data used for estimation in the object
+        fixef_tol: int
+            The used tolerance for fixed effects demeaning.
+        fixef_maxiter: int
+            The maximum number of iterations for fixed effects demeaning.
 
         Returns
         -------
@@ -788,6 +794,9 @@ class Feols:
             self._fixef = fval
         else:
             self._has_fixef = False
+
+        self._fixef_tol = fixef_tol
+        self._fixef_maxiter = fixef_maxiter
 
     def wald_test(self, R=None, q=None, distribution="F") -> None:
         """
@@ -1529,12 +1538,12 @@ class Feols:
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
 
-        Parameters 
+        Parameters
         ----------
         alpha: Optional[float]
-            The significance level for the confidence intervals. If None, 
-            computes a 95% confidence interval (`alpha = 0.05`). 
-        
+            The significance level for the confidence intervals. If None,
+            computes a 95% confidence interval (`alpha = 0.05`).
+
         Returns
         -------
         tidy_df : pd.DataFrame
