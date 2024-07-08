@@ -37,7 +37,7 @@ Jupyter.
 Start by forking the pyfixest GitHub repository, then clone your forked repository
 using `git`:
 
-```{bash}
+```{.bash .code-copy}
 git clone https://github.com/<username>/pyfixest.git
 cd pyfixest
 ```
@@ -52,36 +52,40 @@ them prior to development the following are potential options:
 
 On Mac/Linux via [Hombrew](https://brew.sh/):
 
-```{bash}
+```{.bash .code-copy}
 brew install python@3.11 # specify the version of python you prefer
 ```
 
 On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
-```{bash}
+```{.bash .code-copy}
 winget install -e --id Python.Python.3.11
 ```
 
 ### Installing R
 
+Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation.
+You can also test against R by using github actions.
+
 On Mac/Linux:
-```{bash}
+```{.bash .code-copy}
 brew install r
 ```
 
 Depending on your local set up, you may need to install additional libraries, for
 example:
 
-```{bash}
+```{.bash .code-copy}
 sudo apt install gcc-11 cmake
 ```
 
 On Windows using [Winget](https://winget.run/pkg/RProject/R):
 
-```{bash}
+```{.bash .code-copy}
 winget install -e --id RProject.R
 ```
 
 Tests run with R require the following packages:
+
 - base
 - broom
 - clubSandwich
@@ -91,7 +95,7 @@ Tests run with R require the following packages:
 - wildrwolf
 - ritest
 
-```{bash}
+```{.bash .code-copy}
 Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'
 ```
 
@@ -101,23 +105,43 @@ To install Quarto, run:
 
 On MacOS via [Homebrew](https://formulae.brew.sh/cask/quarto#default):
 
-```{bash}
+```{.bash .code-copy}
 brew install --cask quarto
 ```
 
 On Linux (Ubuntu using `gdebi`):
 
-```{bash}
+```{.bash .code-copy}
 sudo curl -o quarto-linux-amd64.deb -L <https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb>
 sudo gdebi quarto-linux-amd64.deb
 ```
 
 On Windows:
 
-```{bash}
+```{.bash .code-copy}
 scoop bucket add extras
 scoop install extras/quarto
 ```
+
+### Package Management
+
+`PyFixest` is using [poetry](https://github.com/python-poetry/poetry).
+
+Please follow the [installation instructions](https://python-poetry.org/docs/#installing-with-the-official-installer) from the poetry documentation.
+
+Afterwards, you can initiate the project environment and install all dependencies by running
+
+```{.bash .code-copy}
+cd path-to-pyfixest
+poetry install
+```
+
+If you type
+```{.bash .code-copy}
+poetry shell
+```
+
+you will see that you have activated a custom poetry environment for pyfixest.
 
 ### Code Style
 
@@ -125,13 +149,13 @@ We use `ruff` and `pre-commit` to ensure a consistent code style.
 
 You can install `pre-commit` from `pip` by running
 
-```{bash}
+```{.bash .code-copy}
 pip install pre-commit
 ```
 
 To install the required hooks, run
 
-```{bash}
+```{.bash .code-copy}
 pre-commit install
 ```
 
@@ -141,17 +165,18 @@ and you're ready to go!
 
 There are several command line targets that assist with development included in the
 `justfile`. [Just](https://just.systems/) can be installed to help run these
-command line targets.
+command line targets. Installing `just` is only recommended and not needed for
+development of pyfixest.
 
 On Mac/Linux via [Homebrew](https://formulae.brew.sh/formula/just#default):
 
-```{bash}
+```{.bash .code-copy}
 brew install just
 ```
 
 On Windows:
 
-```{bash}
+```{.bash .code-copy}
 scoop bucket add main
 scoop install main/just
 ```
@@ -160,7 +185,7 @@ The justfile includes multiple helpful shorthands to help with development. Note
 if you are not using windows/powershell, you will have to uncomment the first line of the justfile
 `set shell := ["powershell.exe", "-c"]`.
 
-```{bash}
+```{.bash .code-copy}
 # install all development dependencies
 just install-dev
 # install all R development dependencies
@@ -171,7 +196,7 @@ just tests
 
 To rebuild the documentation locally, you can run
 
-```{bash}
+```{.bash .code-copy}
 # Build documentation and website
 just docs-build
 # render the docs

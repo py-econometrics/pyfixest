@@ -297,6 +297,7 @@ class FixestMulti:
                         FIT = Feiv(
                             Y=Yd_array,
                             X=Xd_array,
+                            endogvar=endogvard_array,
                             Z=Zd_array,
                             weights=weights,
                             coefnames_x=coefnames,
