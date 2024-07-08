@@ -18,7 +18,7 @@ def feols(
     ssc: dict[str, Union[str, bool]] = ssc(),
     fixef_rm: str = "none",
     fixef_tol=1e-08,
-    fixef_maxiter=100_000,
+    fixef_iter=100_000,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
     i_ref1=None,
@@ -63,7 +63,7 @@ def feols(
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
 
-    fixef_maxiter: int, optional
+    fixef_iter: int, optional
         Sets the maximum number of iterations for the fixed effects demeaning algorithm.
         Defaults to 100_000.
 
@@ -325,7 +325,7 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_iter=fixef_iter,
         weights_type=weights_type,
     )
 
@@ -334,7 +334,7 @@ def feols(
         copy_data=copy_data,
         store_data=store_data,
         fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_iter=fixef_iter,
         weights_type=weights_type,
     )
 
@@ -358,7 +358,7 @@ def fepois(
     ssc: dict[str, Union[str, bool]] = ssc(),
     fixef_rm: str = "none",
     fixef_tol: float = 1e-08,
-    fixef_maxiter: int = 100_000,
+    fixef_iter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
@@ -401,7 +401,7 @@ def fepois(
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
 
-    fixef_maxiter: int, optional
+    fixef_iter: int, optional
         Sets the maximum number of iterations for the fixed effects demeaning algorithm.
         Defaults to 100_000.
 
@@ -486,7 +486,7 @@ def fepois(
         copy_data=copy_data,
         store_data=store_data,
         fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_iter=fixef_iter,
         weights_type=weights_type,
     )
 
@@ -495,7 +495,7 @@ def fepois(
         copy_data=copy_data,
         store_data=store_data,
         fixef_tol=fixef_tol,
-        fixef_maxiter=fixef_maxiter,
+        fixef_iter=fixef_iter,
         weights_type=weights_type,
     )
 
@@ -531,7 +531,7 @@ def _estimation_input_checks(
     copy_data: bool,
     store_data: bool,
     fixef_tol: float,
-    fixef_maxiter: int,
+    fixef_iter: int,
     weights_type: str,
 ):
     if not isinstance(fml, str):
@@ -592,16 +592,16 @@ def _estimation_input_checks(
             """
         )
 
-    if not isinstance(fixef_maxiter, int):
+    if not isinstance(fixef_iter, int):
         raise TypeError(
-            """The function argument `fixef_maxiter` needs to be of
+            """The function argument `fixef_iter` needs to be of
             type int.
             """
         )
-    if fixef_maxiter <= 10:
+    if fixef_iter <= 10:
         raise ValueError(
             """
-            The function argument `fixef_maxiter` needs to be of
+            The function argument `fixef_iter` needs to be of
             strictly larger than 10.
             """
         )

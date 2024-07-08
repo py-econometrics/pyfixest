@@ -40,8 +40,8 @@ def test_feols_args():
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
 
-    fit_maxiter_100 = pf.feols("Y ~ X1 | f1", data=df, fixef_maxiter=100)
-    fit_maxiter_100000 = pf.feols("Y ~ X1 | f1", data=df, fixef_maxiter=100000)
+    fit_maxiter_100 = pf.feols("Y ~ X1 | f1", data=df, fixef_iter=100)
+    fit_maxiter_100000 = pf.feols("Y ~ X1 | f1", data=df, fixef_iter=100000)
 
     assert fit_maxiter_100.coef().values == fit_maxiter_100000.coef().values
     assert fit_maxiter_100._maxiter == 100
@@ -70,8 +70,8 @@ def test_fepois_args():
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
 
-    fepois_maxiter_100 = pf.fepois("Y ~ X1 | f1", data=df, fixef_maxiter=100)
-    fepois_maxiter_100000 = pf.fepois("Y ~ X1 | f1", data=df, fixef_maxiter=100000)
+    fepois_maxiter_100 = pf.fepois("Y ~ X1 | f1", data=df, fixef_iter=100)
+    fepois_maxiter_100000 = pf.fepois("Y ~ X1 | f1", data=df, fixef_iter=100000)
 
     assert fepois_maxiter_100.coef().values == fepois_maxiter_100000.coef().values
     assert fepois_maxiter_100._maxiter == 100

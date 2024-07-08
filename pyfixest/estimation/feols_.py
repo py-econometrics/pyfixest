@@ -743,7 +743,7 @@ class Feols:
         fval: str,
         store_data: bool,
         fixef_tol: float,
-        fixef_maxiter: int,
+        fixef_iter: int,
     ) -> None:
         """
         Enrich Feols object.
@@ -771,7 +771,7 @@ class Feols:
             Indicates whether to save the data used for estimation in the object
         fixef_tol: int
             The used tolerance for fixed effects demeaning.
-        fixef_maxiter: int
+        fixef_iter: int
             The maximum number of iterations for fixed effects demeaning.
 
         Returns
@@ -796,7 +796,7 @@ class Feols:
             self._has_fixef = False
 
         self._fixef_tol = fixef_tol
-        self._fixef_maxiter = fixef_maxiter
+        self._fixef_iter = fixef_iter
 
     def wald_test(self, R=None, q=None, distribution="F") -> None:
         """

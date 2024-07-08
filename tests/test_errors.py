@@ -411,4 +411,4 @@ def test_ritest_error(data):
 
 def test_api_error(data):
     with pytest.raises(ValueError):
-        pf.feols("Y ~ X1", data=data, fixef_maxiter=1.0)
+        pf.feols("Y ~ X1", data=data, fixef_iter=1.0)
