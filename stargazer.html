@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.bonferroni</title>
+<title>Publication-Ready Output Tables via Stargazer</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -57,22 +57,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../site_libs/quarto-nav/headroom.min.js"></script>
-<script src="../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../">
-<script src="../site_libs/quarto-html/quarto.js"></script>
-<script src="../site_libs/quarto-html/popper.min.js"></script>
-<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -100,11 +100,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="nav-fixed fullcontent">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -117,39 +120,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../pyfixest.html"> 
+    <a class="nav-link" href="./pyfixest.html"> 
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
+    <a class="nav-link" href="./quickstart.html"> 
 <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../difference-in-differences.html"> 
+    <a class="nav-link" href="./difference-in-differences.html"> 
 <span class="menu-text">Difference-in-Differences Estimation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../replicating-the-effect.html"> 
+    <a class="nav-link" href="./replicating-the-effect.html"> 
 <span class="menu-text">Replicating ‘The Effect’ with PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../stargazer.html"> 
+    <a class="nav-link active" href="./stargazer.html" aria-current="page"> 
 <span class="menu-text">Publication-Ready Regression Tables with <code>Stargazer</code></span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../marginaleffects.html"> 
+    <a class="nav-link" href="./marginaleffects.html"> 
 <span class="menu-text">Hypothesis testing and Marginal Effects with <code>py-marginaleffects</code></span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Documentation</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
+    <a class="nav-link" href="./contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../news.html"> 
+    <a class="nav-link" href="./news.html"> 
 <span class="menu-text">Changelog</span></a>
   </li>  
 </ul>
@@ -165,261 +168,189 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
       </div> <!-- /container-fluid -->
     </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.bonferroni.html">estimation.bonferroni</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">PyFixest Function Reference</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Functions</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fepois</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.did2s</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.lpdid</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.event_study</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.bonferroni</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.rwolf</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Classes</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.Feols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.Fepois</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.Feiv</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Summarize and Visualize</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.summary</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.etable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.coefplot</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.iplot</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Misc / Utilities</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.demean</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.detect_singletons</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.model_matrix_fixest</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
     
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Publication-Ready Output Tables via <code>Stargazer</code></h1>
+</div>
 
 
 
-<section id="pyfixest.estimation.bonferroni" class="level1">
-<h1>estimation.bonferroni</h1>
-<p><code>estimation.bonferroni(models, param)</code></p>
-<p>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</p>
-<p>For each model, it is assumed that tests to adjust are of the form “param = 0”.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 6%">
-<col style="width: 27%">
-<col style="width: 58%">
-<col style="width: 7%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>models</code></td>
-<td>(list[Feols, Fepois], Feols or Fepois)</td>
-<td>A list of models for which the p-values should be adjusted, or a Feols or Fepois object.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td><code>param</code></td>
-<td>str</td>
-<td>The parameter for which the p-values should be adjusted.</td>
-<td><em>required</em></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 13%">
-<col style="width: 86%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>pd.DataFrame</td>
-<td>A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.multcomp <span class="im">import</span> bonferroni</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data().dropna()</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> feols(<span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>bonf_df <span class="op">=</span> bonferroni([fit1, fit2], param<span class="op">=</span><span class="st">"X1"</span>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>bonf_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
 
 
-</section>
-</section>
+</header>
+
+
+<p>The <a href="https://github.com/StatsReporting/stargazer">Stargazer</a> Python package support regression output for models from <code>PyFixest</code>. For details on stargazer’s functionality, please take a look at the <a href="https://github.com/StatsReporting/stargazer/blob/master/examples.ipynb">stargazer examples</a>.</p>
+<p>We have opened a PR to the <a href="https://github.com/StatsReporting/stargazer/pull/105">Stargazer repo</a>. Until it is merged, you can download the dev version from <code>py-econometrics</code> by typing</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install git+https://github.com/py-econometrics/stargazer.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>In a first step, we fit a few regression models via <code>PyFixest's</code> multiple estimation syntax:</p>
+<div id="cell-3" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> stargazer.stargazer <span class="im">import</span> LineLocation, Stargazer</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ csw(X1, X2) | csw0(f1, f2)"</span>, data<span class="op">=</span>pf.get_data())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+            <div id="H2N5jb"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.0.1/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("H2N5jb").appendChild(div);
+                    };
+                    var e = document.getElementById("H2N5jb");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+</div>
+<p>We can now produce a html table with the results of the three regressions by simply passing a list of <code>Feols</code>, <code>Fepois</code> or <code>Feiv</code> objects to <code>Stargazer</code>:</p>
+<div id="cell-5" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result_table <span class="op">=</span> Stargazer(fit.to_list())</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+
+<tr><td style="text-align:left">Intercept</td><td>0.919<sup>***</sup></td><td>0.889<sup>***</sup></td><td></td><td></td><td></td><td></td></tr>
+<tr><td style="text-align:left"></td><td>(0.112)</td><td>(0.108)</td><td></td><td></td><td></td><td></td></tr>
+<tr><td style="text-align:left">X1</td><td>-1.000<sup>***</sup></td><td>-0.993<sup>***</sup></td><td>-0.949<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td>(0.085)</td><td>(0.082)</td><td>(0.069)</td><td>(0.067)</td><td>(0.065)</td><td>(0.061)</td></tr>
+<tr><td style="text-align:left">X2</td><td></td><td>-0.176<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
+
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
+</div>
+</div>
+<p>Note that we could have achieved a similar result by using the pyfixest native <code>etable()</code> function.</p>
+<div id="cell-7" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit.to_list())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                           est1               est2               est3               est4               est5               est6
+------------  -----------------  -----------------  -----------------  -----------------  -----------------  -----------------
+depvar                        Y                  Y                  Y                  Y                  Y                  Y
+------------------------------------------------------------------------------------------------------------------------------
+Intercept      0.919*** (0.112)   0.889*** (0.108)
+X1            -1.000*** (0.085)  -0.993*** (0.082)  -0.949*** (0.069)  -0.950*** (0.067)  -0.919*** (0.065)  -0.924*** (0.061)
+X2                               -0.176*** (0.022)                     -0.174*** (0.018)                     -0.174*** (0.015)
+------------------------------------------------------------------------------------------------------------------------------
+f1                            -                  -                  x                  x                  x                  x
+f2                            -                  -                  -                  -                  x                  x
+------------------------------------------------------------------------------------------------------------------------------
+R2                        0.123              0.177              0.437              0.489              0.609              0.659
+S.E. type                   iid                iid             by: f1             by: f1             by: f1             by: f1
+Observations                998                998                997                997                997                997
+------------------------------------------------------------------------------------------------------------------------------
+Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
+Format of coefficient cell:
+Coefficient (Std. Error)</code></pre>
+</div>
+</div>
+<p>Additionally, we can ask <code>Stargazer</code> to output the results in LaTeX format:</p>
+<div id="cell-9" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result_table.render_latex())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>\begin{table}[!htbp] \centering
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+&amp; \multicolumn{6}{c}{\textit{Dependent variable: Y}} \
+\cr \cline{2-7}
+\\[-1.8ex] &amp; (1) &amp; (2) &amp; (3) &amp; (4) &amp; (5) &amp; (6) \\
+\hline \\[-1.8ex]
+ Intercept &amp; 0.919$^{***}$ &amp; 0.889$^{***}$ &amp; &amp; &amp; &amp; \\
+&amp; (0.112) &amp; (0.108) &amp; &amp; &amp; &amp; \\
+ X1 &amp; -1.000$^{***}$ &amp; -0.993$^{***}$ &amp; -0.949$^{***}$ &amp; -0.950$^{***}$ &amp; -0.919$^{***}$ &amp; -0.924$^{***}$ \\
+&amp; (0.085) &amp; (0.082) &amp; (0.069) &amp; (0.067) &amp; (0.065) &amp; (0.061) \\
+ X2 &amp; &amp; -0.176$^{***}$ &amp; &amp; -0.174$^{***}$ &amp; &amp; -0.174$^{***}$ \\
+&amp; &amp; (0.022) &amp; &amp; (0.018) &amp; &amp; (0.015) \\
+\hline \\[-1.8ex]
+ Observations &amp; 998 &amp; 998 &amp; 997 &amp; 997 &amp; 997 &amp; 997 \\
+ $R^2$ &amp; 0.123 &amp; 0.177 &amp; 0.437 &amp; 0.489 &amp; 0.609 &amp; 0.659 \\
+\hline
+\hline \\[-1.8ex]
+\textit{Note:} &amp; \multicolumn{6}{r}{$^{*}$p$&lt;$0.1; $^{**}$p$&lt;$0.05; $^{***}$p$&lt;$0.01} \\
+\end{tabular}
+\end{table}</code></pre>
+</div>
+</div>
+<p>And we can add custom statistics!</p>
+<p>For example, assume that we want to correct for multiple testing via the Romano-Wolf correction. We can do this as follows:</p>
+<div id="cell-11" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf(fit.to_list(), param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, B <span class="op">=</span> <span class="dv">9999</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-12" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</code></pre>
+</div>
+</div>
+<div id="cell-13" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'Fixed Effects'</span>, [x._fixef <span class="cf">for</span> x <span class="kw">in</span> fit.to_list()], LineLocation.FOOTER_TOP)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'X1: Romano-Wolf P-Value'</span>, rwolf_pvalues, LineLocation.FOOTER_TOP)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+
+<tr><td style="text-align:left">Intercept</td><td>0.919<sup>***</sup></td><td>0.889<sup>***</sup></td><td></td><td></td><td></td><td></td></tr>
+<tr><td style="text-align:left"></td><td>(0.112)</td><td>(0.108)</td><td></td><td></td><td></td><td></td></tr>
+<tr><td style="text-align:left">X1</td><td>-1.000<sup>***</sup></td><td>-0.993<sup>***</sup></td><td>-0.949<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td>(0.085)</td><td>(0.082)</td><td>(0.069)</td><td>(0.067)</td><td>(0.065)</td><td>(0.061)</td></tr>
+<tr><td style="text-align:left">X2</td><td></td><td>-0.176<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
+
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align: left">Fixed Effects</td><td>None</td><td>None</td><td>f1</td><td>f1</td><td>f1+f2</td><td>f1+f2</td></tr><tr><td style="text-align: left">X1: Romano-Wolf P-Value</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
+<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
+</div>
+</div>
+
+
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
