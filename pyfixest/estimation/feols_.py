@@ -1305,7 +1305,7 @@ class Feols:
                 effect.
             """
             c_pattern = r"C\((.+?)\)"
-            t_pattern = r"\[T\.(.*\])"
+            t_pattern = r"\[T\.(.*?)\]"
             c_match = re.search(c_pattern, fe_string)
             t_match = re.search(t_pattern, fe_string, re.DOTALL)
 
@@ -1437,7 +1437,7 @@ class Feols:
                     new_levels = df_fe[fixef].unique()
                     old_levels = _data[fixef].unique().astype(str)
                     subdict = self._fixef_dict[
-                        f"C({fixef})"
+                        f"{fixef}"
                     ]  # as variables are called C(var) in the fixef_dict
 
                     for level in new_levels:
