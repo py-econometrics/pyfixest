@@ -1288,6 +1288,38 @@ class Feols:
         -------
         None
         """
+
+        def extract_variable_level(fe_string: str):
+            """
+            Extract the variable and level from a given string.
+
+            Parameters
+            ----------
+            fe_string: str
+                The string encapsulating the fixed effect factor variable and level.
+
+            Returns
+            -------
+            tuple
+                A tuple containing the extracted variable and level for the fixed
+                effect.
+            """
+            c_pattern = r"C\((.+?)\)"
+            t_pattern = r"\[T\.(.*\])"
+            c_match = re.search(c_pattern, fe_string)
+            t_match = re.search(t_pattern, fe_string, re.DOTALL)
+
+            if not c_match or not t_match:
+                raise ValueError(
+                    f"feols() failed after regex encountered the following value as a fixed effect:\n {fe_string}."
+                    + "\nThis may due to the presence of line separation and/or escape sequences within the string."
+                    + " If so, consider recoding the underlying string. Otherwise, please open a PR in the github repo!"
+                )
+
+            variable = c_match.group(1)
+            level = t_match.group(1)
+            return variable, level
+
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
         _method = self._method
@@ -1330,14 +1362,10 @@ class Feols:
 
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
-            matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
-            if matches:
-                variable = matches.group(1)
-                level = matches.group(2)
-            else:
-                raise ValueError(
-                    "Something went wrong with the regex. Please open a PR in the github repo!"
-                )
+            try:
+                variable, level = extract_variable_level(col)
+            except ValueError as e:
+                print(e)
 
             # check if res already has a key variable
             if variable not in res:
@@ -1529,12 +1557,12 @@ class Feols:
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
 
-        Parameters 
+        Parameters
         ----------
         alpha: Optional[float]
-            The significance level for the confidence intervals. If None, 
-            computes a 95% confidence interval (`alpha = 0.05`). 
-        
+            The significance level for the confidence intervals. If None,
+            computes a 95% confidence interval (`alpha = 0.05`).
+
         Returns
         -------
         tidy_df : pd.DataFrame
@@ -1825,10 +1853,12 @@ class Feols:
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError("""
+            raise ValueError(
+                """
             The cluster variable contains missing values. This is not allowed
             for randomization inference via `ritest()`.
-            """)
+            """
+            )
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
@@ -1944,11 +1974,13 @@ class Feols:
         Inference Statistics.
         """
         if not hasattr(self, "_ritest_statistics"):
-            raise ValueError("""
+            raise ValueError(
+                """
                             The randomization inference statistics have not been stored
                             in the model object. Please set `store_ritest_statistics=True`
                             when calling `ritest()`
-                            """)
+                            """
+            )
 
         ri_stats = self._ritest_statistics
         sample_stat = self._ritest_sample_stat
