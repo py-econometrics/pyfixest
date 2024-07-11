@@ -799,7 +799,9 @@ class Feols:
         """
         Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form Rb = q.
+        Compute a Wald test for a linear hypothesis of the form R * β = q.
+        where R is m x k matrix, β is a k x 1 vector of coefficients,
+        and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
 
         This method producues the following attriutes
@@ -832,6 +834,29 @@ class Feols:
         -------
         pd.Series
             A pd.Series with the Wald statistic and p-value.
+
+        Examples
+        --------
+        data = pd.read_csv("pyfixest/did/data/df_het.csv")
+        data = data.iloc[1:3000]
+
+        R = np.array([[1,-1]] )
+        q = np.array([0.0])
+
+        fml = "dep_var ~ treat"
+        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+        # Wald test
+        fit.wald_test(R=R, q=q, distribution = "chi2")
+        f_stat = fit._f_statistic
+        p_stat = fit._p_value
+
+        print(f"Python f_stat: {f_stat}")
+        print(f"Python p_stat: {p_stat}")
+
+        # The code above produces the following results :
+        # Python f_stat: 256.55432910297003
+        # Python p_stat: 9.67406627744023e-58
         """
         _vcov = self._vcov
         _N = self._N
