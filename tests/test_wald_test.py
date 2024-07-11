@@ -1,17 +1,24 @@
 import numpy as np
 import pandas as pd
 import pytest
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.utils.utils import ssc
 
 pandas2ri.activate()
+
+
 clubSandwich = importr("clubSandwich")
+fixest = importr("fixest")
 stats = importr("stats")
+broom = importr("broom")
+car = importr("car")
 base = importr("base")
 
 
@@ -21,7 +28,7 @@ base = importr("base")
         np.eye(3),
     ],
 )
-def test_wald_test_single_equation_no_clustering(R):
+def test_F_test_single_equation_no_clustering(R):
     # Test R * \beta = 0 with single equation.
     # Generate correlated data for dep_var and treat
     np.random.seed(50)
@@ -46,6 +53,7 @@ def test_wald_test_single_equation_no_clustering(R):
     fit.wald_test(R=R, distribution="F")
     f_stat = fit._f_statistic
     p_stat = fit._p_value
+
     # Compare with R
 
     r_fit = stats.lm(fml, data=data)
@@ -77,7 +85,7 @@ def test_wald_test_single_equation_no_clustering(R):
         # np.eye(2) * 2,
     ],
 )
-def test_wald_test_single_equation(R):
+def test_F_test_single_equation(R):
     # Test R * \beta = 0 with single equation.
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
@@ -113,7 +121,7 @@ def test_wald_test_single_equation(R):
         100,
     ],
 )
-def test_wald_test_multiple_equation(seedn):
+def test_F_test_multiple_equation(seedn):
     # Test R * \beta = 0 with single equation.
 
     R = np.eye(3)
@@ -165,7 +173,7 @@ def test_wald_test_multiple_equation(seedn):
         (np.eye(4), "dep_var ~ treat + X1 + X2"),
     ],
 )
-def test_wald_test_multiple_equations_pvalue(R, fml):
+def test_F_test_multiple_equations_pvalue(R, fml):
     # Test R * \beta = 0 with multiple equations.
     # In this test, we test p-values that are quite larger than 0.0
     # Generate correlated data for dep_var and treat
@@ -216,3 +224,54 @@ def test_wald_test_multiple_equations_pvalue(R, fml):
     )
     r_fstat = pd.DataFrame(r_wald).T[1].values[0]
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
+
+
+# We test "Wald-test" cases, where R and q are not trivial
+# Note that clubSandwich R package does not allow non-zero q vector
+car = importr("car")
+
+
+@pytest.mark.parametrize(
+    "R, q, fml",
+    [
+        (np.array([[0, 1, 2], [1, 1, 0]]), np.array([-1.169, -0.104]), "Y ~ X1 + X2"),
+        (np.array([[0, 1, 2], [1, 1, 0]]), np.array([-1.4, -0.11]), "Y ~ X1 + X2"),
+        (
+            np.array([[1, 1, 1, 0], [1, 2, 0, 0]]),
+            np.array([-0.200, -1.131]),
+            "Y ~ X1 + X2 + Z1",
+        ),
+    ],
+)
+def test_wald_test_multiple_equations(R, q, fml):
+    # Test R * \beta = q with multiple equations.
+    # In this test, we test p-values that are quite larger than 0.0
+    # Generate correlated data
+
+    R_nrows = R.shape[0]
+    R_ncloumns = R.shape[1]
+
+    data = pf.get_data()
+    fit_r = stats.lm(fml, data=data)
+    R_r = ro.r.matrix(R.reshape(1, R_nrows * R_ncloumns), nrow=R_nrows, byrow=True)
+
+    fit2 = pf.feols(fml, data=data)
+    # Define the hypothesis matrix R
+    Rpf = R
+
+    # Define the hypothesis values q (both zero)
+
+    # Perform the Wald test
+    fit2.wald_test(R=Rpf, q=q, distribution="chi2")
+
+    r_result = car.linearHypothesis(fit_r, R_r, rhs=ro.FloatVector(q), test="Chisq")
+
+    # Extracting p-value from the result
+    wald_stat = fit2._wald_statistic
+    p_value = fit2._p_value
+
+    r_wald_stat = r_result[4][1]
+    r_p_value = r_result[5][1]
+
+    np.testing.assert_allclose(wald_stat, r_wald_stat, rtol=1e-03, atol=1e-05)
+    np.testing.assert_allclose(p_value, r_p_value, rtol=1e-03, atol=1e-05)

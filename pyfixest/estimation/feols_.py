@@ -1557,12 +1557,12 @@ class Feols:
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
 
-        Parameters 
+        Parameters
         ----------
         alpha: Optional[float]
-            The significance level for the confidence intervals. If None, 
-            computes a 95% confidence interval (`alpha = 0.05`). 
-        
+            The significance level for the confidence intervals. If None,
+            computes a 95% confidence interval (`alpha = 0.05`).
+
         Returns
         -------
         tidy_df : pd.DataFrame
