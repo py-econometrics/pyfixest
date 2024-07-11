@@ -71,8 +71,8 @@ def test_F_test_single_equation_no_clustering(R):
     r_fstat = pd.DataFrame(r_wald).T[1].values[0]
     r_pvalue = pd.DataFrame(r_wald).T[5].values[0]
 
-    np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
-    np.testing.assert_allclose(p_stat, r_pvalue, rtol=1e-02, atol=1e-02)
+    np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-03, atol=1e-02)
+    np.testing.assert_allclose(p_stat, r_pvalue, rtol=1e-03, atol=1e-02)
 
 
 @pytest.mark.parametrize(
@@ -104,12 +104,12 @@ def test_F_test_single_equation(R):
         constraints=base.matrix(R, 1, 2),
         vcov="CR1",
         cluster=data["year"],
-        test="Naive-Fp",
+        test="Naive-F",
     )
     r_fstat = pd.DataFrame(r_wald).T[1].values[0]
     r_pvalue = pd.DataFrame(r_wald).T[5].values[0]
 
-    np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
+    np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-03, atol=1e-03)
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
 
 
