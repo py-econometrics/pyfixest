@@ -837,6 +837,11 @@ class Feols:
 
         Examples
         --------
+        import numpy as np
+        import pandas as pd
+
+        from pyfixest.estimation.estimation import feols
+
         data = pd.read_csv("pyfixest/did/data/df_het.csv")
         data = data.iloc[1:3000]
 

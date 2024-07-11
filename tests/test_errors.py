@@ -440,4 +440,6 @@ def test_wald_test_R_q_column_consistency():
 
     # q must have the same number of rows as R
     with pytest.raises(ValueError):
-        fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0]]))
+        fit.wald_test(
+            R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
+        )
