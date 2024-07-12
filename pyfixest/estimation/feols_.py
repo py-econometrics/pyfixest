@@ -1,4 +1,5 @@
 import functools
+import gc
 import re
 import warnings
 from importlib import import_module
@@ -794,6 +795,30 @@ class Feols:
             self._fixef = fval
         else:
             self._has_fixef = False
+
+    def _clear_attributes(self):
+        attributes = [
+            "_X",
+            "_Y",
+            "_Z",
+            "_data",
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_weights",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "_Y_untransformed",
+        ]
+
+        for attr in attributes:
+            if hasattr(self, attr):
+                delattr(self, attr)
+        gc.collect()
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """

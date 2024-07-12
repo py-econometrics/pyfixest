@@ -23,6 +23,7 @@ def feols(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
+    lean: bool = False,
     weights_type: str = "aweights",
 ) -> Union[Feols, FixestMulti]:
     """
@@ -86,6 +87,13 @@ def feols(
         to access the data via the `data` attribute of the model object. This has
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`.
+
+    lean: bool, optional
+        False by default. If True, then all large objects are removed from the
+        returned result: this will save memory but will block the possibility
+        to use many methods. It is recommended to use the argument vcov
+        to obtain the appropriate standard-errors at estimation time,
+        since obtaining different SEs won't be possible afterwards.
 
     weights_type: str, optional
         Options include `aweights` or `fweights`. `aweights` implement analytic or
@@ -319,6 +327,7 @@ def feols(
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
+        lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
     )
@@ -327,6 +336,7 @@ def feols(
         data=data,
         copy_data=copy_data,
         store_data=store_data,
+        lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
     )
@@ -358,6 +368,7 @@ def fepois(
     i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
+    lean: bool = False,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -427,6 +438,13 @@ def fepois(
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`.
 
+    lean: bool, optional
+        False by default. If True, then all large objects are removed from the
+        returned result: this will save memory but will block the possibility
+        to use many methods. It is recommended to use the argument vcov
+        to obtain the appropriate standard-errors at estimation time,
+        since obtaining different SEs won't be possible afterwards.
+
     Returns
     -------
     object
@@ -473,6 +491,7 @@ def fepois(
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
+        lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
     )
@@ -481,6 +500,7 @@ def fepois(
         data=data,
         copy_data=copy_data,
         store_data=store_data,
+        lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
     )
@@ -516,6 +536,7 @@ def _estimation_input_checks(
     collin_tol: float,
     copy_data: bool,
     store_data: bool,
+    lean: bool,
     fixef_tol: float,
     weights_type: str,
 ):
@@ -550,11 +571,10 @@ def _estimation_input_checks(
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
 
-    if not isinstance(copy_data, bool):
-        raise TypeError("copy_data must be a boolean")
-
-    if not isinstance(store_data, bool):
-        raise TypeError("store_data must be a boolean")
+    bool_args = [copy_data, store_data, lean]
+    for arg in bool_args:
+        if not isinstance(arg, bool):
+            raise TypeError(f"The function argument {arg} must be of type bool.")
 
     if not isinstance(fixef_tol, float):
         raise TypeError(
