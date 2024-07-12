@@ -1379,7 +1379,7 @@ class Feols:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
             Y = Y.to_numpy().flatten().astype(np.float64)
             X = X.to_numpy()
-            uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
+            uhat = (Y - X @ self._beta_hat).flatten()
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
