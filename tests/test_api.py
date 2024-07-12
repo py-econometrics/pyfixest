@@ -62,3 +62,12 @@ def test_fepois_args():
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
+
+
+def test_lean():
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + X2 | f1", data=data, lean=True)
+
+    assert not hasattr(fit, "_data")
+    assert not hasattr(fit, "_X")
+    assert not hasattr(fit, "_Y")
