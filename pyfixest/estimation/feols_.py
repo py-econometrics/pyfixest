@@ -1384,7 +1384,7 @@ class Feols:
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
 
-        alpha = lsqr(D2, uhat)
+        alpha = lsqr(D2, uhat)[0]
         
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
