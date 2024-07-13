@@ -25,6 +25,8 @@ def test_fweights_ols():
     fit1 = pf.feols("Y ~ X1", data=data)
     fit2 = pf.feols("Y ~ X1", data=data2_w, weights="count", weights_type="fweights")
     np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
+
+    np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
     np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
     np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
 
@@ -33,10 +35,12 @@ def test_fweights_ols():
         "Y ~ X1 | f1", data=data3_w, weights="count", weights_type="fweights"
     )
     np.testing.assert_allclose(fit3.tidy().values, fit4.tidy().values)
-
     np.testing.assert_allclose(
         fit3.vcov({"CRV3": "f1"})._vcov, fit4.vcov({"CRV3": "f1"})._vcov
     )
+    np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
+    np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
+    np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
 
 
 @pytest.mark.skip(reason="Not implemented yet.")
