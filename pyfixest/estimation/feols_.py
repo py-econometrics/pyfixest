@@ -1,4 +1,5 @@
 import functools
+import gc
 import re
 import warnings
 from importlib import import_module
@@ -6,10 +7,11 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from formulaic import Formula
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
-from scipy.stats import f, norm, t
+from scipy.sparse.linalg import lsqr, spsolve
+from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
@@ -62,6 +64,9 @@ class Feols:
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     Attributes
     ----------
@@ -86,6 +91,8 @@ class Feols:
         Indices of collinear variables.
     _Z : np.ndarray
         Alias for the _X array, used for calculations.
+    _solver: str
+        The solver used for the regression.
     _weights : np.ndarray
         Array of weights for each observation.
     _N : int
@@ -166,7 +173,8 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-
+    _solver: str
+        The solver used to fit the normal equation.
     """
 
     def __init__(
@@ -178,6 +186,7 @@ class Feols:
         coefnames: list[str],
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -198,7 +207,7 @@ class Feols:
             self._X = X
 
         self.get_nobs()
-
+        self._solver = solver
         _feols_input_checks(Y, X, weights)
 
         if self._X.shape[1] == 0:
@@ -295,6 +304,34 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
+        """
+        Solve the ordinary least squares problem using the specified solver.
+
+        Parameters
+        ----------
+        tZX (array-like): Z'X.
+        tZY (array-like): Z'Y.
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
+        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
+
+        Returns
+        -------
+        array-like: The solution to the ordinary least squares problem.
+
+        Raises
+        ------
+        ValueError: If the specified solver is not supported.
+        """
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        elif solver == "scipy.sparse.linalg.lsqr":
+            return lsqr(tZX, tZY)[0].flatten()
+        else:
+            raise ValueError(f"Solver {solver} not supported.")
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -306,15 +343,11 @@ class Feols:
         _X = self._X
         _Y = self._Y
         _Z = self._Z
-
+        _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        # self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
-
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
+        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
@@ -352,6 +385,10 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
+        # Assuming `data` is the DataFrame in question
+        if isinstance(data, pl.DataFrame):
+            data = _polars_to_pandas(data)
+
         _data = self._data
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
@@ -408,7 +445,8 @@ class Feols:
             if data is not None:
                 # use input data set
                 self._cluster_df = _get_cluster_df(
-                    data=data, clustervar=self._clustervar
+                    data=data,
+                    clustervar=self._clustervar,
                 )
                 _check_cluster_df(cluster_df=self._cluster_df, data=data)
             else:
@@ -661,14 +699,15 @@ class Feols:
 
         return _vcov
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def get_inference(self, alpha: float = 0.05) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for confidence intervals. Defaults to 0.95.
+            The significance level for confidence intervals. Defaults to 0.05, which
+            produces a 95% confidence interval.
 
         Returns
         -------
@@ -692,10 +731,10 @@ class Feols:
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
             self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf((1 - alpha) / 2, df))
+            z = np.abs(t.ppf(alpha / 2, df))
         else:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf((1 - alpha) / 2))
+            z = np.abs(norm.ppf(alpha / 2))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -757,12 +796,52 @@ class Feols:
         else:
             self._has_fixef = False
 
-    def wald_test(self, R=None, q=None, distribution="F") -> None:
+    def _clear_attributes(self):
+        attributes = [
+            "_X",
+            "_Y",
+            "_Z",
+            "_data",
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_weights",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "_Y_untransformed",
+        ]
+
+        for attr in attributes:
+            if hasattr(self, attr):
+                delattr(self, attr)
+        gc.collect()
+
+    def wald_test(self, R=None, q=None, distribution="F"):
         """
         Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form Rb = q.
+        Compute a Wald test for a linear hypothesis of the form R * β = q.
+        where R is m x k matrix, β is a k x 1 vector of coefficients,
+        and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
+
+        This method producues the following attriutes
+
+        _dfd : int
+            degree of freedom in denominator
+        _dfn : int
+            degree of freedom in numerator
+        _wald_statistic : scalar
+            Wald-statistics computed for hypothesis testing
+        _f_statistic : scalar
+            Wald-statistics(when R is an indentity matrix, and q being zero vector)
+            computed for hypothesis testing
+        _p_value : scalar
+            corresponding p-value for statistics
 
         Parameters
         ----------
@@ -780,65 +859,101 @@ class Feols:
         -------
         pd.Series
             A pd.Series with the Wald statistic and p-value.
-        """
-        raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
 
+        Examples
+        --------
+        import numpy as np
+        import pandas as pd
+
+        from pyfixest.estimation.estimation import feols
+
+        data = pd.read_csv("pyfixest/did/data/df_het.csv")
+        data = data.iloc[1:3000]
+
+        R = np.array([[1,-1]] )
+        q = np.array([0.0])
+
+        fml = "dep_var ~ treat"
+        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+        # Wald test
+        fit.wald_test(R=R, q=q, distribution = "chi2")
+        f_stat = fit._f_statistic
+        p_stat = fit._p_value
+
+        print(f"Python f_stat: {f_stat}")
+        print(f"Python p_stat: {p_stat}")
+
+        # The code above produces the following results :
+        # Python f_stat: 256.55432910297003
+        # Python p_stat: 9.67406627744023e-58
+        """
         _vcov = self._vcov
         _N = self._N
         _k = self._k
         _beta_hat = self._beta_hat
         _k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
 
-        dfn = _N - _k_fe - _k
-        dfd = _k
-
-        # if R is not two dimensional, make it two dimensional
-        if R is not None:
-            if R.ndim == 1:
-                R = R.reshape((1, len(R)))
-            assert (
-                R.shape[1] == _k
-            ), "R must have the same number of columns as the number of coefficients."
-        else:
+        # If R is None, default to the identity matrix
+        if R is None:
             R = np.eye(_k)
 
-        if q is not None:
-            assert isinstance(
-                q, (int, float, np.ndarray)
-            ), "q must be a numeric scalar."
-            if isinstance(q, np.ndarray):
-                assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
-                assert (
-                    q.shape[0] == R.shape[0]
-                ), "q must have the same number of rows as R."
-            warnings.warn(
-                "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
-            )
-        else:
-            q = np.zeros(R.shape[0])
+        # Ensure R is two-dimensional
+        if R.ndim == 1:
+            R = R.reshape((1, len(R)))
 
-        assert distribution in [
-            "F",
-            "chi2",
-        ], "distribution must be either 'F' or 'chi2'."
+        if R.shape[1] != _k:
+            raise ValueError(
+                "The number of columns of R must be equal to the number of coefficients."
+            )
+
+        # If q is None, default to a vector of zeros
+        if q is None:
+            q = np.zeros(R.shape[0])
+        else:
+            if not isinstance(q, (int, float, np.ndarray)):
+                raise ValueError("q must be a numeric scalar or array.")
+            if isinstance(q, np.ndarray):
+                if q.ndim != 1:
+                    raise ValueError("q must be a one-dimensional array or a scalar.")
+                if q.shape[0] != R.shape[0]:
+                    raise ValueError("q must have the same number of rows as R.")
+
+        n_restriction = R.shape[0]
+        self._dfn = n_restriction
+
+        if self._is_clustered:
+            self._dfd = np.min(np.array(self._G)) - 1
+        else:
+            self._dfd = _N - _k - _k_fe
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
         W = bread.T @ meat @ bread
-
-        # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W
-        self._f_statistic = W / dfd
+
+        # Check if distribution is "F" and R is not identity matrix
+        # or q is not zero vector
+        if distribution == "F" and (
+            not np.array_equal(R, np.eye(_k)) or not np.all(q == 0)
+        ):
+            warnings.warn(
+                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+            )
+            distribution = "chi2"
 
         if distribution == "F":
-            self._f_statistic_pvalue = f.sf(self._f_statistic, dfn=dfn, dfd=dfd)
-            # self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
+            self._f_statistic = W / self._dfn
+            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
+            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
+        elif distribution == "chi2":
+            self._f_statistic = W / self._dfn
+            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
             res = pd.Series(
-                {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
+                {"statistic": self._wald_statistic, "pvalue": self._p_value}
             )
         else:
-            raise NotImplementedError("chi2 distribution not yet implemented.")
-            # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+            raise ValueError("Distribution must be F or chi2")
 
         return res
 
@@ -1490,12 +1605,18 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self, alpha=0.05) -> pd.DataFrame:
+    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
         """
         Tidy model outputs.
 
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
+
+        Parameters
+        ----------
+        alpha: Optional[float]
+            The significance level for the confidence intervals. If None,
+            computes a 95% confidence interval (`alpha = 0.05`).
 
         Returns
         -------
@@ -1503,8 +1624,14 @@ class Feols:
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
-        _coefnames = self._coefnames
+        if alpha is None:
+            ub, lb = 0.975, 0.025
+            self.get_inference()
+        else:
+            ub, lb = 1 - alpha / 2, alpha / 2
+            self.get_inference(alpha=1 - alpha)
 
+        _coefnames = self._coefnames
         _se = self._se
         _tstat = self._tstat
         _pvalue = self._pvalue
@@ -1518,8 +1645,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5%": _conf_int[0],
-                "97.5%": _conf_int[1],
+                f"{lb*100:.1f}%": _conf_int[0],
+                f"{ub*100:.1f}%": _conf_int[1],
             }
         )
 
