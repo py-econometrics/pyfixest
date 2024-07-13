@@ -5,6 +5,7 @@ import pyfixest as pf
 
 
 def test_fweights_ols():
+    "Test that the fweights are correctly implemented for OLS models."
     data = pf.get_data()
     data2_w = (
         data[["Y", "X1"]]
