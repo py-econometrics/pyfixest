@@ -6,7 +6,8 @@ import pyfixest as pf
 
 def test_fweights_ols():
     "Test that the fweights are correctly implemented for OLS models."
-    data = pf.get_data()
+    # Fepois model for discrete Y
+    data = pf.get_data(model="Fepois")
     data2_w = (
         data[["Y", "X1"]]
         .groupby(["Y", "X1"])

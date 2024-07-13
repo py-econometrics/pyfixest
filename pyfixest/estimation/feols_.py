@@ -538,7 +538,6 @@ class Feols:
         return _vcov
 
     def _vcov_hetero(self):
-        _u_hat = self._u_hat
         _scores = self._scores
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
@@ -549,32 +548,19 @@ class Feols:
         _bread = self._bread
 
         if _vcov_type_detail in ["hetero", "HC1"]:
-            u = _u_hat
             transformed_scores = _scores
         elif _vcov_type_detail in ["HC2", "HC3"]:
-            if _is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference is not supported for IV regressions."
-                )
-            _tZXinv = np.linalg.inv(_tZX)
-            leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
-            if _vcov_type_detail == "HC2":
-                u = _u_hat / np.sqrt(1 - leverage)
-                transformed_scores = _scores / np.sqrt(1 - leverage)[:, None]
-            else:
-                transformed_scores = _scores / (1 - leverage)[:, None]
+            leverage = np.sum(_X * (_X @ np.linalg.inv(_tZX)), axis=1)
+            transformed_scores = (
+                _scores / np.sqrt(1 - leverage)[:, None]
+                if _vcov_type_detail == "HC2"
+                else _scores / (1 - leverage)[:, None]
+            )
 
-        if _is_iv is False:
-            meat = transformed_scores.transpose() @ transformed_scores
-            _vcov = _bread @ meat @ _bread
-        else:
-            if u.ndim == 1:
-                u = u.reshape((-1, 1))
-                Omega = (
-                    transformed_scores.transpose() @ transformed_scores
-                )  # np.transpose( _Z) @ ( _Z * (u**2))  # k x k
-            meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
-            _vcov = _bread @ meat @ _bread
+        Omega = transformed_scores.T @ transformed_scores
+
+        _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
+        _vcov = _bread @ _meat @ _bread
 
         return _vcov
 
