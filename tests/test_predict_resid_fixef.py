@@ -294,8 +294,9 @@ def test_categorical_covariate_predict():
 
 
 def test_extract_variable_level():
-    var = 'C(f4)[\n "web", "ios" \n]'
-    assert _extract_variable_level(var) == ("f4", '.[\n "web", "ios" \n]')
+    """Verify the correct extracation of lists, floats, and integers."""
+    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
+    assert _extract_variable_level(var) == ("SHOPPER_PLATFORM", "['web', 'ios']")
     var = "C(f3)[T.1.0]"
     assert _extract_variable_level(var) == ("f3", "1.0")
     var = "C(f4)[T.1]"
