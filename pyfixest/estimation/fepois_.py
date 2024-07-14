@@ -314,6 +314,8 @@ class Fepois(Feols):
 
 
 def _check_for_separation(
+    fml: str,
+    data: pd.DataFrame,
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
@@ -327,6 +329,10 @@ def _check_for_separation(
 
     Parameters
     ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -357,18 +363,31 @@ def _check_for_separation(
 
     separation_na: set[int] = set()
     for method in methods:
-        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X, fe=fe))
+        separation_na = separation_na.union(
+            valid_methods[method](fml=fml, data=data, Y=Y, X=X, fe=fe)
+        )
 
     return list(separation_na)
 
 
 class _SeparationMethod(Protocol):
-    def __call__(self, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame) -> set[int]:
+    def __call__(
+        self,
+        fml: str,
+        data: pd.DataFrame,
+        Y: pd.DataFrame,
+        X: pd.DataFrame,
+        fe: pd.DataFrame,
+    ) -> set[int]:
         """
         Check for separation.
 
         Parameters
         ----------
+        fml : str
+            The formula used for estimation.
+        data : pd.DataFrame
+            The data used for estimation.
         Y : pd.DataFrame
             Dependent variable.
         X : pd.DataFrame
@@ -385,13 +404,17 @@ class _SeparationMethod(Protocol):
 
 
 def _check_for_separation_fe(
-    Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    fml: str, data: pd.DataFrame, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
 ) -> set[int]:
     """
     Check for separation using the "fe" check.
 
     Parameters
     ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -430,6 +453,8 @@ def _check_for_separation_fe(
 
 
 def _check_for_separation_ir(
+    fml: str,
+    data: pd.DataFrame,
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
@@ -442,6 +467,10 @@ def _check_for_separation_ir(
 
     Parameters
     ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -458,31 +487,40 @@ def _check_for_separation_ir(
     set
         Set of indices of separated observations.
     """
-    # lazy load and avoid circular import
+    # lazy load to avoid circular import
     fixest_module = import_module("pyfixest.estimation")
     feols = getattr(fixest_module, "feols")
-    # initialize variables
-    U = (Y == 0).astype(float).squeeze().rename("U")
-    # weights
-    N0 = (Y > 0).squeeze().sum()
-    K = N0 / tol**2
-    omega = pd.Series(np.where(Y.squeeze() > 0, K, 1), name="omega", index=Y.index)
-    # build formula
-    fml = "U"
-    if X is not None and not X.empty:
-        # TODO: ideally get regressor names from parent class
-        fml += f" ~ {' + '.join(X.columns[X.columns!='Intercept'])}"
-    if fe is not None and not fe.empty:
-        # TODO: can this rename be avoided (get fixed effect names from parent class)?
-        fe.columns = fe.columns.str.replace("factorize", "").str.strip(r"\(|\)")
-        fml += f" | {' + '.join(fe.columns)}"
-    # construct data
-    data = pd.concat([U, X, fe, omega], axis=1)
+    # initialize
     separation_na: set[int] = set()
-    is_interior = Y.squeeze() > 0
+    tmp_suffix = "_separationTmp"
+    # build formula
+    name_dependent, rest = fml.split("~")
+    name_dependent_separation = "U"
+    if name_dependent_separation in data.columns:
+        name_dependent_separation += tmp_suffix
+
+    fml_separation = f"{name_dependent_separation} ~ {rest}"
+
+    dependent: pd.Series = data[name_dependent]
+    is_interior = dependent > 0
     if is_interior.all():
         # no boundary sample, can exit
         return separation_na
+
+    # initialize variables
+    tmp: pd.DataFrame = pd.DataFrame(index=data.index)
+    tmp["U"] = (dependent == 0).astype(float).rename("U")
+    # weights
+    N0 = (dependent > 0).sum()
+    K = N0 / tol**2
+    tmp["omega"] = pd.Series(
+        np.where(dependent > 0, K, 1), name="omega", index=data.index
+    )
+    # combine data
+    # TODO: avoid create new object?
+    tmp = data.join(tmp, how="left", validate="one_to_one", rsuffix=tmp_suffix)
+    # TODO: need to ensure that join doesn't create duplicated columns
+    # assert not tmp.columns.duplicated().any()
 
     iteration = 0
     has_converged = False
@@ -490,21 +528,23 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        Uhat = feols(fml, data=data, weights="omega").predict()
+        fitted = feols(fml_separation, data=tmp, weights="omega")
+        tmp["Uhat"] = pd.Series(fitted.predict(), index=fitted._data.index, name="Uhat")
+        Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
-        Uhat = np.where(is_interior | within_zero, 0, Uhat)
+        Uhat.where(~(is_interior | within_zero.fillna(True)), 0, inplace=True)
         if (Uhat >= 0).all():
             # all separated observations have been identified
             has_converged = True
             break
-        data.loc[~is_interior, "U"] = np.fmax(
+        tmp.loc[~is_interior, "U"] = np.fmax(
             Uhat[~is_interior], 0
         )  # rectified linear unit (ReLU)
 
     if has_converged:
-        separation_na = set(Y[Uhat > 0].index)
+        separation_na = set(dependent[Uhat > 0].index)
     else:
         warnings.warn(
             "iterative rectivier separation check: maximum number of iterations reached before convergence"

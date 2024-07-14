@@ -333,10 +333,14 @@ class FixestMulti:
 
                 elif _method == "fepois":
                     # check for separation and drop separated variables
-
                     na_separation: list[int] = []
                     na_separation = _check_for_separation(
-                        Y=Y, X=X, fe=fe, methods=separation_check
+                        fml=FixestFormula.fml,
+                        data=_data,
+                        Y=Y,
+                        X=X,
+                        fe=fe,
+                        methods=separation_check,
                     )
                     if na_separation:
                         warnings.warn(
