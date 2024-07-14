@@ -463,15 +463,17 @@ def _check_for_separation_ir(
     feols = getattr(fixest_module, "feols")
     # initialize variables
     U = (Y == 0).astype(float).squeeze().rename("U")
+    # weights
     N0 = (Y > 0).squeeze().sum()
     K = N0 / tol**2
-    omega = pd.Series(np.where(Y.squeeze() > 0, K, 1), name="omega")
+    omega = pd.Series(np.where(Y.squeeze() > 0, K, 1), name="omega", index=Y.index)
     # build formula
     fml = "U"
     if X is not None and not X.empty:
+        # TODO: ideally get regressor names from parent class
         fml += f" ~ {' + '.join(X.columns[X.columns!='Intercept'])}"
     if fe is not None and not fe.empty:
-        # TODO: can this rename be avoided?
+        # TODO: can this rename be avoided (get fixed effect names from parent class)?
         fe.columns = fe.columns.str.replace("factorize", "").str.strip(r"\(|\)")
         fml += f" | {' + '.join(fe.columns)}"
     # construct data
@@ -490,7 +492,7 @@ def _check_for_separation_ir(
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         Uhat = feols(fml, data=data, weights="omega").predict()
         # update when within tolerance of zero
-        # need to be more strict below zero, to avoid false positives
+        # need to be more strict below zero to avoid false positives
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
         Uhat = np.where(is_interior | within_zero, 0, Uhat)
         if (Uhat >= 0).all():
