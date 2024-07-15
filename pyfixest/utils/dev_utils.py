@@ -207,4 +207,4 @@ def _extract_variable_level(fe_string: str):
 
     variable = c_match.group(1)
     level = t_match.group(1)
-    return variable, level[0 : level.rfind("]")]
+    return 'C(' + variable + ')', level[0 : level.rfind("]")
