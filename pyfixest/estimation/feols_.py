@@ -1437,7 +1437,7 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict2(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
+    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1492,78 +1492,6 @@ class Feols:
 
         if self._has_fixef:
             y_hat += np.nansum(fixef_mat, axis=1)
-
-        return y_hat.flatten()
-
-    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:  # type: ignore
-        _fml = self._fml
-        _data = self._data
-        _u_hat = self._u_hat
-        _beta_hat = self._beta_hat
-        _is_iv = self._is_iv
-
-        _Y_untransformed = self._Y_untransformed.to_numpy().flatten()
-
-        if _is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
-
-        if newdata is None:
-            y_hat = _Y_untransformed - _u_hat.flatten()
-
-        else:
-            newdata = _polars_to_pandas(newdata).reset_index(drop=False)
-
-            if self._has_fixef:
-                fml_linear, _ = _fml.split("|")
-
-                if self._sumFE is None:
-                    self.fixef()
-
-                fvals = self._fixef.split("+")
-                df_fe = newdata[fvals].astype(str)
-
-                # populate matrix with fixed effects estimates
-                fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
-                # fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
-
-                for i, fixef in enumerate(df_fe.columns):
-                    new_levels = df_fe[fixef].unique()
-                    old_levels = _data[fixef].unique().astype(str)
-                    subdict = self._fixef_dict[
-                        f"C({fixef})"
-                    ]  # as variables are called C(var) in the fixef_dict
-
-                    for level in new_levels:
-                        # if level estimated: either estimated value (or 0 for reference level)  # noqa: W505
-                        if level in old_levels:
-                            fixef_mat[df_fe[fixef] == level, i] = subdict.get(level, 0)
-                        # if new level not estimated: set to NaN
-                        else:
-                            fixef_mat[df_fe[fixef] == level, i] = np.nan
-
-            else:
-                fml_linear = _fml  # noqa: F841
-                fml_fe = None  # noqa: F841
-
-            if not self._X_is_empty:
-                # deal with linear part
-                xfml = _fml.split("|")[0].split("~")[1]
-                X = Formula(xfml).get_model_matrix(newdata)
-                X_index = X.index
-                coef_idx = np.isin(self._coefnames, X.columns)
-                X = X[np.array(self._coefnames)[coef_idx]]
-                X = X.to_numpy()
-                # fill y_hat with np.nans
-                y_hat = np.full(newdata.shape[0], np.nan)
-                y_hat[X_index] = X @ _beta_hat[coef_idx]
-
-            else:
-                y_hat = np.zeros(newdata.shape[0])
-
-            if self._has_fixef:
-                y_hat += np.sum(fixef_mat, axis=1)
 
         return y_hat.flatten()
 
