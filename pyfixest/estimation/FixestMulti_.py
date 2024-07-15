@@ -24,6 +24,7 @@ class FixestMulti:
         data: DataFrameType,
         copy_data: bool,
         store_data: bool,
+        lean: bool,
         fixef_tol: float,
         weights_type: str,
     ) -> None:
@@ -38,6 +39,8 @@ class FixestMulti:
             Whether to copy the data or not.
         store_data : bool
             Whether to store the data in the resulting model object or not.
+        lean: bool
+            Whether to store large-memory objects in the resulting model object or not.
         fixef_tol: float
             The tolerance for the convergence of the demeaning algorithm.
         weights_type: str
@@ -51,6 +54,7 @@ class FixestMulti:
         """
         self._copy_data = copy_data
         self._store_data = store_data
+        self._lean = lean
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
 
@@ -189,6 +193,7 @@ class FixestMulti:
         _has_fixef = False
         _fixef_tol = self._fixef_tol
         _weights_type = self._weights_type
+        _lean = self._lean
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -297,6 +302,7 @@ class FixestMulti:
                         FIT = Feiv(
                             Y=Yd_array,
                             X=Xd_array,
+                            endogvar=endogvard_array,
                             Z=Zd_array,
                             weights=weights,
                             coefnames_x=coefnames,
@@ -411,6 +417,9 @@ class FixestMulti:
                         FIT._icovars = _icovars
                     else:
                         FIT._icovars = None
+
+                if _lean:
+                    FIT._clear_attributes()
 
                     # store fitted model
                 self.all_fitted_models[FixestFormula.fml] = FIT

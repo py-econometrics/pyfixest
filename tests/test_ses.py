@@ -29,7 +29,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
     N = fit1._N
 
     # adj: default adjustments are different for HC3 and CRV3
-    adj_correction = np.sqrt((N - 1) / N)
+    adj_correction = 1
 
     if not np.allclose(res_hc1["t value"] / adj_correction, res_crv1["t value"]):
         raise ValueError("HC1 and CRV1 t values are not the same.")
@@ -57,7 +57,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
     N = fit1._N
 
     # adj: default adjustments are different for HC3 and CRV3
-    adj_correction = np.sqrt((N - 1) / N)
+    adj_correction = 1
 
     # if not np.allclose(np.sort(res_hc3["Std. Error"]) * adj_correction , np.sort(res_crv3["Std. Error"])):  # noqa: W505
     #    raise ValueError("HC3 and CRV3 ses are not the same.")

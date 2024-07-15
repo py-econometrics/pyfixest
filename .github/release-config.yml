@@ -1,0 +1,38 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: 'New Features'
+    labels:
+      - 'enhancement'
+  - title: 'Breaking Changes'
+    labels:
+      - 'breaking changes'
+  - title: 'Maintenance'
+    labels:
+      - 'maintenance'
+  - title: 'Documentation'
+    labels:
+      -'documentation'
+  - title: 'Infrastructure'
+    labels:
+      - 'infrastructure'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+version-resolver:
+  major:
+    labels:
+      - 'breaking change'
+      - 'feature'
+  minor:
+    labels:
+      - 'enhancement'
+      - 'documentation'
+  patch:
+    labels:
+      - 'maintenance'
+      - 'infrastructure'
+  default: patch
+template: |
+  ## Changes
+
+  $CHANGES

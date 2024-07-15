@@ -18,7 +18,7 @@ from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
-from pyfixest.utils.utils import get_data
+from pyfixest.utils.utils import get_data, ssc
 
 
 @pytest.fixture
@@ -185,6 +185,26 @@ def test_multcomp_errors():
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     with pytest.raises(ValueError):
         rwolf(fit1.to_list(), param="X2", reps=999, seed=92)
+
+
+def test_multcomp_sampling_errors():
+    data = get_data().dropna()
+    # Sampling method not supported in "rwolf"
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    with pytest.raises(ValueError):
+        rwolf(fit1.to_list(), param="X1", reps=999, seed=92, sampling_method="abc")
+
+
+def test_rwolf_error():
+    rng = np.random.default_rng(123)
+
+    data = get_data()
+    data["f1"] = rng.choice(range(5), len(data), True)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+
+    # test for full enumeration warning
+    with pytest.warns(UserWarning):
+        pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
 def test_wildboottest_errors():
@@ -387,3 +407,39 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+def test_wald_test_invalid_distribution():
+    data = pd.read_csv("pyfixest/did/data/df_het.csv")
+    data = data.iloc[1:3000]
+
+    fml = "dep_var ~ treat"
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, -1]]), distribution="abc")
+
+
+def test_wald_test_R_q_column_consistency():
+    data = pd.read_csv("pyfixest/did/data/df_het.csv")
+    data = data.iloc[1:3000]
+    fml = "dep_var ~ treat"
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+    # Test with R.size[1] == number of coeffcients
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0, 0]]))
+
+    # Test with q type
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0]]), q="invalid type q")
+
+    # Test with q being a one-dimensional array or a scalar.
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0, 1]]))
+
+    # q must have the same number of rows as R
+    with pytest.raises(ValueError):
+        fit.wald_test(
+            R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
+        )

@@ -1,24 +1,33 @@
 import functools
+import gc
 import re
 import warnings
 from importlib import import_module
 from typing import Optional, Union
 
-import numba as nb
 import numpy as np
 import pandas as pd
+import polars as pl
 from formulaic import Formula
 from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
-from scipy.stats import f, norm, t
+from scipy.sparse.linalg import lsqr, spsolve
+from scipy.stats import chi2, f, norm, t
 
-from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
+from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
     _get_ritest_stats_fast,
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
+)
+from pyfixest.estimation.vcov_utils import (
+    _check_cluster_df,
+    _compute_bread,
+    _count_G_for_ssc_correction,
+    _crv1_meat_loop,
+    _get_cluster_df,
+    _prepare_twoway_clustering,
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -55,6 +64,9 @@ class Feols:
     weights_type : Optional[str]
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     Attributes
     ----------
@@ -79,6 +91,8 @@ class Feols:
         Indices of collinear variables.
     _Z : np.ndarray
         Alias for the _X array, used for calculations.
+    _solver: str
+        The solver used for the regression.
     _weights : np.ndarray
         Array of weights for each observation.
     _N : int
@@ -87,8 +101,6 @@ class Feols:
         Number of independent variables (or features).
     _support_crv3_inference : bool
         Indicates support for CRV3 inference.
-    _support_iid_inference : bool
-        Indicates support for IID inference.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -161,7 +173,8 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-
+    _solver: str
+        The solver used to fit the normal equation.
     """
 
     def __init__(
@@ -173,6 +186,7 @@ class Feols:
         coefnames: list[str],
         weights_name: Optional[str],
         weights_type: Optional[str],
+        solver: str = "np.linalg.solve",
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -193,7 +207,7 @@ class Feols:
             self._X = X
 
         self.get_nobs()
-
+        self._solver = solver
         _feols_input_checks(Y, X, weights)
 
         if self._X.shape[1] == 0:
@@ -215,7 +229,6 @@ class Feols:
         self._support_crv3_inference = True
         if self._weights_name is not None:
             self._supports_wildboottest = False
-        self._support_iid_inference = True
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
@@ -249,7 +262,7 @@ class Feols:
         self._vcov_type = ""
         self._vcov_type_detail = ""
         self._is_clustered = False
-        self._clustervar = ""
+        self._clustervar: list[str] = []
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
@@ -291,6 +304,34 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
+        """
+        Solve the ordinary least squares problem using the specified solver.
+
+        Parameters
+        ----------
+        tZX (array-like): Z'X.
+        tZY (array-like): Z'Y.
+        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
+        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
+
+        Returns
+        -------
+        array-like: The solution to the ordinary least squares problem.
+
+        Raises
+        ------
+        ValueError: If the specified solver is not supported.
+        """
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        elif solver == "scipy.sparse.linalg.lsqr":
+            return lsqr(tZX, tZY)[0].flatten()
+        else:
+            raise ValueError(f"Solver {solver} not supported.")
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -302,15 +343,11 @@ class Feols:
         _X = self._X
         _Y = self._Y
         _Z = self._Z
-
+        _solver = self._solver
         self._tZX = _Z.T @ _X
         self._tZy = _Z.T @ _Y
 
-        # self._tZXinv = np.linalg.inv(self._tZX)
-        self._beta_hat = np.linalg.solve(self._tZX, self._tZy).flatten()
-        # self._beta_hat, _, _, _ = lstsq(self._tZX, self._tZy, lapack_driver='gelsy')
-
-        # self._beta_hat = (self._tZXinv @ self._tZy).flatten()
+        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
@@ -348,33 +385,25 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
+        # Assuming `data` is the DataFrame in question
+        if isinstance(data, pl.DataFrame):
+            data = _polars_to_pandas(data)
+
         _data = self._data
         _has_fixef = self._has_fixef
         _is_iv = self._is_iv
         _method = self._method
-        _support_iid_inference = self._support_iid_inference
         _support_crv3_inference = self._support_crv3_inference
-        _weights_name = self._weights_name
 
-        _beta_hat = self._beta_hat
-
-        _X = self._X
-        _Z = self._Z
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         # _tZXinv = self._tZXinv
         _hessian = self._hessian
-        _scores = self._scores
 
-        _weights = self._weights
-        _weights_type = self._weights_type
         _ssc_dict = self._ssc_dict
         _N = self._N
-        _N_rows = self._N_rows
         _k = self._k
-
-        _u_hat = self._u_hat
 
         # deparse vcov input
         _check_vcov_input(vcov, _data)
@@ -385,18 +414,10 @@ class Feols:
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
 
-        if _is_iv:
-            bread = np.linalg.inv(_tXZ @ _tZZinv @ _tZX)
-        else:
-            bread = np.linalg.inv(_hessian)
+        self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # compute vcov
         if self._vcov_type == "iid":
-            if not _support_iid_inference:
-                raise NotImplementedError(
-                    f"'iid' inference is not supported for {_method} regressions."
-                )
-
             self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
@@ -406,16 +427,7 @@ class Feols:
                 vcov_type="iid",
             )
 
-            if self._method == "feols":
-                sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-            elif self._method == "fepois":
-                sigma2 = 1
-            else:
-                raise NotImplementedError(
-                    f"'iid' inference is not supported for {_method} regressions."
-                )
-
-            self._vcov = self._ssc * bread * sigma2
+            self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
             self._ssc = get_ssc(
@@ -427,84 +439,34 @@ class Feols:
                 vcov_type="hetero",
             )
 
-            if self._vcov_type_detail in ["hetero", "HC1"]:
-                u = _u_hat
-                transformed_scores = _scores
-            elif self._vcov_type_detail in ["HC2", "HC3"]:
-                if _is_iv:
-                    raise VcovTypeNotSupportedError(
-                        "HC2 and HC3 inference is not supported for IV regressions."
-                    )
-                _tZXinv = np.linalg.inv(_tZX)
-                leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
-                if self._vcov_type_detail == "HC2":
-                    u = _u_hat / np.sqrt(1 - leverage)
-                    transformed_scores = _scores / np.sqrt(1 - leverage)[:, None]
-                else:
-                    transformed_scores = _scores / (1 - leverage)[:, None]
-
-            if _is_iv is False:
-                meat = transformed_scores.transpose() @ transformed_scores
-                self._vcov = self._ssc * bread @ meat @ bread
-            else:
-                if u.ndim == 1:
-                    u = u.reshape((-1, 1))
-                Omega = (
-                    transformed_scores.transpose() @ transformed_scores
-                )  # np.transpose( self._Z) @ ( self._Z * (u**2))  # k x k
-                meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
-                self._vcov = self._ssc * bread @ meat @ bread
+            self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
             if data is not None:
-                data_pandas = _polars_to_pandas(data)
-                self._cluster_df = data_pandas[self._clustervar].copy()
-            elif not self._data.empty:
-                self._cluster_df = self._data[self._clustervar].copy()
+                # use input data set
+                self._cluster_df = _get_cluster_df(
+                    data=data,
+                    clustervar=self._clustervar,
+                )
+                _check_cluster_df(cluster_df=self._cluster_df, data=data)
             else:
-                raise AttributeError(
-                    """The input data set needs to be stored in the model object if
-                    you call `vcov()` post estimation with a novel cluster variable.
-                    Please set the function argument `store_data=True` when calling
-                    the regression.
-                    """
+                # use stored data
+                self._cluster_df = _get_cluster_df(
+                    data=self._data, clustervar=self._clustervar
                 )
-
-            if np.any(self._cluster_df.isna().any()):
-                raise NanInClusterVarError(
-                    "CRV inference not supported with missing values in the cluster variable."
-                    "Please drop missing values before running the regression."
-                )
+                _check_cluster_df(cluster_df=self._cluster_df, data=self._data)
 
             if self._cluster_df.shape[1] > 1:
-                # paste both columns together
-                # set cluster_df to string
-
-                cluster_one = self._clustervar[0]
-                cluster_two = self._clustervar[1]
-
-                cluster_df_one_str = self._cluster_df[cluster_one].astype(str)
-                cluster_df_two_str = self._cluster_df[cluster_two].astype(str)
-                self._cluster_df.loc[:, "cluster_intersection"] = (
-                    cluster_df_one_str.str.cat(cluster_df_two_str, sep="-")
+                self._cluster_df = _prepare_twoway_clustering(
+                    clustervar=self._clustervar, cluster_df=self._cluster_df
                 )
 
-            if self._cluster_df.shape[0] != _N_rows:
-                raise ValueError(
-                    "The cluster variable must have the same length as the data set."
-                )
-
-            G = []
-            for col in self._cluster_df.columns:
-                G.append(self._cluster_df[col].nunique())
-
-            if _ssc_dict["cluster_df"] == "min":
-                G = [min(G)] * 3
+            self._G = _count_G_for_ssc_correction(
+                cluster_df=self._cluster_df, ssc_dict=_ssc_dict
+            )
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
-            self._G = G
-
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
@@ -521,33 +483,12 @@ class Feols:
                     vcov_type="CRV",
                 )
 
-                if x == 0:
-                    self._ssc = np.array([ssc])
-                else:
-                    self._ssc = np.append(self._ssc, ssc)
+                self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
 
                 if self._vcov_type_detail == "CRV1":
-                    k_instruments = _Z.shape[1]
-                    meat = np.zeros((k_instruments, k_instruments))
-
-                    # deviance uniquely for Poisson
-                    if self._method == "fepois":
-                        weighted_uhat = _weights.flatten() * _u_hat.flatten()
-                    else:
-                        weighted_uhat = _u_hat
-
-                    meat = _crv1_meat_loop(
-                        _Z=_Z.astype(np.float64),
-                        weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
-                        clustid=clustid,
-                        cluster_col=cluster_col,
+                    self._vcov += self._ssc[x] * self._vcov_crv1(
+                        clustid=clustid, cluster_col=cluster_col
                     )
-
-                    if _is_iv is False:
-                        self._vcov += self._ssc[x] * bread @ meat @ bread
-                    else:
-                        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ self._tZX
-                        self._vcov += self._ssc[x] * bread @ meat @ bread
 
                 elif self._vcov_type_detail == "CRV3":
                     # check: is fixed effect cluster fixed effect?
@@ -559,75 +500,214 @@ class Feols:
                             "CRV3 inference is not supported with IV regression."
                         )
 
-                    beta_jack = np.zeros((len(clustid), _k))
-
                     if (
-                        (self._has_fixef is False)
-                        and (self._method == "feols")
+                        (_has_fixef is False)
+                        and (_method == "feols")
                         and (_is_iv is False)
                     ):
-                        # inverse hessian precomputed?
-                        tXX = np.transpose(self._X) @ self._X
-                        tXy = np.transpose(self._X) @ self._Y
-
-                        # compute leave-one-out regression coefficients (aka clusterjacks')  # noqa: W505
-                        for ixg, g in enumerate(clustid):
-                            Xg = self._X[np.equal(g, cluster_col)]
-                            Yg = self._Y[np.equal(g, cluster_col)]
-                            tXgXg = np.transpose(Xg) @ Xg
-                            # jackknife regression coefficient
-                            beta_jack[ixg, :] = (
-                                np.linalg.pinv(tXX - tXgXg)
-                                @ (tXy - np.transpose(Xg) @ Yg)
-                            ).flatten()
-
+                        self._vcov += self._ssc[x] * self._vcov_crv3_fast(
+                            clustid=clustid, cluster_col=cluster_col
+                        )
                     else:
-                        # lazy loading to avoid circular import
-                        fixest_module = import_module("pyfixest.estimation")
-                        if self._method == "feols":
-                            fit_ = getattr(fixest_module, "feols")
-                        else:
-                            fit_ = getattr(fixest_module, "fepois")
+                        self._vcov += self._ssc[x] * self._vcov_crv3_slow(
+                            clustid=clustid, cluster_col=cluster_col
+                        )
 
-                        for ixg, g in enumerate(clustid):
-                            # direct leave one cluster out implementation
-                            data = _data[~np.equal(g, cluster_col)]
-                            fit = fit_(
-                                fml=self._fml,
-                                data=data,
-                                vcov="iid",
-                                weights=_weights_name,
-                                weights_type=_weights_type,
-                            )
-                            beta_jack[ixg, :] = fit.coef().to_numpy()
-
-                    # optional: beta_bar in MNW (2022)
-                    # center = "estimate"
-                    # if center == 'estimate':
-                    #    beta_center = beta_hat
-                    # else:
-                    #    beta_center = np.mean(beta_jack, axis = 0)
-                    beta_center = _beta_hat
-
-                    vcov_mat = np.zeros((_k, _k))
-                    for ixg, g in enumerate(clustid):
-                        beta_centered = beta_jack[ixg, :] - beta_center
-                        vcov_mat += np.outer(beta_centered, beta_centered)
-
-                    self._vcov += self._ssc[x] * vcov_mat
-
+        # update p-value, t-stat, standard error, confint
         self.get_inference()
 
         return self
 
-    def get_inference(self, alpha: float = 0.95) -> None:
+    def _vcov_iid(self):
+        _N = self._N
+        _u_hat = self._u_hat
+        _method = self._method
+        _bread = self._bread
+
+        if _method == "feols":
+            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
+        elif _method == "fepois":
+            sigma2 = 1
+        else:
+            raise NotImplementedError(
+                f"'iid' inference is not supported for {_method} regressions."
+            )
+
+        _vcov = _bread * sigma2
+
+        return _vcov
+
+    def _vcov_hetero(self):
+        _u_hat = self._u_hat
+        _scores = self._scores
+        _vcov_type_detail = self._vcov_type_detail
+        _tXZ = self._tXZ
+        _tZZinv = self._tZZinv
+        _tZX = self._tZX
+        _X = self._X
+        _is_iv = self._is_iv
+        _bread = self._bread
+
+        if _vcov_type_detail in ["hetero", "HC1"]:
+            u = _u_hat
+            transformed_scores = _scores
+        elif _vcov_type_detail in ["HC2", "HC3"]:
+            if _is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference is not supported for IV regressions."
+                )
+            _tZXinv = np.linalg.inv(_tZX)
+            leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
+            if _vcov_type_detail == "HC2":
+                u = _u_hat / np.sqrt(1 - leverage)
+                transformed_scores = _scores / np.sqrt(1 - leverage)[:, None]
+            else:
+                transformed_scores = _scores / (1 - leverage)[:, None]
+
+        if _is_iv is False:
+            meat = transformed_scores.transpose() @ transformed_scores
+            _vcov = _bread @ meat @ _bread
+        else:
+            if u.ndim == 1:
+                u = u.reshape((-1, 1))
+                Omega = (
+                    transformed_scores.transpose() @ transformed_scores
+                )  # np.transpose( _Z) @ ( _Z * (u**2))  # k x k
+            meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
+            _vcov = _bread @ meat @ _bread
+
+        return _vcov
+
+    def _vcov_crv1(self, clustid, cluster_col):
+        _Z = self._Z
+        _weights = self._weights
+        _u_hat = self._u_hat
+        _method = self._method
+        _is_iv = self._is_iv
+        _tXZ = self._tXZ
+        _tZZinv = self._tZZinv
+        _tZX = self._tZX
+        _bread = self._bread
+
+        k_instruments = _Z.shape[1]
+        meat = np.zeros((k_instruments, k_instruments))
+
+        # deviance uniquely for Poisson
+        if _method == "fepois":
+            weighted_uhat = _weights.flatten() * _u_hat.flatten()
+        else:
+            weighted_uhat = _u_hat
+
+        meat = _crv1_meat_loop(
+            _Z=_Z.astype(np.float64),
+            weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
+            clustid=clustid,
+            cluster_col=cluster_col,
+        )
+
+        if _is_iv is False:
+            _vcov = _bread @ meat @ _bread
+        else:
+            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
+            _vcov = _bread @ meat @ _bread
+
+        return _vcov
+
+    def _vcov_crv3_fast(self, clustid, cluster_col):
+        _k = self._k
+        _Y = self._Y
+        _X = self._X
+        _beta_hat = self._beta_hat
+
+        beta_jack = np.zeros((len(clustid), _k))
+
+        # inverse hessian precomputed?
+        tXX = np.transpose(_X) @ _X
+        tXy = np.transpose(_X) @ _Y
+
+        # compute leave-one-out regression coefficients (aka clusterjacks')  # noqa: W505
+        for ixg, g in enumerate(clustid):
+            Xg = _X[np.equal(g, cluster_col)]
+            Yg = _Y[np.equal(g, cluster_col)]
+            tXgXg = np.transpose(Xg) @ Xg
+            # jackknife regression coefficient
+            beta_jack[ixg, :] = (
+                np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+            ).flatten()
+
+        # optional: beta_bar in MNW (2022)
+        # center = "estimate"
+        # if center == 'estimate':
+        #    beta_center = beta_hat
+        # else:
+        #    beta_center = np.mean(beta_jack, axis = 0)
+        beta_center = _beta_hat
+
+        vcov_mat = np.zeros((_k, _k))
+        for ixg, g in enumerate(clustid):
+            beta_centered = beta_jack[ixg, :] - beta_center
+            vcov_mat += np.outer(beta_centered, beta_centered)
+
+        _vcov = vcov_mat
+
+        return _vcov
+
+    def _vcov_crv3_slow(self, clustid, cluster_col):
+        _k = self._k
+        _method = self._method
+        _fml = self._fml
+        _data = self._data
+        _weights_name = self._weights_name
+        _weights_type = self._weights_type
+        _beta_hat = self._beta_hat
+
+        beta_jack = np.zeros((len(clustid), _k))
+
+        # lazy loading to avoid circular import
+        fixest_module = import_module("pyfixest.estimation")
+        if _method == "feols":
+            fit_ = getattr(fixest_module, "feols")
+        else:
+            fit_ = getattr(fixest_module, "fepois")
+
+        for ixg, g in enumerate(clustid):
+            # direct leave one cluster out implementation
+            data = _data[~np.equal(g, cluster_col)]
+            fit = fit_(
+                fml=_fml,
+                data=data,
+                vcov="iid",
+                weights=_weights_name,
+                weights_type=_weights_type,
+            )
+            beta_jack[ixg, :] = fit.coef().to_numpy()
+
+        # optional: beta_bar in MNW (2022)
+        # center = "estimate"
+        # if center == 'estimate':
+        #    beta_center = beta_hat
+        # else:
+        #    beta_center = np.mean(beta_jack, axis = 0)
+        beta_center = _beta_hat
+
+        vcov_mat = np.zeros((_k, _k))
+        for ixg, g in enumerate(clustid):
+            beta_centered = beta_jack[ixg, :] - beta_center
+            vcov_mat += np.outer(beta_centered, beta_centered)
+
+        _vcov = vcov_mat
+
+        return _vcov
+
+    def get_inference(self, alpha: float = 0.05) -> None:
         """
         Compute standard errors, t-statistics, and p-values for the regression model.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for confidence intervals. Defaults to 0.95.
+            The significance level for confidence intervals. Defaults to 0.05, which
+            produces a 95% confidence interval.
 
         Returns
         -------
@@ -651,10 +731,10 @@ class Feols:
         # use t-dist for linear models, but normal for non-linear models
         if _method == "feols":
             self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf((1 - alpha) / 2, df))
+            z = np.abs(t.ppf(alpha / 2, df))
         else:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf((1 - alpha) / 2))
+            z = np.abs(norm.ppf(alpha / 2))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -716,12 +796,52 @@ class Feols:
         else:
             self._has_fixef = False
 
-    def wald_test(self, R=None, q=None, distribution="F") -> None:
+    def _clear_attributes(self):
+        attributes = [
+            "_X",
+            "_Y",
+            "_Z",
+            "_data",
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_weights",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "_Y_untransformed",
+        ]
+
+        for attr in attributes:
+            if hasattr(self, attr):
+                delattr(self, attr)
+        gc.collect()
+
+    def wald_test(self, R=None, q=None, distribution="F"):
         """
         Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form Rb = q.
+        Compute a Wald test for a linear hypothesis of the form R * β = q.
+        where R is m x k matrix, β is a k x 1 vector of coefficients,
+        and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
+
+        This method producues the following attriutes
+
+        _dfd : int
+            degree of freedom in denominator
+        _dfn : int
+            degree of freedom in numerator
+        _wald_statistic : scalar
+            Wald-statistics computed for hypothesis testing
+        _f_statistic : scalar
+            Wald-statistics(when R is an indentity matrix, and q being zero vector)
+            computed for hypothesis testing
+        _p_value : scalar
+            corresponding p-value for statistics
 
         Parameters
         ----------
@@ -739,65 +859,101 @@ class Feols:
         -------
         pd.Series
             A pd.Series with the Wald statistic and p-value.
-        """
-        raise ValueError("wald_tests will be released as a feature with pyfixest 0.14.")
 
+        Examples
+        --------
+        import numpy as np
+        import pandas as pd
+
+        from pyfixest.estimation.estimation import feols
+
+        data = pd.read_csv("pyfixest/did/data/df_het.csv")
+        data = data.iloc[1:3000]
+
+        R = np.array([[1,-1]] )
+        q = np.array([0.0])
+
+        fml = "dep_var ~ treat"
+        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+        # Wald test
+        fit.wald_test(R=R, q=q, distribution = "chi2")
+        f_stat = fit._f_statistic
+        p_stat = fit._p_value
+
+        print(f"Python f_stat: {f_stat}")
+        print(f"Python p_stat: {p_stat}")
+
+        # The code above produces the following results :
+        # Python f_stat: 256.55432910297003
+        # Python p_stat: 9.67406627744023e-58
+        """
         _vcov = self._vcov
         _N = self._N
         _k = self._k
         _beta_hat = self._beta_hat
         _k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
 
-        dfn = _N - _k_fe - _k
-        dfd = _k
-
-        # if R is not two dimensional, make it two dimensional
-        if R is not None:
-            if R.ndim == 1:
-                R = R.reshape((1, len(R)))
-            assert (
-                R.shape[1] == _k
-            ), "R must have the same number of columns as the number of coefficients."
-        else:
+        # If R is None, default to the identity matrix
+        if R is None:
             R = np.eye(_k)
 
-        if q is not None:
-            assert isinstance(
-                q, (int, float, np.ndarray)
-            ), "q must be a numeric scalar."
-            if isinstance(q, np.ndarray):
-                assert q.ndim == 1, "q must be a one-dimensional array or a scalar."
-                assert (
-                    q.shape[0] == R.shape[0]
-                ), "q must have the same number of rows as R."
-            warnings.warn(
-                "Note that the argument q is experimental and no unit tests are implemented. Please use with caution / take a look at the source code."
-            )
-        else:
-            q = np.zeros(R.shape[0])
+        # Ensure R is two-dimensional
+        if R.ndim == 1:
+            R = R.reshape((1, len(R)))
 
-        assert distribution in [
-            "F",
-            "chi2",
-        ], "distribution must be either 'F' or 'chi2'."
+        if R.shape[1] != _k:
+            raise ValueError(
+                "The number of columns of R must be equal to the number of coefficients."
+            )
+
+        # If q is None, default to a vector of zeros
+        if q is None:
+            q = np.zeros(R.shape[0])
+        else:
+            if not isinstance(q, (int, float, np.ndarray)):
+                raise ValueError("q must be a numeric scalar or array.")
+            if isinstance(q, np.ndarray):
+                if q.ndim != 1:
+                    raise ValueError("q must be a one-dimensional array or a scalar.")
+                if q.shape[0] != R.shape[0]:
+                    raise ValueError("q must have the same number of rows as R.")
+
+        n_restriction = R.shape[0]
+        self._dfn = n_restriction
+
+        if self._is_clustered:
+            self._dfd = np.min(np.array(self._G)) - 1
+        else:
+            self._dfd = _N - _k - _k_fe
 
         bread = R @ _beta_hat - q
         meat = np.linalg.inv(R @ _vcov @ R.T)
         W = bread.T @ meat @ bread
-
-        # this is chi-squared(k) distributed, with k = number of coefficients
         self._wald_statistic = W
-        self._f_statistic = W / dfd
+
+        # Check if distribution is "F" and R is not identity matrix
+        # or q is not zero vector
+        if distribution == "F" and (
+            not np.array_equal(R, np.eye(_k)) or not np.all(q == 0)
+        ):
+            warnings.warn(
+                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+            )
+            distribution = "chi2"
 
         if distribution == "F":
-            self._f_statistic_pvalue = f.sf(self._f_statistic, dfn=dfn, dfd=dfd)
-            # self._f_statistic_pvalue = 1 - chi2(df = _k).cdf(self._f_statistic)
+            self._f_statistic = W / self._dfn
+            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
+            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
+        elif distribution == "chi2":
+            self._f_statistic = W / self._dfn
+            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
             res = pd.Series(
-                {"statistic": self._f_statistic, "pvalue": self._f_statistic_pvalue}
+                {"statistic": self._wald_statistic, "pvalue": self._p_value}
             )
         else:
-            raise NotImplementedError("chi2 distribution not yet implemented.")
-            # self._wald_pvalue = 1 - chi2(df = _k).cdf(self._wald_statistic)
+            raise ValueError("Distribution must be F or chi2")
 
         return res
 
@@ -945,9 +1101,9 @@ class Feols:
             _xnames = _X.model_spec.column_names
 
         # later: allow r <> 0 and custom R
-        R = np.ones(len(_xnames))
+        R = np.zeros(len(_xnames))
         if param is not None:
-            R[_xnames.index(param)] = 0
+            R[_xnames.index(param)] = 1
         r = 0
 
         if run_heteroskedastic:
@@ -1088,15 +1244,14 @@ class Feols:
             )
 
         if cluster is None:
-            cluster = self._clustervar
-            if cluster is None:
+            if self._clustervar is None:
                 raise ValueError("No cluster variable found in the model fit.")
-            elif len(cluster) > 1:
+            elif len(self._clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance estimator."
                 )
             else:
-                cluster = cluster[0]
+                cluster = self._clustervar[0]
 
         # check that cluster is in data
         if cluster not in self._data.columns:
@@ -1450,12 +1605,18 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self) -> pd.DataFrame:
+    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
         """
         Tidy model outputs.
 
         Return a tidy pd.DataFrame with the point estimates, standard errors,
         t-statistics, and p-values.
+
+        Parameters
+        ----------
+        alpha: Optional[float]
+            The significance level for the confidence intervals. If None,
+            computes a 95% confidence interval (`alpha = 0.05`).
 
         Returns
         -------
@@ -1463,6 +1624,13 @@ class Feols:
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
+        if alpha is None:
+            ub, lb = 0.975, 0.025
+            self.get_inference()
+        else:
+            ub, lb = 1 - alpha / 2, alpha / 2
+            self.get_inference(alpha=1 - alpha)
+
         _coefnames = self._coefnames
         _se = self._se
         _tstat = self._tstat
@@ -1477,8 +1645,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                "2.5%": _conf_int[0],
-                "97.5%": _conf_int[1],
+                f"{lb*100:.1f}%": _conf_int[0],
+                f"{ub*100:.1f}%": _conf_int[1],
             }
         )
 
@@ -2066,87 +2234,6 @@ def _find_collinear_variables(
             R[j, i] = value / R_jj
 
     return id_excl, n_excl, False
-
-
-# CODE from Styfen Schaer (@styfenschaer)
-@nb.njit(parallel=False)
-def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Sorts the input array using the bucket sort algorithm.
-
-    Parameters
-    ----------
-    arr : array_like
-        An array_like object that needs to be sorted.
-
-    Returns
-    -------
-    array_like
-        A sorted copy of the input array.
-
-    Raises
-    ------
-    ValueError
-        If the input is not an array_like object.
-
-    Notes
-    -----
-    The bucket sort algorithm works by distributing the elements of an array
-    into a number of buckets. Each bucket is then sorted individually, either
-    using a different sorting algorithm, or by recursively applying the bucket
-    sorting algorithm.
-    """
-    counts = np.zeros(arr.max() + 1, dtype=np.uint32)
-    for i in range(arr.size):
-        counts[arr[i]] += 1
-
-    locs = np.empty(counts.size + 1, dtype=np.uint32)
-    locs[0] = 0
-    pos = np.empty(counts.size, dtype=np.uint32)
-    for i in range(counts.size):
-        locs[i + 1] = locs[i] + counts[i]
-        pos[i] = locs[i]
-
-    args = np.empty(arr.size, dtype=np.uint32)
-    for i in range(arr.size):
-        e = arr[i]
-        args[pos[e]] = i
-        pos[e] += 1
-
-    return args, locs
-
-
-# CODE from Styfen Schaer (@styfenschaer)
-@nb.njit(parallel=False)
-def _crv1_meat_loop(
-    _Z: np.ndarray,
-    weighted_uhat: np.ndarray,
-    clustid: np.ndarray,
-    cluster_col: np.ndarray,
-) -> np.ndarray:
-    k = _Z.shape[1]
-    dtype = _Z.dtype
-    meat = np.zeros((k, k), dtype=dtype)
-
-    g_indices, g_locs = bucket_argsort(cluster_col)
-
-    score_g = np.empty((k, 1), dtype=dtype)
-    meat_i = np.empty((k, k), dtype=dtype)
-
-    for i in range(clustid.size):
-        g = clustid[i]
-        start = g_locs[g]
-        end = g_locs[g + 1]
-        g_index = g_indices[start:end]
-
-        Zg = _Z[g_index]
-        ug = weighted_uhat[g_index]
-
-        np.dot(Zg.T, ug, out=score_g)
-        np.outer(score_g, score_g, out=meat_i)
-        meat += meat_i
-
-    return meat
 
 
 def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
