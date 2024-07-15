@@ -1466,18 +1466,6 @@ class Feols:
 
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
-        if self._has_fixef:
-            if self._sumFE is None:
-                self.fixef()
-
-            fvals = self._fixef.split("+")
-            df_fe = newdata[fvals].astype(str)
-
-            fixef_dicts = {
-                f"C({fixef})": self._fixef_dict[f"C({fixef})"] for fixef in fvals
-            }
-            fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
-
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             X = Formula(xfml).get_model_matrix(newdata)
@@ -1491,7 +1479,15 @@ class Feols:
             y_hat = np.zeros(newdata.shape[0])
 
         if self._has_fixef:
-            y_hat += np.nansum(fixef_mat, axis=1)
+            if self._sumFE is None:
+                self.fixef()
+            fvals = self._fixef.split("+")
+            df_fe = newdata[fvals].astype(str)
+            fixef_dicts = {
+                f"C({fixef})": self._fixef_dict[f"C({fixef})"] for fixef in fvals
+            }
+            _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
+            y_hat += np.sum(_fixef_mat, axis=1)
 
         return y_hat.flatten()
 
@@ -2320,19 +2316,15 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
     return vcov_type, vcov_type_detail, is_clustered, clustervar
 
 
-
 def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
+    # vectorized dict getter
+    vectorized_map = np.vectorize(lambda x, mapping_dict: mapping_dict.get(x))
     for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
         # Create a mapping array
-        unique_levels = np.unique(df_fe_values[:, i])
-        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
-
-        # Use the mapping to efficiently fill fixef_mat
-        sorter = np.argsort(unique_levels)
-        indices = sorter[
-            np.searchsorted(unique_levels, df_fe_values[:, i], sorter=sorter)
-        ]
-        fixef_mat[:, i] = mapping[indices]
-
+        fe_levels = df_fe_values[:, i]
+        # mapping dict
+        mapping = {lev: subdict.get(lev, np.nan) for lev in np.unique(fe_levels)}
+        # assign from vectorized map call
+        fixef_mat[:, i] = vectorized_map(fe_levels, mapping).astype(float)
     return fixef_mat
