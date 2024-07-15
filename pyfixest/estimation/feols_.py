@@ -1437,7 +1437,7 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:  # type: ignore
+    def predict2(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1456,6 +1456,46 @@ class Feols:
         y_hat : np.ndarray
             A flat np.array with predicted values of the regression model.
         """
+        if self._is_iv:
+            raise NotImplementedError(
+                "The predict() method is currently not supported for IV models."
+            )
+
+        if newdata is None:
+            return self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
+
+        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+
+        if self._has_fixef:
+            if self._sumFE is None:
+                self.fixef()
+
+            fvals = self._fixef.split("+")
+            df_fe = newdata[fvals].astype(str)
+
+            fixef_dicts = {
+                f"C({fixef})": self._fixef_dict[f"C({fixef})"] for fixef in fvals
+            }
+            fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
+
+        if not self._X_is_empty:
+            xfml = self._fml.split("|")[0].split("~")[1]
+            X = Formula(xfml).get_model_matrix(newdata)
+            X_index = X.index
+            coef_idx = np.isin(self._coefnames, X.columns)
+            X = X[np.array(self._coefnames)[coef_idx]]
+            X = X.to_numpy()
+            y_hat = np.full(newdata.shape[0], np.nan)
+            y_hat[X_index] = X @ self._beta_hat[coef_idx]
+        else:
+            y_hat = np.zeros(newdata.shape[0])
+
+        if self._has_fixef:
+            y_hat += np.nansum(fixef_mat, axis=1)
+
+        return y_hat.flatten()
+
+    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:  # type: ignore
         _fml = self._fml
         _data = self._data
         _u_hat = self._u_hat
@@ -1908,10 +1948,12 @@ class Feols:
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError("""
+            raise ValueError(
+                """
             The cluster variable contains missing values. This is not allowed
             for randomization inference via `ritest()`.
-            """)
+            """
+            )
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
@@ -2027,11 +2069,13 @@ class Feols:
         Inference Statistics.
         """
         if not hasattr(self, "_ritest_statistics"):
-            raise ValueError("""
+            raise ValueError(
+                """
                             The randomization inference statistics have not been stored
                             in the model object. Please set `store_ritest_statistics=True`
                             when calling `ritest()`
-                            """)
+                            """
+            )
 
         ri_stats = self._ritest_statistics
         sample_stat = self._ritest_sample_stat
@@ -2346,3 +2390,21 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
+
+
+
+def _apply_fixef_numpy(df_fe_values, fixef_dicts):
+    fixef_mat = np.zeros_like(df_fe_values, dtype=float)
+    for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
+        # Create a mapping array
+        unique_levels = np.unique(df_fe_values[:, i])
+        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
+
+        # Use the mapping to efficiently fill fixef_mat
+        sorter = np.argsort(unique_levels)
+        indices = sorter[
+            np.searchsorted(unique_levels, df_fe_values[:, i], sorter=sorter)
+        ]
+        fixef_mat[:, i] = mapping[indices]
+
+    return fixef_mat
