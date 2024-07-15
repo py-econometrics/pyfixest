@@ -209,7 +209,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-        from pyfixest.estimation._feols import feols
+        from pyfixest.estimation.estimation import feols
 
         #  Start First Stage
         _X = self._X
@@ -271,18 +271,20 @@ class Feiv(Feols):
         )
 
         # Ensure model1 is of type Feols
+        if isinstance(model1, Feols):
+            # Store the first stage coefficients
+            self._pi_hat = model1._beta_hat
 
-        # Store the first stage coefficients
-        self._pi_hat = model1._beta_hat
+            # Use fitted values from the first stage
+            self._X_hat = model1._Y_hat_link
 
-        # Use fitted values from the first stage
-        self._X_hat = model1._Y_hat_link
+            # Residuals from the first stage
+            self._v_hat = model1._u_hat
 
-        # Residuals from the first stage
-        self._v_hat = model1._u_hat
-
-        # Store 1st stage model for further use
-        self._model_1st_stage = model1
+            # Store 1st stage model for further use
+            self._model_1st_stage = model1
+        else:
+            raise TypeError("The first stage model must be of type Feols")
 
     def IV_Diag(self) -> None:
         """Implement IV weakness test(F-test)."""
