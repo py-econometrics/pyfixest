@@ -1483,9 +1483,16 @@ class Feols:
                 self.fixef()
             fvals = self._fixef.split("+")
             df_fe = newdata[fvals].astype(str)
-            fixef_dicts = {
-                f"C({fixef})": self._fixef_dict[f"C({fixef})"] for fixef in fvals
-            }
+            # populate fixed effect dicts with omitted categories handling
+            fixef_dicts = {}
+            for f in fvals:
+                fdict = self._fixef_dict[f"C({f})"]
+                omitted_cat = set(self._data[f].unique().astype(str)) - set(
+                    fdict.keys()
+                )
+                if omitted_cat:
+                    fdict.update({x: 0 for x in omitted_cat})
+                fixef_dicts[f"C({f})"] = fdict
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
