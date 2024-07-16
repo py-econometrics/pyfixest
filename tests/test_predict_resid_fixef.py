@@ -9,6 +9,7 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.utils.dev_utils import _extract_variable_level
 from pyfixest.utils.utils import get_data
 
 pandas2ri.activate()
@@ -290,3 +291,13 @@ def test_categorical_covariate_predict():
     )
 
     np.testing.assert_allclose(py_predict, r_predict, rtol=1e-08, atol=1e-08)
+
+
+def test_extract_variable_level():
+    """Verify the correct extracation of lists, floats, and integers."""
+    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
+    assert _extract_variable_level(var) == ("C(SHOPPER_PLATFORM)", "['ios', 'android']")
+    var = "C(f3)[T.1.0]"
+    assert _extract_variable_level(var) == ("C(f3)", "1.0")
+    var = "C(f4)[T.1]"
+    assert _extract_variable_level(var) == ("C(f4)", "1")

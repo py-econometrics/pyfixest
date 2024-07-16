@@ -1,6 +1,5 @@
 import functools
 import gc
-import re
 import warnings
 from importlib import import_module
 from typing import Optional, Union
@@ -31,6 +30,7 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _extract_variable_level,
     _polars_to_pandas,
     _select_order_coefs,
 )
@@ -1413,15 +1413,7 @@ class Feols:
 
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
-            matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
-            if matches:
-                variable = matches.group(1)
-                level = matches.group(2)
-            else:
-                raise ValueError(
-                    "Something went wrong with the regex. Please open a PR in the github repo!"
-                )
-
+            variable, level = _extract_variable_level(col)
             # check if res already has a key variable
             if variable not in res:
                 res[variable] = dict()
@@ -1908,10 +1900,12 @@ class Feols:
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError("""
+            raise ValueError(
+                """
             The cluster variable contains missing values. This is not allowed
             for randomization inference via `ritest()`.
-            """)
+            """
+            )
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
@@ -2027,11 +2021,13 @@ class Feols:
         Inference Statistics.
         """
         if not hasattr(self, "_ritest_statistics"):
-            raise ValueError("""
+            raise ValueError(
+                """
                             The randomization inference statistics have not been stored
                             in the model object. Please set `store_ritest_statistics=True`
                             when calling `ritest()`
-                            """)
+                            """
+            )
 
         ri_stats = self._ritest_statistics
         sample_stat = self._ritest_sample_stat
