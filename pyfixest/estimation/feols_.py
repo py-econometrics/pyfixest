@@ -1487,7 +1487,7 @@ class Feols:
             fixef_dicts = {}
             for f in fvals:
                 fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str)) - set(
+                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
                     fdict.keys()
                 )
                 if omitted_cat:
@@ -2325,13 +2325,9 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
 
 def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    # vectorized dict getter
-    vectorized_map = np.vectorize(lambda x, mapping_dict: mapping_dict.get(x))
     for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
-        # Create a mapping array
-        fe_levels = df_fe_values[:, i]
-        # mapping dict
-        mapping = {lev: subdict.get(lev, np.nan) for lev in np.unique(fe_levels)}
-        # assign from vectorized map call
-        fixef_mat[:, i] = vectorized_map(fe_levels, mapping).astype(float)
+        unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
+        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
+        fixef_mat[:, i] = mapping[inverse]
+
     return fixef_mat
