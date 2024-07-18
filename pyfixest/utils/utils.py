@@ -287,6 +287,35 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     return df
 
 
+def get_blw():
+    """DGP for effect heterogeneity in panel data from Baker, Larcker, and Wang (2022)."""
+    n = np.arange(1, 31)
+    id_ = np.arange(1, 1001)
+    blw = pd.DataFrame(
+        [(n_, id__) for n_ in n for id__ in id_], columns=["n", "id"]
+    ).eval(
+        """
+            year = n + 1980 - 1
+            state = 1 + (id - 1) // 25
+            group = 1 + (state - 1) // 10
+            treat_date = 1980 + group * 6
+            time_til = year - treat_date
+            treat = time_til >= 0
+        """
+    )
+    blw["firms"] = np.random.uniform(0, 5, size=len(blw))
+    blw["e"] = np.random.normal(0, 0.5**2, size=len(blw))
+    blw["te"] = np.random.normal(10 - 2 * (blw["group"] - 1), 0.2**2, size=len(blw))
+    blw.eval(
+        """
+        y = firms + n + treat * te * (year - treat_date + 1) + e
+        y2 = firms + n + te * treat + e
+    """,
+        inplace=True,
+    )
+    return blw
+
+
 def simultaneous_crit_val(
     C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
 ) -> float:
