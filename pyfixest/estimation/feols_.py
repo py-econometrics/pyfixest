@@ -1,5 +1,5 @@
 import functools
-import re
+import gc
 import warnings
 from importlib import import_module
 from typing import Optional, Union
@@ -30,6 +30,7 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _extract_variable_level,
     _polars_to_pandas,
     _select_order_coefs,
 )
@@ -795,6 +796,30 @@ class Feols:
         else:
             self._has_fixef = False
 
+    def _clear_attributes(self):
+        attributes = [
+            "_X",
+            "_Y",
+            "_Z",
+            "_data",
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_weights",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "_Y_untransformed",
+        ]
+
+        for attr in attributes:
+            if hasattr(self, attr):
+                delattr(self, attr)
+        gc.collect()
+
     def wald_test(self, R=None, q=None, distribution="F"):
         """
         Conduct Wald test.
@@ -1388,15 +1413,7 @@ class Feols:
         
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
-            matches = re.match(r"(.+?)\[T\.(.+?)\]", col)
-            if matches:
-                variable = matches.group(1)
-                level = matches.group(2)
-            else:
-                raise ValueError(
-                    "Something went wrong with the regex. Please open a PR in the github repo!"
-                )
-
+            variable, level = _extract_variable_level(col)
             # check if res already has a key variable
             if variable not in res:
                 res[variable] = dict()
@@ -1412,7 +1429,7 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:  # type: ignore
+    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1431,74 +1448,45 @@ class Feols:
         y_hat : np.ndarray
             A flat np.array with predicted values of the regression model.
         """
-        _fml = self._fml
-        _data = self._data
-        _u_hat = self._u_hat
-        _beta_hat = self._beta_hat
-        _is_iv = self._is_iv
-
-        _Y_untransformed = self._Y_untransformed.to_numpy().flatten()
-
-        if _is_iv:
+        if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
 
         if newdata is None:
-            y_hat = _Y_untransformed - _u_hat.flatten()
+            return self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
 
+        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+
+        if not self._X_is_empty:
+            xfml = self._fml.split("|")[0].split("~")[1]
+            X = Formula(xfml).get_model_matrix(newdata)
+            X_index = X.index
+            coef_idx = np.isin(self._coefnames, X.columns)
+            X = X[np.array(self._coefnames)[coef_idx]]
+            X = X.to_numpy()
+            y_hat = np.full(newdata.shape[0], np.nan)
+            y_hat[X_index] = X @ self._beta_hat[coef_idx]
         else:
-            newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+            y_hat = np.zeros(newdata.shape[0])
 
-            if self._has_fixef:
-                fml_linear, _ = _fml.split("|")
-
-                if self._sumFE is None:
-                    self.fixef()
-
-                fvals = self._fixef.split("+")
-                df_fe = newdata[fvals].astype(str)
-
-                # populate matrix with fixed effects estimates
-                fixef_mat = np.zeros((newdata.shape[0], len(fvals)))
-                # fixef_mat = np.full((newdata.shape[0], len(fvals)), np.nan)
-
-                for i, fixef in enumerate(df_fe.columns):
-                    new_levels = df_fe[fixef].unique()
-                    old_levels = _data[fixef].unique().astype(str)
-                    subdict = self._fixef_dict[
-                        f"C({fixef})"
-                    ]  # as variables are called C(var) in the fixef_dict
-
-                    for level in new_levels:
-                        # if level estimated: either estimated value (or 0 for reference level)  # noqa: W505
-                        if level in old_levels:
-                            fixef_mat[df_fe[fixef] == level, i] = subdict.get(level, 0)
-                        # if new level not estimated: set to NaN
-                        else:
-                            fixef_mat[df_fe[fixef] == level, i] = np.nan
-
-            else:
-                fml_linear = _fml  # noqa: F841
-                fml_fe = None  # noqa: F841
-
-            if not self._X_is_empty:
-                # deal with linear part
-                xfml = _fml.split("|")[0].split("~")[1]
-                X = Formula(xfml).get_model_matrix(newdata)
-                X_index = X.index
-                coef_idx = np.isin(self._coefnames, X.columns)
-                X = X[np.array(self._coefnames)[coef_idx]]
-                X = X.to_numpy()
-                # fill y_hat with np.nans
-                y_hat = np.full(newdata.shape[0], np.nan)
-                y_hat[X_index] = X @ _beta_hat[coef_idx]
-
-            else:
-                y_hat = np.zeros(newdata.shape[0])
-
-            if self._has_fixef:
-                y_hat += np.sum(fixef_mat, axis=1)
+        if self._has_fixef:
+            if self._sumFE is None:
+                self.fixef()
+            fvals = self._fixef.split("+")
+            df_fe = newdata[fvals].astype(str)
+            # populate fixed effect dicts with omitted categories handling
+            fixef_dicts = {}
+            for f in fvals:
+                fdict = self._fixef_dict[f"C({f})"]
+                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
+                    fdict.keys()
+                )
+                if omitted_cat:
+                    fdict.update({x: 0 for x in omitted_cat})
+                fixef_dicts[f"C({f})"] = fdict
+            _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
+            y_hat += np.sum(_fixef_mat, axis=1)
 
         return y_hat.flatten()
 
@@ -1883,10 +1871,12 @@ class Feols:
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError("""
+            raise ValueError(
+                """
             The cluster variable contains missing values. This is not allowed
             for randomization inference via `ritest()`.
-            """)
+            """
+            )
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
@@ -2002,11 +1992,13 @@ class Feols:
         Inference Statistics.
         """
         if not hasattr(self, "_ritest_statistics"):
-            raise ValueError("""
+            raise ValueError(
+                """
                             The randomization inference statistics have not been stored
                             in the model object. Please set `store_ritest_statistics=True`
                             when calling `ritest()`
-                            """)
+                            """
+            )
 
         ri_stats = self._ritest_statistics
         sample_stat = self._ritest_sample_stat
@@ -2321,3 +2313,13 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
+
+
+def _apply_fixef_numpy(df_fe_values, fixef_dicts):
+    fixef_mat = np.zeros_like(df_fe_values, dtype=float)
+    for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
+        unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
+        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
+        fixef_mat[:, i] = mapping[inverse]
+
+    return fixef_mat
