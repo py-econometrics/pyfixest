@@ -1358,7 +1358,7 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def fixef(self, atol, btol) -> dict[str, dict[str, float]]:
+    def fixef(self, atol : float = 1e-06, btol : float = 1e-06) -> dict[str, dict[str, float]]:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
