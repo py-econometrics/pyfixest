@@ -1429,7 +1429,7 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None, atol: Float = 1e-6, btol: Float = 1e-6) -> np.ndarray:
+    def predict(self, newdata: Optional[DataFrameType] = None, atol: float = 1e-6, btol: float = 1e-6) -> np.ndarray:
         """
         Predict values of the model on new data.
 
