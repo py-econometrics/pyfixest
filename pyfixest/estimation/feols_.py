@@ -352,7 +352,7 @@ class Feols:
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self._scores = self._u_hat[:, None] * _X
+        self._scores = _X * self._u_hat[:, None]
         self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
@@ -430,14 +430,23 @@ class Feols:
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=1,
-                vcov_sign=1,
-                vcov_type="hetero",
-            )
+            # this is what fixest does internally: see fixest:::vcov_hetero_internal:
+            # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+
+            adj1 = _N / (_N - 1)
+            adj2 = (_N - 1) / (_N - _k)
+            adj3 = _N / (_N - _k)
+
+            adj1, adj2, adj3 = (np.array([x]) for x in [adj1, adj2, adj3])
+
+            if _ssc_dict["adj"] and _ssc_dict["cluster_adj"]:
+                self._ssc = adj3
+            elif _ssc_dict["adj"] and not _ssc_dict["cluster_adj"]:
+                self._ssc = adj2
+            elif not _ssc_dict["adj"] and _ssc_dict["cluster_adj"]:
+                self._ssc = adj1
+            elif not _ssc_dict["adj"] and not _ssc_dict["cluster_adj"]:
+                self._ssc = np.array([1.0])
 
             self._vcov = self._ssc * self._vcov_hetero()
 
@@ -579,14 +588,12 @@ class Feols:
         meat = np.zeros((k_instruments, k_instruments))
 
         # deviance uniquely for Poisson
-        if _method == "fepois":
-            weighted_uhat = _weights.flatten() * _u_hat.flatten()
-        else:
-            weighted_uhat = _u_hat
+
+        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
 
         meat = _crv1_meat_loop(
             _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
+            weighted_uhat=weighted_uhat.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )

@@ -21,6 +21,8 @@ website:
         file: pyfixest.md
       - text: "Quickstart"
         file: quickstart.ipynb
+      - text: "Compare fixest & pyfixest"
+        file: compare-fixest-pyfixest.ipynb
       - text: "Difference-in-Differences Estimation"
         file: difference-in-differences.ipynb
       - text: "Replicating 'The Effect' with PyFixest"

@@ -23,8 +23,14 @@ def test_fweights_ols():
         .rename(columns={0: "count"})
     )
 
-    fit1 = pf.feols("Y ~ X1", data=data)
-    fit2 = pf.feols("Y ~ X1", data=data2_w, weights="count", weights_type="fweights")
+    fit1 = pf.feols("Y ~ X1", data=data, ssc=pf.ssc(adj=False, cluster_adj=False))
+    fit2 = pf.feols(
+        "Y ~ X1",
+        data=data2_w,
+        weights="count",
+        weights_type="fweights",
+        ssc=pf.ssc(adj=False, cluster_adj=False),
+    )
     np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
 
     np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)

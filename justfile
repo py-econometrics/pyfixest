@@ -32,7 +32,7 @@ tests:
 	poetry run pytest -n 4 --cov-report=term tests
 
 rerun-tests:
-	poetry run pytest --lf
+	poetry run pytest --lf -n 4
 
 # Build the package
 build: tests
