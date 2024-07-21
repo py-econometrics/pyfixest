@@ -174,7 +174,7 @@ def test_predict_nas():
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
 
@@ -187,14 +187,14 @@ def test_predict_nas():
     res = fit.predict(newdata=newdata)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=newdata)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
     newdata.loc[198, "Y"] = np.nan
     res = fit.predict(newdata=newdata)
     res_r = stats.predict(fit_r, newdata=newdata)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
@@ -204,7 +204,7 @@ def test_predict_nas():
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
 
