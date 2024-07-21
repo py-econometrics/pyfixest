@@ -1358,7 +1358,7 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def fixef(self) -> dict[str, dict[str, float]]:
+    def fixef(self, atol : float = 1e-06, btol : float = 1e-06) -> dict[str, dict[str, float]]:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
@@ -1404,13 +1404,13 @@ class Feols:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
             Y = Y.to_numpy().flatten().astype(np.float64)
             X = X.to_numpy()
-            uhat = csr_matrix(Y - X @ self._beta_hat).transpose()
+            uhat = (Y - X @ self._beta_hat).flatten()
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
 
-        alpha = spsolve(D2.transpose() @ D2, D2.transpose() @ uhat)
-
+        alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
+        
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
             variable, level = _extract_variable_level(col)
@@ -1429,7 +1429,7 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None) -> np.ndarray:
+    def predict(self, newdata: Optional[DataFrameType] = None, atol: float = 1e-6, btol: float = 1e-6) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1442,6 +1442,12 @@ class Feols:
         newdata : Optional[DataFrameType], optional
             A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
             If None (default), the data used for fitting the model is used.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr(). 
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
         Returns
         -------
@@ -1472,7 +1478,7 @@ class Feols:
 
         if self._has_fixef:
             if self._sumFE is None:
-                self.fixef()
+                self.fixef(atol, btol)
             fvals = self._fixef.split("+")
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling

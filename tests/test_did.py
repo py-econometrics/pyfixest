@@ -47,8 +47,8 @@ def test_event_study(data):
     did2s_df = pd.DataFrame(did2s_df).T
 
     if True:
-        np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r))
-        np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
+        np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r), atol = 1e-05, rtol = 1e-05)
+        np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]), atol = 1e-05, rtol = 1e-05)
 
 
 def test_did2s(data):
@@ -78,8 +78,8 @@ def test_did2s(data):
     did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
     did2s_df = pd.DataFrame(did2s_df).T
 
-    np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r))
-    np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]))
+    np.testing.assert_allclose(fit_did2s.coef(), stats.coef(fit_did2s_r), atol = 1e-05, rtol = 1e-05)
+    np.testing.assert_allclose(fit_did2s.se(), float(did2s_df[2]), atol = 1e-05, rtol = 1e-05)
 
     if True:
         # ATT, event study
@@ -105,8 +105,8 @@ def test_did2s(data):
         did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
         did2s_df = pd.DataFrame(did2s_df).T
 
-        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
-        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
+        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol = 1e-05, rtol = 1e-05)
+        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float), atol = 1e-05, rtol = 1e-05)
 
     if True:
         # test event study with covariate in first stage
@@ -131,8 +131,8 @@ def test_did2s(data):
         did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
         did2s_df = pd.DataFrame(did2s_df).T
 
-        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
-        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
+        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol = 1e-05, rtol = 1e-05)
+        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float), atol = 1e-05, rtol = 1e-05)
 
     if True:
         # test event study with covariate in first stage and second stage
@@ -157,8 +157,8 @@ def test_did2s(data):
         did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
         did2s_df = pd.DataFrame(did2s_df).T
 
-        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r))
-        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float))
+        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol = 1e-05, rtol = 1e-05)
+        np.testing.assert_allclose(fit.se(), did2s_df[2].values.astype(float), atol = 1e-05, rtol = 1e-05)
 
     if True:
         # binary non boolean treatment variable, just check that it runs
