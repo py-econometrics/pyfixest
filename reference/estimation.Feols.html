@@ -1108,7 +1108,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.fixef" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.fixef">fixef</h3>
-<p><code>estimation.Feols.fixef()</code></p>
+<p><code>estimation.Feols.fixef(atol=1e-06, btol=1e-06)</code></p>
 <p>Compute the coefficients of (swept out) fixed effects for a regression model.</p>
 <p>This method creates the following attributes: - <code>alphaDF</code> (pd.DataFrame): A DataFrame with the estimated fixed effects. - <code>sumFE</code> (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).</p>
 <section id="returns-4" class="level4">
@@ -1336,7 +1336,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.predict">predict</h3>
-<p><code>estimation.Feols.predict(newdata=None)</code></p>
+<p><code>estimation.Feols.predict(newdata=None, atol=1e-06, btol=1e-06)</code></p>
 <p>Predict values of the model on new data.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
 <section id="parameters-6" class="level4">
@@ -1344,8 +1344,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 5%">
-<col style="width: 14%">
-<col style="width: 73%">
+<col style="width: 13%">
+<col style="width: 75%">
 <col style="width: 5%">
 </colgroup>
 <thead>
@@ -1362,6 +1362,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Optional[DataFrameType]</td>
 <td>A pd.DataFrame or pl.DataFrame with the data to be used for prediction. If None (default), the data used for fitting the model is used.</td>
 <td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>atol</code></td>
+<td>Float</td>
+<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td><code>1e-6</code></td>
+</tr>
+<tr class="odd">
+<td><code>btol</code></td>
+<td>Float</td>
+<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td><code>1e-6</code></td>
 </tr>
 </tbody>
 </table>
