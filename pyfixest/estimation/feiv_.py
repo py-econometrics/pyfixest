@@ -400,8 +400,6 @@ class Feiv(Feols):
             k = (
                 self._model_1st_stage._k
             )  # number of estimated coefficients of 1st stage
-            print(k)
-            print(self._model_1st_stage._k_fe)
 
             # Generate matrix R that tests the following;
             # H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
