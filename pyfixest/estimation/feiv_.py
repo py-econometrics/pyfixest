@@ -298,7 +298,7 @@ class Feiv(Feols):
         in future updates!
         """
         # default
-        iv_diag_statistics = ["effective_f"]
+        iv_diag_statistics = ["f_stat", "effective_f"]
 
         if statistics:
             iv_diag_statistics += statistics
