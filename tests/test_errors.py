@@ -15,6 +15,7 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
@@ -443,3 +444,54 @@ def test_wald_test_R_q_column_consistency():
         fit.wald_test(
             R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
         )
+
+
+def setup_feiv_instance():
+    # Setup necessary data for Feiv
+    n = 100
+    Y = np.random.rand(n, 1)
+    X = np.random.rand(n, 1)
+    endogvar = np.random.rand(n, 1)
+    Z = np.random.rand(n, 2)
+    weights = np.random.rand(n, 1)
+    coefnames_x = ["x1", "x2"]
+    coefnames_z = ["z1", "z2"]
+    collin_tol = 1e-10
+    weights_name = "weights"
+    weights_type = "aweights"
+    solver = "np.linalg.solve"
+
+    return Feiv(
+        Y=Y,
+        X=X,
+        endogvar=endogvar,
+        Z=Z,
+        weights=weights,
+        coefnames_x=coefnames_x,
+        coefnames_z=coefnames_z,
+        collin_tol=collin_tol,
+        weights_name=weights_name,
+        weights_type=weights_type,
+        solver=solver,
+    )
+
+
+def test_IV_first_stage_invalid_model_type():
+    class NotFeols:
+        # Dummy class for testing invalid model type
+        pass
+
+    invalid_model = NotFeols()
+
+    with pytest.raises(TypeError):
+        feiv_instance = setup_feiv_instance()
+        feiv_instance.first_stage(invalid_model)  # This should raise TypeError
+
+
+def test_IV_Diag_unsupported_statistics():
+    feiv_instance = setup_feiv_instance()
+
+    unsupported_statistics = ["unsupported_stat"]
+
+    with pytest.raises(ValueError):
+        feiv_instance.IV_Diag(statistics=unsupported_statistics)
