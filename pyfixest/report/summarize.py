@@ -37,8 +37,24 @@ class Stargazer(BaseStargazer):
             A list of regression model objects to be included in the table.
         """
         super().__init__(models)
+
+        # temporarily add the _fixef attribute to the models if not present
+        for x in self.models:
+            if not hasattr(x, "_fixef"):
+                x._fixef = None
+
         if any([x._fixef is not None for x in self.models]):
             self.add_fixef()
+
+        # delete the _fixef attribute from the models if
+        # not of type Feols, Feiv, Fepois
+        for x in self.models:
+            if (
+                not isinstance(x, Feols)
+                or not isinstance(x, Fepois)
+                or not isinstance(x, Feiv)
+            ):
+                del x._fixef
 
     def add_fixef(self):
         """
