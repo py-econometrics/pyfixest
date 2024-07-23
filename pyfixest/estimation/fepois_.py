@@ -270,7 +270,11 @@ class Fepois(Feols):
             self._convergence = True
 
     def predict(
-        self, newdata: Optional[DataFrameType] = None, type: str = "link"
+        self,
+        newdata: Optional[DataFrameType] = None,
+        type: str = "link",
+        atol: float = 1e-06,
+        btol: float = 1e-06,
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -292,6 +296,13 @@ class Fepois(Feols):
             i.e., it is the expected predictor E(Y|X).
             If "link", the output is at the level of the explanatory variables,
             i.e., the linear predictor X @ beta.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+
 
         Returns
         -------
@@ -313,7 +324,7 @@ class Fepois(Feols):
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
-        y_hat = super().predict(newdata=newdata)
+        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
             y_hat = np.exp(y_hat)
 

@@ -34,6 +34,7 @@ pre-commit = "^3.6.0"
 doubleml = "^0.7.1"
 marginaleffects = "^0.0.10"
 stargazer = ">=0.0.7"
+statsmodels = "^0.14.2"
 
 [tool.poetry.group.docs.dependencies]
 quartodoc = ">=0.7.2"
