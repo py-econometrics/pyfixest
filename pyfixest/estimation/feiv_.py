@@ -96,6 +96,8 @@ class Feiv(Feols):
         List of instruments name excluding exogenous independent vars.
     __p_iv : scalar
         Number of instruments listed in _non_exo_instruments
+    _iv_loc_first  : scalar
+        First index of insturments in 1st stage regression
     _f_stat_1st_stage : scalar
         F-statistics of First Stage regression for evaluation of IV weakness.
         The computed F-statistics test the following null hypothesis :
@@ -175,6 +177,15 @@ class Feiv(Feols):
         self._endogvar = endogvar
         self._endogvar_1st_stage = endogvar_1st_stage
         self._Z_1st_stage = Z_1st_stage
+
+    def extract_indices_IVs(self):
+        """Extract indices of instrument variales in the first stage regression."""
+        indices = []
+        for instrument in self._non_exo_instruments:
+            if instrument in self._coefnames_z:
+                index = self._coefnames_z.index(instrument)
+                indices.append(index)
+        return indices
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
@@ -296,30 +307,11 @@ class Feiv(Feols):
         This method covers diagnostic tests related with IV regression.
         We currently have IV weak tests only. More test will be updated
         in future updates!
-        """
-        # default
-        iv_diag_statistics = ["f_stat", "effective_f"]
 
-        if statistics:
-            iv_diag_statistics += statistics
-
-        self.IV_weakness_test(iv_diag_statistics)
-
-    def IV_weakness_test(self, iv_diag_statistics: Optional[list[str]] = None) -> None:
-        """Implement IV weakness test (F-test).
-
-        This method covers hetero-robust and clustered-robust F statistics.
-        It produces two statistics:
-
-        - self._f_stat_1st_stage: F statistics of first stage regression
-        - self._eff_F: Effective F statistics (Olea and Pflueger 2013)
-                       of first stage regression
-
-        Notes
-        -----
-        "self._f_stat_1st_stage" is adjusted to the specification of vcov.
-        If vcov_detail = "iid", F statistics is not adjusted,
-        otherwise it is always adjusted.
+        Parameters
+        ----------
+        statistics : list[str], optional
+            List of IV diagnostic statistics
 
         Example
         -------
@@ -389,6 +381,50 @@ class Feiv(Feols):
             # (Unadjusted) F stat : 52.81535560457482
             # Effective F stat : 48.661542741328205
         """
+        # Set default statistics
+        iv_diag_stat = ["f_stat", "effective_f"]
+
+        # Set statistics allowed in the current version
+        iv_diag_stat_allowed = ["f_stat", "effective_f"]
+
+        # Check whether there is unsupported statistics.
+        if statistics:
+            invalid_stats = [
+                stat for stat in statistics if stat not in iv_diag_stat_allowed
+            ]
+
+            if invalid_stats:
+                raise ValueError(
+                    f"Statistics not supported: {invalid_stats}."
+                    f"You should specify from the following list of statistics {iv_diag_stat_allowed}"
+                )
+
+            iv_diag_stat += statistics
+
+        self.IV_weakness_test(iv_diag_stat)
+
+    def IV_weakness_test(self, iv_diag_statistics: Optional[list[str]] = None) -> None:
+        """Implement IV weakness test (F-test).
+
+        This method covers hetero-robust and clustered-robust F statistics.
+        It produces two statistics:
+
+        - self._f_stat_1st_stage: F statistics of first stage regression
+        - self._eff_F: Effective F statistics (Olea and Pflueger 2013)
+                       of first stage regression
+
+        Notes
+        -----
+        "self._f_stat_1st_stage" is adjusted to the specification of vcov.
+        If vcov_detail = "iid", F statistics is not adjusted,
+        otherwise it is always adjusted.
+
+        Parameters
+        ----------
+        iv_diag_statistics : list, optional
+            List of IV weakness statistics
+
+        """
         iv_diag_statistics = iv_diag_statistics or []
 
         if "f_stat" in iv_diag_statistics:
@@ -401,17 +437,20 @@ class Feiv(Feols):
                 self._model_1st_stage._k
             )  # number of estimated coefficients of 1st stage
 
+            iv_loc = self.extract_indices_IVs()  # Extract indices of IVs
+
+            self._iv_loc_first = np.min(iv_loc)
+            iv_loc_first = self._iv_loc_first
+
             # Generate matrix R that tests the following;
             # H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
             #      where z_1, ..., z_{p_iv} are the instrument variables
             # H1 : H0 does not hold
 
+            # Pad identity matrix to implement wald-test
             identity_matrix = np.eye(p_iv)
             R = np.zeros((p_iv, k))
-            if self._has_fixef:
-                R[:, :p_iv] = identity_matrix
-            else:
-                R[:, 1 : p_iv + 1] = identity_matrix
+            R[:, iv_loc_first : p_iv + iv_loc_first] = identity_matrix
 
             self._model_1st_stage.wald_test(R=R)
             self._f_stat_1st_stage = self._model_1st_stage._f_statistic
@@ -425,7 +464,7 @@ class Feiv(Feols):
         # If vcov is iid, redo first stage regression
         if self._vcov_type_detail == "iid":
             self._vcov_type_detail = "hetero"
-            self.first_stage()
+            self._model_1st_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013
         # 1. Extract First Stage Coefficients and Variance-Covariance Matrix:
@@ -460,7 +499,9 @@ class Feiv(Feols):
 
         # Extract the submatrix
 
-        iv_pos = range(0, self._p_iv) if self._has_fixef else range(1, self._p_iv + 1)
+        iv_pos = range(self._iv_loc_first, self._p_iv + self._iv_loc_first)
+
+        # iv_pos = range(0, self._p_iv) if self._has_fixef else range(1, self._p_iv + 1)
 
         Sigma = vcv[np.ix_(iv_pos, iv_pos)]
 
