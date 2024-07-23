@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 import statsmodels.formula.api as smf
 
 import pyfixest as pf
@@ -98,6 +99,7 @@ def test_summary():
     ]
 
 
+@pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
 def test_stargazer():
     data = pf.get_data()
 
