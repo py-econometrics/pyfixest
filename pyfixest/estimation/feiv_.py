@@ -178,15 +178,6 @@ class Feiv(Feols):
         self._endogvar_1st_stage = endogvar_1st_stage
         self._Z_1st_stage = Z_1st_stage
 
-    def extract_indices_IVs(self):
-        """Extract indices of instrument variales in the first stage regression."""
-        indices = []
-        for instrument in self._non_exo_instruments:
-            if instrument in self._coefnames_z:
-                index = self._coefnames_z.index(instrument)
-                indices.append(index)
-        return indices
-
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         _X = self._X
@@ -437,8 +428,12 @@ class Feiv(Feols):
                 self._model_1st_stage._k
             )  # number of estimated coefficients of 1st stage
 
-            iv_loc = self.extract_indices_IVs()  # Extract indices of IVs
-
+            # Extract all the IV indexes and its first index
+            iv_loc = [
+                self._coefnames_z.index(x)
+                for x in self._non_exo_instruments
+                if x in self._coefnames_z
+            ]
             self._iv_loc_first = np.min(iv_loc)
             iv_loc_first = self._iv_loc_first
 
@@ -500,8 +495,6 @@ class Feiv(Feols):
         # Extract the submatrix
 
         iv_pos = range(self._iv_loc_first, self._p_iv + self._iv_loc_first)
-
-        # iv_pos = range(0, self._p_iv) if self._has_fixef else range(1, self._p_iv + 1)
 
         Sigma = vcv[np.ix_(iv_pos, iv_pos)]
 
