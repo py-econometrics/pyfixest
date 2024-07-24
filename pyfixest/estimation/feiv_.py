@@ -443,9 +443,8 @@ class Feiv(Feols):
             # H1 : H0 does not hold
 
             # Pad identity matrix to implement wald-test
-            identity_matrix = np.eye(p_iv)
             R = np.zeros((p_iv, k))
-            R[:, iv_loc_first : p_iv + iv_loc_first] = identity_matrix
+            R[:, iv_loc_first : p_iv + iv_loc_first] = np.eye(p_iv)
 
             self._model_1st_stage.wald_test(R=R)
             self._f_stat_1st_stage = self._model_1st_stage._f_statistic
