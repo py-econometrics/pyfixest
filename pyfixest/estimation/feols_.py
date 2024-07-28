@@ -2033,7 +2033,8 @@ class Feols:
         Parameters
         ----------
             X : np.ndarray
-                Covariates for new data points
+                Covariates for new data points. Users expected to ensure conformability
+                with existing data.
             y : np.ndarray
                 Outcome values for new data points
             inplace : bool, optional
