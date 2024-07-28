@@ -1358,7 +1358,9 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def fixef(self, atol : float = 1e-06, btol : float = 1e-06) -> dict[str, dict[str, float]]:
+    def fixef(
+        self, atol: float = 1e-06, btol: float = 1e-06
+    ) -> dict[str, dict[str, float]]:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
@@ -1410,7 +1412,7 @@ class Feols:
         cols = D2.model_spec.column_names
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
-        
+
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
             variable, level = _extract_variable_level(col)
@@ -1429,7 +1431,12 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None, atol: float = 1e-6, btol: float = 1e-6) -> np.ndarray:
+    def predict(
+        self,
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+    ) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1443,7 +1450,7 @@ class Feols:
             A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
             If None (default), the data used for fitting the model is used.
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr(). 
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
@@ -2012,6 +2019,45 @@ class Feols:
         return _plot_ritest_pvalue(
             ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
         )
+
+    def update(
+        self, X_new: np.ndarray, y_new: np.ndarray, inplace: bool = False
+    ) -> np.ndarray:
+        """
+        Update coefficients for new observations using Sherman-Morrison formula.
+
+        Parameters
+        ----------
+            X : np.ndarray
+                Covariates for new data points
+            y : np.ndarray
+                Outcome values for new data points
+            inplace : bool, optional
+                Whether to update the model object in place. Defaults to False.
+
+        Returns
+        -------
+        np.ndarray
+            Updated coefficients
+        """
+        if self._has_fixef:
+            raise NotImplementedError(
+                "The update() method is currently not supported for models with fixed effects."
+            )
+        if not np.all(X_new[:, 0] == 1):
+            X_new = np.column_stack((np.ones(len(X_new)), X_new))
+        X_n_plus_1 = np.vstack((self._X, X_new))
+        epsi_n_plus_1 = y_new - X_new @ self._beta_hat
+        gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
+        beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
+        if inplace:
+            self._X = X_n_plus_1
+            self._Y = np.append(self._Y, y_new)
+            self._beta_hat = beta_n_plus_1
+            self._u_hat = self._Y - self._X @ self._beta_hat
+            self._N += X_new.shape[0]
+        else:
+            return beta_n_plus_1
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
