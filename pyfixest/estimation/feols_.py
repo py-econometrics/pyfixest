@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from formulaic import Formula
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import lsqr, spsolve
+from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -1434,6 +1433,7 @@ class Feols:
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
+        type: str = "link",
         atol: float = 1e-6,
         btol: float = 1e-6,
     ) -> np.ndarray:
@@ -1449,6 +1449,10 @@ class Feols:
         newdata : Optional[DataFrameType], optional
             A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
             If None (default), the data used for fitting the model is used.
+        type : str, optional
+            The type of prediction to be computed.
+            Can be either "response" (default) or "link". For linear models, both are
+            identical.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
