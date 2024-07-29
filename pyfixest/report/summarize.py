@@ -3,8 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from stargazer.stargazer import LineLocation
-from stargazer.stargazer import Stargazer as BaseStargazer
+from IPython.display import HTML, display
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
@@ -14,51 +13,9 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 
-class Stargazer(BaseStargazer):
-    """
-    A wrapper around the Stargazer class from the stargazer package.
-    Adds fixed effects to the regression table. For details,
-    see the Stargazer documentation:
-    https://github.com/StatsReporting/stargazer.
-
-    Parameters
-    ----------
-    models : list
-        A list of regression model objects to be included in the table.
-    """
-
-    def __init__(self, models):
-        """
-        Initialize the Stargazer object with a list of models.
-
-        Parameters
-        ----------
-        models : list
-            A list of regression model objects to be included in the table.
-        """
-        super().__init__(models)
-        if any([x._fixef is not None for x in self.models]):
-            self.add_fixef()
-
-    def add_fixef(self):
-        """
-        Add information on fixed effects to the regression table.
-
-        This method deparses the fixed effects contained in
-        Feols._fixef and attaches it to the Stargazer
-        regression table.
-        """
-        deparsed_fixef_lists = _deparse_fixef_for_stargazer(
-            [x._fixef for x in self.models]
-        )
-
-        for _, key in enumerate(deparsed_fixef_lists):
-            self.add_line(key, deparsed_fixef_lists[key], LineLocation.FOOTER_TOP)
-
-
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-    type: str = "md",
+    type: str = "df",
     signif_code: list = [0.001, 0.01, 0.05],
     coef_fmt: str = "b (se)",
     custom_stats: Optional[dict] = None,
@@ -299,19 +256,28 @@ def etable(
     res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
     res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
 
-    if type == "tex":
-        return res_all.to_latex()
-    elif type == "md":
-        res_all = _tabulate_etable(res_all, len(models), n_fixef)
-        print(res_all)
-        if signif_code:
-            print(
-                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-            )
-        print(f"Format of coefficient cell:\n{coef_fmt_title}")
+    caption = (
+        f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
+        + f"Format of coefficient cell:\n{coef_fmt_title}"
+    )
+
+    if type == "md":
+        res_all = _tabulate_etable_md(res_all, len(models), n_fixef)
+        display(HTML(res_all))
+        # if signif_code:
+        #    print(
+        #        f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+        #    )
+        #    print(f"Format of coefficient cell:\n{coef_fmt_title}")
         return None
+    elif type in ["df", "tex"]:
+        res_all = _tabulate_etable_df(res_all, n_fixef, caption)
+        if type == "df":
+            return res_all
+        else:
+            return res_all.to_latex()
     else:
-        return res_all
+        raise ValueError("type must be either 'df', 'md' or 'tex'")
 
 
 def summary(
@@ -447,7 +413,57 @@ def _post_processing_input_checks(
     return models
 
 
-def _tabulate_etable(df, n_models, n_fixef):
+def _tabulate_etable_df(df, n_fixef, caption):
+    k, _ = df.shape
+    n_coef = k - 3 - 2 - n_fixef
+
+    line1 = 2 + n_coef
+    line2 = line1 + n_fixef
+    line3 = k
+
+    styler = (
+        df.style.set_properties(**{"text-align": "center"})
+        .set_table_styles(
+            [
+                # {'selector': 'thead th', 'props': 'border-bottom: 2px solid black; text-align: center;'},  # Header row
+                {
+                    "selector": "tbody tr:nth-child(0) td",
+                    "props": "background-color: #f0f0f0; text-align: center",
+                },  # First row
+                {
+                    "selector": "tbody tr:nth-child(1) td",
+                    "props": "border-bottom: 2px solid black;text-align: center;",
+                },  # Line below row 1 (index 1)
+                {
+                    "selector": f"tbody tr:nth-child({line1}) td",
+                    "props": "border-bottom: 1px solid black;",
+                },  # Line below fixef_bar row
+                {
+                    "selector": f"tbody tr:nth-child({line2}) td",
+                    "props": "border-bottom: 1px solid black;",
+                },  # Line below fixef_bar row
+                {
+                    "selector": f"tbody tr:nth-child({line3}) td",
+                    "props": "border-bottom: 1px solid black;",
+                },  # Line below fixef_bar row
+                {
+                    "selector": "tbody td",
+                    "props": "background-color: #ffffff;",
+                },  # Background color for all cells
+                {
+                    "selector": "tbody tr td:first-child",
+                    "props": "background-color: #f0f0f0; font-weight: bold;",
+                },  # Set first column to grey and bold
+            ]
+        )
+        .hide(axis="index")
+        .set_caption(caption)
+    )
+
+    return styler
+
+
+def _tabulate_etable_md(df, n_models, n_fixef):
     """
     Format and tabulate a DataFrame.
 
@@ -463,7 +479,11 @@ def _tabulate_etable(df, n_models, n_fixef):
     """
     # Format the DataFrame for tabulate
     table = tabulate(
-        df, headers="keys", showindex=False, colalign=["left"] + n_models * ["right"]
+        df,
+        headers="keys",
+        showindex=False,
+        colalign=["left"] + n_models * ["right"],
+        tablefmt="html",
     )
 
     # Split the table into header and body
@@ -583,53 +603,3 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
-
-
-def _deparse_fixef_for_stargazer(fixef_list: list[str]) -> dict[str, list[str]]:
-    """
-    Deparse Feols._fixef to a dict of lists for easy use with Stargazer
-    to add fixed effects to the regression table.
-
-    Parameters
-    ----------
-    fixef_list : list
-        List of fixed effects from Feols._fixef.
-
-    Returns
-    -------
-    dict
-        Dictionary of lists, where each list contains the fixed
-        effects for a given variable.
-
-    Example
-    -------
-        # basic example
-        fixef_list = ['f1', 'f2', 'f1+f2', 'f1', 'f2', 'f1+f2']
-        deparse_fixef_for_stargazer(fixef_list)
-        # Output
-        {'f1': ['f1', '-', 'f1', 'f1', '-', 'f1'],
-        'f2': ['-', 'f2', 'f2', '-', 'f2', 'f2']
-        }
-    """
-
-    def identify_variables(lst):
-        variables = set()
-        for item in lst:
-            if item:
-                parts = item.split("+")
-                for part in parts:
-                    variables.add(part)
-        return list(variables)
-
-    unique_variables = identify_variables(fixef_list)
-
-    variable_lists: dict[str, list[str]] = {var: [] for var in unique_variables}
-
-    for item in fixef_list:
-        for var in unique_variables:
-            if item and var in item:
-                variable_lists[var].append("x")
-            else:
-                variable_lists[var].append("-")
-
-    return variable_lists
