@@ -144,18 +144,10 @@ class Feiv(Feols):
             solver=solver,
         )
 
-        if self._has_weights:
-            w = np.sqrt(weights)
-            Z_1st_stage = Z
-            endogvar_1st_stage = endogvar
-            Z = Z * w
-            endogvar = endogvar * w
-        else:
-            w = 1
-            Z_1st_stage = Z
-            endogvar_1st_stage = endogvar
-            Z = Z * w
-            endogvar = endogvar * w
+        w = np.sqrt(weights) if self._has_weights else 1.0
+
+        endogvar_1st_stage = endogvar
+        endogvar = endogvar * w
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
@@ -170,13 +162,12 @@ class Feiv(Feols):
         ) = _drop_multicollinear_variables(Z, coefnames_z, self._collin_tol)
 
         self._is_iv = True
-
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._endogvar = endogvar
         self._endogvar_1st_stage = endogvar_1st_stage
-        self._Z_1st_stage = Z_1st_stage
+        self._Z_1st_stage = self._Z
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
