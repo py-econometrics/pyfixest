@@ -204,11 +204,6 @@ class Feiv(Feols):
         """Implement First stage regression."""
         from pyfixest.estimation.estimation import feols
 
-        #  Start First Stage
-        _X = self._X
-        _Z = self._Z
-        _Y = self._Y
-
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -253,7 +248,6 @@ class Feiv(Feols):
             weight_detail = None
 
         # Do first stage regression
-
         model1 = feols(
             fml=formula,
             data=data,
