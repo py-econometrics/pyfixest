@@ -429,13 +429,11 @@ class Feiv(Feols):
             )  # number of estimated coefficients of 1st stage
 
             # Extract all the IV indexes and its first index
-            iv_loc = [
+            self._iv_loc = [
                 self._coefnames_z.index(x)
                 for x in self._non_exo_instruments
                 if x in self._coefnames_z
             ]
-            self._iv_loc_first = np.min(iv_loc)
-            iv_loc_first = self._iv_loc_first
 
             # Generate matrix R that tests the following;
             # H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
@@ -444,7 +442,7 @@ class Feiv(Feols):
 
             # Pad identity matrix to implement wald-test
             R = np.zeros((p_iv, k))
-            R[:, iv_loc_first : p_iv + iv_loc_first] = np.eye(p_iv)
+            R[:, self._iv_loc] = np.eye(p_iv)
 
             self._model_1st_stage.wald_test(R=R)
             self._f_stat_1st_stage = self._model_1st_stage._f_statistic
@@ -492,10 +490,7 @@ class Feiv(Feols):
         # Number of rows/columns in vcv
 
         # Extract the submatrix
-
-        iv_pos = range(self._iv_loc_first, self._p_iv + self._iv_loc_first)
-
-        Sigma = vcv[np.ix_(iv_pos, iv_pos)]
+        Sigma = vcv[np.ix_(self._iv_loc, self._iv_loc)]
 
         # Calculate the effective F-statistic
         self._eff_F = (pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(Sigma @ Q_zz))
