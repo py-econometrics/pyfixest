@@ -3,7 +3,6 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from IPython.display import HTML, display
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
@@ -263,12 +262,12 @@ def etable(
 
     if type == "md":
         res_all = _tabulate_etable_md(res_all, len(models), n_fixef)
-        display(HTML(res_all))
-        # if signif_code:
-        #    print(
-        #        f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-        #    )
-        #    print(f"Format of coefficient cell:\n{coef_fmt_title}")
+        print(res_all)
+        if signif_code:
+            print(
+                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            )
+            print(f"Format of coefficient cell:\n{coef_fmt_title}")
         return None
     elif type in ["df", "tex"]:
         res_all = _tabulate_etable_df(res_all, n_fixef, caption)
@@ -422,17 +421,17 @@ def _tabulate_etable_df(df, n_fixef, caption):
     line3 = k
 
     styler = (
-        df.style.set_properties(**{"text-align": "center"})
+        df.style.set_properties(**{"text-align": "right"})
         .set_table_styles(
             [
                 # {'selector': 'thead th', 'props': 'border-bottom: 2px solid black; text-align: center;'},  # Header row
                 {
                     "selector": "tbody tr:nth-child(0) td",
-                    "props": "background-color: #f0f0f0; text-align: center",
+                    "props": "background-color: #f0f0f0",
                 },  # First row
                 {
                     "selector": "tbody tr:nth-child(1) td",
-                    "props": "border-bottom: 2px solid black;text-align: center;",
+                    "props": "border-bottom: 2px solid black",
                 },  # Line below row 1 (index 1)
                 {
                     "selector": f"tbody tr:nth-child({line1}) td",
@@ -452,7 +451,7 @@ def _tabulate_etable_df(df, n_fixef, caption):
                 },  # Background color for all cells
                 {
                     "selector": "tbody tr td:first-child",
-                    "props": "background-color: #f0f0f0; font-weight: bold;",
+                    "props": "background-color: #f0f0f0; font-weight: bold;text-align: left;",
                 },  # Set first column to grey and bold
             ]
         )
@@ -483,7 +482,6 @@ def _tabulate_etable_md(df, n_models, n_fixef):
         headers="keys",
         showindex=False,
         colalign=["left"] + n_models * ["right"],
-        tablefmt="html",
     )
 
     # Split the table into header and body
