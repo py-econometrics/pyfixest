@@ -270,7 +270,11 @@ class Fepois(Feols):
             self._convergence = True
 
     def predict(
-        self, newdata: Optional[DataFrameType] = None, type: str = "link"
+        self,
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+        type: str = "link",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -285,6 +289,14 @@ class Fepois(Feols):
         newdata : Union[None, pd.DataFrame], optional
             A pd.DataFrame with the new data, to be used for prediction.
             If None (default), uses the data used for fitting the model.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type : str, optional
             The type of prediction to be computed.
             Can be either "response" (default) or "link".

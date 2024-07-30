@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from formulaic import Formula
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import lsqr, spsolve
+from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -1358,7 +1357,9 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def fixef(self, atol : float = 1e-06, btol : float = 1e-06) -> dict[str, dict[str, float]]:
+    def fixef(
+        self, atol: float = 1e-06, btol: float = 1e-06
+    ) -> dict[str, dict[str, float]]:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
@@ -1410,7 +1411,7 @@ class Feols:
         cols = D2.model_spec.column_names
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
-        
+
         res: dict[str, dict[str, float]] = {}
         for i, col in enumerate(cols):
             variable, level = _extract_variable_level(col)
@@ -1429,7 +1430,13 @@ class Feols:
 
         return self._fixef_dict
 
-    def predict(self, newdata: Optional[DataFrameType] = None, atol: float = 1e-6, btol: float = 1e-6) -> np.ndarray:
+    def predict(
+        self,
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+        type: str = "link",
+    ) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1443,11 +1450,17 @@ class Feols:
             A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
             If None (default), the data used for fitting the model is used.
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr(). 
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        link:
+            The type of prediction to be made. Can be either 'link' or 'response'.
+             Defaults to 'link'. 'link' and 'response' lead
+            to identical results for linear models.
 
         Returns
         -------
