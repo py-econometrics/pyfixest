@@ -11,7 +11,6 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
     type: str = "df",
