@@ -1449,6 +1449,10 @@ class Feols:
         newdata : Optional[DataFrameType], optional
             A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
             If None (default), the data used for fitting the model is used.
+        type : str, optional
+            The type of prediction to be computed.
+            Can be either "response" (default) or "link". For linear models, both are
+            identical.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
