@@ -46,6 +46,10 @@ class Feiv(Feols):
     ----------
     _Z : np.ndarray
         Processed instruments after handling multicollinearity.
+    _weights_type_feiv : str
+        Type of the weights variable defined in Feiv class.
+        Either "aweights" for analytic weights or "fweights"
+        for frequency weights.
     _coefnames_z : list
         Names of coefficients for Z after handling multicollinearity.
     _collin_vars_z : list
@@ -96,8 +100,6 @@ class Feiv(Feols):
         List of instruments name excluding exogenous independent vars.
     __p_iv : scalar
         Number of instruments listed in _non_exo_instruments
-    _iv_loc_first  : scalar
-        First index of insturments in 1st stage regression
     _f_stat_1st_stage : scalar
         F-statistics of First Stage regression for evaluation of IV weakness.
         The computed F-statistics test the following null hypothesis :
@@ -118,7 +120,6 @@ class Feiv(Feols):
     """
 
     # Constructor and methods implementation...
-
     def __init__(
         self,
         Y: np.ndarray,
@@ -130,7 +131,7 @@ class Feiv(Feols):
         coefnames_z: list,
         collin_tol: float,
         weights_name: Optional[str],
-        weights_type: Optional[str],
+        weights_type: str,
         solver: str = "np.linalg.solve",
     ) -> None:
         super().__init__(
@@ -143,15 +144,21 @@ class Feiv(Feols):
             weights_type=weights_type,
             solver=solver,
         )
-
-        w = np.sqrt(weights) if self._has_weights else 1.0
-
-        endogvar_1st_stage = endogvar
-        endogvar = endogvar * w
+        self._weights_type_feiv: str
 
         # check if Z is two dimensional array
         if len(Z.shape) != 2:
             raise ValueError("Z must be a two-dimensional array")
+
+        # Store weights type in Feiv class.
+        self._weights_type_feiv = weights_type
+
+        w = np.sqrt(weights) if self._has_weights else 1.0
+
+        # Weight endgvar first. We will weight Z
+        # after handling multicolinearity
+        endogvar_1st_stage = endogvar
+        endogvar = endogvar * w
 
         # handle multicollinearity in Z
         (
@@ -165,9 +172,12 @@ class Feiv(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+
+        # Define variables to be used in the next methods
         self._endogvar = endogvar
         self._endogvar_1st_stage = endogvar_1st_stage
         self._Z_1st_stage = self._Z
+        self._Z = self._Z * w
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
@@ -253,6 +263,7 @@ class Feiv(Feols):
             data=data,
             vcov=vcov_detail,
             weights=weight_detail,
+            weights_type=self._weights_type_feiv,
             collin_tol=1e-10,
         )
 
