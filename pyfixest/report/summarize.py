@@ -11,6 +11,7 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
     type: str = "df",
@@ -74,8 +75,8 @@ def etable(
         A DataFrame with the coefficients and standard errors of the models.
     """  # noqa: D301
     assert (
-        signif_code is None or len(signif_code) == 3
-    ), "signif_code must be a list of length 3 or None"
+        isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
+    ), "signif_code must be a list of length 3"
     if signif_code:
         assert all(
             [0 < i < 1 for i in signif_code]
