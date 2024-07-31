@@ -410,6 +410,9 @@ class FixestMulti:
                     FIT.vcov(vcov=vcov_type, data=_data_clean)
                     FIT.get_inference()
 
+                    # compute first stage for IV
+                    if isinstance(FIT, Feiv):
+                        FIT.first_stage()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()

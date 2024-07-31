@@ -1433,9 +1433,9 @@ class Feols:
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
-        type: str = "link",
         atol: float = 1e-6,
         btol: float = 1e-6,
+        type: str = "link",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1455,10 +1455,16 @@ class Feols:
             identical.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        link:
+            The type of prediction to be made. Can be either 'link' or 'response'.
+             Defaults to 'link'. 'link' and 'response' lead
+            to identical results for linear models.
 
         Returns
         -------
