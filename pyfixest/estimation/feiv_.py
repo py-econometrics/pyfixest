@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Union
 
 import numpy as np
@@ -440,7 +441,9 @@ class Feiv(Feols):
             R = np.zeros((p_iv, k))
             R[:, self._iv_loc] = np.eye(p_iv)
 
-            self._model_1st_stage.wald_test(R=R)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._model_1st_stage.wald_test(R=R)
             self._f_stat_1st_stage = self._model_1st_stage._f_statistic
             self._p_value_1st_stage = self._model_1st_stage._p_value
 
