@@ -782,14 +782,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Fitted model t-statistics.</td>
 </tr>
 <tr class="odd">
+<td><a href="#pyfixest.estimation.Feols.update">update</a></td>
+<td>Update coefficients for new observations using Sherman-Morrison formula.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.vcov">vcov</a></td>
 <td>Compute covariance matrices for an estimated regression model.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.wald_test">wald_test</a></td>
 <td>Conduct Wald test.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.wildboottest">wildboottest</a></td>
 <td>Run a wild cluster bootstrap based on an object of type “Feols”.</td>
 </tr>
@@ -1759,6 +1763,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
+<section id="pyfixest.estimation.Feols.update" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.update">update</h3>
+<p><code>estimation.Feols.update(X_new, y_new, inplace=False)</code></p>
+<p>Update coefficients for new observations using Sherman-Morrison formula.</p>
+<section id="returns-18" class="level4">
+<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>np.ndarray</td>
+<td>Updated coefficients</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="pyfixest.estimation.Feols.vcov" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.vcov">vcov</h3>
 <p><code>estimation.Feols.vcov(vcov, data=None)</code></p>
@@ -1796,8 +1822,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-18" class="level4">
-<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
+<section id="returns-19" class="level4">
+<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 9%">
@@ -1864,8 +1890,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-19" class="level4">
-<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
+<section id="returns-20" class="level4">
+<h4 class="anchored" data-anchor-id="returns-20">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -2002,8 +2028,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-20" class="level4">
-<h4 class="anchored" data-anchor-id="returns-20">Returns</h4>
+<section id="returns-21" class="level4">
+<h4 class="anchored" data-anchor-id="returns-21">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 4%">
