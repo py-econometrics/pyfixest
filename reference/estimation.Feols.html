@@ -1336,7 +1336,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.Feols.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.predict">predict</h3>
-<p><code>estimation.Feols.predict(newdata=None, type='link', atol=1e-06, btol=1e-06)</code></p>
+<p><code>estimation.Feols.predict(newdata=None, atol=1e-06, btol=1e-06, type='link')</code></p>
 <p>Predict values of the model on new data.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
 <section id="parameters-6" class="level4">
@@ -1344,8 +1344,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 5%">
-<col style="width: 13%">
-<col style="width: 75%">
+<col style="width: 12%">
+<col style="width: 76%">
 <col style="width: 5%">
 </colgroup>
 <thead>
@@ -1372,14 +1372,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><code>atol</code></td>
 <td>Float</td>
-<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
 <td><code>1e-6</code></td>
 </tr>
 <tr class="even">
 <td><code>btol</code></td>
 <td>Float</td>
-<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
 <td><code>1e-6</code></td>
+</tr>
+<tr class="odd">
+<td><code>link</code></td>
+<td></td>
+<td>The type of prediction to be made. Can be either ‘link’ or ‘response’. Defaults to ‘link’. ‘link’ and ‘response’ lead to identical results for linear models.</td>
+<td><em>required</em></td>
 </tr>
 </tbody>
 </table>

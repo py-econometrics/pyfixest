@@ -506,7 +506,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="pyfixest.estimation.Fepois.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.predict">predict</h3>
-<p><code>estimation.Fepois.predict(newdata=None, type='link', atol=1e-06, btol=1e-06)</code></p>
+<p><code>estimation.Fepois.predict(newdata=None, atol=1e-06, btol=1e-06, type='link')</code></p>
 <p>Return predicted values from regression model.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
 <section id="parameters" class="level4">
@@ -532,6 +532,18 @@ ul.task-list li input[type="checkbox"] {
 <td>Union[None, pd.DataFrame]</td>
 <td>A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.</td>
 <td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>atol</code></td>
+<td>Float</td>
+<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td><code>1e-6</code></td>
+</tr>
+<tr class="odd">
+<td><code>btol</code></td>
+<td>Float</td>
+<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
+<td><code>1e-6</code></td>
 </tr>
 <tr class="even">
 <td><code>type</code></td>

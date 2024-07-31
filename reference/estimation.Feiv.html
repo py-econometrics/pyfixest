@@ -408,9 +408,9 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 25%">
-<col style="width: 12%">
-<col style="width: 63%">
+<col style="width: 5%">
+<col style="width: 2%">
+<col style="width: 91%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -426,99 +426,139 @@ ul.task-list li input[type="checkbox"] {
 <td>Processed instruments after handling multicollinearity.</td>
 </tr>
 <tr class="even">
+<td>_weights_type_feiv</td>
+<td>str</td>
+<td>Type of the weights variable defined in Feiv class. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
+</tr>
+<tr class="odd">
 <td>_coefnames_z</td>
 <td>list</td>
 <td>Names of coefficients for Z after handling multicollinearity.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_collin_vars_z</td>
 <td>list</td>
 <td>Variables identified as collinear in Z.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_collin_index_z</td>
 <td>list</td>
 <td>Indices of collinear variables in Z.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_is_iv</td>
 <td>bool</td>
 <td>Indicator if instrumental variables are used.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_support_crv3_inference</td>
 <td>bool</td>
 <td>Indicator for supporting CRV3 inference.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_support_iid_inference</td>
 <td>bool</td>
 <td>Indicator for supporting IID inference.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_tZX</td>
 <td>np.ndarray</td>
 <td>Transpose of Z times X.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_tXZ</td>
 <td>np.ndarray</td>
 <td>Transpose of X times Z.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_tZy</td>
 <td>np.ndarray</td>
 <td>Transpose of Z times Y.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_tZZinv</td>
 <td>np.ndarray</td>
 <td>Inverse of transpose of Z times Z.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_beta_hat</td>
 <td>np.ndarray</td>
 <td>Estimated regression coefficients.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_Y_hat_link</td>
 <td>np.ndarray</td>
 <td>Predicted values of the regression model.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_u_hat</td>
 <td>np.ndarray</td>
 <td>Residuals of the regression model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_scores</td>
 <td>np.ndarray</td>
 <td>Scores used in the regression.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_hessian</td>
 <td>np.ndarray</td>
 <td>Hessian matrix used in the regression.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_bread</td>
 <td>np.ndarray</td>
 <td>Bread matrix used in the regression.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_pi_hat</td>
 <td>np.ndarray</td>
 <td>Estimated coefficients from 1st stage regression</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>_X_hat</td>
 <td>np.ndarray</td>
 <td>Predicted values of the 1st stage regression</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>_v_hat</td>
 <td>np.ndarray</td>
 <td>Residuals of the 1st stage regression</td>
+</tr>
+<tr class="even">
+<td>_model_1st_stage</td>
+<td>Any</td>
+<td>feols object of 1st stage regression. It contains various results and diagnostics from the fixed effects OLS regression.</td>
+</tr>
+<tr class="odd">
+<td>_endogvar_1st_stage</td>
+<td>np.ndarray</td>
+<td>Unweihgted Endogenous independent variable vector</td>
+</tr>
+<tr class="even">
+<td>_Z_1st_stage</td>
+<td>np.ndarray</td>
+<td>Unweighted instruments vector to be used for 1st stage</td>
+</tr>
+<tr class="odd">
+<td>_non_exo_instruments</td>
+<td>list</td>
+<td>List of instruments name excluding exogenous independent vars.</td>
+</tr>
+<tr class="even">
+<td>__p_iv</td>
+<td>scalar</td>
+<td>Number of instruments listed in _non_exo_instruments</td>
+</tr>
+<tr class="odd">
+<td>_f_stat_1st_stage</td>
+<td>scalar</td>
+<td>F-statistics of First Stage regression for evaluation of IV weakness. The computed F-statistics test the following null hypothesis : # H0 : β_{z_1} = 0 &amp; … &amp; β_{z_{p_iv}} = 0 where z_1, …, z_{p_iv} # are the instrument variables # H1 : H0 does not hold Note that this F-statistics is adjusted to heteroskedasticity / clusters if users set specification of variance-covariance matrix type</td>
+</tr>
+<tr class="even">
+<td>_eff_F</td>
+<td>scalar</td>
+<td>Effective F-statistics of first stage regression as in Olea and Pflueger 2013</td>
 </tr>
 </tbody>
 </table>
@@ -551,11 +591,179 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#pyfixest.estimation.Feiv.IV_Diag">IV_Diag</a></td>
+<td>Implement IV diagnostic tests.</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.Feiv.IV_weakness_test">IV_weakness_test</a></td>
+<td>Implement IV weakness test (F-test).</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Feiv.eff_F">eff_F</a></td>
+<td>Compute Effective F stat (Olea and Pflueger 2013).</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.Feiv.first_stage">first_stage</a></td>
+<td>Implement First stage regression.</td>
+</tr>
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feiv.get_fit">get_fit</a></td>
 <td>Fit a IV model using a 2SLS estimator.</td>
 </tr>
 </tbody>
 </table>
+<section id="pyfixest.estimation.Feiv.IV_Diag" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.IV_Diag">IV_Diag</h3>
+<p><code>estimation.Feiv.IV_Diag(statistics=None)</code></p>
+<p>Implement IV diagnostic tests.</p>
+<section id="notes" class="level4">
+<h4 class="anchored" data-anchor-id="notes">Notes</h4>
+<p>This method covers diagnostic tests related with IV regression. We currently have IV weak tests only. More test will be updated in future updates!</p>
+</section>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 18%">
+<col style="width: 47%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>statistics</code></td>
+<td>list[str]</td>
+<td>List of IV diagnostic statistics</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="example" class="level4">
+<h4 class="anchored" data-anchor-id="example">Example</h4>
+<p>The following is an example usage of this method:</p>
+<pre><code>import numpy as np
+import pandas as pd
+from pyfixest.estimation.estimation import feols
+
+# Set random seed for reproducibility
+np.random.seed(1)
+
+# Number of observations
+n = 1000
+
+# Simulate the data
+# Instrumental variable
+z = np.random.binomial(1, 0.5, size=n)
+z2 = np.random.binomial(1, 0.5, size=n)
+
+# Endogenous variable
+d = 0.5 * z + 1.5 * z2 + np.random.normal(size=n)
+
+# Control variables
+c1 = np.random.normal(size=n)
+c2 = np.random.normal(size=n)
+
+# Outcome variable
+y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + np.random.normal(size=n)
+
+# Cluster variable
+cluster = np.random.randint(1, 50, size=n)
+weights = np.random.uniform(1, 3, size=n)
+
+# Create a DataFrame
+data = pd.DataFrame({
+    'd': d,
+    'y': y,
+    'z': z,
+    'z2': z2,
+    'c1': c1,
+    'c2': c2,
+    'cluster': cluster,
+    'weights': weights
+})
+
+vcov_detail = "iid"
+
+# Fit OLS model
+fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
+
+# Fit IV model
+fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+         vcov=vcov_detail,
+         weights="weights")
+fit_iv.first_stage()
+F_stat_pf = fit_iv._f_stat_1st_stage
+fit_iv.IV_Diag()
+F_stat_eff_pf = fit_iv._eff_F
+
+print("(Unadjusted) F stat :", F_stat_pf)
+print("Effective F stat :", F_stat_eff_pf)
+
+# The example above generates the following results
+# (Unadjusted) F stat : 52.81535560457482
+# Effective F stat : 48.661542741328205</code></pre>
+</section>
+</section>
+<section id="pyfixest.estimation.Feiv.IV_weakness_test" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.IV_weakness_test">IV_weakness_test</h3>
+<p><code>estimation.Feiv.IV_weakness_test(iv_diag_statistics=None)</code></p>
+<p>Implement IV weakness test (F-test).</p>
+<p>This method covers hetero-robust and clustered-robust F statistics. It produces two statistics:</p>
+<ul>
+<li>self._f_stat_1st_stage: F statistics of first stage regression</li>
+<li>self._eff_F: Effective F statistics (Olea and Pflueger 2013) of first stage regression</li>
+</ul>
+<section id="notes-1" class="level4">
+<h4 class="anchored" data-anchor-id="notes-1">Notes</h4>
+<p>“self._f_stat_1st_stage” is adjusted to the specification of vcov. If vcov_detail = “iid”, F statistics is not adjusted, otherwise it is always adjusted.</p>
+</section>
+<section id="parameters-2" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 10%">
+<col style="width: 43%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>iv_diag_statistics</code></td>
+<td>list</td>
+<td>List of IV weakness statistics</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="pyfixest.estimation.Feiv.eff_F" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.eff_F">eff_F</h3>
+<p><code>estimation.Feiv.eff_F()</code></p>
+<p>Compute Effective F stat (Olea and Pflueger 2013).</p>
+</section>
+<section id="pyfixest.estimation.Feiv.first_stage" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.first_stage">first_stage</h3>
+<p><code>estimation.Feiv.first_stage()</code></p>
+<p>Implement First stage regression.</p>
+</section>
 <section id="pyfixest.estimation.Feiv.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feiv.get_fit">get_fit</h3>
 <p><code>estimation.Feiv.get_fit()</code></p>
