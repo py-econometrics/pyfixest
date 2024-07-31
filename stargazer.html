@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Publication-Ready Output Tables via Stargazer</title>
+<title>Regression Tables via pf.etable() and the Stargazer package</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -179,7 +179,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Publication-Ready Output Tables via <code>Stargazer</code></h1>
+<h1 class="title">Regression Tables via <code>pf.etable()</code> and the <code>Stargazer</code> package</h1>
 </div>
 
 
@@ -196,129 +196,889 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>The <a href="https://github.com/StatsReporting/stargazer">Stargazer</a> Python package support regression output for models from <code>PyFixest</code>. For details on stargazer’s functionality, please take a look at the <a href="https://github.com/StatsReporting/stargazer/blob/master/examples.ipynb">stargazer examples</a>.</p>
-<p>We have opened a PR for <code>pyfixest</code> support to the <a href="https://github.com/StatsReporting/stargazer/pull/105">Stargazer repo</a>. Until it is merged, you can download the dev version from <code>py-econometrics</code> by typing</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install git+https://github.com/py-econometrics/stargazer.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>In a first step, we fit a few regression models via <code>PyFixest's</code> multiple estimation syntax:</p>
-<div id="cell-3" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> stargazer.stargazer <span class="im">import</span> LineLocation</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ csw(X1, X2) | csw0(f1, f2)"</span>, data<span class="op">=</span>pf.get_data())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>We can now produce a html table with the results of the three regressions by simply passing a list of <code>Feols</code>, <code>Fepois</code> or <code>Feiv</code> objects to <code>Stargazer</code>:</p>
-<div id="cell-5" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result_table <span class="op">=</span> pf.Stargazer(fit.to_list())</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="9">
-<table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+<p>To produce regression tables, we have two options: pyfixest’s internal <code>etable()</code> function and the <a href="https://github.com/StatsReporting/stargazer">Stargazer</a> Python package.</p>
+<p>To begin, we load some libraries and fit a set of regression models.</p>
+<div id="cell-3" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> stargazer.stargazer <span class="im">import</span> LineLocation, Stargazer</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1"</span>, data <span class="op">=</span> data)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 | f1 + f2"</span>, data <span class="op">=</span> data)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> data)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>fit5 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 *X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
 
-<tr><td style="text-align:left">Intercept</td><td>0.919<sup>***</sup></td><td>0.889<sup>***</sup></td><td></td><td></td><td></td><td></td></tr>
-<tr><td style="text-align:left"></td><td>(0.112)</td><td>(0.108)</td><td></td><td></td><td></td><td></td></tr>
-<tr><td style="text-align:left">X1</td><td>-1.000<sup>***</sup></td><td>-0.993<sup>***</sup></td><td>-0.949<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
-<tr><td style="text-align:left"></td><td>(0.085)</td><td>(0.082)</td><td>(0.069)</td><td>(0.067)</td><td>(0.065)</td><td>(0.061)</td></tr>
-<tr><td style="text-align:left">X2</td><td></td><td>-0.176<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td></tr>
-<tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
+            <div id="En73Du"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("En73Du").appendChild(div);
+                    };
+                    var e = document.getElementById("En73Du");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+</div>
+<section id="regression-tables-via-pf.etable" class="level2">
+<h2 class="anchored" data-anchor-id="regression-tables-via-pf.etable">Regression Tables via <code>pf.etable()</code></h2>
+<p>We can compare all regression models via the pyfixest-internal <code>pf.etable()</code> function:</p>
+<div id="cell-6" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<style type="text/css">
+#T_9eb6e tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_9eb6e tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_9eb6e tbody tr:nth-child(4) td {
+  border-bottom: 1px solid black;
+}
+#T_9eb6e tbody tr:nth-child(6) td {
+  border-bottom: 1px solid black;
+}
+#T_9eb6e tbody tr:nth-child(9) td {
+  border-bottom: 1px solid black;
+}
+#T_9eb6e tbody td {
+  background-color: #ffffff;
+}
+#T_9eb6e tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_9eb6e_row0_col0, #T_9eb6e_row0_col1, #T_9eb6e_row0_col2, #T_9eb6e_row0_col3, #T_9eb6e_row0_col4, #T_9eb6e_row0_col5, #T_9eb6e_row1_col0, #T_9eb6e_row1_col1, #T_9eb6e_row1_col2, #T_9eb6e_row1_col3, #T_9eb6e_row1_col4, #T_9eb6e_row1_col5, #T_9eb6e_row2_col0, #T_9eb6e_row2_col1, #T_9eb6e_row2_col2, #T_9eb6e_row2_col3, #T_9eb6e_row2_col4, #T_9eb6e_row2_col5, #T_9eb6e_row3_col0, #T_9eb6e_row3_col1, #T_9eb6e_row3_col2, #T_9eb6e_row3_col3, #T_9eb6e_row3_col4, #T_9eb6e_row3_col5, #T_9eb6e_row4_col0, #T_9eb6e_row4_col1, #T_9eb6e_row4_col2, #T_9eb6e_row4_col3, #T_9eb6e_row4_col4, #T_9eb6e_row4_col5, #T_9eb6e_row5_col0, #T_9eb6e_row5_col1, #T_9eb6e_row5_col2, #T_9eb6e_row5_col3, #T_9eb6e_row5_col4, #T_9eb6e_row5_col5, #T_9eb6e_row6_col0, #T_9eb6e_row6_col1, #T_9eb6e_row6_col2, #T_9eb6e_row6_col3, #T_9eb6e_row6_col4, #T_9eb6e_row6_col5, #T_9eb6e_row7_col0, #T_9eb6e_row7_col1, #T_9eb6e_row7_col2, #T_9eb6e_row7_col3, #T_9eb6e_row7_col4, #T_9eb6e_row7_col5, #T_9eb6e_row8_col0, #T_9eb6e_row8_col1, #T_9eb6e_row8_col2, #T_9eb6e_row8_col3, #T_9eb6e_row8_col4, #T_9eb6e_row8_col5 {
+  text-align: right;
+}
+</style>
 
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align: left">f1</td><td>-</td><td>-</td><td>x</td><td>x</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">f2</td><td>-</td><td>-</td><td>-</td><td>-</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
+<div id="T_9eb6e" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_9eb6e-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_9eb6e-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_9eb6e" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_9eb6e_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_9eb6e_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_9eb6e_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_9eb6e_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_9eb6e_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_9eb6e_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_9eb6e_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_9eb6e_row0_col1" class="data row0 col1">Y</td>
+<td id="T_9eb6e_row0_col2" class="data row0 col2">Y</td>
+<td id="T_9eb6e_row0_col3" class="data row0 col3">Y</td>
+<td id="T_9eb6e_row0_col4" class="data row0 col4">Y</td>
+<td id="T_9eb6e_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_9eb6e_row1_col0" class="data row1 col0">X1</td>
+<td id="T_9eb6e_row1_col1" class="data row1 col1">-0.949*** (0.069)</td>
+<td id="T_9eb6e_row1_col2" class="data row1 col2">-0.919*** (0.065)</td>
+<td id="T_9eb6e_row1_col3" class="data row1 col3">-0.950*** (0.067)</td>
+<td id="T_9eb6e_row1_col4" class="data row1 col4">-0.924*** (0.061)</td>
+<td id="T_9eb6e_row1_col5" class="data row1 col5">-0.924*** (0.061)</td>
+</tr>
+<tr class="odd">
+<td id="T_9eb6e_row2_col0" class="data row2 col0">X2</td>
+<td id="T_9eb6e_row2_col1" class="data row2 col1"></td>
+<td id="T_9eb6e_row2_col2" class="data row2 col2"></td>
+<td id="T_9eb6e_row2_col3" class="data row2 col3">-0.174*** (0.018)</td>
+<td id="T_9eb6e_row2_col4" class="data row2 col4">-0.174*** (0.015)</td>
+<td id="T_9eb6e_row2_col5" class="data row2 col5">-0.185*** (0.025)</td>
+</tr>
+<tr class="even">
+<td id="T_9eb6e_row3_col0" class="data row3 col0">X1:X2</td>
+<td id="T_9eb6e_row3_col1" class="data row3 col1"></td>
+<td id="T_9eb6e_row3_col2" class="data row3 col2"></td>
+<td id="T_9eb6e_row3_col3" class="data row3 col3"></td>
+<td id="T_9eb6e_row3_col4" class="data row3 col4"></td>
+<td id="T_9eb6e_row3_col5" class="data row3 col5">0.011 (0.018)</td>
+</tr>
+<tr class="odd">
+<td id="T_9eb6e_row4_col0" class="data row4 col0">f2</td>
+<td id="T_9eb6e_row4_col1" class="data row4 col1">-</td>
+<td id="T_9eb6e_row4_col2" class="data row4 col2">x</td>
+<td id="T_9eb6e_row4_col3" class="data row4 col3">-</td>
+<td id="T_9eb6e_row4_col4" class="data row4 col4">x</td>
+<td id="T_9eb6e_row4_col5" class="data row4 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_9eb6e_row5_col0" class="data row5 col0">f1</td>
+<td id="T_9eb6e_row5_col1" class="data row5 col1">x</td>
+<td id="T_9eb6e_row5_col2" class="data row5 col2">x</td>
+<td id="T_9eb6e_row5_col3" class="data row5 col3">x</td>
+<td id="T_9eb6e_row5_col4" class="data row5 col4">x</td>
+<td id="T_9eb6e_row5_col5" class="data row5 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_9eb6e_row6_col0" class="data row6 col0">R2</td>
+<td id="T_9eb6e_row6_col1" class="data row6 col1">0.437</td>
+<td id="T_9eb6e_row6_col2" class="data row6 col2">0.609</td>
+<td id="T_9eb6e_row6_col3" class="data row6 col3">0.489</td>
+<td id="T_9eb6e_row6_col4" class="data row6 col4">0.659</td>
+<td id="T_9eb6e_row6_col5" class="data row6 col5">0.659</td>
+</tr>
+<tr class="even">
+<td id="T_9eb6e_row7_col0" class="data row7 col0">S.E. type</td>
+<td id="T_9eb6e_row7_col1" class="data row7 col1">by: f1</td>
+<td id="T_9eb6e_row7_col2" class="data row7 col2">by: f1</td>
+<td id="T_9eb6e_row7_col3" class="data row7 col3">by: f1</td>
+<td id="T_9eb6e_row7_col4" class="data row7 col4">by: f1</td>
+<td id="T_9eb6e_row7_col5" class="data row7 col5">by: f1</td>
+</tr>
+<tr class="odd">
+<td id="T_9eb6e_row8_col0" class="data row8 col0">Observations</td>
+<td id="T_9eb6e_row8_col1" class="data row8 col1">997</td>
+<td id="T_9eb6e_row8_col2" class="data row8 col2">997</td>
+<td id="T_9eb6e_row8_col3" class="data row8 col3">997</td>
+<td id="T_9eb6e_row8_col4" class="data row8 col4">997</td>
+<td id="T_9eb6e_row8_col5" class="data row8 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
 </div>
 </div>
-<p>Note that we could have achieved a similar result by using the pyfixest native <code>etable()</code> function.</p>
-<div id="cell-7" class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable(fit.to_list())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><code>etable</code> allows us to do a few things out of the box. For example, we can only keep the variables that we’d like, which keeps all variables that fit the provided regex match.</p>
+<div id="cell-8" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], keep <span class="op">=</span> <span class="st">"X1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<style type="text/css">
+#T_e0b61 tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_e0b61 tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_e0b61 tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_e0b61 tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_e0b61 tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_e0b61 tbody td {
+  background-color: #ffffff;
+}
+#T_e0b61 tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_e0b61_row0_col0, #T_e0b61_row0_col1, #T_e0b61_row0_col2, #T_e0b61_row0_col3, #T_e0b61_row0_col4, #T_e0b61_row0_col5, #T_e0b61_row1_col0, #T_e0b61_row1_col1, #T_e0b61_row1_col2, #T_e0b61_row1_col3, #T_e0b61_row1_col4, #T_e0b61_row1_col5, #T_e0b61_row2_col0, #T_e0b61_row2_col1, #T_e0b61_row2_col2, #T_e0b61_row2_col3, #T_e0b61_row2_col4, #T_e0b61_row2_col5, #T_e0b61_row3_col0, #T_e0b61_row3_col1, #T_e0b61_row3_col2, #T_e0b61_row3_col3, #T_e0b61_row3_col4, #T_e0b61_row3_col5, #T_e0b61_row4_col0, #T_e0b61_row4_col1, #T_e0b61_row4_col2, #T_e0b61_row4_col3, #T_e0b61_row4_col4, #T_e0b61_row4_col5, #T_e0b61_row5_col0, #T_e0b61_row5_col1, #T_e0b61_row5_col2, #T_e0b61_row5_col3, #T_e0b61_row5_col4, #T_e0b61_row5_col5, #T_e0b61_row6_col0, #T_e0b61_row6_col1, #T_e0b61_row6_col2, #T_e0b61_row6_col3, #T_e0b61_row6_col4, #T_e0b61_row6_col5, #T_e0b61_row7_col0, #T_e0b61_row7_col1, #T_e0b61_row7_col2, #T_e0b61_row7_col3, #T_e0b61_row7_col4, #T_e0b61_row7_col5 {
+  text-align: right;
+}
+</style>
+
+<div id="T_e0b61" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_e0b61-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_e0b61-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_e0b61" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_e0b61_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_e0b61_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_e0b61_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_e0b61_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_e0b61_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_e0b61_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_e0b61_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_e0b61_row0_col1" class="data row0 col1">Y</td>
+<td id="T_e0b61_row0_col2" class="data row0 col2">Y</td>
+<td id="T_e0b61_row0_col3" class="data row0 col3">Y</td>
+<td id="T_e0b61_row0_col4" class="data row0 col4">Y</td>
+<td id="T_e0b61_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_e0b61_row1_col0" class="data row1 col0">X1</td>
+<td id="T_e0b61_row1_col1" class="data row1 col1">-0.949*** (0.069)</td>
+<td id="T_e0b61_row1_col2" class="data row1 col2">-0.919*** (0.065)</td>
+<td id="T_e0b61_row1_col3" class="data row1 col3">-0.950*** (0.067)</td>
+<td id="T_e0b61_row1_col4" class="data row1 col4">-0.924*** (0.061)</td>
+<td id="T_e0b61_row1_col5" class="data row1 col5">-0.924*** (0.061)</td>
+</tr>
+<tr class="odd">
+<td id="T_e0b61_row2_col0" class="data row2 col0">X1:X2</td>
+<td id="T_e0b61_row2_col1" class="data row2 col1"></td>
+<td id="T_e0b61_row2_col2" class="data row2 col2"></td>
+<td id="T_e0b61_row2_col3" class="data row2 col3"></td>
+<td id="T_e0b61_row2_col4" class="data row2 col4"></td>
+<td id="T_e0b61_row2_col5" class="data row2 col5">0.011 (0.018)</td>
+</tr>
+<tr class="even">
+<td id="T_e0b61_row3_col0" class="data row3 col0">f2</td>
+<td id="T_e0b61_row3_col1" class="data row3 col1">-</td>
+<td id="T_e0b61_row3_col2" class="data row3 col2">x</td>
+<td id="T_e0b61_row3_col3" class="data row3 col3">-</td>
+<td id="T_e0b61_row3_col4" class="data row3 col4">x</td>
+<td id="T_e0b61_row3_col5" class="data row3 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_e0b61_row4_col0" class="data row4 col0">f1</td>
+<td id="T_e0b61_row4_col1" class="data row4 col1">x</td>
+<td id="T_e0b61_row4_col2" class="data row4 col2">x</td>
+<td id="T_e0b61_row4_col3" class="data row4 col3">x</td>
+<td id="T_e0b61_row4_col4" class="data row4 col4">x</td>
+<td id="T_e0b61_row4_col5" class="data row4 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_e0b61_row5_col0" class="data row5 col0">R2</td>
+<td id="T_e0b61_row5_col1" class="data row5 col1">0.437</td>
+<td id="T_e0b61_row5_col2" class="data row5 col2">0.609</td>
+<td id="T_e0b61_row5_col3" class="data row5 col3">0.489</td>
+<td id="T_e0b61_row5_col4" class="data row5 col4">0.659</td>
+<td id="T_e0b61_row5_col5" class="data row5 col5">0.659</td>
+</tr>
+<tr class="odd">
+<td id="T_e0b61_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_e0b61_row6_col1" class="data row6 col1">by: f1</td>
+<td id="T_e0b61_row6_col2" class="data row6 col2">by: f1</td>
+<td id="T_e0b61_row6_col3" class="data row6 col3">by: f1</td>
+<td id="T_e0b61_row6_col4" class="data row6 col4">by: f1</td>
+<td id="T_e0b61_row6_col5" class="data row6 col5">by: f1</td>
+</tr>
+<tr class="even">
+<td id="T_e0b61_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_e0b61_row7_col1" class="data row7 col1">997</td>
+<td id="T_e0b61_row7_col2" class="data row7 col2">997</td>
+<td id="T_e0b61_row7_col3" class="data row7 col3">997</td>
+<td id="T_e0b61_row7_col4" class="data row7 col4">997</td>
+<td id="T_e0b61_row7_col5" class="data row7 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</div>
+</div>
+<p>We can use the <code>exact_match</code> argument to select a specific set of variables:</p>
+<div id="cell-10" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], keep <span class="op">=</span> [<span class="st">"X1"</span>, <span class="st">"X2"</span>], exact_match <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<style type="text/css">
+#T_1e2dd tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_1e2dd tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_1e2dd tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_1e2dd tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_1e2dd tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_1e2dd tbody td {
+  background-color: #ffffff;
+}
+#T_1e2dd tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_1e2dd_row0_col0, #T_1e2dd_row0_col1, #T_1e2dd_row0_col2, #T_1e2dd_row0_col3, #T_1e2dd_row0_col4, #T_1e2dd_row0_col5, #T_1e2dd_row1_col0, #T_1e2dd_row1_col1, #T_1e2dd_row1_col2, #T_1e2dd_row1_col3, #T_1e2dd_row1_col4, #T_1e2dd_row1_col5, #T_1e2dd_row2_col0, #T_1e2dd_row2_col1, #T_1e2dd_row2_col2, #T_1e2dd_row2_col3, #T_1e2dd_row2_col4, #T_1e2dd_row2_col5, #T_1e2dd_row3_col0, #T_1e2dd_row3_col1, #T_1e2dd_row3_col2, #T_1e2dd_row3_col3, #T_1e2dd_row3_col4, #T_1e2dd_row3_col5, #T_1e2dd_row4_col0, #T_1e2dd_row4_col1, #T_1e2dd_row4_col2, #T_1e2dd_row4_col3, #T_1e2dd_row4_col4, #T_1e2dd_row4_col5, #T_1e2dd_row5_col0, #T_1e2dd_row5_col1, #T_1e2dd_row5_col2, #T_1e2dd_row5_col3, #T_1e2dd_row5_col4, #T_1e2dd_row5_col5, #T_1e2dd_row6_col0, #T_1e2dd_row6_col1, #T_1e2dd_row6_col2, #T_1e2dd_row6_col3, #T_1e2dd_row6_col4, #T_1e2dd_row6_col5, #T_1e2dd_row7_col0, #T_1e2dd_row7_col1, #T_1e2dd_row7_col2, #T_1e2dd_row7_col3, #T_1e2dd_row7_col4, #T_1e2dd_row7_col5 {
+  text-align: right;
+}
+</style>
+
+<div id="T_1e2dd" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_1e2dd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_1e2dd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_1e2dd" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_1e2dd_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_1e2dd_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_1e2dd_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_1e2dd_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_1e2dd_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_1e2dd_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_1e2dd_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_1e2dd_row0_col1" class="data row0 col1">Y</td>
+<td id="T_1e2dd_row0_col2" class="data row0 col2">Y</td>
+<td id="T_1e2dd_row0_col3" class="data row0 col3">Y</td>
+<td id="T_1e2dd_row0_col4" class="data row0 col4">Y</td>
+<td id="T_1e2dd_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_1e2dd_row1_col0" class="data row1 col0">X1</td>
+<td id="T_1e2dd_row1_col1" class="data row1 col1">-0.949*** (0.069)</td>
+<td id="T_1e2dd_row1_col2" class="data row1 col2">-0.919*** (0.065)</td>
+<td id="T_1e2dd_row1_col3" class="data row1 col3">-0.950*** (0.067)</td>
+<td id="T_1e2dd_row1_col4" class="data row1 col4">-0.924*** (0.061)</td>
+<td id="T_1e2dd_row1_col5" class="data row1 col5">-0.924*** (0.061)</td>
+</tr>
+<tr class="odd">
+<td id="T_1e2dd_row2_col0" class="data row2 col0">X2</td>
+<td id="T_1e2dd_row2_col1" class="data row2 col1"></td>
+<td id="T_1e2dd_row2_col2" class="data row2 col2"></td>
+<td id="T_1e2dd_row2_col3" class="data row2 col3">-0.174*** (0.018)</td>
+<td id="T_1e2dd_row2_col4" class="data row2 col4">-0.174*** (0.015)</td>
+<td id="T_1e2dd_row2_col5" class="data row2 col5">-0.185*** (0.025)</td>
+</tr>
+<tr class="even">
+<td id="T_1e2dd_row3_col0" class="data row3 col0">f2</td>
+<td id="T_1e2dd_row3_col1" class="data row3 col1">-</td>
+<td id="T_1e2dd_row3_col2" class="data row3 col2">x</td>
+<td id="T_1e2dd_row3_col3" class="data row3 col3">-</td>
+<td id="T_1e2dd_row3_col4" class="data row3 col4">x</td>
+<td id="T_1e2dd_row3_col5" class="data row3 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_1e2dd_row4_col0" class="data row4 col0">f1</td>
+<td id="T_1e2dd_row4_col1" class="data row4 col1">x</td>
+<td id="T_1e2dd_row4_col2" class="data row4 col2">x</td>
+<td id="T_1e2dd_row4_col3" class="data row4 col3">x</td>
+<td id="T_1e2dd_row4_col4" class="data row4 col4">x</td>
+<td id="T_1e2dd_row4_col5" class="data row4 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_1e2dd_row5_col0" class="data row5 col0">R2</td>
+<td id="T_1e2dd_row5_col1" class="data row5 col1">0.437</td>
+<td id="T_1e2dd_row5_col2" class="data row5 col2">0.609</td>
+<td id="T_1e2dd_row5_col3" class="data row5 col3">0.489</td>
+<td id="T_1e2dd_row5_col4" class="data row5 col4">0.659</td>
+<td id="T_1e2dd_row5_col5" class="data row5 col5">0.659</td>
+</tr>
+<tr class="odd">
+<td id="T_1e2dd_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_1e2dd_row6_col1" class="data row6 col1">by: f1</td>
+<td id="T_1e2dd_row6_col2" class="data row6 col2">by: f1</td>
+<td id="T_1e2dd_row6_col3" class="data row6 col3">by: f1</td>
+<td id="T_1e2dd_row6_col4" class="data row6 col4">by: f1</td>
+<td id="T_1e2dd_row6_col5" class="data row6 col5">by: f1</td>
+</tr>
+<tr class="even">
+<td id="T_1e2dd_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_1e2dd_row7_col1" class="data row7 col1">997</td>
+<td id="T_1e2dd_row7_col2" class="data row7 col2">997</td>
+<td id="T_1e2dd_row7_col3" class="data row7 col3">997</td>
+<td id="T_1e2dd_row7_col4" class="data row7 col4">997</td>
+<td id="T_1e2dd_row7_col5" class="data row7 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</div>
+</div>
+<p>We can also easily <strong>drop</strong> variables via the <code>drop</code> argument:</p>
+<div id="cell-12" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], drop <span class="op">=</span> [<span class="st">"X1"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<style type="text/css">
+#T_e0d98 tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_e0d98 tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_e0d98 tbody tr:nth-child(2) td {
+  border-bottom: 1px solid black;
+}
+#T_e0d98 tbody tr:nth-child(4) td {
+  border-bottom: 1px solid black;
+}
+#T_e0d98 tbody tr:nth-child(7) td {
+  border-bottom: 1px solid black;
+}
+#T_e0d98 tbody td {
+  background-color: #ffffff;
+}
+#T_e0d98 tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_e0d98_row0_col0, #T_e0d98_row0_col1, #T_e0d98_row0_col2, #T_e0d98_row0_col3, #T_e0d98_row0_col4, #T_e0d98_row0_col5, #T_e0d98_row1_col0, #T_e0d98_row1_col1, #T_e0d98_row1_col2, #T_e0d98_row1_col3, #T_e0d98_row1_col4, #T_e0d98_row1_col5, #T_e0d98_row2_col0, #T_e0d98_row2_col1, #T_e0d98_row2_col2, #T_e0d98_row2_col3, #T_e0d98_row2_col4, #T_e0d98_row2_col5, #T_e0d98_row3_col0, #T_e0d98_row3_col1, #T_e0d98_row3_col2, #T_e0d98_row3_col3, #T_e0d98_row3_col4, #T_e0d98_row3_col5, #T_e0d98_row4_col0, #T_e0d98_row4_col1, #T_e0d98_row4_col2, #T_e0d98_row4_col3, #T_e0d98_row4_col4, #T_e0d98_row4_col5, #T_e0d98_row5_col0, #T_e0d98_row5_col1, #T_e0d98_row5_col2, #T_e0d98_row5_col3, #T_e0d98_row5_col4, #T_e0d98_row5_col5, #T_e0d98_row6_col0, #T_e0d98_row6_col1, #T_e0d98_row6_col2, #T_e0d98_row6_col3, #T_e0d98_row6_col4, #T_e0d98_row6_col5 {
+  text-align: right;
+}
+</style>
+
+<div id="T_e0d98" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_e0d98-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_e0d98-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_e0d98" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_e0d98_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_e0d98_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_e0d98_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_e0d98_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_e0d98_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_e0d98_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_e0d98_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_e0d98_row0_col1" class="data row0 col1">Y</td>
+<td id="T_e0d98_row0_col2" class="data row0 col2">Y</td>
+<td id="T_e0d98_row0_col3" class="data row0 col3">Y</td>
+<td id="T_e0d98_row0_col4" class="data row0 col4">Y</td>
+<td id="T_e0d98_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_e0d98_row1_col0" class="data row1 col0">X2</td>
+<td id="T_e0d98_row1_col1" class="data row1 col1"></td>
+<td id="T_e0d98_row1_col2" class="data row1 col2"></td>
+<td id="T_e0d98_row1_col3" class="data row1 col3">-0.174*** (0.018)</td>
+<td id="T_e0d98_row1_col4" class="data row1 col4">-0.174*** (0.015)</td>
+<td id="T_e0d98_row1_col5" class="data row1 col5">-0.185*** (0.025)</td>
+</tr>
+<tr class="odd">
+<td id="T_e0d98_row2_col0" class="data row2 col0">f2</td>
+<td id="T_e0d98_row2_col1" class="data row2 col1">-</td>
+<td id="T_e0d98_row2_col2" class="data row2 col2">x</td>
+<td id="T_e0d98_row2_col3" class="data row2 col3">-</td>
+<td id="T_e0d98_row2_col4" class="data row2 col4">x</td>
+<td id="T_e0d98_row2_col5" class="data row2 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_e0d98_row3_col0" class="data row3 col0">f1</td>
+<td id="T_e0d98_row3_col1" class="data row3 col1">x</td>
+<td id="T_e0d98_row3_col2" class="data row3 col2">x</td>
+<td id="T_e0d98_row3_col3" class="data row3 col3">x</td>
+<td id="T_e0d98_row3_col4" class="data row3 col4">x</td>
+<td id="T_e0d98_row3_col5" class="data row3 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_e0d98_row4_col0" class="data row4 col0">R2</td>
+<td id="T_e0d98_row4_col1" class="data row4 col1">0.437</td>
+<td id="T_e0d98_row4_col2" class="data row4 col2">0.609</td>
+<td id="T_e0d98_row4_col3" class="data row4 col3">0.489</td>
+<td id="T_e0d98_row4_col4" class="data row4 col4">0.659</td>
+<td id="T_e0d98_row4_col5" class="data row4 col5">0.659</td>
+</tr>
+<tr class="even">
+<td id="T_e0d98_row5_col0" class="data row5 col0">S.E. type</td>
+<td id="T_e0d98_row5_col1" class="data row5 col1">by: f1</td>
+<td id="T_e0d98_row5_col2" class="data row5 col2">by: f1</td>
+<td id="T_e0d98_row5_col3" class="data row5 col3">by: f1</td>
+<td id="T_e0d98_row5_col4" class="data row5 col4">by: f1</td>
+<td id="T_e0d98_row5_col5" class="data row5 col5">by: f1</td>
+</tr>
+<tr class="odd">
+<td id="T_e0d98_row6_col0" class="data row6 col0">Observations</td>
+<td id="T_e0d98_row6_col1" class="data row6 col1">997</td>
+<td id="T_e0d98_row6_col2" class="data row6 col2">997</td>
+<td id="T_e0d98_row6_col3" class="data row6 col3">997</td>
+<td id="T_e0d98_row6_col4" class="data row6 col4">997</td>
+<td id="T_e0d98_row6_col5" class="data row6 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</div>
+</div>
+<p>By default, <code>pf.etable()</code> reports <strong>standard errors</strong>. But we can also ask to output p-values or confidence intervals via the <code>coef_fmt</code> function argument.</p>
+<div id="cell-14" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], coef_fmt <span class="op">=</span> <span class="st">"b (se) [p]"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="18">
+<style type="text/css">
+#T_b1b9d tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_b1b9d tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_b1b9d tbody tr:nth-child(4) td {
+  border-bottom: 1px solid black;
+}
+#T_b1b9d tbody tr:nth-child(6) td {
+  border-bottom: 1px solid black;
+}
+#T_b1b9d tbody tr:nth-child(9) td {
+  border-bottom: 1px solid black;
+}
+#T_b1b9d tbody td {
+  background-color: #ffffff;
+}
+#T_b1b9d tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_b1b9d_row0_col0, #T_b1b9d_row0_col1, #T_b1b9d_row0_col2, #T_b1b9d_row0_col3, #T_b1b9d_row0_col4, #T_b1b9d_row0_col5, #T_b1b9d_row1_col0, #T_b1b9d_row1_col1, #T_b1b9d_row1_col2, #T_b1b9d_row1_col3, #T_b1b9d_row1_col4, #T_b1b9d_row1_col5, #T_b1b9d_row2_col0, #T_b1b9d_row2_col1, #T_b1b9d_row2_col2, #T_b1b9d_row2_col3, #T_b1b9d_row2_col4, #T_b1b9d_row2_col5, #T_b1b9d_row3_col0, #T_b1b9d_row3_col1, #T_b1b9d_row3_col2, #T_b1b9d_row3_col3, #T_b1b9d_row3_col4, #T_b1b9d_row3_col5, #T_b1b9d_row4_col0, #T_b1b9d_row4_col1, #T_b1b9d_row4_col2, #T_b1b9d_row4_col3, #T_b1b9d_row4_col4, #T_b1b9d_row4_col5, #T_b1b9d_row5_col0, #T_b1b9d_row5_col1, #T_b1b9d_row5_col2, #T_b1b9d_row5_col3, #T_b1b9d_row5_col4, #T_b1b9d_row5_col5, #T_b1b9d_row6_col0, #T_b1b9d_row6_col1, #T_b1b9d_row6_col2, #T_b1b9d_row6_col3, #T_b1b9d_row6_col4, #T_b1b9d_row6_col5, #T_b1b9d_row7_col0, #T_b1b9d_row7_col1, #T_b1b9d_row7_col2, #T_b1b9d_row7_col3, #T_b1b9d_row7_col4, #T_b1b9d_row7_col5, #T_b1b9d_row8_col0, #T_b1b9d_row8_col1, #T_b1b9d_row8_col2, #T_b1b9d_row8_col3, #T_b1b9d_row8_col4, #T_b1b9d_row8_col5 {
+  text-align: right;
+}
+</style>
+
+<div id="T_b1b9d" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_b1b9d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;5: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error) [p-value]
+</figcaption>
+<div aria-describedby="T_b1b9d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_b1b9d" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_b1b9d_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_b1b9d_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_b1b9d_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_b1b9d_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_b1b9d_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_b1b9d_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_b1b9d_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_b1b9d_row0_col1" class="data row0 col1">Y</td>
+<td id="T_b1b9d_row0_col2" class="data row0 col2">Y</td>
+<td id="T_b1b9d_row0_col3" class="data row0 col3">Y</td>
+<td id="T_b1b9d_row0_col4" class="data row0 col4">Y</td>
+<td id="T_b1b9d_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_b1b9d_row1_col0" class="data row1 col0">X1</td>
+<td id="T_b1b9d_row1_col1" class="data row1 col1">-0.949*** (0.069) [0.000]</td>
+<td id="T_b1b9d_row1_col2" class="data row1 col2">-0.919*** (0.065) [0.000]</td>
+<td id="T_b1b9d_row1_col3" class="data row1 col3">-0.950*** (0.067) [0.000]</td>
+<td id="T_b1b9d_row1_col4" class="data row1 col4">-0.924*** (0.061) [0.000]</td>
+<td id="T_b1b9d_row1_col5" class="data row1 col5">-0.924*** (0.061) [0.000]</td>
+</tr>
+<tr class="odd">
+<td id="T_b1b9d_row2_col0" class="data row2 col0">X2</td>
+<td id="T_b1b9d_row2_col1" class="data row2 col1"></td>
+<td id="T_b1b9d_row2_col2" class="data row2 col2"></td>
+<td id="T_b1b9d_row2_col3" class="data row2 col3">-0.174*** (0.018) [0.000]</td>
+<td id="T_b1b9d_row2_col4" class="data row2 col4">-0.174*** (0.015) [0.000]</td>
+<td id="T_b1b9d_row2_col5" class="data row2 col5">-0.185*** (0.025) [0.000]</td>
+</tr>
+<tr class="even">
+<td id="T_b1b9d_row3_col0" class="data row3 col0">X1:X2</td>
+<td id="T_b1b9d_row3_col1" class="data row3 col1"></td>
+<td id="T_b1b9d_row3_col2" class="data row3 col2"></td>
+<td id="T_b1b9d_row3_col3" class="data row3 col3"></td>
+<td id="T_b1b9d_row3_col4" class="data row3 col4"></td>
+<td id="T_b1b9d_row3_col5" class="data row3 col5">0.011 (0.018) [0.565]</td>
+</tr>
+<tr class="odd">
+<td id="T_b1b9d_row4_col0" class="data row4 col0">f2</td>
+<td id="T_b1b9d_row4_col1" class="data row4 col1">-</td>
+<td id="T_b1b9d_row4_col2" class="data row4 col2">x</td>
+<td id="T_b1b9d_row4_col3" class="data row4 col3">-</td>
+<td id="T_b1b9d_row4_col4" class="data row4 col4">x</td>
+<td id="T_b1b9d_row4_col5" class="data row4 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_b1b9d_row5_col0" class="data row5 col0">f1</td>
+<td id="T_b1b9d_row5_col1" class="data row5 col1">x</td>
+<td id="T_b1b9d_row5_col2" class="data row5 col2">x</td>
+<td id="T_b1b9d_row5_col3" class="data row5 col3">x</td>
+<td id="T_b1b9d_row5_col4" class="data row5 col4">x</td>
+<td id="T_b1b9d_row5_col5" class="data row5 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_b1b9d_row6_col0" class="data row6 col0">R2</td>
+<td id="T_b1b9d_row6_col1" class="data row6 col1">0.437</td>
+<td id="T_b1b9d_row6_col2" class="data row6 col2">0.609</td>
+<td id="T_b1b9d_row6_col3" class="data row6 col3">0.489</td>
+<td id="T_b1b9d_row6_col4" class="data row6 col4">0.659</td>
+<td id="T_b1b9d_row6_col5" class="data row6 col5">0.659</td>
+</tr>
+<tr class="even">
+<td id="T_b1b9d_row7_col0" class="data row7 col0">S.E. type</td>
+<td id="T_b1b9d_row7_col1" class="data row7 col1">by: f1</td>
+<td id="T_b1b9d_row7_col2" class="data row7 col2">by: f1</td>
+<td id="T_b1b9d_row7_col3" class="data row7 col3">by: f1</td>
+<td id="T_b1b9d_row7_col4" class="data row7 col4">by: f1</td>
+<td id="T_b1b9d_row7_col5" class="data row7 col5">by: f1</td>
+</tr>
+<tr class="odd">
+<td id="T_b1b9d_row8_col0" class="data row8 col0">Observations</td>
+<td id="T_b1b9d_row8_col1" class="data row8 col1">997</td>
+<td id="T_b1b9d_row8_col2" class="data row8 col2">997</td>
+<td id="T_b1b9d_row8_col3" class="data row8 col3">997</td>
+<td id="T_b1b9d_row8_col4" class="data row8 col4">997</td>
+<td id="T_b1b9d_row8_col5" class="data row8 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</div>
+</div>
+<p>Additionally, we can also overwrite the defaults for the reported significance levels and control the rounding of results via the <code>signif_code</code> and <code>digits</code> function arguments:</p>
+<div id="cell-16" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits <span class="op">=</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<style type="text/css">
+#T_e6b3d tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_e6b3d tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_e6b3d tbody tr:nth-child(4) td {
+  border-bottom: 1px solid black;
+}
+#T_e6b3d tbody tr:nth-child(6) td {
+  border-bottom: 1px solid black;
+}
+#T_e6b3d tbody tr:nth-child(9) td {
+  border-bottom: 1px solid black;
+}
+#T_e6b3d tbody td {
+  background-color: #ffffff;
+}
+#T_e6b3d tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_e6b3d_row0_col0, #T_e6b3d_row0_col1, #T_e6b3d_row0_col2, #T_e6b3d_row0_col3, #T_e6b3d_row0_col4, #T_e6b3d_row0_col5, #T_e6b3d_row1_col0, #T_e6b3d_row1_col1, #T_e6b3d_row1_col2, #T_e6b3d_row1_col3, #T_e6b3d_row1_col4, #T_e6b3d_row1_col5, #T_e6b3d_row2_col0, #T_e6b3d_row2_col1, #T_e6b3d_row2_col2, #T_e6b3d_row2_col3, #T_e6b3d_row2_col4, #T_e6b3d_row2_col5, #T_e6b3d_row3_col0, #T_e6b3d_row3_col1, #T_e6b3d_row3_col2, #T_e6b3d_row3_col3, #T_e6b3d_row3_col4, #T_e6b3d_row3_col5, #T_e6b3d_row4_col0, #T_e6b3d_row4_col1, #T_e6b3d_row4_col2, #T_e6b3d_row4_col3, #T_e6b3d_row4_col4, #T_e6b3d_row4_col5, #T_e6b3d_row5_col0, #T_e6b3d_row5_col1, #T_e6b3d_row5_col2, #T_e6b3d_row5_col3, #T_e6b3d_row5_col4, #T_e6b3d_row5_col5, #T_e6b3d_row6_col0, #T_e6b3d_row6_col1, #T_e6b3d_row6_col2, #T_e6b3d_row6_col3, #T_e6b3d_row6_col4, #T_e6b3d_row6_col5, #T_e6b3d_row7_col0, #T_e6b3d_row7_col1, #T_e6b3d_row7_col2, #T_e6b3d_row7_col3, #T_e6b3d_row7_col4, #T_e6b3d_row7_col5, #T_e6b3d_row8_col0, #T_e6b3d_row8_col1, #T_e6b3d_row8_col2, #T_e6b3d_row8_col3, #T_e6b3d_row8_col4, #T_e6b3d_row8_col5 {
+  text-align: right;
+}
+</style>
+
+<div id="T_e6b3d" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_e6b3d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;6: Significance levels: * p &lt; 0.1, ** p &lt; 0.05, *** p &lt; 0.01. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_e6b3d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_e6b3d" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_e6b3d_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_e6b3d_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_e6b3d_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_e6b3d_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+<th id="T_e6b3d_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">est4</th>
+<th id="T_e6b3d_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">est5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_e6b3d_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_e6b3d_row0_col1" class="data row0 col1">Y</td>
+<td id="T_e6b3d_row0_col2" class="data row0 col2">Y</td>
+<td id="T_e6b3d_row0_col3" class="data row0 col3">Y</td>
+<td id="T_e6b3d_row0_col4" class="data row0 col4">Y</td>
+<td id="T_e6b3d_row0_col5" class="data row0 col5">Y</td>
+</tr>
+<tr class="even">
+<td id="T_e6b3d_row1_col0" class="data row1 col0">X1</td>
+<td id="T_e6b3d_row1_col1" class="data row1 col1">-0.94944*** (0.06886)</td>
+<td id="T_e6b3d_row1_col2" class="data row1 col2">-0.91925*** (0.06539)</td>
+<td id="T_e6b3d_row1_col3" class="data row1 col3">-0.94953*** (0.06652)</td>
+<td id="T_e6b3d_row1_col4" class="data row1 col4">-0.92405*** (0.06093)</td>
+<td id="T_e6b3d_row1_col5" class="data row1 col5">-0.92417*** (0.06094)</td>
+</tr>
+<tr class="odd">
+<td id="T_e6b3d_row2_col0" class="data row2 col0">X2</td>
+<td id="T_e6b3d_row2_col1" class="data row2 col1"></td>
+<td id="T_e6b3d_row2_col2" class="data row2 col2"></td>
+<td id="T_e6b3d_row2_col3" class="data row2 col3">-0.17423*** (0.01840)</td>
+<td id="T_e6b3d_row2_col4" class="data row2 col4">-0.17411*** (0.01461)</td>
+<td id="T_e6b3d_row2_col5" class="data row2 col5">-0.18550*** (0.02516)</td>
+</tr>
+<tr class="even">
+<td id="T_e6b3d_row3_col0" class="data row3 col0">X1:X2</td>
+<td id="T_e6b3d_row3_col1" class="data row3 col1"></td>
+<td id="T_e6b3d_row3_col2" class="data row3 col2"></td>
+<td id="T_e6b3d_row3_col3" class="data row3 col3"></td>
+<td id="T_e6b3d_row3_col4" class="data row3 col4"></td>
+<td id="T_e6b3d_row3_col5" class="data row3 col5">0.01057 (0.01818)</td>
+</tr>
+<tr class="odd">
+<td id="T_e6b3d_row4_col0" class="data row4 col0">f2</td>
+<td id="T_e6b3d_row4_col1" class="data row4 col1">-</td>
+<td id="T_e6b3d_row4_col2" class="data row4 col2">x</td>
+<td id="T_e6b3d_row4_col3" class="data row4 col3">-</td>
+<td id="T_e6b3d_row4_col4" class="data row4 col4">x</td>
+<td id="T_e6b3d_row4_col5" class="data row4 col5">x</td>
+</tr>
+<tr class="even">
+<td id="T_e6b3d_row5_col0" class="data row5 col0">f1</td>
+<td id="T_e6b3d_row5_col1" class="data row5 col1">x</td>
+<td id="T_e6b3d_row5_col2" class="data row5 col2">x</td>
+<td id="T_e6b3d_row5_col3" class="data row5 col3">x</td>
+<td id="T_e6b3d_row5_col4" class="data row5 col4">x</td>
+<td id="T_e6b3d_row5_col5" class="data row5 col5">x</td>
+</tr>
+<tr class="odd">
+<td id="T_e6b3d_row6_col0" class="data row6 col0">R2</td>
+<td id="T_e6b3d_row6_col1" class="data row6 col1">0.43708</td>
+<td id="T_e6b3d_row6_col2" class="data row6 col2">0.60903</td>
+<td id="T_e6b3d_row6_col3" class="data row6 col3">0.48899</td>
+<td id="T_e6b3d_row6_col4" class="data row6 col4">0.65904</td>
+<td id="T_e6b3d_row6_col5" class="data row6 col5">0.65916</td>
+</tr>
+<tr class="even">
+<td id="T_e6b3d_row7_col0" class="data row7 col0">S.E. type</td>
+<td id="T_e6b3d_row7_col1" class="data row7 col1">by: f1</td>
+<td id="T_e6b3d_row7_col2" class="data row7 col2">by: f1</td>
+<td id="T_e6b3d_row7_col3" class="data row7 col3">by: f1</td>
+<td id="T_e6b3d_row7_col4" class="data row7 col4">by: f1</td>
+<td id="T_e6b3d_row7_col5" class="data row7 col5">by: f1</td>
+</tr>
+<tr class="odd">
+<td id="T_e6b3d_row8_col0" class="data row8 col0">Observations</td>
+<td id="T_e6b3d_row8_col1" class="data row8 col1">997</td>
+<td id="T_e6b3d_row8_col2" class="data row8 col2">997</td>
+<td id="T_e6b3d_row8_col3" class="data row8 col3">997</td>
+<td id="T_e6b3d_row8_col4" class="data row8 col4">997</td>
+<td id="T_e6b3d_row8_col5" class="data row8 col5">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</div>
+</div>
+<p>By default, <code>pf.etable()</code> returns a data frame, but you can also opt to output latex and markdown via the <code>type</code> argument.</p>
+<div id="cell-18" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits <span class="op">=</span> <span class="dv">5</span>, <span class="bu">type</span> <span class="op">=</span> <span class="st">"md"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                           est1               est2               est3               est4               est5               est6
-------------  -----------------  -----------------  -----------------  -----------------  -----------------  -----------------
-depvar                        Y                  Y                  Y                  Y                  Y                  Y
-------------------------------------------------------------------------------------------------------------------------------
-Intercept      0.919*** (0.112)   0.889*** (0.108)
-X1            -1.000*** (0.085)  -0.993*** (0.082)  -0.949*** (0.069)  -0.950*** (0.067)  -0.919*** (0.065)  -0.924*** (0.061)
-X2                               -0.176*** (0.022)                     -0.174*** (0.018)                     -0.174*** (0.015)
-------------------------------------------------------------------------------------------------------------------------------
-f2                            -                  -                  -                  -                  x                  x
-f1                            -                  -                  x                  x                  x                  x
-------------------------------------------------------------------------------------------------------------------------------
-R2                        0.123              0.177              0.437              0.489              0.609              0.659
-S.E. type                   iid                iid             by: f1             by: f1             by: f1             by: f1
-Observations                998                998                997                997                997                997
-------------------------------------------------------------------------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
+<pre><code>                               est1                   est2                   est3                   est4                   est5
+------------  ---------------------  ---------------------  ---------------------  ---------------------  ---------------------
+depvar                            Y                      Y                      Y                      Y                      Y
+-------------------------------------------------------------------------------------------------------------------------------
+X1            -0.94944*** (0.06886)  -0.91925*** (0.06539)  -0.94953*** (0.06652)  -0.92405*** (0.06093)  -0.92417*** (0.06094)
+X2                                                          -0.17423*** (0.01840)  -0.17411*** (0.01461)  -0.18550*** (0.02516)
+X1:X2                                                                                                         0.01057 (0.01818)
+-------------------------------------------------------------------------------------------------------------------------------
+f2                                -                      x                      -                      x                      x
+f1                                x                      x                      x                      x                      x
+-------------------------------------------------------------------------------------------------------------------------------
+R2                          0.43708                0.60903                0.48899                0.65904                0.65916
+S.E. type                    by: f1                 by: f1                 by: f1                 by: f1                 by: f1
+Observations                    997                    997                    997                    997                    997
+-------------------------------------------------------------------------------------------------------------------------------
+Significance levels: * p &lt; 0.1, ** p &lt; 0.05, *** p &lt; 0.01
 Format of coefficient cell:
 Coefficient (Std. Error)</code></pre>
 </div>
 </div>
-<p>Additionally, we can ask <code>Stargazer</code> to output the results in LaTeX format:</p>
-<div id="cell-9" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result_table.render_latex())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>\begin{table}[!htbp] \centering
-\begin{tabular}{@{\extracolsep{5pt}}lcccccc}
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
-&amp; \multicolumn{6}{c}{\textit{Dependent variable: Y}} \
-\cr \cline{2-7}
-\\[-1.8ex] &amp; (1) &amp; (2) &amp; (3) &amp; (4) &amp; (5) &amp; (6) \\
-\hline \\[-1.8ex]
- Intercept &amp; 0.919$^{***}$ &amp; 0.889$^{***}$ &amp; &amp; &amp; &amp; \\
-&amp; (0.112) &amp; (0.108) &amp; &amp; &amp; &amp; \\
- X1 &amp; -1.000$^{***}$ &amp; -0.993$^{***}$ &amp; -0.949$^{***}$ &amp; -0.950$^{***}$ &amp; -0.919$^{***}$ &amp; -0.924$^{***}$ \\
-&amp; (0.085) &amp; (0.082) &amp; (0.069) &amp; (0.067) &amp; (0.065) &amp; (0.061) \\
- X2 &amp; &amp; -0.176$^{***}$ &amp; &amp; -0.174$^{***}$ &amp; &amp; -0.174$^{***}$ \\
-&amp; &amp; (0.022) &amp; &amp; (0.018) &amp; &amp; (0.015) \\
-\hline \\[-1.8ex]
- f1 &amp; - &amp; - &amp; x &amp; x &amp; x &amp; x \\
- f2 &amp; - &amp; - &amp; - &amp; - &amp; x &amp; x \\
- Observations &amp; 998 &amp; 998 &amp; 997 &amp; 997 &amp; 997 &amp; 997 \\
- $R^2$ &amp; 0.123 &amp; 0.177 &amp; 0.437 &amp; 0.489 &amp; 0.609 &amp; 0.659 \\
-\hline
-\hline \\[-1.8ex]
-\textit{Note:} &amp; \multicolumn{6}{r}{$^{*}$p$&lt;$0.1; $^{**}$p$&lt;$0.05; $^{***}$p$&lt;$0.01} \\
-\end{tabular}
-\end{table}</code></pre>
-</div>
-</div>
-<p>And we can add custom statistics!</p>
-<p>For example, assume that we want to correct for multiple testing via the Romano-Wolf correction. We can do this as follows:</p>
-<div id="cell-11" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf(fit.to_list(), param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, reps <span class="op">=</span> <span class="dv">9999</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div id="cell-12" class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="13">
-<pre><code>[0.234, 0.234, 0.234, 0.306, 0.753, 0.753]</code></pre>
-</div>
-</div>
-<div id="cell-13" class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'Fixed Effects'</span>, [x._fixef <span class="cf">for</span> x <span class="kw">in</span> fit.to_list()], LineLocation.FOOTER_TOP)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>result_table.add_line(<span class="st">'X1: Romano-Wolf P-Value'</span>, rwolf_pvalues, LineLocation.FOOTER_TOP)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>result_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="14">
-<table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align:left"></td><td colspan="6"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
+</section>
+<section id="regression-tables-via-stargazer" class="level2">
+<h2 class="anchored" data-anchor-id="regression-tables-via-stargazer">Regression Tables via <code>Stargazer</code></h2>
+<p>We have opened a PR for <code>pyfixest</code> support for the excellent <a href="https://github.com/StatsReporting/stargazer/pull/105">Stargazer</a> project. Until it is merged, you can download the dev version from <code>py-econometrics</code> by typing</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install git+https://github.com/py-econometrics/stargazer.git</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>Stargazer</code> is particularly useful if you need highly customizable regression tables (beyond the scope of <code>pf.etable()</code>), or if you want to compare models from <code>statsmodels</code> or <code>linearmodels</code> with <code>pyfixest</code>.</p>
+<p>After installing <code>stargazer</code>, we can produce a summary table via the <code>Stargazer</code> class:</p>
+<div id="cell-21" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>stargazer_table <span class="op">=</span> Stargazer([fit1, fit2, fit3, fit4, fit5])</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>stargazer_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="23">
+<table style="text-align:center"><tbody><tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align:left"></td><td colspan="5"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td></tr>
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
 
-<tr><td style="text-align:left">Intercept</td><td>0.919<sup>***</sup></td><td>0.889<sup>***</sup></td><td></td><td></td><td></td><td></td></tr>
-<tr><td style="text-align:left"></td><td>(0.112)</td><td>(0.108)</td><td></td><td></td><td></td><td></td></tr>
-<tr><td style="text-align:left">X1</td><td>-1.000<sup>***</sup></td><td>-0.993<sup>***</sup></td><td>-0.949<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
-<tr><td style="text-align:left"></td><td>(0.085)</td><td>(0.082)</td><td>(0.069)</td><td>(0.067)</td><td>(0.065)</td><td>(0.061)</td></tr>
-<tr><td style="text-align:left">X2</td><td></td><td>-0.176<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td><td></td><td>-0.174<sup>***</sup></td></tr>
-<tr><td style="text-align:left"></td><td></td><td>(0.022)</td><td></td><td>(0.018)</td><td></td><td>(0.015)</td></tr>
+<tr><td style="text-align:left">X1</td><td>-0.949<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.924<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td>(0.069)</td><td>(0.065)</td><td>(0.067)</td><td>(0.061)</td><td>(0.061)</td></tr>
+<tr><td style="text-align:left">X1:X2</td><td></td><td></td><td></td><td></td><td>0.011<sup></sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td></td><td></td><td></td><td>(0.018)</td></tr>
+<tr><td style="text-align:left">X2</td><td></td><td></td><td>-0.174<sup>***</sup></td><td>-0.174<sup>***</sup></td><td>-0.185<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td></td><td>(0.018)</td><td>(0.015)</td><td>(0.025)</td></tr>
 
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
-<tr><td style="text-align: left">f1</td><td>-</td><td>-</td><td>x</td><td>x</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">f2</td><td>-</td><td>-</td><td>-</td><td>-</td><td>x</td><td>x</td></tr><tr><td style="text-align: left">Fixed Effects</td><td></td><td></td><td>f1</td><td>f1</td><td>f1+f2</td><td>f1+f2</td></tr><tr><td style="text-align: left">X1: Romano-Wolf P-Value</td><td>0.234</td><td>0.234</td><td>0.234</td><td>0.306</td><td>0.753</td><td>0.753</td></tr><tr><td style="text-align: left">Observations</td><td>998</td><td>998</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.123</td><td>0.177</td><td>0.437</td><td>0.489</td><td>0.609</td><td>0.659</td></tr>
-<tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="6" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align: left">Observations</td><td>997</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.437</td><td>0.609</td><td>0.489</td><td>0.659</td><td>0.659</td></tr>
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="5" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
+</div>
+</div>
+<p>We can easily add custom statisics. For example, assume that we want to correct for multiple testing via the Romano-Wolf correction. We can do this as follows:</p>
+<div id="cell-23" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf([fit1, fit2, fit3, fit4, fit5], param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, reps <span class="op">=</span> <span class="dv">9999</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-24" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(<span class="st">'Fixed Effects'</span>, [x._fixef <span class="cf">for</span> x <span class="kw">in</span> [fit1, fit2, fit3, fit4, fit5]], LineLocation.FOOTER_TOP)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(<span class="st">'X1: Romano-Wolf P-Value'</span>, rwolf_pvalues, LineLocation.FOOTER_TOP)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>stargazer_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="25">
+<table style="text-align:center"><tbody><tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align:left"></td><td colspan="5"><em>Dependent variable: Y</em></td></tr><tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td></tr>
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
+
+<tr><td style="text-align:left">X1</td><td>-0.949<sup>***</sup></td><td>-0.919<sup>***</sup></td><td>-0.950<sup>***</sup></td><td>-0.924<sup>***</sup></td><td>-0.924<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td>(0.069)</td><td>(0.065)</td><td>(0.067)</td><td>(0.061)</td><td>(0.061)</td></tr>
+<tr><td style="text-align:left">X1:X2</td><td></td><td></td><td></td><td></td><td>0.011<sup></sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td></td><td></td><td></td><td>(0.018)</td></tr>
+<tr><td style="text-align:left">X2</td><td></td><td></td><td>-0.174<sup>***</sup></td><td>-0.174<sup>***</sup></td><td>-0.185<sup>***</sup></td></tr>
+<tr><td style="text-align:left"></td><td></td><td></td><td>(0.018)</td><td>(0.015)</td><td>(0.025)</td></tr>
+
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr>
+<tr><td style="text-align: left">Fixed Effects</td><td>f1</td><td>f1+f2</td><td>f1</td><td>f1+f2</td><td>f1+f2</td></tr><tr><td style="text-align: left">X1: Romano-Wolf P-Value</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td style="text-align: left">Observations</td><td>997</td><td>997</td><td>997</td><td>997</td><td>997</td></tr><tr><td style="text-align: left">R<sup>2</sup></td><td>0.437</td><td>0.609</td><td>0.489</td><td>0.659</td><td>0.659</td></tr>
+<tr><td colspan="6" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align: left">Note:</td><td colspan="5" style="text-align: right"><sup>*</sup>p&lt;0.1; <sup>**</sup>p&lt;0.05; <sup>***</sup>p&lt;0.01</td></tr></tbody></table>
 </div>
 </div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

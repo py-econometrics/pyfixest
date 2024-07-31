@@ -314,7 +314,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.etable" class="level1">
 <h1>report.etable</h1>
-<p><code>report.etable(models, type='md', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, **kwargs)</code></p>
+<p><code>report.etable(models, type='df', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, **kwargs)</code></p>
 <p>Create an esttab-like table from a list of models.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -344,7 +344,7 @@ ul.task-list li input[type="checkbox"] {
 <td><code>type</code></td>
 <td>str</td>
 <td>Type of output. Either “df” for pandas DataFrame, “md” for markdown, or “tex” for LaTeX table. Default is “md”.</td>
-<td><code>'md'</code></td>
+<td><code>'df'</code></td>
 </tr>
 <tr class="odd">
 <td><code>signif_code</code></td>
