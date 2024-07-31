@@ -43,7 +43,7 @@ def test_summary():
 
     # Test significance code
     etable([fit1, fit2], signif_code=[0.01, 0.05, 0.1])
-    etable([fit1, fit2], signif_code=None)
+    etable([fit1, fit2], signif_code=[0.02, 0.06, 0.1])
 
     # Test coefficient format
     etable([fit1, fit2], coef_fmt="b (se)\nt [p]")

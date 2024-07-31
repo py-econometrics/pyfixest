@@ -33,8 +33,6 @@ wildboottest = ">=0.2.0"
 pre-commit = "^3.6.0"
 doubleml = "^0.7.1"
 marginaleffects = "^0.0.10"
-stargazer = ">=0.0.7"
-statsmodels = "^0.14.2"
 
 [tool.poetry.group.docs.dependencies]
 quartodoc = ">=0.7.2"
@@ -95,6 +93,7 @@ ignore = [
   "SIM110", # Use all instead of `for` loop
   "TRY003", # Avoid specifying long messages outside the exception class
   "D205",   # 1 blank line required between summary line and description
+  "W505",   # Doc line too long
 ]
 
 [tool.ruff.lint.per-file-ignores]

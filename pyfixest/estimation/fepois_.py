@@ -312,6 +312,7 @@ class Fepois(Feols):
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
 
+
         Returns
         -------
         np.ndarray
