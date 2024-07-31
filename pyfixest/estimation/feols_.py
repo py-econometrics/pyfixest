@@ -2030,6 +2030,46 @@ class Feols:
             ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
         )
 
+    def update(
+        self, X_new: np.ndarray, y_new: np.ndarray, inplace: bool = False
+    ) -> np.ndarray:
+        """
+        Update coefficients for new observations using Sherman-Morrison formula.
+
+        Parameters
+        ----------
+            X : np.ndarray
+                Covariates for new data points. Users expected to ensure conformability
+                with existing data.
+            y : np.ndarray
+                Outcome values for new data points
+            inplace : bool, optional
+                Whether to update the model object in place. Defaults to False.
+
+        Returns
+        -------
+        np.ndarray
+            Updated coefficients
+        """
+        if self._has_fixef:
+            raise NotImplementedError(
+                "The update() method is currently not supported for models with fixed effects."
+            )
+        if not np.all(X_new[:, 0] == 1):
+            X_new = np.column_stack((np.ones(len(X_new)), X_new))
+        X_n_plus_1 = np.vstack((self._X, X_new))
+        epsi_n_plus_1 = y_new - X_new @ self._beta_hat
+        gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
+        beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
+        if inplace:
+            self._X = X_n_plus_1
+            self._Y = np.append(self._Y, y_new)
+            self._beta_hat = beta_n_plus_1
+            self._u_hat = self._Y - self._X @ self._beta_hat
+            self._N += X_new.shape[0]
+        else:
+            return beta_n_plus_1
+
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
     """
