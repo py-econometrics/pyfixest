@@ -1,5 +1,8 @@
 import pandas as pd
+import pytest
+import statsmodels.formula.api as smf
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.summarize import _select_order_coefs, etable, summary
 from pyfixest.utils.utils import get_data
@@ -40,7 +43,7 @@ def test_summary():
 
     # Test significance code
     etable([fit1, fit2], signif_code=[0.01, 0.05, 0.1])
-    etable([fit1, fit2], signif_code=None)
+    etable([fit1, fit2], signif_code=[0.02, 0.06, 0.1])
 
     # Test coefficient format
     etable([fit1, fit2], coef_fmt="b (se)\nt [p]")
@@ -94,3 +97,13 @@ def test_summary():
         "x11",
         "x21",
     ]
+
+
+@pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
+def test_stargazer():
+    data = pf.get_data()
+
+    fit = pf.feols("Y ~ X1", data=data)
+    fit_smf = smf.ols("Y ~ X1", data=data).fit()
+
+    pf.Stargazer([fit, fit_smf])
