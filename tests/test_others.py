@@ -47,3 +47,53 @@ def test_integer_XY():
     fit2 = feols("Y ~ X + C(f)", data=df)
 
     np.testing.assert_allclose(fit1.coef().xs("X"), fit2.coef().xs("X"))
+
+
+def test_coef_update():
+    data = get_data()
+    data_subsample = data.sample(frac=0.5)
+    m = feols("Y ~ X1 + X2", data=data_subsample)
+    new_points_id = np.random.choice(
+        list(set(data.index) - set(data_subsample.index)), 5
+    )
+    X_new, y_new = (
+        np.c_[
+            np.ones(len(new_points_id)), data.loc[new_points_id][["X1", "X2"]].values
+        ],
+        data.loc[new_points_id]["Y"].values,
+    )
+    updated_coefs = m.update(X_new, y_new)
+    full_coefs = (
+        feols(
+            "Y ~ X1 + X2",
+            data=data.loc[data_subsample.index.append(pd.Index(new_points_id))],
+        )
+        .coef()
+        .values
+    )
+
+    np.testing.assert_allclose(updated_coefs, full_coefs)
+
+def test_coef_update_inplace():
+    data = get_data()
+    data_subsample = data.sample(frac=0.3)
+    m = feols("Y ~ X1 + X2", data=data_subsample)
+    new_points_id = np.random.choice(
+        list(set(data.index) - set(data_subsample.index)), 5
+    )
+    X_new, y_new = (
+        np.c_[
+            data.loc[new_points_id][["X1", "X2"]].values # only pass columns; let `update` add the intercept
+        ],
+        data.loc[new_points_id]["Y"].values,
+    )
+    m.update(X_new, y_new, inplace=True)
+    full_coefs = (
+        feols(
+            "Y ~ X1 + X2",
+            data=data.loc[data_subsample.index.append(pd.Index(new_points_id))],
+        )
+        .coef()
+        .values
+    )
+    np.testing.assert_allclose(m.coef().values, full_coefs)
