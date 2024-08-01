@@ -1518,7 +1518,7 @@ class Feols:
         df["yhat"] = y_hat.flatten()
 
         if compute_stdp:
-            vcov = self.vcov()
+            vcov = self.vcov("hetero")
             stdp = np.linalg.multi_dot([X, vcov, np.transpose(X)])
             df["stdp"] = stdp
         
