@@ -1615,7 +1615,7 @@ class Feols:
             self.get_inference()
         else:
             ub, lb = 1 - alpha / 2, alpha / 2
-            self.get_inference(alpha=1 - alpha)
+            self.get_inference(alpha=alpha)
 
         _coefnames = self._coefnames
         _se = self._se
@@ -2067,8 +2067,8 @@ class Feols:
             self._beta_hat = beta_n_plus_1
             self._u_hat = self._Y - self._X @ self._beta_hat
             self._N += X_new.shape[0]
-        else:
-            return beta_n_plus_1
+
+        return beta_n_plus_1
 
 
 def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
