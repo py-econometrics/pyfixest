@@ -1478,12 +1478,14 @@ class Feols:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
-
+        
+        prediction_df = pd.DataFrame()
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
-
-        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
-
+            prediction_df["yhat"] = self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
+            if compute_stdp:
+                prediction_df["stdp"] = self.get_newdata_stdp(self._X)
+            return prediction_df
+        
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             X = Formula(xfml).get_model_matrix(newdata)
@@ -1495,6 +1497,8 @@ class Feols:
             y_hat[X_index] = X @ self._beta_hat[coef_idx]
         else:
             y_hat = np.zeros(newdata.shape[0])
+
+        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
         if self._has_fixef:
             if self._sumFE is None:
@@ -1514,16 +1518,35 @@ class Feols:
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
-        df = pd.DataFrame()
-        df["yhat"] = y_hat.flatten()
-
+        prediction_df["yhat"] = y_hat.flatten()
         if compute_stdp:
-            vcov = self.vcov("hetero")
-            stdp = np.linalg.multi_dot([X, vcov, np.transpose(X)])
-            df["stdp"] = stdp
-        
+            prediction_df["stdp"] = self.get_newdata_stdp(X)
+            
+        return prediction_df
+    
+    def get_newdata_stdp(self, X):
+        # for now only compute prediction error if model has no fixed effects
+        # TODO: implement for fixed effects
+        if not self._has_fixef:
+            if not self._X_is_empty:
+                return list(map(self.get_single_row_stdp, X))
+            else:
+                warnings.warn(
+                    """
+                    Standard error of the prediction cannot be computed if X is empty.
+                    Prediction dataframe stdp column will be None.
+                    """
+                )
+        else:
+            warnings.warn(
+                """
+                Standard error of the prediction is not implemented for fixed effects models.
+                Prediction dataframe stdp column will be None.
+                """
+            )
 
-        return df
+    def get_single_row_stdp(self, row):
+        return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
 
     def get_nobs(self):
         """
