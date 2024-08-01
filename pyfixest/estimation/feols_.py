@@ -1436,6 +1436,7 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
+        compute_stdp: bool = False
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1465,11 +1466,13 @@ class Feols:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
+        compute_stdp: boolean
+            Whether to compute standard error of the predictions
 
         Returns
         -------
-        y_hat : np.ndarray
-            A flat np.array with predicted values of the regression model.
+        pred_results : pd.DataFrame
+            Dataframe with columns "y_hat" and optionally "stdp" (if compute_stdp is True)
         """
         if self._is_iv:
             raise NotImplementedError(
@@ -1511,7 +1514,16 @@ class Feols:
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
-        return y_hat.flatten()
+        df = pd.DataFrame()
+        df["yhat"] = y_hat.flatten()
+
+        if compute_stdp:
+            vcov = self.vcov()
+            stdp = np.linalg.multi_dot([X, vcov, np.transpose(X)])
+            df["stdp"] = stdp
+        
+
+        return df
 
     def get_nobs(self):
         """
