@@ -1486,6 +1486,8 @@ class Feols:
                 prediction_df["stdp"] = self.get_newdata_stdp(self._X)
             return prediction_df
         
+        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+        
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             X = Formula(xfml).get_model_matrix(newdata)
@@ -1497,8 +1499,6 @@ class Feols:
             y_hat[X_index] = X @ self._beta_hat[coef_idx]
         else:
             y_hat = np.zeros(newdata.shape[0])
-
-        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
         if self._has_fixef:
             if self._sumFE is None:
