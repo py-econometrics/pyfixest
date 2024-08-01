@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.5.55">
+<meta name="generator" content="quarto-1.5.56">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -137,7 +137,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./stargazer.html"> 
-<span class="menu-text">Publication-Ready Regression Tables with <code>Stargazer</code></span></a>
+<span class="menu-text">Regression Tables with <code>pf.etable()</code> and <code>Stargazer</code></span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="./marginaleffects.html"> 
@@ -206,7 +206,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>watermark <span class="op">--</span>iversions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="OeMbSv"></div>
+            <div id="rCtGcx"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -217,7 +217,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -230,9 +230,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("OeMbSv").appendChild(div);
+                        document.getElementById("rCtGcx").appendChild(div);
                     };
-                    var e = document.getElementById("OeMbSv");
+                    var e = document.getElementById("rCtGcx");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="Yzaj2r"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("Yzaj2r").appendChild(div);
+                    };
+                    var e = document.getElementById("Yzaj2r");
                     e.appendChild(script);
                 })()
             </script>
@@ -240,7 +274,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>causaldata: 0.1.3
-pyfixest  : 0.19.5
+pyfixest  : 0.22.0
 </code></pre>
 </div>
 </div>
@@ -302,7 +336,7 @@ Observations:  428
 RMSE: 0.697 R2: 0.068 </code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\alexa\AppData\Local\Temp\ipykernel_26864\865424107.py:6: SettingWithCopyWarning: 
+<pre><code>C:\Users\alexa\AppData\Local\Temp\ipykernel_14196\865424107.py:6: SettingWithCopyWarning: 
 A value is trying to be set on a copy of a slice from a DataFrame.
 Try using .loc[row_indexer,col_indexer] = value instead
 
@@ -350,46 +384,114 @@ RMSE: 6.051 R2: 0.065 </code></pre>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"inspection_score ~ NumberofLocations*Weekend + Year"</span>, data<span class="op">=</span>df)</span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>pf.summary([fit1, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>###
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<style type="text/css">
+#T_48d2d tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_48d2d tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_48d2d tbody tr:nth-child(7) td {
+  border-bottom: 1px solid black;
+}
+#T_48d2d tbody tr:nth-child(7) td {
+  border-bottom: 1px solid black;
+}
+#T_48d2d tbody tr:nth-child(10) td {
+  border-bottom: 1px solid black;
+}
+#T_48d2d tbody td {
+  background-color: #ffffff;
+}
+#T_48d2d tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_48d2d_row0_col0, #T_48d2d_row0_col1, #T_48d2d_row0_col2, #T_48d2d_row1_col0, #T_48d2d_row1_col1, #T_48d2d_row1_col2, #T_48d2d_row2_col0, #T_48d2d_row2_col1, #T_48d2d_row2_col2, #T_48d2d_row3_col0, #T_48d2d_row3_col1, #T_48d2d_row3_col2, #T_48d2d_row4_col0, #T_48d2d_row4_col1, #T_48d2d_row4_col2, #T_48d2d_row5_col0, #T_48d2d_row5_col1, #T_48d2d_row5_col2, #T_48d2d_row6_col0, #T_48d2d_row6_col1, #T_48d2d_row6_col2, #T_48d2d_row7_col0, #T_48d2d_row7_col1, #T_48d2d_row7_col2, #T_48d2d_row8_col0, #T_48d2d_row8_col1, #T_48d2d_row8_col2, #T_48d2d_row9_col0, #T_48d2d_row9_col1, #T_48d2d_row9_col2 {
+  text-align: right;
+}
+</style>
 
-Estimation:  OLS
-Dep. var.: inspection_score, Fixed effects: 
-Inference:  iid
-Observations:  27178
-
-| Coefficient              |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |    2.5% |   97.5% |
-|:-------------------------|-----------:|-------------:|----------:|-----------:|--------:|--------:|
-| Intercept                |    225.504 |       12.409 |    18.172 |      0.000 | 201.181 | 249.827 |
-| NumberofLocations        |     -0.075 |        0.019 |    -4.041 |      0.000 |  -0.111 |  -0.039 |
-| I(NumberofLocations ^ 2) |      0.056 |        0.019 |     3.009 |      0.003 |   0.020 |   0.093 |
-| Year                     |     -0.065 |        0.006 |   -10.527 |      0.000 |  -0.077 |  -0.053 |
----
-RMSE: 6.038 R2: 0.069 
-###
-
-Estimation:  OLS
-Dep. var.: inspection_score, Fixed effects: 
-Inference:  iid
-Observations:  27178
-
-| Coefficient               |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |    2.5% |   97.5% |
-|:--------------------------|-----------:|-------------:|----------:|-----------:|--------:|--------:|
-| Intercept                 |    225.126 |       12.415 |    18.134 |      0.000 | 200.793 | 249.460 |
-| NumberofLocations         |     -0.019 |        0.000 |   -43.759 |      0.000 |  -0.020 |  -0.018 |
-| Weekend                   |      1.759 |        0.488 |     3.606 |      0.000 |   0.803 |   2.715 |
-| Year                      |     -0.065 |        0.006 |   -10.494 |      0.000 |  -0.077 |  -0.053 |
-| NumberofLocations:Weekend |     -0.010 |        0.008 |    -1.307 |      0.191 |  -0.025 |   0.005 |
----
-RMSE: 6.038 R2: 0.069 </code></pre>
+<div id="T_48d2d" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_48d2d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_48d2d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_48d2d" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_48d2d_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_48d2d_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_48d2d_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_48d2d_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_48d2d_row0_col1" class="data row0 col1">inspection_score</td>
+<td id="T_48d2d_row0_col2" class="data row0 col2">inspection_score</td>
+</tr>
+<tr class="even">
+<td id="T_48d2d_row1_col0" class="data row1 col0">Intercept</td>
+<td id="T_48d2d_row1_col1" class="data row1 col1">225.504*** (12.409)</td>
+<td id="T_48d2d_row1_col2" class="data row1 col2">225.126*** (12.415)</td>
+</tr>
+<tr class="odd">
+<td id="T_48d2d_row2_col0" class="data row2 col0">NumberofLocations</td>
+<td id="T_48d2d_row2_col1" class="data row2 col1">-0.075*** (0.019)</td>
+<td id="T_48d2d_row2_col2" class="data row2 col2">-0.019*** (0.000)</td>
+</tr>
+<tr class="even">
+<td id="T_48d2d_row3_col0" class="data row3 col0">I(NumberofLocations ^ 2)</td>
+<td id="T_48d2d_row3_col1" class="data row3 col1">0.056** (0.019)</td>
+<td id="T_48d2d_row3_col2" class="data row3 col2"></td>
+</tr>
+<tr class="odd">
+<td id="T_48d2d_row4_col0" class="data row4 col0">Year</td>
+<td id="T_48d2d_row4_col1" class="data row4 col1">-0.065*** (0.006)</td>
+<td id="T_48d2d_row4_col2" class="data row4 col2">-0.065*** (0.006)</td>
+</tr>
+<tr class="even">
+<td id="T_48d2d_row5_col0" class="data row5 col0">Weekend</td>
+<td id="T_48d2d_row5_col1" class="data row5 col1"></td>
+<td id="T_48d2d_row5_col2" class="data row5 col2">1.759*** (0.488)</td>
+</tr>
+<tr class="odd">
+<td id="T_48d2d_row6_col0" class="data row6 col0">NumberofLocations:Weekend</td>
+<td id="T_48d2d_row6_col1" class="data row6 col1"></td>
+<td id="T_48d2d_row6_col2" class="data row6 col2">-0.010 (0.008)</td>
+</tr>
+<tr class="even">
+<td id="T_48d2d_row7_col0" class="data row7 col0">R2</td>
+<td id="T_48d2d_row7_col1" class="data row7 col1">0.069</td>
+<td id="T_48d2d_row7_col2" class="data row7 col2">0.069</td>
+</tr>
+<tr class="odd">
+<td id="T_48d2d_row8_col0" class="data row8 col0">S.E. type</td>
+<td id="T_48d2d_row8_col1" class="data row8 col1">iid</td>
+<td id="T_48d2d_row8_col2" class="data row8 col2">iid</td>
+</tr>
+<tr class="even">
+<td id="T_48d2d_row9_col0" class="data row9 col0">Observations</td>
+<td id="T_48d2d_row9_col1" class="data row9 col1">27178</td>
+<td id="T_48d2d_row9_col2" class="data row9 col2">27178</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
 </div>
 </div>
 </section>
 <section id="example-3-hc-standard-errors" class="level3">
 <h3 class="anchored" data-anchor-id="example-3-hc-standard-errors">Example 3: HC Standard Errors</h3>
 <div id="cell-10" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>pf.feols(fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.feols(fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>).summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -400,7 +502,7 @@ Observations:  27178
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |    2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|--------:|--------:|
-| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.564 | 209.196 |
+| Intercept     |    185.380 |       12.150 |    15.257 |      0.000 | 161.565 | 209.195 |
 | Year          |     -0.046 |        0.006 |    -7.551 |      0.000 |  -0.057 |  -0.034 |
 | Weekend       |      2.057 |        0.353 |     5.829 |      0.000 |   1.365 |   2.749 |
 ---
@@ -411,9 +513,9 @@ RMSE: 6.248 R2: 0.003 </code></pre>
 <section id="example-4-clustered-standard-errors" class="level3">
 <h3 class="anchored" data-anchor-id="example-4-clustered-standard-errors">Example 4: Clustered Standard Errors</h3>
 <div id="cell-12" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pf.feols(</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"Weekend"</span>}</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>).tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pf.feols(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"Weekend"</span>}</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>).tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
 <div>
 
@@ -477,15 +579,15 @@ RMSE: 6.248 R2: 0.003 </code></pre>
 <section id="example-5-bootstrap-inference" class="level3">
 <h3 class="anchored" data-anchor-id="example-5-bootstrap-inference">Example 5: Bootstrap Inference</h3>
 <div id="cell-14" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit.wildboottest(reps<span class="op">=</span><span class="dv">999</span>, param<span class="op">=</span><span class="st">"Year"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"inspection_score ~ Year + Weekend"</span>, data<span class="op">=</span>df)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>fit.wildboottest(reps<span class="op">=</span><span class="dv">999</span>, param<span class="op">=</span><span class="st">"Year"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
-<pre><code>param                  Year
-t value           15.434326
-Pr(&gt;|t|)                0.0
-bootstrap_type           11
-inference                HC
-impose_null            True
+<pre><code>param                Year
+t value          -7.55233
+Pr(&gt;|t|)              0.0
+bootstrap_type         11
+inference              HC
+impose_null          True
 dtype: object</code></pre>
 </div>
 </div>
@@ -500,11 +602,11 @@ dtype: object</code></pre>
 <section id="example-2-1" class="level3">
 <h3 class="anchored" data-anchor-id="example-2-1">Example 2</h3>
 <div id="cell-18" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gm <span class="op">=</span> gapminder.load_pandas().data</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>gm[<span class="st">"logGDPpercap"</span>] <span class="op">=</span> gm[<span class="st">"gdpPercap"</span>].<span class="bu">apply</span>(<span class="st">"log"</span>)</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"lifeExp ~ C(country) + np.log(gdpPercap)"</span>, data<span class="op">=</span>gm)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gm <span class="op">=</span> gapminder.load_pandas().data</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>gm[<span class="st">"logGDPpercap"</span>] <span class="op">=</span> gm[<span class="st">"gdpPercap"</span>].<span class="bu">apply</span>(<span class="st">"log"</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"lifeExp ~ C(country) + np.log(gdpPercap)"</span>, data<span class="op">=</span>gm)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <div>
 
@@ -586,9 +688,9 @@ dtype: object</code></pre>
 <section id="example-3-twfe" class="level3">
 <h3 class="anchored" data-anchor-id="example-3-twfe">Example 3: TWFE</h3>
 <div id="cell-20" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set our individual and time (index) for our data</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"lifeExp ~ np.log(gdpPercap) | country + year"</span>, data<span class="op">=</span>gm)</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set our individual and time (index) for our data</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"lifeExp ~ np.log(gdpPercap) | country + year"</span>, data<span class="op">=</span>gm)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -611,15 +713,15 @@ RMSE: 3.267 R2: 0.936 R2 Within: 0.019 </code></pre>
 <section id="example-1-2" class="level3">
 <h3 class="anchored" data-anchor-id="example-1-2">Example 1</h3>
 <div id="cell-22" class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>od <span class="op">=</span> organ_donations.load_pandas().data</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Treatment Variable</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od[<span class="st">"State"</span>] <span class="op">==</span> <span class="st">"California"</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"After"</span>] <span class="op">=</span> od[<span class="st">"Quarter_Num"</span>] <span class="op">&gt;</span> <span class="dv">3</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"Treated"</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> (od[<span class="st">"California"</span>] <span class="op">&amp;</span> od[<span class="st">"After"</span>])</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>did <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Rate ~ Treated | State + Quarter"</span>, data<span class="op">=</span>od)</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>did.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>od <span class="op">=</span> organ_donations.load_pandas().data</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Treatment Variable</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od[<span class="st">"State"</span>] <span class="op">==</span> <span class="st">"California"</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"After"</span>] <span class="op">=</span> od[<span class="st">"Quarter_Num"</span>] <span class="op">&gt;</span> <span class="dv">3</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"Treated"</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">*</span> (od[<span class="st">"California"</span>] <span class="op">&amp;</span> od[<span class="st">"After"</span>])</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>did <span class="op">=</span> pf.feols(fml<span class="op">=</span><span class="st">"Rate ~ Treated | State + Quarter"</span>, data<span class="op">=</span>od)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>did.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -639,18 +741,18 @@ RMSE: 0.022 R2: 0.979 R2 Within: 0.009 </code></pre>
 <section id="example-3-dynamic-treatment-effect" class="level3">
 <h3 class="anchored" data-anchor-id="example-3-dynamic-treatment-effect">Example 3: Dynamic Treatment Effect</h3>
 <div id="cell-24" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>od <span class="op">=</span> organ_donations.load_pandas().data</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Treatment Variable</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od[<span class="st">"State"</span>] <span class="op">==</span> <span class="st">"California"</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co"># od["Quarter_Num"] = pd.Categorical(od.Quarter_Num)</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od.California.astype(<span class="bu">float</span>)</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>did2 <span class="op">=</span> pf.feols(</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Rate ~ i(Quarter_Num, California,ref=3) | State + Quarter_Num"</span>, data<span class="op">=</span>od</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>did2.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>od <span class="op">=</span> organ_donations.load_pandas().data</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Treatment Variable</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od[<span class="st">"State"</span>] <span class="op">==</span> <span class="st">"California"</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co"># od["Quarter_Num"] = pd.Categorical(od.Quarter_Num)</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>od[<span class="st">"California"</span>] <span class="op">=</span> od.California.astype(<span class="bu">float</span>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>did2 <span class="op">=</span> pf.feols(</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    fml<span class="op">=</span><span class="st">"Rate ~ i(Quarter_Num, California,ref=3) | State + Quarter_Num"</span>, data<span class="op">=</span>od</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>did2.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
 <div>
 
