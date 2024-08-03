@@ -33,7 +33,7 @@ class FixestMulti:
 
         Parameters
         ----------
-        data : panda.DataFrame
+        data : pandas.DataFrame
             The input DataFrame for the object.
         copy_data : bool
             Whether to copy the data or not.
@@ -158,6 +158,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -178,6 +179,9 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
 
         Returns
         -------
@@ -335,17 +339,23 @@ class FixestMulti:
 
                 elif _method == "fepois":
                     # check for separation and drop separated variables
-
                     na_separation: list[int] = []
-                    if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, fe=fe)
-                        if na_separation:
-                            warnings.warn(
-                                f"{str(len(na_separation))} observations removed because of separation."
-                            )
+                    na_separation = _check_for_separation(
+                        fml=FixestFormula.fml,
+                        data=_data,
+                        Y=Y,
+                        X=X,
+                        fe=fe,
+                        methods=separation_check,
+                    )
+                    if na_separation:
+                        warnings.warn(
+                            f"{str(len(na_separation))} observations removed because of separation."
+                        )
 
-                            Y.drop(na_separation, axis=0, inplace=True)
-                            X.drop(na_separation, axis=0, inplace=True)
+                        Y.drop(na_separation, axis=0, inplace=True)
+                        X.drop(na_separation, axis=0, inplace=True)
+                        if fe is not None:
                             fe.drop(na_separation, axis=0, inplace=True)
 
                     Y_array, X_array = (x.to_numpy() for x in [Y, X])
