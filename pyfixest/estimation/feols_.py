@@ -10,6 +10,7 @@ import polars as pl
 from formulaic import Formula
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
+from tqdm import tqdm
 
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
@@ -955,6 +956,90 @@ class Feols:
             raise ValueError("Distribution must be F or chi2")
 
         return res
+
+    def bootstrap(
+        self, reps: int, seed: Optional[int] = None, inplace: bool = False
+    ) -> Union["Feols", np.ndarray]:
+        """
+        Run a non-parametric bootstrap.
+
+        Runs a non-parametric bootstrap. If vcov is clustered, then the bootstrap is a block bootstrap,
+        else it is a standard bootstrap. If option inplace is set to True, the model object is updated
+        with the new variance-covariance matrix and the model object is returned.
+        If option inplace is set to False, the variance-covariance matrix is returned.
+
+        Parameters
+        ----------
+        reps : int
+            The number of bootstrap iterations to run.
+        seed : Union[int, None], optional
+            An option to provide a random seed. Defaults to None.
+        inplace : bool, optional
+            Indicates whether to update the model object with the new variance-covariance matrix.
+            Defaults to False. If False, a vcov matrix is returned. If True, the model object is updated.
+
+        """
+        _clustervar = self._clustervar[0] if self._clustervar else None
+        _vcov = (
+            {self._vcov_type_detail: _clustervar}
+            if _clustervar
+            else self._vcov_type_detail
+        )
+        _N = self._N
+        _fml = self._fml
+        _data = pl.DataFrame(self._data)
+        _method = self._method
+        _k = self._k
+
+        rng = np.random.default_rng(seed)
+
+        block_bootstrap = _clustervar is not None
+
+        if block_bootstrap:
+            unique_groups = _data.select(_clustervar).unique().to_numpy().flatten()
+
+        # lazy loading to avoid circular import
+        fixest_module = import_module("pyfixest.estimation")
+        if _method == "feols":
+            fit_ = getattr(fixest_module, "feols")
+        else:
+            fit_ = getattr(fixest_module, "fepois")
+
+        boot_stats = np.zeros((reps, _k))
+
+        for b in tqdm(range(reps)):
+            if block_bootstrap:
+                resampled_groups = rng.choice(
+                    unique_groups, size=len(unique_groups), replace=True
+                )
+                df_boot = pl.concat(
+                    [
+                        _data.filter(pl.col(_clustervar) == group)
+                        for group in resampled_groups
+                    ]
+                )
+            else:
+                indices = rng.integers(0, _N, _N)
+                df_boot = _data[indices]
+
+            fit_resampled = fit_(
+                fml=self._fml,
+                data=df_boot,
+                weights=self._weights_name,
+                weights_type=self._weights_type,
+                vcov=_vcov,
+            )
+
+            boot_stats[b, :] = fit_resampled.coef().to_numpy() - self.coef().to_numpy()
+
+        vcov = self._ssc * (np.dot(boot_stats.T, boot_stats) / (reps - 1))
+
+        if inplace:
+            self._vcov = vcov
+            self.get_inference()
+            return self
+        else:
+            return vcov
 
     def wildboottest(
         self,
