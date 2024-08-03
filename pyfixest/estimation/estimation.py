@@ -631,7 +631,7 @@ def _regression_compression(
     return df_compressed
 
 
-def feols_compressed(fml, data, vcov):
+def feols_compressed(fml, data, vcov, reps=1000, seed=None):
     "Run a regression model using sufficient statistics."
     # data = data.dropna().reset_index(drop = True).copy()
 
@@ -663,5 +663,5 @@ def feols_compressed(fml, data, vcov):
     kwargs = {"data": data, "fml": fml}
 
     return fit.bootstrap(
-        reps=250, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
+        reps=reps, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
     )
