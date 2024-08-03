@@ -1007,9 +1007,6 @@ class Feols:
 
         block_bootstrap = _clustervar is not None
 
-        if block_bootstrap:
-            unique_groups = _data.select(_clustervar).unique().to_numpy().flatten()
-
         if fit_func is None:
             # lazy loading to avoid circular import
             fixest_module = import_module("pyfixest.estimation")
@@ -1027,6 +1024,13 @@ class Feols:
             _N = _data.shape[0]
             fit_ = fit_func
 
+        if block_bootstrap:
+            unique_groups = _data.select(_clustervar).unique().to_numpy().flatten()
+            grouped_data = {
+                group: _data.filter(pl.col(_clustervar) == group)
+                for group in set(unique_groups)
+            }
+
         boot_stats = np.zeros((reps, _k))
 
         for b in tqdm(range(reps)):
@@ -1034,11 +1038,9 @@ class Feols:
                 resampled_groups = rng.choice(
                     unique_groups, size=len(unique_groups), replace=True
                 )
+
                 df_boot = pl.concat(
-                    [
-                        _data.filter(pl.col(_clustervar) == group)
-                        for group in resampled_groups
-                    ]
+                    [grouped_data[group] for group in resampled_groups], how="vertical"
                 )
             else:
                 indices = rng.integers(0, _N, _N)
