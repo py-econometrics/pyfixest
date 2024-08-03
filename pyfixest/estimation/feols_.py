@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -958,7 +958,12 @@ class Feols:
         return res
 
     def bootstrap(
-        self, reps: int, seed: Optional[int] = None, inplace: bool = False
+        self,
+        reps: int,
+        seed: Optional[int] = None,
+        inplace: bool = False,
+        fit_func: Optional[Callable] = None,
+        **kwargs,
     ) -> Union["Feols", np.ndarray]:
         """
         Run a non-parametric bootstrap.
@@ -977,6 +982,12 @@ class Feols:
         inplace : bool, optional
             Indicates whether to update the model object with the new variance-covariance matrix.
             Defaults to False. If False, a vcov matrix is returned. If True, the model object is updated.
+        fit_func : Callable, optional
+            An option to provide a custom fit function. Defaults to None, in which case the self._method
+            attribute is used to determine the fit function. If a custom fit function is provided, it must
+            take the same arguments as the `feols` or `fepois` function.
+        **fit_kwargs : dict, optional
+            Additional keyword arguments to pass to the fit function.
 
         """
         _clustervar = self._clustervar[0] if self._clustervar else None
@@ -990,6 +1001,7 @@ class Feols:
         _data = pl.DataFrame(self._data)
         _method = self._method
         _k = self._k
+        _fml = self._fml
 
         rng = np.random.default_rng(seed)
 
@@ -998,12 +1010,22 @@ class Feols:
         if block_bootstrap:
             unique_groups = _data.select(_clustervar).unique().to_numpy().flatten()
 
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        if _method == "feols":
-            fit_ = getattr(fixest_module, "feols")
+        if fit_func is None:
+            # lazy loading to avoid circular import
+            fixest_module = import_module("pyfixest.estimation")
+            if _method == "feols":
+                fit_ = getattr(fixest_module, "feols")
+            else:
+                fit_ = getattr(fixest_module, "fepois")
+
         else:
-            fit_ = getattr(fixest_module, "fepois")
+            # check if data is passed via kwargs - if so,
+            # update the data with the passed data
+            _data = kwargs.get("data", _data)
+            _data = pl.DataFrame(_data)
+            _fml = kwargs.get("fml", self._fml)
+            _N = _data.shape[0]
+            fit_ = fit_func
 
         boot_stats = np.zeros((reps, _k))
 
@@ -1023,7 +1045,7 @@ class Feols:
                 df_boot = _data[indices]
 
             fit_resampled = fit_(
-                fml=self._fml,
+                fml=_fml,
                 data=df_boot,
                 weights=self._weights_name,
                 weights_type=self._weights_type,

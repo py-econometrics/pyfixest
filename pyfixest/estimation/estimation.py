@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import pandas as pd
+import polars as pl
 
 from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
@@ -605,3 +606,62 @@ def _estimation_input_checks(
             (for frequency weights) but it is {weights_type}.
             """
         )
+
+
+def _regression_compression(
+    depvars: list[str], covars: list[str], fevars: list[str], data_long: pl.DataFrame
+) -> pl.DataFrame:
+    "Compress data for regression based on sufficient statistics."
+    aggregate_by = covars + fevars
+
+    agg_expressions = []
+    for var in depvars:
+        agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
+    agg_expressions.append(pl.count(depvars[0]).alias("count"))
+
+    df_compressed = data_long.group_by(aggregate_by).agg(agg_expressions)
+
+    mean_expressions = []
+    for var in depvars:
+        mean_expressions.append(
+            (pl.col(f"sum_{var}") / pl.col("count")).alias(f"mean_{var}")
+        )
+    df_compressed = df_compressed.with_columns(mean_expressions)
+
+    return df_compressed
+
+
+def feols_compressed(fml, data, vcov):
+    "Run a regression model using sufficient statistics."
+    # data = data.dropna().reset_index(drop = True).copy()
+
+    def _feols_compressed(
+        fml, data, vcov, weights=None, weights_type="aweights", **kwargs
+    ):
+        fml2 = fml.split("~")
+        depvar = [fml2[0].strip()]
+        rhs = fml2[1].strip()
+        covars = rhs.split("|")[0].strip().split("+")
+        fevars = rhs.split("|")[1].strip().split("+")
+
+        df_compressed = _regression_compression(
+            depvars=depvar, covars=covars, fevars=fevars, data_long=pl.DataFrame(data)
+        )
+        fml_compressed = f"mean_{depvar[0]} ~ {rhs}"
+
+        fit = feols(
+            fml=fml_compressed,
+            data=df_compressed.to_pandas(),
+            vcov=vcov,
+            weights="count",
+            weights_type="fweights",
+        )
+
+        return fit
+
+    fit = _feols_compressed(fml, data, vcov, weights=None, weights_type="aweights")
+    kwargs = {"data": data, "fml": fml}
+
+    return fit.bootstrap(
+        reps=250, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
+    )
