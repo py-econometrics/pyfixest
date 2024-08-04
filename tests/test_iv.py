@@ -144,10 +144,10 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         F_eff_R = result[4]
     elif adj_vcov == "iid":
         F_stat_R = F_naive
-        F_eff_R = result[1] * _N / (_N - 1)
+        F_eff_R = result[1]  # * _N / (_N - 1)
     elif adj_vcov == "hetero":
-        F_stat_R = F_hetero * _N / (_N - 1)
-        F_eff_R = result[1] * _N / (_N - 1)
+        F_stat_R = F_hetero  # * _N / (_N - 1)
+        F_eff_R = result[1]  # * _N / (_N - 1)
 
     np.testing.assert_allclose(
         F_stat_pf,

@@ -251,10 +251,10 @@ class Fepois(Feols):
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat = resid.flatten()
+        self._u_hat = (WZ - WX @ delta_new).flatten()
 
-        self._Y = Z_resid
-        self._X = X_resid
+        self._Y = WZ
+        self._X = WX
         self._Z = self._X
         self.deviance = deviance
 
@@ -262,9 +262,8 @@ class Fepois(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._scores = self._u_hat[:, None] * self._weights * X_resid
+        self._scores = self._u_hat[:, None] * self._X
         self._hessian = XWX
-        self._T = self._weights * X_resid
 
         if _convergence:
             self._convergence = True
