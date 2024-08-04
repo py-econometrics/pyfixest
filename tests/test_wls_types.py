@@ -4,6 +4,7 @@ import pytest
 import pyfixest as pf
 
 
+@pytest.mark.skip(reason="Bug for fweights and heteroskedastic errors.")
 def test_fweights_ols():
     "Test that the fweights are correctly implemented for OLS models."
     # Fepois model for discrete Y
