@@ -201,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>This vignette compares estimation results from <code>fixest</code> with <code>pyfixest</code> via the <code>rpy2</code> package.</p>
-<div id="cell-3" class="cell" data-execution_count="53">
+<div id="cell-3" class="cell" data-execution_count="79">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> rpy2.robjects <span class="im">as</span> ro</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> rpy2.robjects <span class="im">import</span> pandas2ri</span>
@@ -221,7 +221,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data using pyfixest</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model<span class="op">=</span><span class="st">"Feols"</span>, N<span class="op">=</span><span class="dv">1000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model<span class="op">=</span><span class="st">"Feols"</span>, N<span class="op">=</span><span class="dv">10_000</span>, seed <span class="op">=</span> <span class="dv">99292</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The autoreload extension is already loaded. To reload it, use:
   %reload_ext autoreload</code></pre>
@@ -232,20 +232,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="iid-inference" class="level3">
 <h3 class="anchored" data-anchor-id="iid-inference">IID Inference</h3>
 <p>First, we estimate a model via `pyfixest. We compute “iid” standard errors.</p>
-<div id="cell-7" class="cell" data-execution_count="54">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"iid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-7" class="cell" data-execution_count="80">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"iid"</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We estimate the same model with weights:</p>
-<div id="cell-9" class="cell" data-execution_count="55">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, weights <span class="op">=</span> <span class="st">"weights"</span>, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"iid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-9" class="cell" data-execution_count="81">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    weights <span class="op">=</span> <span class="st">"weights"</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"iid"</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Via <code>r-fixest</code> and <code>rpy2</code>, we get</p>
-<div id="cell-11" class="cell" data-execution_count="56">
+<div id="cell-11" class="cell" data-execution_count="82">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>r_fit <span class="op">=</span> fixest.feols(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"iid"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>r_fit_weights <span class="op">=</span> fixest.feols(</span>
@@ -253,7 +262,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>ro.Formula(<span class="st">"~weights"</span>),</span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"iid"</span>,</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, RHS: 1, Fixed-effects: 1).
@@ -263,49 +272,121 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 <p>Let’s compare how close the covariance matrices are:</p>
-<div id="cell-13" class="cell" data-execution_count="57">
+<div id="cell-13" class="cell" data-execution_count="83">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit_vcov <span class="op">=</span> fit._vcov</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>r_vcov <span class="op">=</span> stats.vcov(r_fit)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fit_vcov <span class="op">-</span> r_vcov</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="57">
-<pre><code>array([[-3.46944695e-18, -2.62580214e-20],
-       [-2.62580214e-20,  5.42101086e-20]])</code></pre>
+<div class="cell-output cell-output-display" data-execution_count="83">
+<pre><code>array([[-7.04731412e-19, -3.34180967e-22],
+       [-3.34594558e-22, -1.38913403e-19]])</code></pre>
 </div>
 </div>
 <p>And for WLS:</p>
-<div id="cell-15" class="cell" data-execution_count="58">
+<div id="cell-15" class="cell" data-execution_count="84">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(r_fit_weights)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="58">
-<pre><code>array([[ 0.00000000e+00, -1.60936260e-20],
-       [-1.60936260e-20, -1.08420217e-19]])</code></pre>
+<div class="cell-output cell-output-display" data-execution_count="84">
+<pre><code>array([[ 1.68051337e-18, -1.69406589e-21],
+       [-1.69406589e-21, -1.49077799e-19]])</code></pre>
 </div>
 </div>
 <p>We conclude by comparing all estimation results via the <code>etable</code> function:</p>
-<div id="cell-17" class="cell" data-execution_count="59">
+<div id="cell-17" class="cell" data-execution_count="85">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weights], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                                 est1                     est2
-------------  -----------------------  -----------------------
-depvar                              Y                        Y
---------------------------------------------------------------
-X1            -0.924046*** (0.054373)  -0.854266*** (0.054288)
-X2            -0.174107*** (0.014412)  -0.164147*** (0.014849)
---------------------------------------------------------------
-f2                                  x                        x
-f1                                  x                        x
---------------------------------------------------------------
-R2                           0.659044                        -
-S.E. type                         iid                      iid
-Observations                      997                      997
---------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
-Format of coefficient cell:
-Coefficient (Std. Error)</code></pre>
+<div class="cell-output cell-output-display" data-execution_count="85">
+<style type="text/css">
+#T_f4cad tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_f4cad tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_f4cad tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_f4cad tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_f4cad tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_f4cad tbody td {
+  background-color: #ffffff;
+}
+#T_f4cad tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_f4cad_row0_col0, #T_f4cad_row0_col1, #T_f4cad_row0_col2, #T_f4cad_row1_col0, #T_f4cad_row1_col1, #T_f4cad_row1_col2, #T_f4cad_row2_col0, #T_f4cad_row2_col1, #T_f4cad_row2_col2, #T_f4cad_row3_col0, #T_f4cad_row3_col1, #T_f4cad_row3_col2, #T_f4cad_row4_col0, #T_f4cad_row4_col1, #T_f4cad_row4_col2, #T_f4cad_row5_col0, #T_f4cad_row5_col1, #T_f4cad_row5_col2, #T_f4cad_row6_col0, #T_f4cad_row6_col1, #T_f4cad_row6_col2, #T_f4cad_row7_col0, #T_f4cad_row7_col1, #T_f4cad_row7_col2 {
+  text-align: right;
+}
+</style>
+
+<div id="T_f4cad" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_f4cad-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_f4cad-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_f4cad" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_f4cad_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_f4cad_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_f4cad_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_f4cad_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_f4cad_row0_col1" class="data row0 col1">Y</td>
+<td id="T_f4cad_row0_col2" class="data row0 col2">Y</td>
+</tr>
+<tr class="even">
+<td id="T_f4cad_row1_col0" class="data row1 col0">X1</td>
+<td id="T_f4cad_row1_col1" class="data row1 col1">0.112019*** (0.016947)</td>
+<td id="T_f4cad_row1_col2" class="data row1 col2">0.123687*** (0.016880)</td>
+</tr>
+<tr class="odd">
+<td id="T_f4cad_row2_col0" class="data row2 col0">X2</td>
+<td id="T_f4cad_row2_col1" class="data row2 col1">0.732788*** (0.004595)</td>
+<td id="T_f4cad_row2_col2" class="data row2 col2">0.732244*** (0.004584)</td>
+</tr>
+<tr class="even">
+<td id="T_f4cad_row3_col0" class="data row3 col0">f1</td>
+<td id="T_f4cad_row3_col1" class="data row3 col1">x</td>
+<td id="T_f4cad_row3_col2" class="data row3 col2">x</td>
+</tr>
+<tr class="odd">
+<td id="T_f4cad_row4_col0" class="data row4 col0">f2</td>
+<td id="T_f4cad_row4_col1" class="data row4 col1">x</td>
+<td id="T_f4cad_row4_col2" class="data row4 col2">x</td>
+</tr>
+<tr class="even">
+<td id="T_f4cad_row5_col0" class="data row5 col0">R2</td>
+<td id="T_f4cad_row5_col1" class="data row5 col1">0.774375</td>
+<td id="T_f4cad_row5_col2" class="data row5 col2">-</td>
+</tr>
+<tr class="odd">
+<td id="T_f4cad_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_f4cad_row6_col1" class="data row6 col1">iid</td>
+<td id="T_f4cad_row6_col2" class="data row6 col2">iid</td>
+</tr>
+<tr class="even">
+<td id="T_f4cad_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_f4cad_row7_col1" class="data row7 col1">9997</td>
+<td id="T_f4cad_row7_col2" class="data row7 col2">9997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
 </div>
 </div>
-<div id="cell-18" class="cell" data-execution_count="60">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(r_fit, r_fit_weights, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="60">
+</div>
+<div id="cell-18" class="cell" data-execution_count="86">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(r_fit, r_fit_weights, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="86">
 <div>
 
 
@@ -334,20 +415,20 @@ Coefficient (Std. Error)</code></pre>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
 <td>X1</td>
-<td>-0.924046*** (0.054373)</td>
-<td>-0.854266*** (0.054288)</td>
+<td>0.112019*** (0.016947)</td>
+<td>0.123687*** (0.016880)</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
 <td>X2</td>
-<td>-0.174107*** (0.014412)</td>
-<td>-0.164147*** (0.014849)</td>
+<td>0.732788*** (0.004595)</td>
+<td>0.732244*** (0.004584)</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
 <td>Fixed-Effects:</td>
-<td>-----------------------</td>
-<td>-----------------------</td>
+<td>----------------------</td>
+<td>----------------------</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">5</td>
@@ -364,8 +445,8 @@ Coefficient (Std. Error)</code></pre>
 <tr class="even">
 <td data-quarto-table-cell-role="th">7</td>
 <td>_______________</td>
-<td>_______________________</td>
-<td>_______________________</td>
+<td>______________________</td>
+<td>______________________</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">8</td>
@@ -376,20 +457,20 @@ Coefficient (Std. Error)</code></pre>
 <tr class="even">
 <td data-quarto-table-cell-role="th">9</td>
 <td>Observations</td>
-<td>997</td>
-<td>997</td>
+<td>9,997</td>
+<td>9,997</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">10</td>
 <td>R2</td>
-<td>0.65904</td>
-<td>0.65208</td>
+<td>0.77438</td>
+<td>0.77526</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">11</td>
 <td>Within R2</td>
-<td>0.30263</td>
-<td>0.26968</td>
+<td>0.71822</td>
+<td>0.71886</td>
 </tr>
 </tbody>
 </table>
@@ -401,25 +482,33 @@ Coefficient (Std. Error)</code></pre>
 <section id="heteroskedastic-errors" class="level3">
 <h3 class="anchored" data-anchor-id="heteroskedastic-errors">Heteroskedastic Errors</h3>
 <p>We repeat the same exercise with heteroskedastic (HC1) errors:</p>
-<div id="cell-21" class="cell" data-execution_count="61">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"hetero"</span>)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"hetero"</span>, weights <span class="op">=</span> <span class="st">"weights"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-21" class="cell" data-execution_count="87">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"hetero"</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"hetero"</span>,</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    weights <span class="op">=</span> <span class="st">"weights"</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="cell-22" class="cell" data-execution_count="62">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_r <span class="op">=</span> fixest.feols(</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>fit_weights_r <span class="op">=</span> fixest.feols(</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>ro.Formula(<span class="st">"~weights"</span>),</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-22" class="cell" data-execution_count="88">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_r <span class="op">=</span> fixest.feols(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>fit_weights_r <span class="op">=</span> fixest.feols(</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>ro.Formula(<span class="st">"~weights"</span>),</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, RHS: 1, Fixed-effects: 1).
 
@@ -428,45 +517,117 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </div>
 </div>
 <p>As before, we compare the variance covariance matrices:</p>
-<div id="cell-24" class="cell" data-execution_count="63">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(fit_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="63">
-<pre><code>array([[ 2.61539922e-14,  6.55185745e-14],
-       [ 6.55185745e-14, -8.23562681e-15]])</code></pre>
+<div id="cell-24" class="cell" data-execution_count="89">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(fit_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="89">
+<pre><code>array([[-1.61925594e-16, -2.13306719e-17],
+       [-2.13306719e-17, -5.39593869e-17]])</code></pre>
 </div>
 </div>
-<div id="cell-25" class="cell" data-execution_count="64">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(fit_weights_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="64">
-<pre><code>array([[7.61158497e-13, 3.29128177e-13],
-       [3.29128177e-13, 9.55965450e-14]])</code></pre>
+<div id="cell-25" class="cell" data-execution_count="90">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(fit_weights_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="90">
+<pre><code>array([[-2.04968421e-16, -9.53780274e-18],
+       [-9.53780274e-18, -3.03136151e-17]])</code></pre>
 </div>
 </div>
-<div id="cell-26" class="cell" data-execution_count="65">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weights], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                                 est1                     est2
-------------  -----------------------  -----------------------
-depvar                              Y                        Y
---------------------------------------------------------------
-X1            -0.924046*** (0.054704)  -0.854266*** (0.063090)
-X2            -0.174107*** (0.015009)  -0.164147*** (0.016769)
---------------------------------------------------------------
-f2                                  x                        x
-f1                                  x                        x
---------------------------------------------------------------
-R2                           0.659044                        -
-S.E. type                      hetero                   hetero
-Observations                      997                      997
---------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
-Format of coefficient cell:
-Coefficient (Std. Error)</code></pre>
+<div id="cell-26" class="cell" data-execution_count="91">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weights], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="91">
+<style type="text/css">
+#T_6f76e tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_6f76e tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_6f76e tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_6f76e tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_6f76e tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_6f76e tbody td {
+  background-color: #ffffff;
+}
+#T_6f76e tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_6f76e_row0_col0, #T_6f76e_row0_col1, #T_6f76e_row0_col2, #T_6f76e_row1_col0, #T_6f76e_row1_col1, #T_6f76e_row1_col2, #T_6f76e_row2_col0, #T_6f76e_row2_col1, #T_6f76e_row2_col2, #T_6f76e_row3_col0, #T_6f76e_row3_col1, #T_6f76e_row3_col2, #T_6f76e_row4_col0, #T_6f76e_row4_col1, #T_6f76e_row4_col2, #T_6f76e_row5_col0, #T_6f76e_row5_col1, #T_6f76e_row5_col2, #T_6f76e_row6_col0, #T_6f76e_row6_col1, #T_6f76e_row6_col2, #T_6f76e_row7_col0, #T_6f76e_row7_col1, #T_6f76e_row7_col2 {
+  text-align: right;
+}
+</style>
+
+<div id="T_6f76e" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_6f76e-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_6f76e-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_6f76e" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_6f76e_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_6f76e_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_6f76e_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_6f76e_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_6f76e_row0_col1" class="data row0 col1">Y</td>
+<td id="T_6f76e_row0_col2" class="data row0 col2">Y</td>
+</tr>
+<tr class="even">
+<td id="T_6f76e_row1_col0" class="data row1 col0">X1</td>
+<td id="T_6f76e_row1_col1" class="data row1 col1">0.112019*** (0.017009)</td>
+<td id="T_6f76e_row1_col2" class="data row1 col2">0.123687*** (0.019361)</td>
+</tr>
+<tr class="odd">
+<td id="T_6f76e_row2_col0" class="data row2 col0">X2</td>
+<td id="T_6f76e_row2_col1" class="data row2 col1">0.732788*** (0.004553)</td>
+<td id="T_6f76e_row2_col2" class="data row2 col2">0.732244*** (0.005140)</td>
+</tr>
+<tr class="even">
+<td id="T_6f76e_row3_col0" class="data row3 col0">f1</td>
+<td id="T_6f76e_row3_col1" class="data row3 col1">x</td>
+<td id="T_6f76e_row3_col2" class="data row3 col2">x</td>
+</tr>
+<tr class="odd">
+<td id="T_6f76e_row4_col0" class="data row4 col0">f2</td>
+<td id="T_6f76e_row4_col1" class="data row4 col1">x</td>
+<td id="T_6f76e_row4_col2" class="data row4 col2">x</td>
+</tr>
+<tr class="even">
+<td id="T_6f76e_row5_col0" class="data row5 col0">R2</td>
+<td id="T_6f76e_row5_col1" class="data row5 col1">0.774375</td>
+<td id="T_6f76e_row5_col2" class="data row5 col2">-</td>
+</tr>
+<tr class="odd">
+<td id="T_6f76e_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_6f76e_row6_col1" class="data row6 col1">hetero</td>
+<td id="T_6f76e_row6_col2" class="data row6 col2">hetero</td>
+</tr>
+<tr class="even">
+<td id="T_6f76e_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_6f76e_row7_col1" class="data row7 col1">9997</td>
+<td id="T_6f76e_row7_col2" class="data row7 col2">9997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
 </div>
 </div>
-<div id="cell-27" class="cell" data-execution_count="66">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r, fit_weights_r, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="66">
+</div>
+<div id="cell-27" class="cell" data-execution_count="92">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r, fit_weights_r, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="92">
 <div>
 
 
@@ -495,20 +656,20 @@ Coefficient (Std. Error)</code></pre>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
 <td>X1</td>
-<td>-0.924046*** (0.054704)</td>
-<td>-0.854266*** (0.063090)</td>
+<td>0.112019*** (0.017009)</td>
+<td>0.123687*** (0.019361)</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
 <td>X2</td>
-<td>-0.174107*** (0.015009)</td>
-<td>-0.164147*** (0.016769)</td>
+<td>0.732788*** (0.004553)</td>
+<td>0.732244*** (0.005140)</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
 <td>Fixed-Effects:</td>
-<td>-----------------------</td>
-<td>-----------------------</td>
+<td>----------------------</td>
+<td>----------------------</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">5</td>
@@ -525,32 +686,32 @@ Coefficient (Std. Error)</code></pre>
 <tr class="even">
 <td data-quarto-table-cell-role="th">7</td>
 <td>_______________</td>
-<td>_______________________</td>
-<td>_______________________</td>
+<td>______________________</td>
+<td>______________________</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">8</td>
 <td>S.E. type</td>
-<td>Heteroskedasticity-rob.</td>
-<td>Heteroskedasticity-rob.</td>
+<td>Heteroskedastici.-rob.</td>
+<td>Heteroskedastici.-rob.</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">9</td>
 <td>Observations</td>
-<td>997</td>
-<td>997</td>
+<td>9,997</td>
+<td>9,997</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">10</td>
 <td>R2</td>
-<td>0.65904</td>
-<td>0.65208</td>
+<td>0.77438</td>
+<td>0.77526</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">11</td>
 <td>Within R2</td>
-<td>0.30263</td>
-<td>0.26968</td>
+<td>0.71822</td>
+<td>0.71886</td>
 </tr>
 </tbody>
 </table>
@@ -562,23 +723,32 @@ Coefficient (Std. Error)</code></pre>
 <section id="cluster-robust-errors" class="level3">
 <h3 class="anchored" data-anchor-id="cluster-robust-errors">Cluster-Robust Errors</h3>
 <p>We conclude with cluster robust errors.</p>
-<div id="cell-30" class="cell" data-execution_count="67">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> {<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> {<span class="st">"CRV1"</span>:<span class="st">"f1"</span>}, weights <span class="op">=</span> <span class="st">"weights"</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>fit_r <span class="op">=</span> fixest.feols(</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span> ro.Formula(<span class="st">"~f1"</span>),</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>fit_r_weights <span class="op">=</span> fixest.feols(</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>ro.Formula(<span class="st">"~weights"</span>),</span>
-<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span> ro.Formula(<span class="st">"~f1"</span>),</span>
-<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-30" class="cell" data-execution_count="93">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> {<span class="st">"CRV1"</span>: <span class="st">"f1"</span>}</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>fit_weights <span class="op">=</span> pf.feols(</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> {<span class="st">"CRV1"</span>:<span class="st">"f1"</span>},</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    weights <span class="op">=</span> <span class="st">"weights"</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>fit_r <span class="op">=</span> fixest.feols(</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span> ro.Formula(<span class="st">"~f1"</span>),</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>fit_r_weights <span class="op">=</span> fixest.feols(</span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span>ro.Formula(<span class="st">"~weights"</span>),</span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span> ro.Formula(<span class="st">"~f1"</span>),</span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, RHS: 1, Fixed-effects: 1).
 
@@ -586,45 +756,117 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </code></pre>
 </div>
 </div>
-<div id="cell-31" class="cell" data-execution_count="68">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(fit_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="68">
-<pre><code>array([[-8.45259193e-13,  8.24642309e-15],
-       [ 8.24642140e-15, -9.52734528e-15]])</code></pre>
+<div id="cell-31" class="cell" data-execution_count="94">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>fit._vcov <span class="op">-</span> stats.vcov(fit_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="94">
+<pre><code>array([[ 4.20345182e-16, -6.97387636e-17],
+       [-6.97404577e-17, -1.42166010e-17]])</code></pre>
 </div>
 </div>
-<div id="cell-32" class="cell" data-execution_count="69">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(fit_weights_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="69">
-<pre><code>array([[-2.75502512e-04,  7.09991484e-05],
-       [ 7.09991484e-05,  2.83672348e-06]])</code></pre>
+<div id="cell-32" class="cell" data-execution_count="95">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit_weights._vcov <span class="op">-</span> stats.vcov(fit_weights_r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="95">
+<pre><code>array([[-3.95318402e-05,  2.05473422e-05],
+       [ 2.05473422e-05,  1.13249200e-06]])</code></pre>
 </div>
 </div>
-<div id="cell-33" class="cell" data-execution_count="70">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weights], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                                 est1                     est2
-------------  -----------------------  -----------------------
-depvar                              Y                        Y
---------------------------------------------------------------
-X1            -0.924046*** (0.059910)  -0.854266*** (0.060868)
-X2            -0.174107*** (0.014363)  -0.164147*** (0.016854)
---------------------------------------------------------------
-f2                                  x                        x
-f1                                  x                        x
---------------------------------------------------------------
-R2                           0.659044                        -
-S.E. type                      by: f1                   by: f1
-Observations                      997                      997
---------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
-Format of coefficient cell:
-Coefficient (Std. Error)</code></pre>
+<div id="cell-33" class="cell" data-execution_count="96">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weights], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="96">
+<style type="text/css">
+#T_c24d5 tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_c24d5 tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_c24d5 tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_c24d5 tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_c24d5 tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_c24d5 tbody td {
+  background-color: #ffffff;
+}
+#T_c24d5 tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_c24d5_row0_col0, #T_c24d5_row0_col1, #T_c24d5_row0_col2, #T_c24d5_row1_col0, #T_c24d5_row1_col1, #T_c24d5_row1_col2, #T_c24d5_row2_col0, #T_c24d5_row2_col1, #T_c24d5_row2_col2, #T_c24d5_row3_col0, #T_c24d5_row3_col1, #T_c24d5_row3_col2, #T_c24d5_row4_col0, #T_c24d5_row4_col1, #T_c24d5_row4_col2, #T_c24d5_row5_col0, #T_c24d5_row5_col1, #T_c24d5_row5_col2, #T_c24d5_row6_col0, #T_c24d5_row6_col1, #T_c24d5_row6_col2, #T_c24d5_row7_col0, #T_c24d5_row7_col1, #T_c24d5_row7_col2 {
+  text-align: right;
+}
+</style>
+
+<div id="T_c24d5" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_c24d5-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_c24d5-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_c24d5" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_c24d5_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_c24d5_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_c24d5_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_c24d5_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_c24d5_row0_col1" class="data row0 col1">Y</td>
+<td id="T_c24d5_row0_col2" class="data row0 col2">Y</td>
+</tr>
+<tr class="even">
+<td id="T_c24d5_row1_col0" class="data row1 col0">X1</td>
+<td id="T_c24d5_row1_col1" class="data row1 col1">0.112019*** (0.015816)</td>
+<td id="T_c24d5_row1_col2" class="data row1 col2">0.123687*** (0.018311)</td>
+</tr>
+<tr class="odd">
+<td id="T_c24d5_row2_col0" class="data row2 col0">X2</td>
+<td id="T_c24d5_row2_col1" class="data row2 col1">0.732788*** (0.004476)</td>
+<td id="T_c24d5_row2_col2" class="data row2 col2">0.732244*** (0.005249)</td>
+</tr>
+<tr class="even">
+<td id="T_c24d5_row3_col0" class="data row3 col0">f1</td>
+<td id="T_c24d5_row3_col1" class="data row3 col1">x</td>
+<td id="T_c24d5_row3_col2" class="data row3 col2">x</td>
+</tr>
+<tr class="odd">
+<td id="T_c24d5_row4_col0" class="data row4 col0">f2</td>
+<td id="T_c24d5_row4_col1" class="data row4 col1">x</td>
+<td id="T_c24d5_row4_col2" class="data row4 col2">x</td>
+</tr>
+<tr class="even">
+<td id="T_c24d5_row5_col0" class="data row5 col0">R2</td>
+<td id="T_c24d5_row5_col1" class="data row5 col1">0.774375</td>
+<td id="T_c24d5_row5_col2" class="data row5 col2">-</td>
+</tr>
+<tr class="odd">
+<td id="T_c24d5_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_c24d5_row6_col1" class="data row6 col1">by: f1</td>
+<td id="T_c24d5_row6_col2" class="data row6 col2">by: f1</td>
+</tr>
+<tr class="even">
+<td id="T_c24d5_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_c24d5_row7_col1" class="data row7 col1">9997</td>
+<td id="T_c24d5_row7_col2" class="data row7 col2">9997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
 </div>
 </div>
-<div id="cell-34" class="cell" data-execution_count="71">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r, fit_r_weights, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="71">
+</div>
+<div id="cell-34" class="cell" data-execution_count="97">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r, fit_r_weights, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="97">
 <div>
 
 
@@ -653,20 +895,20 @@ Coefficient (Std. Error)</code></pre>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
 <td>X1</td>
-<td>-0.924046*** (0.059910)</td>
-<td>-0.854266*** (0.060868)</td>
+<td>0.112019*** (0.015816)</td>
+<td>0.123687*** (0.018311)</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
 <td>X2</td>
-<td>-0.174107*** (0.014363)</td>
-<td>-0.164147*** (0.016854)</td>
+<td>0.732788*** (0.004476)</td>
+<td>0.732244*** (0.005249)</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
 <td>Fixed-Effects:</td>
-<td>-----------------------</td>
-<td>-----------------------</td>
+<td>----------------------</td>
+<td>----------------------</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">5</td>
@@ -683,8 +925,8 @@ Coefficient (Std. Error)</code></pre>
 <tr class="even">
 <td data-quarto-table-cell-role="th">7</td>
 <td>_______________</td>
-<td>_______________________</td>
-<td>_______________________</td>
+<td>______________________</td>
+<td>______________________</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">8</td>
@@ -695,20 +937,20 @@ Coefficient (Std. Error)</code></pre>
 <tr class="even">
 <td data-quarto-table-cell-role="th">9</td>
 <td>Observations</td>
-<td>997</td>
-<td>997</td>
+<td>9,997</td>
+<td>9,997</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">10</td>
 <td>R2</td>
-<td>0.65904</td>
-<td>0.65208</td>
+<td>0.77438</td>
+<td>0.77526</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">11</td>
 <td>Within R2</td>
-<td>0.30263</td>
-<td>0.26968</td>
+<td>0.71822</td>
+<td>0.71886</td>
 </tr>
 </tbody>
 </table>
@@ -720,34 +962,48 @@ Coefficient (Std. Error)</code></pre>
 </section>
 <section id="poisson-regression" class="level2">
 <h2 class="anchored" data-anchor-id="poisson-regression">Poisson Regression</h2>
-<div id="cell-36" class="cell" data-execution_count="72">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-36" class="cell" data-execution_count="98">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="cell-37" class="cell" data-execution_count="73">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>fit_iid <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"iid"</span>, iwls_tol <span class="op">=</span> <span class="fl">1e-10</span>)</span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>fit_hetero <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> <span class="st">"hetero"</span>, iwls_tol <span class="op">=</span> <span class="fl">1e-10</span>)</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>fit_crv <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data, ssc <span class="op">=</span> pf.ssc(adj <span class="op">=</span> <span class="va">True</span>, cluster_adj <span class="op">=</span> <span class="va">False</span>), vcov <span class="op">=</span> {<span class="st">"CRV1"</span>:<span class="st">"f1"</span>}, iwls_tol <span class="op">=</span> <span class="fl">1e-10</span>)</span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>fit_r_iid <span class="op">=</span> fixest.fepois(</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"iid"</span>,</span>
-<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>fit_r_hetero <span class="op">=</span> fixest.fepois(</span>
-<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
-<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>fit_r_crv <span class="op">=</span> fixest.fepois(</span>
-<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
-<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
-<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>ro.Formula(<span class="st">"~f1"</span>),</span>
-<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">False</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
-<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cell-37" class="cell" data-execution_count="99">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>fit_iid <span class="op">=</span> pf.fepois(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"iid"</span>,</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    iwls_tol <span class="op">=</span> <span class="fl">1e-10</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>fit_hetero <span class="op">=</span> pf.fepois(</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data,</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> <span class="st">"hetero"</span>,</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    iwls_tol <span class="op">=</span> <span class="fl">1e-10</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>fit_crv <span class="op">=</span> pf.fepois(</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>    fml <span class="op">=</span> <span class="st">"Y ~ X1 + X2 | f1 + f2"</span>,</span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> data,</span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>    vcov <span class="op">=</span> {<span class="st">"CRV1"</span>:<span class="st">"f1"</span>},</span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>    iwls_tol <span class="op">=</span> <span class="fl">1e-10</span></span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>fit_r_iid <span class="op">=</span> fixest.fepois(</span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"iid"</span>,</span>
+<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a>fit_r_hetero <span class="op">=</span> fixest.fepois(</span>
+<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="st">"hetero"</span>,</span>
+<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a>fit_r_crv <span class="op">=</span> fixest.fepois(</span>
+<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a>    ro.Formula(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>),</span>
+<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>data,</span>
+<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>ro.Formula(<span class="st">"~f1"</span>),</span>
+<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span>fixest.ssc(<span class="va">True</span>, <span class="st">"none"</span>, <span class="va">True</span>, <span class="st">"min"</span>, <span class="st">"min"</span>, <span class="va">False</span>),</span>
+<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, RHS: 1, Fixed-effects: 1).
 
@@ -757,52 +1013,133 @@ R[write to console]: NOTE: 3 observations removed because of NA values (LHS: 1, 
 </code></pre>
 </div>
 </div>
-<div id="cell-38" class="cell" data-execution_count="74">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>fit_iid._vcov <span class="op">-</span> stats.vcov(fit_r_iid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="74">
+<div id="cell-38" class="cell" data-execution_count="100">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit_iid._vcov <span class="op">-</span> stats.vcov(fit_r_iid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="100">
 <pre><code>array([[ 1.20791284e-08, -6.55604931e-10],
        [-6.55604931e-10,  1.69958097e-09]])</code></pre>
 </div>
 </div>
-<div id="cell-39" class="cell" data-execution_count="75">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>fit_hetero._vcov <span class="op">-</span> stats.vcov(fit_r_hetero)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="75">
-<pre><code>array([[ 2.17883089e-08, -7.37971037e-10],
-       [-7.37971037e-10,  3.07279240e-09]])</code></pre>
+<div id="cell-39" class="cell" data-execution_count="101">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>fit_hetero._vcov <span class="op">-</span> stats.vcov(fit_r_hetero)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="101">
+<pre><code>array([[ 2.18101847e-08, -7.38711972e-10],
+       [-7.38711972e-10,  3.07587753e-09]])</code></pre>
 </div>
 </div>
-<div id="cell-40" class="cell" data-execution_count="76">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>fit_crv._vcov <span class="op">-</span> stats.vcov(fit_r_crv)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="76">
-<pre><code>array([[ 1.53194424e-08, -1.16909821e-10],
-       [-1.16909821e-10,  3.07270399e-09]])</code></pre>
+<div id="cell-40" class="cell" data-execution_count="102">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit_crv._vcov <span class="op">-</span> stats.vcov(fit_r_crv)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="102">
+<pre><code>array([[ 1.58300904e-08, -1.20806815e-10],
+       [-1.20806815e-10,  3.17512746e-09]])</code></pre>
 </div>
 </div>
-<div id="cell-41" class="cell" data-execution_count="77">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_iid, fit_hetero, fit_crv], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                              est1                  est2                  est3
-------------  --------------------  --------------------  --------------------
-depvar                           Y                     Y                     Y
-------------------------------------------------------------------------------
-X1            -0.006591 (0.040758)  -0.006591 (0.039125)  -0.006591 (0.034180)
-X2            -0.014924 (0.010994)  -0.014924 (0.010496)  -0.014924 (0.010135)
-------------------------------------------------------------------------------
-f2                               x                     x                     x
-f1                               x                     x                     x
-------------------------------------------------------------------------------
-R2                               -                     -                     -
-S.E. type                      iid                hetero                by: f1
-Observations                   997                   997                   997
-------------------------------------------------------------------------------
-Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001
-Format of coefficient cell:
-Coefficient (Std. Error)</code></pre>
+<div id="cell-41" class="cell" data-execution_count="103">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_iid, fit_hetero, fit_crv], digits <span class="op">=</span> <span class="dv">6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="103">
+<style type="text/css">
+#T_d66d4 tbody tr:nth-child(0) td {
+  background-color: #f0f0f0;
+}
+#T_d66d4 tbody tr:nth-child(1) td {
+  border-bottom: 2px solid black;
+}
+#T_d66d4 tbody tr:nth-child(3) td {
+  border-bottom: 1px solid black;
+}
+#T_d66d4 tbody tr:nth-child(5) td {
+  border-bottom: 1px solid black;
+}
+#T_d66d4 tbody tr:nth-child(8) td {
+  border-bottom: 1px solid black;
+}
+#T_d66d4 tbody td {
+  background-color: #ffffff;
+}
+#T_d66d4 tbody tr td:first-child {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: left;
+}
+#T_d66d4_row0_col0, #T_d66d4_row0_col1, #T_d66d4_row0_col2, #T_d66d4_row0_col3, #T_d66d4_row1_col0, #T_d66d4_row1_col1, #T_d66d4_row1_col2, #T_d66d4_row1_col3, #T_d66d4_row2_col0, #T_d66d4_row2_col1, #T_d66d4_row2_col2, #T_d66d4_row2_col3, #T_d66d4_row3_col0, #T_d66d4_row3_col1, #T_d66d4_row3_col2, #T_d66d4_row3_col3, #T_d66d4_row4_col0, #T_d66d4_row4_col1, #T_d66d4_row4_col2, #T_d66d4_row4_col3, #T_d66d4_row5_col0, #T_d66d4_row5_col1, #T_d66d4_row5_col2, #T_d66d4_row5_col3, #T_d66d4_row6_col0, #T_d66d4_row6_col1, #T_d66d4_row6_col2, #T_d66d4_row6_col3, #T_d66d4_row7_col0, #T_d66d4_row7_col1, #T_d66d4_row7_col2, #T_d66d4_row7_col3 {
+  text-align: right;
+}
+</style>
+
+<div id="T_d66d4" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_d66d4-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)
+</figcaption>
+<div aria-describedby="T_d66d4-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_d66d4" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th id="T_d66d4_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_d66d4_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_d66d4_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_d66d4_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">est3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td id="T_d66d4_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_d66d4_row0_col1" class="data row0 col1">Y</td>
+<td id="T_d66d4_row0_col2" class="data row0 col2">Y</td>
+<td id="T_d66d4_row0_col3" class="data row0 col3">Y</td>
+</tr>
+<tr class="even">
+<td id="T_d66d4_row1_col0" class="data row1 col0">X1</td>
+<td id="T_d66d4_row1_col1" class="data row1 col1">-0.006591 (0.040758)</td>
+<td id="T_d66d4_row1_col2" class="data row1 col2">-0.006591 (0.039145)</td>
+<td id="T_d66d4_row1_col3" class="data row1 col3">-0.006591 (0.034745)</td>
+</tr>
+<tr class="odd">
+<td id="T_d66d4_row2_col0" class="data row2 col0">X2</td>
+<td id="T_d66d4_row2_col1" class="data row2 col1">-0.014924 (0.010994)</td>
+<td id="T_d66d4_row2_col2" class="data row2 col2">-0.014924 (0.010501)</td>
+<td id="T_d66d4_row2_col3" class="data row2 col3">-0.014924 (0.010303)</td>
+</tr>
+<tr class="even">
+<td id="T_d66d4_row3_col0" class="data row3 col0">f1</td>
+<td id="T_d66d4_row3_col1" class="data row3 col1">x</td>
+<td id="T_d66d4_row3_col2" class="data row3 col2">x</td>
+<td id="T_d66d4_row3_col3" class="data row3 col3">x</td>
+</tr>
+<tr class="odd">
+<td id="T_d66d4_row4_col0" class="data row4 col0">f2</td>
+<td id="T_d66d4_row4_col1" class="data row4 col1">x</td>
+<td id="T_d66d4_row4_col2" class="data row4 col2">x</td>
+<td id="T_d66d4_row4_col3" class="data row4 col3">x</td>
+</tr>
+<tr class="even">
+<td id="T_d66d4_row5_col0" class="data row5 col0">R2</td>
+<td id="T_d66d4_row5_col1" class="data row5 col1">-</td>
+<td id="T_d66d4_row5_col2" class="data row5 col2">-</td>
+<td id="T_d66d4_row5_col3" class="data row5 col3">-</td>
+</tr>
+<tr class="odd">
+<td id="T_d66d4_row6_col0" class="data row6 col0">S.E. type</td>
+<td id="T_d66d4_row6_col1" class="data row6 col1">iid</td>
+<td id="T_d66d4_row6_col2" class="data row6 col2">hetero</td>
+<td id="T_d66d4_row6_col3" class="data row6 col3">by: f1</td>
+</tr>
+<tr class="even">
+<td id="T_d66d4_row7_col0" class="data row7 col0">Observations</td>
+<td id="T_d66d4_row7_col1" class="data row7 col1">997</td>
+<td id="T_d66d4_row7_col2" class="data row7 col2">997</td>
+<td id="T_d66d4_row7_col3" class="data row7 col3">997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
 </div>
 </div>
-<div id="cell-42" class="cell" data-execution_count="78">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r_iid, fit_r_hetero, fit_r_crv, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="78">
+</div>
+<div id="cell-42" class="cell" data-execution_count="104">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(fixest.etable(fit_r_iid, fit_r_hetero, fit_r_crv, digits <span class="op">=</span> <span class="dv">6</span>)).T</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="104">
 <div>
 
 
@@ -835,15 +1172,15 @@ Coefficient (Std. Error)</code></pre>
 <td data-quarto-table-cell-role="th">2</td>
 <td>X1</td>
 <td>-0.006591 (0.040758)</td>
-<td>-0.006591 (0.039125)</td>
-<td>-0.006591 (0.034180)</td>
+<td>-0.006591 (0.039145)</td>
+<td>-0.006591 (0.034745)</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
 <td>X2</td>
 <td>-0.014924 (0.010994)</td>
-<td>-0.014924 (0.010496)</td>
-<td>-0.014924 (0.010135)</td>
+<td>-0.014924 (0.010501)</td>
+<td>-0.014924 (0.010302)</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
