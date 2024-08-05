@@ -483,7 +483,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="611dd7ee" class="cell" data-execution_count="1">
+<div id="deb56ab1" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
@@ -494,7 +494,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="bEA0Mh"></div>
+            <div id="Q0y2yw"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -505,7 +505,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -518,9 +518,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("bEA0Mh").appendChild(div);
+                        document.getElementById("Q0y2yw").appendChild(div);
                     };
-                    var e = document.getElementById("bEA0Mh");
+                    var e = document.getElementById("Q0y2yw");
                     e.appendChild(script);
                 })()
             </script>
@@ -528,7 +528,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="vfRlGp"></div>
+            <div id="16Zeve"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -539,7 +539,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -552,16 +552,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("vfRlGp").appendChild(div);
+                        document.getElementById("16Zeve").appendChild(div);
                     };
-                    var e = document.getElementById("vfRlGp");
+                    var e = document.getElementById("16Zeve");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="sPzdi8"></div>
+   <div id="eRAKre"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -578,6 +578,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "color":"Model"
 },
 "data_meta":{
+"series_annotations":[{
+"type":"int",
+"column":"index"
+},{
+"type":"str",
+"column":"Model"
+},{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
 },
 "coord":{
 "name":"flip",
@@ -594,10 +627,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }
 },
 "kind":"plot",
-"scales":[{
-"name":"Estimate and 95.0% Confidence Interval",
-"aesthetic":"y"
-}],
+"scales":[],
 "layers":[{
 "geom":"point",
 "mapping":{
@@ -628,7 +658,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("sPzdi8");
+           var plotContainer = document.getElementById("eRAKre");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});

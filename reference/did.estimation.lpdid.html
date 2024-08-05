@@ -478,7 +478,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="f44d52cc" class="cell" data-execution_count="1">
+<div id="41d1c538" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> lpdid</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -501,7 +501,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="tDwPW6"></div>
+            <div id="QONYML"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -512,7 +512,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -525,9 +525,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("tDwPW6").appendChild(div);
+                        document.getElementById("QONYML").appendChild(div);
                     };
-                    var e = document.getElementById("tDwPW6");
+                    var e = document.getElementById("QONYML");
                     e.appendChild(script);
                 })()
             </script>
@@ -535,7 +535,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="PC4Ws5"></div>
+            <div id="3MSWvE"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -546,7 +546,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.3.3/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.0/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -559,16 +559,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("PC4Ws5").appendChild(div);
+                        document.getElementById("3MSWvE").appendChild(div);
                     };
-                    var e = document.getElementById("PC4Ws5");
+                    var e = document.getElementById("3MSWvE");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display">
-   <div id="Yc4j71"></div>
+   <div id="XQxxEy"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
@@ -585,6 +585,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "color":"Model"
 },
 "data_meta":{
+"series_annotations":[{
+"type":"str",
+"column":"Coefficient"
+},{
+"type":"float",
+"column":"Estimate"
+},{
+"type":"float",
+"column":"Std. Error"
+},{
+"type":"float",
+"column":"t value"
+},{
+"type":"float",
+"column":"Pr(>|t|)"
+},{
+"type":"float",
+"column":"2.5%"
+},{
+"type":"float",
+"column":"97.5%"
+},{
+"type":"float",
+"column":"N"
+},{
+"type":"str",
+"column":"Model"
+}]
+},
+"guides":{
+"y":{
+"title":"Estimate and 95.0% Confidence Interval"
+}
 },
 "ggsize":{
 "width":1200.0,
@@ -600,10 +633,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "text":"LPDID Event Study Estimate"
 },
 "kind":"plot",
-"scales":[{
-"name":"Estimate and 95.0% Confidence Interval",
-"aesthetic":"y"
-}],
+"scales":[],
 "layers":[{
 "geom":"point",
 "mapping":{
@@ -634,7 +664,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("Yc4j71");
+           var plotContainer = document.getElementById("XQxxEy");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
@@ -643,7 +673,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>To get the ATT, set <code>att=True</code>:</p>
-<div id="12f14cfe" class="cell" data-execution_count="2">
+<div id="06a15690" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> lpdid(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
