@@ -4,10 +4,7 @@ from pyfixest.estimation.demean_ import (
 from pyfixest.estimation.detect_singletons_ import (
     detect_singletons,
 )
-from pyfixest.estimation.estimation import (
-    feols,
-    fepois,
-)
+from pyfixest.estimation.estimation import feols, feols_c, feols_compressed, fepois
 from pyfixest.estimation.feiv_ import (
     Feiv,
 )
@@ -40,4 +37,6 @@ __all__ = [
     "Fepois",
     "Feiv",
     "FixestMulti",
+    "feols_compressed",
+    "feols_c",
 ]

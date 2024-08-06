@@ -11,6 +11,8 @@ from pyfixest import (
 from pyfixest.estimation import (
     bonferroni,
     feols,
+    feols_c,
+    feols_compressed,
     fepois,
     rwolf,
 )
@@ -39,6 +41,8 @@ __all__ = [
     "estimation",
     "report",
     "utils",
+    "feols_c",
+    "feols_compressed",
 ]
 
 from importlib.metadata import PackageNotFoundError, version

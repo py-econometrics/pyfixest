@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 import polars as pl
 
@@ -617,7 +618,10 @@ def _regression_compression(
     agg_expressions = []
     for var in depvars:
         agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
-    agg_expressions.append(pl.count(depvars[0]).alias("count"))
+        # col_expr = pl.col(var)
+        var_sq = pl.col(var).pow(2)
+        agg_expressions.append(pl.sum(var_sq).alias(f"sum_{var}_sq"))
+        agg_expressions.append(pl.count(depvars[0]).alias("count"))
 
     df_compressed = data_long.group_by(aggregate_by).agg(agg_expressions)
 
@@ -631,7 +635,14 @@ def _regression_compression(
     return df_compressed
 
 
-def feols_compressed(fml, data, vcov, reps=1000, seed=None):
+def feols_compressed(
+    fml,
+    data,
+    vcov,
+    bootstrap=True,
+    reps=1000,
+    seed=None,
+):
     "Run a regression model using sufficient statistics."
     # data = data.dropna().reset_index(drop = True).copy()
 
@@ -657,11 +668,44 @@ def feols_compressed(fml, data, vcov, reps=1000, seed=None):
             weights_type="fweights",
         )
 
+        fit._depvar_compressed = f"mean_{depvar[0]}"
+        fit._covars = rhs
+
         return fit
 
-    fit = _feols_compressed(fml, data, vcov, weights=None, weights_type="aweights")
-    kwargs = {"data": data, "fml": fml}
+    def _vcov_hetero(fit):
+        yprime = fit._data[f"sum_{fit._depvar}"].to_numpy().reshape(-1, 1)
+        yprimeprime = fit._data[f"sum_{fit._depvar}_sq"].to_numpy().reshape(-1, 1)
+        X = fit._data["+".split(fit._covars)].to_numpy()
+        yhat = fit._y_hat
+        rss_g = (
+            (yhat**2) * fit._data["count"].to_numpy().reshape(-1, 1)
+            - 2 * yhat * yprime
+            + yprimeprime
+        )
+        bread = fit._bread
+        meat = X.T @ np.diag(rss_g.flatten()) @ X
+        return fit._ssc * (bread @ meat @ bread)
 
-    return fit.bootstrap(
-        reps=reps, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
-    )
+    fit = _feols_compressed(fml, data, vcov, weights=None, weights_type="aweights")
+
+    if bootstrap:
+        kwargs = {"data": data, "fml": fml}
+        return fit.bootstrap(
+            reps=reps, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
+        )
+    else:
+        if vcov == "hetero":
+            fit._vcov = _vcov_hetero(fit)
+        else:
+            raise NotImplementedError(
+                "Only heteroscedastic robust standard errors are supported for bootstrap = False."
+            )
+
+    fit.get_inference()
+    return fit
+
+
+def feols_c(fml, data, vcov, reps=1000, seed=None):
+    "Shorthand for feols_compressed function."
+    return feols_compressed(fml=fml, data=data, vcov=vcov, reps=reps, seed=seed)
