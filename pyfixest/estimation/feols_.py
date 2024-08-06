@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,7 @@ import polars as pl
 from formulaic import Formula
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
+from tqdm import tqdm
 
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.ritest import (
@@ -942,6 +943,114 @@ class Feols:
             raise ValueError("Distribution must be F or chi2")
 
         return res
+
+    def bootstrap(
+        self,
+        reps: int,
+        seed: Optional[int] = None,
+        inplace: bool = False,
+        fit_func: Optional[Callable] = None,
+        **kwargs,
+    ) -> Union["Feols", np.ndarray]:
+        """
+        Run a non-parametric bootstrap.
+
+        Runs a non-parametric bootstrap. If vcov is clustered, then the bootstrap is a block bootstrap,
+        else it is a standard bootstrap. If option inplace is set to True, the model object is updated
+        with the new variance-covariance matrix and the model object is returned.
+        If option inplace is set to False, the variance-covariance matrix is returned.
+
+        Parameters
+        ----------
+        reps : int
+            The number of bootstrap iterations to run.
+        seed : Union[int, None], optional
+            An option to provide a random seed. Defaults to None.
+        inplace : bool, optional
+            Indicates whether to update the model object with the new variance-covariance matrix.
+            Defaults to False. If False, a vcov matrix is returned. If True, the model object is updated.
+        fit_func : Callable, optional
+            An option to provide a custom fit function. Defaults to None, in which case the self._method
+            attribute is used to determine the fit function. If a custom fit function is provided, it must
+            take the same arguments as the `feols` or `fepois` function.
+        **fit_kwargs : dict, optional
+            Additional keyword arguments to pass to the fit function.
+
+        """
+        _clustervar = self._clustervar[0] if self._clustervar else None
+        _vcov = (
+            {self._vcov_type_detail: _clustervar}
+            if _clustervar
+            else self._vcov_type_detail
+        )
+        _N = self._N
+        _fml = self._fml
+        _data = pl.DataFrame(self._data)
+        _method = self._method
+        _k = self._k
+        _fml = self._fml
+
+        rng = np.random.default_rng(seed)
+
+        block_bootstrap = _clustervar is not None
+
+        if fit_func is None:
+            # lazy loading to avoid circular import
+            fixest_module = import_module("pyfixest.estimation")
+            if _method == "feols":
+                fit_ = getattr(fixest_module, "feols")
+            else:
+                fit_ = getattr(fixest_module, "fepois")
+
+        else:
+            # check if data is passed via kwargs - if so,
+            # update the data with the passed data
+            _data = kwargs.get("data", _data)
+            _data = pl.DataFrame(_data)
+            _fml = kwargs.get("fml", self._fml)
+            _N = _data.shape[0]
+            fit_ = fit_func
+
+        if block_bootstrap:
+            unique_groups = _data.select(_clustervar).unique().to_numpy().flatten()
+            grouped_data = {
+                group: _data.filter(pl.col(_clustervar) == group)
+                for group in set(unique_groups)
+            }
+
+        boot_stats = np.zeros((reps, _k))
+
+        for b in tqdm(range(reps)):
+            if block_bootstrap:
+                resampled_groups = rng.choice(
+                    unique_groups, size=len(unique_groups), replace=True
+                )
+
+                df_boot = pl.concat(
+                    [grouped_data[group] for group in resampled_groups], how="vertical"
+                )
+            else:
+                indices = rng.integers(0, _N, _N)
+                df_boot = _data[indices]
+
+            fit_resampled = fit_(
+                fml=_fml,
+                data=df_boot,
+                weights=self._weights_name,
+                weights_type=self._weights_type,
+                vcov=_vcov,
+            )
+
+            boot_stats[b, :] = fit_resampled.coef().to_numpy() - self.coef().to_numpy()
+
+        vcov = self._ssc * (np.dot(boot_stats.T, boot_stats) / (reps - 1))
+
+        if inplace:
+            self._vcov = vcov
+            self.get_inference()
+            return self
+        else:
+            return vcov
 
     def wildboottest(
         self,
