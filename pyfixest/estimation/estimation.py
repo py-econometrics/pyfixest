@@ -619,7 +619,6 @@ def _regression_compression(
     for var in depvars:
         agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
         agg_expressions.append(pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
-        # agg_expressions.append(pl.sum(pl.col(var).pow(2)).alias(f"sum_{var}_sq"))
 
     df_compressed = data_long.group_by(aggregate_by).agg(agg_expressions)
 
@@ -675,14 +674,14 @@ def feols_compressed(
         yprime = fit._data[f"sum_{fit._depvar}"].to_numpy().reshape(-1, 1)
         yprimeprime = fit._data[f"sum_{fit._depvar}_sq"].to_numpy().reshape(-1, 1)
         X = fit._data[fit._coefnames].to_numpy()
+        weights = fit._data["count"].to_numpy().reshape(-1, 1)
         yhat = fit.predict().reshape(-1, 1)
-        rss_g = (
-            (yhat**2) * fit._data["count"].to_numpy().reshape(-1, 1)
-            - 2 * yhat * yprime
-            + yprimeprime
-        )
-        _meat = (X * rss_g).T @ X
-        return fit._ssc * (fit._bread @ _meat @ fit._bread), _meat
+        rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
+        import numpy as np
+
+        _bread = np.linalg.inv(X.T @ np.diag(weights.flatten()) @ X)
+        _meat = X.T @ np.diag(rss_g.flatten()) @ X
+        return fit._ssc * (_bread @ _meat @ _bread), _meat
 
     fit = _feols_compressed(fml, data, vcov)
 
