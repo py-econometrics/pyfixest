@@ -1,5 +1,7 @@
+import warnings
 from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 import polars as pl
 
@@ -609,10 +611,10 @@ def _estimation_input_checks(
 
 
 def _regression_compression(
-    depvars: list[str], covars: list[str], fevars: list[str], data_long: pl.DataFrame
+    depvars: list[str], covars: list[str], data_long: pl.DataFrame
 ) -> pl.DataFrame:
     "Compress data for regression based on sufficient statistics."
-    aggregate_by = covars + fevars
+    aggregate_by = covars
 
     agg_expressions = []
     agg_expressions.append(pl.count(depvars[0]).alias("count"))
@@ -636,9 +638,10 @@ def feols_compressed(
     fml,
     data,
     vcov,
-    bootstrap=True,
+    bootstrap=False,
     reps=1000,
     seed=None,
+    # ssc = ssc(),
 ):
     "Run a regression model using sufficient statistics."
     # data = data.dropna().reset_index(drop = True).copy()
@@ -647,15 +650,15 @@ def feols_compressed(
         fml, data, vcov, weights=None, weights_type="aweights", **kwargs
     ):
         fml2 = fml.split("~")
-        depvar = [fml2[0].strip()]
-        rhs = fml2[1].strip()
-        covars = rhs.split("|")[0].strip().split("+")
-        fevars = rhs.split("|")[1].strip().split("+")
+        depvar = [fml2[0].replace(" ", "")]
+        rhs_fml = fml2[1].replace(" ", "").replace("|", "+")
+        rhs_vars = rhs_fml.split("+")
 
         df_compressed = _regression_compression(
-            depvars=depvar, covars=covars, fevars=fevars, data_long=pl.DataFrame(data)
+            depvars=depvar, covars=rhs_vars, data_long=pl.DataFrame(data)
         )
-        fml_compressed = f"mean_{depvar[0]} ~ {rhs}"
+
+        fml_compressed = f"mean_{depvar[0]} ~ {rhs_fml}"
 
         fit = feols(
             fml=fml_compressed,
@@ -663,47 +666,52 @@ def feols_compressed(
             vcov=vcov,
             weights="count",
             weights_type="fweights",
+            # ssc=ssc,
         )
 
         fit._depvar = depvar[0]
-        fit._covars, _ = rhs.split("|")
+        fit._covars = rhs_fml
 
         return fit
 
     def _vcov_hetero(fit):
         yprime = fit._data[f"sum_{fit._depvar}"].to_numpy().reshape(-1, 1)
         yprimeprime = fit._data[f"sum_{fit._depvar}_sq"].to_numpy().reshape(-1, 1)
-        X = fit._data[fit._coefnames].to_numpy()
-        weights = fit._data["count"].to_numpy().reshape(-1, 1)
-        yhat = fit.predict().reshape(-1, 1)
+        weights = fit._weights
+        X = fit._X / np.sqrt(fit._weights)
+        beta_hat = fit._beta_hat
+        yhat = (X @ beta_hat).reshape(-1, 1)
         rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
-        import numpy as np
-
-        _bread = np.linalg.inv(X.T @ np.diag(weights.flatten()) @ X)
-        _meat = X.T @ np.diag(rss_g.flatten()) @ X
+        _bread = fit._bread
+        _meat = (X * rss_g).T @ X
         return fit._ssc * (_bread @ _meat @ _bread), _meat
 
-    fit = _feols_compressed(fml, data, vcov)
+    fit = _feols_compressed(fml, data, vcov, ssc=ssc)
 
     # import pdb; pdb.set_trace()
     if bootstrap:
         kwargs = {"data": data, "fml": fml}
-        return fit.bootstrap(
+        fit.bootstrap(
             reps=reps, seed=12, inplace=True, fit_func=_feols_compressed, **kwargs
         )
     else:
-        if vcov == "hetero":
+        if vcov == "iid":
+            pass
+        elif vcov == "hetero":
             fit._vcov, fit._meat = _vcov_hetero(fit)
         else:
-            raise NotImplementedError(
-                "Only heteroscedastic robust standard errors are supported for bootstrap = False."
+            warnings.warn(
+                "Analytical standard errors are only available for 'iid' and 'hetero' vcov. Using a clustter bootstrap instead."
+            )
+            fit.bootstrap(
+                reps=reps, seed=seed, inplace=True, fit_func=_feols_compressed, **kwargs
             )
 
     fit.get_inference()
     return fit
 
 
-def feols_c(fml, data, vcov, bootstrap=True, reps=1000, seed=None):
+def feols_c(fml, data, vcov, bootstrap=False, reps=1000, seed=None):
     "Shorthand for feols_compressed function."
     return feols_compressed(
         fml=fml, data=data, vcov=vcov, bootstrap=bootstrap, reps=reps, seed=seed
