@@ -1423,6 +1423,7 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
+        compute_stdp: bool = False
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1452,22 +1453,28 @@ class Feols:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
+        compute_stdp: boolean
+            Whether to compute standard error of the predictions
 
         Returns
         -------
-        y_hat : np.ndarray
-            A flat np.array with predicted values of the regression model.
+        pred_results : pd.DataFrame
+            Dataframe with columns "y_hat" and optionally "stdp" (if compute_stdp is True)
         """
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
-
+        
+        prediction_df = pd.DataFrame()
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
-
+            prediction_df["yhat"] = self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
+            if compute_stdp:
+                prediction_df["stdp"] = self.get_newdata_stdp(self._X)
+            return prediction_df
+        
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
-
+        
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             X = Formula(xfml).get_model_matrix(newdata)
@@ -1498,7 +1505,35 @@ class Feols:
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
-        return y_hat.flatten()
+        prediction_df["yhat"] = y_hat.flatten()
+        if compute_stdp:
+            prediction_df["stdp"] = self.get_newdata_stdp(X)
+            
+        return prediction_df
+    
+    def get_newdata_stdp(self, X):
+        # for now only compute prediction error if model has no fixed effects
+        # TODO: implement for fixed effects
+        if not self._has_fixef:
+            if not self._X_is_empty:
+                return list(map(self.get_single_row_stdp, X))
+            else:
+                warnings.warn(
+                    """
+                    Standard error of the prediction cannot be computed if X is empty.
+                    Prediction dataframe stdp column will be None.
+                    """
+                )
+        else:
+            warnings.warn(
+                """
+                Standard error of the prediction is not implemented for fixed effects models.
+                Prediction dataframe stdp column will be None.
+                """
+            )
+
+    def get_single_row_stdp(self, row):
+        return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
 
     def get_nobs(self):
         """
