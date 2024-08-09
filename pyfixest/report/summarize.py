@@ -63,13 +63,15 @@ def etable(
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys are the original variable 
+        A dictionary to relabel the variables. The keys are the original variable
         names and the values the new names. Note that interaction terms will also be
         relabeled using the labels of the individual variables.
+        The command is applied after the `keep` and `drop` commands.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
-        the FE lines with a different label than the one specied for the respective 
+        the FE lines with a different label than the one specied for the respective
         variable in the labels dictionary.
+        The command is applied after the `keep` and `drop` commands.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -261,28 +263,33 @@ def etable(
 
     if labels is not None:
         # Relabel dependent variables
-        dep_var_list= [labels.get(k,k) for k in dep_var_list]
+        dep_var_list = [labels.get(k, k) for k in dep_var_list]
 
         # Set symbol for interaction terms depending on output type
-        if type in ["df","html"]:
+        if type in ["df", "html"]:
             interactionSymbol = " &#215; "
         elif type == "tex":
             interactionSymbol = " $\\times$ "
         else:
             interactionSymbol = " x "
-        
+
         # Relabel explanatory variables
-        res['index'] = res['index'].apply(lambda x: _relabel_expvar(x, labels, interactionSymbol))
+        res["index"] = res["index"].apply(
+            lambda x: _relabel_expvar(x, labels, interactionSymbol)
+        )
 
         # Relabel fixed effects
         if felabels is not None:
             # When the user provides a dictionary for fixed effects, then use it
             # When a corresponsing variable is not in the felabel dictionary, then use the labels dictionary
-            # When in neither then just use the original variable name 
-            nobs_fixef_df['index'] = nobs_fixef_df['index'].apply(lambda x: felabels.get(x, labels.get(x, x)))
+            # When in neither then just use the original variable name
+            nobs_fixef_df["index"] = nobs_fixef_df["index"].apply(
+                lambda x: felabels.get(x, labels.get(x, x))
+            )
         else:
-            nobs_fixef_df['index'] = nobs_fixef_df['index'].apply(lambda x: labels.get(x, x))
-        
+            nobs_fixef_df["index"] = nobs_fixef_df["index"].apply(
+                lambda x: labels.get(x, x)
+            )
 
     depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
     depvars.columns = res.columns
@@ -638,8 +645,7 @@ def _number_formatter(x: float, **kwargs) -> str:
     return _int if digits == 0 else f"{_int}.{_float}"
 
 
-
-def _relabel_expvar(varname: str, labels: dict , interaction_symbol: str):
+def _relabel_expvar(varname: str, labels: dict, interaction_symbol: str):
     """
     Relabel a variable name using the labels dictionary
     Also automatically relabel interaction terms using the labels of the individual variables.
@@ -658,7 +664,6 @@ def _relabel_expvar(varname: str, labels: dict , interaction_symbol: str):
     str
         The relabeled variable
     """
-       
     # When varname in labels dictionary, then relabel (note: this allows also to manually rename interaction terms in the dictionary)
     # Otherwise: When interaction term, then split by vars, relabel, and join using interaction symbol
     if varname in labels:
