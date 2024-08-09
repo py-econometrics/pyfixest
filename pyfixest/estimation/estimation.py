@@ -674,6 +674,17 @@ def feols_compressed(
 
         return fit
 
+    def _vcov_iid(fit):
+        yprime = fit._data[f"sum_{fit._depvar}"].to_numpy().reshape(-1, 1)
+        yprimeprime = fit._data[f"sum_{fit._depvar}_sq"].to_numpy().reshape(-1, 1)
+        weights = fit._weights
+        X = fit._X / np.sqrt(fit._weights)
+        beta_hat = fit._beta_hat
+        yhat = (X @ beta_hat).reshape(-1, 1)
+        rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
+        sigma2 = np.sum(rss_g) / (fit._N - 1)
+        return fit._ssc * fit._bread * sigma2
+
     def _vcov_hetero(fit):
         yprime = fit._data[f"sum_{fit._depvar}"].to_numpy().reshape(-1, 1)
         yprimeprime = fit._data[f"sum_{fit._depvar}_sq"].to_numpy().reshape(-1, 1)
@@ -684,7 +695,7 @@ def feols_compressed(
         rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
         _bread = fit._bread
         _meat = (X * rss_g).T @ X
-        return fit._ssc * (_bread @ _meat @ _bread), _meat
+        return fit._ssc * (_bread @ _meat @ _bread)
 
     fit = _feols_compressed(fml, data, vcov, ssc=ssc)
 
@@ -696,9 +707,9 @@ def feols_compressed(
         )
     else:
         if vcov == "iid":
-            pass
+            fit._vcov = _vcov_iid(fit)
         elif vcov == "hetero":
-            fit._vcov, fit._meat = _vcov_hetero(fit)
+            fit._vcov = _vcov_hetero(fit)
         else:
             warnings.warn(
                 "Analytical standard errors are only available for 'iid' and 'hetero' vcov. Using a clustter bootstrap instead."
