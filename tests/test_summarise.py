@@ -17,6 +17,7 @@ def test_summary():
     df2 = get_data(model="Fepois")
 
     fit1 = feols("Y ~ X1 + X2 | f1", data=df1)
+    fit1a = feols("Y ~ X1 + X2 + f1", data=df1)
     fit2 = fepois("Y ~ X1 + X2 + f2 | f1", data=df2, vcov={"CRV1": "f1+f2"})
     fit3 = feols("Y ~ X1", data=df1)
     fit4 = feols("Y ~ X1", data=df1, weights="weights")
@@ -87,6 +88,15 @@ def test_summary():
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep=[r"\d"], drop=["f"])
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", keep="X")
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]", drop=r"\d$")
+
+    # test labels, felabels args
+    etable([fit1, fit1a], labels={"X1": "X1_label"}, felabels={"f1": "f1_label"})
+    etable(
+        [fit1, fit1a], labels={"X1": "X1_label"}, felabels={"f1": "f1_label"}, keep="X1"
+    )
+    etable(
+        [fit1, fit1a], labels={"X1": "X1_label"}, felabels={"f1": "f1_label"}, drop="X1"
+    )
 
     cols = ["x1", "x2", "x11", "x21"]
     assert _select_order_coefs(cols, keep=["x1"]) == ["x1", "x11"]
