@@ -318,7 +318,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.etable" class="level1">
 <h1>report.etable</h1>
-<p><code>report.etable(models, type='df', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, **kwargs)</code></p>
+<p><code>report.etable(models, type='df', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, labels=None, felabels=None, **kwargs)</code></p>
 <p>Create an esttab-like table from a list of models.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -385,6 +385,18 @@ ul.task-list li input[type="checkbox"] {
 <td>Optional[bool]</td>
 <td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
 <td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>labels</code></td>
+<td>Optional[dict]</td>
+<td>A dictionary to relabel the variables. The keys are the original variable names and the values the new names. Note that interaction terms will also be relabeled using the labels of the individual variables. The command is applied after the <code>keep</code> and <code>drop</code> commands.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>felabels</code></td>
+<td>Optional[dict]</td>
+<td>A dictionary to relabel the fixed effects. Only needed if you want to relabel the FE lines with a different label than the one specied for the respective variable in the labels dictionary. The command is applied after the <code>keep</code> and <code>drop</code> commands.</td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>digits</code></td>
