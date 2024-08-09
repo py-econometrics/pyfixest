@@ -352,7 +352,7 @@ class Feols:
         self._Y_hat_link = self._X @ self._beta_hat
         self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self._scores = self._u_hat[:, None] * _X
+        self._scores = _X * self._u_hat[:, None]
         self._hessian = self._tZX.copy()
 
         # IV attributes, set to None for OLS, Poisson
@@ -430,11 +430,14 @@ class Feols:
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
+            # this is what fixest does internally: see fixest:::vcov_hetero_internal:
+            # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+
             self._ssc = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=_k,
-                G=1,
+                G=_N,  # all clusters are singletons
                 vcov_sign=1,
                 vcov_type="hetero",
             )
@@ -538,7 +541,6 @@ class Feols:
         return _vcov
 
     def _vcov_hetero(self):
-        _u_hat = self._u_hat
         _scores = self._scores
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
@@ -549,32 +551,19 @@ class Feols:
         _bread = self._bread
 
         if _vcov_type_detail in ["hetero", "HC1"]:
-            u = _u_hat
             transformed_scores = _scores
         elif _vcov_type_detail in ["HC2", "HC3"]:
-            if _is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference is not supported for IV regressions."
-                )
-            _tZXinv = np.linalg.inv(_tZX)
-            leverage = np.sum(_X * (_X @ _tZXinv), axis=1)
-            if _vcov_type_detail == "HC2":
-                u = _u_hat / np.sqrt(1 - leverage)
-                transformed_scores = _scores / np.sqrt(1 - leverage)[:, None]
-            else:
-                transformed_scores = _scores / (1 - leverage)[:, None]
+            leverage = np.sum(_X * (_X @ np.linalg.inv(_tZX)), axis=1)
+            transformed_scores = (
+                _scores / np.sqrt(1 - leverage)[:, None]
+                if _vcov_type_detail == "HC2"
+                else _scores / (1 - leverage)[:, None]
+            )
 
-        if _is_iv is False:
-            meat = transformed_scores.transpose() @ transformed_scores
-            _vcov = _bread @ meat @ _bread
-        else:
-            if u.ndim == 1:
-                u = u.reshape((-1, 1))
-                Omega = (
-                    transformed_scores.transpose() @ transformed_scores
-                )  # np.transpose( _Z) @ ( _Z * (u**2))  # k x k
-            meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX  # k x k
-            _vcov = _bread @ meat @ _bread
+        Omega = transformed_scores.T @ transformed_scores
+
+        _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
+        _vcov = _bread @ _meat @ _bread
 
         return _vcov
 
@@ -593,14 +582,12 @@ class Feols:
         meat = np.zeros((k_instruments, k_instruments))
 
         # deviance uniquely for Poisson
-        if _method == "fepois":
-            weighted_uhat = _weights.flatten() * _u_hat.flatten()
-        else:
-            weighted_uhat = _u_hat
+
+        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
 
         meat = _crv1_meat_loop(
             _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64).reshape((-1, 1)),
+            weighted_uhat=weighted_uhat.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )
