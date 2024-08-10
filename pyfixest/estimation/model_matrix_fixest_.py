@@ -81,7 +81,7 @@ def model_matrix_fixest(
     fval = FixestFormula._fval
     _check_weights(weights, data)
 
-    if use_compression and len(fval.split("+")) > 1:
+    if use_compression and len(fval.split("+")) > 2:
         raise ValueError(
             "Compressed estimation is only supported for models with one fixed effect."
         )
@@ -243,17 +243,16 @@ def _regression_compression(
 
     agg_expressions = []
 
-    # import pdb; pdb.set_trace()
-
     if fevars:
         fevars2 = [f"factorize({fevar})" for fevar in fevars]
-        for var in covars:
-            mean_var_name = f"mean_{var}"
-            covars_updated.append(mean_var_name)
-            agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
+        for fevar in fevars2:
+            for var in covars:
+                mean_var_name = f"mean_{var}_by_{fevar}"
+                covars_updated.append(mean_var_name)
+                agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
 
-        df_grouped = data_long.groupby(fevars2).agg(agg_expressions)
-        data_long = data_long.join(df_grouped, on=fevars2, how="left")
+            df_grouped = data_long.groupby(fevar).agg(agg_expressions)
+            data_long = data_long.join(df_grouped, on=fevar, how="left")
 
     agg_expressions = []
     agg_expressions.append(pl.count(depvars[0]).alias("count"))
@@ -270,9 +269,13 @@ def _regression_compression(
         )
     df_compressed = df_compressed.with_columns(mean_expressions)
 
+    if fevars:
+        df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
+        columns_updated = covars_updated + ["Intercept"]
+
     compressed_dict = {
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
-        "X": df_compressed.select(covars_updated),
+        "X": df_compressed.select(columns_updated),
         "compression_count": df_compressed.select("count"),
         "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
         "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),
