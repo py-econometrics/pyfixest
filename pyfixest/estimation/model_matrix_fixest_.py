@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 from formulaic import Formula
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
@@ -16,6 +17,7 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
+    use_compression=False,
 ) -> dict:
     """
     Create model matrices for fixed effects estimation.
@@ -41,6 +43,9 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
+    use_compression: bool
+        Whether to use regression compression to estimation losslessly via
+        sufficient statistics. Default is False.
 
     Returns
     -------
@@ -75,6 +80,11 @@ def model_matrix_fixest(
     fml_first_stage = FixestFormula.fml_first_stage
     fval = FixestFormula._fval
     _check_weights(weights, data)
+
+    if use_compression and len(fval.split("+")) > 1:
+        raise ValueError(
+            "Compressed estimation is only supported for models with one fixed effect."
+        )
 
     pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
 
@@ -175,6 +185,33 @@ def model_matrix_fixest(
     na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
 
+    if use_compression:
+        depvars = Y.columns.tolist()
+        covars = X.columns.tolist()
+        Y_polars = pl.DataFrame(pd.DataFrame(Y))
+        X_polars = pl.DataFrame(pd.DataFrame(X))
+        fe_polars = pl.DataFrame(pd.DataFrame(fe))
+        if fe is not None:
+            data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
+        else:
+            data_long = pl.concat([Y_polars, X_polars], how="horizontal")
+
+        compressed_dict = _regression_compression(
+            depvars=depvars,
+            covars=covars,
+            data_long=data_long,
+            fevars=fval.split("+") if fval != "0" else None,
+        )
+        Y = compressed_dict.get("Y").to_pandas()
+        X = compressed_dict.get("X").to_pandas()
+        compression_count = compressed_dict.get("compression_count").to_pandas()
+        Yprime = compressed_dict.get("Yprime").to_pandas()
+        Yprimeprime = compressed_dict.get("Yprimeprime").to_pandas()
+        df_compressed = compressed_dict.get("df_compressed").to_pandas()
+
+    else:
+        Yprime = Yprimeprime = compression_count = df_compressed = None
+
     return {
         "Y": Y,
         "X": X,
@@ -185,8 +222,64 @@ def model_matrix_fixest(
         "na_index": na_index,
         "na_index_str": na_index_str,
         "_icovars": _icovars,
-        "X_is_empty": X_is_empty,
+        "X_is_empty": X_is_empty,  #
+        # all values below are None if use_compression is False
+        "Yprime": Yprime,
+        "Yprimeprime": Yprimeprime,
+        "compression_count": compression_count,
+        # "compressed_fml": compressed_fml,
+        "df_compressed": df_compressed,
     }
+
+
+def _regression_compression(
+    depvars: list[str],
+    covars: list[str],
+    data_long: pl.DataFrame,
+    fevars: Optional[list[str]] = None,
+) -> dict:
+    "Compress data for regression based on sufficient statistics."
+    covars_updated = covars.copy()
+
+    agg_expressions = []
+
+    # import pdb; pdb.set_trace()
+
+    if fevars:
+        fevars2 = [f"factorize({fevar})" for fevar in fevars]
+        for var in covars:
+            mean_var_name = f"mean_{var}"
+            covars_updated.append(mean_var_name)
+            agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
+
+        df_grouped = data_long.groupby(fevars2).agg(agg_expressions)
+        data_long = data_long.join(df_grouped, on=fevars2, how="left")
+
+    agg_expressions = []
+    agg_expressions.append(pl.count(depvars[0]).alias("count"))
+    for var in depvars:
+        agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
+        agg_expressions.append(pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
+
+    df_compressed = data_long.group_by(covars_updated).agg(agg_expressions)
+
+    mean_expressions = []
+    for var in depvars:
+        mean_expressions.append(
+            (pl.col(f"sum_{var}") / pl.col("count")).alias(f"mean_{var}")
+        )
+    df_compressed = df_compressed.with_columns(mean_expressions)
+
+    compressed_dict = {
+        "Y": df_compressed.select(f"mean_{depvars[0]}"),
+        "X": df_compressed.select(covars_updated),
+        "compression_count": df_compressed.select("count"),
+        "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
+        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),
+        "df_compressed": df_compressed,
+    }
+
+    return compressed_dict
 
 
 def _get_na_index(N: int, Y_index: pd.Series) -> np.ndarray:

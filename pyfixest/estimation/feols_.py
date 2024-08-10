@@ -1,9 +1,11 @@
 import functools
 import gc
+import time
 import warnings
 from importlib import import_module
 from typing import Callable, Optional, Union
 
+import numba as nb
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -210,6 +212,7 @@ class Feols:
         self._solver = solver
         _feols_input_checks(Y, X, weights)
 
+        tic = time.time()
         if self._X.shape[1] == 0:
             self._X_is_empty = True
         else:
@@ -221,6 +224,8 @@ class Feols:
                 self._collin_vars,
                 self._collin_index,
             ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
+        toc = time.time()
+        print("multicol check", toc - tic)
 
         self._Z = self._X
 
@@ -360,7 +365,10 @@ class Feols:
         self._tZZinv = np.array([])
 
     def vcov(
-        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+        self,
+        vcov: Union[str, dict[str, str]],
+        data: Optional[DataFrameType] = None,
+        use_compression=False,
     ) -> "Feols":
         """
         Compute covariance matrices for an estimated regression model.
@@ -378,7 +386,8 @@ class Feols:
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, tries to fetch the data from the
             model object. Defaults to None.
-
+        use_compression: bool, optional
+            Indicates whether regression fit was based on compressed data. Defaults to False.
 
         Returns
         -------
@@ -427,7 +436,7 @@ class Feols:
                 vcov_type="iid",
             )
 
-            self._vcov = self._ssc * self._vcov_iid()
+            self._vcov = self._ssc * self._vcov_iid(use_compression=use_compression)
 
         elif self._vcov_type == "hetero":
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
@@ -442,7 +451,7 @@ class Feols:
                 vcov_type="hetero",
             )
 
-            self._vcov = self._ssc * self._vcov_hetero()
+            self._vcov = self._ssc * self._vcov_hetero(use_compression=use_compression)
 
         elif self._vcov_type == "CRV":
             if data is not None:
@@ -521,26 +530,37 @@ class Feols:
 
         return self
 
-    def _vcov_iid(self):
+    def _vcov_iid(self, use_compression: bool):
         _N = self._N
         _u_hat = self._u_hat
         _method = self._method
         _bread = self._bread
 
-        if _method == "feols":
-            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method == "fepois":
-            sigma2 = 1
+        if not use_compression:
+            if _method == "feols":
+                sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
+            elif _method == "fepois":
+                sigma2 = 1
+            else:
+                raise NotImplementedError(
+                    f"'iid' inference is not supported for {_method} regressions."
+                )
         else:
-            raise NotImplementedError(
-                f"'iid' inference is not supported for {_method} regressions."
-            )
+            # import pdb; pdb.set_trace()
+            weights = self._compression_count.to_numpy()
+            Yprime = self._Yprime.to_numpy()
+            Yprimeprime = self._Yprimeprime.to_numpy()
+            X = self._X / np.sqrt(weights)
+            beta_hat = self._beta_hat
+            yhat = (X @ beta_hat).reshape(-1, 1)
+            rss_g = (yhat**2) * weights - 2 * yhat * Yprime + Yprimeprime
+            sigma2 = np.sum(rss_g) / (_N - 1)
 
         _vcov = _bread * sigma2
 
         return _vcov
 
-    def _vcov_hetero(self):
+    def _vcov_hetero(self, use_compression: bool):
         _scores = self._scores
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
@@ -550,22 +570,37 @@ class Feols:
         _is_iv = self._is_iv
         _bread = self._bread
 
-        if _vcov_type_detail in ["hetero", "HC1"]:
-            transformed_scores = _scores
-        elif _vcov_type_detail in ["HC2", "HC3"]:
-            leverage = np.sum(_X * (_X @ np.linalg.inv(_tZX)), axis=1)
-            transformed_scores = (
-                _scores / np.sqrt(1 - leverage)[:, None]
-                if _vcov_type_detail == "HC2"
-                else _scores / (1 - leverage)[:, None]
-            )
+        if not use_compression:
+            if _vcov_type_detail in ["hetero", "HC1"]:
+                transformed_scores = _scores
+            elif _vcov_type_detail in ["HC2", "HC3"]:
+                leverage = np.sum(_X * (_X @ np.linalg.inv(_tZX)), axis=1)
+                transformed_scores = (
+                    _scores / np.sqrt(1 - leverage)[:, None]
+                    if _vcov_type_detail == "HC2"
+                    else _scores / (1 - leverage)[:, None]
+                )
 
-        Omega = transformed_scores.T @ transformed_scores
+            Omega = transformed_scores.T @ transformed_scores
 
-        _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
-        _vcov = _bread @ _meat @ _bread
+            _meat = _tXZ @ _tZZinv @ Omega @ _tZZinv @ _tZX if _is_iv else Omega
 
-        return _vcov
+        else:
+            if _vcov_type_detail in ["HC2", "HC3"]:
+                raise NotImplementedError(
+                    f"Only HC1 robust inference is supported, but {_vcov_type_detail} was specified."
+                )
+
+            yprime = self._Yprime.to_numpy()
+            yprimeprime = self._Yprimeprime.to_numpy()
+            weights = self._compression_count.to_numpy()
+            X = self._X / np.sqrt(weights)
+            beta_hat = self._beta_hat
+            yhat = (X @ beta_hat).reshape(-1, 1)
+            rss_g = (yhat**2) * weights - 2 * yhat * yprime + yprimeprime
+            _meat = (X * rss_g).T @ X
+
+        return _bread @ _meat @ _bread
 
     def _vcov_crv1(self, clustid, cluster_col):
         _Z = self._Z
@@ -732,10 +767,14 @@ class Feols:
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
+        Yprime: pd.DataFrame,
+        Yprimeprime: pd.DataFrame,
+        compression_count: pd.DataFrame,
         _ssc_dict: dict[str, Union[str, bool]],
         _k_fe: int,
         fval: str,
         store_data: bool,
+        # fe_array: np.ndarray,
     ) -> None:
         """
         Enrich Feols object.
@@ -782,6 +821,11 @@ class Feols:
             self._fixef = fval
         else:
             self._has_fixef = False
+
+        self._Yprime = Yprime
+        self._Yprimeprime = Yprimeprime
+        self._compression_count = compression_count
+        # self._fe_array = fe_array
 
     def _clear_attributes(self):
         attributes = [
@@ -2299,6 +2343,7 @@ def _drop_multicollinear_variables(
     return X, names_array.tolist(), collin_vars, collin_index
 
 
+@nb.njit(parallel=True)
 def _find_collinear_variables(
     X: np.ndarray, tol: float = 1e-10
 ) -> tuple[np.ndarray, int, bool]:
@@ -2324,7 +2369,7 @@ def _find_collinear_variables(
     """
     K = X.shape[1]
     R = np.zeros((K, K))
-    id_excl = np.zeros(K, dtype=bool)
+    id_excl = np.zeros(K, dtype=np.int32)
     n_excl = 0
     min_norm = X[0, 0]
 
@@ -2337,11 +2382,11 @@ def _find_collinear_variables(
 
         if R_jj < tol:
             n_excl += 1
-            id_excl[j] = True
+            id_excl[j] = 1
 
             if n_excl == K:
                 all_removed = True
-                return id_excl, n_excl, all_removed
+                return id_excl.astype(np.bool_), n_excl, all_removed
 
             continue
 
@@ -2359,7 +2404,7 @@ def _find_collinear_variables(
                 value -= R[k, i] * R[k, j]
             R[j, i] = value / R_jj
 
-    return id_excl, n_excl, False
+    return id_excl.astype(np.bool_), n_excl, False
 
 
 def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):

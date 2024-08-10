@@ -28,6 +28,7 @@ def feols(
     store_data: bool = True,
     lean: bool = False,
     weights_type: str = "aweights",
+    use_compression: bool = False,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -333,6 +334,7 @@ def feols(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=use_compression,
     )
 
     fixest = FixestMulti(
@@ -342,6 +344,7 @@ def feols(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=use_compression,
     )
 
     fixest._prepare_estimation(
@@ -497,6 +500,7 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=False,  # Poisson regression does not support compression as it doesn't support weights
     )
 
     fixest = FixestMulti(
@@ -506,6 +510,7 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=False,
     )
 
     fixest._prepare_estimation(
@@ -542,6 +547,7 @@ def _estimation_input_checks(
     lean: bool,
     fixef_tol: float,
     weights_type: str,
+    use_compression: bool = False,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -609,6 +615,13 @@ def _estimation_input_checks(
             """
         )
 
+    if not isinstance(use_compression, bool):
+        raise TypeError("The function argument `use_compression` must be of type bool.")
+    if use_compression and weights is not None:
+        raise NotImplementedError(
+            "Compressed regression is not supported with weights."
+        )
+
 
 def _regression_compression(
     depvars: list[str], covars: list[str], data_long: pl.DataFrame
@@ -643,7 +656,7 @@ def feols_compressed(
     seed=None,
     # ssc = ssc(),
 ):
-    "Run a regression model using sufficient statistics."
+    """Run a regression model using sufficient statistics."""
     # data = data.dropna().reset_index(drop = True).copy()
 
     def _feols_compressed(
@@ -699,7 +712,6 @@ def feols_compressed(
 
     fit = _feols_compressed(fml, data, vcov, ssc=ssc)
 
-    # import pdb; pdb.set_trace()
     if bootstrap:
         kwargs = {"data": data, "fml": fml}
         fit.bootstrap(

@@ -1,4 +1,5 @@
 import functools
+import time
 import warnings
 from importlib import import_module
 from typing import Optional, Union
@@ -27,6 +28,7 @@ class FixestMulti:
         lean: bool,
         fixef_tol: float,
         weights_type: str,
+        use_compression: bool,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -47,6 +49,8 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
+        use_compression: bool
+            Wheter to run the estimation on lossless compression via sufficient statistics or not.
 
         Returns
         -------
@@ -57,6 +61,7 @@ class FixestMulti:
         self._lean = lean
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
+        self._use_compression = use_compression
 
         data = _polars_to_pandas(data)
 
@@ -194,6 +199,7 @@ class FixestMulti:
         _fixef_tol = self._fixef_tol
         _weights_type = self._weights_type
         _lean = self._lean
+        _use_compression = self._use_compression
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -216,38 +222,31 @@ class FixestMulti:
                     drop_singletons=_drop_singletons,
                     drop_intercept=_drop_intercept,
                     weights=_weights,
+                    use_compression=_use_compression,
                 )
 
-                mm_dict_keys = [
-                    "Y",
-                    "X",
-                    "fe",
-                    "endogvar",
-                    "Z",
-                    "weights_df",
-                    "na_index",
-                    "na_index_str",
-                    "_icovars",
-                    "X_is_empty",
-                ]
-                (
-                    Y,
-                    X,
-                    fe,
-                    endogvar,
-                    Z,
-                    weights_df,
-                    na_index,
-                    na_index_str,
-                    _icovars,
-                    X_is_empty,
-                ) = (mm_dict[key] for key in mm_dict_keys)
+                Y = mm_dict.get("Y")
+                X = mm_dict.get("X")
+                fe = mm_dict.get("fe")
+                endogvar = mm_dict.get("endogvar")
+                Z = mm_dict.get("Z")
+                weights_df = mm_dict.get("weights_df")
+                na_index = mm_dict.get("na_index")
+                na_index_str = mm_dict.get("na_index_str")
+                _icovars = mm_dict.get("_icovars")
+                X_is_empty = mm_dict.get("X_is_empty")
+                Yprime = mm_dict.get("Yprime")
+                Yprimeprime = mm_dict.get("Yprimeprime")
+                compression_count = mm_dict.get("compression_count")
+                # self._compressed_fml = mm_dict.get("compressed_fml")
+                df_compressed = mm_dict.get("df_compressed")
 
-                if _weights is not None:
+                if isinstance(weights_df, pd.DataFrame):
                     weights = weights_df.to_numpy()
                 else:
                     weights = np.ones(Y.shape[0])
 
+                weights = compression_count.to_numpy() if _use_compression else weights
                 weights = weights.reshape((weights.shape[0], 1))
 
                 self._X_is_empty = False
@@ -265,16 +264,18 @@ class FixestMulti:
 
                     if fe is not None:
                         _has_fixef = True
-
-                    Yd, Xd = demean_model(
-                        Y,
-                        X,
-                        fe,
-                        weights,
-                        lookup_demeaned_data,
-                        na_index_str,
-                        _fixef_tol,
-                    )
+                    if not _use_compression:
+                        Yd, Xd = demean_model(
+                            Y,
+                            X,
+                            fe,
+                            weights,
+                            lookup_demeaned_data,
+                            na_index_str,
+                            _fixef_tol,
+                        )
+                    else:
+                        Yd, Xd = Y, X
 
                     if _is_iv:
                         endogvard, Zd = demean_model(
@@ -313,15 +314,18 @@ class FixestMulti:
                         )
                     else:
                         # initiate OLS class
-
                         FIT = Feols(
                             Y=Yd_array,
                             X=Xd_array,
                             weights=weights,
                             coefnames=coefnames,
                             collin_tol=collin_tol,
-                            weights_name=_weights,
-                            weights_type=_weights_type,
+                            weights_name="compression_count"
+                            if _use_compression
+                            else _weights,
+                            weights_type="fweights"
+                            if _use_compression
+                            else _weights_type,
                         )
 
                     FIT.na_index = na_index
@@ -331,7 +335,9 @@ class FixestMulti:
                     if FIT._X_is_empty:
                         FIT._u_hat = Y.to_numpy() - Yd_array
                     else:
+                        tic = time.time()
                         FIT.get_fit()
+                        print("Time to fit: ", time.time() - tic)
 
                 elif _method == "fepois":
                     # check for separation and drop separated variables
@@ -396,18 +402,28 @@ class FixestMulti:
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
                     Y=Y,
-                    _data=_data_clean,
+                    _data=df_compressed if _use_compression else _data_clean,
+                    Yprime=Yprime,
+                    Yprimeprime=Yprimeprime,
+                    compression_count=compression_count,
                     _ssc_dict=_ssc_dict,
                     _k_fe=_k_fe,
                     fval=fval,
                     store_data=self._store_data,
+                    # fe_array = fe.to_numpy()
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type, data=_data_clean)
+                    tic = time.time()
+                    FIT.vcov(
+                        vcov=vcov_type,
+                        data=df_compressed if _use_compression else _data_clean,
+                        use_compression=_use_compression,
+                    )
+                    print("Time to vcov: ", time.time() - tic)
                     FIT.get_inference()
 
                     # compute first stage for IV
