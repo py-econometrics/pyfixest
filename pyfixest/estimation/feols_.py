@@ -767,6 +767,7 @@ class Feols:
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
+        _data_long: pd.DataFrame,
         Yprime: pd.DataFrame,
         Yprimeprime: pd.DataFrame,
         compression_count: pd.DataFrame,
@@ -791,7 +792,10 @@ class Feols:
         Y : pd.Series
             The dependent variable of the regression model.
         _data : pd.DataFrame
-            The data used for estimation.
+            The data used for estimation. If `use_compression = True`, the compressed
+            data set.
+        _data_long : pd.DataFrame
+            If `use_compression = True`, the long data set. Else None.
         _ssc_dict : dict
             A dictionary with the sum of squares and cross products matrices.
         _k_fe : int

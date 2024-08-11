@@ -403,14 +403,14 @@ class FixestMulti:
                     depvar=FixestFormula._depvar,
                     Y=Y,
                     _data=df_compressed if _use_compression else _data_clean,
+                    _data_long=_data_clean if _use_compression else None,
                     Yprime=Yprime,
                     Yprimeprime=Yprimeprime,
                     compression_count=compression_count,
                     _ssc_dict=_ssc_dict,
                     _k_fe=_k_fe,
-                    fval=fval,
+                    fval=fval if not _use_compression else None,
                     store_data=self._store_data,
-                    # fe_array = fe.to_numpy()
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
