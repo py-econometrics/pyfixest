@@ -399,6 +399,7 @@ class FixestMulti:
                 _data_clean = _drop_cols(_data, FIT.na_index)
 
                 FIT.add_fixest_multi_context(
+                    FixestFormula=FixestFormula,
                     fml=FixestFormula.fml,
                     depvar=FixestFormula._depvar,
                     Y=Y,
@@ -411,6 +412,7 @@ class FixestMulti:
                     _k_fe=_k_fe,
                     fval=fval if not _use_compression else None,
                     store_data=self._store_data,
+                    drop_singletons=_drop_singletons,
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
@@ -420,7 +422,7 @@ class FixestMulti:
                     tic = time.time()
                     FIT.vcov(
                         vcov=vcov_type,
-                        data=df_compressed if _use_compression else _data_clean,
+                        data=_data_clean,
                         use_compression=_use_compression,
                     )
                     print("Time to vcov: ", time.time() - tic)

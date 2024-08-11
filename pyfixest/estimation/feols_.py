@@ -1,6 +1,5 @@
 import functools
 import gc
-import time
 import warnings
 from importlib import import_module
 from typing import Callable, Optional, Union
@@ -15,6 +14,7 @@ from scipy.stats import chi2, f, norm, t
 from tqdm import tqdm
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -212,7 +212,6 @@ class Feols:
         self._solver = solver
         _feols_input_checks(Y, X, weights)
 
-        tic = time.time()
         if self._X.shape[1] == 0:
             self._X_is_empty = True
         else:
@@ -224,8 +223,6 @@ class Feols:
                 self._collin_vars,
                 self._collin_index,
             ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
-        toc = time.time()
-        print("multicol check", toc - tic)
 
         self._Z = self._X
 
@@ -499,7 +496,9 @@ class Feols:
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
-                        clustid=clustid, cluster_col=cluster_col
+                        clustid=clustid,
+                        cluster_col=cluster_col,
+                        use_compression=use_compression,
                     )
 
                 elif self._vcov_type_detail == "CRV3":
@@ -602,11 +601,10 @@ class Feols:
 
         return _bread @ _meat @ _bread
 
-    def _vcov_crv1(self, clustid, cluster_col):
+    def _vcov_crv1(self, clustid, cluster_col, use_compression):
         _Z = self._Z
         _weights = self._weights
         _u_hat = self._u_hat
-        _method = self._method
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
@@ -620,12 +618,62 @@ class Feols:
 
         weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
 
-        meat = _crv1_meat_loop(
-            _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64),
-            clustid=clustid,
-            cluster_col=cluster_col,
-        )
+        if not use_compression:
+            meat = _crv1_meat_loop(
+                _Z=_Z.astype(np.float64),
+                weighted_uhat=weighted_uhat.astype(np.float64),
+                clustid=clustid,
+                cluster_col=cluster_col,
+            )
+
+        else:
+            _clustervar = self._clustervar[0]
+            reps = 100
+            _data_long = pl.DataFrame(self._data_long)
+
+            grouped_data = {
+                group: _data_long.filter(pl.col(_clustervar) == group)
+                for group in set(clustid)
+            }
+
+            rng = np.random.default_rng(12345)
+
+            boot_stats = np.zeros((reps, self._k))
+            # resample from 'long' data and compress
+            for b in tqdm(range(reps)):
+                resampled_groups = rng.choice(clustid, size=len(clustid), replace=True)
+                df_boot = pl.concat(
+                    [grouped_data[group] for group in resampled_groups], how="vertical"
+                )
+
+                # get model matrix
+                mm_dict = model_matrix_fixest(
+                    # fml=fml,
+                    FixestFormula=self._FixestFormula,
+                    data=df_boot.to_pandas(),
+                    drop_singletons=self._drop_singletons,
+                    drop_intercept=False,
+                    weights=None,
+                    use_compression=True,
+                )
+                Y_mean = mm_dict.get("Y").to_numpy()
+                X = mm_dict.get("X").to_numpy()
+                compression_count = mm_dict.get("compression_count").to_numpy()
+
+                FIT = Feols(
+                    Y=Y_mean,
+                    X=X,
+                    weights=compression_count,
+                    collin_tol=self._collin_tol,
+                    coefnames=self._coefnames,
+                    weights_name="compression_count",
+                    weights_type="fweights",
+                    solver=self._solver,
+                )
+                FIT.get_fit()
+                boot_stats[b, :] = FIT._beta_hat - self._beta_hat
+
+            return np.dot(boot_stats.T, boot_stats) / (reps - 1)
 
         if _is_iv is False:
             _vcov = _bread @ meat @ _bread
@@ -763,6 +811,7 @@ class Feols:
 
     def add_fixest_multi_context(
         self,
+        FixestFormula,
         fml: str,
         depvar: str,
         Y: pd.Series,
@@ -775,6 +824,7 @@ class Feols:
         _k_fe: int,
         fval: str,
         store_data: bool,
+        drop_singletons: bool,
         # fe_array: np.ndarray,
     ) -> None:
         """
@@ -810,13 +860,17 @@ class Feols:
         None
         """
         # some bookkeeping
+        self._FixestFormula = FixestFormula
         self._fml = fml
         self._depvar = depvar
         self._Y_untransformed = Y
+        self._drop_singletons = drop_singletons
         self._data = pd.DataFrame()
+        self._data_long = pd.DataFrame()
 
         if store_data:
             self._data = _data
+            self._data_long = _data_long
 
         self._ssc_dict = _ssc_dict
         self._k_fe = _k_fe
@@ -837,6 +891,7 @@ class Feols:
             "_Y",
             "_Z",
             "_data",
+            "_data_long",
             "_cluster_df",
             "_tXZ",
             "_tZy",
