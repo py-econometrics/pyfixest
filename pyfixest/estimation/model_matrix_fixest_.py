@@ -272,6 +272,8 @@ def _regression_compression(
     if fevars:
         df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
         columns_updated = covars_updated + ["Intercept"]
+    else:
+        columns_updated = covars_updated
 
     compressed_dict = {
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
