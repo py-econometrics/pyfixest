@@ -1,4 +1,5 @@
 import re
+import time
 import warnings
 from typing import Optional, Union
 
@@ -186,6 +187,7 @@ def model_matrix_fixest(
     na_index_str = ",".join(str(x) for x in na_index)
 
     if use_compression:
+        tic = time.time()
         depvars = Y.columns.tolist()
         covars = X.columns.tolist()
         Y_polars = pl.DataFrame(pd.DataFrame(Y))
@@ -196,12 +198,16 @@ def model_matrix_fixest(
         else:
             data_long = pl.concat([Y_polars, X_polars], how="horizontal")
 
+        print("pandas to polars time: ", time.time() - tic)
+
+        tic = time.time()
         compressed_dict = _regression_compression(
             depvars=depvars,
             covars=covars,
             data_long=data_long,
             fevars=fval.split("+") if fval != "0" else None,
         )
+        print(f"Compression time: {time.time() - tic}")
         Y = compressed_dict.get("Y").to_pandas()
         X = compressed_dict.get("X").to_pandas()
         compression_count = compressed_dict.get("compression_count").to_pandas()
@@ -232,6 +238,65 @@ def model_matrix_fixest(
     }
 
 
+def _regression_compression2(
+    depvars: list[str],
+    covars: list[str],
+    data_long: pl.DataFrame,
+    fevars: Optional[list[str]] = None,
+) -> dict:
+    "Compress data for regression based on sufficient statistics."
+    covars_updated = covars.copy()
+
+    if fevars:
+        # Factorize and prepare group-wise mean calculations in one go
+        for fevar in fevars:
+            for var in covars:
+                mean_var_name = f"mean_{var}_by_{fevar}"
+                covars_updated.append(mean_var_name)
+                # Add mean calculation for this var by factorized fevar
+                data_long = data_long.with_columns(
+                    pl.col(var).mean().over(fevar).alias(mean_var_name)
+                )
+
+    # Prepare aggregation expressions
+    agg_expressions = [pl.count(depvars[0]).alias("count")]
+    for var in depvars:
+        agg_expressions.extend(
+            [
+                pl.sum(var).alias(f"sum_{var}"),
+                pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"),
+            ]
+        )
+
+    # Perform the final grouping and aggregation
+    df_compressed = data_long.groupby(covars_updated).agg(agg_expressions)
+
+    # Calculate means
+    mean_expressions = [
+        (pl.col(f"sum_{var}") / pl.col("count")).alias(f"mean_{var}") for var in depvars
+    ]
+    df_compressed = df_compressed.with_columns(mean_expressions)
+
+    # Add Intercept if necessary
+    if fevars:
+        df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
+        columns_updated = covars_updated + ["Intercept"]
+    else:
+        columns_updated = covars_updated
+
+    # Prepare the output dictionary
+    compressed_dict = {
+        "Y": df_compressed.select(f"mean_{depvars[0]}"),
+        "X": df_compressed.select(columns_updated),
+        "compression_count": df_compressed.select("count"),
+        "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
+        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),
+        "df_compressed": df_compressed,
+    }
+
+    return compressed_dict
+
+
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
@@ -242,19 +307,23 @@ def _regression_compression(
     covars_updated = covars.copy()
 
     agg_expressions = []
+    agg_expressions_fe = []
 
+    data_long = data_long.lazy()
+
+    # import pdb; pdb.set_trace()
     if fevars:
         fevars2 = [f"factorize({fevar})" for fevar in fevars]
         for fevar in fevars2:
             for var in covars:
                 mean_var_name = f"mean_{var}_by_{fevar}"
                 covars_updated.append(mean_var_name)
-                agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
+                # agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
+                agg_expressions_fe.append(
+                    pl.col(var).mean().over(fevar).alias(mean_var_name)
+                )
 
-            df_grouped = data_long.groupby(fevar).agg(agg_expressions)
-            data_long = data_long.join(df_grouped, on=fevar, how="left")
-
-    agg_expressions = []
+    data_long = data_long.with_columns(agg_expressions_fe)
     agg_expressions.append(pl.count(depvars[0]).alias("count"))
     for var in depvars:
         agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
@@ -275,6 +344,7 @@ def _regression_compression(
     else:
         columns_updated = covars_updated
 
+    df_compressed = df_compressed.collect()
     compressed_dict = {
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
         "X": df_compressed.select(columns_updated),

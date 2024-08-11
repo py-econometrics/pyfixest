@@ -1,5 +1,6 @@
 import functools
 import gc
+import time
 import warnings
 from importlib import import_module
 from typing import Callable, Optional, Union
@@ -628,23 +629,28 @@ class Feols:
 
         else:
             _clustervar = self._clustervar[0]
-            reps = 100
+            reps = 4
             _data_long = pl.DataFrame(self._data_long)
 
+            tic = time.time()
+            _data_long_grouped = _data_long.groupby(_clustervar)
             grouped_data = {
-                group: _data_long.filter(pl.col(_clustervar) == group)
-                for group in set(clustid)
+                group_name: group_df for group_name, group_df in _data_long_grouped
             }
+            print(f"Grouping took {time.time() - tic} seconds")
 
             rng = np.random.default_rng(12345)
 
             boot_stats = np.zeros((reps, self._k))
             # resample from 'long' data and compress
-            for b in tqdm(range(reps)):
+            for b in range(reps):
                 resampled_groups = rng.choice(clustid, size=len(clustid), replace=True)
+
+                tic = time.time()
                 df_boot = pl.concat(
                     [grouped_data[group] for group in resampled_groups], how="vertical"
                 )
+                print("stacking took", time.time() - tic)
 
                 # get model matrix
                 mm_dict = model_matrix_fixest(
