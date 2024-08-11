@@ -233,7 +233,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>Add support for randomization inference via the <code>ritest()</code> method:</li>
 </ul>
-<div id="81d422d0" class="cell" data-execution_count="1">
+<div id="72170f06" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -252,7 +252,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>Fixes multiple smaller and larger performance regressions. The NYC-Taxi example regression now takes approximately 22 seconds to run (… if my laptopt is connected to a power charger)!</li>
 </ul>
-<div id="977d10b4" class="cell" data-execution_count="2">
+<div id="2456f2a4" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -313,7 +313,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Adds three new function arguments to <code>feols()</code> and <code>fepois()</code>: <code>copy_data</code>, <code>store_data</code>, and <code>fixef_tol</code>.</li>
 <li>Adds support for frequency weights with the <code>weights_type</code> function argument.</li>
 </ul>
-<div id="40dc9ba3" class="cell" data-execution_count="3">
+<div id="0d53830f" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(N <span class="op">=</span> <span class="dv">10000</span>, model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -336,7 +336,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>pf.etable([fit, fit_weighted], coef_fmt <span class="op">=</span> <span class="st">"b(se) </span><span class="ch">\n</span><span class="st"> (t) </span><span class="ch">\n</span><span class="st"> (p)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="3NxVPs"></div>
+            <div id="FKPCWy"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -360,9 +360,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("3NxVPs").appendChild(div);
+                        document.getElementById("FKPCWy").appendChild(div);
                     };
-                    var e = document.getElementById("3NxVPs");
+                    var e = document.getElementById("FKPCWy");
                     e.appendChild(script);
                 })()
             </script>
@@ -370,7 +370,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="aXgIRv"></div>
+            <div id="BOjIsU"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -394,9 +394,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("aXgIRv").appendChild(div);
+                        document.getElementById("BOjIsU").appendChild(div);
                     };
-                    var e = document.getElementById("aXgIRv");
+                    var e = document.getElementById("BOjIsU");
                     e.appendChild(script);
                 })()
             </script>
@@ -413,78 +413,78 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <style type="text/css">
-#T_69f5c tbody tr:nth-child(0) td {
+#T_42eda tbody tr:nth-child(0) td {
   background-color: #f0f0f0;
 }
-#T_69f5c tbody tr:nth-child(1) td {
+#T_42eda tbody tr:nth-child(1) td {
   border-bottom: 2px solid black;
 }
-#T_69f5c tbody tr:nth-child(2) td {
+#T_42eda tbody tr:nth-child(2) td {
   border-bottom: 1px solid black;
 }
-#T_69f5c tbody tr:nth-child(3) td {
+#T_42eda tbody tr:nth-child(3) td {
   border-bottom: 1px solid black;
 }
-#T_69f5c tbody tr:nth-child(6) td {
+#T_42eda tbody tr:nth-child(6) td {
   border-bottom: 1px solid black;
 }
-#T_69f5c tbody td {
+#T_42eda tbody td {
   background-color: #ffffff;
 }
-#T_69f5c tbody tr td:first-child {
+#T_42eda tbody tr td:first-child {
   background-color: #f0f0f0;
   font-weight: bold;
   text-align: left;
 }
-#T_69f5c_row0_col0, #T_69f5c_row0_col1, #T_69f5c_row0_col2, #T_69f5c_row1_col0, #T_69f5c_row1_col1, #T_69f5c_row1_col2, #T_69f5c_row2_col0, #T_69f5c_row2_col1, #T_69f5c_row2_col2, #T_69f5c_row3_col0, #T_69f5c_row3_col1, #T_69f5c_row3_col2, #T_69f5c_row4_col0, #T_69f5c_row4_col1, #T_69f5c_row4_col2, #T_69f5c_row5_col0, #T_69f5c_row5_col1, #T_69f5c_row5_col2 {
+#T_42eda_row0_col0, #T_42eda_row0_col1, #T_42eda_row0_col2, #T_42eda_row1_col0, #T_42eda_row1_col1, #T_42eda_row1_col2, #T_42eda_row2_col0, #T_42eda_row2_col1, #T_42eda_row2_col2, #T_42eda_row3_col0, #T_42eda_row3_col1, #T_42eda_row3_col2, #T_42eda_row4_col0, #T_42eda_row4_col1, #T_42eda_row4_col2, #T_42eda_row5_col0, #T_42eda_row5_col1, #T_42eda_row5_col2 {
   text-align: right;
 }
 </style>
 
-<div id="T_69f5c" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
+<div id="T_42eda" class="quarto-float quarto-figure quarto-figure-center anchored" data-quarto-postprocess="true">
 <figure class="quarto-float quarto-float-tbl figure">
-<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_69f5c-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="T_42eda-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient(Std. Error) (t-stats) (p-value)
 </figcaption>
-<div aria-describedby="T_69f5c-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<table id="T_69f5c" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<div aria-describedby="T_42eda-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table id="T_42eda" class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
-<th id="T_69f5c_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
-<th id="T_69f5c_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
-<th id="T_69f5c_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
+<th id="T_42eda_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th"></th>
+<th id="T_42eda_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">est1</th>
+<th id="T_42eda_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">est2</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_69f5c_row0_col0" class="data row0 col0">depvar</td>
-<td id="T_69f5c_row0_col1" class="data row0 col1">Y</td>
-<td id="T_69f5c_row0_col2" class="data row0 col2">Y</td>
+<td id="T_42eda_row0_col0" class="data row0 col0">depvar</td>
+<td id="T_42eda_row0_col1" class="data row0 col1">Y</td>
+<td id="T_42eda_row0_col2" class="data row0 col2">Y</td>
 </tr>
 <tr class="even">
-<td id="T_69f5c_row1_col0" class="data row1 col0">X1</td>
-<td id="T_69f5c_row1_col1" class="data row1 col1">0.001(0.012) (0.092) (0.927)</td>
-<td id="T_69f5c_row1_col2" class="data row1 col2">0.001(0.012) (0.092) (0.927)</td>
+<td id="T_42eda_row1_col0" class="data row1 col0">X1</td>
+<td id="T_42eda_row1_col1" class="data row1 col1">0.001(0.012) (0.092) (0.927)</td>
+<td id="T_42eda_row1_col2" class="data row1 col2">0.001(0.012) (0.092) (0.927)</td>
 </tr>
 <tr class="odd">
-<td id="T_69f5c_row2_col0" class="data row2 col0">f1</td>
-<td id="T_69f5c_row2_col1" class="data row2 col1">x</td>
-<td id="T_69f5c_row2_col2" class="data row2 col2">x</td>
+<td id="T_42eda_row2_col0" class="data row2 col0">f1</td>
+<td id="T_42eda_row2_col1" class="data row2 col1">x</td>
+<td id="T_42eda_row2_col2" class="data row2 col2">x</td>
 </tr>
 <tr class="even">
-<td id="T_69f5c_row3_col0" class="data row3 col0">R2</td>
-<td id="T_69f5c_row3_col1" class="data row3 col1">0.011</td>
-<td id="T_69f5c_row3_col2" class="data row3 col2">-</td>
+<td id="T_42eda_row3_col0" class="data row3 col0">R2</td>
+<td id="T_42eda_row3_col1" class="data row3 col1">0.011</td>
+<td id="T_42eda_row3_col2" class="data row3 col2">-</td>
 </tr>
 <tr class="odd">
-<td id="T_69f5c_row4_col0" class="data row4 col0">S.E. type</td>
-<td id="T_69f5c_row4_col1" class="data row4 col1">by: f1</td>
-<td id="T_69f5c_row4_col2" class="data row4 col2">by: f1</td>
+<td id="T_42eda_row4_col0" class="data row4 col0">S.E. type</td>
+<td id="T_42eda_row4_col1" class="data row4 col1">by: f1</td>
+<td id="T_42eda_row4_col2" class="data row4 col2">by: f1</td>
 </tr>
 <tr class="even">
-<td id="T_69f5c_row5_col0" class="data row5 col0">Observations</td>
-<td id="T_69f5c_row5_col1" class="data row5 col1">9997</td>
-<td id="T_69f5c_row5_col2" class="data row5 col2">9997</td>
+<td id="T_42eda_row5_col0" class="data row5 col0">Observations</td>
+<td id="T_42eda_row5_col1" class="data row5 col1">9997</td>
+<td id="T_42eda_row5_col2" class="data row5 col2">9997</td>
 </tr>
 </tbody>
 </table>
@@ -507,7 +507,7 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <li>Additionally, <code>model_matrix_fixest</code> now returns a dictionary instead of a tuple.</li>
 <li>Brings back fixed effects reference setting via <code>i(var1, var2, ref)</code> syntax. Deprecates the <code>i_ref1</code>, <code>i_ref2</code> function arguments. I.e. it is again possible to e.g.&nbsp;run</li>
 </ul>
-<div id="a5bbf73b" class="cell" data-execution_count="4">
+<div id="5f99d351" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -515,7 +515,7 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>fit1.coef()[<span class="dv">0</span>:<span class="dv">8</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Via the <code>ref</code> syntax, via can set the reference level:</p>
-<div id="c9afdb01" class="cell" data-execution_count="5">
+<div id="42448a08" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ i(f1, X2, ref = 1)"</span>, data<span class="op">=</span>data)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fit2.coef()[<span class="dv">0</span>:<span class="dv">8</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -524,7 +524,7 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h2 class="anchored" data-anchor-id="pyfixest-0.17.0">PyFixest 0.17.0</h2>
 <ul>
 <li><p>Restructures the codebase and reorganizes how users can interact with the <code>pyfixest</code> API. It is now recommended to use <code>pyfixest</code> in the following way:</p>
-<div id="8cf02431" class="cell" data-execution_count="6">
+<div id="d48f6360" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
@@ -592,7 +592,7 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 </div>
 <p>The update should not inroduce any breaking changes. Thanks to <a href="https://github.com/Wenzhi-Ding"><span class="citation" data-cites="Wenzhi-Ding">@Wenzhi-Ding</span></a> for the PR!</p></li>
 <li><p>Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to <a href="https://github.com/apoorvalal"><span class="citation" data-cites="apoorvalal">@apoorvalal</span></a> for the contribution!</p>
-<div id="3ec15941" class="cell" data-execution_count="7">
+<div id="408919c6" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit.confint(joint <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div>
@@ -609,18 +609,18 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">Intercept</td>
-<td>0.379339</td>
-<td>1.178359</td>
+<td>0.380495</td>
+<td>1.177203</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">D</td>
-<td>-1.759805</td>
-<td>-1.045429</td>
+<td>-1.758771</td>
+<td>-1.046463</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">f1</td>
-<td>-0.014133</td>
-<td>0.023682</td>
+<td>-0.014078</td>
+<td>0.023627</td>
 </tr>
 </tbody>
 </table>
@@ -629,10 +629,10 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 </div>
 </div></li>
 <li><p>Adds support for the causal cluster variance estimator by <a href="https://academic.oup.com/qje/article/138/1/1/6750017">Abadie et al.&nbsp;(QJE, 2023)</a> for OLS via the <code>.ccv()</code> method.</p>
-<div id="0c9f4d2b" class="cell" data-execution_count="8">
+<div id="c84ee7b9" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit.ccv(treatment <span class="op">=</span> <span class="st">"D"</span>, cluster <span class="op">=</span> <span class="st">"group_id"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1249: UserWarning:
+<pre><code>/home/runner/work/pyfixest/pyfixest/pyfixest/estimation/feols_.py:1250: UserWarning:
 
 The initial model was not clustered. CRV1 inference is computed and stored in the model object.
 </code></pre>
@@ -657,11 +657,11 @@ The initial model was not clustered. CRV1 inference is computed and stored in th
 <tr class="odd">
 <td data-quarto-table-cell-role="th">CCV</td>
 <td>-1.4026168622179929</td>
-<td>0.303885</td>
-<td>-4.615613</td>
-<td>0.000215</td>
-<td>-2.041056</td>
-<td>-0.764178</td>
+<td>0.266396</td>
+<td>-5.265158</td>
+<td>0.000052</td>
+<td>-1.962294</td>
+<td>-0.84294</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">CRV1</td>
@@ -703,7 +703,7 @@ The initial model was not clustered. CRV1 inference is computed and stored in th
 <li>Changes all docstrings to <code>numpy</code> format.</li>
 <li>Difference-in-differences estimation functions now need to be imported via the <code>pyfixest.did.estimation</code> module:</li>
 </ul>
-<div id="a7024510" class="cell" data-execution_count="9">
+<div id="7908f496" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.did.estimation <span class="im">import</span> did2s, lpdid, event_study</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
