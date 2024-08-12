@@ -126,13 +126,14 @@ def iplot(
     --------
     ```{python}
     import pyfixest as pf
+    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ i(f1)", data = df)
     fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    pf.iplot([fit1, fit2, fit3])
+    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
     ```
     """
     models = _post_processing_input_checks(models)
@@ -253,13 +254,17 @@ def coefplot(
     --------
     ```{python}
     import pyfixest as pf
+    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ X1", data = df)
     fit2 = pf.feols("Y ~ X1 + X2", data = df)
     fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
+    fit4 = pf.feols("Y ~ C(X1)", data = df)
 
     pf.coefplot([fit1, fit2, fit3])
+    pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
+
     ```
     """
     models = _post_processing_input_checks(models)

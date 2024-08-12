@@ -38,7 +38,7 @@ def _rename_categorical(col_name):
     return col_name
 
 
-def rename_categorical(coef_names_list: list) -> dict:
+def rename_categoricals(coef_names_list: list) -> dict:
     """
     Rename the categorical variables in the coef_names_list.
 
