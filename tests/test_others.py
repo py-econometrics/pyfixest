@@ -3,7 +3,7 @@ import pandas as pd
 import polars as pl
 
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.report.utils import rename_categoricals
+from pyfixest.report.utils import rename_categoricals, rename_event_study_coefs
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -111,4 +111,41 @@ def test_rename_categoricals():
         "C(var)[T.2]": "var::2",
         "C(var2)[T.1]": "var2::1",
         "C(var2)[T.2]": "var2::2",
+    }
+
+    # with strings:
+    coefnames = ["Intercept", "C(f4)[T.B]", "C(f4)[T.C]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "C(f4)[T.B]": "f4::B",
+        "C(f4)[T.C]": "f4::C",
+    }
+
+    # with reference levels:
+    coefnames = [
+        "Intercept",
+        "C(f4, contr.treatment(base='A'))[T.B]",
+        "C(f4, contr.treatment(base='A'))[T.C]",
+    ]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "C(f4, contr.treatment(base='A'))[T.B]": "f4::B",
+        "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
+    }
+
+
+def test_rename_event_study_coefs():
+    coefnames = [
+        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]",
+        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]",
+        "Intercept",
+    ]
+
+    renamed = rename_event_study_coefs(coefnames)
+    assert renamed == {
+        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]": "rel_year::-20.0",
+        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
+        "Intercept": "Intercept",
     }
