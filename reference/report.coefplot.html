@@ -369,7 +369,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>report.coefplot(models, alpha=0.05, figsize=None, yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=None, drop=None, exact_match=False, plot_backend='lets_plot')</code></p>
+<p><code>report.coefplot(models, alpha=0.05, figsize=None, yintercept=0, xintercept=None, rotate_xticks=0, title=None, coord_flip=True, keep=None, drop=None, exact_match=False, plot_backend='lets_plot', labels=None)</code></p>
 <p>Plot model coefficients with confidence intervals.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -461,6 +461,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>The plotting backend to use between “lets_plot” (default) and “matplotlib”.</td>
 <td><code>'lets_plot'</code></td>
 </tr>
+<tr class="odd">
+<td><code>labels</code></td>
+<td>Optional[dict]</td>
+<td>A dictionary to relabel the variables. The keys are the original variable names and the values the new names. The renaming is applied after the selection of the coefficients via <code>keep</code> and <code>drop</code>.</td>
+<td><code>None</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -483,18 +489,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2">
 <h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="8c1f8057" class="cell" data-execution_count="1">
+<div id="dd65fec9" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> df)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit1, fit2, fit3])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y ~ C(X1)"</span>, data <span class="op">=</span> df)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit1, fit2, fit3])</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit4], labels <span class="op">=</span> rename_categoricals(fit1._coefnames))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="DzP5tM"></div>
+            <div id="Nk8DF5"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -518,9 +527,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("DzP5tM").appendChild(div);
+                        document.getElementById("Nk8DF5").appendChild(div);
                     };
-                    var e = document.getElementById("DzP5tM");
+                    var e = document.getElementById("Nk8DF5");
                     e.appendChild(script);
                 })()
             </script>
@@ -528,7 +537,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="yna73Y"></div>
+            <div id="NMc18N"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -552,25 +561,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("yna73Y").appendChild(div);
+                        document.getElementById("NMc18N").appendChild(div);
                     };
-                    var e = document.getElementById("yna73Y");
+                    var e = document.getElementById("NMc18N");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="eBBjlO"></div>
+   <div id="ntPhTf"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
        (function() {
            var plotSpec={
 "data":{
-"Coefficient":["Intercept","Intercept","X1","X1","X1","Intercept","Intercept","X1","X1","X1","X2","X2","X1","X1","X1","X2","X2"],
-"Model":["Y~X1","Y~X1+X2","Y~X1","Y~X1+X2","Y~X1+X2|f1","Y~X1","Y~X1+X2","Y~X1","Y~X1+X2","Y~X1+X2|f1","Y~X1+X2","Y~X1+X2|f1","Y~X1","Y~X1+X2","Y~X1+X2|f1","Y~X1+X2","Y~X1+X2|f1"],
-"Estimate":[0.9185177588356426,0.888779148933936,-1.000085840074156,-0.9929357698186859,-0.9495255714191589,0.9185177588356426,0.888779148933936,-1.000085840074156,-0.9929357698186859,-0.9495255714191589,-0.17634236659778288,-0.1742252748945438,-1.000085840074156,-0.9929357698186859,-0.9495255714191589,-0.17634236659778288,-0.1742252748945438],
-"2.5%":[0.6990856170653885,0.6760162836776399,-1.1663660739416457,-1.1540790755856785,-1.085581857547282,0.6990856170653885,0.6760162836776399,-1.1663660739416457,-1.1540790755856785,-1.085581857547282,-0.21905485705638192,-0.2118570044389386,-1.1663660739416457,-1.1540790755856785,-1.085581857547282,-0.21905485705638192,-0.2118570044389386],
-"97.5%":[1.1379499006058966,1.101542014190232,-0.8338056062066661,-0.8317924640516935,-0.8134692852910359,1.1379499006058966,1.101542014190232,-0.8338056062066661,-0.8317924640516935,-0.8134692852910359,-0.13362987613918384,-0.13659354535014903,-0.8338056062066661,-0.8317924640516935,-0.8134692852910359,-0.13362987613918384,-0.13659354535014903]
+"Coefficient":["Intercept","C(X1)[T.1.0]","C(X1)[T.2.0]"],
+"Model":["Y~C(X1)","Y~C(X1)","Y~C(X1)"],
+"Estimate":[0.8537251189108644,-0.8214379253682664,-1.9919795072842579],
+"2.5%":[0.6106291116676353,-1.1546313748778112,-2.3247248623427095],
+"97.5%":[1.0968211261540937,-0.4882444758587216,-1.6592341522258065]
 },
 "mapping":{
 "x":"Coefficient",
@@ -669,7 +678,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }],
 "metainfo_list":[]
 };
-           var plotContainer = document.getElementById("eBBjlO");
+           var plotContainer = document.getElementById("ntPhTf");
            window.letsPlotCall(function() {{
                LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
            }});
