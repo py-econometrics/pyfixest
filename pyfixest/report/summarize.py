@@ -9,6 +9,7 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 
@@ -643,33 +644,3 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
-
-
-def _relabel_expvar(varname: str, labels: dict, interaction_symbol: str):
-    """
-    Relabel a variable name using the labels dictionary
-    Also automatically relabel interaction terms using the labels of the individual variables.
-
-    Parameters
-    ----------
-    varname: str
-        The varname in the regression.
-    labels: dict
-        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
-    interaction_symbol: str
-        The symbol to use for displaying the interaction term.
-
-    Returns
-    -------
-    str
-        The relabeled variable
-    """
-    # When varname in labels dictionary, then relabel (note: this allows also to manually rename interaction terms in the dictionary)
-    # Otherwise: When interaction term, then split by vars, relabel, and join using interaction symbol
-    if varname in labels:
-        return labels[varname]
-    elif ":" in varname:
-        vars = varname.split(":")
-        relabeled_vars = [labels.get(v, v) for v in vars]
-        return interaction_symbol.join(relabeled_vars)
-    return varname
