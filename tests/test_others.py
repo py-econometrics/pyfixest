@@ -3,6 +3,7 @@ import pandas as pd
 import polars as pl
 
 from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.report.utils import rename_categoricals, rename_event_study_coefs
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -74,6 +75,7 @@ def test_coef_update():
 
     np.testing.assert_allclose(updated_coefs, full_coefs)
 
+
 def test_coef_update_inplace():
     data = get_data()
     data_subsample = data.sample(frac=0.3)
@@ -83,7 +85,9 @@ def test_coef_update_inplace():
     )
     X_new, y_new = (
         np.c_[
-            data.loc[new_points_id][["X1", "X2"]].values # only pass columns; let `update` add the intercept
+            data.loc[new_points_id][
+                ["X1", "X2"]
+            ].values  # only pass columns; let `update` add the intercept
         ],
         data.loc[new_points_id]["Y"].values,
     )
@@ -97,3 +101,51 @@ def test_coef_update_inplace():
         .values
     )
     np.testing.assert_allclose(m.coef().values, full_coefs)
+
+
+def test_rename_categoricals():
+    coefnames = ["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "C(var)[T.1]": "var::1",
+        "C(var)[T.2]": "var::2",
+        "C(var2)[T.1]": "var2::1",
+        "C(var2)[T.2]": "var2::2",
+    }
+
+    # with strings:
+    coefnames = ["Intercept", "C(f4)[T.B]", "C(f4)[T.C]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "C(f4)[T.B]": "f4::B",
+        "C(f4)[T.C]": "f4::C",
+    }
+
+    # with reference levels:
+    coefnames = [
+        "Intercept",
+        "C(f4, contr.treatment(base='A'))[T.B]",
+        "C(f4, contr.treatment(base='A'))[T.C]",
+    ]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "C(f4, contr.treatment(base='A'))[T.B]": "f4::B",
+        "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
+    }
+
+
+def test_rename_event_study_coefs():
+    coefnames = [
+        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]",
+        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]",
+        "Intercept",
+    ]
+
+    renamed = rename_event_study_coefs(coefnames)
+    assert renamed == {
+        "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]": "rel_year::-20.0",
+        "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
+        "Intercept": "Intercept",
+    }

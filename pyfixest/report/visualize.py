@@ -21,6 +21,7 @@ from lets_plot import (
 )
 
 from pyfixest.report.summarize import _post_processing_input_checks
+from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 LetsPlot.setup_html()
@@ -68,6 +69,7 @@ def iplot(
     drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
+    labels: Optional[dict] = None,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -111,6 +113,9 @@ def iplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    labels: dict, optional
+        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
+        The renaming is applied after the selection of the coefficients via `keep` and `drop`.
 
     Returns
     -------
@@ -121,13 +126,14 @@ def iplot(
     --------
     ```{python}
     import pyfixest as pf
+    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ i(f1)", data = df)
     fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    pf.iplot([fit1, fit2, fit3])
+    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
     ```
     """
     models = _post_processing_input_checks(models)
@@ -148,7 +154,7 @@ def iplot(
                 "In consequence, the '.iplot()' method is not supported."
             )
         all_icovars += fxst._icovars
-        df_model = fxst.tidy(alpha = alpha).reset_index()  # Coefficient -> simple column
+        df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
         df_model["fml"] = fxst._fml
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
@@ -176,6 +182,7 @@ def iplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
+        labels=labels,
     )
 
 
@@ -192,6 +199,7 @@ def coefplot(
     drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
+    labels: Optional[dict] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -233,6 +241,9 @@ def coefplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    labels: dict, optional
+        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
+        The renaming is applied after the selection of the coefficients via `keep` and `drop`.
 
     Returns
     -------
@@ -243,13 +254,17 @@ def coefplot(
     --------
     ```{python}
     import pyfixest as pf
+    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ X1", data = df)
     fit2 = pf.feols("Y ~ X1 + X2", data = df)
     fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
+    fit4 = pf.feols("Y ~ C(X1)", data = df)
 
     pf.coefplot([fit1, fit2, fit3])
+    pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
+
     ```
     """
     models = _post_processing_input_checks(models)
@@ -284,6 +299,7 @@ def coefplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
+        labels=labels,
     )
 
 
@@ -307,6 +323,7 @@ def _coefplot_lets_plot(
     rotate_xticks: float = 0,
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
+    labels: Optional[dict] = None,
 ):
     """
     Plot model coefficients with confidence intervals.
@@ -329,15 +346,25 @@ def _coefplot_lets_plot(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
+    labels : dict, optional
+        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
 
     Returns
     -------
     object
         A lets-plot figure.
     """
+    # import pdb; pdb.set_trace()
+
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
+
+    if labels is not None:
+        interactionSymbol = " x "
+        df["Coefficient"] = df["Coefficient"].apply(
+            lambda x: _relabel_expvar(x, labels, interactionSymbol)
+        )
 
     plot = (
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
@@ -375,6 +402,7 @@ def _coefplot_matplotlib(
     rotate_xticks: float = 0,
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
+    labels: Optional[dict] = None,
     **fig_kwargs,
 ) -> so.Plot:
     """
@@ -400,6 +428,8 @@ def _coefplot_matplotlib(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
+    labels : dict, optional
+        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
     fig_kwargs : dict
         Additional keyword arguments to pass to the matplotlib figure.
 
@@ -412,6 +442,11 @@ def _coefplot_matplotlib(
     --------
     - https://seaborn.pydata.org/tutorial/objects_interface.html
     """
+    if labels is not None:
+        interactionSymbol = " x "
+        df["Coefficient"] = df["Coefficient"].apply(
+            lambda x: _relabel_expvar(x, labels, interactionSymbol)
+        )
     yintercept = yintercept if yintercept is not None else 0
     ub, lb = alpha / 2, 1 - alpha / 2
     title = title if title is not None else "Coefficient Plot"
