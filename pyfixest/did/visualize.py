@@ -9,6 +9,7 @@ def panelview(
     unit: str,
     time: str,
     treat: str,
+    type: Optional[str] = None,
     collapse_to_cohort: Optional[bool] = False,
     subsamp: Optional[int] = None,
     sort_by_timing: Optional[bool] = False,
@@ -74,24 +75,72 @@ def panelview(
     )
     ```
     """
-    treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
-    treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
-    if collapse_to_cohort:
-        treatment_quilt = treatment_quilt.drop_duplicates()
-    if sort_by_timing:
-        treatment_quilt = treatment_quilt.loc[
-            treatment_quilt.sum(axis=1).sort_values().index
-        ]
-    if not ax:
-        f, ax = plt.subplots()
-    cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
-    f.colorbar(cax) if legend else None
-    ax.set_xlabel(xlab) if xlab else None
-    ax.set_ylabel(ylab) if ylab else None
+    if type == "outcome" and outcome:
+        if not ax:
+            f, ax = plt.subplots(figsize=figsize, dpi = 300)
+        
+        for unit_id in data[unit].unique():
+            unit_data = data[data[unit] == unit_id]
+            treatment_times = unit_data[unit_data[treat] == 1][time]
+            
+            # If the unit never receives treatment, plot the line in grey
+            if treatment_times.empty:
+                ax.plot(unit_data[time], unit_data[outcome], color="#999999", linewidth=0.5, alpha = 0.5)
+            else:
+                treatment_start = treatment_times.min()
 
-    if noticks:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    if title:
-        ax.set_title(title)
+                # Plot the entire line with the initial color (orange), then change to red after treatment
+                ax.plot(
+                    unit_data[time],
+                    unit_data[outcome],
+                    color="#FF8343",
+                    linewidth=0.5,  # Thinner line
+                    label=f"Unit {unit_id}" if legend else None,
+                    alpha = 0.5
+                )
+                ax.plot(
+                    unit_data[unit_data[time] >= treatment_start][time],
+                    unit_data[unit_data[time] >= treatment_start][outcome],
+                    color="#ff0000",
+                    linewidth=0.9,  
+                    alpha = 0.5
+                )
+
+        ax.set_xlabel(xlab if xlab else time)
+        ax.set_ylabel(ylab if ylab else outcome)
+        ax.set_title(title if title else "Outcome over Time with Treatment Effect", fontweight='bold')  # Bold title
+        
+        ax.grid(True, color=grid_color, linewidth=grid_linewidth, linestyle=grid_linestyle)  # Customize grid
+
+        # Add custom legend below the x-axis title
+        if legend:
+            custom_lines = [
+                plt.Line2D([0], [0], color="#999999", lw=1.5),
+                plt.Line2D([0], [0], color="#FF8343", lw=1.5),
+                plt.Line2D([0], [0], color="#ff0000", lw=1.5)
+            ]
+            ax.legend(custom_lines, ['Control', 'Treatment (Pre)', 'Treatment (Post)'],
+                      loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False)
+            
+    else:
+        treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
+        treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
+        if collapse_to_cohort:
+            treatment_quilt = treatment_quilt.drop_duplicates()
+        if sort_by_timing:
+            treatment_quilt = treatment_quilt.loc[
+                treatment_quilt.sum(axis=1).sort_values().index
+            ]
+        if not ax:
+            f, ax = plt.subplots()
+        cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
+        f.colorbar(cax) if legend else None
+        ax.set_xlabel(xlab) if xlab else None
+        ax.set_ylabel(ylab) if ylab else None
+
+        if noticks:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        if title:
+            ax.set_title(title)
     return ax
