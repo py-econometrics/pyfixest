@@ -10,6 +10,7 @@ def panelview(
     time: str,
     treat: str,
     type: Optional[str] = None,
+    outcome: Optional[str] = None,
     collapse_to_cohort: Optional[bool] = False,
     subsamp: Optional[int] = None,
     sort_by_timing: Optional[bool] = False,
@@ -110,7 +111,7 @@ def panelview(
         ax.set_ylabel(ylab if ylab else outcome)
         ax.set_title(title if title else "Outcome over Time with Treatment Effect", fontweight='bold')  # Bold title
         
-        ax.grid(True, color=grid_color, linewidth=grid_linewidth, linestyle=grid_linestyle)  # Customize grid
+        ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle='-')  # Customize grid
 
         # Add custom legend below the x-axis title
         if legend:
