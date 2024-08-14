@@ -16,6 +16,7 @@ def panelview(
     sort_by_timing: Optional[bool] = False,
     xlab: Optional[str] = None,
     ylab: Optional[str] = None,
+    figsize: Optional[tuple] = (11, 3),  # Default plot size
     noticks: Optional[bool] = False,
     title: Optional[str] = None,
     legend: Optional[bool] = False,
