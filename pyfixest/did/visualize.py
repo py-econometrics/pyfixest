@@ -2,6 +2,7 @@ from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 
 def panelview(
@@ -78,9 +79,12 @@ def panelview(
     ```
     """
     if type == "outcome" and outcome:
+        if subsamp:
+            unique_units = data[unit].unique()
+            sampled_units = np.random.choice(unique_units, size=subsamp, replace=False)
+            data = data[data[unit].isin(sampled_units)]
         if not ax:
             f, ax = plt.subplots(figsize=figsize, dpi = 300)
-        
         for unit_id in data[unit].unique():
             unit_data = data[data[unit] == unit_id]
             treatment_times = unit_data[unit_data[treat] == 1][time]
@@ -111,9 +115,7 @@ def panelview(
         ax.set_xlabel(xlab if xlab else time)
         ax.set_ylabel(ylab if ylab else outcome)
         ax.set_title(title if title else "Outcome over Time with Treatment Effect", fontweight='bold')  # Bold title
-        
         ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle='-')  # Customize grid
-
         # Add custom legend below the x-axis title
         if legend:
             custom_lines = [
@@ -123,7 +125,6 @@ def panelview(
             ]
             ax.legend(custom_lines, ['Control', 'Treatment (Pre)', 'Treatment (Post)'],
                       loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False)
-            
     else:
         treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
         treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
