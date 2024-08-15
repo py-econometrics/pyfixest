@@ -126,8 +126,7 @@ def panelview(
         ax.set_xlabel(xlab if xlab else time)
         ax.set_ylabel(ylab if ylab else outcome)
         ax.set_title(title if title else "Outcome over Time with Treatment Effect", fontweight='bold')  # Bold title
-        ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle='-')  # Customize grid
-        # Add custom legend below the x-axis title
+        ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle='-')
         if legend:
             custom_lines = [
                 plt.Line2D([0], [0], color="#999999", lw=1.5),
