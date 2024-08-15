@@ -36,6 +36,10 @@ def panelview(
         The column name representing the time identifier.
     treat : str
         The column name representing the treatment variable.
+    type : str, optional
+        Optional type of plot. Currently supported: 'outcome'.
+    outcome : str, optional
+        The column name representing the outcome variable. Used when `type` is 'outcome'.
     collapse_to_cohort : bool, optional
         Whether to collapse units into treatment cohorts.
     subsamp : int, optional
@@ -46,6 +50,8 @@ def panelview(
         The label for the x-axis. Default is None, in which case default labels are used.
     ylab : str, optional
         The label for the y-axis. Default is None, in which case default labels are used.
+    figsize : tuple, optional
+        The figure size for the outcome plot. Default is (11, 3).
     noticks : bool, optional
         Whether to display ticks on the plot. Default is False.
     title : str, optional
@@ -83,11 +89,16 @@ def panelview(
             unique_units = data[unit].unique()
             sampled_units = np.random.choice(unique_units, size=subsamp, replace=False)
             data = data[data[unit].isin(sampled_units)]
+        if collapse_to_cohort:
+            treatment_starts = data.groupby(unit).apply(lambda x: x[x[treat] == True][time].min())
+            treatment_starts = treatment_starts.reset_index(name='treatment_start')
+            treatment_starts = treatment_starts.drop_duplicates(subset='treatment_start')
+            data = data[data[unit].isin(treatment_starts[unit])]
         if not ax:
             f, ax = plt.subplots(figsize=figsize, dpi = 300)
         for unit_id in data[unit].unique():
             unit_data = data[data[unit] == unit_id]
-            treatment_times = unit_data[unit_data[treat] == 1][time]
+            treatment_times = unit_data[unit_data[treat] == True][time]
             
             # If the unit never receives treatment, plot the line in grey
             if treatment_times.empty:
