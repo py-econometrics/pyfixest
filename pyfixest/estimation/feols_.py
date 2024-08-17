@@ -1437,7 +1437,7 @@ class Feols:
         btol: float = 1e-6,
         type: str = "link",
         compute_stdp: bool = False
-    ) -> np.ndarray:
+    ) -> pd.DataFrame:
         """
         Predict values of the model on new data.
 

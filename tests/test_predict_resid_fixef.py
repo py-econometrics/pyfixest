@@ -37,8 +37,8 @@ def test_internally(data):
     # predict via feols, without fixed effect
     fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
     mod = fit.fetch_model(0)
-    original_prediction = mod.predict()
-    updated_prediction = mod.predict(newdata=mod._data)
+    original_prediction = mod.predict().yhat
+    updated_prediction = mod.predict(newdata=mod._data).yhat
     np.allclose(original_prediction, updated_prediction)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
@@ -47,8 +47,8 @@ def test_internally(data):
     fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
     mod = fit.fetch_model(0)
     mod.fixef()
-    original_prediction = mod.predict()
-    updated_prediction = mod.predict(newdata=mod._data)
+    original_prediction = mod.predict().yhat
+    updated_prediction = mod.predict(newdata=mod._data).yhat
     np.allclose(original_prediction, updated_prediction)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
@@ -123,13 +123,13 @@ def test_vs_fixest(data, fml):
     #    raise ValueError("sumFE for Poisson are not equal")
 
     # test predict for OLS
-    if not np.allclose(feols_mod.predict(), r_fixest_ols.rx2("fitted.values")):
+    if not np.allclose(feols_mod.predict().yhat, r_fixest_ols.rx2("fitted.values")):
         raise ValueError("Predictions for OLS are not equal")
 
-    if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
+    if not np.allclose(len(feols_mod.predict().yhat), len(stats.predict(r_fixest_ols))):
         raise ValueError("Predictions for OLS are not the same length")
     # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
+    # if not np.allclose(fepois_mod.predict().yhat, r_fixest_pois.rx2("fitted.values")):
     #    raise ValueError("Predictions for Poisson are not equal")
 
     # test on new data - OLS.
