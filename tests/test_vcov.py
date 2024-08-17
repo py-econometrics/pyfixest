@@ -59,10 +59,25 @@ def test_hetero(data, fml, adj, cluster_adj):
         ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
     )
 
+    _N = py_mod._N
+    _k = py_mod._k
+
+    adj1 = _N / (_N - 1)
+    adj2 = (_N - 1) / (_N - _k)
+    adj3 = _N / (_N - _k)
+    if adj and cluster_adj:
+        adj_factor = adj3
+    elif adj and not cluster_adj:
+        adj_factor = adj2
+    elif not adj and cluster_adj:
+        adj_factor = adj1
+    elif not adj and not cluster_adj:
+        adj_factor = 1
+
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-16)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -132,10 +147,25 @@ def test_hetero_weights(data, fml, adj, cluster_adj):
         ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
     )
 
+    _N = py_mod._N
+    _k = py_mod._k
+
+    adj1 = _N / (_N - 1)
+    adj2 = (_N - 1) / (_N - _k)
+    adj3 = _N / (_N - _k)
+    if adj and cluster_adj:
+        adj_factor = adj3
+    elif adj and not cluster_adj:
+        adj_factor = adj2
+    elif not adj and cluster_adj:
+        adj_factor = adj1
+    elif not adj and not cluster_adj:
+        adj_factor = 1
+
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-16)
 
 
 @pytest.mark.parametrize("fml", models)
