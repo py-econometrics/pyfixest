@@ -274,8 +274,12 @@ class FixestMulti:
                                 fevars=[f"factorize({x})" for x in fval.split("+")],
                                 data_long=data_long,
                             )
+                            data_long = data_long.with_columns(
+                                pl.lit(1).alias("Intercept")
+                            )
+
                             # no fixed effects in estimation after mundlak transformation
-                            covars = covars_updated
+                            covars = covars_updated + ["Intercept"]
                     else:
                         data_long = pl.concat([Y_polars, X_polars], how="horizontal")
 
@@ -284,7 +288,6 @@ class FixestMulti:
                             depvars=depvars,
                             covars=covars,
                             data_long=data_long,
-                            add_intercept=_use_mundlak,
                         )
 
                         # overwrite Y, X
@@ -471,6 +474,8 @@ class FixestMulti:
                     fval=fval if not _use_compression else None,
                     store_data=self._store_data,
                     drop_singletons=_drop_singletons,
+                    use_compression=_use_compression,
+                    use_mundlak=_use_mundlak,
                 )
 
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505

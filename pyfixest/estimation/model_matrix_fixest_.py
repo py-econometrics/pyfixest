@@ -212,7 +212,6 @@ def _regression_compression(
     depvars: list[str],
     covars: list[str],
     data_long: pl.DataFrame,
-    add_intercept: bool,
 ) -> dict:
     "Compress data for regression based on sufficient statistics."
     covars_updated = covars.copy()
@@ -235,16 +234,10 @@ def _regression_compression(
         )
     df_compressed = df_compressed.with_columns(mean_expressions)
 
-    if add_intercept:
-        df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
-        columns_updated = covars_updated + ["Intercept"]
-    else:
-        columns_updated = covars_updated
-
     df_compressed = df_compressed.collect()
     compressed_dict = {
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
-        "X": df_compressed.select(columns_updated),
+        "X": df_compressed.select(covars_updated),
         "compression_count": df_compressed.select("count"),
         "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
         "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),

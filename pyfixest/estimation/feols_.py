@@ -14,6 +14,7 @@ from scipy.stats import chi2, f, norm, t
 from tqdm import tqdm
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.model_matrix_fixest_ import _regression_compression
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -625,16 +626,81 @@ class Feols:
                 cluster_col=cluster_col,
             )
 
-        else:
-            pass
+            if _is_iv is False:
+                _vcov = _bread @ meat @ _bread
+            else:
+                meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
+                _vcov = _bread @ meat @ _bread
 
-        if _is_iv is False:
-            _vcov = _bread @ meat @ _bread
-        else:
-            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
-            _vcov = _bread @ meat @ _bread
+            return _vcov
 
-        return _vcov
+        else:
+            df_long = self._data_mundlak if self._use_mundlak else self._data_long
+
+            X_long = self._data_mundlak.select(self._coefnames).to_numpy()
+            Y_long = self._data_mundlak.select(self._depvar).to_numpy()
+
+            yhat = X_long @ self._beta_hat
+            uhat = Y_long.flatten() - yhat
+
+            df_long = df_long.with_columns(
+                [
+                    pl.lit(yhat).alias("yhat"),
+                    pl.lit(uhat).alias("uhat"),
+                    pl.lit(yhat + uhat).alias(
+                        "yhat_g_boot_pos"
+                    ),  # rademacher weights = 1
+                    pl.lit(yhat - uhat).alias(
+                        "yhat_g_boot_neg"
+                    ),  # rademacher weights = -1
+                ]
+            )
+
+            boot_iter = 100
+            beta_boot = np.zeros((boot_iter, self._k))
+
+            clustervar = self._clustervar
+            cluster = self._data_long[clustervar]
+            cluster_ids = np.unique(cluster).astype(np.int32)
+
+            for b in tqdm(range(boot_iter)):
+                boot_df = pl.DataFrame(
+                    {
+                        "coin_flip": np.random.randint(0, 2, size=len(cluster_ids)),
+                        f"factorize({clustervar[0]})": cluster_ids,
+                    }
+                )
+
+                df_boot = df_long.join(
+                    boot_df, on=f"factorize({clustervar[0]})", how="left"
+                )
+
+                df_boot = df_boot.with_columns(
+                    [
+                        pl.when(pl.col("coin_flip") == 1)
+                        .then(pl.col("yhat_g_boot_pos"))
+                        .otherwise(pl.col("yhat_g_boot_neg"))
+                        .alias("yhat_boot")
+                    ]
+                )
+
+                comp_dict = _regression_compression(
+                    depvars=["yhat_boot"],
+                    covars=self._coefnames,
+                    data_long=df_boot,
+                )
+
+                Y = comp_dict.get("Y").to_numpy()
+                X = comp_dict.get("X").to_numpy()
+                compression_count = comp_dict.get("compression_count").to_numpy()
+                Yw = Y * np.sqrt(compression_count)
+                Xw = X * np.sqrt(compression_count)
+
+                beta_boot[b, :] = np.linalg.lstsq(Xw.T @ Xw, Xw.T @ Yw, rcond=None)[
+                    0
+                ].flatten()
+
+            return np.cov(beta_boot.T)
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         _k = self._k
@@ -779,6 +845,8 @@ class Feols:
         fval: str,
         store_data: bool,
         drop_singletons: bool,
+        use_compression=bool,
+        use_mundlak=bool,
         # fe_array: np.ndarray,
     ) -> None:
         """
@@ -810,6 +878,10 @@ class Feols:
             The fixed effects formula.
         store_data : bool
             Indicates whether to save the data used for estimation in the object
+        use_compression : bool
+            Indicates whether the regression fit was based on compressed data.
+        use_mundlak : bool
+            Indicates whether the regression fit was based on Mundlak transformed data.
 
         Returns
         -------
@@ -827,6 +899,7 @@ class Feols:
         if store_data:
             self._data = _data
             self._data_long = _data_long
+            self._data_mundlak = _data_mundlak
 
         self._ssc_dict = _ssc_dict
         self._k_fe = _k_fe
@@ -839,6 +912,8 @@ class Feols:
         self._Yprime = Yprime
         self._Yprimeprime = Yprimeprime
         self._compression_count = compression_count
+        self._use_compression = use_compression
+        self._use_mundlak = use_mundlak
         # self._fe_array = fe_array
 
     def _clear_attributes(self):
@@ -848,6 +923,7 @@ class Feols:
             "_Z",
             "_data",
             "_data_long",
+            "_data_mundlak",
             "_cluster_df",
             "_tXZ",
             "_tZy",
