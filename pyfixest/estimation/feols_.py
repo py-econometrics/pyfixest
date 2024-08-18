@@ -1,6 +1,5 @@
 import functools
 import gc
-import time
 import warnings
 from importlib import import_module
 from typing import Callable, Optional, Union
@@ -15,7 +14,6 @@ from scipy.stats import chi2, f, norm, t
 from tqdm import tqdm
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -628,58 +626,7 @@ class Feols:
             )
 
         else:
-            _clustervar = self._clustervar[0]
-            reps = 4
-            _data_long = pl.DataFrame(self._data_long)
-
-            tic = time.time()
-            _data_long_grouped = _data_long.groupby(_clustervar)
-            grouped_data = {
-                group_name: group_df for group_name, group_df in _data_long_grouped
-            }
-            print(f"Grouping took {time.time() - tic} seconds")
-
-            rng = np.random.default_rng(12345)
-
-            boot_stats = np.zeros((reps, self._k))
-            # resample from 'long' data and compress
-            for b in range(reps):
-                resampled_groups = rng.choice(clustid, size=len(clustid), replace=True)
-
-                tic = time.time()
-                df_boot = pl.concat(
-                    [grouped_data[group] for group in resampled_groups], how="vertical"
-                )
-                print("stacking took", time.time() - tic)
-
-                # get model matrix
-                mm_dict = model_matrix_fixest(
-                    # fml=fml,
-                    FixestFormula=self._FixestFormula,
-                    data=df_boot.to_pandas(),
-                    drop_singletons=self._drop_singletons,
-                    drop_intercept=False,
-                    weights=None,
-                    use_compression=True,
-                )
-                Y_mean = mm_dict.get("Y").to_numpy()
-                X = mm_dict.get("X").to_numpy()
-                compression_count = mm_dict.get("compression_count").to_numpy()
-
-                FIT = Feols(
-                    Y=Y_mean,
-                    X=X,
-                    weights=compression_count,
-                    collin_tol=self._collin_tol,
-                    coefnames=self._coefnames,
-                    weights_name="compression_count",
-                    weights_type="fweights",
-                    solver=self._solver,
-                )
-                FIT.get_fit()
-                boot_stats[b, :] = FIT._beta_hat - self._beta_hat
-
-            return np.dot(boot_stats.T, boot_stats) / (reps - 1)
+            pass
 
         if _is_iv is False:
             _vcov = _bread @ meat @ _bread
@@ -823,6 +770,7 @@ class Feols:
         Y: pd.Series,
         _data: pd.DataFrame,
         _data_long: pd.DataFrame,
+        _data_mundlak: pd.DataFrame,
         Yprime: pd.DataFrame,
         Yprimeprime: pd.DataFrame,
         compression_count: pd.DataFrame,
@@ -851,7 +799,9 @@ class Feols:
             The data used for estimation. If `use_compression = True`, the compressed
             data set.
         _data_long : pd.DataFrame
-            If `use_compression = True`, the long data set. Else None.
+            If `use_compression = True`, the original "long" data set. Else None.
+        _data_mundlak : pd.DataFrame
+            If `use_compression = True`, the original "long" data set, including Mundlak transform. Else None
         _ssc_dict : dict
             A dictionary with the sum of squares and cross products matrices.
         _k_fe : int

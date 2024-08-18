@@ -1,5 +1,4 @@
 import re
-import time
 import warnings
 from typing import Optional, Union
 
@@ -18,7 +17,6 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
-    use_compression=False,
 ) -> dict:
     """
     Create model matrices for fixed effects estimation.
@@ -44,9 +42,6 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
-    use_compression: bool
-        Whether to use regression compression to estimation losslessly via
-        sufficient statistics. Default is False.
 
     Returns
     -------
@@ -81,11 +76,6 @@ def model_matrix_fixest(
     fml_first_stage = FixestFormula.fml_first_stage
     fval = FixestFormula._fval
     _check_weights(weights, data)
-
-    if use_compression and len(fval.split("+")) > 2:
-        raise ValueError(
-            "Compressed estimation is only supported for models with one fixed effect."
-        )
 
     pattern = r"i\((?P<var1>\w+)(?:,(?P<var2>\w+))?(?:,ref=(?P<ref>.*?))?\)"
 
@@ -186,38 +176,6 @@ def model_matrix_fixest(
     na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
 
-    if use_compression:
-        tic = time.time()
-        depvars = Y.columns.tolist()
-        covars = X.columns.tolist()
-        Y_polars = pl.DataFrame(pd.DataFrame(Y))
-        X_polars = pl.DataFrame(pd.DataFrame(X))
-        fe_polars = pl.DataFrame(pd.DataFrame(fe))
-        if fe is not None:
-            data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
-        else:
-            data_long = pl.concat([Y_polars, X_polars], how="horizontal")
-
-        print("pandas to polars time: ", time.time() - tic)
-
-        tic = time.time()
-        compressed_dict = _regression_compression(
-            depvars=depvars,
-            covars=covars,
-            data_long=data_long,
-            fevars=fval.split("+") if fval != "0" else None,
-        )
-        print(f"Compression time: {time.time() - tic}")
-        Y = compressed_dict.get("Y").to_pandas()
-        X = compressed_dict.get("X").to_pandas()
-        compression_count = compressed_dict.get("compression_count").to_pandas()
-        Yprime = compressed_dict.get("Yprime").to_pandas()
-        Yprimeprime = compressed_dict.get("Yprimeprime").to_pandas()
-        df_compressed = compressed_dict.get("df_compressed").to_pandas()
-
-    else:
-        Yprime = Yprimeprime = compression_count = df_compressed = None
-
     return {
         "Y": Y,
         "X": X,
@@ -228,102 +186,41 @@ def model_matrix_fixest(
         "na_index": na_index,
         "na_index_str": na_index_str,
         "_icovars": _icovars,
-        "X_is_empty": X_is_empty,  #
-        # all values below are None if use_compression is False
-        "Yprime": Yprime,
-        "Yprimeprime": Yprimeprime,
-        "compression_count": compression_count,
-        # "compressed_fml": compressed_fml,
-        "df_compressed": df_compressed,
+        "X_is_empty": X_is_empty,
     }
 
 
-def _regression_compression2(
-    depvars: list[str],
-    covars: list[str],
-    data_long: pl.DataFrame,
-    fevars: Optional[list[str]] = None,
-) -> dict:
-    "Compress data for regression based on sufficient statistics."
+def _mundlak_transform(
+    covars: list[str], fevars: list[str], data_long: pl.DataFrame
+) -> Union[pl.DataFrame, list[str]]:
+    "Compute the Mundlak transformation of the data."
     covars_updated = covars.copy()
+    # Factorize and prepare group-wise mean calculations in one go
+    for fevar in fevars:
+        for var in covars:
+            mean_var_name = f"mean_{var}_by_{fevar}"
+            covars_updated.append(mean_var_name)
+            # Add mean calculation for this var by factorized fevar
+            data_long = data_long.with_columns(
+                pl.col(var).mean().over(fevar).alias(mean_var_name)
+            )
 
-    if fevars:
-        # Factorize and prepare group-wise mean calculations in one go
-        for fevar in fevars:
-            for var in covars:
-                mean_var_name = f"mean_{var}_by_{fevar}"
-                covars_updated.append(mean_var_name)
-                # Add mean calculation for this var by factorized fevar
-                data_long = data_long.with_columns(
-                    pl.col(var).mean().over(fevar).alias(mean_var_name)
-                )
-
-    # Prepare aggregation expressions
-    agg_expressions = [pl.count(depvars[0]).alias("count")]
-    for var in depvars:
-        agg_expressions.extend(
-            [
-                pl.sum(var).alias(f"sum_{var}"),
-                pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"),
-            ]
-        )
-
-    # Perform the final grouping and aggregation
-    df_compressed = data_long.groupby(covars_updated).agg(agg_expressions)
-
-    # Calculate means
-    mean_expressions = [
-        (pl.col(f"sum_{var}") / pl.col("count")).alias(f"mean_{var}") for var in depvars
-    ]
-    df_compressed = df_compressed.with_columns(mean_expressions)
-
-    # Add Intercept if necessary
-    if fevars:
-        df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
-        columns_updated = covars_updated + ["Intercept"]
-    else:
-        columns_updated = covars_updated
-
-    # Prepare the output dictionary
-    compressed_dict = {
-        "Y": df_compressed.select(f"mean_{depvars[0]}"),
-        "X": df_compressed.select(columns_updated),
-        "compression_count": df_compressed.select("count"),
-        "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
-        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),
-        "df_compressed": df_compressed,
-    }
-
-    return compressed_dict
+    return data_long, covars_updated
 
 
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
     data_long: pl.DataFrame,
-    fevars: Optional[list[str]] = None,
+    add_intercept: bool,
 ) -> dict:
     "Compress data for regression based on sufficient statistics."
     covars_updated = covars.copy()
 
     agg_expressions = []
-    agg_expressions_fe = []
 
     data_long = data_long.lazy()
 
-    # import pdb; pdb.set_trace()
-    if fevars:
-        fevars2 = [f"factorize({fevar})" for fevar in fevars]
-        for fevar in fevars2:
-            for var in covars:
-                mean_var_name = f"mean_{var}_by_{fevar}"
-                covars_updated.append(mean_var_name)
-                # agg_expressions.append(pl.col(var).mean().alias(mean_var_name))
-                agg_expressions_fe.append(
-                    pl.col(var).mean().over(fevar).alias(mean_var_name)
-                )
-
-    data_long = data_long.with_columns(agg_expressions_fe)
     agg_expressions.append(pl.count(depvars[0]).alias("count"))
     for var in depvars:
         agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
@@ -338,7 +235,7 @@ def _regression_compression(
         )
     df_compressed = df_compressed.with_columns(mean_expressions)
 
-    if fevars:
+    if add_intercept:
         df_compressed = df_compressed.with_columns(pl.lit(1).alias("Intercept"))
         columns_updated = covars_updated + ["Intercept"]
     else:

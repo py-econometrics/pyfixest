@@ -29,6 +29,7 @@ def feols(
     lean: bool = False,
     weights_type: str = "aweights",
     use_compression: bool = False,
+    use_mundlak: bool = False,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -103,6 +104,15 @@ def feols(
         Options include `aweights` or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
+    use_compression: bool
+        Whether to use sufficient statistics to losslessly fit the regression model
+        on compressed data. False by default.
+
+    use_mundlak: bool
+        Whether to use the Mundlak transform for fixed effects estimation. Works
+        for oneway fixed effects. For two-way fixed effects, the two-way Mundlak
+        only works for panel data sets. False by default.
 
 
     Returns
@@ -335,6 +345,7 @@ def feols(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=use_compression,
+        use_mundlak=use_mundlak,
     )
 
     fixest = FixestMulti(
@@ -345,6 +356,7 @@ def feols(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=use_compression,
+        use_mundlak=use_mundlak,
     )
 
     fixest._prepare_estimation(
@@ -501,6 +513,7 @@ def fepois(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=False,  # Poisson regression does not support compression as it doesn't support weights
+        use_mundlak=False,
     )
 
     fixest = FixestMulti(
@@ -548,6 +561,7 @@ def _estimation_input_checks(
     fixef_tol: float,
     weights_type: str,
     use_compression: bool = False,
+    use_mundlak: bool = False,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -621,6 +635,9 @@ def _estimation_input_checks(
         raise NotImplementedError(
             "Compressed regression is not supported with weights."
         )
+
+    if not isinstance(use_mundlak, bool):
+        raise TypeError("The function argument `use_mundlak` must be of type bool.")
 
 
 def _regression_compression(

@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
@@ -13,7 +14,11 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.model_matrix_fixest_ import (
+    _mundlak_transform,
+    _regression_compression,
+    model_matrix_fixest,
+)
 from pyfixest.utils.dev_utils import DataFrameType, _drop_cols, _polars_to_pandas
 
 
@@ -29,6 +34,7 @@ class FixestMulti:
         fixef_tol: float,
         weights_type: str,
         use_compression: bool,
+        use_mundlak: bool,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -51,6 +57,8 @@ class FixestMulti:
             frequency weights (`fweights`).
         use_compression: bool
             Wheter to run the estimation on lossless compression via sufficient statistics or not.
+        use_mundlak: bool
+            Whether to use the Mundlak transform for fixed effects estimation or not.
 
         Returns
         -------
@@ -62,6 +70,7 @@ class FixestMulti:
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
         self._use_compression = use_compression
+        self._use_mundlak = use_mundlak
 
         data = _polars_to_pandas(data)
 
@@ -200,6 +209,7 @@ class FixestMulti:
         _weights_type = self._weights_type
         _lean = self._lean
         _use_compression = self._use_compression
+        _use_mundlak = self._use_mundlak
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -222,7 +232,7 @@ class FixestMulti:
                     drop_singletons=_drop_singletons,
                     drop_intercept=_drop_intercept,
                     weights=_weights,
-                    use_compression=_use_compression,
+                    # use_compression=_use_compression,
                 )
 
                 Y = mm_dict.get("Y")
@@ -235,11 +245,58 @@ class FixestMulti:
                 na_index_str = mm_dict.get("na_index_str")
                 _icovars = mm_dict.get("_icovars")
                 X_is_empty = mm_dict.get("X_is_empty")
-                Yprime = mm_dict.get("Yprime")
-                Yprimeprime = mm_dict.get("Yprimeprime")
-                compression_count = mm_dict.get("compression_count")
-                # self._compressed_fml = mm_dict.get("compressed_fml")
-                df_compressed = mm_dict.get("df_compressed")
+
+                Yprime = Yprimeprime = compression_count = df_compressed = None
+                if _use_compression or _use_mundlak:
+                    if _is_iv or self._method == "fepois":
+                        raise ValueError(
+                            "Compressed estimation is not supported for IV or Poisson estimation."
+                        )
+
+                    depvars = Y.columns.tolist()
+                    covars = X.columns.tolist()
+                    Y_polars = pl.DataFrame(pd.DataFrame(Y))
+                    X_polars = pl.DataFrame(pd.DataFrame(X))
+                    if fe is not None:
+                        fe_polars = pl.DataFrame(pd.DataFrame(fe))
+                        data_long = pl.concat(
+                            [Y_polars, X_polars, fe_polars], how="horizontal"
+                        )
+
+                        if _use_mundlak:
+                            if len(fval.split("+")) > 2:
+                                raise ValueError(
+                                    "The Mundlak transform is only supported for models with up to two fixed effects."
+                                )
+
+                            data_long, covars_updated = _mundlak_transform(
+                                covars=covars,
+                                fevars=[f"factorize({x})" for x in fval.split("+")],
+                                data_long=data_long,
+                            )
+                            # no fixed effects in estimation after mundlak transformation
+                            covars = covars_updated
+                    else:
+                        data_long = pl.concat([Y_polars, X_polars], how="horizontal")
+
+                    if _use_compression:
+                        compressed_dict = _regression_compression(
+                            depvars=depvars,
+                            covars=covars,
+                            data_long=data_long,
+                            add_intercept=_use_mundlak,
+                        )
+
+                        # overwrite Y, X
+                        Y = compressed_dict.get("Y").to_pandas()
+                        X = compressed_dict.get("X").to_pandas()
+                        covars = X.columns
+                        compression_count = compressed_dict.get(
+                            "compression_count"
+                        ).to_pandas()
+                        Yprime = compressed_dict.get("Yprime").to_pandas()
+                        Yprimeprime = compressed_dict.get("Yprimeprime").to_pandas()
+                        df_compressed = compressed_dict.get("df_compressed").to_pandas()
 
                 if isinstance(weights_df, pd.DataFrame):
                     weights = weights_df.to_numpy()
@@ -405,6 +462,7 @@ class FixestMulti:
                     Y=Y,
                     _data=df_compressed if _use_compression else _data_clean,
                     _data_long=_data_clean if _use_compression else None,
+                    _data_mundlak=data_long if _use_compression else None,
                     Yprime=Yprime,
                     Yprimeprime=Yprimeprime,
                     compression_count=compression_count,
