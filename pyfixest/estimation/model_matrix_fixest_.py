@@ -212,6 +212,7 @@ def _regression_compression(
     depvars: list[str],
     covars: list[str],
     data_long: pl.DataFrame,
+    short: bool = False,
 ) -> dict:
     "Compress data for regression based on sufficient statistics."
     covars_updated = covars.copy()
@@ -221,9 +222,11 @@ def _regression_compression(
     data_long = data_long.lazy()
 
     agg_expressions.append(pl.count(depvars[0]).alias("count"))
-    for var in depvars:
-        agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
-        agg_expressions.append(pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
+
+    if not short:
+        for var in depvars:
+            agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
+            agg_expressions.append(pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
 
     df_compressed = data_long.group_by(covars_updated).agg(agg_expressions)
 
@@ -239,8 +242,10 @@ def _regression_compression(
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
         "X": df_compressed.select(covars_updated),
         "compression_count": df_compressed.select("count"),
-        "Yprime": df_compressed.select(f"sum_{depvars[0]}"),
-        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq"),
+        "Yprime": df_compressed.select(f"sum_{depvars[0]}") if not short else None,
+        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq")
+        if not short
+        else None,
         "df_compressed": df_compressed,
     }
 

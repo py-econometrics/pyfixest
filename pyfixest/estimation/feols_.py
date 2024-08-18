@@ -661,7 +661,8 @@ class Feols:
 
             clustervar = self._clustervar
             cluster = self._data_long[clustervar]
-            cluster_ids = np.unique(cluster).astype(np.int32)
+            cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
+            df_long.sort(f"factorize({clustervar[0]})")
 
             for b in tqdm(range(boot_iter)):
                 boot_df = pl.DataFrame(
@@ -670,11 +671,9 @@ class Feols:
                         f"factorize({clustervar[0]})": cluster_ids,
                     }
                 )
-
                 df_boot = df_long.join(
                     boot_df, on=f"factorize({clustervar[0]})", how="left"
                 )
-
                 df_boot = df_boot.with_columns(
                     [
                         pl.when(pl.col("coin_flip") == 1)
@@ -683,13 +682,11 @@ class Feols:
                         .alias("yhat_boot")
                     ]
                 )
-
                 comp_dict = _regression_compression(
                     depvars=["yhat_boot"],
                     covars=self._coefnames,
                     data_long=df_boot,
                 )
-
                 Y = comp_dict.get("Y").to_numpy()
                 X = comp_dict.get("X").to_numpy()
                 compression_count = comp_dict.get("compression_count").to_numpy()
