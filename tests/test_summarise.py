@@ -113,6 +113,8 @@ def test_summary():
 
     etable([fit1, fit2], type="tex")
     etable([fit1, fit2], type="tex", notes="You can add notes here.")
+    etable([fit1, fit2], type="md", notes="You can add notes here.")
+
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"])
     etable(
         [fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="dh"
