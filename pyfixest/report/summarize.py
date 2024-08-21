@@ -26,7 +26,7 @@ def etable(
     notes: Optional[str] = None,
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
-    filename: Optional[str] = None,
+    file_name: Optional[str] = None,
     print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
