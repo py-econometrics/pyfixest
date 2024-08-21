@@ -109,6 +109,24 @@ def test_summary():
         "x21",
     ]
 
+    # API tests for new tex args
+
+    etable([fit1, fit2], type="tex")
+    etable([fit1, fit2], type="tex", notes="You can add notes here.")
+    etable([fit1, fit2], type="md", notes="You can add notes here.")
+
+    etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"])
+    etable(
+        [fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="dh"
+    )
+    etable(
+        [fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="hd"
+    )
+    etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="d")
+    etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="h")
+    etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="")
+    etable([fit1, fit2], type="tex", filename="tests/texfiles/test.tex")
+
 
 @pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
 def test_stargazer():
