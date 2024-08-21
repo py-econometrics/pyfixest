@@ -267,7 +267,7 @@ def etable(
                 if type in ["df", "html"]:
                     model_tidy_df[coef_fmt_title] += "<br>"
                 elif type == "tex":
-                    model_tidy_df[coef_fmt_title] += r"\\"   # Only works with package makecell 
+                    model_tidy_df[coef_fmt_title] += r"\\"   
                 elif type == "md":
                     model_tidy_df[coef_fmt_title] += "\n"
             else:
@@ -540,11 +540,11 @@ def _tabulate_etable_df(df, n_fixef, notes):
                 },  # Center the header
                 {
                     "selector": "thead tr:nth-child(1) th",
-                    "props": "border-top: 1px solid black;",
+                    "props": "border-top: 2px solid black;",
                 },  # Add a top border above the first index level 
                 {
                     "selector": "thead tr:nth-child(1) th:nth-child(n+2)",
-                    "props": "border-bottom: 1px solid black;",
+                    "props": "border-bottom: 0.5px solid black;",
                 },  # Add a top border after the first index level from the second column onward
                 {
                     "selector": "tbody tr:nth-child(0) td",
@@ -552,7 +552,7 @@ def _tabulate_etable_df(df, n_fixef, notes):
                 },  # First row
                 {
                     "selector": "tbody tr:nth-child(1) td",
-                    "props": "border-top: 2px solid black",
+                    "props": "border-top: 1px solid black",
                 },  # Line above row 1 (index 1)
                 {
                     "selector": f"tbody tr:nth-child({line1}) td",
@@ -564,7 +564,7 @@ def _tabulate_etable_df(df, n_fixef, notes):
                 },  # Line below fixef_bar row
                 {
                     "selector": f"tbody tr:nth-child({line3}) td",
-                    "props": "border-bottom: 1px solid black;",
+                    "props": "border-bottom: 2px solid black;",
                 },  # Line below fixef_bar row
                 {
                     "selector": "tbody td",
@@ -588,6 +588,7 @@ def _tabulate_etable_df(df, n_fixef, notes):
   
 
 def _tabulate_etable_tex(df, n_coef, n_fixef, n_models, notes):
+
     # First wrap all cells which contain a line break in a makecell command
     df = df.map(lambda x: f"\\makecell{{{x}}}" if "\\\\" in x else x)
     
