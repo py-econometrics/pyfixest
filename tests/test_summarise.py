@@ -112,6 +112,8 @@ def test_summary():
     # API tests for new tex args
 
     etable([fit1, fit2], type="tex")
+    etable([fit1, fit2], type="tex", print_tex=True)
+
     etable([fit1, fit2], type="tex", notes="You can add notes here.")
     etable([fit1, fit2], type="md", notes="You can add notes here.")
 
