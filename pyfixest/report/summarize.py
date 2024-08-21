@@ -27,7 +27,7 @@ def etable(
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
     filename: Optional[str] = None,
-    print_tex: Optional[bool] = True,
+    print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -101,7 +101,7 @@ def etable(
         The filename to save the LaTeX table to. If None, the LaTeX code is returned
         as a string. Default is None.
     print_tex: bool, optional
-        Whether to print the LaTeX code to the console. Default is True.
+        Whether to print the LaTeX code to the console. Default is False.
 
     Returns
     -------
