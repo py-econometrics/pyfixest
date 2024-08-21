@@ -27,6 +27,7 @@ def etable(
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
     filename: Optional[str] = None,
+    print_tex: Optional[bool] = True,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -99,11 +100,14 @@ def etable(
     filename: str, optional
         The filename to save the LaTeX table to. If None, the LaTeX code is returned
         as a string. Default is None.
+    print_tex: bool, optional
+        Whether to print the LaTeX code to the console. Default is True.
 
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with the coefficients and standard errors of the models.
+        A styled DataFrame with the coefficients and standard errors of the models.
+        When output is "tex", the LaTeX code is returned as a string.
     """  # noqa: D301
     assert (
         isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
@@ -383,6 +387,8 @@ def etable(
             if filename is not None:
                 with open(filename, "w") as f:
                     f.write(latex_res)  # Write the latex code to a file
+            if print_tex:
+                print(latex_res)
             return latex_res 
     else:
         raise ValueError("type must be either 'df', 'md' or 'tex'")
