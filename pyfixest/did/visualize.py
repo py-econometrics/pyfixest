@@ -82,6 +82,17 @@ def panelview(
         subsamp = 50,
         title = "Treatment Assignment"
     )
+
+    panelview(
+        data = df_het,
+        unit = "unit",
+        time = "year",
+        type = "outcome",
+        outcome = "dep_var",
+        treat = "treat",
+        subsamp = 50,
+        title = "Outcome Plot"
+    )
     ```
     """
     if type == "outcome" and outcome:
