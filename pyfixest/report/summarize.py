@@ -22,10 +22,13 @@ def etable(
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     labels: Optional[dict] = None,
+    show_fe: Optional[bool] = True,
+    show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
     notes: Optional[str] = None,
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
+    custom_model_stats: Optional[dict] = None,
     filename: Optional[str] = None,
     print_tex: Optional[bool] = False,
     **kwargs,
@@ -71,6 +74,10 @@ def etable(
         names and the values the new names. Note that interaction terms will also be
         relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
+    show_fe: bool, optional
+        Whether to show the rows with fixed effects markers. Default is True.
+    show_se_type: bool, optional
+        Whether to show the rows with standard error type. Default is True.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
         the FE lines with a different label than the one specied for the respective
@@ -154,6 +161,14 @@ def etable(
     if model_heads is None and 'h' in head_order:
         head_order = head_order.replace('h', '')
 
+    # Check if custom_model_stats is a dictionary and the provided lists have the same length as models
+    if custom_model_stats is not None:
+        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
+        for stat, values in custom_model_stats.items():
+            assert isinstance(stat, str), "custom_model_stats keys must be strings"
+            assert isinstance(values, list), "custom_model_stats values must lists"
+            assert len(values) == len(models), "lists in custom_model_stats values must have the same length as models"
+    
     dep_var_list = []
     nobs_list = []
     fixef_list: list[str] = []
@@ -195,31 +210,46 @@ def etable(
         if model._fixef is not None:
             fixef_list += model._fixef.split("+")
 
-    # find all fixef variables
-    # drop "" from fixef_list
-    fixef_list = [x for x in fixef_list if x]
-    # keep only unique values
-    fixef_list = list(set(fixef_list))
-    n_fixef = len(fixef_list)
+    # find all fixef variables when the user does not want to hide the FE rows
+    if show_fe:
+        # drop "" from fixef_list
+        fixef_list = [x for x in fixef_list if x]
+        # keep only unique values
+        fixef_list = list(set(fixef_list))
+        n_fixef = len(fixef_list)
+    else:
+        fixef_list=[]
+        n_fixef = 0
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame(
-        {"Observations": nobs_list, "S.E. type": se_type_list, R2code: r2_list}
-    )
-
-    if fixef_list:  # only when at least one model has a fixed effect
+    # First create a dataframe for the model stats such as R2, nobs, etc.
+    model_stats_df = pd.DataFrame()
+    if custom_model_stats is not None:
+        for stat, values in custom_model_stats.items():
+            model_stats_df[stat] = values
+    model_stats_df["Observations"] = nobs_list
+    if show_se_type:
+        model_stats_df["S.E. type"] = se_type_list
+    model_stats_df[R2code] = r2_list
+    n_model_stats=model_stats_df.shape[1]
+    
+    # Create a dataframe for the Fixed Effects markers
+    fe_df = pd.DataFrame()
+    # when at least one model has a fixed effect & the user wants to show them
+    if fixef_list:  
         for fixef in fixef_list:
             # check if not empty string
             if fixef:
-                nobs_fixef_df[fixef] = "-"
                 for i, model in enumerate(models):
                     if model._fixef is not None and fixef in model._fixef.split("+"):
-                        nobs_fixef_df.loc[i, fixef] = "x"
-
-    colnames = nobs_fixef_df.columns.tolist()
-    colnames.reverse()
-    nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
-
+                        fe_df.loc[i, fixef] = "x"
+    # Replace NaNs with empty strings
+    fe_df.fillna("-", inplace=True)
+    # Sort by model
+    fe_df.sort_index(inplace=True)
+    # Transpose & concatenate the two dataframes 
+    nobs_fixef_df=pd.concat([fe_df.T, model_stats_df.T]).reset_index()
+    
     coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
 
     etable_list = []
@@ -336,19 +366,16 @@ def etable(
     if type == "md":
         res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
         res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
-        res_all = _tabulate_etable_md(res_all, len(models), n_fixef)
-        print(res_all)
         # Generate notes string if user has not provided any 
         if notes is None:
             if signif_code:
-                print(
-                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-                )
-                print(f"Format of coefficient cell: {coef_fmt_title}")
-            return None
-        else:
-            print(notes)
-            return None
+                notes= f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            else:
+                notes=f"Format of coefficient cell: {coef_fmt_title}"
+        res_all = _tabulate_etable_md(df=res_all, n_coef=res.shape[0], n_fixef=n_fixef, n_models=len(models), n_model_stats=n_model_stats)
+        print(res_all)
+        print(notes)
+        return None
     elif type in ["df", "tex"]:
         # Prepare Multiindex for columns 
         id_dep = [""] + dep_var_list                                # depvars
@@ -374,7 +401,7 @@ def etable(
                     f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
                     + f"Format of coefficient cell:\n{coef_fmt_title}"
                 )
-            res_all = _tabulate_etable_df(df=res_all, n_fixef=n_fixef, notes=notes)
+            res_all = _tabulate_etable_df(df=res_all, n_coef=res.shape[0], n_fixef=n_fixef, n_models=len(models), n_model_stats=n_model_stats, notes=notes)
             return res_all
         elif type == "tex":
             # Generate notes string if user has not provided any 
@@ -527,13 +554,11 @@ def _post_processing_input_checks(
     return models
 
 
-def _tabulate_etable_df(df, n_fixef, notes):
-    k, _ = df.shape
-    n_coef = k - 3 - 2 - n_fixef
-
-    line1 = 2 + n_coef
+def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
+    
+    line1 = n_coef
     line2 = line1 + n_fixef
-    line3 = k
+    line3 = line2 + n_model_stats
 
     styler = (
         df.style.set_properties(subset=[df.columns[0]], **{"text-align": "left"})
@@ -596,7 +621,7 @@ def _tabulate_etable_df(df, n_fixef, notes):
 def _tabulate_etable_tex(df, n_coef, n_fixef, n_models, notes):
 
     # First wrap all cells which contain a line break in a makecell command
-    df = df.map(lambda x: f"\\makecell{{{x}}}" if "\\\\" in x else x)
+    df = df.map(lambda x: f"\\makecell{{{x}}}" if isinstance(x, str) and "\\\\" in x else x)
     
     # Style the table
     styler = (
@@ -654,16 +679,18 @@ def _tabulate_etable_tex(df, n_coef, n_fixef, n_models, notes):
 
 
 
-def _tabulate_etable_md(df, n_models, n_fixef):
+def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
     """
     Format and tabulate a DataFrame.
 
     Parameters
     ----------
     - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
-    - n_models (int): The number of models.
+    - n_coef (int): The number of coefficients.
     - n_fixef (int): The number of fixed effects.
-
+    - n_models (int): The number of models.
+    - n_model_stats (int): The number of rows with model statistics.
+    
     Returns
     -------
     - formatted_table (str): The formatted table as a string.
@@ -682,8 +709,9 @@ def _tabulate_etable_md(df, n_models, n_fixef):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-3 - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-3, "-" * len(body_lines[0]))
+    if n_fixef > 0:
+        body_lines.insert(-n_model_stats - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-n_model_stats, "-" * len(body_lines[0]))
     body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
