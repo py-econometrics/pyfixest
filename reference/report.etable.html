@@ -318,7 +318,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.etable" class="level1">
 <h1>report.etable</h1>
-<p><code>report.etable(models, type='df', signif_code=[0.001, 0.01, 0.05], coef_fmt='b (se)', custom_stats=None, keep=None, drop=None, exact_match=False, labels=None, felabels=None, **kwargs)</code></p>
+<p><code>report.etable(models, type='df', signif_code=[0.001, 0.01, 0.05], coef_fmt='b \n (se)', custom_stats=None, keep=None, drop=None, exact_match=False, labels=None, show_fe=True, show_se_type=True, felabels=None, notes=None, model_heads=None, head_order='dh', custom_model_stats=None, filename=None, print_tex=False, **kwargs)</code></p>
 <p>Create an esttab-like table from a list of models.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -359,8 +359,8 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>coef_fmt</code></td>
 <td>str</td>
-<td>The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is <code>"b (se)"</code>. Spaces <code></code>, parentheses <code>()</code>, brackets <code>[]</code>, newlines <code>\n</code> are supported. Newline is not support for LaTeX output.</td>
-<td><code>'b (se)'</code></td>
+<td>The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is <code>"b \n (se)"</code>. Spaces <code></code>, parentheses <code>()</code>, brackets <code>[]</code>, newlines <code>\n</code> are supported.</td>
+<td><code>'b \n (se)'</code></td>
 </tr>
 <tr class="odd">
 <td><code>custom_stats</code></td>
@@ -393,6 +393,18 @@ ul.task-list li input[type="checkbox"] {
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td><code>show_fe</code></td>
+<td>Optional[bool]</td>
+<td>Whether to show the rows with fixed effects markers. Default is True.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="odd">
+<td><code>show_se_type</code></td>
+<td>Optional[bool]</td>
+<td>Whether to show the rows with standard error type. Default is True.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
 <td><code>felabels</code></td>
 <td>Optional[dict]</td>
 <td>A dictionary to relabel the fixed effects. Only needed if you want to relabel the FE lines with a different label than the one specied for the respective variable in the labels dictionary. The command is applied after the <code>keep</code> and <code>drop</code> commands.</td>
@@ -422,6 +434,36 @@ ul.task-list li input[type="checkbox"] {
 <td>The threshold for using scientific notation. Default is 10_000.</td>
 <td><em>required</em></td>
 </tr>
+<tr class="odd">
+<td><code>notes</code></td>
+<td>Optional[str]</td>
+<td>Custom table notes. Default shows the significance levels and the format of the coefficient cell.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>model_heads</code></td>
+<td>Optional[list]</td>
+<td>Add custom headlines to models when output as df or latex. Length of list must correspond to number of models. Default is None.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>head_order</code></td>
+<td>Optional[str]</td>
+<td>String to determine the display of the table header when output as df or latex. Allowed values are “dh”, “hd”, “d”, “h”, or ““. When head_order is”dh”, the dependent variable is displayed first, followed by the custom model_heads (provided the user has specified them). With “hd” it is the other way around. When head_order is “d”, only the dependent variable and model numbers are displayed and with “” only the model numbers. Default is “dh”.</td>
+<td><code>'dh'</code></td>
+</tr>
+<tr class="even">
+<td><code>filename</code></td>
+<td>Optional[str]</td>
+<td>The filename to save the LaTeX table to. If None, the LaTeX code is returned as a string. Default is None.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>print_tex</code></td>
+<td>Optional[bool]</td>
+<td>Whether to print the LaTeX code to the console. Default is False.</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -429,8 +471,8 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 20%">
-<col style="width: 79%">
+<col style="width: 11%">
+<col style="width: 88%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -441,7 +483,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td>pandas.DataFrame</td>
-<td>A DataFrame with the coefficients and standard errors of the models.</td>
+<td>A styled DataFrame with the coefficients and standard errors of the models. When output is “tex”, the LaTeX code is returned as a string.</td>
 </tr>
 </tbody>
 </table>
