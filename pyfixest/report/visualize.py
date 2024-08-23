@@ -2,7 +2,6 @@ from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn.objects as so
 from lets_plot import (
     LetsPlot,
     aes,
@@ -19,6 +18,7 @@ from lets_plot import (
     theme,
     ylab,
 )
+from scipy.stats import norm
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
@@ -73,6 +73,7 @@ def iplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    ax: Optional[plt.Axes] = None,
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
 ):
@@ -199,6 +200,7 @@ def iplot(
         title=title,
         flip_coord=coord_flip,
         labels=labels,
+        ax=ax,
     )
 
 
@@ -218,6 +220,7 @@ def coefplot(
     labels: Optional[dict] = None,
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
+    ax: Optional[plt.Axes] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -329,6 +332,7 @@ def coefplot(
         title=title,
         flip_coord=coord_flip,
         labels=labels,
+        ax=ax,
     )
 
 
@@ -353,6 +357,7 @@ def _coefplot_lets_plot(
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
     labels: Optional[dict] = None,
+    ax=None,
 ):
     """
     Plot model coefficients with confidence intervals.
@@ -430,16 +435,15 @@ def _coefplot_matplotlib(
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
     labels: Optional[dict] = None,
+    ax: Optional[plt.Axes] = None,
     **fig_kwargs,
-) -> so.Plot:
+) -> plt.Figure:
     """
     Plot model coefficients with confidence intervals.
 
-    We use the seaborn library to create the plot through the seaborn objects interface.
-
     Parameters
     ----------
-    df pandas.DataFrame
+    df : pandas.DataFrame
         The dataframe containing the data used for the model fitting.
     figsize : tuple
         The size of the figure.
@@ -462,53 +466,60 @@ def _coefplot_matplotlib(
 
     Returns
     -------
-    object
-        A seaborn Plot object.
-
-    See Also
-    --------
-    - https://seaborn.pydata.org/tutorial/objects_interface.html
+    matplotlib.figure.Figure
+        A matplotlib Figure object.
     """
     if labels is not None:
         interactionSymbol = " x "
         df["Coefficient"] = df["Coefficient"].apply(
             lambda x: _relabel_expvar(x, labels, interactionSymbol)
         )
+
     yintercept = yintercept if yintercept is not None else 0
-    ub, lb = alpha / 2, 1 - alpha / 2
+    critval = norm.ppf(1 - alpha / 2)
     title = title if title is not None else "Coefficient Plot"
 
-    _, ax = plt.subplots(figsize=figsize, **fig_kwargs)
-
-    ax.axvline(x=yintercept, color="black", linestyle="--")
-
-    if xintercept is not None:
-        ax.axhline(y=xintercept, color="black", linestyle="--")
-
-    plot = (
-        so.Plot(df, x="Estimate", y="Coefficient", color="fml")
-        .add(so.Dot(), so.Dodge(empty="drop"))
-        .add(
-            so.Range(),
-            so.Dodge(empty="drop"),
-            xmin=str(round(lb * 100, 1)) + "%",
-            xmax=str(round(ub * 100, 1)) + "%",
-        )
-        .label(
-            title=title,
-            x=rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval",
-            y="Coefficient",
-            color="Model",
-        )
-        .on(ax)
-    )
-    ax.tick_params(axis="x", rotation=rotate_xticks)
+    if ax is None:
+        f, ax = plt.subplots(figsize=figsize, **fig_kwargs)
+    else:
+        f = ax.get_figure()
 
     if flip_coord:
-        ax.invert_yaxis()
+        ax.errorbar(
+            y=df.index,
+            x=df["Estimate"],
+            # use alpha to determine critical value
+            xerr=df["Std. Error"] * critval,
+            fmt="o",
+            capsize=5,
+            label="Estimates",
+        )
+        ax.axvline(x=yintercept, color="black", linestyle="--")
+        if xintercept is not None:
+            ax.axhline(y=xintercept, color="black", linestyle="--")
+        ax.set_xlabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_ylabel("Coefficient")
+        ax.tick_params(axis="y", rotation=rotate_xticks)
+    else:
+        ax.errorbar(
+            x=df.index,
+            y=df["Estimate"],
+            yerr=df["Std. Error"] * critval,
+            fmt="o",
+            capsize=5,
+            label="Estimates",
+        )
+        ax.axhline(y=yintercept, color="black", linestyle="--")
+        if xintercept is not None:
+            ax.axvline(x=xintercept, color="black", linestyle="--")
+        ax.set_ylabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_xlabel("Coefficient")
+        ax.tick_params(axis="x", rotation=rotate_xticks)
 
+    ax.set_title(title)
+    plt.tight_layout()
     plt.close()
-    return plot
+    return f
 
 
 def _get_model_df(
