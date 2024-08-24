@@ -70,6 +70,7 @@ def iplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    joint: Optional[Union[str, bool]] = None,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -116,6 +117,11 @@ def iplot(
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
+    joint: str or bool, optional
+        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
+        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        not available for objects of type `FixestMulti`, i.e. multiple estimation.
 
     Returns
     -------
@@ -134,9 +140,14 @@ def iplot(
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
     pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
+
+    pf.iplot([fit1], joint = "both")
     ```
     """
     models = _post_processing_input_checks(models)
+
+    # if joint in [True, "both"] and not isinstance(models, (Feols, Fepois, Feiv)):
+    #    raise ValueError("The 'joint' parameter is only available for 'Feols', 'Fepois', or 'Feiv' objects.")
 
     df_all = []
     all_icovars = []
@@ -156,6 +167,16 @@ def iplot(
         all_icovars += fxst._icovars
         df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
         df_model["fml"] = fxst._fml
+        if joint == "both":
+            df_joint = fxst.confint(joint=True)
+            df_joint.reset_index(inplace=True)
+            df_joint = df_joint.rename(columns={"index": "Coefficient"})
+            df_joint["fml"] = fxst._fml + ":joint CIs"
+            df_model = pd.concat([df_model, df_joint], axis=0)
+        elif joint:
+            df_joint = fxst.confint(joint=True)
+            df_model["fml"] = fxst._fml + ":joint CIs"
+
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
 
@@ -200,6 +221,7 @@ def coefplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    joint: Optional[Union[str, bool]] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -244,6 +266,11 @@ def coefplot(
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
+    joint: str or bool, optional
+        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
+        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        not available for objects of type `FixestMulti`, i.e. multiple estimation.
 
     Returns
     -------
@@ -265,6 +292,8 @@ def coefplot(
     pf.coefplot([fit1, fit2, fit3])
     pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
 
+    pf.coefplot([fit1], joint = "both")
+
     ```
     """
     models = _post_processing_input_checks(models)
@@ -279,6 +308,16 @@ def coefplot(
     for fxst in models:
         df_model = fxst.tidy(alpha=alpha).reset_index()
         df_model["fml"] = fxst._fml
+        if joint == "both":
+            df_joint = fxst.confint(joint=True)
+            df_joint.reset_index(inplace=True)
+            df_joint = df_joint.rename(columns={"index": "Coefficient"})
+            df_joint["fml"] = fxst._fml + ":joint CIs"
+            df_model = pd.concat([df_model, df_joint], axis=0)
+        elif joint:
+            df_joint = fxst.confint(joint=True)
+            df_model["fml"] = fxst._fml + ":joint CIs"
+
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
 
@@ -354,8 +393,6 @@ def _coefplot_lets_plot(
     object
         A lets-plot figure.
     """
-    # import pdb; pdb.set_trace()
-
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
