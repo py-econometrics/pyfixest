@@ -15,10 +15,10 @@ def test_confint():
     confint = fit.confint()
 
     np.testing.assert_allclose(confint, fit.confint(alpha=0.05))
-    assert np.all(confint.loc[:, "0.025%"] == fit.confint(alpha=0.05).loc[:, "0.025%"])
-    assert np.all(confint.loc[:, "0.975%"] == fit.confint(alpha=0.05).loc[:, "0.975%"])
-    assert np.all(confint.loc[:, "0.025%"] < fit.confint(alpha=0.10).loc[:, "0.05%"])
-    assert np.all(confint.loc[:, "0.975%"] > fit.confint(alpha=0.10).loc[:, "0.95%"])
+    assert np.all(confint.loc[:, "2.5%"] == fit.confint(alpha=0.05).loc[:, "2.5%"])
+    assert np.all(confint.loc[:, "97.5%"] == fit.confint(alpha=0.05).loc[:, "97.5%"])
+    assert np.all(confint.loc[:, "2.5%"] < fit.confint(alpha=0.10).loc[:, "5.0%"])
+    assert np.all(confint.loc[:, "97.5%"] > fit.confint(alpha=0.10).loc[:, "95.0%"])
 
     # test keep, drop, and exact_match
     assert fit.confint(keep="X1", exact_match=True).shape[0] == 1
@@ -30,12 +30,11 @@ def test_confint():
     # simultaneous CIs: simultaneous CIs always wider
     for _ in range(5):
         assert np.all(
-            confint.loc[:, "0.025%"]
-            > fit.confint(alpha=0.05, joint=True).loc[:, "0.025%"]
+            confint.loc[:, "2.5%"] > fit.confint(alpha=0.05, joint=True).loc[:, "2.5%"]
         )
         assert np.all(
-            confint.loc[:, "0.975%"]
-            < fit.confint(alpha=0.05, joint=True).loc[:, "0.975%"]
+            confint.loc[:, "97.5%"]
+            < fit.confint(alpha=0.05, joint=True).loc[:, "97.5%"]
         )
 
     # test seeds
