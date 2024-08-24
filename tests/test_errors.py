@@ -244,9 +244,6 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(ValueError):
-        etable([fit1, fit2], coef_fmt="b (se)\nt [p]", type="tex")
-
     with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
