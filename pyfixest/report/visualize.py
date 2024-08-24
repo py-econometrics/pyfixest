@@ -145,9 +145,10 @@ def iplot(
     ```
     """
     models = _post_processing_input_checks(models)
-
-    # if joint in [True, "both"] and not isinstance(models, (Feols, Fepois, Feiv)):
-    #    raise ValueError("The 'joint' parameter is only available for 'Feols', 'Fepois', or 'Feiv' objects.")
+    if joint not in [False, None] and len(models) > 1:
+        raise ValueError(
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+        )
 
     df_all = []
     all_icovars = []
@@ -301,6 +302,10 @@ def coefplot(
     ```
     """
     models = _post_processing_input_checks(models)
+    if joint not in [False, None] and len(models) > 1:
+        raise ValueError(
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+        )
 
     if keep is None:
         keep = []
