@@ -66,6 +66,9 @@ jobs:
         run: poetry install --with docs
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
+      - name: install tinytex
+        run: |
+          quarto install tinytex
       - name: Compile docstrings with quartodoc
         run : |
           poetry run quartodoc build --verbose --config docs/_quarto.yml
