@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from lets_plot import (
     LetsPlot,
@@ -357,7 +358,7 @@ def _coefplot_lets_plot(
     title: Optional[str] = None,
     flip_coord: Optional[bool] = True,
     labels: Optional[dict] = None,
-    ax=None,
+    ax=None,  # for compatibility with matplotlib backend
 ):
     """
     Plot model coefficients with confidence intervals.
@@ -436,15 +437,17 @@ def _coefplot_matplotlib(
     flip_coord: Optional[bool] = True,
     labels: Optional[dict] = None,
     ax: Optional[plt.Axes] = None,
+    dodge: float = 0.5,
     **fig_kwargs,
 ) -> plt.Figure:
     """
-    Plot model coefficients with confidence intervals.
+    Plot model coefficients with confidence intervals, supporting multiple models.
 
     Parameters
     ----------
     df : pandas.DataFrame
         The dataframe containing the data used for the model fitting.
+        Must include a 'fml' column identifying different models.
     figsize : tuple
         The size of the figure.
     alpha : float
@@ -461,6 +464,8 @@ def _coefplot_matplotlib(
         Whether to flip the coordinates of the plot. Default is True.
     labels : dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
+    dodge : float, optional
+        The amount to dodge each model's points by. Default is 0.1.
     fig_kwargs : dict
         Additional keyword arguments to pass to the matplotlib figure.
 
@@ -484,39 +489,71 @@ def _coefplot_matplotlib(
     else:
         f = ax.get_figure()
 
+    # Check if we have multiple models
+    models = df["fml"].unique()
+    is_multi_model = len(models) > 1
+
+    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    color_dict = dict(zip(models, colors))
+
+    # Calculate the positions for dodging
+    unique_coefficients = df["Coefficient"].unique()
+    if is_multi_model:
+        coef_positions = {coef: i for i, coef in enumerate(unique_coefficients)}
+    dodge_start = -(len(models) - 1) * dodge / 2
+
+    for i, (model, group) in enumerate(df.groupby("fml")):
+        color = color_dict[model]
+
+        if is_multi_model:
+            dodge_val = dodge_start + i * dodge
+            x_pos = [coef_positions[coef] + dodge_val for coef in group["Coefficient"]]
+        else:
+            x_pos = range(len(group))
+
+        if flip_coord:
+            ax.errorbar(
+                x=group["Estimate"],
+                y=x_pos,
+                xerr=group["Std. Error"] * critval,
+                fmt="o",
+                capsize=5,
+                color=color,
+                label=model if is_multi_model else "Estimates",
+            )
+        else:
+            ax.errorbar(
+                y=group["Estimate"],
+                x=x_pos,
+                yerr=group["Std. Error"] * critval,
+                fmt="o",
+                capsize=5,
+                color=color,
+                label=model if is_multi_model else "Estimates",
+            )
+
     if flip_coord:
-        ax.errorbar(
-            y=df.index,
-            x=df["Estimate"],
-            # use alpha to determine critical value
-            xerr=df["Std. Error"] * critval,
-            fmt="o",
-            capsize=5,
-            label="Estimates",
-        )
         ax.axvline(x=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axhline(y=xintercept, color="black", linestyle="--")
         ax.set_xlabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
         ax.set_ylabel("Coefficient")
+        ax.set_yticks(range(len(unique_coefficients)))
+        ax.set_yticklabels(unique_coefficients)
         ax.tick_params(axis="y", rotation=rotate_xticks)
     else:
-        ax.errorbar(
-            x=df.index,
-            y=df["Estimate"],
-            yerr=df["Std. Error"] * critval,
-            fmt="o",
-            capsize=5,
-            label="Estimates",
-        )
         ax.axhline(y=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axvline(x=xintercept, color="black", linestyle="--")
         ax.set_ylabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
         ax.set_xlabel("Coefficient")
+        ax.set_xticks(range(len(unique_coefficients)))
+        ax.set_xticklabels(unique_coefficients)
         ax.tick_params(axis="x", rotation=rotate_xticks)
 
     ax.set_title(title)
+    if is_multi_model:
+        ax.legend()
     plt.tight_layout()
     plt.close()
     return f
