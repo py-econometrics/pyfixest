@@ -1580,7 +1580,8 @@ class Feols:
         self._adj_r2_within = np.nan
 
     def tidy(
-        self, alpha: Optional[float] = None, joint: Optional[Union[bool, str]] = False
+        self,
+        alpha: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
