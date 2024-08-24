@@ -167,7 +167,7 @@ def iplot(
             )
         all_icovars += fxst._icovars
         df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-        df_model["fml"] = fxst._fml
+        df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
         if joint == "both":
             df_joint = fxst.confint(joint=True, alpha=alpha)
             df_joint.reset_index(inplace=True)
@@ -316,7 +316,7 @@ def coefplot(
     df_all = []
     for fxst in models:
         df_model = fxst.tidy(alpha=alpha).reset_index()
-        df_model["fml"] = fxst._fml
+        df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
         if joint == "both":
             df_joint = fxst.confint(joint=True, alpha=alpha)
             df_joint.reset_index(inplace=True)
