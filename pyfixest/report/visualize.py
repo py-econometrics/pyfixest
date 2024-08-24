@@ -20,6 +20,9 @@ from lets_plot import (
     ylab,
 )
 
+from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
@@ -70,6 +73,8 @@ def iplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    joint: Optional[Union[str, bool]] = None,
+    seed: Optional[int] = None,
 ):
     r"""
     Plot model coefficients for variables interacted via "i()" syntax, with
@@ -116,6 +121,13 @@ def iplot(
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
+    joint: str or bool, optional
+        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
+        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        not available for objects of type `FixestMulti`, i.e. multiple estimation.
+    seed: int, optional
+        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
 
     Returns
     -------
@@ -134,9 +146,15 @@ def iplot(
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
     pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
+
+    pf.iplot([fit1], joint = "both")
     ```
     """
     models = _post_processing_input_checks(models)
+    if joint not in [False, None] and len(models) > 1:
+        raise ValueError(
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+        )
 
     df_all = []
     all_icovars = []
@@ -154,9 +172,8 @@ def iplot(
                 "In consequence, the '.iplot()' method is not supported."
             )
         all_icovars += fxst._icovars
-        df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-        df_model["fml"] = fxst._fml
-        df_model.set_index("fml", inplace=True)
+
+        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
         df_all.append(df_model)
 
     # drop duplicates
@@ -164,11 +181,10 @@ def iplot(
 
     df = pd.concat(df_all, axis=0)
     if keep or drop:
-        idxs = _select_order_coefs(df["Coefficient"], keep, drop, exact_match)
+        idxs = _select_order_coefs(df["Coefficient"].tolist(), keep, drop, exact_match)
     else:
         idxs = df["Coefficient"]
     df = df.loc[df["Coefficient"].isin(idxs), :]
-    fml_list = df.index.unique()  # noqa: F841
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
@@ -200,6 +216,8 @@ def coefplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    joint: Optional[Union[str, bool]] = None,
+    seed: Optional[int] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -244,6 +262,13 @@ def coefplot(
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
+    joint: str or bool, optional
+        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
+        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        not available for objects of type `FixestMulti`, i.e. multiple estimation.
+    seed: int, optional
+        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
 
     Returns
     -------
@@ -265,9 +290,15 @@ def coefplot(
     pf.coefplot([fit1, fit2, fit3])
     pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
 
+    pf.coefplot([fit1], joint = "both")
+
     ```
     """
     models = _post_processing_input_checks(models)
+    if joint not in [False, None] and len(models) > 1:
+        raise ValueError(
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+        )
 
     if keep is None:
         keep = []
@@ -277,9 +308,7 @@ def coefplot(
 
     df_all = []
     for fxst in models:
-        df_model = fxst.tidy(alpha=alpha).reset_index()
-        df_model["fml"] = fxst._fml
-        df_model.set_index("fml", inplace=True)
+        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
         df_all.append(df_model)
 
     df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
@@ -354,8 +383,6 @@ def _coefplot_lets_plot(
     object
         A lets-plot figure.
     """
-    # import pdb; pdb.set_trace()
-
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
@@ -482,3 +509,53 @@ def _coefplot_matplotlib(
 
     plt.close()
     return plot
+
+
+def _get_model_df(
+    fxst: Union[Feols, Fepois, Feiv],
+    alpha: float,
+    joint: Optional[Union[str, bool]],
+    seed: Optional[int] = None,
+) -> pd.DataFrame:
+    """
+    Get a tidy model frame as input to the _coefplot function.
+
+    Parameters
+    ----------
+    fxst : Union[Feols, Fepois, Feiv]
+        The fitted model.
+    alpha : float
+        The significance level for the confidence intervals.
+    joint : Optional[Union[str, bool]]
+        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
+        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
+        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        not available for objects of type `FixestMulti`, i.e. multiple estimation.
+    seed : int, optional
+        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+
+    Returns
+    -------
+    pd.DataFrame
+        A tidy model frame.
+    """
+    df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
+    df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}%"
+
+    if joint in ["both", True]:
+        lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
+        df_joint = fxst.confint(joint=True, alpha=alpha, seed=seed)
+        df_joint.reset_index(inplace=True)
+        df_joint = df_joint.rename(columns={"index": "Coefficient"})
+        df_joint_full = (
+            df_model.copy()
+            .drop([lb, ub], axis=1)
+            .merge(df_joint, on="Coefficient", how="left")
+        )
+        df_joint_full["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
+        if joint == "both":
+            df_model = pd.concat([df_model, df_joint_full], axis=0)
+        else:
+            df_model = df_joint_full
+
+    return df_model
