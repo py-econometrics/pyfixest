@@ -48,6 +48,18 @@ def test_panelview():
     assert isinstance(ax, plt.Axes)
     plt.close()
 
+    # Test with basic functionality for outcome plot
+    ax = panelview(
+        data=df_het,
+        type="outcome",
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
     # Test with collapse_to_cohort
     ax = panelview(
         data=df_het,
@@ -55,6 +67,33 @@ def test_panelview():
         time="year",
         treat="treat",
         collapse_to_cohort=True,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Test with collapse_to_cohort for outcome plot
+    ax = panelview(
+        data=df_het,
+        type="outcome",
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        collapse_to_cohort=True,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Test with units_to_plot for outcome plot
+    ax = panelview(
+        data=df_het,
+        type="outcome",
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        collapse_to_cohort=True,
+        units_to_plot=[1, 2, 3, 4]
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
