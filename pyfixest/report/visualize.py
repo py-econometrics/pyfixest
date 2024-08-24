@@ -185,7 +185,6 @@ def iplot(
     else:
         idxs = df["Coefficient"]
     df = df.loc[df["Coefficient"].isin(idxs), :]
-    fml_list = df.index.unique()  # noqa: F841
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
