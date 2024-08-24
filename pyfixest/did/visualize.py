@@ -65,6 +65,12 @@ def panelview(
     ax : matplotlib.pyplot.Axes, optional
         The axes on which to draw the plot. Default is None, in which case a new figure
         is created.
+    xlim : tuple, optional
+        The limits for the x-axis of the plot. Default is None.
+    ylim : tuple, optional
+        The limits for the y-axis of the plot. Default is None.
+    units_to_plot : list, optional
+        A list of unit to include in the plot. If None, all units in the dataset are plotted.
 
     Returns
     -------
