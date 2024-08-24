@@ -168,14 +168,18 @@ def iplot(
         df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
         df_model["fml"] = fxst._fml
         if joint == "both":
-            df_joint = fxst.confint(joint=True)
+            df_joint = fxst.confint(joint=True, alpha=alpha)
             df_joint.reset_index(inplace=True)
             df_joint = df_joint.rename(columns={"index": "Coefficient"})
-            df_joint["fml"] = fxst._fml + ":joint CIs"
+            df_joint["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
             df_model = pd.concat([df_model, df_joint], axis=0)
         elif joint:
-            df_joint = fxst.confint(joint=True)
-            df_model["fml"] = fxst._fml + ":joint CIs"
+            # import pdb; pdb.set_trace()
+            df_joint = fxst.confint(joint=True, alpha=alpha)
+            # replace CI columns
+            lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
+            df_model[[lb, ub]] = df_joint[[lb, ub]]
+            df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
 
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
@@ -309,14 +313,17 @@ def coefplot(
         df_model = fxst.tidy(alpha=alpha).reset_index()
         df_model["fml"] = fxst._fml
         if joint == "both":
-            df_joint = fxst.confint(joint=True)
+            df_joint = fxst.confint(joint=True, alpha=alpha)
             df_joint.reset_index(inplace=True)
             df_joint = df_joint.rename(columns={"index": "Coefficient"})
-            df_joint["fml"] = fxst._fml + ":joint CIs"
+            df_joint["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
             df_model = pd.concat([df_model, df_joint], axis=0)
         elif joint:
-            df_joint = fxst.confint(joint=True)
-            df_model["fml"] = fxst._fml + ":joint CIs"
+            df_joint = fxst.confint(joint=True, alpha=alpha)
+            # import pdb; pdb.set_trace()
+            lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
+            df_model[[lb, ub]] = df_joint[[lb, ub]]
+            df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
 
         df_model.set_index("fml", inplace=True)
         df_all.append(df_model)
