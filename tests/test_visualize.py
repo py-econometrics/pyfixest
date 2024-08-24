@@ -56,6 +56,7 @@ def test_panelview():
         unit="unit",
         time="year",
         treat="treat",
+        subsamp=50
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
@@ -92,7 +93,6 @@ def test_panelview():
         unit="unit",
         time="year",
         treat="treat",
-        collapse_to_cohort=True,
         units_to_plot=[1, 2, 3, 4]
     )
     assert isinstance(ax, plt.Axes)
