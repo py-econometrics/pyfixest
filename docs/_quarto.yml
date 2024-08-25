@@ -76,6 +76,7 @@ quartodoc:
         - report.etable
         - report.coefplot
         - report.iplot
+        - did.visualize.panelview
     - title: Misc / Utilities
       desc: |
         PyFixest internals and utilities
