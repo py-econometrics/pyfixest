@@ -19,7 +19,6 @@ from lets_plot import (
     theme,
     ylab,
 )
-from scipy.stats import norm
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
@@ -480,8 +479,9 @@ def _coefplot_matplotlib(
             lambda x: _relabel_expvar(x, labels, interactionSymbol)
         )
 
+    ub, lb = (f"{round(x * 100, 1)}%" for x in [1 - alpha / 2, alpha / 2])
+
     yintercept = yintercept if yintercept is not None else 0
-    critval = norm.ppf(1 - alpha / 2)
     title = title if title is not None else "Coefficient Plot"
 
     if ax is None:
@@ -509,13 +509,15 @@ def _coefplot_matplotlib(
             dodge_val = dodge_start + i * dodge
             x_pos = [coef_positions[coef] + dodge_val for coef in group["Coefficient"]]
         else:
-            x_pos = range(len(group))
+            x_pos = list(map(float, range(len(group))))
+
+        err = [group["Estimate"] - group[lb], group[ub] - group["Estimate"]]
 
         if flip_coord:
             ax.errorbar(
                 x=group["Estimate"],
                 y=x_pos,
-                xerr=group["Std. Error"] * critval,
+                xerr=err,
                 fmt="o",
                 capsize=5,
                 color=color,
@@ -525,7 +527,8 @@ def _coefplot_matplotlib(
             ax.errorbar(
                 y=group["Estimate"],
                 x=x_pos,
-                yerr=group["Std. Error"] * critval,
+                # yerr=group["Std. Error"] * critval,
+                yerr=err,
                 fmt="o",
                 capsize=5,
                 color=color,
