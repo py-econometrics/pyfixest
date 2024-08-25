@@ -358,13 +358,20 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref=a)", data)
 
 
-def test_coefplot_backend_error():
+def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
         fit.coefplot(plot_backend="plotnine")
+
+    fit_multi = feols("Y + Y2 ~ i(f1)", data=df)
+    with pytest.raises(ValueError):
+        fit_multi.coefplot(joint=True)
+
+    with pytest.raises(ValueError):
+        fit_multi.iplot(joint="both")
 
 
 def test_ritest_error(data):

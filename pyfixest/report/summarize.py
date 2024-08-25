@@ -93,17 +93,17 @@ def etable(
     scientific_notation_threshold: int, optional
         The threshold for using scientific notation. Default is 10_000.
     notes: str, optional
-        Custom table notes. Default shows the significance levels and the format of 
+        Custom table notes. Default shows the significance levels and the format of
         the coefficient cell.
     model_heads: list, optional
-        Add custom headlines to models when output as df or latex. Length of list 
+        Add custom headlines to models when output as df or latex. Length of list
         must correspond to number of models. Default is None.
     head_order: str, optional
-        String to determine the display of the table header when output as df or latex. 
-        Allowed values are "dh", "hd", "d", "h", or "". When head_order is "dh", 
-        the dependent variable is displayed first, followed by the custom model_heads 
+        String to determine the display of the table header when output as df or latex.
+        Allowed values are "dh", "hd", "d", "h", or "". When head_order is "dh",
+        the dependent variable is displayed first, followed by the custom model_heads
         (provided the user has specified them). With "hd" it is the other way around.
-        When head_order is "d", only the dependent variable and model numbers are displayed 
+        When head_order is "d", only the dependent variable and model numbers are displayed
         and with "" only the model numbers. Default is "dh".
     filename: str, optional
         The filename to save the LaTeX table to. If None, the LaTeX code is returned
@@ -155,12 +155,20 @@ def etable(
     ], "type must be either 'df', 'md', 'html' or 'tex'"
 
     if model_heads is not None:
-        assert len(model_heads) == len(models), "model_heads must have the same length as models"
-    
+        assert len(model_heads) == len(
+            models
+        ), "model_heads must have the same length as models"
+
     # Check if head_order is allowed string & remove h when no model_heads provided
-    assert head_order in ["dh", "hd", "d", "h", ""], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
-    if model_heads is None and 'h' in head_order:
-        head_order = head_order.replace('h', '')
+    assert head_order in [
+        "dh",
+        "hd",
+        "d",
+        "h",
+        "",
+    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    if model_heads is None and "h" in head_order:
+        head_order = head_order.replace("h", "")
 
     # Check if custom_model_stats is a dictionary and the provided lists have the same length as models
     if custom_model_stats is not None:
@@ -168,8 +176,10 @@ def etable(
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
             assert isinstance(values, list), "custom_model_stats values must lists"
-            assert len(values) == len(models), "lists in custom_model_stats values must have the same length as models"
-    
+            assert len(values) == len(
+                models
+            ), "lists in custom_model_stats values must have the same length as models"
+
     dep_var_list = []
     nobs_list = []
     fixef_list: list[str] = []
@@ -219,7 +229,7 @@ def etable(
         fixef_list = list(set(fixef_list))
         n_fixef = len(fixef_list)
     else:
-        fixef_list=[]
+        fixef_list = []
         n_fixef = 0
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
@@ -232,12 +242,12 @@ def etable(
     if show_se_type:
         model_stats_df["S.E. type"] = se_type_list
     model_stats_df[R2code] = r2_list
-    n_model_stats=model_stats_df.shape[1]
-    
+    n_model_stats = model_stats_df.shape[1]
+
     # Create a dataframe for the Fixed Effects markers
     fe_df = pd.DataFrame()
     # when at least one model has a fixed effect & the user wants to show them
-    if fixef_list:  
+    if fixef_list:
         for fixef in fixef_list:
             # check if not empty string
             if fixef:
@@ -248,9 +258,9 @@ def etable(
     fe_df.fillna("-", inplace=True)
     # Sort by model
     fe_df.sort_index(inplace=True)
-    # Transpose & concatenate the two dataframes 
-    nobs_fixef_df=pd.concat([fe_df.T, model_stats_df.T]).reset_index()
-    
+    # Transpose & concatenate the two dataframes
+    nobs_fixef_df = pd.concat([fe_df.T, model_stats_df.T]).reset_index()
+
     coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
 
     etable_list = []
@@ -298,11 +308,11 @@ def etable(
                 model_tidy_df[coef_fmt_title] += pd.Series(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
-            elif element == "\n": # Replace output specific code for newline
+            elif element == "\n":  # Replace output specific code for newline
                 if type in ["df", "html"]:
                     model_tidy_df[coef_fmt_title] += "<br>"
                 elif type == "tex":
-                    model_tidy_df[coef_fmt_title] += r"\\"   
+                    model_tidy_df[coef_fmt_title] += r"\\"
                 elif type == "md":
                     model_tidy_df[coef_fmt_title] += "\n"
             else:
@@ -363,63 +373,84 @@ def etable(
 
     depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
     depvars.columns = res.columns
-      
+
     if type == "md":
         res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
         res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
-        # Generate notes string if user has not provided any 
+        # Generate notes string if user has not provided any
         if notes is None:
             if signif_code:
-                notes= f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+                notes = f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
             else:
-                notes=f"Format of coefficient cell: {coef_fmt_title}"
-        res_all = _tabulate_etable_md(df=res_all, n_coef=res.shape[0], n_fixef=n_fixef, n_models=len(models), n_model_stats=n_model_stats)
+                notes = f"Format of coefficient cell: {coef_fmt_title}"
+        res_all = _tabulate_etable_md(
+            df=res_all,
+            n_coef=res.shape[0],
+            n_fixef=n_fixef,
+            n_models=len(models),
+            n_model_stats=n_model_stats,
+        )
         print(res_all)
         print(notes)
         return None
     elif type in ["df", "tex"]:
-        # Prepare Multiindex for columns 
-        id_dep = [""] + dep_var_list                                # depvars
+        # Prepare Multiindex for columns
+        id_dep = [""] + dep_var_list  # depvars
         if model_heads is None:
-            id_head = [""] * (1+len(models))
+            id_head = [""] * (1 + len(models))
         else:
-            id_head = [""] + model_heads                            # model_heads provided by user
-        id_num = [""]+[f"({s})" for s in range(1, len(models) + 1)] # model numbers
+            id_head = [""] + model_heads  # model_heads provided by user
+        id_num = [""] + [f"({s})" for s in range(1, len(models) + 1)]  # model numbers
 
         res_all = pd.concat([res, nobs_fixef_df], ignore_index=True)
         # When no depvars & headlines should be displayed then use simple index
-        # otherwise generate MultiIndex & determine order of index levels as specified by head_order 
-        if head_order=="":
+        # otherwise generate MultiIndex & determine order of index levels as specified by head_order
+        if head_order == "":
             res_all.columns = pd.Index(id_num)
         else:
-            cindex = [ {'h': id_head, 'd': id_dep}[c] for c in head_order] + [id_num]
-            res_all.columns= pd.MultiIndex.from_arrays(cindex)
-        
+            cindex = [{"h": id_head, "d": id_dep}[c] for c in head_order] + [id_num]
+            res_all.columns = pd.MultiIndex.from_arrays(cindex)
+
         if type == "df":
-            # Generate notes string if user has not provided any 
+            # Generate notes string if user has not provided any
             if notes is None:
                 notes = (
                     f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
                     + f"Format of coefficient cell:\n{coef_fmt_title}"
                 )
-            res_all = _tabulate_etable_df(df=res_all, n_coef=res.shape[0], n_fixef=n_fixef, n_models=len(models), n_model_stats=n_model_stats, notes=notes)
+            res_all = _tabulate_etable_df(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                n_model_stats=n_model_stats,
+                notes=notes,
+            )
             return res_all
         elif type == "tex":
-            # Generate notes string if user has not provided any 
+            # Generate notes string if user has not provided any
             if notes is None:
                 notes = (
                     f"Significance levels: $*$ p $<$ {signif_code[2]}, $**$ p $<$ {signif_code[1]}, $***$ p $<$ {signif_code[0]}. "
                     + f"Format of coefficient cell: {coef_fmt_title}"
                 )
-            latex_res=_tabulate_etable_tex(df=res_all, n_coef=res.shape[0], n_fixef=n_fixef, n_models=len(models), notes=notes)
+            latex_res = _tabulate_etable_tex(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                notes=notes,
+            )
             if filename is not None:
                 with open(filename, "w") as f:
                     f.write(latex_res)  # Write the latex code to a file
             if print_tex:
                 print(latex_res)
-            return latex_res 
+            return latex_res
     else:
         raise ValueError("type must be either 'df', 'md' or 'tex'")
+
+    return None
 
 
 def summary(
@@ -556,7 +587,6 @@ def _post_processing_input_checks(
 
 
 def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
-    
     line1 = n_coef
     line2 = line1 + n_fixef
     line3 = line2 + n_model_stats
@@ -573,7 +603,7 @@ def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
                 {
                     "selector": "thead tr:nth-child(1) th",
                     "props": "border-top: 2px solid black;",
-                },  # Add a top border above the first index level 
+                },  # Add a top border above the first index level
                 {
                     "selector": "thead tr:nth-child(1) th:nth-child(n+2)",
                     "props": "border-bottom: 0.5px solid black;",
@@ -609,75 +639,85 @@ def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
                 {
                     "selector": "caption",
                     "props": "caption-side: bottom; font-size: 1em; text-align: justify;",
-                }
+                },
             ]
         )
         .hide(axis="index")
-        .set_caption(notes)  
+        .set_caption(notes)
     )
 
     return styler
-  
+
 
 def _tabulate_etable_tex(df, n_coef, n_fixef, n_models, notes):
-
     # First wrap all cells which contain a line break in a makecell command
-    df = df.map(lambda x: f"\\makecell{{{x}}}" if isinstance(x, str) and "\\\\" in x else x)
-    
+    df = df.map(
+        lambda x: f"\\makecell{{{x}}}" if isinstance(x, str) and "\\\\" in x else x
+    )
+
     # Style the table
     styler = (
-        df.style
-        .hide(axis="index")
-        .format_index(escape="latex", axis=1, level=[0,1])
-        #.set_caption(caption)
+        df.style.hide(axis="index").format_index(escape="latex", axis=1, level=[0, 1])
+        # .set_caption(caption)
     )
     # Generate LaTeX code
-    latex_res = styler.to_latex(hrules=True, 
-                            multicol_align="c", 
-                            column_format="l" + "c" * n_models)
-    
+    latex_res = styler.to_latex(
+        hrules=True, multicol_align="c", column_format="l" + "c" * n_models
+    )
+
     # Now perform post-processing of the LaTeX code
     # First split the LaTeX code into lines
     lines = latex_res.splitlines()
-    
-    # Insert midrule after coeffs 
-    coef_start = 3 + df.columns.nlevels ## Table code starts with 2 lines + depth of the column index
-    lines.insert(coef_start+n_coef, '\\midrule')  # 4 lines in the latex code before the first coefficient
+
+    # Insert midrule after coeffs
+    coef_start = (
+        3 + df.columns.nlevels
+    )  ## Table code starts with 2 lines + depth of the column index
+    lines.insert(
+        coef_start + n_coef, "\\midrule"
+    )  # 4 lines in the latex code before the first coefficient
     # When FE are present, insert a midrule after the FEs
-    if n_fixef>0:
-        lines.insert(coef_start+n_coef+n_fixef +1, '\\midrule')
+    if n_fixef > 0:
+        lines.insert(coef_start + n_coef + n_fixef + 1, "\\midrule")
 
     # Insert cmidrule that underlines each value of the top column index (i.e. typically dependent variable)
     # First find the first line with an occurrence of "multicolumn"
     cmidrule_line_number = None
     for i, line in enumerate(lines):
-        if 'multicolumn' in line:
-            cmidrule_line_number = i+1
+        if "multicolumn" in line:
+            cmidrule_line_number = i + 1
             # Regular expression to find \multicolumn{number}
-            pattern = r'\\multicolumn\{(\d+)\}'
+            pattern = r"\\multicolumn\{(\d+)\}"
             # Find all matches (i.e. values of d) in the LaTeX string & convert to integers
             ncols = [int(match) for match in re.findall(pattern, line)]
             break  # Only process the first line containing "multicolumn"
-    
+
     if cmidrule_line_number is not None:
         cmidrule_string = ""
-        leftcol=2
+        leftcol = 2
         for n in ncols:
-            cmidrule_string += r"\cmidrule(lr){" + str(leftcol) + "-" + str(leftcol+n-1) +"} "
+            cmidrule_string += (
+                r"\cmidrule(lr){" + str(leftcol) + "-" + str(leftcol + n - 1) + "} "
+            )
             leftcol += n
         lines.insert(cmidrule_line_number, cmidrule_string)
-    
+
     # Put the lines back together
-    latex_res= "\n".join(lines)
-    
+    latex_res = "\n".join(lines)
+
     # Wrap in threeparttable to allow for table notes
-    latex_res="\\begin{threeparttable}\n"+latex_res+"\n\\footnotesize "+notes+"\n\\end{threeparttable}"
-    
+    latex_res = (
+        "\\begin{threeparttable}\n"
+        + latex_res
+        + "\n\\footnotesize "
+        + notes
+        + "\n\\end{threeparttable}"
+    )
+
     # Set cell aligment to top
-    latex_res= "\\renewcommand\\cellalign{t}\n" + latex_res
+    latex_res = "\\renewcommand\\cellalign{t}\n" + latex_res
 
     return latex_res
-
 
 
 def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
@@ -691,7 +731,7 @@ def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
     - n_fixef (int): The number of fixed effects.
     - n_models (int): The number of models.
     - n_model_stats (int): The number of rows with model statistics.
-    
+
     Returns
     -------
     - formatted_table (str): The formatted table as a string.
