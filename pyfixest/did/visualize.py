@@ -120,17 +120,17 @@ def panelview(
 
             treatment_starts = (
                 data.groupby(unit)
-                .apply(get_treatment_start)
+                .apply(get_treatment_start, include_groups=False)
                 .reset_index(name="treatment_start")
             )
             data = data.merge(treatment_starts, on=unit, how="left")
             data_agg = (
-                data.groupby(["treatment_start", "year"], dropna=False)[outcome]
+                data.groupby(["treatment_start", time], dropna=False)[outcome]
                 .mean()
                 .reset_index()
             )
             data_agg[treat] = data_agg.apply(
-                lambda row: row["year"] >= row["treatment_start"]
+                lambda row: row[time] >= row["treatment_start"]
                 if pd.notna(row["treatment_start"])
                 else False,
                 axis=1,
