@@ -80,6 +80,7 @@ def panelview(
     ```python
     import pandas as pd
     import numpy as np
+    from pyfixest.did.visualize import panelview
 
     df_het = pd.read_csv("pd.read_csv("pyfixest/did/data/df_het.csv")
 
@@ -119,7 +120,7 @@ def panelview(
 
             treatment_starts = (
                 data.groupby(unit)
-                .apply(get_treatment_start, include_groups=False)
+                .apply(get_treatment_start)
                 .reset_index(name="treatment_start")
             )
             data = data.merge(treatment_starts, on=unit, how="left")
