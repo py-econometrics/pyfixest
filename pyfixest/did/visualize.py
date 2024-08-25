@@ -83,6 +83,8 @@ def panelview(
     import numpy as np
 
     df_het = pd.read_csv("pd.read_csv("pyfixest/did/data/df_het.csv")
+
+    # inspect treatment assignment
     panelview(
         data = df_het,
         unit = "unit",
@@ -92,6 +94,7 @@ def panelview(
         title = "Treatment Assignment"
     )
 
+    # outcome plot
     panelview(
         data = df_het,
         unit = "unit",
