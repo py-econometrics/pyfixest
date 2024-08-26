@@ -287,35 +287,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     return df
 
 
-def get_blw():
-    """DGP for effect heterogeneity in panel data from Baker, Larcker, and Wang (2022)."""
-    n = np.arange(1, 31)
-    id_ = np.arange(1, 1001)
-    blw = pd.DataFrame(
-        [(n_, id__) for n_ in n for id__ in id_], columns=["n", "id"]
-    ).eval(
-        """
-            year = n + 1980 - 1
-            state = 1 + (id - 1) // 25
-            group = 1 + (state - 1) // 10
-            treat_date = 1980 + group * 6
-            time_til = year - treat_date
-            treat = time_til >= 0
-        """
-    )
-    blw["firms"] = np.random.uniform(0, 5, size=len(blw))
-    blw["e"] = np.random.normal(0, 0.5**2, size=len(blw))
-    blw["te"] = np.random.normal(10 - 2 * (blw["group"] - 1), 0.2**2, size=len(blw))
-    blw.eval(
-        """
-        y = firms + n + treat * te * (year - treat_date + 1) + e
-        y2 = firms + n + te * treat + e
-    """,
-        inplace=True,
-    )
-    return blw
-
-
 def simultaneous_crit_val(
     C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
 ) -> float:
@@ -354,42 +325,3 @@ def simultaneous_crit_val(
     return np.quantile(tmaxs, 1 - alpha)
 
 
-def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
-    """
-    Select and order the coefficients based on the pattern.
-
-    Parameters
-    ----------
-    res: pd.DataFrame
-        The DataFrame to be ordered.
-    keep: list
-        Refer to the `keep` parameter in the `etable` function.
-    drop: list
-        Refer to the `drop` parameter in the `etable` function.
-
-    Returns
-    -------
-    res: pd.DataFrame
-        The ordered DataFrame.
-    """
-    coefs = list(res.index)
-    coef_order = [] if keep else coefs[:]  # Store matched coefs
-    for pattern in keep:
-        _coefs = []  # Store remaining coefs
-        for coef in coefs:
-            if re.findall(pattern, coef):
-                coef_order.append(coef)
-            else:
-                _coefs.append(coef)
-        coefs = _coefs
-
-    for pattern in drop:
-        _coefs = []
-        for (
-            coef
-        ) in coef_order:  # Remove previously matched coefs that match the drop pattern
-            if not re.findall(pattern, coef):
-                _coefs.append(coef)
-        coef_order = _coefs
-
-    return res.loc[coef_order]
