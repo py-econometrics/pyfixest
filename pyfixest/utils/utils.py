@@ -1,4 +1,3 @@
-import re
 from typing import Optional, Union
 
 import numpy as np
@@ -323,5 +322,3 @@ def simultaneous_crit_val(
     p = C.shape[0]
     tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
-
-
