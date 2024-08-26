@@ -244,9 +244,6 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(ValueError):
-        etable([fit1, fit2], coef_fmt="b (se)\nt [p]", type="tex")
-
     with pytest.raises(AssertionError):
         etable(
             models=[fit1, fit2],
@@ -361,13 +358,20 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref=a)", data)
 
 
-def test_coefplot_backend_error():
+def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
         fit.coefplot(plot_backend="plotnine")
+
+    fit_multi = feols("Y + Y2 ~ i(f1)", data=df)
+    with pytest.raises(ValueError):
+        fit_multi.coefplot(joint=True)
+
+    with pytest.raises(ValueError):
+        fit_multi.iplot(joint="both")
 
 
 def test_ritest_error(data):

@@ -1819,7 +1819,10 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
+    def tidy(
+        self,
+        alpha: Optional[float] = None,
+    ) -> pd.DataFrame:
         """
         Tidy model outputs.
 
@@ -2020,7 +2023,13 @@ class Feols:
             self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
         )
 
-        df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
+        df = pd.DataFrame(
+            {
+                f"{alpha / 2*100:.1f}%": lb,
+                f"{(1-alpha / 2)*100:.1f}%": ub,
+            }
+        )
+        # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
         df.index = coefnames
 
         return df
@@ -2432,6 +2441,7 @@ def _drop_multicollinear_variables(
 
 
 @nb.njit(parallel=True)
+@nb.njit(parallel=False)
 def _find_collinear_variables(
     X: np.ndarray, tol: float = 1e-10
 ) -> tuple[np.ndarray, int, bool]:
@@ -2458,6 +2468,7 @@ def _find_collinear_variables(
     K = X.shape[1]
     R = np.zeros((K, K))
     id_excl = np.zeros(K, dtype=np.int32)
+    id_excl = np.zeros(K, dtype=np.int32)
     n_excl = 0
     min_norm = X[0, 0]
 
@@ -2471,10 +2482,11 @@ def _find_collinear_variables(
         if R_jj < tol:
             n_excl += 1
             id_excl[j] = 1
+            id_excl[j] = 1
 
             if n_excl == K:
                 all_removed = True
-                return id_excl.astype(np.bool_), n_excl, all_removed
+                return id_excl.astype(np.bool_).astype(np.bool_), n_excl, all_removed
 
             continue
 
@@ -2492,7 +2504,7 @@ def _find_collinear_variables(
                 value -= R[k, i] * R[k, j]
             R[j, i] = value / R_jj
 
-    return id_excl.astype(np.bool_), n_excl, False
+    return id_excl.astype(np.bool_).astype(np.bool_), n_excl, False
 
 
 def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
