@@ -234,12 +234,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data <span class="op">=</span> data)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 *X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 + X2 | f1"</span>, data <span class="op">=</span> data)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit5 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 + X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>fit6 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 *X2 | f1 + f2"</span>, data <span class="op">=</span> data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data<span class="op">=</span>data)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 *X2 | f1 + f2"</span>, data<span class="op">=</span>data)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 + X2 | f1"</span>, data<span class="op">=</span>data)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>fit5 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>data)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>fit6 <span class="op">=</span> pf.feols(<span class="st">"Y2 ~ X1 *X2 | f1 + f2"</span>, data<span class="op">=</span>data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
             <div id="fTpaPe"></div>
@@ -494,7 +494,7 @@ Table&nbsp;1: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h3 class="anchored" data-anchor-id="keep-and-drop-variables">Keep and drop variables</h3>
 <p><code>etable</code> allows us to do a few things out of the box. For example, we can only keep the variables that we’d like, which keeps all variables that fit the provided regex match.</p>
 <div id="cell-8" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep <span class="op">=</span> <span class="st">"X1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep<span class="op">=</span><span class="st">"X1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <style type="text/css">
 #T_1a742 thead th {
@@ -655,7 +655,7 @@ Table&nbsp;2: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 </div>
 <p>We can use the <code>exact_match</code> argument to select a specific set of variables:</p>
 <div id="cell-10" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep <span class="op">=</span> [<span class="st">"X1"</span>, <span class="st">"X2"</span>], exact_match <span class="op">=</span> <span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], keep<span class="op">=</span>[<span class="st">"X1"</span>, <span class="st">"X2"</span>], exact_match<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <style type="text/css">
 #T_e9901 thead th {
@@ -820,7 +820,7 @@ Table&nbsp;3: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 </div>
 <p>We can also easily <strong>drop</strong> variables via the <code>drop</code> argument:</p>
 <div id="cell-12" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop <span class="op">=</span> [<span class="st">"X1"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], drop<span class="op">=</span>[<span class="st">"X1"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
 <style type="text/css">
 #T_92dc4 thead th {
@@ -973,7 +973,9 @@ Table&nbsp;4: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h3 class="anchored" data-anchor-id="hide-fixed-effects-or-se-type-rows">Hide fixed effects or SE-type rows</h3>
 <p>We can hide the rows showing the relevant fixed effects and those showing the S.E. type by setting <code>show_fe=False</code> and <code>show_setype=False</code> (for instance when the set of fixed effects or the estimation method for the std. errors is the same for all models and you want to describe this in the text or table notes rather than displaying it in the table).</p>
 <div id="cell-14" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], show_fe<span class="op">=</span><span class="va">False</span>, show_se_type<span class="op">=</span><span class="va">False</span>, <span class="bu">type</span><span class="op">=</span><span class="st">"df"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6], show_fe<span class="op">=</span><span class="va">False</span>, show_se_type<span class="op">=</span><span class="va">False</span>, <span class="bu">type</span><span class="op">=</span><span class="st">"df"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
 <style type="text/css">
 #T_22f14 thead th {
@@ -1152,7 +1154,7 @@ Table&nbsp;5: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h3 class="anchored" data-anchor-id="display-p-values-or-confidence-intervals">Display p-values or confidence intervals</h3>
 <p>By default, <code>pf.etable()</code> reports <strong>standard errors</strong>. But we can also ask to output p-values or confidence intervals via the <code>coef_fmt</code> function argument.</p>
 <div id="cell-16" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], coef_fmt <span class="op">=</span> <span class="st">"b </span><span class="ch">\n</span><span class="st"> (se) </span><span class="ch">\n</span><span class="st"> [p]"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], coef_fmt<span class="op">=</span><span class="st">"b </span><span class="ch">\n</span><span class="st"> (se) </span><span class="ch">\n</span><span class="st"> [p]"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <style type="text/css">
 #T_65de1 thead th {
@@ -1345,7 +1347,7 @@ Table&nbsp;6: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h3 class="anchored" data-anchor-id="significance-levels-and-rounding">Significance levels and rounding</h3>
 <p>Additionally, we can also overwrite the defaults for the reported significance levels and control the rounding of results via the <code>signif_code</code> and <code>digits</code> function arguments:</p>
 <div id="cell-18" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits <span class="op">=</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits<span class="op">=</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <style type="text/css">
 #T_16490 thead th {
@@ -1525,7 +1527,12 @@ Table&nbsp;7: Significance levels: * p &lt; 0.1, ** p &lt; 0.05, *** p &lt; 0.01
 <p>By default, <code>pf.etable()</code> returns a data frame, but you can also opt to output markdown or latex via the <code>type</code> argument.</p>
 <div id="cell-20" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Markdown output:</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits <span class="op">=</span> <span class="dv">5</span>, <span class="bu">type</span> <span class="op">=</span> <span class="st">"md"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6],</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>],</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    digits<span class="op">=</span><span class="dv">5</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">"md"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                      est1          est2          est3          est4          est5          est6
 ------------  ------------  ------------  ------------  ------------  ------------  ------------
@@ -1553,7 +1560,13 @@ Format of coefficient cell: Coefficient
 <p>To obtain latex output use <code>format = "tex"</code>. If you want to save the table as a tex file, you can use the <code>filename=</code> argument to specify the respective path where it should be saved. If you want the latex code to be displayed in the notebook, you can use the <code>print_tex=True</code> argument. Etable will use latex packages <code>booktabs</code>, <code>threeparttable</code> and <code>makecell</code> for the table layout, so don’t forget to include these packages in your latex document.</p>
 <div id="cell-22" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># LaTex output (include latex packages booktabs, threeparttable, and makecell in your document):</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>tab<span class="op">=</span> pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>], digits <span class="op">=</span> <span class="dv">2</span>, <span class="bu">type</span> <span class="op">=</span> <span class="st">"tex"</span>, print_tex<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>tab <span class="op">=</span> pf.etable(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6],</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    signif_code<span class="op">=</span>[<span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>],</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    digits<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">"tex"</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    print_tex<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The following code generates a pdf including the regression table which you can display clicking on the link below the cell:</p>
 <div id="cell-24" class="cell" data-execution_count="11">
@@ -1561,18 +1574,22 @@ Format of coefficient cell: Coefficient
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_pdf(tab, <span class="bu">file</span>):</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"Create a PDF document with tex table."</span></span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    doc <span class="op">=</span> pl.Document()</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">'booktabs'</span>))</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">'threeparttable'</span>))</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">'makecell'</span>))</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">"booktabs"</span>))</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">"threeparttable"</span>))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    doc.packages.append(pl.Package(<span class="st">"makecell"</span>))</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> doc.create(pl.Section(<span class="st">'A PyFixest LateX Table'</span>)), doc.create(pl.Table(position<span class="op">=</span><span class="st">'htbp'</span>)) <span class="im">as</span> table:</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>        table.append(pl.NoEscape(tab))</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    doc.generate_pdf(<span class="bu">file</span>, clean_tex<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile latex to pdf &amp; display a button with the hyperlink to the pdf</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>make_pdf(tab, <span class="st">"latexdocs/SampleTableDoc"</span>)</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>display(FileLink(<span class="st">'latexdocs/SampleTableDoc.pdf'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> (</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>        doc.create(pl.Section(<span class="st">"A PyFixest LateX Table"</span>)),</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        doc.create(pl.Table(position<span class="op">=</span><span class="st">"htbp"</span>)) <span class="im">as</span> table,</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    ):</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        table.append(pl.NoEscape(tab))</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    doc.generate_pdf(<span class="bu">file</span>, clean_tex<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile latex to pdf &amp; display a button with the hyperlink to the pdf</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>make_pdf(tab, <span class="st">"latexdocs/SampleTableDoc"</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>display(FileLink(<span class="st">"latexdocs/SampleTableDoc.pdf"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <a href="latexdocs/SampleTableDoc.pdf" target="_blank">latexdocs/SampleTableDoc.pdf</a><br>
 </div>
@@ -1582,13 +1599,13 @@ Format of coefficient cell: Coefficient
 <h3 class="anchored" data-anchor-id="rename-variables">Rename variables</h3>
 <p>You can also rename variables if you want to have a more readable output. Just pass a dictionary to the <code>labels</code> argument. Note that interaction terms will also be relabeled using the specified labels for the interacted variables (if you want to manually relabel an interaction term differently, add it to the dictionary).</p>
 <div id="cell-26" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>labels<span class="op">=</span>{</span>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>labels <span class="op">=</span> {</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y"</span>: <span class="st">"Wage"</span>,</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y2"</span>: <span class="st">"Wealth"</span>,</span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"X1"</span>: <span class="st">"Age"</span>,</span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"X2"</span>: <span class="st">"Years of Schooling"</span>,</span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"f1"</span>: <span class="st">"Industry"</span>,</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"f2"</span>: <span class="st">"Year"</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"f2"</span>: <span class="st">"Year"</span>,</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], labels<span class="op">=</span>labels)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1767,7 +1784,11 @@ Table&nbsp;8: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 </div>
 <p>If you want to label the rows indicating the inclusion of fixed effects not with the variable label but with a custom label, you can pass on a separate dictionary to the <code>felabels</code> argument.</p>
 <div id="cell-28" class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], labels<span class="op">=</span>labels, felabels<span class="op">=</span>{<span class="st">"f1"</span>: <span class="st">"Industry Fixed Effects"</span>, <span class="st">"f2"</span>: <span class="st">"Year Fixed Effects"</span>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6],</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    felabels<span class="op">=</span>{<span class="st">"f1"</span>: <span class="st">"Industry Fixed Effects"</span>, <span class="st">"f2"</span>: <span class="st">"Year Fixed Effects"</span>},</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <style type="text/css">
 #T_d2c8f thead th {
@@ -1946,7 +1967,11 @@ Table&nbsp;9: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.0
 <h3 class="anchored" data-anchor-id="custom-model-headlines">Custom model headlines</h3>
 <p>You can also add custom headers for each model by passing a list of strings to the <code>model_headers</code> argument.</p>
 <div id="cell-30" class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], labels<span class="op">=</span>labels, model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6],</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>],</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="14">
 <style type="text/css">
 #T_874ea thead th {
@@ -2131,9 +2156,12 @@ Table&nbsp;10: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.
 </div>
 <p>Or change the ordering of headlines having headlines first and then dependent variables using the <code>head_order</code> argument. “hd” stands for headlines then dependent variables, “dh” for dependent variables then headlines. Assigning “d” or “h” can be used to only show dependent variables or only headlines. When head_order=“” only model numbers are shown.</p>
 <div id="cell-32" class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit4, fit2, fit5, fit3, fit6], labels<span class="op">=</span>labels,</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>          model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>          head_order<span class="op">=</span><span class="st">"hd"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit4, fit2, fit5, fit3, fit6],</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">"hd"</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="15">
 <style type="text/css">
 #T_ea0c6 thead th {
@@ -2319,9 +2347,12 @@ Table&nbsp;11: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.
 </div>
 <p>Remove the dependent variables from the headers:</p>
 <div id="cell-34" class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit4, fit2, fit5, fit3, fit6], labels<span class="op">=</span>labels,</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>          model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>          head_order<span class="op">=</span><span class="st">""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit4, fit2, fit5, fit3, fit6],</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">""</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
 <style type="text/css">
 #T_d8b10 thead th {
@@ -2495,10 +2526,14 @@ Table&nbsp;12: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.
 <h3 class="anchored" data-anchor-id="further-custom-model-information">Further custom model information</h3>
 <p>You can add further custom model statistics/information to the bottom of the table by using the <code>custom_stats</code> argument to which you pass a dictionary with the name of the row and lists of values. The length of the lists must be equal to the number of models.</p>
 <div id="cell-36" class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], labels<span class="op">=</span>labels,</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>          custom_model_stats<span class="op">=</span>{<span class="st">"Number of Clusters"</span>: [<span class="dv">42</span>,<span class="dv">42</span>,<span class="dv">42</span>,<span class="dv">37</span>,<span class="dv">37</span>,<span class="dv">37</span>],</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"Additional Info"</span>: [<span class="st">"A"</span>,<span class="st">"A"</span>,<span class="st">"B"</span>,<span class="st">"B"</span>,<span class="st">"C"</span>,<span class="st">"C"</span>]</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>                              })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6],</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    custom_model_stats<span class="op">=</span>{</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Number of Clusters"</span>: [<span class="dv">42</span>, <span class="dv">42</span>, <span class="dv">42</span>, <span class="dv">37</span>, <span class="dv">37</span>, <span class="dv">37</span>],</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Additional Info"</span>: [<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>, <span class="st">"C"</span>],</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="17">
 <style type="text/css">
 #T_1124a thead th {
@@ -2677,10 +2712,14 @@ Table&nbsp;13: Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.
 <h3 class="anchored" data-anchor-id="custom-table-notes">Custom table notes</h3>
 <p>You can replace the default table notes with your own notes using the <code>notes</code> argument.</p>
 <div id="cell-38" class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>mynotes<span class="op">=</span><span class="st">"Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>pf.etable([fit1, fit4, fit2, fit5, fit3, fit6], labels<span class="op">=</span>labels,</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>          model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>          head_order<span class="op">=</span><span class="st">"hd"</span>, notes<span class="op">=</span>mynotes)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>mynotes <span class="op">=</span> <span class="st">"Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet."</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    [fit1, fit4, fit2, fit5, fit3, fit6],</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">"hd"</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    notes<span class="op">=</span>mynotes,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="18">
 <style type="text/css">
 #T_89c17 thead th {
@@ -2869,14 +2908,23 @@ Table&nbsp;14: Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
 <h3 class="anchored" data-anchor-id="publication-ready-latex-tables">Publication-ready LaTex tables</h3>
 <p>With few lines of code you thus obtain a publication-ready latex table:</p>
 <div id="cell-40" class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tab<span class="op">=</span>pf.etable([fit1, fit4, fit2, fit5, fit3, fit6], labels<span class="op">=</span>labels,</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>          model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>          head_order<span class="op">=</span><span class="st">"hd"</span>, <span class="bu">type</span><span class="op">=</span><span class="st">"tex"</span>, notes<span class="op">=</span>mynotes, show_fe<span class="op">=</span><span class="va">True</span>, show_se_type<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>          custom_model_stats<span class="op">=</span>{<span class="st">"Number of Clusters"</span>: [<span class="dv">42</span>,<span class="dv">42</span>,<span class="dv">42</span>,<span class="dv">37</span>,<span class="dv">37</span>,<span class="dv">37</span>],})</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile latex to pdf &amp; display a button with the hyperlink to the pdf</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>make_pdf(tab, <span class="st">"latexdocs/SampleTableDoc2"</span>)</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>display(FileLink(<span class="st">'latexdocs/SampleTableDoc2.pdf'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tab <span class="op">=</span> pf.etable(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit4, fit2, fit5, fit3, fit6],</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>labels,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    model_heads<span class="op">=</span>[<span class="st">"US"</span>, <span class="st">"US"</span>, <span class="st">"China"</span>, <span class="st">"China"</span>, <span class="st">"EU"</span>, <span class="st">"EU"</span>],</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    head_order<span class="op">=</span><span class="st">"hd"</span>,</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">"tex"</span>,</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    notes<span class="op">=</span>mynotes,</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    show_fe<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    show_se_type<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    custom_model_stats<span class="op">=</span>{</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Number of Clusters"</span>: [<span class="dv">42</span>, <span class="dv">42</span>, <span class="dv">42</span>, <span class="dv">37</span>, <span class="dv">37</span>, <span class="dv">37</span>],</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    },</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Compile latex to pdf &amp; display a button with the hyperlink to the pdf</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>make_pdf(tab, <span class="st">"latexdocs/SampleTableDoc2"</span>)</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>display(FileLink(<span class="st">"latexdocs/SampleTableDoc2.pdf"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <a href="latexdocs/SampleTableDoc2.pdf" target="_blank">latexdocs/SampleTableDoc2.pdf</a><br>
 </div>
@@ -2916,13 +2964,21 @@ Table&nbsp;14: Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
 </div>
 <p>We can easily add custom statisics. For example, assume that we want to correct for multiple testing via the Romano-Wolf correction. We can do this as follows:</p>
 <div id="cell-46" class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf([fit1, fit2, fit3, fit4, fit5, fit6], param <span class="op">=</span> <span class="st">"X1"</span>, seed <span class="op">=</span> <span class="dv">123</span>, reps <span class="op">=</span> <span class="dv">9999</span>)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>rwolf_res <span class="op">=</span> pf.rwolf(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    [fit1, fit2, fit3, fit4, fit5, fit6], param<span class="op">=</span><span class="st">"X1"</span>, seed<span class="op">=</span><span class="dv">123</span>, reps<span class="op">=</span><span class="dv">9999</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>rwolf_pvalues <span class="op">=</span> np.<span class="bu">round</span>(rwolf_res.xs(<span class="st">"RW Pr(&gt;|t|)"</span>), <span class="dv">3</span>).to_list()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div id="cell-47" class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(<span class="st">'Fixed Effects'</span>, [x._fixef <span class="cf">for</span> x <span class="kw">in</span> [fit1, fit2, fit3, fit4, fit5, fit6]], LineLocation.FOOTER_TOP)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(<span class="st">'X1: Romano-Wolf P-Value'</span>, rwolf_pvalues, LineLocation.FOOTER_TOP)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>stargazer_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Fixed Effects"</span>,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    [x._fixef <span class="cf">for</span> x <span class="kw">in</span> [fit1, fit2, fit3, fit4, fit5, fit6]],</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    LineLocation.FOOTER_TOP,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>stargazer_table.add_line(</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"X1: Romano-Wolf P-Value"</span>, rwolf_pvalues, LineLocation.FOOTER_TOP</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>stargazer_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="22">
 <table style="text-align:center"><tbody><tr><td colspan="7" style="border-bottom: 1px solid black"></td></tr>
 <tr><td style="text-align:left"></td></tr><tr><td style="text-align:left"></td><td>(1)</td><td>(2)</td><td>(3)</td><td>(4)</td><td>(5)</td><td>(6)</td></tr>
