@@ -12,10 +12,11 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+from great_tables import GT, style, loc
 
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-    type: str = "df",
+    type: str = "gt",
     signif_code: list = [0.001, 0.01, 0.05],
     coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
@@ -43,7 +44,7 @@ def etable(
         A list of models of type Feols, Feiv, Fepois.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        or "tex" for LaTeX table. Default is "md".
+        "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
         Significance levels for the stars. Default is [0.001, 0.01, 0.05].
         If None, no stars are printed.
@@ -152,7 +153,8 @@ def etable(
         "tex",
         "md",
         "html",
-    ], "type must be either 'df', 'md', 'html' or 'tex'"
+        "gt"
+    ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     if model_heads is not None:
         assert len(model_heads) == len(
@@ -309,7 +311,7 @@ def etable(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
             elif element == "\n":  # Replace output specific code for newline
-                if type in ["df", "html"]:
+                if type in ["df", "html", "gt"]:
                     model_tidy_df[coef_fmt_title] += "<br>"
                 elif type == "tex":
                     model_tidy_df[coef_fmt_title] += r"\\"
@@ -393,7 +395,7 @@ def etable(
         print(res_all)
         print(notes)
         return None
-    elif type in ["df", "tex"]:
+    elif type in ["df", "tex", "gt"]:
         # Prepare Multiindex for columns
         id_dep = [""] + dep_var_list  # depvars
         if model_heads is None:
@@ -447,8 +449,23 @@ def etable(
             if print_tex:
                 print(latex_res)
             return latex_res
+        elif type == "gt":
+            if notes is None:
+                notes = (
+                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
+                    + f"Format of coefficient cell:\n{coef_fmt_title}"
+                )
+            gt = _tabulate_etable_gt(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                n_model_stats=n_model_stats,
+                notes=notes,
+            )
+            return gt
     else:
-        raise ValueError("type must be either 'df', 'md' or 'tex'")
+        raise ValueError("type must be either 'gt', 'df', 'md' or 'tex'")
 
     return None
 
@@ -585,6 +602,66 @@ def _post_processing_input_checks(
 
     return models
 
+
+def _tabulate_etable_gt(df, n_coef, n_fixef, n_models, n_model_stats, notes):
+    if isinstance(df.columns, pd.MultiIndex):
+        # GT does not support MultiIndex columns, so we need to flatten the columns
+        # But use the MultiIndex to generate column spanners below
+        # First save the index
+        dfcols= df.columns.to_list()[1:]
+        nl= df.columns.nlevels
+        # Then flatten the column index & keep only the model numbers
+        df.columns = df.columns.get_level_values(-1)
+    else:
+        nl = 1
+    
+    # Add a column for the rowtype to use GTs grouping of rows   
+    df["rowtype"]= "coef"
+    df.loc[n_coef:n_coef+n_fixef, "rowtype"] = "fe"
+    df.loc[n_coef+n_fixef:n_coef+n_fixef+n_model_stats, "rowtype"] = "modelstats"
+    gt = GT(df, auto_align=False)
+    if nl>1:
+        # Add column spanners based on multiindex
+        # Do this for every level in the multiindex (except the one with the column numbers)
+        for i in range(nl-1):
+            col_spanners = {}
+            # Iterate over columns and group them by the labels in the respective level
+            for c in dfcols:
+                key = c[i]
+                if key not in col_spanners:
+                    col_spanners[key] = []
+                col_spanners[key].append(c[-1])
+            for label, columns in col_spanners.items():
+                gt = gt.tab_spanner(label=label, columns=columns, level=nl-1-i)
+    
+    # Customize the table layout
+    gt = (
+            gt.tab_source_note(notes)
+             .tab_stub(rowname_col="", groupname_col="rowtype")
+             .tab_options(table_body_hlines_style="none",
+                          table_body_vlines_style="none",
+                          stub_border_style="hidden",
+                         column_labels_border_top_style="solid",
+                         column_labels_border_top_color="black",
+                         column_labels_border_bottom_style="solid",
+                         column_labels_border_bottom_color="black",
+                         column_labels_border_bottom_width="0.5px",
+                         column_labels_vlines_style="hidden",
+                         table_body_border_top_width="0.5px",
+                         table_border_bottom_style="hidden",
+                         table_body_border_bottom_color="black",
+                         row_group_font_size="0px",
+                         row_group_padding="0px",
+                         row_group_border_top_style="hidden",
+                         row_group_border_bottom_style="solid",
+                         row_group_border_bottom_width="0.5px",
+                         row_group_border_bottom_color="black",
+            )
+            .cols_align(align="center")
+            .cols_align(align="left", columns="")
+    )
+
+    return gt
 
 def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
     line1 = n_coef
