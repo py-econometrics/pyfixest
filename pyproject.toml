@@ -21,7 +21,7 @@ numba = ">=0.58.0"
 tabulate = ">=0.9.0"
 polars = ">=0.20.1"
 tqdm = "^4.66.4"
-great-tables = "^0.10.0"
+great-tables = ">=0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest=">=7.0.0"
