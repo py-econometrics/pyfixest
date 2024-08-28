@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from great_tables import GT
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
@@ -12,7 +13,6 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-from great_tables import GT, style, loc
 
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
@@ -153,7 +153,7 @@ def etable(
         "tex",
         "md",
         "html",
-        "gt"
+        "gt",
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     if model_heads is not None:
@@ -608,22 +608,24 @@ def _tabulate_etable_gt(df, n_coef, n_fixef, n_models, n_model_stats, notes):
         # GT does not support MultiIndex columns, so we need to flatten the columns
         # But use the MultiIndex to generate column spanners below
         # First save the index
-        dfcols= df.columns.to_list()[1:]
-        nl= df.columns.nlevels
+        dfcols = df.columns.to_list()[1:]
+        nl = df.columns.nlevels
         # Then flatten the column index & keep only the model numbers
         df.columns = df.columns.get_level_values(-1)
     else:
         nl = 1
-    
-    # Add a column for the rowtype to use GTs grouping of rows   
-    df["rowtype"]= "coef"
-    df.loc[n_coef:n_coef+n_fixef, "rowtype"] = "fe"
-    df.loc[n_coef+n_fixef:n_coef+n_fixef+n_model_stats, "rowtype"] = "modelstats"
+
+    # Add a column for the rowtype to use GTs grouping of rows
+    df["rowtype"] = "coef"
+    df.loc[n_coef : n_coef + n_fixef, "rowtype"] = "fe"
+    df.loc[n_coef + n_fixef : n_coef + n_fixef + n_model_stats, "rowtype"] = (
+        "modelstats"
+    )
     gt = GT(df, auto_align=False)
-    if nl>1:
+    if nl > 1:
         # Add column spanners based on multiindex
         # Do this for every level in the multiindex (except the one with the column numbers)
-        for i in range(nl-1):
+        for i in range(nl - 1):
             col_spanners = {}
             # Iterate over columns and group them by the labels in the respective level
             for c in dfcols:
@@ -632,36 +634,38 @@ def _tabulate_etable_gt(df, n_coef, n_fixef, n_models, n_model_stats, notes):
                     col_spanners[key] = []
                 col_spanners[key].append(c[-1])
             for label, columns in col_spanners.items():
-                gt = gt.tab_spanner(label=label, columns=columns, level=nl-1-i)
-    
+                gt = gt.tab_spanner(label=label, columns=columns, level=nl - 1 - i)
+
     # Customize the table layout
     gt = (
-            gt.tab_source_note(notes)
-             .tab_stub(rowname_col="", groupname_col="rowtype")
-             .tab_options(table_body_hlines_style="none",
-                          table_body_vlines_style="none",
-                          stub_border_style="hidden",
-                         column_labels_border_top_style="solid",
-                         column_labels_border_top_color="black",
-                         column_labels_border_bottom_style="solid",
-                         column_labels_border_bottom_color="black",
-                         column_labels_border_bottom_width="0.5px",
-                         column_labels_vlines_style="hidden",
-                         table_body_border_top_width="0.5px",
-                         table_border_bottom_style="hidden",
-                         table_body_border_bottom_color="black",
-                         row_group_font_size="0px",
-                         row_group_padding="0px",
-                         row_group_border_top_style="hidden",
-                         row_group_border_bottom_style="solid",
-                         row_group_border_bottom_width="0.5px",
-                         row_group_border_bottom_color="black",
-            )
-            .cols_align(align="center")
-            .cols_align(align="left", columns="")
+        gt.tab_source_note(notes)
+        .tab_stub(rowname_col="", groupname_col="rowtype")
+        .tab_options(
+            table_body_hlines_style="none",
+            table_body_vlines_style="none",
+            stub_border_style="hidden",
+            column_labels_border_top_style="solid",
+            column_labels_border_top_color="black",
+            column_labels_border_bottom_style="solid",
+            column_labels_border_bottom_color="black",
+            column_labels_border_bottom_width="0.5px",
+            column_labels_vlines_style="hidden",
+            table_body_border_top_width="0.5px",
+            table_border_bottom_style="hidden",
+            table_body_border_bottom_color="black",
+            row_group_font_size="0px",
+            row_group_padding="0px",
+            row_group_border_top_style="hidden",
+            row_group_border_bottom_style="solid",
+            row_group_border_bottom_width="0.5px",
+            row_group_border_bottom_color="black",
+        )
+        .cols_align(align="center")
+        .cols_align(align="left", columns="")
     )
 
     return gt
+
 
 def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
     line1 = n_coef
