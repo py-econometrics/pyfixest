@@ -243,9 +243,9 @@ def get_panel_dgp_stagg(
         )
         treated_units = np.concatenate((treated_units, cohort_treated_units))
         treatment_status[cohort_treated_units, treatment_start:] = True
-        treatment_effect[
-            cohort_treated_units, treatment_start:
-        ] += cohort_treatment_effect[cohort_treated_units, :]
+        treatment_effect[cohort_treated_units, treatment_start:] += (
+            cohort_treatment_effect[cohort_treated_units, :]
+        )
 
     # Apply the heterogeneous treatment effect to the treated units
     Y1 = Y0.copy()
