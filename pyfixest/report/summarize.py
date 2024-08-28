@@ -254,6 +254,8 @@ def etable(
                 for i, model in enumerate(models):
                     if model._fixef is not None and fixef in model._fixef.split("+"):
                         fe_df.loc[i, fixef] = "x"
+                    else:
+                        fe_df.loc[i, fixef] = "-"
     # Replace NaNs with empty strings
     fe_df.fillna("-", inplace=True)
     # Sort by model
