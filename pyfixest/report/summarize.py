@@ -256,8 +256,8 @@ def etable(
                 for i, model in enumerate(models):
                     if model._fixef is not None and fixef in model._fixef.split("+"):
                         fe_df.loc[i, fixef] = "x"
-    # Replace NaNs with empty strings
-    fe_df.fillna("-", inplace=True)
+                    else:
+                        fe_df.loc[i, fixef] = "-"
     # Sort by model
     fe_df.sort_index(inplace=True)
     # Transpose & concatenate the two dataframes
