@@ -1,45 +1,76 @@
-[tool.poetry]
+[project]
+authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}]
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 name = "pyfixest"
+requires-python = ">= 3.9"
 version = "0.24.1"
+dependencies = ["lets-plot>=4.0.1"]
 
-description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures (HC1-3, CRV1 & CRV3, wild bootstrap, randomization inference, simultaneous CIs, Romano-Wolf's multiple testing correction). Additionally, supports (some of) the regression based new Difference-in-Differences Estimators (Did2s, Linear Projections)."
-authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
-license = "MIT"
-readme = "README.md"
-homepage = "https://py-econometrics.github.io/pyfixest/"
-repository = "https://github.com/py-econometrics/pyfixest"
+[project.optional-dependencies]
+test = ["pytest>=7.2.0"]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-pandas = ">=1.1.0"
-numpy = ">=1.19.0"
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+pyfixest = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+debug = "python pyfixest/debug.py"
+
+[tool.pixi.dependencies]
 scipy = ">=1.6"
 formulaic = ">=1.0.0"
-lets-plot = ">=4.0.1"
-seaborn = ">=0.13.2"
+pandas = ">=1.1.0"
 numba = ">=0.58.0"
+seaborn = ">=0.13.2"
 tabulate = ">=0.9.0"
 polars = ">=0.20.1"
-tqdm = "^4.66.4"
-great-tables = ">=0.10.0"
+tqdm = "==4.66.4"
+great_tables = ">=0.10.0,<0.11"
+numpy = ">=1.19.0"
 
-[tool.poetry.group.dev.dependencies]
-pytest=">=7.0.0"
-rpy2 = "3.5.15"
-pytest-cov = "^4.1.0"
+[tool.pixi.environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=7.0.0"
+pytest-cov = "==4.1.0"
 pytest-xdist = ">=3.5.0"
 pyhdfe = ">=0.2.0"
-pyarrow = ">=14.0.2"
-wildboottest = ">=0.2.0"
-pre-commit = "^3.6.0"
-doubleml = "^0.7.1"
-marginaleffects = "^0.0.10"
+pyarrow = ">=17.0.0,<18"
+pre-commit = "==3.6.0"
+doubleml = "==0.7.1"
+r-fixest = ">=0.12.1,<0.13"
+r-broom = ">=1.0.5,<2"
 
-[tool.poetry.group.docs.dependencies]
+[tool.pixi.feature.test.tasks]
+test = "pytest"
+tests = "pytest -n 4 --cov-report=term tests"
+tests-regular = "pytest tests -m 'not extended' -n 4"
+tests-rerun = "pytest --lf -n 4"
+
+[tool.pixi.feature.docs.dependencies]
 quartodoc = ">=0.7.2"
-jupyterlab = "^4.0.12"
-jupytext = "^1.16.1"
-watermark = "^2.4.3"
+jupyterlab = "4.0.12.*"
+jupytext = "==1.16.1"
+watermark = "==2.4.3"
+
+[tool.pixi.feature.docs.tasks]
+build-docs = "run quartodoc build --verbose --config docs/_quarto.yml"
+build-docs2 = "quartodoc build --verbose --config docs/_quarto.yml"
+render-docs2 = "quarto render docs"
+preview2 = "quarto preview docs"
+
+[tool.pixi.feature.tests.dependencies]
+rpy2 = "==3.5.15"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -53,66 +84,3 @@ addopts = [
 markers = [
     "extended: mark test to be part of the extended test suite"
 ]
-filterwarnings =[
-    "ignore::FutureWarning:rpy2",
-    "ignore::DeprecationWarning:rpy2"
-]
-
-[tool.ruff]
-line-length = 88
-fix = true
-
-# Assume Python 3.9
-target-version = "py39"
-
-[tool.ruff.lint]
-# docs: https://docs.astral.sh/ruff/rules/
-select = [
-  "F", # Pyflakes
-  "E", # pycodestyle errors
-  "W", # pycodestyle warnings
-  "I", # isort
-  "D", # flake8-docstrings
-  "UP", # pyupgrade
-  "SIM", # flake8-simplify
-  "TRY", # tryceratops
-]
-
-ignore = [
-# do not enable if formatting
-# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-  "W191",   # tab indentation
-  "E111",   # indentation
-  "E114",   # indentation
-  "E117",   # over indented
-  "D206",   # indent with spaces
-  "D300",   # triple single quotes
-  "E501",   # line length regulated by formatter
-  "D105",   # missing docstring in magic method
-  "D100",   # missing docstring in public module
-  "D104",   # missing docstring in public package
-  "SIM110", # Use all instead of `for` loop
-  "TRY003", # Avoid specifying long messages outside the exception class
-  "D205",   # 1 blank line required between summary line and description
-  "W505",   # Doc line too long
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D103"]
-"pyfixest/multcomp.py" = ["D103"]
-"pyfixest/summarize.py" = ["D103"]
-"pyfixest/visualize.py" = ["D103"]
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 88
-
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 88
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
