@@ -274,11 +274,11 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-    ) -> np.ndarray:
+    ) -> pd.DataFrame:
         """
         Return predicted values from regression model.
 
-        Return a flat np.array with predicted values of the regression model.
+        Return a Pandas DataFrame with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
         for such observations
         will be set to NaN.
@@ -314,8 +314,8 @@ class Fepois(Feols):
 
         Returns
         -------
-        np.ndarray
-            A flat array with the predicted values of the regression model.
+        pd.DataFrame
+            A DataFrame with the predicted values of the regression model.
         """
         _Xbeta = self._Xbeta
         _has_fixef = self._has_fixef
