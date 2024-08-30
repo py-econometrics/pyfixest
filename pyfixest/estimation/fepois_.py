@@ -274,7 +274,7 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-    ) -> np.ndarray:
+    ) -> pd.DataFrame:
         """
         Return predicted values from regression model.
 
@@ -314,8 +314,8 @@ class Fepois(Feols):
 
         Returns
         -------
-        np.ndarray
-            A flat np.ndarray with the predicted values of the regression model.
+        pd.DataFrame
+            A Pandas DataFrame with the predicted values of the regression model.
         """
         _Xbeta = self._Xbeta
         _has_fixef = self._has_fixef
@@ -332,9 +332,9 @@ class Fepois(Feols):
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
-        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol).to_numpy()
+        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            y_hat = np.exp(y_hat)
+            y_hat["yhat"] = np.exp(y_hat.yhat)
 
         return y_hat
 
