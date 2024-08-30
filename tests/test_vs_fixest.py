@@ -216,7 +216,7 @@ def test_single_fit_feols(
     r_resid = stats.residuals(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    if not mod._is_empty:
+    if not mod._X_is_empty:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
