@@ -1514,6 +1514,19 @@ class Feols:
 
 
     def get_newdata_stdp(self, X):
+        """
+        Get standard error of predictions for new data.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Covariates for new data points.
+
+        Returns
+        -------
+        stdp : list
+            Standard errors for each prediction
+        """
         # for now only compute prediction error if model has no fixed effects
         # TODO: implement for fixed effects
         if not self._has_fixef:
@@ -1535,6 +1548,19 @@ class Feols:
             )
 
     def get_single_row_stdp(self, row):
+        """
+        Get standard error of predictions for a single row.
+
+        Parameters
+        ----------
+        row : np.ndarray
+            Single row of new covariate data
+
+        Returns
+        -------
+        stdp : np.ndarray
+            Standard error of prediction for single row
+        """
         return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
 
     def get_nobs(self):
