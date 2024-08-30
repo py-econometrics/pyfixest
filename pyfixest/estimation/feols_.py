@@ -1511,7 +1511,8 @@ class Feols:
             prediction_df["stdp"] = self.get_newdata_stdp(X)
             
         return prediction_df
-    
+
+
     def get_newdata_stdp(self, X):
         # for now only compute prediction error if model has no fixed effects
         # TODO: implement for fixed effects
