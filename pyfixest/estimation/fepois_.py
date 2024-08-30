@@ -274,7 +274,7 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-    ) -> pd.DataFrame:
+    ) -> np.ndarray:
         """
         Return predicted values from regression model.
 
@@ -299,7 +299,7 @@ class Fepois(Feols):
         type : str, optional
             The type of prediction to be computed.
             Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the response variable,
+            If type="response", the output is at the level of the responsflat np.arraye variable,
             i.e., it is the expected predictor E(Y|X).
             If "link", the output is at the level of the explanatory variables,
             i.e., the linear predictor X @ beta.
@@ -314,8 +314,8 @@ class Fepois(Feols):
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame with the predicted values of the regression model.
+        np.ndarray
+            A flat np.ndarray with the predicted values of the regression model.
         """
         _Xbeta = self._Xbeta
         _has_fixef = self._has_fixef
@@ -332,7 +332,7 @@ class Fepois(Feols):
         if type not in ["response", "link"]:
             raise ValueError("type must be one of 'response' or 'link'.")
 
-        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol).to_numpy()
         if type == "link":
             y_hat = np.exp(y_hat)
 

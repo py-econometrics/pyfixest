@@ -1524,7 +1524,7 @@ class Feols:
 
         Returns
         -------
-        stdp : list
+        list
             Standard errors for each prediction
         """
         # for now only compute prediction error if model has no fixed effects
@@ -1558,7 +1558,7 @@ class Feols:
 
         Returns
         -------
-        stdp : np.ndarray
+        np.ndarray
             Standard error of prediction for single row
         """
         return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
