@@ -27,10 +27,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: Set up poetry
-        uses: snok/install-poetry@v1
-      - name: Install
-        run: poetry install --without docs
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
 
       - name: set numba parallel flags
         run: |
@@ -45,7 +44,7 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run pytest tests -m "not extended" --cov=./ --cov-report=xml
+          pixi run tests-regular
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
 
@@ -60,10 +59,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Set up poetry
-        uses: snok/install-poetry@v1
-      - name: Install dependencies
-        run: poetry install --with docs
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
       - name: install tinytex
@@ -71,10 +68,10 @@ jobs:
           quarto install tinytex
       - name: Compile docstrings with quartodoc
         run : |
-          poetry run quartodoc build --verbose --config docs/_quarto.yml
+          pixi run build-docs2
       - name: Render docs
         run: |
-          poetry run quarto render docs
+          pixi run render-docs2
       - name: Save docs artifact
         uses: actions/upload-artifact@v4
         with:
