@@ -14927,7 +14927,7 @@ packages:
   name: pyfixest
   version: 0.24.1
   path: .
-  sha256: dbc58c12854c7866134d196f4484179dc63b1c65e7f232750f50774982ebe656
+  sha256: 53d9db31ca5da7b98277fffe021893878bd8ac3cad99a9bd70a810fb59f41ce9
   requires_dist:
   - lets-plot>=4.0.1
   - pytest>=7.2.0 ; extra == 'test'
