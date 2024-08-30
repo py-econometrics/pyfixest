@@ -11,8 +11,8 @@ repos:
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-toml
-      #- id: check-added-large-files
-
+      - id: check-added-large-files
+        exclude: pixi.lock
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.29.2
     hooks:
