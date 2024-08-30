@@ -6,17 +6,13 @@ requires-python = ">= 3.9"
 version = "0.24.1"
 dependencies = ["lets-plot>=4.0.1"]
 
-[project.optional-dependencies]
-test = ["pytest>=7.2.0"]
-
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
-
+platforms = ["win-64"]
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true }
 
@@ -37,22 +33,19 @@ numpy = ">=1.19.0"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-test = { features = ["test"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 
-[tool.pixi.feature.test.dependencies]
-pytest = ">=7.0.0"
+[tool.pixi.feature.dev.dependencies]
+pytest = ">=7.0.0, <8.0.0"
 pytest-cov = "==4.1.0"
 pytest-xdist = ">=3.5.0"
 pyhdfe = ">=0.2.0"
 pyarrow = ">=17.0.0,<18"
 pre-commit = "==3.6.0"
 doubleml = "==0.7.1"
-r-fixest = ">=0.12.1,<0.13"
-r-broom = ">=1.0.5,<2"
 
-[tool.pixi.feature.test.tasks]
-test = "pytest"
+[tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -m 'not extended' -n 4"
 tests-rerun = "pytest --lf -n 4"
@@ -64,13 +57,9 @@ jupytext = "==1.16.1"
 watermark = "==2.4.3"
 
 [tool.pixi.feature.docs.tasks]
-build-docs = "run quartodoc build --verbose --config docs/_quarto.yml"
 build-docs2 = "quartodoc build --verbose --config docs/_quarto.yml"
 render-docs2 = "quarto render docs"
 preview2 = "quarto preview docs"
-
-[tool.pixi.feature.tests.dependencies]
-rpy2 = "==3.5.15"
 
 [tool.pytest.ini_options]
 addopts = [
