@@ -213,16 +213,19 @@ def test_single_fit_feols(
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = r_fixest.rx2("working_residuals")  # noqa: F841
+    r_resid = stats.residuals(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-    check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
-    check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
-    check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
+    if not mod._is_empty:
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
+        check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
+        check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
+        check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
+        check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
+
+    check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-08, "py_resid != r_resid")
 
     if not weights:
         py_r2 = mod._r2
