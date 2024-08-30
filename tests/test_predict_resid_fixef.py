@@ -1,21 +1,21 @@
 import numpy as np
 import pandas as pd
 import pytest
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+# import rpy2.robjects as ro
+# from rpy2.robjects import pandas2ri
 
 # rpy2 imports
-from rpy2.robjects.packages import importr
+# from rpy2.robjects.packages import importr
 
 from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.dev_utils import _extract_variable_level
 from pyfixest.utils.utils import get_data
 
-pandas2ri.activate()
+# pandas2ri.activate()
 
-fixest = importr("fixest")
-stats = importr("stats")
+# fixest = importr("fixest")
+# stats = importr("stats")
 
 
 @pytest.fixture
@@ -171,7 +171,7 @@ def test_predict_nas():
     # test 1
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
-    res = fit.predict(newdata=data)
+    res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
