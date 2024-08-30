@@ -1615,7 +1615,10 @@ class Feols:
         self._adj_r2 = np.nan
         self._adj_r2_within = np.nan
 
-    def tidy(self, alpha: Optional[float] = None) -> pd.DataFrame:
+    def tidy(
+        self,
+        alpha: Optional[float] = None,
+    ) -> pd.DataFrame:
         """
         Tidy model outputs.
 
@@ -1816,7 +1819,13 @@ class Feols:
             self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
         )
 
-        df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
+        df = pd.DataFrame(
+            {
+                f"{alpha / 2*100:.1f}%": lb,
+                f"{(1-alpha / 2)*100:.1f}%": ub,
+            }
+        )
+        # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
         df.index = coefnames
 
         return df

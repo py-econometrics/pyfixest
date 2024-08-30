@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from great_tables import GT
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
@@ -15,15 +16,23 @@ from pyfixest.utils.dev_utils import _select_order_coefs
 
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-    type: str = "df",
+    type: str = "gt",
     signif_code: list = [0.001, 0.01, 0.05],
-    coef_fmt: str = "b (se)",
+    coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     labels: Optional[dict] = None,
+    show_fe: Optional[bool] = True,
+    show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
+    notes: Optional[str] = None,
+    model_heads: Optional[list] = None,
+    head_order: Optional[str] = "dh",
+    custom_model_stats: Optional[dict] = None,
+    filename: Optional[str] = None,
+    print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -35,15 +44,14 @@ def etable(
         A list of models of type Feols, Feiv, Fepois.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        or "tex" for LaTeX table. Default is "md".
+        "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
         Significance levels for the stars. Default is [0.001, 0.01, 0.05].
         If None, no stars are printed.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
-        p-value (p). Default is `"b (se)"`.
+        p-value (p). Default is `"b \n (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
-        Newline is not support for LaTeX output.
     custom_stats: dict, optional
         A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
     keep: str or list of str, optional
@@ -68,6 +76,10 @@ def etable(
         names and the values the new names. Note that interaction terms will also be
         relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
+    show_fe: bool, optional
+        Whether to show the rows with fixed effects markers. Default is True.
+    show_se_type: bool, optional
+        Whether to show the rows with standard error type. Default is True.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
         the FE lines with a different label than the one specied for the respective
@@ -81,11 +93,30 @@ def etable(
         Whether to use scientific notation. Default is True.
     scientific_notation_threshold: int, optional
         The threshold for using scientific notation. Default is 10_000.
+    notes: str, optional
+        Custom table notes. Default shows the significance levels and the format of
+        the coefficient cell.
+    model_heads: list, optional
+        Add custom headlines to models when output as df or latex. Length of list
+        must correspond to number of models. Default is None.
+    head_order: str, optional
+        String to determine the display of the table header when output as df or latex.
+        Allowed values are "dh", "hd", "d", "h", or "". When head_order is "dh",
+        the dependent variable is displayed first, followed by the custom model_heads
+        (provided the user has specified them). With "hd" it is the other way around.
+        When head_order is "d", only the dependent variable and model numbers are displayed
+        and with "" only the model numbers. Default is "dh".
+    filename: str, optional
+        The filename to save the LaTeX table to. If None, the LaTeX code is returned
+        as a string. Default is None.
+    print_tex: bool, optional
+        Whether to print the LaTeX code to the console. Default is False.
 
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with the coefficients and standard errors of the models.
+        A styled DataFrame with the coefficients and standard errors of the models.
+        When output is "tex", the LaTeX code is returned as a string.
     """  # noqa: D301
     assert (
         isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
@@ -122,7 +153,34 @@ def etable(
         "tex",
         "md",
         "html",
-    ], "type must be either 'df', 'md', 'html' or 'tex'"
+        "gt",
+    ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
+
+    if model_heads is not None:
+        assert len(model_heads) == len(
+            models
+        ), "model_heads must have the same length as models"
+
+    # Check if head_order is allowed string & remove h when no model_heads provided
+    assert head_order in [
+        "dh",
+        "hd",
+        "d",
+        "h",
+        "",
+    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    if model_heads is None and "h" in head_order:
+        head_order = head_order.replace("h", "")
+
+    # Check if custom_model_stats is a dictionary and the provided lists have the same length as models
+    if custom_model_stats is not None:
+        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
+        for stat, values in custom_model_stats.items():
+            assert isinstance(stat, str), "custom_model_stats keys must be strings"
+            assert isinstance(values, list), "custom_model_stats values must lists"
+            assert len(values) == len(
+                models
+            ), "lists in custom_model_stats values must have the same length as models"
 
     dep_var_list = []
     nobs_list = []
@@ -131,6 +189,17 @@ def etable(
     se_type_list = []
     r2_list = []
     r2_within_list: list[float] = []  # noqa: F841
+
+    # Define code for R2 & interaction symbol depending on output type
+    if type in ["df", "html"]:
+        interactionSymbol = " &#215; "
+        R2code = "R<sup>2</sup>"
+    elif type == "tex":
+        interactionSymbol = " $\\times$ "
+        R2code = "$R^2$"
+    else:
+        interactionSymbol = " x "
+        R2code = "R2"
 
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
@@ -154,30 +223,45 @@ def etable(
         if model._fixef is not None:
             fixef_list += model._fixef.split("+")
 
-    # find all fixef variables
-    # drop "" from fixef_list
-    fixef_list = [x for x in fixef_list if x]
-    # keep only unique values
-    fixef_list = list(set(fixef_list))
-    n_fixef = len(fixef_list)
+    # find all fixef variables when the user does not want to hide the FE rows
+    if show_fe:
+        # drop "" from fixef_list
+        fixef_list = [x for x in fixef_list if x]
+        # keep only unique values
+        fixef_list = list(set(fixef_list))
+        n_fixef = len(fixef_list)
+    else:
+        fixef_list = []
+        n_fixef = 0
 
     # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame(
-        {"Observations": nobs_list, "S.E. type": se_type_list, "R2": r2_list}
-    )
+    # First create a dataframe for the model stats such as R2, nobs, etc.
+    model_stats_df = pd.DataFrame()
+    if custom_model_stats is not None:
+        for stat, values in custom_model_stats.items():
+            model_stats_df[stat] = values
+    model_stats_df["Observations"] = nobs_list
+    if show_se_type:
+        model_stats_df["S.E. type"] = se_type_list
+    model_stats_df[R2code] = r2_list
+    n_model_stats = model_stats_df.shape[1]
 
-    if fixef_list:  # only when at least one model has a fixed effect
+    # Create a dataframe for the Fixed Effects markers
+    fe_df = pd.DataFrame()
+    # when at least one model has a fixed effect & the user wants to show them
+    if fixef_list:
         for fixef in fixef_list:
             # check if not empty string
             if fixef:
-                nobs_fixef_df[fixef] = "-"
                 for i, model in enumerate(models):
                     if model._fixef is not None and fixef in model._fixef.split("+"):
-                        nobs_fixef_df.loc[i, fixef] = "x"
-
-    colnames = nobs_fixef_df.columns.tolist()
-    colnames.reverse()
-    nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
+                        fe_df.loc[i, fixef] = "x"
+                    else:
+                        fe_df.loc[i, fixef] = "-"
+    # Sort by model
+    fe_df.sort_index(inplace=True)
+    # Transpose & concatenate the two dataframes
+    nobs_fixef_df = pd.concat([fe_df.T, model_stats_df.T]).reset_index()
 
     coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
 
@@ -226,8 +310,13 @@ def etable(
                 model_tidy_df[coef_fmt_title] += pd.Series(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
-            elif element == "\n" and type == "tex":
-                raise ValueError("Newline is currently not supported for LaTeX output.")
+            elif element == "\n":  # Replace output specific code for newline
+                if type in ["df", "html", "gt"]:
+                    model_tidy_df[coef_fmt_title] += "<br>"
+                elif type == "tex":
+                    model_tidy_df[coef_fmt_title] += r"\\"
+                elif type == "md":
+                    model_tidy_df[coef_fmt_title] += "\n"
             else:
                 model_tidy_df[coef_fmt_title] += element
         model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
@@ -266,14 +355,6 @@ def etable(
         # Relabel dependent variables
         dep_var_list = [labels.get(k, k) for k in dep_var_list]
 
-        # Set symbol for interaction terms depending on output type
-        if type in ["df", "html"]:
-            interactionSymbol = " &#215; "
-        elif type == "tex":
-            interactionSymbol = " $\\times$ "
-        else:
-            interactionSymbol = " x "
-
         # Relabel explanatory variables
         res["index"] = res["index"].apply(
             lambda x: _relabel_expvar(x, labels, interactionSymbol)
@@ -295,31 +376,98 @@ def etable(
     depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
     depvars.columns = res.columns
 
-    res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
-    res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
-
-    caption = (
-        f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
-        + f"Format of coefficient cell:\n{coef_fmt_title}"
-    )
-
     if type == "md":
-        res_all = _tabulate_etable_md(res_all, len(models), n_fixef)
+        res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
+        res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
+        # Generate notes string if user has not provided any
+        if notes is None:
+            if signif_code:
+                notes = f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            else:
+                notes = f"Format of coefficient cell: {coef_fmt_title}"
+        res_all = _tabulate_etable_md(
+            df=res_all,
+            n_coef=res.shape[0],
+            n_fixef=n_fixef,
+            n_models=len(models),
+            n_model_stats=n_model_stats,
+        )
         print(res_all)
-        if signif_code:
-            print(
-                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-            )
-            print(f"Format of coefficient cell:\n{coef_fmt_title}")
+        print(notes)
         return None
-    elif type in ["df", "tex"]:
-        res_all = _tabulate_etable_df(res_all, n_fixef, caption)
-        if type == "df":
-            return res_all
+    elif type in ["df", "tex", "gt"]:
+        # Prepare Multiindex for columns
+        id_dep = [""] + dep_var_list  # depvars
+        if model_heads is None:
+            id_head = [""] * (1 + len(models))
         else:
-            return res_all.to_latex()
+            id_head = [""] + model_heads  # model_heads provided by user
+        id_num = [""] + [f"({s})" for s in range(1, len(models) + 1)]  # model numbers
+
+        res_all = pd.concat([res, nobs_fixef_df], ignore_index=True)
+        # When no depvars & headlines should be displayed then use simple index
+        # otherwise generate MultiIndex & determine order of index levels as specified by head_order
+        if head_order == "":
+            res_all.columns = pd.Index(id_num)
+        else:
+            cindex = [{"h": id_head, "d": id_dep}[c] for c in head_order] + [id_num]
+            res_all.columns = pd.MultiIndex.from_arrays(cindex)
+
+        if type == "df":
+            # Generate notes string if user has not provided any
+            if notes is None:
+                notes = (
+                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
+                    + f"Format of coefficient cell:\n{coef_fmt_title}"
+                )
+            res_all = _tabulate_etable_df(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                n_model_stats=n_model_stats,
+                notes=notes,
+            )
+            return res_all
+        elif type == "tex":
+            # Generate notes string if user has not provided any
+            if notes is None:
+                notes = (
+                    f"Significance levels: $*$ p $<$ {signif_code[2]}, $**$ p $<$ {signif_code[1]}, $***$ p $<$ {signif_code[0]}. "
+                    + f"Format of coefficient cell: {coef_fmt_title}"
+                )
+            latex_res = _tabulate_etable_tex(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                notes=notes,
+            )
+            if filename is not None:
+                with open(filename, "w") as f:
+                    f.write(latex_res)  # Write the latex code to a file
+            if print_tex:
+                print(latex_res)
+            return latex_res
+        elif type == "gt":
+            if notes is None:
+                notes = (
+                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
+                    + f"Format of coefficient cell:\n{coef_fmt_title}"
+                )
+            gt = _tabulate_etable_gt(
+                df=res_all,
+                n_coef=res.shape[0],
+                n_fixef=n_fixef,
+                n_models=len(models),
+                n_model_stats=n_model_stats,
+                notes=notes,
+            )
+            return gt
     else:
-        raise ValueError("type must be either 'df', 'md' or 'tex'")
+        raise ValueError("type must be either 'gt', 'df', 'md' or 'tex'")
+
+    return None
 
 
 def summary(
@@ -455,27 +603,100 @@ def _post_processing_input_checks(
     return models
 
 
-def _tabulate_etable_df(df, n_fixef, caption):
-    k, _ = df.shape
-    n_coef = k - 3 - 2 - n_fixef
+def _tabulate_etable_gt(df, n_coef, n_fixef, n_models, n_model_stats, notes):
+    if isinstance(df.columns, pd.MultiIndex):
+        # GT does not support MultiIndex columns, so we need to flatten the columns
+        # But use the MultiIndex to generate column spanners below
+        # First save the index
+        dfcols = df.columns.to_list()[1:]
+        nl = df.columns.nlevels
+        # Then flatten the column index & keep only the model numbers
+        df.columns = df.columns.get_level_values(-1)
+    else:
+        nl = 1
 
-    line1 = 2 + n_coef
+    # Add a column for the rowtype to use GTs grouping of rows
+    df["rowtype"] = "coef"
+    df.loc[n_coef : n_coef + n_fixef, "rowtype"] = "fe"
+    df.loc[n_coef + n_fixef : n_coef + n_fixef + n_model_stats, "rowtype"] = (
+        "modelstats"
+    )
+    gt = GT(df, auto_align=False)
+    if nl > 1:
+        # Add column spanners based on multiindex
+        # Do this for every level in the multiindex (except the one with the column numbers)
+        for i in range(nl - 1):
+            col_spanners = {}
+            # Iterate over columns and group them by the labels in the respective level
+            for c in dfcols:
+                key = c[i]
+                if key not in col_spanners:
+                    col_spanners[key] = []
+                col_spanners[key].append(c[-1])
+            for label, columns in col_spanners.items():
+                gt = gt.tab_spanner(label=label, columns=columns, level=nl - 1 - i)
+
+    # Customize the table layout
+    gt = (
+        gt.tab_source_note(notes)
+        .tab_stub(rowname_col="", groupname_col="rowtype")
+        .tab_options(
+            table_body_hlines_style="none",
+            table_body_vlines_style="none",
+            stub_border_style="hidden",
+            column_labels_border_top_style="solid",
+            column_labels_border_top_color="black",
+            column_labels_border_bottom_style="solid",
+            column_labels_border_bottom_color="black",
+            column_labels_border_bottom_width="0.5px",
+            column_labels_vlines_style="hidden",
+            table_body_border_top_width="0.5px",
+            table_border_bottom_style="hidden",
+            table_body_border_bottom_color="black",
+            row_group_font_size="0px",
+            row_group_padding="0px",
+            row_group_border_top_style="hidden",
+            row_group_border_bottom_style="solid",
+            row_group_border_bottom_width="0.5px",
+            row_group_border_bottom_color="black",
+        )
+        .cols_align(align="center")
+        .cols_align(align="left", columns="")
+    )
+
+    return gt
+
+
+def _tabulate_etable_df(df, n_coef, n_fixef, n_models, n_model_stats, notes):
+    line1 = n_coef
     line2 = line1 + n_fixef
-    line3 = k
+    line3 = line2 + n_model_stats
 
     styler = (
-        df.style.set_properties(**{"text-align": "right"})
+        df.style.set_properties(subset=[df.columns[0]], **{"text-align": "left"})
+        .set_properties(subset=df.columns[1:], **{"text-align": "center"})
         .set_table_styles(
             [
-                # {'selector': 'thead th', 'props': 'border-bottom: 2px solid black; text-align: center;'},  # Header row
+                {
+                    "selector": "thead th",
+                    "props": "text-align: center",
+                },  # Center the header
+                {
+                    "selector": "thead tr:nth-child(1) th",
+                    "props": "border-top: 2px solid black;",
+                },  # Add a top border above the first index level
+                {
+                    "selector": "thead tr:nth-child(1) th:nth-child(n+2)",
+                    "props": "border-bottom: 0.5px solid black;",
+                },  # Add a top border after the first index level from the second column onward
                 {
                     "selector": "tbody tr:nth-child(0) td",
                     "props": "background-color: #f0f0f0",
                 },  # First row
                 {
                     "selector": "tbody tr:nth-child(1) td",
-                    "props": "border-bottom: 2px solid black",
-                },  # Line below row 1 (index 1)
+                    "props": "border-top: 1px solid black",
+                },  # Line above row 1 (index 1)
                 {
                     "selector": f"tbody tr:nth-child({line1}) td",
                     "props": "border-bottom: 1px solid black;",
@@ -486,7 +707,7 @@ def _tabulate_etable_df(df, n_fixef, caption):
                 },  # Line below fixef_bar row
                 {
                     "selector": f"tbody tr:nth-child({line3}) td",
-                    "props": "border-bottom: 1px solid black;",
+                    "props": "border-bottom: 2px solid black;",
                 },  # Line below fixef_bar row
                 {
                     "selector": "tbody td",
@@ -496,24 +717,101 @@ def _tabulate_etable_df(df, n_fixef, caption):
                     "selector": "tbody tr td:first-child",
                     "props": "background-color: #f0f0f0; font-weight: bold;text-align: left;",
                 },  # Set first column to grey and bold
+                {
+                    "selector": "caption",
+                    "props": "caption-side: bottom; font-size: 1em; text-align: justify;",
+                },
             ]
         )
         .hide(axis="index")
-        .set_caption(caption)
+        .set_caption(notes)
     )
 
     return styler
 
 
-def _tabulate_etable_md(df, n_models, n_fixef):
+def _tabulate_etable_tex(df, n_coef, n_fixef, n_models, notes):
+    # First wrap all cells which contain a line break in a makecell command
+    df = df.map(
+        lambda x: f"\\makecell{{{x}}}" if isinstance(x, str) and "\\\\" in x else x
+    )
+
+    # Style the table
+    styler = (
+        df.style.hide(axis="index").format_index(escape="latex", axis=1, level=[0, 1])
+        # .set_caption(caption)
+    )
+    # Generate LaTeX code
+    latex_res = styler.to_latex(
+        hrules=True, multicol_align="c", column_format="l" + "c" * n_models
+    )
+
+    # Now perform post-processing of the LaTeX code
+    # First split the LaTeX code into lines
+    lines = latex_res.splitlines()
+
+    # Insert midrule after coeffs
+    coef_start = (
+        3 + df.columns.nlevels
+    )  ## Table code starts with 2 lines + depth of the column index
+    lines.insert(
+        coef_start + n_coef, "\\midrule"
+    )  # 4 lines in the latex code before the first coefficient
+    # When FE are present, insert a midrule after the FEs
+    if n_fixef > 0:
+        lines.insert(coef_start + n_coef + n_fixef + 1, "\\midrule")
+
+    # Insert cmidrule that underlines each value of the top column index (i.e. typically dependent variable)
+    # First find the first line with an occurrence of "multicolumn"
+    cmidrule_line_number = None
+    for i, line in enumerate(lines):
+        if "multicolumn" in line:
+            cmidrule_line_number = i + 1
+            # Regular expression to find \multicolumn{number}
+            pattern = r"\\multicolumn\{(\d+)\}"
+            # Find all matches (i.e. values of d) in the LaTeX string & convert to integers
+            ncols = [int(match) for match in re.findall(pattern, line)]
+            break  # Only process the first line containing "multicolumn"
+
+    if cmidrule_line_number is not None:
+        cmidrule_string = ""
+        leftcol = 2
+        for n in ncols:
+            cmidrule_string += (
+                r"\cmidrule(lr){" + str(leftcol) + "-" + str(leftcol + n - 1) + "} "
+            )
+            leftcol += n
+        lines.insert(cmidrule_line_number, cmidrule_string)
+
+    # Put the lines back together
+    latex_res = "\n".join(lines)
+
+    # Wrap in threeparttable to allow for table notes
+    latex_res = (
+        "\\begin{threeparttable}\n"
+        + latex_res
+        + "\n\\footnotesize "
+        + notes
+        + "\n\\end{threeparttable}"
+    )
+
+    # Set cell aligment to top
+    latex_res = "\\renewcommand\\cellalign{t}\n" + latex_res
+
+    return latex_res
+
+
+def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
     """
     Format and tabulate a DataFrame.
 
     Parameters
     ----------
     - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
-    - n_models (int): The number of models.
+    - n_coef (int): The number of coefficients.
     - n_fixef (int): The number of fixed effects.
+    - n_models (int): The number of models.
+    - n_model_stats (int): The number of rows with model statistics.
 
     Returns
     -------
@@ -533,8 +831,9 @@ def _tabulate_etable_md(df, n_models, n_fixef):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-3 - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-3, "-" * len(body_lines[0]))
+    if n_fixef > 0:
+        body_lines.insert(-n_model_stats - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-n_model_stats, "-" * len(body_lines[0]))
     body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
