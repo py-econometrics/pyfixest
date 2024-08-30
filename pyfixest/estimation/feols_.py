@@ -1450,7 +1450,7 @@ class Feols:
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        link:
+        type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
