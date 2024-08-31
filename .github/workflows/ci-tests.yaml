@@ -68,10 +68,10 @@ jobs:
           quarto install tinytex
       - name: Compile docstrings with quartodoc
         run : |
-          pixi run build-docs2
+          pixi run build-docs
       - name: Render docs
         run: |
-          pixi run render-docs2
+          pixi run render-docs
       - name: Save docs artifact
         uses: actions/upload-artifact@v4
         with:
