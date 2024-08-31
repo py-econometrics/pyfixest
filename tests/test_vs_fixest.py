@@ -76,7 +76,8 @@ ols_fmls = [
     ("Y ~ X1 + poly(X2, 2) | f1"),
     # empty models
     "Y ~ 1 | f1",
-    "Y ~ 1 | f1 + f2" "Y ~ 0 | f1",
+    "Y ~ 1 | f1 + f2",
+    "Y ~ 0 | f1",
     "Y ~ 0 | f1 + f2",
 ]
 
