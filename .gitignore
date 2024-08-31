@@ -26,3 +26,6 @@ tests/.coverage
 .venv/# pixi environments
 .pixi
 *.egg-info
+# pixi environments
+.pixi
+*.egg-info
