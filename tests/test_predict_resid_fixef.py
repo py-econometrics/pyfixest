@@ -192,7 +192,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     newdata.loc[198, "Y"] = np.nan
-    res = fit.predict(newdata=newdata)
+    res = fit.predict(newdata=newdata).yhat
     res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
@@ -201,7 +201,7 @@ def test_predict_nas():
     # test 3
     fml = "Y ~ X1 + X2 + f1| f1 "
     fit = feols(fml, data=data)
-    res = fit.predict(newdata=data)
+    res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
