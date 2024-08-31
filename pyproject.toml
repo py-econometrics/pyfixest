@@ -1,7 +1,7 @@
 [project]
 authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}, {name = "Styfen Schär"}]
 dependencies = ["lets-plot>=4.0.0", "scipy>=1.6", "formulaic>=1.0.0", "pandas>=1.1.0", "numba>=0.58.0", "seaborn>=0.13.2", "tabulate>=0.9.0", "polars>=0.20.1", "tqdm==4.66.4", "great-tables>=0.10.0", "numpy>=1.19.0"]
-description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures (HC1-3, CRV1 & CRV3, wild bootstrap, randomization inference, simultaneous CIs, Romano-Wolf's multiple testing correction). Additionally, supports (some of) the regression based new Difference-in-Differences Estimators (Did2s, Linear Projections)."
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 name = "pyfixest"
 requires-python = ">= 3.9"
 version = "0.24.1"
@@ -21,9 +21,6 @@ platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true }
 
-[tool.pixi.tasks]
-debug = "python pyfixest/debug.py"
-
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
@@ -33,6 +30,7 @@ docs = { features = ["docs"], solve-group = "default" }
 tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -m 'not extended' -n 4"
 tests-rerun = "pytest --lf -n 4"
+debug = "python pyfixest/debug.py"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
