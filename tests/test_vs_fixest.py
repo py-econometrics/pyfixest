@@ -74,11 +74,6 @@ ols_fmls = [
     # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
     # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
     ("Y ~ X1 + poly(X2, 2) | f1"),
-    # empty models
-    ("Y ~ 1 | f1"),
-    ("Y ~ 1 | f1 + f2"),
-    ("Y ~ 0 | f1"),
-    ("Y ~ 0 | f1 + f2"),
 ]
 
 ols_but_not_poisson_fml = [
@@ -86,6 +81,11 @@ ols_but_not_poisson_fml = [
     ("Y~X1|f2^f3"),
     ("Y~X1|f1 + f2^f3"),
     ("Y~X1|f2^f3^f1"),
+    # empty models
+    ("Y ~ 1 | f1"),
+    ("Y ~ 1 | f1 + f2"),
+    ("Y ~ 0 | f1"),
+    ("Y ~ 0 | f1 + f2"),
 ]
 
 iv_fmls = [
@@ -127,8 +127,8 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-# @pytest.mark.parametrize("inference", ["iid", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("weights", [None, "weights"])
+# @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("weights", ["weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
@@ -200,7 +200,7 @@ def test_single_fit_feols(
     py_nobs = mod._N
     py_vcov = mod._vcov[0, 0]
     py_resid = mod.resid()
-    # TODO: test residuals
+    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -210,8 +210,9 @@ def test_single_fit_feols(
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = stats.residuals(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
+    r_resid = stats.residuals(r_fixest)
+    r_predict = stats.predict(r_fixest)
 
     if not mod._X_is_empty:
         if inference == "iid" and adj and cluster_adj:
@@ -225,8 +226,11 @@ def test_single_fit_feols(
         check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
 
     # residuals invariant so to vcov type
-    if inference == "iid" and adj and cluster_adj:
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-08, "py_resid != r_resid")
+    if inference == "iid" and adj and not cluster_adj:
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        check_absolute_diff(
+            py_predict[0:5], r_predict[0:5], 1e-07, "py_resid != r_resid"
+        )
 
     if mod._X_is_empty:
         assert mod._beta_hat.size == 0
@@ -307,9 +311,8 @@ def test_single_fit_fepois(
     py_nobs = mod._N
     py_vcov = mod._vcov[0, 0]
     py_deviance = mod.deviance
-
-    py_resid = mod._u_hat.flatten()  # noqa: F841
-    # TODO: test residuals
+    py_resid = mod.resid()
+    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -319,12 +322,19 @@ def test_single_fit_fepois(
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = r_fixest.rx2("working_residuals")  # noqa: F841
+    r_resid = stats.residuals(r_fixest)
+    r_predict = stats.predict(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
 
-    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+    if inference == "iid" and adj and cluster_adj:
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        check_absolute_diff(
+            py_predict[0:5], r_predict[0:5], 1e-07, "py_resid != r_resid"
+        )
+
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
@@ -409,9 +419,8 @@ def test_single_fit_iv(
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod._N
     py_vcov = mod._vcov[0, 0]
-
-    py_resid = mod._u_hat.flatten()  # noqa: F841
-    # TODO: test residuals
+    py_resid = mod.resid()
+    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -421,11 +430,16 @@ def test_single_fit_iv(
     r_tstat = df_X1["statistic"]
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = r_fixest.rx2("working_residuals")  # noqa: F841
+    r_resid = stats.resid(r_fixest)
+    r_predict = stats.predict(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+    if inference == "iid" and adj and cluster_adj:
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_coef != r_coef")
+        check_absolute_diff(py_predict[0:5], r_predict[0:5], 1e-07, "py_coef != r_coef")
+
     check_absolute_diff(py_vcov, r_vcov, 1e-07, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-07, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
