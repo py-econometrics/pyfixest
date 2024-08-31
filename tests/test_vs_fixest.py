@@ -131,10 +131,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
-# see here for why not test against cluster_adj = True
-# it triggers the N / (N-1) correction, not sure why
-# https://github.com/lrberge/fixest/issues/518#issuecomment-2227365516
-@pytest.mark.parametrize("cluster_adj", [False])
+@pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_feols(
     N,
     seed,
@@ -201,8 +198,7 @@ def test_single_fit_feols(
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod._N
     py_vcov = mod._vcov[0, 0]
-
-    py_resid = mod._u_hat.flatten()  # noqa: F841
+    py_resid = mod.resid()
     # TODO: test residuals
 
     df_X1 = _get_r_df(r_fixest)
@@ -217,15 +213,22 @@ def test_single_fit_feols(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     if not mod._X_is_empty:
-        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        if inference == "iid" and adj and cluster_adj:
+            check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+            check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+
         check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
         check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
         check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
         check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
         check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
 
-    check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-08, "py_resid != r_resid")
+    # residuals invariant so to vcov type
+    if inference == "iid" and adj and cluster_adj:
+        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-08, "py_resid != r_resid")
+
+    if mod._X_is_empty:
+        assert mod._beta_hat.size == 0
 
     if not weights:
         py_r2 = mod._r2
