@@ -312,7 +312,6 @@ def test_single_fit_fepois(
     py_vcov = mod._vcov[0, 0]
     py_deviance = mod.deviance
     py_resid = mod.resid()
-    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -323,7 +322,6 @@ def test_single_fit_fepois(
     r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.residuals(r_fixest)
-    r_predict = stats.predict(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
 
@@ -331,9 +329,6 @@ def test_single_fit_fepois(
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
-        check_absolute_diff(
-            py_predict[0:5], r_predict[0:5], 1e-07, "py_resid != r_resid"
-        )
 
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
@@ -341,6 +336,13 @@ def test_single_fit_fepois(
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
+
+    if not mod._has_fixef:
+        py_predict = mod.predict()
+        r_predict = stats.predict(r_fixest)
+        check_absolute_diff(
+            py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+        )
 
 
 @pytest.mark.parametrize("N", [1000])
