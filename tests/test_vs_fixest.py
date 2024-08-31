@@ -127,8 +127,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-# @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("weights", ["weights"])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
@@ -227,9 +226,11 @@ def test_single_fit_feols(
 
     # residuals invariant so to vcov type
     if inference == "iid" and adj and not cluster_adj:
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
         check_absolute_diff(
-            py_predict[0:5], r_predict[0:5], 1e-07, "py_resid != r_resid"
+            (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
+        )
+        check_absolute_diff(
+            py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
         )
 
     if mod._X_is_empty:
@@ -328,7 +329,7 @@ def test_single_fit_fepois(
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_resid != r_resid")
+        check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
 
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
@@ -439,8 +440,8 @@ def test_single_fit_iv(
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        check_absolute_diff(py_resid[0:5], r_resid[0:5], 1e-07, "py_coef != r_coef")
         check_absolute_diff(py_predict[0:5], r_predict[0:5], 1e-07, "py_coef != r_coef")
+        check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
 
     check_absolute_diff(py_vcov, r_vcov, 1e-07, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-07, "py_se != r_se")
