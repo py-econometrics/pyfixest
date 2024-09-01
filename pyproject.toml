@@ -51,6 +51,10 @@ addopts = [
 markers = [
     "extended: mark test to be part of the extended test suite"
 ]
+filterwarnings =[
+    "ignore::FutureWarning:rpy2",
+    "ignore::DeprecationWarning:rpy2"
+]
 
 [tool.ruff]
 line-length = 88
@@ -106,8 +110,3 @@ convention = "numpy"
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 88
-
-filterwarnings =[
-    "ignore::FutureWarning:rpy2",
-    "ignore::DeprecationWarning:rpy2"
-]
