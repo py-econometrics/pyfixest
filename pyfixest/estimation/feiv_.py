@@ -229,7 +229,8 @@ class Feiv(Feols):
     def first_stage(self) -> None:
         """Implement First stage regression."""
 
-        import pdb; pdb.set_trace()
+        self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
+
         # lazy import to avoid circular imports
         fixest_module = import_module("pyfixest.estimation")
         fit_ = getattr(fixest_module, "feols")

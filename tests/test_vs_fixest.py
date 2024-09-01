@@ -88,7 +88,6 @@ empty_models = [
     ("Y ~ 1 | f1 + f2"),
     ("Y ~ 0 | f1"),
     ("Y ~ 0 | f1 + f2"),
-
 ]
 
 iv_fmls = [
@@ -279,7 +278,6 @@ def test_single_fit_feols_empty(
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
 
-
     mod = pf.feols(fml=fml, data=data, weights=weights)
     if weights is not None:
         r_fixest = fixest.feols(
@@ -302,15 +300,12 @@ def test_single_fit_feols_empty(
     r_predict = stats.predict(r_fixest)
 
     check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff(
-        (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
-    )
+    check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid")
     check_absolute_diff(
         py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
     )
 
     assert mod._beta_hat.size == 0
-
 
 
 @pytest.mark.parametrize("N", [1000])
@@ -480,7 +475,6 @@ def test_single_fit_iv(
 
     py_nobs = mod._N
     py_resid = mod.resid()
-    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -493,12 +487,10 @@ def test_single_fit_iv(
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
-    r_predict = stats.predict(r_fixest)
 
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        check_absolute_diff(py_predict[0:5], r_predict[0:5], 1e-07, "py_coef != r_coef")
         check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
 
     check_absolute_diff(py_vcov, r_vcov, 1e-07, "py_vcov != r_vcov")

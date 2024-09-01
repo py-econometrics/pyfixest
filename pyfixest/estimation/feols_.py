@@ -331,7 +331,6 @@ class Feols:
         self._Z_1st_stage = self._Z
 
     def demean(self):
-
         if self._has_fixef:
             self._Yd, self._Xd = demean_model(
                 self._Y,
@@ -369,7 +368,6 @@ class Feols:
 
         self._X_is_empty = True if self._X.shape[1] == 0 else False
 
-
     def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
         """
         Solve the ordinary least squares problem using the specified solver.
@@ -389,7 +387,6 @@ class Feols:
         ------
         ValueError: If the specified solver is not supported.
         """
-
         if solver == "np.linalg.lstsq":
             return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
         elif solver == "np.linalg.solve":
@@ -407,7 +404,6 @@ class Feols:
         -------
         None
         """
-
         if self._X_is_empty:
             self._u_hat = self._Y
         else:
@@ -1872,7 +1868,6 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-
         return self._u_hat.flatten() / np.sqrt(self._weights).flatten()
 
     def ritest(
