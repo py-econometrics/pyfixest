@@ -1,18 +1,14 @@
 import functools
-import warnings
 from importlib import import_module
 from typing import Optional, Union
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.errors import MultiEstNotSupportedError
-from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
-from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
+from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
 
 
@@ -211,40 +207,59 @@ class FixestMulti:
 
                 FIT: Union[Feols, Feiv, Fepois]
 
-                FIT = Feols(
-                    FixestFormula=FixestFormula,
-                    data=_data,
-                    ssc_dict = _ssc_dict,
-                    drop_singletons=_drop_singletons,
-                    drop_intercept=_drop_intercept,
-                    weights=_weights,
-                    weights_type = _weights_type,
-                    collin_tol=collin_tol,
-                    fixef_tol=_fixef_tol,
-                    lookup_demeaned_data=lookup_demeaned_data,
-                )
-
-                FIT.prepare_model_matrix()
-                if not isinstance(FIT, Fepois):
-                    if FIT._fe is not None:
-                       FIT.demean()
+                if _method == "feols" and not _is_iv:
+                    FIT = Feols(
+                        FixestFormula=FixestFormula,
+                        data=_data,
+                        ssc_dict=_ssc_dict,
+                        drop_singletons=_drop_singletons,
+                        drop_intercept=_drop_intercept,
+                        weights=_weights,
+                        weights_type=_weights_type,
+                        collin_tol=collin_tol,
+                        fixef_tol=_fixef_tol,
+                        lookup_demeaned_data=lookup_demeaned_data,
+                    )
+                    FIT.prepare_model_matrix()
+                    FIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
                     FIT.wls_transform()
-                FIT.get_fit()
+                elif _method == "feols" and _is_iv:
+                    FIT = Feiv(
+                        FixestFormula=FixestFormula,
+                        data=_data,
+                        ssc_dict=_ssc_dict,
+                        drop_singletons=_drop_singletons,
+                        drop_intercept=_drop_intercept,
+                        weights=_weights,
+                        weights_type=_weights_type,
+                        collin_tol=collin_tol,
+                        fixef_tol=_fixef_tol,
+                        lookup_demeaned_data=lookup_demeaned_data,
+                    )
+                    FIT.prepare_model_matrix()
+                    FIT.demean()
+                    FIT.demean_iv()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
+                    FIT.drop_multicol_vars_iv()
+                    FIT.wls_transform()
+                elif _method == "fepois":
+                    pass
+
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
+                    FIT.get_fit()
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type, data=FIT._data)
                     FIT.get_inference()
-                    # compute first stage for IV
-                    if isinstance(FIT, Feiv):
-                        FIT.first_stage()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
-
+                    if isinstance(FIT, Feiv):
+                        FIT.first_stage()
                 if _lean:
                     FIT._clear_attributes()
 

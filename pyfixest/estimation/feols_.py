@@ -13,7 +13,9 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -31,15 +33,13 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _drop_cols,
     _extract_variable_level,
     _polars_to_pandas,
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.estimation.demean_ import demean_model
-from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.utils.dev_utils import _drop_cols
+
 
 class Feols:
     """
@@ -195,7 +195,6 @@ class Feols:
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
     ) -> None:
-
         self._method = "feols"
         self._is_iv = False
         self.FixestFormula = FixestFormula
@@ -288,7 +287,6 @@ class Feols:
         self.summary.__doc__ = _tmp.__doc__
 
     def prepare_model_matrix(self):
-
         mm_dict = model_matrix_fixest(
             FixestFormula=self.FixestFormula,
             data=self._data,
@@ -307,16 +305,14 @@ class Feols:
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
         self._icovars = mm_dict.get("icovars")
-        X_is_empty = mm_dict.get("X_is_empty")
-
-        self._X_is_empty = False
-        if X_is_empty:
-            self._X_is_empty = True
 
         self._coefnames = self._X.columns.tolist()
+        self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
+        self._depvar = self._Y.columns[0]
         self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
         self._has_fixef = True if self._fe is not None else False
         self._N, self._k = self._X.shape
+        self._fixef = self.FixestFormula._fval
 
         if self._weights_name is not None:
             self._weights = self._weights_df.to_numpy()
@@ -330,22 +326,31 @@ class Feols:
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
 
+        # only relevant for IV
+        self._endogvar_1st_stage = self._endogvar
+        self._Z_1st_stage = self._Z
 
     def demean(self):
-        # demean
-        self._Yd, self._Xd = demean_model(
-            self._Y,
-            self._X,
-            self._fe,
-            self._weights.flatten(),
-            self._lookup_demeaned_data,
-            self._na_index_str,
-            self._fixef_tol,
-        )
+
+        if self._has_fixef:
+            self._Yd, self._Xd = demean_model(
+                self._Y,
+                self._X,
+                self._fe,
+                self._weights.flatten(),
+                self._lookup_demeaned_data,
+                self._na_index_str,
+                self._fixef_tol,
+            )
+        else:
+            self._Yd, self._Xd = self._Y, self._X
 
     def to_array(self):
-
-        self._Y, self._X, self._Z = (self._Yd.to_numpy(), self._Xd.to_numpy(), self._Xd.to_numpy())
+        self._Y, self._X, self._Z = (
+            self._Yd.to_numpy(),
+            self._Xd.to_numpy(),
+            self._Xd.to_numpy(),
+        )
 
     def wls_transform(self):
         if self._has_weights:
@@ -355,13 +360,14 @@ class Feols:
             self._Z = self._Z * w
 
     def drop_multicol_vars(self):
-
         (
             self._X,
             self._coefnames,
             self._collin_vars,
             self._collin_index,
         ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
+
+        self._X_is_empty = True if self._X.shape[1] == 0 else False
 
 
     def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
@@ -384,7 +390,7 @@ class Feols:
         ValueError: If the specified solver is not supported.
         """
         if self._X_is_empty:
-            self._u_hat = self._Yd_array
+            self._u_hat = self._Yd
         else:
             if solver == "np.linalg.lstsq":
                 return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
@@ -448,7 +454,6 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
-
         # Assuming `data` is the DataFrame in question
         if isinstance(data, pl.DataFrame):
             data = _polars_to_pandas(data)
@@ -632,7 +637,6 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid, cluster_col):
-
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv

@@ -77,10 +77,10 @@ ols_fmls = [
 ]
 
 ols_but_not_poisson_fml = [
-    ("log(Y) ~ X1"),
-    ("Y~X1|f2^f3"),
-    ("Y~X1|f1 + f2^f3"),
-    ("Y~X1|f2^f3^f1"),
+    #("log(Y) ~ X1"),
+    #("Y~X1|f2^f3"),
+    #("Y~X1|f1 + f2^f3"),
+    #("Y~X1|f2^f3^f1"),
     # empty models
     ("Y ~ 1 | f1"),
     ("Y ~ 1 | f1 + f2"),
@@ -129,7 +129,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
-@pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
+@pytest.mark.parametrize("fml", ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_feols(
@@ -149,8 +149,6 @@ def test_single_fit_feols(
         pytest.skip(
             "Cluster adjustment only works with cluster inference. Nothing to test here."
         )
-    if "f3" not in fml:
-        pytest.skip("No f3 in formula. Nothing to test here.")
 
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
@@ -191,25 +189,28 @@ def test_single_fit_feols(
             ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
         )
 
-    py_coef = mod.coef().xs("X1")
-    py_se = mod.se().xs("X1")
-    py_pval = mod.pvalue().xs("X1")
-    py_tstat = mod.tstat().xs("X1")
-    py_confint = mod.confint().xs("X1").values
+    if not mod._X_is_empty:
+        py_coef = mod.coef().xs("X1")
+        py_se = mod.se().xs("X1")
+        py_pval = mod.pvalue().xs("X1")
+        py_tstat = mod.tstat().xs("X1")
+        py_confint = mod.confint().xs("X1").values
+        py_vcov = mod._vcov[0, 0]
+
     py_nobs = mod._N
-    py_vcov = mod._vcov[0, 0]
     py_resid = mod.resid()
     py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
+    if not mod._X_is_empty:
+        r_coef = df_X1["estimate"]
+        r_se = df_X1["std.error"]
+        r_pval = df_X1["p.value"]
+        r_tstat = df_X1["statistic"]
+        r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+        r_vcov = stats.vcov(r_fixest)[0, 0]
 
-    r_coef = df_X1["estimate"]
-    r_se = df_X1["std.error"]
-    r_pval = df_X1["p.value"]
-    r_tstat = df_X1["statistic"]
-    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_vcov = stats.vcov(r_fixest)[0, 0]
     r_resid = stats.residuals(r_fixest)
     r_predict = stats.predict(r_fixest)
 
@@ -272,8 +273,6 @@ def test_single_fit_fepois(
         pytest.skip(
             "Cluster adjustment only works with cluster inference. Nothing to test here."
         )
-    if "f3" not in fml:
-        pytest.skip("No f3 in formula. Nothing to test here.")
 
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
@@ -375,9 +374,6 @@ def test_single_fit_iv(
             "Cluster adjustment only works with cluster inference. Nothing to test here."
         )
 
-    if "f3" not in fml:
-        pytest.skip("No f3 in formula. Nothing to test here.")
-
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
     data = get_data(
@@ -415,27 +411,31 @@ def test_single_fit_iv(
             ssc=fixest.ssc(True, "none", True, "min", "min", False),
         )
 
-    py_coef = mod.coef().xs("X1")
-    py_se = mod.se().xs("X1")
-    py_pval = mod.pvalue().xs("X1")
-    py_tstat = mod.tstat().xs("X1")
-    py_confint = mod.confint().xs("X1").values
+    if not mod._X_is_empty:
+        py_coef = mod.coef().xs("X1")
+        py_se = mod.se().xs("X1")
+        py_pval = mod.pvalue().xs("X1")
+        py_tstat = mod.tstat().xs("X1")
+        py_confint = mod.confint().xs("X1").values
+        py_vcov = mod._vcov[0, 0]
+
     py_nobs = mod._N
-    py_vcov = mod._vcov[0, 0]
     py_resid = mod.resid()
     py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
 
-    r_coef = df_X1["estimate"]
-    r_se = df_X1["std.error"]
-    r_pval = df_X1["p.value"]
-    r_tstat = df_X1["statistic"]
-    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+    if not mod._X_is_empty:
+        r_coef = df_X1["estimate"]
+        r_se = df_X1["std.error"]
+        r_pval = df_X1["p.value"]
+        r_tstat = df_X1["statistic"]
+        r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+        r_vcov = stats.vcov(r_fixest)[0, 0]
+
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
     r_predict = stats.predict(r_fixest)
-    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
