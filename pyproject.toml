@@ -106,3 +106,8 @@ convention = "numpy"
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 88
+
+filterwarnings =[
+    "ignore::FutureWarning:rpy2",
+    "ignore::DeprecationWarning:rpy2"
+]
