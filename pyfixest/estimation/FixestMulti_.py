@@ -411,8 +411,8 @@ class FixestMulti:
                     FIT.get_inference()
 
                     # compute first stage for IV
-                    if isinstance(FIT, Feiv):
-                        FIT.first_stage()
+                    # if isinstance(FIT, Feiv):
+                    #    FIT.first_stage()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
