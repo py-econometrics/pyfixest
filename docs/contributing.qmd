@@ -42,7 +42,7 @@ git clone https://github.com/<username>/pyfixest.git
 cd pyfixest
 ```
 
-In order to work of `pyfixest`, you will need Python and R installed. If working
+In order to work on `pyfixest`, you will need Python and R installed. If working
 on documentation, you will need Quarto installed.
 
 There are multiple ways of installing Python and R, but if you need to install
@@ -50,7 +50,7 @@ them prior to development the following are potential options:
 
 #### Installing Python
 
-On Mac/Linux via [Hombrew](https://brew.sh/):
+The minimal Python version to develop `pyfixest` is `3.9`. You can installed it on Mac/Linux via [Hombrew](https://brew.sh/):
 
 ```{.bash .code-copy}
 brew install python@3.11 # specify the version of python you prefer
@@ -84,22 +84,6 @@ On Windows using [Winget](https://winget.run/pkg/RProject/R):
 winget install -e --id RProject.R
 ```
 
-Tests run with R require the following packages:
-
-- base
-- broom
-- clubSandwich
-- did2s
-- fixest
-- stats
-- wildrwolf
-- ritest
-- ivDiag
-
-```{.bash .code-copy}
-Rscript -e 'install.packages(c("broom", "clubSandwich", "did2s", "fixest", "wildrwolf"), repos="https://cran.rstudio.com"); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))'
-```
-
 Documentation for `pyfixest` is written, compiled, and published using Quarto.
 
 To install Quarto, run:
@@ -126,84 +110,70 @@ scoop install extras/quarto
 
 ### Package Management
 
-`PyFixest` is using [poetry](https://github.com/python-poetry/poetry).
+`PyFixest` is using [pixi](https://pixi.sh/latest/).
 
-Please follow the [installation instructions](https://python-poetry.org/docs/#installing-with-the-official-installer) from the poetry documentation.
+Please follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation.
 
 Afterwards, you can initiate the project environment and install all dependencies by running
 
 ```{.bash .code-copy}
 cd path-to-pyfixest
-poetry install
+pixi install
 ```
 
 If you type
 ```{.bash .code-copy}
-poetry shell
+pixi shell
 ```
 
-you will see that you have activated a custom poetry environment for pyfixest.
+you will see that you have activated a custom `pixi` environment for `pyfixest`.
 
 ### Code Style
 
 We use `ruff` and `pre-commit` to ensure a consistent code style.
 
-You can install `pre-commit` from `pip` by running
-
-```{.bash .code-copy}
-pip install pre-commit
-```
-
 To install the required hooks, run
 
 ```{.bash .code-copy}
-pre-commit install
+pixi run lint
 ```
 
 and you're ready to go!
 
-### Justfile
+### `Pixi` tasks
 
-There are several command line targets that assist with development included in the
-`justfile`. [Just](https://just.systems/) can be installed to help run these
-command line targets. Installing `just` is only recommended and not needed for
-development of pyfixest.
+There are several command line targets that assist with development included
+as `pixi` tasks.
 
-On Mac/Linux via [Homebrew](https://formulae.brew.sh/formula/just#default):
 
 ```{.bash .code-copy}
-brew install just
-```
-
-On Windows:
-
-```{.bash .code-copy}
-scoop bucket add main
-scoop install main/just
-```
-
-The justfile includes multiple helpful shorthands to help with development. Note that
-if you are not using windows/powershell, you will have to uncomment the first line of the justfile
-`set shell := ["powershell.exe", "-c"]`.
-
-```{.bash .code-copy}
-# install all development dependencies
-just install-dev
 # install all R development dependencies
-just install-r
+pixi r install-r
 # run all tests via pytest
-just tests
+pixi r tests
+# run all tests excluding very computationally demanding tests
+pixi r tests-regular
 ```
 
 To rebuild the documentation locally, you can run
 
 ```{.bash .code-copy}
 # Build documentation and website
-just docs-build
+pixi r docs-build
 # render the docs
-just render
+pixi r docs-render
 # preview the docs
-just preview
+pixi r docs-preview
 ```
 
-To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run `just update-tests-data`.
+To run the linter, you can run
+
+```{.bash .code-copy}
+just r lint
+```
+
+To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run
+
+```{.bash .code-copy}
+`just update-tests-data`
+```
