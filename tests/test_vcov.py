@@ -20,7 +20,13 @@ def data():
     return pf.get_data()
 
 
-models = ["Y~X1", "Y~X1 | f1", "Y ~ 1 | X1 ~ Z1", "Y ~ 1 | f1| X1 ~ Z1"]
+models = [
+    "Y~X1",
+    "Y~X1 | f1",
+    "Y ~ 1 | X1 ~ Z1",
+    "Y ~ 1 | f1| X1 ~ Z1",
+    "Y ~ X2 | X1 ~ Z1 + Z2",
+]
 adj = [False, True]
 cluster_adj = [False, True]
 
