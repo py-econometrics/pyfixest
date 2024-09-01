@@ -16,7 +16,7 @@ requires = ["hatchling"]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
+platforms = ["linux-64", "win-64"]
 
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true }
@@ -33,6 +33,9 @@ tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
+
+[tool.pixi.feature.dev.dependencies]
+rpy2 = ">=3.5.11,<4"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
