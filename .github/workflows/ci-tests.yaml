@@ -39,12 +39,13 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
-        shell: bash
+        run: |
+          pixi run install-r
 
       - name: Run tests
         run: |
           pixi run tests-regular
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
 
