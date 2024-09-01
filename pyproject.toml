@@ -31,6 +31,8 @@ tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -m 'not extended' -n 4"
 tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
+lint = "pre-commit run ruff --all-files"
+update-test-data = "Rscript tests/r_test_comparisons.R"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
