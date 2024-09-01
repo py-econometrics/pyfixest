@@ -33,6 +33,7 @@ tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
+install-r = "Rscript r_test_requirements.R"
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
