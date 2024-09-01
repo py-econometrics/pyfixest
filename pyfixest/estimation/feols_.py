@@ -389,17 +389,15 @@ class Feols:
         ------
         ValueError: If the specified solver is not supported.
         """
-        if self._X_is_empty:
-            self._u_hat = self._Yd
+
+        if solver == "np.linalg.lstsq":
+            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
+        elif solver == "np.linalg.solve":
+            return np.linalg.solve(tZX, tZY).flatten()
+        elif solver == "scipy.sparse.linalg.lsqr":
+            return lsqr(tZX, tZY)[0].flatten()
         else:
-            if solver == "np.linalg.lstsq":
-                return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-            elif solver == "np.linalg.solve":
-                return np.linalg.solve(tZX, tZY).flatten()
-            elif solver == "scipy.sparse.linalg.lsqr":
-                return lsqr(tZX, tZY)[0].flatten()
-            else:
-                raise ValueError(f"Solver {solver} not supported.")
+            raise ValueError(f"Solver {solver} not supported.")
 
     def get_fit(self) -> None:
         """
@@ -409,24 +407,28 @@ class Feols:
         -------
         None
         """
-        _X = self._X
-        _Y = self._Y
-        _Z = self._Z
-        _solver = self._solver
-        self._tZX = _Z.T @ _X
-        self._tZy = _Z.T @ _Y
 
-        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+        if self._X_is_empty:
+            self._u_hat = self._Y
+        else:
+            _X = self._X
+            _Y = self._Y
+            _Z = self._Z
+            _solver = self._solver
+            self._tZX = _Z.T @ _X
+            self._tZy = _Z.T @ _Y
 
-        self._Y_hat_link = self._X @ self._beta_hat
-        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
-        self._scores = _X * self._u_hat[:, None]
-        self._hessian = self._tZX.copy()
+            self._Y_hat_link = self._X @ self._beta_hat
+            self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        # IV attributes, set to None for OLS, Poisson
-        self._tXZ = np.array([])
-        self._tZZinv = np.array([])
+            self._scores = _X * self._u_hat[:, None]
+            self._hessian = self._tZX.copy()
+
+            # IV attributes, set to None for OLS, Poisson
+            self._tXZ = np.array([])
+            self._tZZinv = np.array([])
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
@@ -1870,6 +1872,7 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
+
         return self._u_hat.flatten() / np.sqrt(self._weights).flatten()
 
     def ritest(

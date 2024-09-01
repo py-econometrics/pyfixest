@@ -248,9 +248,9 @@ class FixestMulti:
                 elif _method == "fepois":
                     pass
 
+                FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
-                    FIT.get_fit()
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type, data=FIT._data)

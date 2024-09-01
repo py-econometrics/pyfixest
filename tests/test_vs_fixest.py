@@ -77,15 +77,18 @@ ols_fmls = [
 ]
 
 ols_but_not_poisson_fml = [
-    #("log(Y) ~ X1"),
-    #("Y~X1|f2^f3"),
-    #("Y~X1|f1 + f2^f3"),
-    #("Y~X1|f2^f3^f1"),
-    # empty models
+    ("log(Y) ~ X1"),
+    ("Y~X1|f2^f3"),
+    ("Y~X1|f1 + f2^f3"),
+    ("Y~X1|f2^f3^f1"),
+]
+
+empty_models = [
     ("Y ~ 1 | f1"),
     ("Y ~ 1 | f1 + f2"),
     ("Y ~ 0 | f1"),
     ("Y ~ 0 | f1 + f2"),
+
 ]
 
 iv_fmls = [
@@ -129,7 +132,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
-@pytest.mark.parametrize("fml", ols_but_not_poisson_fml)
+@pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_feols(
@@ -189,53 +192,40 @@ def test_single_fit_feols(
             ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
         )
 
-    if not mod._X_is_empty:
-        py_coef = mod.coef().xs("X1")
-        py_se = mod.se().xs("X1")
-        py_pval = mod.pvalue().xs("X1")
-        py_tstat = mod.tstat().xs("X1")
-        py_confint = mod.confint().xs("X1").values
-        py_vcov = mod._vcov[0, 0]
+    py_coef = mod.coef().xs("X1")
+    py_se = mod.se().xs("X1")
+    py_pval = mod.pvalue().xs("X1")
+    py_tstat = mod.tstat().xs("X1")
+    py_confint = mod.confint().xs("X1").values
+    py_vcov = mod._vcov[0, 0]
 
     py_nobs = mod._N
     py_resid = mod.resid()
     py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
-    if not mod._X_is_empty:
-        r_coef = df_X1["estimate"]
-        r_se = df_X1["std.error"]
-        r_pval = df_X1["p.value"]
-        r_tstat = df_X1["statistic"]
-        r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-        r_vcov = stats.vcov(r_fixest)[0, 0]
+    r_coef = df_X1["estimate"]
+    r_se = df_X1["std.error"]
+    r_pval = df_X1["p.value"]
+    r_tstat = df_X1["statistic"]
+    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.residuals(r_fixest)
     r_predict = stats.predict(r_fixest)
 
-    if not mod._X_is_empty:
-        if inference == "iid" and adj and cluster_adj:
-            check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-            check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+    if inference == "iid" and adj and cluster_adj:
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff(py_predict[0:5], r_predict[0:5], 1e-07, "py_coef != r_coef")
+        check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
 
-        check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
-        check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
-        check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
-        check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
-        check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
-
-    # residuals invariant so to vcov type
-    if inference == "iid" and adj and not cluster_adj:
-        check_absolute_diff(
-            (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
-        )
-        check_absolute_diff(
-            py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
-        )
-
-    if mod._X_is_empty:
-        assert mod._beta_hat.size == 0
+    check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
+    check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
+    check_absolute_diff(py_pval, r_pval, 1e-08, "py_pval != r_pval")
+    check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
+    check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
 
     if not weights:
         py_r2 = mod._r2
@@ -251,6 +241,76 @@ def test_single_fit_feols(
             check_absolute_diff(
                 py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
             )
+
+
+@pytest.mark.parametrize("N", [1000])
+@pytest.mark.parametrize("seed", [76540251])
+@pytest.mark.parametrize("beta_type", ["2"])
+@pytest.mark.parametrize("error_type", ["2"])
+@pytest.mark.parametrize("dropna", [False])
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
+@pytest.mark.parametrize("fml", empty_models)
+def test_single_fit_feols_empty(
+    N,
+    seed,
+    beta_type,
+    error_type,
+    dropna,
+    weights,
+    f3_type,
+    fml,
+):
+    data = get_data(
+        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
+    )
+
+    if dropna:
+        data = data.dropna()
+
+    # long story, but categories need to be strings to be converted to R factors,
+    # this then produces 'nan' values in the pd.DataFrame ...
+    data[data == "nan"] = np.nan
+
+    # test fixed effects that are not floats, but ints or categoricals, etc
+
+    data = _convert_f3(data, f3_type)
+
+    data_r = get_data_r(fml, data)
+    r_fml = _c_to_as_factor(fml)
+
+
+    mod = pf.feols(fml=fml, data=data, weights=weights)
+    if weights is not None:
+        r_fixest = fixest.feols(
+            ro.Formula(r_fml),
+            data=data_r,
+            weights=ro.Formula("~" + weights),
+        )
+    else:
+        r_fixest = fixest.feols(
+            ro.Formula(r_fml),
+            data=data_r,
+        )
+
+    py_nobs = mod._N
+    py_resid = mod.resid()
+    py_predict = mod.predict()
+
+    r_nobs = int(stats.nobs(r_fixest)[0])
+    r_resid = stats.residuals(r_fixest)
+    r_predict = stats.predict(r_fixest)
+
+    check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+    check_absolute_diff(
+        (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
+    )
+    check_absolute_diff(
+        py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+    )
+
+    assert mod._beta_hat.size == 0
+
 
 
 @pytest.mark.parametrize("N", [1000])
@@ -411,13 +471,12 @@ def test_single_fit_iv(
             ssc=fixest.ssc(True, "none", True, "min", "min", False),
         )
 
-    if not mod._X_is_empty:
-        py_coef = mod.coef().xs("X1")
-        py_se = mod.se().xs("X1")
-        py_pval = mod.pvalue().xs("X1")
-        py_tstat = mod.tstat().xs("X1")
-        py_confint = mod.confint().xs("X1").values
-        py_vcov = mod._vcov[0, 0]
+    py_coef = mod.coef().xs("X1")
+    py_se = mod.se().xs("X1")
+    py_pval = mod.pvalue().xs("X1")
+    py_tstat = mod.tstat().xs("X1")
+    py_confint = mod.confint().xs("X1").values
+    py_vcov = mod._vcov[0, 0]
 
     py_nobs = mod._N
     py_resid = mod.resid()
@@ -425,13 +484,12 @@ def test_single_fit_iv(
 
     df_X1 = _get_r_df(r_fixest)
 
-    if not mod._X_is_empty:
-        r_coef = df_X1["estimate"]
-        r_se = df_X1["std.error"]
-        r_pval = df_X1["p.value"]
-        r_tstat = df_X1["statistic"]
-        r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
-        r_vcov = stats.vcov(r_fixest)[0, 0]
+    r_coef = df_X1["estimate"]
+    r_se = df_X1["std.error"]
+    r_pval = df_X1["p.value"]
+    r_tstat = df_X1["statistic"]
+    r_confint = df_X1[["conf.low", "conf.high"]].values.astype(np.float64)
+    r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.resid(r_fixest)
