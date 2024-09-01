@@ -13,7 +13,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import DataFrameType, _drop_cols, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
 
 
 class FixestMulti:
@@ -209,217 +209,41 @@ class FixestMulti:
                 # loop over both dictfe and dictfe_iv (if the latter is not None)
                 # get Y, X, Z, fe, NA indices for model
 
-                mm_dict = model_matrix_fixest(
-                    # fml=fml,
+                FIT: Union[Feols, Feiv, Fepois]
+
+                FIT = Feols(
                     FixestFormula=FixestFormula,
                     data=_data,
+                    ssc_dict = _ssc_dict,
                     drop_singletons=_drop_singletons,
                     drop_intercept=_drop_intercept,
                     weights=_weights,
+                    weights_type = _weights_type,
+                    collin_tol=collin_tol,
+                    fixef_tol=_fixef_tol,
+                    lookup_demeaned_data=lookup_demeaned_data,
                 )
 
-                mm_dict_keys = [
-                    "Y",
-                    "X",
-                    "fe",
-                    "endogvar",
-                    "Z",
-                    "weights_df",
-                    "na_index",
-                    "na_index_str",
-                    "_icovars",
-                    "X_is_empty",
-                ]
-                (
-                    Y,
-                    X,
-                    fe,
-                    endogvar,
-                    Z,
-                    weights_df,
-                    na_index,
-                    na_index_str,
-                    _icovars,
-                    X_is_empty,
-                ) = (mm_dict[key] for key in mm_dict_keys)
-
-                if _weights is not None:
-                    weights = weights_df.to_numpy()
-                else:
-                    weights = np.ones(Y.shape[0])
-
-                weights = weights.reshape((weights.shape[0], 1))
-
-                self._X_is_empty = False
-                if X_is_empty:
-                    self._X_is_empty = True
-
-                coefnames = X.columns.tolist()
-
-                _k_fe = fe.nunique(axis=0) if fe is not None else None
-
-                FIT: Union[Feols, Feiv, Fepois]
-
-                if _method == "feols":
-                    # demean Y, X, Z, if not already done in previous estimation
-
-                    if fe is not None:
-                        _has_fixef = True
-
-                    Yd, Xd = demean_model(
-                        Y,
-                        X,
-                        fe,
-                        weights,
-                        lookup_demeaned_data,
-                        na_index_str,
-                        _fixef_tol,
-                    )
-
-                    if _is_iv:
-                        endogvard, Zd = demean_model(
-                            endogvar,
-                            Z,
-                            fe,
-                            weights,
-                            lookup_demeaned_data,
-                            na_index_str,
-                            _fixef_tol,
-                        )
-                    else:
-                        endogvard, Zd = None, None
-
-                    if not _is_iv:
-                        Zd = Xd
-
-                    Yd_array, Xd_array, Zd_array, endogvard_array = (
-                        x.to_numpy() if x is not None else np.array([])
-                        for x in [Yd, Xd, Zd, endogvard]
-                    )
-
-                    if _is_iv:
-                        coefnames_z = Z.columns.tolist()
-                        FIT = Feiv(
-                            Y=Yd_array,
-                            X=Xd_array,
-                            endogvar=endogvard_array,
-                            Z=Zd_array,
-                            weights=weights,
-                            coefnames_x=coefnames,
-                            coefnames_z=coefnames_z,
-                            collin_tol=collin_tol,
-                            weights_name=_weights,
-                            weights_type=_weights_type,
-                        )
-                    else:
-                        # initiate OLS class
-
-                        FIT = Feols(
-                            Y=Yd_array,
-                            X=Xd_array,
-                            weights=weights,
-                            coefnames=coefnames,
-                            collin_tol=collin_tol,
-                            weights_name=_weights,
-                            weights_type=_weights_type,
-                        )
-
-                    FIT.na_index = na_index
-
-                    # special case: sometimes it is useful to fit models as
-                    # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
-                    if FIT._X_is_empty:
-                        FIT._u_hat = Yd_array
-                    else:
-                        FIT.get_fit()
-
-                elif _method == "fepois":
-                    # check for separation and drop separated variables
-
-                    na_separation: list[int] = []
-                    if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, fe=fe)
-                        if na_separation:
-                            warnings.warn(
-                                f"{str(len(na_separation))} observations removed because of separation."
-                            )
-
-                            Y.drop(na_separation, axis=0, inplace=True)
-                            X.drop(na_separation, axis=0, inplace=True)
-                            fe.drop(na_separation, axis=0, inplace=True)
-
-                    Y_array, X_array = (x.to_numpy() for x in [Y, X])
-                    N = X_array.shape[0]
-
-                    fe_array = None
-                    if fe is not None:
-                        _has_fixef = True
-                        fe_array = fe.to_numpy()
-                        if fe_array.ndim == 1:
-                            fe_array = fe_array.reshape((N, 1))
-
-                    # initiate OLS class
-                    FIT = Fepois(
-                        Y=Y_array,
-                        X=X_array,
-                        fe=fe_array,
-                        weights=weights,
-                        coefnames=coefnames,
-                        drop_singletons=_drop_singletons,
-                        maxiter=iwls_maxiter,
-                        tol=iwls_tol,
-                        collin_tol=collin_tol,
-                        weights_name=None,
-                        fixef_tol=_fixef_tol,
-                        weights_type=_weights_type,
-                    )
-
-                    FIT.get_fit()
-
-                    FIT.na_index = na_index
-                    if na_separation:
-                        FIT.na_index = np.concatenate(
-                            [FIT.na_index, np.array(na_separation)]
-                        )
-                        FIT.n_separation_na = len(na_separation)
-
-                else:
-                    raise ValueError(
-                        "Estimation method not supported. Please use 'feols' or 'fepois'."
-                    )
-
-                    # enrich FIT with model info obtained outside of the model class
-
-                _data_clean = _drop_cols(_data, FIT.na_index)
-
-                FIT.add_fixest_multi_context(
-                    fml=FixestFormula.fml,
-                    depvar=FixestFormula._depvar,
-                    Y=Y,
-                    _data=_data_clean,
-                    _ssc_dict=_ssc_dict,
-                    _k_fe=_k_fe,
-                    fval=fval,
-                    store_data=self._store_data,
-                )
-
+                FIT.prepare_model_matrix()
+                if not isinstance(FIT, Fepois):
+                    if FIT._fe is not None:
+                       FIT.demean()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
+                    FIT.wls_transform()
+                FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type, data=_data_clean)
+                    FIT.vcov(vcov=vcov_type, data=FIT._data)
                     FIT.get_inference()
-
                     # compute first stage for IV
                     if isinstance(FIT, Feiv):
                         FIT.first_stage()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
-                    if _icovars is not None:
-                        FIT._icovars = _icovars
-                    else:
-                        FIT._icovars = None
 
                 if _lean:
                     FIT._clear_attributes()
