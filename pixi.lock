@@ -306,6 +306,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/58/f9c9e6be752e9fcb8b6a0ee9fb87e6e7a1f6bcab2cdc73f02bb7ba91ada0/tzdata-2024.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/4d/410156100224c5e2f0011d435e477b57aed9576fc7fe137abcf14ec16e11/virtualenv-20.26.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/62/62/30ca2405de6a20448ee557ab2cd61ab9c5900be7cbd18a2639db595f0b98/wrapt-1.16.0-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/07/9e/c96f7a4cd0bf5625bb409b7e61e99b1130dc63a98cb8b24aeabae62d43e8/zipp-3.20.1-py3-none-any.whl
       - pypi: .
@@ -382,6 +383,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/58/f9c9e6be752e9fcb8b6a0ee9fb87e6e7a1f6bcab2cdc73f02bb7ba91ada0/tzdata-2024.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/4d/410156100224c5e2f0011d435e477b57aed9576fc7fe137abcf14ec16e11/virtualenv-20.26.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/92/17/224132494c1e23521868cdd57cd1e903f3b6a7ba6996b7b8f077ff8ac7fe/wrapt-1.16.0-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/07/9e/c96f7a4cd0bf5625bb409b7e61e99b1130dc63a98cb8b24aeabae62d43e8/zipp-3.20.1-py3-none-any.whl
       - pypi: .
@@ -458,6 +460,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/58/f9c9e6be752e9fcb8b6a0ee9fb87e6e7a1f6bcab2cdc73f02bb7ba91ada0/tzdata-2024.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/4d/410156100224c5e2f0011d435e477b57aed9576fc7fe137abcf14ec16e11/virtualenv-20.26.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6a/d7/cfcd73e8f4858079ac59d9db1ec5a1349bc486ae8e9ba55698cc1f4a1dff/wrapt-1.16.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/07/9e/c96f7a4cd0bf5625bb409b7e61e99b1130dc63a98cb8b24aeabae62d43e8/zipp-3.20.1-py3-none-any.whl
       - pypi: .
@@ -537,6 +540,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/58/f9c9e6be752e9fcb8b6a0ee9fb87e6e7a1f6bcab2cdc73f02bb7ba91ada0/tzdata-2024.1-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/4d/410156100224c5e2f0011d435e477b57aed9576fc7fe137abcf14ec16e11/virtualenv-20.26.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5c/cc/8297f9658506b224aa4bd71906447dea6bb0ba629861a758c28f67428b91/wrapt-1.16.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/07/9e/c96f7a4cd0bf5625bb409b7e61e99b1130dc63a98cb8b24aeabae62d43e8/zipp-3.20.1-py3-none-any.whl
       - pypi: .
@@ -4665,7 +4669,7 @@ packages:
   name: pyfixest
   version: 0.24.3
   path: .
-  sha256: dffed2b134570ce5367d748e06fd8b84a9d16472e6aed2f0eb46fd591c1675a0
+  sha256: 0e6deaafd1144766a556fbfa26558e53e277fed762b5a14be867872f9bbe88d1
   requires_dist:
   - lets-plot>=4.0.0
   - scipy>=1.6
@@ -4685,6 +4689,7 @@ packages:
   - pyarrow>=17.0.0 ; extra == 'dev'
   - pre-commit==3.6.0 ; extra == 'dev'
   - doubleml==0.7.1 ; extra == 'dev'
+  - wildboottest>=0.3.2 ; extra == 'dev'
   - quartodoc>=0.7.2 ; extra == 'docs'
   - jupyterlab>=4.0.12 ; extra == 'docs'
   - jupytext==1.16.1 ; extra == 'docs'
@@ -6236,6 +6241,18 @@ packages:
   - wsaccel ; extra == 'optional'
   - websockets ; extra == 'test'
   requires_python: '>=3.8'
+- kind: pypi
+  name: wildboottest
+  version: 0.3.2
+  url: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
+  sha256: 886762642098358ddeb190656fc05c17e26d5c024ccff9f8863627ce3392902f
+  requires_dist:
+  - numba>=0.57
+  - numpy>=1.18
+  - pandas>=1.4
+  - statsmodels>=0.13
+  - tabulate>=0.9.0
+  requires_python: '>=3.8,<4.0'
 - kind: pypi
   name: wrapt
   version: 1.16.0
