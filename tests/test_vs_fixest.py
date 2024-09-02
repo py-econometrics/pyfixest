@@ -323,14 +323,6 @@ def test_single_fit_feols_empty(
 def test_single_fit_fepois(
     N, seed, beta_type, error_type, dropna, inference, f3_type, fml, adj, cluster_adj
 ):
-    if cluster_adj and inference in ["iid", "hetero"]:
-        pytest.skip(
-            "Cluster adjustment only works with cluster inference. Nothing to test here."
-        )
-
-    if f3_type in ["object", "int", "categorical"] and "f3" not in fml:
-        pytest.skip("Only test different f3 types when f3 is in the formula.")
-
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
     data = get_data(
@@ -369,6 +361,7 @@ def test_single_fit_fepois(
     py_vcov = mod._vcov[0, 0]
     py_deviance = mod.deviance
     py_resid = mod.resid()
+    py_irls_weights = mod._irls_weights.flatten()
 
     df_X1 = _get_r_df(r_fixest)
 
@@ -381,11 +374,15 @@ def test_single_fit_fepois(
     r_resid = stats.residuals(r_fixest)
     r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
+    r_irls_weights = r_fixest.rx2("irls_weights")
 
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
+        check_absolute_diff(
+            py_irls_weights, r_irls_weights, 1e-07, "py_irls_weights != r_irls_weights"
+        )
 
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
@@ -394,13 +391,13 @@ def test_single_fit_fepois(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
-    if False:
-        # if not mod._has_fixef:
-        py_predict = mod.predict()
-        r_predict = stats.predict(r_fixest)
-        check_absolute_diff(
-            py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
-        )
+    if not mod._has_fixef:
+        py_predict_response = mod.predict(type="response")  # noqa: F841
+        py_predict_link = mod.predict(type="link")  # noqa: F841
+        r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
+        r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
+        # check_absolute_diff(py_predict_response[0:5], r_predict_response[0:5], 1e-07, "py_predict_response != r_predict_response")
+        # check_absolute_diff(py_predict_link[0:5], r_predict_link[0:5], 1e-07, "py_predict_link != r_predict_link")
 
 
 @pytest.mark.parametrize("N", [1000])

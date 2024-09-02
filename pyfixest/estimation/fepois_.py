@@ -247,11 +247,14 @@ class Fepois(Feols):
 
         # updat for inference
         self._weights = mu_old
+        self._irls_weights = mu
         # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
         self._u_hat = (WZ - WX @ delta_new).flatten()
+        self._u_hat_working = resid
+        self._u_hat_response = self._Y - np.exp(eta)
 
         self._Y = WZ
         self._X = WX
@@ -267,6 +270,28 @@ class Fepois(Feols):
 
         if _convergence:
             self._convergence = True
+
+    def resid(self, type: str = "response") -> np.ndarray:
+        """
+        Return residuals from regression model.
+
+        Parameters
+        ----------
+        type : str, optional
+            The type of residuals to be computed.
+            Can be either "response" (default) or "working".
+
+        Returns
+        -------
+        np.ndarray
+            A flat array with the residuals of the regression model.
+        """
+        if type == "response":
+            return self._u_hat_response.flatten()
+        elif type == "working":
+            return self._u_hat_working.flatten()
+        else:
+            raise ValueError("type must be one of 'response' or 'working'.")
 
     def predict(
         self,
@@ -317,7 +342,7 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        _Xbeta = self._Xbeta
+        _Xbeta = self._Xbeta.flatten()
         _has_fixef = self._has_fixef
 
         if _has_fixef:
@@ -329,14 +354,13 @@ class Fepois(Feols):
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
 
-        if type not in ["response", "link"]:
-            raise ValueError("type must be one of 'response' or 'link'.")
-
-        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+        # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            y_hat = np.exp(y_hat)
-
-        return y_hat
+            return np.exp(_Xbeta)
+        elif type == "response":
+            return _Xbeta
+        else:
+            raise ValueError("type must be one of 'response' or 'link'.")
 
 
 def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
