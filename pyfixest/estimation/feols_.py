@@ -13,6 +13,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -728,7 +729,7 @@ class Feols:
 
     def add_fixest_multi_context(
         self,
-        fml: str,
+        FixestFormula: FixestFormula,
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
@@ -745,8 +746,8 @@ class Feols:
 
         Parameters
         ----------
-        fml : str
-            The formula used for estimation.
+        FixestFormula : FixestFormula
+            The formula(s) used for estimation encoded in a `FixestFormula` object.
         depvar : str
             The dependent variable of the regression model.
         Y : pd.Series
@@ -767,7 +768,8 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = fml
+        self._fml = FixestFormula.fml
+        self._FixestFormula = FixestFormula
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()

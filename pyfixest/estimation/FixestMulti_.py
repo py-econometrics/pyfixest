@@ -393,7 +393,7 @@ class FixestMulti:
                 _data_clean = _drop_cols(_data, FIT.na_index)
 
                 FIT.add_fixest_multi_context(
-                    fml=FixestFormula.fml,
+                    FixestFormula=FixestFormula,
                     depvar=FixestFormula._depvar,
                     Y=Y,
                     _data=_data_clean,
@@ -411,8 +411,8 @@ class FixestMulti:
                     FIT.get_inference()
 
                     # compute first stage for IV
-                    # if isinstance(FIT, Feiv):
-                    #    FIT.first_stage()
+                    if isinstance(FIT, Feiv):
+                        FIT.first_stage()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
                         FIT.get_performance()
