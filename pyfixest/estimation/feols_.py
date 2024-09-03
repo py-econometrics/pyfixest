@@ -1465,7 +1465,7 @@ class Feols:
             )
 
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
+            return self._Y_untransformed.to_numpy().flatten() - self.resid()
 
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
@@ -1803,7 +1803,7 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        return self._u_hat
+        return self._u_hat.flatten() / np.sqrt(self._weights).flatten()
 
     def ritest(
         self,
