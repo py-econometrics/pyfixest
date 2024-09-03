@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: "Tests"
+    name: "Tests Core"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -50,7 +50,7 @@ jobs:
         uses: codecov/codecov-action@v4
 
   test_slow:
-    name: "Tests"
+    name: "Test Slow"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
