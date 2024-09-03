@@ -121,6 +121,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1 - x2) < tol), msg
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -252,6 +253,7 @@ def test_single_fit_feols(
             )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -346,6 +348,7 @@ def test_single_fit_fepois(
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -450,6 +453,7 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -560,6 +564,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         )
 
 
+@pytest.mark.slow
 def test_twoway_clustering():
     data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
 
@@ -616,6 +621,7 @@ def test_twoway_clustering():
             )
 
 
+@pytest.mark.slow
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
@@ -733,6 +739,7 @@ def get_data_r(fml, data):
     return data_r
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "fml",
     [
@@ -763,6 +770,7 @@ def test_wald_test(fml, data):
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
 
 
+@pytest.mark.slow
 def test_singleton_dropping():
     data = get_data()
     # create a singleton fixed effect
