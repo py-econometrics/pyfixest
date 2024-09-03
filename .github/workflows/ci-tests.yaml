@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
@@ -46,6 +46,46 @@ jobs:
       - name: Run tests
         run: |
           poetry run pytest tests -m "not extended" --cov=./ --cov-report=xml
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+
+  test_slow:
+    name: "Tests"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
+      - name: Install
+        run: poetry install --without docs
+
+      - name: set numba parallel flags
+        run: |
+          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: install R packages
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+        shell: bash
+
+      - name: Run tests
+        run: |
+          poetry run pytest tests --only-slow --cov=./ --cov-report=xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
 
