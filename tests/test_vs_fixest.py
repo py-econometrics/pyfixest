@@ -115,6 +115,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
     assert np.all(np.abs(x1 - x2) < tol), msg
 
+
 @pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
@@ -651,6 +652,7 @@ def test_wls_na():
         err_msg="WLS: Coefs are not equal.",
     )
 
+
 @pytest.mark.slow
 def _py_fml_to_r_fml(py_fml):
     """
@@ -709,6 +711,7 @@ def get_data_r(fml, data):
 
     return data_r
 
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "fml",
@@ -738,6 +741,7 @@ def test_wald_test(fml, data):
 
     np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+
 
 @pytest.mark.slow
 def test_singleton_dropping():
