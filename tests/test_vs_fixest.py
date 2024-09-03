@@ -127,11 +127,8 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
-# see here for why not test against cluster_adj = True
-# it triggers the N / (N-1) correction, not sure why
-# https://github.com/lrberge/fixest/issues/518#issuecomment-2227365516
+@pytest.mark.parametrize("cluster_adj", [False, True])
 @pytest.mark.slow
-@pytest.mark.parametrize("cluster_adj", [False])
 def test_single_fit_feols(
     N,
     seed,
