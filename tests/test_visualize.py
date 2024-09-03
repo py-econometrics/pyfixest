@@ -1,5 +1,5 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from pyfixest.did.visualize import panelview
 from pyfixest.estimation.estimation import feols, fepois
@@ -56,7 +56,7 @@ def test_panelview():
         unit="unit",
         time="year",
         treat="treat",
-        subsamp=50
+        subsamp=50,
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
@@ -93,7 +93,7 @@ def test_panelview():
         unit="unit",
         time="year",
         treat="treat",
-        units_to_plot=[1, 2, 3, 4]
+        units_to_plot=[1, 2, 3, 4],
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
