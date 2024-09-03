@@ -121,6 +121,7 @@ def check_absolute_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1 - x2) < tol), msg
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -132,7 +133,6 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
-@pytest.mark.slow
 def test_single_fit_feols(
     N,
     seed,
@@ -253,6 +253,7 @@ def test_single_fit_feols(
             )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -266,7 +267,6 @@ def test_single_fit_feols(
 # it triggers the N / (N-1) correction, not sure why
 # https://github.com/lrberge/fixest/issues/518#issuecomment-2227365516
 @pytest.mark.parametrize("cluster_adj", [False])
-@pytest.mark.slow
 def test_single_fit_fepois(
     N, seed, beta_type, error_type, dropna, inference, f3_type, fml, adj, cluster_adj
 ):
@@ -348,6 +348,7 @@ def test_single_fit_fepois(
         )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -359,7 +360,6 @@ def test_single_fit_fepois(
 @pytest.mark.parametrize("fml", iv_fmls)
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
-@pytest.mark.slow
 def test_single_fit_iv(
     N,
     seed,
@@ -453,6 +453,7 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -506,7 +507,6 @@ def test_single_fit_iv(
         # ("Y ~ i(f1,X2, ref = -8) | csw(f2, f3)"),
     ],
 )
-@pytest.mark.slow
 def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     """Test pyfixest against fixest_multi objects."""
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
@@ -739,6 +739,7 @@ def get_data_r(fml, data):
     return data_r
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "fml",
     [
@@ -751,7 +752,6 @@ def get_data_r(fml, data):
 )
 @pytest.mark.parametrize("data", [(pd.read_csv("pyfixest/did/data/df_het.csv"))])
 @pytest.mark.skip("Wald tests will be released with pyfixest 0.14.0.")
-@pytest.mark.slow
 def test_wald_test(fml, data):
     fit1 = feols(fml, data)
     fit1.wald_test()
