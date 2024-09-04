@@ -101,7 +101,9 @@ jobs:
     - name: Install dependencies
       run: poetry install
     - name: Run notebooks
-      run: poetry run scripts/run_notebooks.py
+      run: |
+        poetry install --with docs
+        poetry run scripts/run_notebooks.py
 
 
   build-docs:
