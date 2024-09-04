@@ -390,6 +390,20 @@ webencodings = "*"
 css = ["tinycss2 (>=1.1.0,<1.3)"]
 
 [[package]]
+name = "causaldata"
+version = "0.1.4"
+description = "Example Data Sets for Causal Inference"
+optional = false
+python-versions = "*"
+files = [
+    {file = "causaldata-0.1.4-py3-none-any.whl", hash = "sha256:33b4e378951c1a1064924dee7c5f6c10ddae636558bb44d2c5e560b27f2559ac"},
+]
+
+[package.dependencies]
+pandas = "*"
+statsmodels = "*"
+
+[[package]]
 name = "certifi"
 version = "2024.8.30"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -2570,6 +2584,20 @@ files = [
 ]
 
 [[package]]
+name = "ordered-set"
+version = "4.1.0"
+description = "An OrderedSet is a custom MutableSet that remembers its order, so that every"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "ordered-set-4.1.0.tar.gz", hash = "sha256:694a8e44c87657c59292ede72891eb91d34131f6531463aab3009191c77364a8"},
+    {file = "ordered_set-4.1.0-py3-none-any.whl", hash = "sha256:046e1132c71fcf3330438a539928932caf51ddbc582496833e23de611de14562"},
+]
+
+[package.extras]
+dev = ["black", "mypy", "pytest"]
+
+[[package]]
 name = "overrides"
 version = "7.7.0"
 description = "A decorator to automatically detect mismatch when overriding a method."
@@ -3321,6 +3349,28 @@ scipy = ">=1.0.0"
 [package.extras]
 docs = ["astunparse", "docutils (==0.17)", "ipython", "jinja2 (>=2.11,<3.0)", "nbsphinx (==0.5.0)", "sphinx (==2.0.0)", "sphinx-rtd-theme (==0.4.3)"]
 tests = ["pytest", "pytest-xdist"]
+
+[[package]]
+name = "pylatex"
+version = "1.4.2"
+description = "A Python library for creating LaTeX files and snippets"
+optional = false
+python-versions = "*"
+files = [
+    {file = "PyLaTeX-1.4.2.tar.gz", hash = "sha256:bb7b21bec57ecdba3f6f44c856ebebdf6549fd6e80661bd44fd5094236729242"},
+]
+
+[package.dependencies]
+ordered-set = "*"
+
+[package.extras]
+all = ["MarkupSafe (==2.0.1)", "alabaster (<0.7.12)", "black", "coverage", "isort", "jinja2 (<3.0)", "matplotlib", "numpy", "pytest (>=4.6)", "pytest-cov", "quantities", "sphinx", "twine"]
+docs = ["MarkupSafe (==2.0.1)", "alabaster (<0.7.12)", "jinja2 (<3.0)", "sphinx"]
+matplotlib = ["matplotlib"]
+matrices = ["numpy"]
+packaging = ["twine"]
+quantities = ["numpy", "quantities"]
+testing = ["black", "coverage", "isort", "pytest (>=4.6)", "pytest-cov"]
 
 [[package]]
 name = "pyparsing"
@@ -4126,6 +4176,17 @@ pure-eval = "*"
 tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
+name = "stargazer"
+version = "0.0.7"
+description = "Nicely formatted regression reporting"
+optional = false
+python-versions = "*"
+files = [
+    {file = "stargazer-0.0.7-py3-none-any.whl", hash = "sha256:0bd47e7fd0a41317724743a63f6c92472d27adf8ab12d7e4d2682fc31aa51bca"},
+    {file = "stargazer-0.0.7.tar.gz", hash = "sha256:ba40f35a492377cc1a1dcc55c45a63e177a6fc0d51c926b50a1b70b23a93c72f"},
+]
+
+[[package]]
 name = "statsmodels"
 version = "0.14.2"
 description = "Statistical computations and models for Python"
@@ -4754,4 +4815,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "d297f840728d4b8ec8539dab8824635d783ebad471b62a66abb571e64060dd86"
+content-hash = "d2fdaaea63fa7c9ce606686fd2764ecdeebad38c294ea77d57e641ef26ed959e"

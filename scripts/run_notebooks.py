@@ -8,9 +8,15 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 KERNEL_NAME: str = "python3"
-DOC_SOURCE = Path("docs")
-NOTEBOOKS_PATH = DOC_SOURCE / "notebooks"
-NOTEBOOKS: list[Path] = list(NOTEBOOKS_PATH.glob("*/*.ipynb"))
+DOCS = Path("docs")
+NOTEBOOKS: list[Path] = [
+    # DOCS / "compare-fixest-pyfixest.ipynb",  # needs R
+    DOCS / "difference-in-differences.ipynb",
+    DOCS / "marginaleffects.ipynb",
+    DOCS / "quickstart.ipynb",
+    DOCS / "replicating-the-effect.ipynb",
+    # DOCS / "stargazer.ipynb",  # needs LaTeX
+]
 
 
 def setup_logging() -> None:
