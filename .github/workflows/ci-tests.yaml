@@ -98,6 +98,8 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.12"
+    - name: Set up poetry
+      uses: snok/install-poetry@v1
     - name: Install dependencies
       run: poetry install
     - name: Run notebooks
