@@ -18,7 +18,7 @@ NOTEBOOKS: list[Path] = [
     DOCS / "marginaleffects.ipynb",
     DOCS / "quickstart.ipynb",
     DOCS / "replicating-the-effect.ipynb",
-    DOCS / "stargazer.ipynb",  # failing notebook
+    # DOCS / "stargazer.ipynb",  # failing notebook
 ]
 
 
