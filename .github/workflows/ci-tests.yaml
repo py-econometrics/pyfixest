@@ -122,6 +122,9 @@ jobs:
       run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
       shell: bash
 
+    - name: Install TeXlive
+      run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
+
     - name: Run notebooks
       run: |
         poetry install --with docs
