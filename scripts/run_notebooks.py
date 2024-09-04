@@ -1,4 +1,7 @@
-"""Script to run all notebooks in the docs/source/notebooks directory."""
+"""Script to run all notebooks example notebooks.
+
+Taken from: https://github.com/pymc-labs/pymc-marketing/blob/main/scripts/run_notebooks/runner.py
+"""
 
 import logging
 from pathlib import Path
@@ -15,7 +18,7 @@ NOTEBOOKS: list[Path] = [
     DOCS / "marginaleffects.ipynb",
     DOCS / "quickstart.ipynb",
     DOCS / "replicating-the-effect.ipynb",
-    DOCS / "stargazer.ipynb",  # needs LaTeX
+    DOCS / "stargazer.ipynb",  # failing notebook
 ]
 
 
