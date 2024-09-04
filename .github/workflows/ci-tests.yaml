@@ -89,6 +89,21 @@ jobs:
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
 
+  test_notebooks:
+    name: "Test Notebooks"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.12"
+    - name: Install dependencies
+      run: poetry install
+    - name: Run notebooks
+      run: poetry run scripts/run_notebooks.py
+
+
   build-docs:
     name: "Build Docs"
     runs-on: ubuntu-latest
