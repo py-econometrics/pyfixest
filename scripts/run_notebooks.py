@@ -10,7 +10,7 @@ from tqdm import tqdm
 KERNEL_NAME: str = "python3"
 DOCS = Path("docs")
 NOTEBOOKS: list[Path] = [
-    # DOCS / "compare-fixest-pyfixest.ipynb",  # needs R
+    DOCS / "compare-fixest-pyfixest.ipynb",  # needs R
     DOCS / "difference-in-differences.ipynb",
     DOCS / "marginaleffects.ipynb",
     DOCS / "quickstart.ipynb",

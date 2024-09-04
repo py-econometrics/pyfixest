@@ -94,14 +94,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
         python-version: "3.12"
+
     - name: Set up poetry
       uses: snok/install-poetry@v1
+
     - name: Install dependencies
       run: poetry install
+
+    - name: Set up poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install
+      run: poetry install --without docs
+    - name: set numba parallel flags
+      run: |
+        echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+    - name: Setup r2u
+      uses: eddelbuettel/github-actions/r2u-setup@master
+
+    - name: install R packages
+      run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+      shell: bash
+
     - name: Run notebooks
       run: |
         poetry install --with docs
