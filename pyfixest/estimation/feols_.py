@@ -1466,16 +1466,16 @@ class Feols:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
-        
+
         prediction_df = pd.DataFrame()
         if newdata is None:
             prediction_df["yhat"] = self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
             if compute_stdp:
                 prediction_df["stdp"] = self.get_newdata_stdp(self._X)
             return prediction_df
-        
+
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
-        
+
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             X = Formula(xfml).get_model_matrix(newdata)
@@ -1509,7 +1509,7 @@ class Feols:
         prediction_df["yhat"] = y_hat.flatten()
         if compute_stdp:
             prediction_df["stdp"] = self.get_newdata_stdp(X)
-            
+
         return prediction_df
 
 

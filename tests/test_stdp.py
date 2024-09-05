@@ -1,8 +1,9 @@
-import statsmodels.api as sm
 import numpy as np
+import statsmodels.api as sm
 
 from pyfixest.estimation.estimation import feols
 from pyfixest.utils.utils import get_data
+
 
 def test_stdp():
     """Compare the standard error of the prediction to statsmodels.get_prediction()."""
