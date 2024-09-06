@@ -358,27 +358,39 @@ def etable(
         res[column] = res[column].fillna("")
 
     res.rename(columns={"Coefficient": "index"}, inplace=True)
-    
+    res.set_index("index", inplace=True)
+
+    # Move the intercept row (if there is one) to the bottom of the table
+    if "Intercept" in res.index:
+        intercept_row = res.loc["Intercept"]
+        res = res.drop("Intercept")
+        res = pd.concat([res, pd.DataFrame([intercept_row])])
+
+    # Relabel variables
     if labels is not None:
         # Relabel dependent variables
         dep_var_list = [labels.get(k, k) for k in dep_var_list]
 
         # Relabel explanatory variables
-        res["index"] = res["index"].apply(
+        res_index = res.index.to_series()
+        res_index = res_index.apply(
             lambda x: _relabel_expvar(x, labels, interactionSymbol)
         )
+        res.index = res_index
 
-        # Relabel fixed effects
+    # Relabel fixed effects
+    if show_fe:
+        if felabels is None:
+            felabels = dict()
+        if labels is None:
+            labels = dict()    
         # When the user provides a dictionary for fixed effects, then use it
         # When a corresponsing variable is not in the felabel dictionary, then use the labels dictionary
         # When in neither then just use the original variable name
-        if felabels is None:
-            felabels = dict()
         fe_index=fe_df.index.to_series()
         fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
         fe_df.index = fe_index
-
-    res.set_index("index", inplace=True)
+ 
     model_stats_df.columns = res.columns
     if show_fe:
         fe_df.columns = res.columns
