@@ -129,6 +129,12 @@ def etable(
         assert (
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
+    
+    # Check if models is of type FixestMulti
+    # If so, convert it to a list of models
+    if isinstance(models, FixestMulti):
+        models = models.to_list() 
+
     models = _post_processing_input_checks(models)
 
     if custom_stats is None:
@@ -996,14 +1002,12 @@ def make_table(df: pd.DataFrame,
                             column_labels_border_bottom_width="0.5px",
                             column_labels_vlines_color="white",
                             column_labels_vlines_width="0px",
-                            #column_labels_vlines_style="hidden",
                             table_body_border_top_style="solid",
                             table_body_border_top_width="0.5px",
                             table_body_border_top_color="black",
                             table_body_hlines_style="none",
                             table_body_vlines_color="white",
                             table_body_vlines_width="0px",
-                            #table_body_vlines_style="hidden",
                             table_body_border_bottom_color="black",
                             row_group_border_top_style="solid",
                             row_group_border_top_width="0.5px",
@@ -1021,7 +1025,6 @@ def make_table(df: pd.DataFrame,
            
         # Full page width
         if full_width:
-            # To CHECK
             gt = gt.tab_options(table_width = "100%")
         
         # Customize row group display
