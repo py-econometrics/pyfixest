@@ -39,9 +39,13 @@ doubleml = "^0.7.1"
 marginaleffects = "^0.0.10"
 
 [tool.poetry.group.docs.dependencies]
+causaldata = "*"
 quartodoc = ">=0.7.2"
 jupyterlab = "^4.0.12"
 jupytext = "^1.16.1"
+papermill = "*"
+pylatex = "*"
+stargazer = "*"
 watermark = "^2.4.3"
 
 [tool.pytest.ini_options]
@@ -106,6 +110,7 @@ ignore = [
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
