@@ -265,11 +265,13 @@ def etable(
                         fe_df.loc[i, fixef] = "x"
                     else:
                         fe_df.loc[i, fixef] = "-"
-    # Sort by model
-    fe_df.sort_index(inplace=True)
-    # Transpose 
-    fe_df= fe_df.T
-
+        # Sort by model
+        fe_df.sort_index(inplace=True)
+        # Transpose 
+        fe_df= fe_df.T
+    else: 
+        show_fe=False
+    
     # Finally, collect & format estimated coefficients and standard errors etc.
     coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
     etable_list = []
