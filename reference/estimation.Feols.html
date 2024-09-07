@@ -805,16 +805,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="pyfixest.estimation.Feols.add_fixest_multi_context" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.add_fixest_multi_context">add_fixest_multi_context</h3>
-<p><code>estimation.Feols.add_fixest_multi_context(fml, depvar, Y, _data, _ssc_dict, _k_fe, fval, store_data)</code></p>
+<p><code>estimation.Feols.add_fixest_multi_context(FixestFormula, depvar, Y, _data, _ssc_dict, _k_fe, fval, store_data)</code></p>
 <p>Enrich Feols object.</p>
 <p>Enrich an instance of <code>Feols</code> Class with additional attributes set in the <code>FixestMulti</code> class.</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
+<col style="width: 14%">
 <col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 63%">
+<col style="width: 62%">
 <col style="width: 10%">
 </colgroup>
 <thead>
@@ -827,9 +827,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>fml</code></td>
-<td>str</td>
-<td>The formula used for estimation.</td>
+<td><code>FixestFormula</code></td>
+<td>FixestFormula</td>
+<td>The formula(s) used for estimation encoded in a <code>FixestFormula</code> object.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">

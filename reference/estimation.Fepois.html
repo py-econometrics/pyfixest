@@ -430,6 +430,10 @@ ul.task-list li input[type="checkbox"] {
 <td><a href="#pyfixest.estimation.Fepois.predict">predict</a></td>
 <td>Return predicted values from regression model.</td>
 </tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Fepois.resid">resid</a></td>
+<td>Return residuals from regression model.</td>
+</tr>
 </tbody>
 </table>
 <section id="pyfixest.estimation.Fepois.get_fit" class="level3">
@@ -587,6 +591,59 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td>np.ndarray</td>
 <td>A flat array with the predicted values of the regression model.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="pyfixest.estimation.Fepois.resid" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.resid">resid</h3>
+<p><code>estimation.Fepois.resid(type='response')</code></p>
+<p>Return residuals from regression model.</p>
+<section id="parameters-1" class="level4">
+<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 74%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>type</code></td>
+<td>str</td>
+<td>The type of residuals to be computed. Can be either “response” (default) or “working”.</td>
+<td><code>'response'</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-2" class="level4">
+<h4 class="anchored" data-anchor-id="returns-2">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 82%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>np.ndarray</td>
+<td>A flat array with the residuals of the regression model.</td>
 </tr>
 </tbody>
 </table>
