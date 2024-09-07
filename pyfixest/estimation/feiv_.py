@@ -1,8 +1,8 @@
 import warnings
+from importlib import import_module
 from typing import Optional, Union
 
 import numpy as np
-import pandas as pd
 
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 
@@ -213,34 +213,15 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-        from pyfixest.estimation.estimation import feols
-
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
-        # Prepare your data
-        # Select the columns from self._data that match the variable names
-        data = pd.DataFrame(self._Z_1st_stage, columns=self._coefnames_z)
+        fixest_module = import_module("pyfixest.estimation")
+        fit_ = getattr(fixest_module, "feols")
 
-        # Store instrument variable matrix for future use
-        _Z_iv = data[self._non_exo_instruments]
-        self._Z_iv = _Z_iv.to_numpy()
-        # Dynamically create the formula string
-        # Extract names of fixed effect
-
-        data["Y"] = self._endogvar_1st_stage
-        independent_vars = " + ".join(
-            data.columns[:-1]
-        )  # All columns except the last one ('Y')
-
-        # Set fix effects, cluster, and weight options to be passed to feols.
-
+        fml_first_stage = self._FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:
-            FE_vars = self._fixef.split("+")
-            data[FE_vars] = self._data[FE_vars]
-            formula = f"Y ~ {independent_vars} | {self._fixef}"
-        else:
-            formula = f"Y ~ {independent_vars}"
+            fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: Union[dict[str, str], str]
@@ -248,24 +229,19 @@ class Feiv(Feols):
         if self._is_clustered:
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
-            data[a] = self._data[a]
         else:
             vcov_detail = self._vcov_type_detail
 
-        if self._has_weights:
-            data["weights"] = self._weights
-            weight_detail = "weights"
-        else:
-            weight_detail = None
+        weight_detail = "weights" if self._has_weights else None
 
         # Do first stage regression
-        model1 = feols(
-            fml=formula,
-            data=data,
+        model1 = fit_(
+            fml=fml_first_stage,
+            data=self._data,
             vcov=vcov_detail,
             weights=weight_detail,
             weights_type=self._weights_type_feiv,
-            collin_tol=1e-10,
+            collin_tol=self._collin_tol,
         )
 
         # Ensure model1 is of type Feols
@@ -453,6 +429,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         # If vcov is iid, redo first stage regression
+
         if self._vcov_type_detail == "iid":
             self._vcov_type_detail = "hetero"
             self._model_1st_stage.vcov("hetero")
@@ -470,14 +447,12 @@ class Feiv(Feols):
 
         # Extract coefficients for the non-exogenous instruments
 
-        pi_hat = np.array(
-            [
-                self._model_1st_stage.coef()[instrument]
-                for instrument in self._non_exo_instruments
-            ]
-        )
-
-        Z = self._Z_iv
+        pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        iv_positions = [
+            self._coefnames_z.index(instrument)
+            for instrument in self._non_exo_instruments
+        ]
+        Z = self._model_1st_stage._X[:, iv_positions]
 
         # Calculate the cross-product of the instrument matrix
         Q_zz = Z.T @ Z
