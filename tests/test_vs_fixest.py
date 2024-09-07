@@ -128,6 +128,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
@@ -316,6 +317,7 @@ def test_single_fit_feols_empty(
     assert mod._beta_hat.size == 0
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("N", [1000])
 @pytest.mark.parametrize("seed", [7651])
 @pytest.mark.parametrize("beta_type", ["2"])
