@@ -417,7 +417,7 @@ def test_single_fit_fepois(
 @pytest.mark.parametrize("seed", [76540251])
 @pytest.mark.parametrize("beta_type", ["2"])
 @pytest.mark.parametrize("error_type", ["2"])
-@pytest.mark.parametrize("dropna", [True])
+@pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
