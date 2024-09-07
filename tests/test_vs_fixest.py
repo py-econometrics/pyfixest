@@ -319,7 +319,7 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("seed", [7651])
 @pytest.mark.parametrize("beta_type", ["2"])
 @pytest.mark.parametrize("error_type", ["2"])
-@pytest.mark.parametrize("dropna", [False])
+@pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls)
