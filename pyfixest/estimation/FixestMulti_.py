@@ -246,7 +246,24 @@ class FixestMulti:
                     FIT.drop_multicol_vars_iv()
                     FIT.wls_transform()
                 elif _method == "fepois":
-                    pass
+                    FIT = Fepois(
+                        FixestFormula=FixestFormula,
+                        data=_data,
+                        ssc_dict=_ssc_dict,
+                        drop_singletons=_drop_singletons,
+                        drop_intercept=_drop_intercept,
+                        weights=_weights,
+                        weights_type=_weights_type,
+                        collin_tol=collin_tol,
+                        fixef_tol=_fixef_tol,
+                        lookup_demeaned_data=lookup_demeaned_data,
+                        tol = iwls_tol,
+                        maxiter = iwls_maxiter,
+                        #solver=_solver
+                    )
+                    FIT.prepare_model_matrix()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
 
                 FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505

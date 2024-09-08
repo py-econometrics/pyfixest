@@ -158,6 +158,7 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
 
     def wls_transform(self):
+        import pdb; pdb.set_trace()
         if self._has_weights:
             w = np.sqrt(self._weights)
             self._Y = self._Y * w
@@ -166,12 +167,14 @@ class Feiv(Feols):
             self._endogvar = self._endogvar * w
 
     def to_array(self):
+        import pdb; pdb.set_trace()
         self._Y = self._Y.to_numpy()
         self._X = self._X.to_numpy()
         self._Z = self._Z.to_numpy()
         self._endogvar = self._endogvar.to_numpy()
 
     def demean_iv(self):
+        import pdb; pdb.set_trace()
         if self._has_fixef:
             self._endogvard, self._Zd = demean_model(
                 self._endogvar,
@@ -233,7 +236,7 @@ class Feiv(Feols):
         fixest_module = import_module("pyfixest.estimation")
         fit_ = getattr(fixest_module, "feols")
 
-        fml_first_stage = self._FixestFormula.fml_first_stage.replace(" ", "")
+        fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:
             fml_first_stage += f" | {self._fixef}"
 
@@ -254,7 +257,7 @@ class Feiv(Feols):
             data=self._data,
             vcov=vcov_detail,
             weights=weight_detail,
-            weights_type=self._weights_type_feiv,
+            weights_type=self._weights_type,
             collin_tol=self._collin_tol,
         )
 

@@ -793,7 +793,6 @@ class Feols:
 
     def add_fixest_multi_context(
         self,
-        FixestFormula: FixestFormula,
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
@@ -832,8 +831,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = FixestFormula.fml
-        self._FixestFormula = FixestFormula
+        self._fml = self.FixestFormula.fml
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()

@@ -131,12 +131,17 @@ def docstring_from(func, custom_doc=""):
     return decorator
 
 
-def _to_integer(x):
-    if x.dtype == int:
+def _to_integer(x: pd.Series or pd.DataFrame):
+
+    if not isinstance(x, (pd.Series, pd.DataFrame)):
+        raise TypeError("Input must be a pandas Series or DataFrame")
+
+    if pd.api.types.is_integer_dtype(x):
         return x
+
     try:
-        x = x.astype(np.int64)
-        return x  # noqa: TRY300
+        x = x.astype('int64')
+        return x
     except ValueError as e:
         raise ValueError(
             """
@@ -144,7 +149,6 @@ def _to_integer(x):
             Please do so manually.
             """
         ) from e
-
 
 def _to_list(x):
     if x is not None and not isinstance(x, list):

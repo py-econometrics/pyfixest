@@ -61,46 +61,54 @@ class Fepois(Feols):
 
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        fe: Union[np.ndarray, None],
-        weights: np.ndarray,
-        coefnames: list[str],
-        drop_singletons: bool,
-        collin_tol: float,
-        maxiter: int = 25,
-        tol: float = 1e-08,
-        fixef_tol: float = 1e-08,
+        FixestFormula,
+        data,
+        ssc_dict,
+        drop_singletons,
+        drop_intercept,
+        weights,
+        weights_type,
+        collin_tol,
+        fixef_tol,
+        lookup_demeaned_data,
+        tol,
+        maxiter,
         solver: str = "np.linalg.solve",
-        weights_name: Optional[str] = None,
-        weights_type: Optional[str] = None,
-    ):
+        ):
+
         super().__init__(
-            Y=Y,
-            X=X,
-            weights=weights,
-            coefnames=coefnames,
-            collin_tol=collin_tol,
-            weights_name=weights_name,
-            weights_type=weights_type,
-            solver=solver,
+            FixestFormula,
+            data,
+            ssc_dict,
+            drop_singletons,
+            drop_intercept,
+            weights,
+            weights_type,
+            collin_tol,
+            fixef_tol,
+            lookup_demeaned_data,
+            solver,
         )
 
         # input checks
-        _fepois_input_checks(fe, drop_singletons, tol, maxiter)
+        _fepois_input_checks(drop_singletons, tol, maxiter)
 
-        self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
-        self.fixef_tol = fixef_tol
-        self._drop_singletons = drop_singletons
         self._method = "fepois"
         self.convergence = False
 
-        if self.fe is not None:
-            self._has_fixef = True
-        else:
-            self._has_fixef = False
+        self._support_crv3_inference = True
+        self._support_iid_inference = True
+        self._supports_cluster_causal_variance = False
+
+        self._Y_hat_response = np.array([])
+        self.deviance = None
+        self._Xbeta = np.array([])
+
+    def prepare_model_matrix(self):
+
+        super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
         self._Y = _to_integer(self._Y)
@@ -110,13 +118,37 @@ class Fepois(Feols):
                 "The dependent variable must be a weakly positive integer."
             )
 
-        self._support_crv3_inference = True
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
+        # check for separation
+        na_separation: list[int] = []
+        if self._fe is not None:
+            na_separation = _check_for_separation(Y=self._Y, fe=self._fe)
+            if na_separation:
+                warnings.warn(
+                    f"{str(len(na_separation))} observations removed because of separation."
+                )
 
-        self._Y_hat_response = np.array([])
-        self.deviance = None
-        self._Xbeta = np.array([])
+        if na_separation:
+
+            self._Y.drop(na_separation, axis=0, inplace=True)
+            self._X.drop(na_separation, axis=0, inplace=True)
+            self._fe.drop(na_separation, axis=0, inplace=True)
+            self._data.drop(na_separation, axis = 0, inplace=True)
+            self._N = self._Y.shape[0]
+
+            self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
+            self.n_separation_na = len(na_separation)
+
+    def to_array(self):
+        self._Y, self._X, self._Z = (
+            self._Y.to_numpy(),
+            self._X.to_numpy(),
+            self._X.to_numpy(),
+        )
+        if self._fe is not None:
+            self._fe = self._fe.to_numpy()
+            if self._fe.ndim == 1:
+                self._fe = self._fe.reshape((self._N, 1))
+
 
     def get_fit(self) -> None:
         """
@@ -148,14 +180,12 @@ class Fepois(Feols):
         """
         _Y = self._Y
         _X = self._X
-        _fe = self.fe
+        _fe = self._fe
         _N = self._N
-        _drop_singletons = self._drop_singletons
         _convergence = self.convergence  # False
         _maxiter = self.maxiter
-        _iwls_maxiter = 25
         _tol = self.tol
-        _fixef_tol = self.fixef_tol
+        _fixef_tol = self._fixef_tol
         _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
@@ -176,7 +206,7 @@ class Fepois(Feols):
             if i == _maxiter:
                 raise NonConvergenceError(
                     f"""
-                    The IRLS algorithm did not converge with {_iwls_maxiter}
+                    The IRLS algorithm did not converge with {_maxiter}
                     iterations. Try to increase the maximum number of iterations.
                     """
                 )
@@ -408,15 +438,13 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
 
 
 def _fepois_input_checks(
-    fe: Union[np.ndarray, None], drop_singletons: bool, tol: float, maxiter: int
+    drop_singletons: bool, tol: float, maxiter: int
 ):
     """
     Perform input checks for Fepois constructor arguments.
 
     Parameters
     ----------
-    fe : Union[np.ndarray, None]
-        Fixed effects. None if no fixed effects are used.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
     tol : float
@@ -428,12 +456,6 @@ def _fepois_input_checks(
     -------
     None
     """
-    # fe must be np.array of dimension 2 or None
-    if fe is not None:
-        if not isinstance(fe, np.ndarray):
-            raise AssertionError("fe must be a numpy array.")
-        if fe.ndim != 2:
-            raise AssertionError("fe must be a numpy array of dimension 2.")
     # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
