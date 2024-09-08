@@ -300,7 +300,7 @@ class Feols:
         self._X = mm_dict.get("X")
         self._fe = mm_dict.get("fe")
         self._endogvar = mm_dict.get("endogvar")
-        self._Z = mm_dict.get("Z")
+        self._Z = mm_dict.get("Z", self._X)
         self._weights_df = mm_dict.get("weights_df")
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
@@ -320,15 +320,8 @@ class Feols:
             self._weights = np.ones(self._N)
         self._weights = self._weights.reshape((self._N, 1))
 
-        # if no IV:
-        self._Z = self._X
-
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
-
-        # only relevant for IV
-        self._endogvar_1st_stage = self._endogvar
-        self._Z_1st_stage = self._Z
 
     def demean(self):
         if self._has_fixef:

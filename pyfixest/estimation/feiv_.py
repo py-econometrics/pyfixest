@@ -157,24 +157,24 @@ class Feiv(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
 
-    def wls_transform(self):
-        import pdb; pdb.set_trace()
+    def prepare_model_matrix(self):
+        super().prepare_model_matrix()
+        self._endogvar_1st_stage = self._endogvar
+        self._Z_1st_stage = self._Z
+
+    def wls_transform(self) -> None:
+        super().wls_transform()
         if self._has_weights:
             w = np.sqrt(self._weights)
-            self._Y = self._Y * w
-            self._X = self._X * w
-            self._Z = self._Z * w
             self._endogvar = self._endogvar * w
 
-    def to_array(self):
-        import pdb; pdb.set_trace()
-        self._Y = self._Y.to_numpy()
-        self._X = self._X.to_numpy()
-        self._Z = self._Z.to_numpy()
+    def to_array(self) -> None:
+        super().to_array()
+        self._Z = self._Zd.to_numpy()
         self._endogvar = self._endogvar.to_numpy()
 
-    def demean_iv(self):
-        import pdb; pdb.set_trace()
+    def demean(self) -> None:
+        super().demean()
         if self._has_fixef:
             self._endogvard, self._Zd = demean_model(
                 self._endogvar,
@@ -189,7 +189,8 @@ class Feiv(Feols):
             self._endogvard = self._endogvar
             self._Zd = self._Z
 
-    def drop_multicol_vars_iv(self):
+    def drop_multicol_vars(self) -> None:
+        super().drop_multicol_vars()
         (
             self._Z,
             self._coefnames_z,

@@ -240,10 +240,8 @@ class FixestMulti:
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
-                    FIT.demean_iv()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
-                    FIT.drop_multicol_vars_iv()
                     FIT.wls_transform()
                 elif _method == "fepois":
                     FIT = Fepois(

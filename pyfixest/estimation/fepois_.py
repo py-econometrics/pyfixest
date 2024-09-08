@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -74,8 +74,7 @@ class Fepois(Feols):
         tol,
         maxiter,
         solver: str = "np.linalg.solve",
-        ):
-
+    ):
         super().__init__(
             FixestFormula,
             data,
@@ -107,7 +106,6 @@ class Fepois(Feols):
         self._Xbeta = np.array([])
 
     def prepare_model_matrix(self):
-
         super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
@@ -128,11 +126,10 @@ class Fepois(Feols):
                 )
 
         if na_separation:
-
             self._Y.drop(na_separation, axis=0, inplace=True)
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
-            self._data.drop(na_separation, axis = 0, inplace=True)
+            self._data.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
@@ -148,7 +145,6 @@ class Fepois(Feols):
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
-
 
     def get_fit(self) -> None:
         """
@@ -386,7 +382,7 @@ class Fepois(Feols):
 
         # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            return _Xbeta #np.exp(_Xbeta)
+            return _Xbeta  # np.exp(_Xbeta)
         elif type == "response":
             return np.exp(_Xbeta)
         else:
@@ -437,9 +433,7 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
     return list(separation_na)
 
 
-def _fepois_input_checks(
-    drop_singletons: bool, tol: float, maxiter: int
-):
+def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
     """
     Perform input checks for Fepois constructor arguments.
 
