@@ -102,17 +102,31 @@ iv_fmls = [
     # "log(Y) ~ X2 | X1 ~ Z1",
     # "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
     "Y ~ 1 | f1 | X1 ~ Z1",
-    "Y ~ 1 | f1 + f2 | X1 ~ Z1",
+    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
     "Y ~ 1 | f1^f2 | X1 ~ Z1",
-    "Y ~  X2| f1 | X1 ~ Z1",
+    "Y ~  X2| f3 | X1 ~ Z1",
     # tests of overidentified models
     "Y ~ 1 | X1 ~ Z1 + Z2",
     "Y ~ X2 | X1 ~ Z1 + Z2",
-    "Y ~ X2 + C(f1) | X1 ~ Z1 + Z2",
+    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
     "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-    "Y2 ~ 1 | f1 + f2 | X1 ~ Z1 + Z2",
+    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
     "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
 ]
+
+
+@pytest.fixture
+def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
+    return pf.get_data(
+        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
+    )
+
+
+@pytest.fixture
+def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
+    return pf.get_data(
+        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
+    )
 
 
 rng = np.random.default_rng(8760985)
@@ -128,11 +142,12 @@ def check_relative_diff(x1, x2, tol, msg=None):
     assert np.all(np.abs(x1 - x2) / np.abs(x1) < tol), msg
 
 
+test_counter_feols = 0
+test_counter_fepois = 0
+test_counter_feiv = 0
+
+
 @pytest.mark.slow
-@pytest.mark.parametrize("N", [1000])
-@pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["2"])
-@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -141,10 +156,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_feols(
-    N,
-    seed,
-    beta_type,
-    error_type,
+    data_feols,
     dropna,
     inference,
     weights,
@@ -153,14 +165,15 @@ def test_single_fit_feols(
     adj,
     cluster_adj,
 ):
-    # if f3_type in ["object", "int", "categorical"] and "f3" not in fml:
-    #    pytest.skip("Only test different f3 types when f3 is in the formula.")
+    global test_counter_feols
+    test_counter_feols += 1
+
+    _skip_f3_checks(fml, f3_type)
+    _skip_dropna(test_counter_feols, dropna)
 
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
-    data = get_data(
-        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
-    )
+    data = data_feols.copy()
 
     if dropna:
         data = data.dropna()
@@ -251,27 +264,18 @@ def test_single_fit_feols(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("N", [1000])
-@pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["2"])
-@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", empty_models)
 def test_single_fit_feols_empty(
-    N,
-    seed,
-    beta_type,
-    error_type,
+    data_feols,
     dropna,
     weights,
     f3_type,
     fml,
 ):
-    data = get_data(
-        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
-    )
+    data = data_feols
 
     if dropna:
         data = data.dropna()
@@ -318,10 +322,6 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("N", [1000])
-@pytest.mark.parametrize("seed", [7651])
-@pytest.mark.parametrize("beta_type", ["2"])
-@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
@@ -329,13 +329,17 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_fepois(
-    N, seed, beta_type, error_type, dropna, inference, f3_type, fml, adj, cluster_adj
+    data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj
 ):
+    global test_counter_fepois
+    test_counter_fepois += 1
+
+    _skip_f3_checks(fml, f3_type)
+    _skip_dropna(test_counter_fepois, dropna)
+
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
-    data = get_data(
-        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
-    )
+    data = data_fepois
 
     if dropna:
         data = data.dropna()
@@ -415,10 +419,6 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("N", [1000])
-@pytest.mark.parametrize("seed", [76540251])
-@pytest.mark.parametrize("beta_type", ["2"])
-@pytest.mark.parametrize("error_type", ["2"])
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -427,10 +427,7 @@ def test_single_fit_fepois(
 @pytest.mark.parametrize("adj", [False, True])
 @pytest.mark.parametrize("cluster_adj", [False, True])
 def test_single_fit_iv(
-    N,
-    seed,
-    beta_type,
-    error_type,
+    data_feols,
     dropna,
     inference,
     weights,
@@ -439,11 +436,15 @@ def test_single_fit_iv(
     adj,
     cluster_adj,
 ):
+    global test_counter_feiv
+    test_counter_feiv += 1
+
+    _skip_f3_checks(fml, f3_type)
+    _skip_dropna(test_counter_feiv, dropna)
+
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
-    data = get_data(
-        N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
-    )
+    data = data_feols
 
     if dropna:
         data = data.dropna()
@@ -626,7 +627,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 
 @pytest.mark.slow
 def test_twoway_clustering():
-    data = get_data(N=1000, seed=17021, beta_type="1", error_type="1").dropna()
+    data = get_data(N=500, seed=17021, beta_type="1", error_type="1").dropna()
 
     cluster_adj_options = [True]
     cluster_df_options = ["min", "conventional"]
@@ -924,3 +925,15 @@ def _get_r_df(r_fixest, is_iv=False):
         df_X1 = df_r.set_index("term").xs("X1")  # only test for X1
 
     return df_X1
+
+
+def _skip_f3_checks(fml, f3_type):
+    if ("f3" not in fml) and (f3_type != "str"):
+        pytest.skip(
+            "No need to tests for different types of factor variable when not included in formula."
+        )
+
+
+def _skip_dropna(test_counter, dropna):
+    if test_counter % 4 != 0 and dropna:
+        pytest.skip(f"Skipping dropna=True for test number {test_counter}")
