@@ -186,10 +186,11 @@ class FixestMulti:
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
         _weights = self._weights
-        _has_fixef = False
         _fixef_tol = self._fixef_tol
         _weights_type = self._weights_type
         _lean = self._lean
+        _store_data = self._store_data
+        _copy_data = self._copy_data
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -219,6 +220,9 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         fixef_tol=_fixef_tol,
                         lookup_demeaned_data=lookup_demeaned_data,
+                        store_data=_store_data,
+                        copy_data = _copy_data,
+                        lean = _lean,
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
@@ -237,6 +241,9 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         fixef_tol=_fixef_tol,
                         lookup_demeaned_data=lookup_demeaned_data,
+                        store_data=_store_data,
+                        copy_data = _copy_data,
+                        lean = _lean,
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
@@ -257,6 +264,9 @@ class FixestMulti:
                         lookup_demeaned_data=lookup_demeaned_data,
                         tol=iwls_tol,
                         maxiter=iwls_maxiter,
+                        store_data=_store_data,
+                        copy_data = _copy_data,
+                        lean = _lean,
                         # solver=_solver
                     )
                     FIT.prepare_model_matrix()
@@ -275,10 +285,11 @@ class FixestMulti:
                         FIT.get_performance()
                     if isinstance(FIT, Feiv):
                         FIT.first_stage()
-                if _lean:
-                    FIT._clear_attributes()
 
-                    # store fitted model
+                # delete large attributescl
+                FIT._clear_attributes()
+
+                # store fitted model
                 self.all_fitted_models[FixestFormula.fml] = FIT
 
         self.set_fixest_multi_flag()

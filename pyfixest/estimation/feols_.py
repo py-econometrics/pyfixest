@@ -194,11 +194,14 @@ class Feols:
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        store_data = True,
+        copy_data = True,
+        lean = False
     ) -> None:
         self._method = "feols"
         self._is_iv = False
         self.FixestFormula = FixestFormula
-        self._data = data
+        self._data = data.copy() if copy_data else data
         self._ssc_dict = ssc_dict
         self._drop_singletons = drop_singletons
         self._drop_intercept = drop_intercept
@@ -209,6 +212,9 @@ class Feols:
         self._fixef_tol = fixef_tol
         self._solver = solver
         self._lookup_demeaned_data = lookup_demeaned_data
+        self._store_data = store_data
+        self._copy_data = copy_data
+        self._lean = lean
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -842,23 +848,32 @@ class Feols:
             self._has_fixef = False
 
     def _clear_attributes(self):
-        attributes = [
-            "_X",
-            "_Y",
-            "_Z",
-            "_data",
-            "_cluster_df",
-            "_tXZ",
-            "_tZy",
-            "_tZX",
-            "_weights",
-            "_scores",
-            "_tZZinv",
-            "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
-            "_Y_untransformed",
-        ]
+
+        attributes = []
+
+        if self._store_data:
+            attributes += ["_data"]
+
+        if self._lean:
+            attributes += [
+                "_X",
+                "_Y",
+                "_Z",
+                "_Xd",
+                "_Yd",
+                "_Zd",
+                "_cluster_df",
+                "_tXZ",
+                "_tZy",
+                "_tZX",
+                "_weights",
+                "_scores",
+                "_tZZinv",
+                "_u_hat",
+                "_Y_hat_link",
+                "_Y_hat_response",
+                "_Y_untransformed",
+            ]
 
         for attr in attributes:
             if hasattr(self, attr):
