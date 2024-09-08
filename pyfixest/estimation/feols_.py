@@ -1860,10 +1860,7 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        if self._X_is_empty:
-            return self._u_hat.flatten()
-        else:
-            return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
 
     def ritest(
         self,

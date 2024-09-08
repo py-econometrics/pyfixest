@@ -255,9 +255,9 @@ class FixestMulti:
                         collin_tol=collin_tol,
                         fixef_tol=_fixef_tol,
                         lookup_demeaned_data=lookup_demeaned_data,
-                        tol = iwls_tol,
-                        maxiter = iwls_maxiter,
-                        #solver=_solver
+                        tol=iwls_tol,
+                        maxiter=iwls_maxiter,
+                        # solver=_solver
                     )
                     FIT.prepare_model_matrix()
                     FIT.to_array()
