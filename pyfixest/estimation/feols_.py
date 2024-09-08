@@ -220,9 +220,9 @@ class Feols:
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._fml = ""
+        self._fml = FixestFormula.fml
         self._has_fixef = False
-        self._fixef = ""
+        self._fixef = FixestFormula._fval
         # self._coefnames = None
         self._icovars = None
 
@@ -698,6 +698,7 @@ class Feols:
         return _vcov
 
     def _vcov_crv3_slow(self, clustid, cluster_col):
+
         _k = self._k
         _method = self._method
         _fml = self._fml
