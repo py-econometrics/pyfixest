@@ -386,9 +386,9 @@ class Fepois(Feols):
 
         # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            return np.exp(_Xbeta)
+            return _Xbeta #np.exp(_Xbeta)
         elif type == "response":
-            return _Xbeta
+            return np.exp(_Xbeta)
         else:
             raise ValueError("type must be one of 'response' or 'link'.")
 

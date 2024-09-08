@@ -389,34 +389,34 @@ def test_single_fit_fepois(
     r_deviance = r_fixest.rx2("deviance")
     r_irls_weights = r_fixest.rx2("irls_weights")
 
-    #if inference == "iid" and adj and cluster_adj:
-        #check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-        #check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
-        #check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
+    if inference == "iid" and adj and cluster_adj:
+        check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
+        check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
+        check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_coef != r_coef")
         # example failure case:
         # x1 = array([1.20821485, 0.9602059 , 2.        , 1.06451667, 0.97644541])
         # x2 = array([1.20821485, 0.96020592, 2.00015315, 1.06451668, 0.97644542])
-        #check_absolute_diff(
-        #    py_irls_weights[10:12],
-        #    r_irls_weights[10:12],
-        #    1e-02,
-        #    "py_irls_weights != r_irls_weights",
-        #)
+        check_absolute_diff(
+            py_irls_weights[10:12],
+            r_irls_weights[10:12],
+            1e-02,
+            "py_irls_weights != r_irls_weights",
+        )
 
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
-    #check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
-    #check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
-    #check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
-    #check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
-    #check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
+    check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
+    check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
+    check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+    check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
-    #if not mod._has_fixef:
-    #    py_predict_response = mod.predict(type="response")  # noqa: F841
-    #    py_predict_link = mod.predict(type="link")  # noqa: F841
-    #    r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
-    #    r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
-    #    # check_absolute_diff(py_predict_response[0:5], r_predict_response[0:5], 1e-07, "py_predict_response != r_predict_response")
-    #    # check_absolute_diff(py_predict_link[0:5], r_predict_link[0:5], 1e-07, "py_predict_link != r_predict_link")
+    if not mod._has_fixef:
+        py_predict_response = mod.predict(type="response")  # noqa: F841
+        py_predict_link = mod.predict(type="link")  # noqa: F841
+        r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
+        r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
+        check_absolute_diff(py_predict_response[0:5], r_predict_response[0:5], 1e-07, "py_predict_response != r_predict_response")
+        check_absolute_diff(py_predict_link[0:5], r_predict_link[0:5], 1e-07, "py_predict_link != r_predict_link")
 
 
 @pytest.mark.slow
