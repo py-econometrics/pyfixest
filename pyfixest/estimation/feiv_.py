@@ -1,13 +1,13 @@
 import warnings
+from importlib import import_module
 from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.demean_ import demean_model
+from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
-from importlib import import_module
 
 
 class Feiv(Feols):
@@ -172,7 +172,6 @@ class Feiv(Feols):
         self._endogvar = self._endogvar.to_numpy()
 
     def demean_iv(self):
-
         if self._has_fixef:
             self._endogvard, self._Zd = demean_model(
                 self._endogvar,
@@ -228,14 +227,13 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-
+        # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
-        # lazy import to avoid circular imports
         fixest_module = import_module("pyfixest.estimation")
         fit_ = getattr(fixest_module, "feols")
 
-        fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
+        fml_first_stage = self._FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:
             fml_first_stage += f" | {self._fixef}"
 
@@ -248,13 +246,15 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
+        weight_detail = "weights" if self._has_weights else None
+
         # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
             vcov=vcov_detail,
-            weights=self._weights_name,
-            weights_type=self._weights_type,
+            weights=weight_detail,
+            weights_type=self._weights_type_feiv,
             collin_tol=self._collin_tol,
         )
 
@@ -443,6 +443,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         # If vcov is iid, redo first stage regression
+
         if self._vcov_type_detail == "iid":
             self._vcov_type_detail = "hetero"
             self._model_1st_stage.vcov("hetero")
@@ -460,14 +461,12 @@ class Feiv(Feols):
 
         # Extract coefficients for the non-exogenous instruments
 
-        pi_hat = np.array(
-            [
-                self._model_1st_stage.coef()[instrument]
-                for instrument in self._non_exo_instruments
-            ]
-        )
-
-        Z = self._Z_iv
+        pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        iv_positions = [
+            self._coefnames_z.index(instrument)
+            for instrument in self._non_exo_instruments
+        ]
+        Z = self._model_1st_stage._X[:, iv_positions]
 
         # Calculate the cross-product of the instrument matrix
         Q_zz = Z.T @ Z

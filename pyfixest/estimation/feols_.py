@@ -793,7 +793,7 @@ class Feols:
 
     def add_fixest_multi_context(
         self,
-        fml: str,
+        FixestFormula: FixestFormula,
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
@@ -810,8 +810,8 @@ class Feols:
 
         Parameters
         ----------
-        fml : str
-            The formula used for estimation.
+        FixestFormula : FixestFormula
+            The formula(s) used for estimation encoded in a `FixestFormula` object.
         depvar : str
             The dependent variable of the regression model.
         Y : pd.Series
@@ -832,7 +832,8 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = fml
+        self._fml = FixestFormula.fml
+        self._FixestFormula = FixestFormula
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()
@@ -1868,7 +1869,10 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        return self._u_hat.flatten() / np.sqrt(self._weights).flatten()
+        if self._X_is_empty:
+            return self._u_hat.flatten()
+        else:
+            return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
 
     def ritest(
         self,
