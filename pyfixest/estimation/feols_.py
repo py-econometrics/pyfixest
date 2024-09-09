@@ -849,7 +849,7 @@ class Feols:
     def _clear_attributes(self):
         attributes = []
 
-        if self._store_data:
+        if not self._store_data:
             attributes += ["_data"]
 
         if self._lean:

@@ -15,7 +15,6 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
@@ -454,7 +453,7 @@ def setup_feiv_instance():
     # Setup necessary data for Feiv
 
     data = pf.get_data()
-    return pf.feols("Y ~ 1 | X1 ~ Z1", data = data)
+    return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
 def test_IV_first_stage_invalid_model_type():
