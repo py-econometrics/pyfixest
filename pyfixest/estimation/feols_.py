@@ -354,7 +354,6 @@ class Feols:
             w = np.sqrt(self._weights)
             self._Y = self._Y * w
             self._X = self._X * w
-            self._Z = self._Z * w
 
     def drop_multicol_vars(self):
         (

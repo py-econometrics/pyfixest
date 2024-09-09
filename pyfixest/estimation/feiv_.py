@@ -163,16 +163,12 @@ class Feiv(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
 
-    def prepare_model_matrix(self):
-        super().prepare_model_matrix()
-        self._endogvar_1st_stage = self._endogvar
-        self._Z_1st_stage = self._Z
-
     def wls_transform(self) -> None:
         super().wls_transform()
         if self._has_weights:
             w = np.sqrt(self._weights)
             self._endogvar = self._endogvar * w
+            self._Z = self._Z * w
 
     def to_array(self) -> None:
         super().to_array()
