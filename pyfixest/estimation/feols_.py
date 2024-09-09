@@ -636,7 +636,6 @@ class Feols:
 
     def _vcov_crv1(self, clustid, cluster_col):
 
-        import pdb; pdb.set_trace()
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv

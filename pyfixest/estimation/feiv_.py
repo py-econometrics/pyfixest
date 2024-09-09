@@ -199,7 +199,6 @@ class Feiv(Feols):
             self._collin_vars_z,
             self._collin_index_z,
         ) = _drop_multicollinear_variables(self._Z, self._coefnames_z, self._collin_tol)
-        self._k = self._Z.shape[1]
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
