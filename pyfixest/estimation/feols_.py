@@ -329,8 +329,6 @@ class Feols:
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
 
-
-
     def demean(self):
         if self._has_fixef:
             self._Yd, self._Xd = demean_model(
@@ -404,7 +402,6 @@ class Feols:
         -------
         None
         """
-
         if self._X_is_empty:
             self._u_hat = self._Y
         else:
