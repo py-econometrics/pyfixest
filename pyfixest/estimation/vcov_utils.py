@@ -129,6 +129,7 @@ def _crv1_meat_loop(
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
+
     k = _Z.shape[1]
     dtype = _Z.dtype
     meat = np.zeros((k, k), dtype=dtype)

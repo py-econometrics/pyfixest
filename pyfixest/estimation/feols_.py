@@ -317,7 +317,7 @@ class Feols:
         self._depvar = self._Y.columns[0]
         self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
         self._has_fixef = True if self._fe is not None else False
-        self._N, self._k = self._X.shape
+        self._N = self._X.shape[0]
         self._fixef = self.FixestFormula._fval
 
         if self._weights_name is not None:
@@ -364,6 +364,7 @@ class Feols:
         ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
 
         self._X_is_empty = True if self._X.shape[1] == 0 else False
+        self._k = self._X.shape[1] if not self._X_is_empty else 0
 
     def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
         """
@@ -535,6 +536,7 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
@@ -633,6 +635,8 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid, cluster_col):
+
+        import pdb; pdb.set_trace()
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv
@@ -853,6 +857,7 @@ class Feols:
 
         if self._lean:
             attributes += [
+                "_data",
                 "_X",
                 "_Y",
                 "_Z",
