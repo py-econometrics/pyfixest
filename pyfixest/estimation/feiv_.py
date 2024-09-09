@@ -137,9 +137,9 @@ class Feiv(Feols):
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
-        store_data = True,
-        copy_data = True,
-        lean = False,
+        store_data=True,
+        copy_data=True,
+        lean=False,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -155,7 +155,7 @@ class Feiv(Feols):
             solver,
             store_data,
             copy_data,
-            lean
+            lean,
         )
 
         self._is_iv = True

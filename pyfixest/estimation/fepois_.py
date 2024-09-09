@@ -74,10 +74,9 @@ class Fepois(Feols):
         tol,
         maxiter,
         solver: str = "np.linalg.solve",
-        store_data = True,
-        copy_data = True,
-        lean = False
-
+        store_data=True,
+        copy_data=True,
+        lean=False,
     ):
         super().__init__(
             FixestFormula,
@@ -93,7 +92,7 @@ class Fepois(Feols):
             solver,
             store_data,
             copy_data,
-            lean
+            lean,
         )
 
         # input checks

@@ -194,9 +194,9 @@ class Feols:
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
-        store_data = True,
-        copy_data = True,
-        lean = False
+        store_data=True,
+        copy_data=True,
+        lean=False,
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -306,7 +306,7 @@ class Feols:
         self._X = mm_dict.get("X")
         self._fe = mm_dict.get("fe")
         self._endogvar = mm_dict.get("endogvar")
-        self._Z = mm_dict.get("Z", self._X)
+        self._Z = mm_dict.get("Z")
         self._weights_df = mm_dict.get("weights_df")
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
@@ -329,6 +329,8 @@ class Feols:
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
 
+
+
     def demean(self):
         if self._has_fixef:
             self._Yd, self._Xd = demean_model(
@@ -344,9 +346,8 @@ class Feols:
             self._Yd, self._Xd = self._Y, self._X
 
     def to_array(self):
-        self._Y, self._X, self._Z = (
+        self._Y, self._X = (
             self._Yd.to_numpy(),
-            self._Xd.to_numpy(),
             self._Xd.to_numpy(),
         )
 
@@ -403,11 +404,13 @@ class Feols:
         -------
         None
         """
+
         if self._X_is_empty:
             self._u_hat = self._Y
         else:
             _X = self._X
             _Y = self._Y
+            self._Z = self._X
             _Z = self._Z
             _solver = self._solver
             self._tZX = _Z.T @ _X
@@ -704,7 +707,6 @@ class Feols:
         return _vcov
 
     def _vcov_crv3_slow(self, clustid, cluster_col):
-
         _k = self._k
         _method = self._method
         _fml = self._fml
@@ -848,7 +850,6 @@ class Feols:
             self._has_fixef = False
 
     def _clear_attributes(self):
-
         attributes = []
 
         if self._store_data:
