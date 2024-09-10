@@ -125,13 +125,13 @@ class FixestMulti:
             None
         """
         self._method = None
-        self._is_iv = None
+        self._is_iv = False
         self._fml_dict = None
         self._fml_dict_iv = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
-        self._is_multiple_estimation = None
-        self._drop_intercept = None
+        self._is_multiple_estimation = False
+        self._drop_intercept = False
         self._weights = weights
         self._has_weights = False
         if weights is not None:
@@ -221,8 +221,8 @@ class FixestMulti:
                         fixef_tol=_fixef_tol,
                         lookup_demeaned_data=lookup_demeaned_data,
                         store_data=_store_data,
-                        copy_data = _copy_data,
-                        lean = _lean,
+                        copy_data=_copy_data,
+                        lean=_lean,
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
@@ -242,8 +242,8 @@ class FixestMulti:
                         fixef_tol=_fixef_tol,
                         lookup_demeaned_data=lookup_demeaned_data,
                         store_data=_store_data,
-                        copy_data = _copy_data,
-                        lean = _lean,
+                        copy_data=_copy_data,
+                        lean=_lean,
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
@@ -265,8 +265,8 @@ class FixestMulti:
                         tol=iwls_tol,
                         maxiter=iwls_maxiter,
                         store_data=_store_data,
-                        copy_data = _copy_data,
-                        lean = _lean,
+                        copy_data=_copy_data,
+                        lean=_lean,
                         # solver=_solver
                     )
                     FIT.prepare_model_matrix()

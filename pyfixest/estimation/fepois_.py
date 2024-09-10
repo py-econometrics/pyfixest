@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,6 +10,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -61,22 +62,22 @@ class Fepois(Feols):
 
     def __init__(
         self,
-        FixestFormula,
-        data,
-        ssc_dict,
-        drop_singletons,
-        drop_intercept,
-        weights,
-        weights_type,
-        collin_tol,
-        fixef_tol,
-        lookup_demeaned_data,
-        tol,
-        maxiter,
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
+        collin_tol: float,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        tol: float,
+        maxiter: int,
         solver: str = "np.linalg.solve",
-        store_data=True,
-        copy_data=True,
-        lean=False,
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
     ):
         super().__init__(
             FixestFormula,

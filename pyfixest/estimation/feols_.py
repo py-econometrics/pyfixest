@@ -188,15 +188,15 @@ class Feols:
         ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: str,
+        weights: Optional[str],
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
-        store_data=True,
-        copy_data=True,
-        lean=False,
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
     ) -> None:
         self._method = "feols"
         self._is_iv = False
@@ -640,7 +640,6 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid, cluster_col):
-
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv
