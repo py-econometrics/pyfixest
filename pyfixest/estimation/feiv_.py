@@ -114,6 +114,9 @@ class Feiv(Feols):
         clusters if users set specification of variance-covariance matrix type
     _eff_F : scalar
         Effective F-statistics of first stage regression as in Olea and Pflueger 2013
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
 
 
     Raises

@@ -58,6 +58,9 @@ class Fepois(Feols):
         Name of the weights variable.
     weights_type : Optional[str]
         Type of weights variable.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
     """
 
     def __init__(

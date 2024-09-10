@@ -179,6 +179,10 @@ class Feols:
         Adjusted R-squared value computed on demeaned dependent variable.
     _solver: str
         The solver used to fit the normal equation.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
+
     """
 
     def __init__(
