@@ -10,7 +10,6 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-import pandas as pd
 from pyfixest.estimation.estimation import feols
 from pyfixest.utils.utils import get_data, ssc
 

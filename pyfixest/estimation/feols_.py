@@ -207,7 +207,7 @@ class Feols:
         self._drop_intercept = drop_intercept
         self._weights_name = weights
         self._weights_type = weights_type
-        self._has_weights = True if weights is not None else False
+        self._has_weights = weights is not None
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
         self._solver = solver
@@ -293,6 +293,7 @@ class Feols:
         self.summary.__doc__ = _tmp.__doc__
 
     def prepare_model_matrix(self):
+        "Prepare model matrices for estimation."
         mm_dict = model_matrix_fixest(
             FixestFormula=self.FixestFormula,
             data=self._data,
@@ -316,7 +317,7 @@ class Feols:
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
         self._depvar = self._Y.columns[0]
         self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
-        self._has_fixef = True if self._fe is not None else False
+        self._has_fixef = self._fe is not None
         self._N = self._X.shape[0]
         self._fixef = self.FixestFormula._fval
 
@@ -330,6 +331,7 @@ class Feols:
         self._data = _drop_cols(self._data, self._na_index)
 
     def demean(self):
+        "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
             self._Yd, self._Xd = demean_model(
                 self._Y,
@@ -344,18 +346,21 @@ class Feols:
             self._Yd, self._Xd = self._Y, self._X
 
     def to_array(self):
+        "Convert estimation data frames to np arrays."
         self._Y, self._X = (
             self._Yd.to_numpy(),
             self._Xd.to_numpy(),
         )
 
     def wls_transform(self):
+        "Transform model matrices for WLS Estimation."
         if self._has_weights:
             w = np.sqrt(self._weights)
             self._Y = self._Y * w
             self._X = self._X * w
 
     def drop_multicol_vars(self):
+        "Detect and drop multicollinear variables."
         (
             self._X,
             self._coefnames,
@@ -363,7 +368,7 @@ class Feols:
             self._collin_index,
         ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
 
-        self._X_is_empty = True if self._X.shape[1] == 0 else False
+        self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
     def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):

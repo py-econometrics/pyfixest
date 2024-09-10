@@ -164,6 +164,7 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
 
     def wls_transform(self) -> None:
+        "Transform variables for WLS estimation."
         super().wls_transform()
         if self._has_weights:
             w = np.sqrt(self._weights)
@@ -171,11 +172,13 @@ class Feiv(Feols):
             self._Z = self._Z * w
 
     def to_array(self) -> None:
+        "Transform estimation DataFrames to arrays."
         super().to_array()
         self._Z = self._Zd.to_numpy()
         self._endogvar = self._endogvar.to_numpy()
 
     def demean(self) -> None:
+        "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
             self._endogvard, self._Zd = demean_model(
@@ -192,6 +195,7 @@ class Feiv(Feols):
             self._Zd = self._Z
 
     def drop_multicol_vars(self) -> None:
+        "Drop multicollinear variables in matrix of instruments Z."
         super().drop_multicol_vars()
         (
             self._Z,

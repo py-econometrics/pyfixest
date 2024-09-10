@@ -112,6 +112,7 @@ class Fepois(Feols):
         self._Xbeta = np.array([])
 
     def prepare_model_matrix(self):
+        "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
@@ -142,6 +143,7 @@ class Fepois(Feols):
             self.n_separation_na = len(na_separation)
 
     def to_array(self):
+        "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (
             self._Y.to_numpy(),
             self._X.to_numpy(),

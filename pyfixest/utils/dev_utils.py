@@ -141,7 +141,6 @@ def _to_integer(x: pd.Series or pd.DataFrame):
 
     try:
         x = x.astype('int64')
-        return x
     except ValueError as e:
         raise ValueError(
             """
@@ -149,6 +148,8 @@ def _to_integer(x: pd.Series or pd.DataFrame):
             Please do so manually.
             """
         ) from e
+    else:
+        return x
 
 def _to_list(x):
     if x is not None and not isinstance(x, list):
