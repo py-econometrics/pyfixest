@@ -7,7 +7,10 @@ import pandas as pd
 from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
+from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feols_compressed_ import FeolsCompressed
+
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
 
@@ -23,6 +26,8 @@ class FixestMulti:
         lean: bool,
         fixef_tol: float,
         weights_type: str,
+        use_compression: bool,
+        use_mundlak: bool
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -43,6 +48,13 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
+        use_compression: bool
+            Whether to use sufficient statistics to losslessly fit the regression model
+            on compressed data. False by default.
+        use_mundlak: bool
+            Whether to use the Mundlak transform for fixed effects estimation. Works
+            for oneway fixed effects. For two-way fixed effects, the two-way Mundlak
+            only works for panel data sets. False by default.
 
         Returns
         -------
@@ -53,6 +65,8 @@ class FixestMulti:
         self._lean = lean
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
+        self._use_compression = use_compression
+        self._use_mundlak = use_mundlak
 
         data = _polars_to_pandas(data)
 
@@ -191,6 +205,8 @@ class FixestMulti:
         _lean = self._lean
         _store_data = self._store_data
         _copy_data = self._copy_data
+        _use_mundlak = self._use_mundlak
+        self._use_compression = self._use_compression
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -270,6 +286,29 @@ class FixestMulti:
                         # solver=_solver
                     )
                     FIT.prepare_model_matrix()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
+
+                elif _method == "compression":
+
+                    FIT = FeolsCompressed(
+                        FixestFormula=FixestFormula,
+                        data=_data,
+                        ssc_dict=_ssc_dict,
+                        drop_singletons=_drop_singletons,
+                        drop_intercept=_drop_intercept,
+                        weights=_weights,
+                        weights_type=_weights_type,
+                        collin_tol=collin_tol,
+                        fixef_tol=_fixef_tol,
+                        lookup_demeaned_data=lookup_demeaned_data,
+                        store_data=_store_data,
+                        copy_data=_copy_data,
+                        lean=_lean,
+                        use_mundlak= _use_mundlak,
+                    )
+                    FIT.prepare_model_matrix()
+                    FIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
 
