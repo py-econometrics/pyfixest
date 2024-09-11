@@ -1,13 +1,15 @@
 from typing import Optional, Union
-import pandas as pd
-from pyfixest.estimation.FormulaParser import FixestFormula
-from tqdm import tqdm
-from pyfixest.estimation.feols_ import Feols
-import polars as pl
+
 import numpy as np
+import pandas as pd
+import polars as pl
+from tqdm import tqdm
+
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.FormulaParser import FixestFormula
+
 
 class FeolsCompressed(Feols):
-
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -24,7 +26,7 @@ class FeolsCompressed(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        use_mundlak = False,
+        use_mundlak=False,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -48,14 +50,21 @@ class FeolsCompressed(Feols):
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
         self._use_mundlak = use_mundlak
+        if weights is not None:
+            raise ValueError("weights argument needs to be None. WLS not supported for compressed regression.")
+        #if weights_type is not "fweights":
+        #    raise ValueError("weights_type argument needs to be 'fweights'. WLS not supported for compressed regression.")
+        self._has_weights = True
+
 
     def prepare_model_matrix(self):
-
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
         if self._is_iv:
-            raise NotImplementedError("Compression is not supported with IV regression.")
+            raise NotImplementedError(
+                "Compression is not supported with IV regression."
+            )
 
         # now run compression algos
         depvars = self._Y.columns.tolist()
@@ -64,9 +73,7 @@ class FeolsCompressed(Feols):
         X_polars = pl.DataFrame(pd.DataFrame(self._X))
         if self._fe is not None:
             fe_polars = pl.DataFrame(pd.DataFrame(self._fe))
-            data_long = pl.concat(
-                 [Y_polars, X_polars, fe_polars], how="horizontal"
-            )
+            data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
 
         if self._use_mundlak:
             if len(self._fval.split("+")) > 2:
@@ -78,9 +85,7 @@ class FeolsCompressed(Feols):
                 fevars=[f"factorize({x})" for x in fval.split("+")],
                 data_long=self._data,
             )
-            data_long = data_long.with_columns(
-                pl.lit(1).alias("Intercept")
-            )
+            data_long = data_long.with_columns(pl.lit(1).alias("Intercept"))
 
             # no fixed effects in estimation after mundlak transformation
             covars = covars_updated + ["Intercept"]
@@ -93,20 +98,22 @@ class FeolsCompressed(Feols):
             data_long=data_long,
         )
 
-        # overwrite Y, X
+        depvar_string = depvars[0]
+        self._depvar = depvar_string
+        self._fml = self._fml.replace(self._depvar, f"mean_{self._depvar}")
+
+        # overwrite Y, X, _data
+        self._data_long = data_long.to_pandas() if self._use_mundlak else self._data
         self._Y = compressed_dict.get("Y").to_pandas()
         self._X = compressed_dict.get("X").to_pandas()
-        #covars = X.columns
-        self._compression_count = compressed_dict.get(
-            "compression_count"
-        ).to_pandas()
+        # covars = X.columns
+        self._compression_count = compressed_dict.get("compression_count").to_pandas()
+        self._weights = self._compression_count.to_numpy()
         self._Yprime = compressed_dict.get("Yprime").to_pandas()
         self._Yprimeprime = compressed_dict.get("Yprimeprime").to_pandas()
-        self._df_compressed = compressed_dict.get("df_compressed").to_pandas()
-
+        self._data = compressed_dict.get("df_compressed").to_pandas()
 
     def _vcov_iid(self):
-
         _N = self._N
         _bread = self._bread
 
@@ -123,16 +130,14 @@ class FeolsCompressed(Feols):
 
         return _vcov
 
-
     def _vcov_hetero(self):
-
         _vcov_type_detail = self._vcov_type_detail
         _bread = self._bread
 
         if _vcov_type_detail in ["HC2", "HC3"]:
             raise NotImplementedError(
                 f"Only HC1 robust inference is supported, but {_vcov_type_detail} was specified."
-        )
+            )
 
         yprime = self._Yprime.to_numpy()
         yprimeprime = self._Yprimeprime.to_numpy()
@@ -146,13 +151,10 @@ class FeolsCompressed(Feols):
 
         return _bread @ _meat @ _bread
 
-
     def _vcov_crv1(self):
 
-        df_long = self._data_mundlak if self._use_mundlak else self._data_long
-
-        X_long = self._data_mundlak.select(self._coefnames).to_numpy()
-        Y_long = self._data_mundlak.select(self._depvar).to_numpy()
+        X_long = self._data_long.select(self._coefnames).to_numpy()
+        Y_long = self._data_long.select(self._depvar).to_numpy()
 
         yhat = X_long @ self._beta_hat
         uhat = Y_long.flatten() - yhat
@@ -161,12 +163,8 @@ class FeolsCompressed(Feols):
             [
                 pl.lit(yhat).alias("yhat"),
                 pl.lit(uhat).alias("uhat"),
-                pl.lit(yhat + uhat).alias(
-                    "yhat_g_boot_pos"
-                ),  # rademacher weights = 1
-                    pl.lit(yhat - uhat).alias(
-                    "yhat_g_boot_neg"
-                ),  # rademacher weights = -1
+                pl.lit(yhat + uhat).alias("yhat_g_boot_pos"),  # rademacher weights = 1
+                pl.lit(yhat - uhat).alias("yhat_g_boot_neg"),  # rademacher weights = -1
             ]
         )
 
@@ -214,8 +212,6 @@ class FeolsCompressed(Feols):
             return np.cov(beta_boot.T)
 
 
-
-
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
@@ -258,7 +254,6 @@ def _regression_compression(
     }
 
     return compressed_dict
-
 
 
 def _mundlak_transform(

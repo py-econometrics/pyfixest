@@ -341,8 +341,8 @@ def feols(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
-        use_compression = use_compression,
-        use_mundlak = use_mundlak
+        use_compression=use_compression,
+        use_mundlak=use_mundlak,
     )
 
     fixest = FixestMulti(
@@ -353,7 +353,7 @@ def feols(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=use_compression,
-        use_mundlak=use_mundlak
+        use_mundlak=use_mundlak,
     )
 
     estimation = "feols" if not use_compression else "compression"
@@ -511,8 +511,8 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
-        use_compression = False,
-        use_mundlak=False
+        use_compression=False,
+        use_mundlak=False,
     )
 
     fixest = FixestMulti(

@@ -9,8 +9,6 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
-from pyfixest.estimation.feols_compressed_ import FeolsCompressed
-
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
 
@@ -27,7 +25,7 @@ class FixestMulti:
         fixef_tol: float,
         weights_type: str,
         use_compression: bool,
-        use_mundlak: bool
+        use_mundlak: bool,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -290,7 +288,6 @@ class FixestMulti:
                     FIT.drop_multicol_vars()
 
                 elif _method == "compression":
-
                     FIT = FeolsCompressed(
                         FixestFormula=FixestFormula,
                         data=_data,
@@ -305,12 +302,13 @@ class FixestMulti:
                         store_data=_store_data,
                         copy_data=_copy_data,
                         lean=_lean,
-                        use_mundlak= _use_mundlak,
+                        use_mundlak=_use_mundlak,
                     )
                     FIT.prepare_model_matrix()
                     FIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
+                    FIT.wls_transform()
 
                 FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505

@@ -460,6 +460,7 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
+
         # Assuming `data` is the DataFrame in question
         if isinstance(data, pl.DataFrame):
             data = _polars_to_pandas(data)
