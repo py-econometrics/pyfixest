@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.24.1"
+version = "0.24.2"
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures (HC1-3, CRV1 & CRV3, wild bootstrap, randomization inference, simultaneous CIs, Romano-Wolf's multiple testing correction). Additionally, supports (some of) the regression based new Difference-in-Differences Estimators (Did2s, Linear Projections)."
-authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
+authors = [
+  "Alexander Fischer <alexander-fischer1801@t-online.de>",
+  "Styfen Schär",
+]
 license = "MIT"
 readme = "README.md"
 homepage = "https://py-econometrics.github.io/pyfixest/"
@@ -24,7 +27,7 @@ tqdm = "^4.66.4"
 great-tables = ">=0.10.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest=">=7.0.0"
+pytest = ">=7.0.0"
 rpy2 = "3.5.15"
 pytest-cov = "^4.1.0"
 pytest-xdist = ">=3.5.0"
@@ -37,26 +40,31 @@ marginaleffects = "^0.0.10"
 statsmodels = "^0.14.1"
 
 [tool.poetry.group.docs.dependencies]
+causaldata = "*"
 quartodoc = ">=0.7.2"
 jupyterlab = "^4.0.12"
 jupytext = "^1.16.1"
+papermill = "*"
+pylatex = "*"
+stargazer = "*"
 watermark = "^2.4.3"
 
 [tool.pytest.ini_options]
 addopts = [
-    "-v",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=pyfixest",
-    "--cov-report=term-missing",
-    "--color=yes",
+  "-v",
+  "--strict-markers",
+  "--strict-config",
+  "--cov=pyfixest",
+  "--cov-report=term-missing",
+  "--color=yes",
 ]
 markers = [
-    "extended: mark test to be part of the extended test suite"
+  "slow: mark test to be part of the slow test suite",
+  "extended: mark test to be part of the extended test suite",
 ]
-filterwarnings =[
-    "ignore::FutureWarning:rpy2",
-    "ignore::DeprecationWarning:rpy2"
+filterwarnings = [
+  "ignore::FutureWarning:rpy2",
+  "ignore::DeprecationWarning:rpy2",
 ]
 
 [tool.ruff]
@@ -69,19 +77,19 @@ target-version = "py39"
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
 select = [
-  "F", # Pyflakes
-  "E", # pycodestyle errors
-  "W", # pycodestyle warnings
-  "I", # isort
-  "D", # flake8-docstrings
-  "UP", # pyupgrade
+  "F",   # Pyflakes
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "D",   # flake8-docstrings
+  "UP",  # pyupgrade
   "SIM", # flake8-simplify
   "TRY", # tryceratops
 ]
 
 ignore = [
-# do not enable if formatting
-# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  # do not enable if formatting
+  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "W191",   # tab indentation
   "E111",   # indentation
   "E114",   # indentation
@@ -103,6 +111,7 @@ ignore = [
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88

@@ -329,7 +329,7 @@ class FixestMulti:
                     # special case: sometimes it is useful to fit models as
                     # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
                     if FIT._X_is_empty:
-                        FIT._u_hat = Y.to_numpy() - Yd_array
+                        FIT._u_hat = Yd_array
                     else:
                         FIT.get_fit()
 
@@ -393,7 +393,7 @@ class FixestMulti:
                 _data_clean = _drop_cols(_data, FIT.na_index)
 
                 FIT.add_fixest_multi_context(
-                    fml=FixestFormula.fml,
+                    FixestFormula=FixestFormula,
                     depvar=FixestFormula._depvar,
                     Y=Y,
                     _data=_data_clean,

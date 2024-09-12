@@ -247,11 +247,14 @@ class Fepois(Feols):
 
         # updat for inference
         self._weights = mu_old
+        self._irls_weights = mu
         # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
         self._u_hat = (WZ - WX @ delta_new).flatten()
+        self._u_hat_working = resid
+        self._u_hat_response = self._Y - np.exp(eta)
 
         self._Y = WZ
         self._X = WX
@@ -268,18 +271,39 @@ class Fepois(Feols):
         if _convergence:
             self._convergence = True
 
+    def resid(self, type: str = "response") -> np.ndarray:
+        """
+        Return residuals from regression model.
+
+        Parameters
+        ----------
+        type : str, optional
+            The type of residuals to be computed.
+            Can be either "response" (default) or "working".
+
+        Returns
+        -------
+        np.ndarray
+            A flat array with the residuals of the regression model.
+        """
+        if type == "response":
+            return self._u_hat_response.flatten()
+        elif type == "working":
+            return self._u_hat_working.flatten()
+        else:
+            raise ValueError("type must be one of 'response' or 'working'.")
+
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-        compute_stdp: bool = False
-    ) -> pd.DataFrame:
+    ) -> np.ndarray:
         """
         Return predicted values from regression model.
 
-        Return a Pandas DataFrame with predicted values of the regression model.
+        Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
         for such observations
         will be set to NaN.
@@ -300,7 +324,7 @@ class Fepois(Feols):
         type : str, optional
             The type of prediction to be computed.
             Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the responsflat np.arraye variable,
+            If type="response", the output is at the level of the response variable,
             i.e., it is the expected predictor E(Y|X).
             If "link", the output is at the level of the explanatory variables,
             i.e., the linear predictor X @ beta.
@@ -310,16 +334,15 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        compute_stdp: boolean
-            Whether to compute standard error of the predictions
+
 
 
         Returns
         -------
-        pd.DataFrame
-            A Pandas DataFrame with the predicted values of the regression model.
+        np.ndarray
+            A flat array with the predicted values of the regression model.
         """
-        _Xbeta = self._Xbeta
+        _Xbeta = self._Xbeta.flatten()
         _has_fixef = self._has_fixef
 
         if _has_fixef:
@@ -331,14 +354,13 @@ class Fepois(Feols):
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
 
-        if type not in ["response", "link"]:
-            raise ValueError("type must be one of 'response' or 'link'.")
-
-        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol, compute_stdp=compute_stdp)
+        # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            y_hat["yhat"] = np.exp(y_hat.yhat)
-
-        return y_hat
+            return np.exp(_Xbeta)
+        elif type == "response":
+            return _Xbeta
+        else:
+            raise ValueError("type must be one of 'response' or 'link'.")
 
 
 def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
