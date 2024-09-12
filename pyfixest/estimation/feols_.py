@@ -1508,7 +1508,9 @@ class Feols:
 
         prediction_df["yhat"] = y_hat.flatten()
         if compute_stdp:
-            prediction_df["stdp"] = self.get_newdata_stdp(X)
+            stdp_df = np.full(newdata.shape[0], np.nan)
+            stdp_df[X_index] = self.get_newdata_stdp(X)
+            prediction_df["stdp"] = stdp_df
 
         return prediction_df
 
