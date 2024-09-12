@@ -299,6 +299,7 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
+        compute_stdp: bool = False
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -334,8 +335,8 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-
-
+        compute_stdp: boolean
+            Ignored, included to conform with method signature of feols.predict()
 
         Returns
         -------
