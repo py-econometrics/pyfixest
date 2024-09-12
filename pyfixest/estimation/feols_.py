@@ -1426,7 +1426,8 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-    ) -> np.ndarray:
+        compute_stdp: bool = False
+    ) -> pd.DataFrame:
         """
         Predict values of the model on new data.
 
@@ -1451,23 +1452,29 @@ class Feols:
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        link:
+        type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
+        compute_stdp: boolean
+            Whether to compute standard error of the predictions
 
         Returns
         -------
-        y_hat : np.ndarray
-            A flat np.array with predicted values of the regression model.
+        pred_results : pd.DataFrame
+            Dataframe with columns "y_hat" and optionally "stdp" (if compute_stdp is True)
         """
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
 
+        prediction_df = pd.DataFrame()
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self.resid()
+            prediction_df["yhat"] = self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
+            if compute_stdp:
+                prediction_df["stdp"] = self.get_newdata_stdp(self._X)
+            return prediction_df
 
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
@@ -1501,7 +1508,64 @@ class Feols:
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
-        return y_hat.flatten()
+        prediction_df["yhat"] = y_hat.flatten()
+        if compute_stdp:
+            stdp_df = np.full(newdata.shape[0], np.nan)
+            stdp_df[X_index] = self.get_newdata_stdp(X)
+            prediction_df["stdp"] = stdp_df
+
+        return prediction_df
+
+
+    def get_newdata_stdp(self, X):
+        """
+        Get standard error of predictions for new data.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Covariates for new data points.
+
+        Returns
+        -------
+        list
+            Standard errors for each prediction
+        """
+        # for now only compute prediction error if model has no fixed effects
+        # TODO: implement for fixed effects
+        if not self._has_fixef:
+            if not self._X_is_empty:
+                return list(map(self.get_single_row_stdp, X))
+            else:
+                warnings.warn(
+                    """
+                    Standard error of the prediction cannot be computed if X is empty.
+                    Prediction dataframe stdp column will be None.
+                    """
+                )
+        else:
+            warnings.warn(
+                """
+                Standard error of the prediction is not implemented for fixed effects models.
+                Prediction dataframe stdp column will be None.
+                """
+            )
+
+    def get_single_row_stdp(self, row):
+        """
+        Get standard error of predictions for a single row.
+
+        Parameters
+        ----------
+        row : np.ndarray
+            Single row of new covariate data
+
+        Returns
+        -------
+        np.ndarray
+            Standard error of prediction for single row
+        """
+        return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
 
     def get_nobs(self):
         """

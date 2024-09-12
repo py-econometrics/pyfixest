@@ -37,8 +37,8 @@ def test_internally(data):
     # predict via feols, without fixed effect
     fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
     mod = fit.fetch_model(0)
-    original_prediction = mod.predict()
-    updated_prediction = mod.predict(newdata=mod._data)
+    original_prediction = mod.predict().yhat
+    updated_prediction = mod.predict(newdata=mod._data).yhat
     np.allclose(original_prediction, updated_prediction)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
@@ -47,15 +47,15 @@ def test_internally(data):
     fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
     mod = fit.fetch_model(0)
     mod.fixef()
-    original_prediction = mod.predict()
-    updated_prediction = mod.predict(newdata=mod._data)
+    original_prediction = mod.predict().yhat
+    updated_prediction = mod.predict(newdata=mod._data).yhat
     np.allclose(original_prediction, updated_prediction)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
     # now expect error with updated predicted being a subset of data
     with pytest.raises(ValueError):
-        updated_prediction = mod.predict(newdata=data.iloc[0:100, :])
+        updated_prediction = mod.predict(newdata=data.iloc[0:100, :]).yhat
         np.allclose(original_prediction, updated_prediction)
 
     # fepois NotImplementedError(s)
@@ -123,18 +123,18 @@ def test_vs_fixest(data, fml):
     #    raise ValueError("sumFE for Poisson are not equal")
 
     # test predict for OLS
-    if not np.allclose(feols_mod.predict(), r_fixest_ols.rx2("fitted.values")):
+    if not np.allclose(feols_mod.predict().yhat, r_fixest_ols.rx2("fitted.values")):
         raise ValueError("Predictions for OLS are not equal")
 
-    if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
+    if not np.allclose(len(feols_mod.predict().yhat), len(stats.predict(r_fixest_ols))):
         raise ValueError("Predictions for OLS are not the same length")
     # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(), r_fixest_pois.rx2("fitted.values")):
+    # if not np.allclose(fepois_mod.predict().yhat, r_fixest_pois.rx2("fitted.values")):
     #    raise ValueError("Predictions for Poisson are not equal")
 
     # test on new data - OLS.
     if not np.allclose(
-        feols_mod.predict(newdata=data2), stats.predict(r_fixest_ols, newdata=data2)
+        feols_mod.predict(newdata=data2).yhat, stats.predict(r_fixest_ols, newdata=data2)
     ):
         raise ValueError("Predictions for OLS are not equal")
 
@@ -171,7 +171,7 @@ def test_predict_nas():
     # test 1
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
-    res = fit.predict(newdata=data)
+    res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
@@ -184,7 +184,7 @@ def test_predict_nas():
 
     fml = "Y ~ X1 + X2 | f1"
     fit = feols(fml, data=data)
-    res = fit.predict(newdata=newdata)
+    res = fit.predict(newdata=newdata).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
@@ -192,7 +192,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     newdata.loc[198, "Y"] = np.nan
-    res = fit.predict(newdata=newdata)
+    res = fit.predict(newdata=newdata).yhat
     res_r = stats.predict(fit_r, newdata=newdata)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
@@ -201,7 +201,7 @@ def test_predict_nas():
     # test 3
     fml = "Y ~ X1 + X2 + f1| f1 "
     fit = feols(fml, data=data)
-    res = fit.predict(newdata=data)
+    res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
     np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
@@ -229,7 +229,7 @@ def test_new_fixef_level(data, fml):
         se="hetero",
     )
 
-    updated_prediction_py = feols_mod.predict(newdata=data2)
+    updated_prediction_py = feols_mod.predict(newdata=data2).yhat
     updated_prediction_r = stats.predict(r_fixest_ols, newdata=data2)
 
     if not np.allclose(updated_prediction_py, updated_prediction_r):
@@ -249,7 +249,7 @@ def test_categorical_covariate_predict():
     df_sub = df.query("x == 1 or x == 2 or x == 3").copy()
 
     py_fit = feols("y ~ C(x, contr.treatment(base=1))", df)
-    py_predict = py_fit.predict(df_sub)
+    py_predict = py_fit.predict(df_sub).yhat
 
     r_predict = np.array(
         [

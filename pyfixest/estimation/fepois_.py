@@ -299,7 +299,8 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: str = "link",
-    ) -> np.ndarray:
+        compute_stdp: bool = False
+    ) -> pd.DataFrame:
         """
         Return predicted values from regression model.
 
@@ -334,13 +335,13 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-
-
+        compute_stdp: boolean
+            Ignored, included to conform with method signature of feols.predict()
 
         Returns
         -------
-        np.ndarray
-            A flat array with the predicted values of the regression model.
+        pred_results : pd.DataFrame
+            Dataframe with columns "y_hat" with predicted values from regression model
         """
         _Xbeta = self._Xbeta.flatten()
         _has_fixef = self._has_fixef
@@ -355,10 +356,13 @@ class Fepois(Feols):
             )
 
         # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+        prediction_df = pd.DataFrame()
         if type == "link":
-            return np.exp(_Xbeta)
+            prediction_df["yhat"] = np.exp(_Xbeta)
+            return prediction_df
         elif type == "response":
-            return _Xbeta
+            prediction_df["yhat"] = _Xbeta
+            return prediction_df
         else:
             raise ValueError("type must be one of 'response' or 'link'.")
 
