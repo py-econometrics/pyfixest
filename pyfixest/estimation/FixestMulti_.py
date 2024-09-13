@@ -304,8 +304,9 @@ class FixestMulti:
                         lean=_lean,
                         use_mundlak=_use_mundlak,
                     )
+
                     FIT.prepare_model_matrix()
-                    FIT.demean()
+                    #FIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
                     FIT.wls_transform()

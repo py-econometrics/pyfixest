@@ -51,11 +51,12 @@ class FeolsCompressed(Feols):
         self._supports_cluster_causal_variance = False
         self._use_mundlak = use_mundlak
         if weights is not None:
-            raise ValueError("weights argument needs to be None. WLS not supported for compressed regression.")
-        #if weights_type is not "fweights":
+            raise ValueError(
+                "weights argument needs to be None. WLS not supported for compressed regression."
+            )
+        # if weights_type is not "fweights":
         #    raise ValueError("weights_type argument needs to be 'fweights'. WLS not supported for compressed regression.")
         self._has_weights = True
-
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -69,32 +70,45 @@ class FeolsCompressed(Feols):
         # now run compression algos
         depvars = self._Y.columns.tolist()
         covars = self._X.columns.tolist()
+
         Y_polars = pl.DataFrame(pd.DataFrame(self._Y))
         X_polars = pl.DataFrame(pd.DataFrame(self._X))
+
+        fevars = []
         if self._fe is not None:
+            fevars = self._fe.columns.tolist()
             fe_polars = pl.DataFrame(pd.DataFrame(self._fe))
             data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
+        else:
+            data_long = pl.concat([Y_polars, X_polars], how="horizontal")
+
+        if self._fe is not None:
+            self._use_mundlak = True
 
         if self._use_mundlak:
-            if len(self._fval.split("+")) > 2:
+
+            if len(fevars) > 2:
                 raise ValueError(
                     "The Mundlak transform is only supported for models with up to two fixed effects."
                 )
             data_long, covars_updated = _mundlak_transform(
                 covars=covars,
-                fevars=[f"factorize({x})" for x in fval.split("+")],
-                data_long=self._data,
+                fevars=fevars,
+                data_long=data_long,
             )
             data_long = data_long.with_columns(pl.lit(1).alias("Intercept"))
 
             # no fixed effects in estimation after mundlak transformation
             covars = covars_updated + ["Intercept"]
+            self._coefnames = covars
+            self._fe = None
         else:
             data_long = pl.concat([Y_polars, X_polars], how="horizontal")
 
         compressed_dict = _regression_compression(
             depvars=depvars,
             covars=covars,
+            fevars = fevars,
             data_long=data_long,
         )
 
@@ -103,9 +117,10 @@ class FeolsCompressed(Feols):
         self._fml = self._fml.replace(self._depvar, f"mean_{self._depvar}")
 
         # overwrite Y, X, _data
-        self._data_long = data_long.to_pandas() if self._use_mundlak else self._data
-        self._Y = compressed_dict.get("Y").to_pandas()
-        self._X = compressed_dict.get("X").to_pandas()
+        self._data_long = data_long
+        self._Yd = compressed_dict.get("Y").to_pandas()
+        self._Xd = compressed_dict.get("X").to_pandas()
+        self._fe = compressed_dict.get("fe").to_pandas()
         # covars = X.columns
         self._compression_count = compressed_dict.get("compression_count").to_pandas()
         self._weights = self._compression_count.to_numpy()
@@ -151,15 +166,24 @@ class FeolsCompressed(Feols):
 
         return _bread @ _meat @ _bread
 
-    def _vcov_crv1(self):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
 
-        X_long = self._data_long.select(self._coefnames).to_numpy()
-        Y_long = self._data_long.select(self._depvar).to_numpy()
+
+
+        _data_long_pl = self._data_long
+        if "Intercept" in self._coefnames and "Intercept" not in _data_long_pl.columns:
+            _data_long_pl = _data_long_pl.with_columns([
+                pl.lit(1).alias("Intercept")
+            ])
+            _data_long_pl = _data_long_pl.select(["Intercept"] + _data_long_pl.columns[:-1])
+
+        X_long = _data_long_pl.select(self._coefnames).to_numpy()
+        Y_long = _data_long_pl.select(self._depvar).to_numpy()
 
         yhat = X_long @ self._beta_hat
         uhat = Y_long.flatten() - yhat
 
-        df_long = df_long.with_columns(
+        _data_long_pl = _data_long_pl.with_columns(
             [
                 pl.lit(yhat).alias("yhat"),
                 pl.lit(uhat).alias("uhat"),
@@ -172,19 +196,23 @@ class FeolsCompressed(Feols):
         beta_boot = np.zeros((boot_iter, self._k))
 
         clustervar = self._clustervar
-        cluster = self._data_long[clustervar]
+        cluster = _data_long_pl[clustervar]
         cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
-        df_long.sort(f"factorize({clustervar[0]})")
+        _data_long_pl = _data_long_pl.with_columns(
+            pl.col(clustervar[0]).cast(pl.Int32)
+        )
+        #_data_long_pl.sort(f"({clustervar[0]})")
 
         for b in tqdm(range(boot_iter)):
             boot_df = pl.DataFrame(
                 {
                     "coin_flip": np.random.randint(0, 2, size=len(cluster_ids)),
-                    f"factorize({clustervar[0]})": cluster_ids,
+                    f"{clustervar[0]}": cluster_ids,
                 }
             )
-            df_boot = df_long.join(
-                boot_df, on=f"factorize({clustervar[0]})", how="left"
+
+            df_boot = _data_long_pl.join(
+                boot_df, on=f"{clustervar[0]}", how="left"
             )
             df_boot = df_boot.with_columns(
                 [
@@ -194,9 +222,13 @@ class FeolsCompressed(Feols):
                     .alias("yhat_boot")
                 ]
             )
+
+            # model_matrix needs to be called here
+
             comp_dict = _regression_compression(
                 depvars=["yhat_boot"],
                 covars=self._coefnames,
+                fevars = self._fe.columns.tolist(),
                 data_long=df_boot,
             )
             Y = comp_dict.get("Y").to_numpy()
@@ -209,17 +241,18 @@ class FeolsCompressed(Feols):
                 0
             ].flatten()
 
-            return np.cov(beta_boot.T)
+        return np.cov(beta_boot.T)
 
 
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
+    fevars: Optional[list[str]],
     data_long: pl.DataFrame,
     short: bool = False,
 ) -> dict:
     "Compress data for regression based on sufficient statistics."
-    covars_updated = covars.copy()
+    covars_updated = covars.copy() + fevars.copy() if fevars is not None else covars.copy()
 
     agg_expressions = []
 
@@ -244,7 +277,8 @@ def _regression_compression(
     df_compressed = df_compressed.collect()
     compressed_dict = {
         "Y": df_compressed.select(f"mean_{depvars[0]}"),
-        "X": df_compressed.select(covars_updated),
+        "X": df_compressed.select(covars),
+        "fe": df_compressed.select(fevars) if fevars is not None else None,
         "compression_count": df_compressed.select("count"),
         "Yprime": df_compressed.select(f"sum_{depvars[0]}") if not short else None,
         "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq")

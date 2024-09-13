@@ -460,8 +460,8 @@ class Feols:
         Feols
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
-
         # Assuming `data` is the DataFrame in question
+
         if isinstance(data, pl.DataFrame):
             data = _polars_to_pandas(data)
 
@@ -644,7 +644,7 @@ class Feols:
 
         return _vcov
 
-    def _vcov_crv1(self, clustid, cluster_col):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv
