@@ -26,6 +26,8 @@ class FixestMulti:
         weights_type: str,
         use_compression: bool,
         use_mundlak: bool,
+        reps: int,
+        seed: Optional[int],
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -53,6 +55,12 @@ class FixestMulti:
             Whether to use the Mundlak transform for fixed effects estimation. Works
             for oneway fixed effects. For two-way fixed effects, the two-way Mundlak
             only works for panel data sets. False by default.
+        reps : int
+            The number of bootstrap iterations to run. Only relevant for wild cluster
+            bootstrap for use_compression=True.
+        seed : Optional[int]
+            Option to provide a random seed. Default is None.
+            Only relevant for wild cluster bootstrap for use_compression=True.
 
         Returns
         -------
@@ -65,6 +73,8 @@ class FixestMulti:
         self._weights_type = weights_type
         self._use_compression = use_compression
         self._use_mundlak = use_mundlak
+        self._reps = reps if use_compression else None
+        self._seed = seed if use_compression else None
 
         data = _polars_to_pandas(data)
 
@@ -303,6 +313,8 @@ class FixestMulti:
                         copy_data=_copy_data,
                         lean=_lean,
                         use_mundlak=_use_mundlak,
+                        reps = self._reps,
+                        seed = self._seed
                     )
 
                     FIT.prepare_model_matrix()

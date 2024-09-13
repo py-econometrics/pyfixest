@@ -27,6 +27,8 @@ class FeolsCompressed(Feols):
         copy_data: bool = True,
         lean: bool = False,
         use_mundlak=False,
+        reps = 100,
+        seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -57,6 +59,8 @@ class FeolsCompressed(Feols):
         # if weights_type is not "fweights":
         #    raise ValueError("weights_type argument needs to be 'fweights'. WLS not supported for compressed regression.")
         self._has_weights = True
+        self._reps = reps
+        self._seed = seed
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -192,7 +196,8 @@ class FeolsCompressed(Feols):
             ]
         )
 
-        boot_iter = 100
+        boot_iter = self._reps
+        rng = np.random.default_rng(self._seed)
         beta_boot = np.zeros((boot_iter, self._k))
 
         clustervar = self._clustervar
@@ -206,7 +211,7 @@ class FeolsCompressed(Feols):
         for b in tqdm(range(boot_iter)):
             boot_df = pl.DataFrame(
                 {
-                    "coin_flip": np.random.randint(0, 2, size=len(cluster_ids)),
+                    "coin_flip": rng.integers(0, 2, size=len(cluster_ids)),
                     f"{clustervar[0]}": cluster_ids,
                 }
             )

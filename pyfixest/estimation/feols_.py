@@ -521,6 +521,7 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
+
             if data is not None:
                 # use input data set
                 self._cluster_df = _get_cluster_df(
