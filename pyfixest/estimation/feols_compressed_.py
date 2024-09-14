@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
@@ -10,7 +11,6 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 class FeolsCompressed(Feols):
-
     """
     Non-user-facing class for compressed regression with fixed effects.
 
@@ -55,7 +55,6 @@ class FeolsCompressed(Feols):
         The seed for the random number generator. Only relevant for CRV1 inference, where a wild
         cluster bootstrap is used.
     """
-
 
     def __init__(
         self,
@@ -106,6 +105,7 @@ class FeolsCompressed(Feols):
         self._has_weights = True
         self._reps = reps
         self._seed = seed
+        self._use_mundlak = False
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -168,15 +168,15 @@ class FeolsCompressed(Feols):
 
         # overwrite Y, X, _data
         self._data_long = data_long
-        self._Yd = compressed_dict.get("Y").to_pandas()
-        self._Xd = compressed_dict.get("X").to_pandas()
-        self._fe = compressed_dict.get("fe").to_pandas()
+        self._Yd = compressed_dict.Y.to_pandas()
+        self._Xd = compressed_dict.X.to_pandas()
+        self._fe = compressed_dict.fe.to_pandas()
         # covars = X.columns
-        self._compression_count = compressed_dict.get("compression_count").to_pandas()
+        self._compression_count = compressed_dict.compression_count.to_pandas()
         self._weights = self._compression_count.to_numpy()
-        self._Yprime = compressed_dict.get("Yprime").to_pandas()
-        self._Yprimeprime = compressed_dict.get("Yprimeprime").to_pandas()
-        self._data = compressed_dict.get("df_compressed").to_pandas()
+        self._Yprime = compressed_dict.Yprime.to_pandas()
+        self._Yprimeprime = compressed_dict.Yprimeprime.to_pandas()
+        self._data = compressed_dict.df_compressed.to_pandas()
 
     def _vcov_iid(self):
         _N = self._N
@@ -267,17 +267,16 @@ class FeolsCompressed(Feols):
                 ]
             )
 
-            # model_matrix needs to be called here
-
             comp_dict = _regression_compression(
                 depvars=["yhat_boot"],
                 covars=self._coefnames,
                 fevars=self._fe.columns.tolist(),
                 data_long=df_boot,
             )
-            Y = comp_dict.get("Y").to_numpy()
-            X = comp_dict.get("X").to_numpy()
-            compression_count = comp_dict.get("compression_count").to_numpy()
+
+            Y: np.ndarray = comp_dict.Y.to_numpy()
+            X: np.ndarray = comp_dict.X.to_numpy()
+            compression_count: np.ndarray = comp_dict.compression_count.to_numpy()
             Yw = Y * np.sqrt(compression_count)
             Xw = X * np.sqrt(compression_count)
 
@@ -288,13 +287,24 @@ class FeolsCompressed(Feols):
         return np.cov(beta_boot.T)
 
 
+@dataclass
+class _RegressionCompressionData:
+    Y: pl.DataFrame
+    X: pl.DataFrame
+    fe: Optional[pl.DataFrame]
+    compression_count: pl.DataFrame
+    Yprime: Optional[pl.DataFrame]
+    Yprimeprime: Optional[pl.DataFrame]
+    df_compressed: pl.DataFrame
+
+
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
     fevars: Optional[list[str]],
     data_long: pl.DataFrame,
     short: bool = False,
-) -> dict:
+) -> _RegressionCompressionData:
     "Compress data for regression based on sufficient statistics."
     covars_updated = (
         covars.copy() + fevars.copy() if fevars is not None else covars.copy()
@@ -321,19 +331,16 @@ def _regression_compression(
     df_compressed = df_compressed.with_columns(mean_expressions)
 
     df_compressed = df_compressed.collect()
-    compressed_dict = {
-        "Y": df_compressed.select(f"mean_{depvars[0]}"),
-        "X": df_compressed.select(covars),
-        "fe": df_compressed.select(fevars) if fevars is not None else None,
-        "compression_count": df_compressed.select("count"),
-        "Yprime": df_compressed.select(f"sum_{depvars[0]}") if not short else None,
-        "Yprimeprime": df_compressed.select(f"sum_{depvars[0]}_sq")
-        if not short
-        else None,
-        "df_compressed": df_compressed,
-    }
 
-    return compressed_dict
+    return _RegressionCompressionData(
+        Y=df_compressed.select(f"mean_{depvars[0]}"),
+        X=df_compressed.select(covars),
+        fe=df_compressed.select(fevars) if fevars is not None else None,
+        compression_count=df_compressed.select("count"),
+        Yprime=df_compressed.select(f"sum_{depvars[0]}") if not short else None,
+        Yprimeprime=df_compressed.select(f"sum_{depvars[0]}_sq") if not short else None,
+        df_compressed=df_compressed,
+    )
 
 
 def _mundlak_transform(

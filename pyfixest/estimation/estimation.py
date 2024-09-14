@@ -356,9 +356,8 @@ def feols(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=use_compression,
-        use_mundlak=use_mundlak,
         reps=reps,
-        seed=seed
+        seed=seed,
     )
 
     fixest = FixestMulti(
@@ -369,7 +368,6 @@ def feols(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=use_compression,
-        use_mundlak=use_mundlak,
         reps=reps,
         seed=seed,
     )
@@ -530,9 +528,8 @@ def fepois(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=False,
-        use_mundlak=False,
-        reps= 0,
-        seed= None
+        reps=0,
+        seed=None,
     )
 
     fixest = FixestMulti(
@@ -542,6 +539,9 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=False,
+        reps=0,
+        seed=None,
     )
 
     fixest._prepare_estimation(
@@ -579,9 +579,8 @@ def _estimation_input_checks(
     fixef_tol: float,
     weights_type: str,
     use_compression: bool,
-    use_mundlak: bool,
     reps,
-    seed
+    seed,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -656,16 +655,11 @@ def _estimation_input_checks(
             "Compressed regression is not supported with weights."
         )
 
-    if not isinstance(use_mundlak, bool):
-        raise TypeError("The function argument `use_mundlak` must be of type bool.")
-
-
     if not isinstance(reps, int):
         raise TypeError("The function argument `reps` must be of type int.")
 
     if reps <= 0:
         raise ValueError("The function argument `reps` must be strictly positive.")
 
-    if seed is not None:
-        if not isinstance(seed, int):
-            raise TypeError("The function argument `seed` must be of type int.")
+    if seed is not None and not isinstance(seed, int):
+        raise TypeError("The function argument `seed` must be of type int.")
