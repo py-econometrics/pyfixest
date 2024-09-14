@@ -139,25 +139,27 @@ class FeolsCompressed(Feols):
                 raise ValueError(
                     "The Mundlak transform is only supported for models with up to two fixed effects."
                 )
+
             data_long, covars_updated = _mundlak_transform(
                 covars=covars,
                 fevars=fevars,
                 data_long=data_long,
             )
+
+            # add intercept
             data_long = data_long.with_columns(pl.lit(1).alias("Intercept"))
             data_long = data_long.select(
                 ["Intercept"] + [col for col in data_long.columns if col != "Intercept"]
             )
-            # no fixed effects in estimation after mundlak transformation
-            covars = ["Intercept"] + covars_updated
-            self._coefnames = covars
+
+            self._coefnames =  ["Intercept"] + covars_updated
             self._fe = None
         else:
             data_long = pl.concat([Y_polars, X_polars], how="horizontal")
 
         compressed_dict = _regression_compression(
             depvars=depvars,
-            covars=covars,
+            covars=self._coefnames,
             fevars=fevars,
             data_long=data_long,
         )
@@ -179,6 +181,7 @@ class FeolsCompressed(Feols):
         self._data = compressed_dict.df_compressed.to_pandas()
 
     def _vcov_iid(self):
+
         _N = self._N
         _bread = self._bread
 
@@ -247,7 +250,6 @@ class FeolsCompressed(Feols):
         cluster = _data_long_pl[clustervar]
         cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
         _data_long_pl = _data_long_pl.with_columns(pl.col(clustervar[0]).cast(pl.Int32))
-        # _data_long_pl.sort(f"({clustervar[0]})")
 
         for b in tqdm(range(boot_iter)):
             boot_df = pl.DataFrame(

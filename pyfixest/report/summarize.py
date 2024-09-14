@@ -254,7 +254,7 @@ def etable(
             # check if not empty string
             if fixef:
                 for i, model in enumerate(models):
-                    if model._fixef is not None and fixef in model._fixef.split("+"):
+                    if model._fixef is not None and fixef in model._fixef.split("+") and not model._use_mundlak:
                         fe_df.loc[i, fixef] = "x"
                     else:
                         fe_df.loc[i, fixef] = "-"
@@ -522,13 +522,15 @@ def summary(
             estimation_method = "DID2S"
         else:
             raise ValueError("Unknown estimation method.")
-
         print("###")
         print("")
         print("Estimation: ", estimation_method)
         depvar_fixef = f"Dep. var.: {depvar}"
         if fxst._fixef is not None:
-            depvar_fixef += f", Fixed effects: {fxst._fixef}"
+            if not fxst._use_mundlak:
+                depvar_fixef += f", Fixed effects: {fxst._fixef}"
+            else:
+                depvar_fixef += f", Mundlak: by {fxst._fixef}"
         print(depvar_fixef)
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)

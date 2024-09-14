@@ -528,7 +528,7 @@ def fepois(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=False,
-        reps=0,
+        reps=None,
         seed=None,
     )
 
@@ -540,7 +540,7 @@ def fepois(
         fixef_tol=fixef_tol,
         weights_type=weights_type,
         use_compression=False,
-        reps=0,
+        reps=None,
         seed=None,
     )
 
@@ -579,8 +579,8 @@ def _estimation_input_checks(
     fixef_tol: float,
     weights_type: str,
     use_compression: bool,
-    reps,
-    seed,
+    reps: Optional[int],
+    seed: Optional[int],
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -655,11 +655,13 @@ def _estimation_input_checks(
             "Compressed regression is not supported with weights."
         )
 
-    if not isinstance(reps, int):
-        raise TypeError("The function argument `reps` must be of type int.")
+    if reps is not None:
 
-    if reps <= 0:
-        raise ValueError("The function argument `reps` must be strictly positive.")
+        if not isinstance(reps, int):
+            raise TypeError("The function argument `reps` must be of type int.")
+
+        if reps <= 0:
+            raise ValueError("The function argument `reps` must be strictly positive.")
 
     if seed is not None and not isinstance(seed, int):
         raise TypeError("The function argument `seed` must be of type int.")

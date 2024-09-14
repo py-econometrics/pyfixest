@@ -7,6 +7,11 @@ from pyfixest.utils.dgps import get_sharkfin
 ATOL = 1e-6
 RTOL_BOOT = 1.05
 
+def check_absolute_diff(x1, x2, tol, msg=None):
+    msg = "" if msg is None else msg
+    assert np.all(np.abs(x1 - x2) < tol), msg
+
+
 
 @pytest.fixture
 def data():
@@ -27,6 +32,12 @@ fmls = [
     "Y ~ treat | unit + year",
     "Y ~ treat + X | unit",
     "Y ~ treat + X | unit + year",
+    # special syntax
+    "Y ~ treat + i(year)",
+    "Y ~ treat + i(year, ref = 1)",
+    "Y ~ treat + i(year, ref = 1) | unit",
+
+    "Y ~ treat + poly(year, 2)"
 ]
 
 
@@ -56,24 +67,38 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
         reps=500,
     )
 
-    assert np.all(
-        fit.coef().xs("treat") - fit_c.coef().xs("treat") < ATOL
-    ), "Error in coef"
+    check_absolute_diff(
+        x1 = fit.coef().xs("treat"),
+        x2 = fit_c.coef().xs("treat"),
+        tol = ATOL,
+        msg = "Error in coef"
+    )
 
-    if vcov in ["iid", "hetero"]:
-        assert np.all(
-            fit.se().xs("treat") - fit_c.se().xs("treat") < ATOL
-        ), "Error in se"
-        assert np.all(
-            fit.pvalue().xs("treat") - fit_c.pvalue().xs("treat") < ATOL
-        ), "Error in pvalue"
-    else:
-        assert np.all(
-            fit.se().xs("treat") / fit_c.se().xs("treat") < RTOL_BOOT
-        ), "Error in se"
-        assert np.all(
-            fit.pvalue().xs("treat") / fit_c.pvalue().xs("treat") < RTOL_BOOT
-        ), "Error in pvalue"
+
+    if True:
+        if vcov in ["iid", "hetero"]:
+
+            check_absolute_diff(
+                x1 = fit.se().xs("treat"),
+                x2 = fit_c.se().xs("treat"),
+                tol = ATOL,
+                msg = "Error in se"
+            )
+
+            check_absolute_diff(
+                x1 = fit.pvalue().xs("treat"),
+                x2 = fit_c.pvalue().xs("treat"),
+                tol = ATOL,
+                msg = "Error in pvalue"
+            )
+
+        else:
+            assert np.all(
+                np.abs(fit.se().xs("treat") / fit_c.se().xs("treat")) < RTOL_BOOT
+            ), "Error in se"
+            assert np.all(
+                np.abs(fit.pvalue().xs("treat") / fit_c.pvalue().xs("treat")) < RTOL_BOOT
+            ), "Error in pvalue"
 
 
 def test_identical_seed():
@@ -96,7 +121,7 @@ def test_different_seed():
     fit4 = pf.feols("Y ~ f1", data=data, use_compression=True, seed=125, reps=1000)
 
     assert np.allclose(fit3.coef().xs("f1"), fit4.coef().xs("f1")), "Error in seed"
-    assert np.all(fit3.se().xs("f1") / fit4.se().xs("f1") < RTOL_BOOT), "Error in se"
-    assert np.all(
-        fit3.pvalue().xs("f1") / fit4.pvalue().xs("f1") < RTOL_BOOT
+    assert np.all(np.abs(fit3.se().xs("f1") / fit4.se().xs("f1")) < RTOL_BOOT), "Error in se"
+    assert np.all(np.abs(
+        fit3.pvalue().xs("f1") / fit4.pvalue().xs("f1")) < RTOL_BOOT
     ), "Error in pvalue"

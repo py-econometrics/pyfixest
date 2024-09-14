@@ -219,6 +219,7 @@ class Feols:
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
+        self._use_mundlak = False
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
