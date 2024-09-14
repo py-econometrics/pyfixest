@@ -26,7 +26,6 @@ def feols(
     lean: bool = False,
     weights_type: str = "aweights",
     use_compression: bool = False,
-    use_mundlak: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
 ) -> Union[Feols, FixestMulti]:
@@ -106,12 +105,17 @@ def feols(
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
-        on compressed data. False by default.
-
-    use_mundlak: bool
-        Whether to use the Mundlak transform for fixed effects estimation. Works
-        for oneway fixed effects. For two-way fixed effects, the two-way Mundlak
-        only works for panel data sets. False by default.
+        on compressed data. False by default. If True, the model is estimated on
+        compressed data, which can lead to a significant speed-up for large data sets.
+        See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297.
+        Note that if `use_compression = True`, inference is lossless. If standard errors are
+        clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap
+        can be specified via the `reps` and `seed` arguments. Additionally, note that for one-way
+        fixed effects, the estimation method uses a Mundlak transform to "control" for the
+        fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed.
+        For two-way fixed effects, the Mundlak transform is only identical to a two-way
+        fixed effects model if the data set is a panel. We do not provide any checks for the
+        panel status of the data set.
 
     reps: int
         Number of bootstrap repetitions. Only relevant for boostrap inference applied to

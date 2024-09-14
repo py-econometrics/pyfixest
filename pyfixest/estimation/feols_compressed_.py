@@ -10,6 +10,53 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 class FeolsCompressed(Feols):
+
+    """
+    Non-user-facing class for compressed regression with fixed effects.
+
+    See the paper "You only compress once" by Wong et al (https://arxiv.org/abs/2102.11297) for
+    details on regression compression.
+
+    Parameters
+    ----------
+    FixestFormula : FixestFormula
+        The formula object.
+    data : pd.DataFrame
+        The data.
+    ssc_dict : dict[str, Union[str, bool]]
+        The ssc dictionary.
+    drop_singletons : bool
+        Whether to drop columns with singleton fixed effects.
+    drop_intercept : bool
+        Whether to include an intercept.
+    weights : Optional[str]
+        The column name of the weights. None if no weights are used. For this method,
+        weights needs to be None.
+    weights_type : Optional[str]
+        The type of weights. For this method, weights_type needs to be 'fweights'.
+    collin_tol : float
+        The tolerance level for collinearity.
+    fixef_tol : float
+        The tolerance level for the fixed effects.
+    lookup_demeaned_data : dict[str, pd.DataFrame]
+        The lookup table for demeaned data.
+    solver : str
+        The solver to use.
+    store_data : bool
+        Whether to store the data.
+    copy_data : bool
+        Whether to copy the data.
+    lean : bool
+        Whether to keep memory-heavy objects as attributes or not.
+    reps : int
+        The number of bootstrap repetitions. Default is 100. Only used for CRV1 inference, where
+        a wild cluster bootstrap is used.
+    seed : Optional[int]
+        The seed for the random number generator. Only relevant for CRV1 inference, where a wild
+        cluster bootstrap is used.
+    """
+
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -26,8 +73,7 @@ class FeolsCompressed(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        use_mundlak=False,
-        reps = 100,
+        reps=100,
         seed: Optional[int] = None,
     ) -> None:
         super().__init__(
@@ -51,7 +97,6 @@ class FeolsCompressed(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
-        self._use_mundlak = use_mundlak
         if weights is not None:
             raise ValueError(
                 "weights argument needs to be None. WLS not supported for compressed regression."
@@ -90,7 +135,6 @@ class FeolsCompressed(Feols):
             self._use_mundlak = True
 
         if self._use_mundlak:
-
             if len(fevars) > 2:
                 raise ValueError(
                     "The Mundlak transform is only supported for models with up to two fixed effects."
@@ -101,9 +145,11 @@ class FeolsCompressed(Feols):
                 data_long=data_long,
             )
             data_long = data_long.with_columns(pl.lit(1).alias("Intercept"))
-
+            data_long = data_long.select(
+                ["Intercept"] + [col for col in data_long.columns if col != "Intercept"]
+            )
             # no fixed effects in estimation after mundlak transformation
-            covars = covars_updated + ["Intercept"]
+            covars = ["Intercept"] + covars_updated
             self._coefnames = covars
             self._fe = None
         else:
@@ -112,7 +158,7 @@ class FeolsCompressed(Feols):
         compressed_dict = _regression_compression(
             depvars=depvars,
             covars=covars,
-            fevars = fevars,
+            fevars=fevars,
             data_long=data_long,
         )
 
@@ -171,15 +217,12 @@ class FeolsCompressed(Feols):
         return _bread @ _meat @ _bread
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-
-
-
         _data_long_pl = self._data_long
         if "Intercept" in self._coefnames and "Intercept" not in _data_long_pl.columns:
-            _data_long_pl = _data_long_pl.with_columns([
-                pl.lit(1).alias("Intercept")
-            ])
-            _data_long_pl = _data_long_pl.select(["Intercept"] + _data_long_pl.columns[:-1])
+            _data_long_pl = _data_long_pl.with_columns([pl.lit(1).alias("Intercept")])
+            _data_long_pl = _data_long_pl.select(
+                ["Intercept"] + _data_long_pl.columns[:-1]
+            )
 
         X_long = _data_long_pl.select(self._coefnames).to_numpy()
         Y_long = _data_long_pl.select(self._depvar).to_numpy()
@@ -203,10 +246,8 @@ class FeolsCompressed(Feols):
         clustervar = self._clustervar
         cluster = _data_long_pl[clustervar]
         cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
-        _data_long_pl = _data_long_pl.with_columns(
-            pl.col(clustervar[0]).cast(pl.Int32)
-        )
-        #_data_long_pl.sort(f"({clustervar[0]})")
+        _data_long_pl = _data_long_pl.with_columns(pl.col(clustervar[0]).cast(pl.Int32))
+        # _data_long_pl.sort(f"({clustervar[0]})")
 
         for b in tqdm(range(boot_iter)):
             boot_df = pl.DataFrame(
@@ -216,9 +257,7 @@ class FeolsCompressed(Feols):
                 }
             )
 
-            df_boot = _data_long_pl.join(
-                boot_df, on=f"{clustervar[0]}", how="left"
-            )
+            df_boot = _data_long_pl.join(boot_df, on=f"{clustervar[0]}", how="left")
             df_boot = df_boot.with_columns(
                 [
                     pl.when(pl.col("coin_flip") == 1)
@@ -233,7 +272,7 @@ class FeolsCompressed(Feols):
             comp_dict = _regression_compression(
                 depvars=["yhat_boot"],
                 covars=self._coefnames,
-                fevars = self._fe.columns.tolist(),
+                fevars=self._fe.columns.tolist(),
                 data_long=df_boot,
             )
             Y = comp_dict.get("Y").to_numpy()
@@ -257,7 +296,9 @@ def _regression_compression(
     short: bool = False,
 ) -> dict:
     "Compress data for regression based on sufficient statistics."
-    covars_updated = covars.copy() + fevars.copy() if fevars is not None else covars.copy()
+    covars_updated = (
+        covars.copy() + fevars.copy() if fevars is not None else covars.copy()
+    )
 
     agg_expressions = []
 
