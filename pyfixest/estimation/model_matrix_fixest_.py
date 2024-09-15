@@ -177,7 +177,9 @@ def model_matrix_fixest(
 
     # rename fixed effects columns wrapped in factorize()
     if fe is not None:
-        fe.rename(columns=lambda x: x.replace("factorize(", "").replace(")", ""), inplace=True)
+        fe.rename(
+            columns=lambda x: x.replace("factorize(", "").replace(")", ""), inplace=True
+        )
 
     return {
         "Y": Y,

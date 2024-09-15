@@ -414,8 +414,19 @@ def test_single_fit_fepois(
         py_predict_link = mod.predict(type="link")  # noqa: F841
         r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
         r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
-        check_absolute_diff(py_predict_response[0:5], r_predict_response[0:5], 1e-07, "py_predict_response != r_predict_response")
-        check_absolute_diff(py_predict_link[0:5], r_predict_link[0:5], 1e-07, "py_predict_link != r_predict_link")
+        check_absolute_diff(
+            py_predict_response[0:5],
+            r_predict_response[0:5],
+            1e-07,
+            "py_predict_response != r_predict_response",
+        )
+        check_absolute_diff(
+            py_predict_link[0:5],
+            r_predict_link[0:5],
+            1e-07,
+            "py_predict_link != r_predict_link",
+        )
+
 
 @pytest.mark.slow
 @pytest.mark.parametrize("dropna", [False, True])

@@ -656,7 +656,6 @@ def _estimation_input_checks(
         )
 
     if reps is not None:
-
         if not isinstance(reps, int):
             raise TypeError("The function argument `reps` must be of type int.")
 

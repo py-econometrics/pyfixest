@@ -254,7 +254,11 @@ def etable(
             # check if not empty string
             if fixef:
                 for i, model in enumerate(models):
-                    if model._fixef is not None and fixef in model._fixef.split("+") and not model._use_mundlak:
+                    if (
+                        model._fixef is not None
+                        and fixef in model._fixef.split("+")
+                        and not model._use_mundlak
+                    ):
                         fe_df.loc[i, fixef] = "x"
                     else:
                         fe_df.loc[i, fixef] = "-"
