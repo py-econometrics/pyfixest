@@ -40,6 +40,7 @@ def fit_multi(data):
     return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize(
     argnames="figsize",
     argvalues=[(10, 6), None],
@@ -61,11 +62,13 @@ def test_set_figsize(figsize, plot_backend):
         assert figsize_not_none == figsize
 
 
+@pytest.mark.extended
 def test_set_figsize_not_none_bad_backend():
     figsize_not_none = set_figsize((10, 6), "bad_backend")
     assert figsize_not_none == (10, 6)
 
 
+@pytest.mark.extended
 def test_set_figsize_none_bad_backend():
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
@@ -73,6 +76,7 @@ def test_set_figsize_none_bad_backend():
         set_figsize(None, "bad_backend")
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize(
     argnames="plot_backend",
     argvalues=["lets_plot", "matplotlib"],
@@ -137,6 +141,7 @@ def test_iplot(
     iplot([fit1, fit2], **plot_kwargs)
 
 
+@pytest.mark.extended
 def test_iplot_error(data):
     with pytest.raises(ValueError):
         fit4 = feols(fml="Y ~ X1", data=data, vcov="iid")
@@ -144,6 +149,7 @@ def test_iplot_error(data):
         iplot(fit4)
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize(
     argnames="plot_backend",
     argvalues=["lets_plot", "matplotlib"],
