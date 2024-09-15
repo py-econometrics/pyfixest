@@ -307,13 +307,18 @@ class FixestMulti:
                         lean=_lean,
                         reps=self._reps,
                         seed=self._seed,
+
                     )
+                    FIT.prepare_model_matrix()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
 
                     FIT.prepare_model_matrix()
                     # SFIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
                     FIT.wls_transform()
+
 
                 FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505

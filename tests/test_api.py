@@ -38,6 +38,7 @@ def test_feols_args():
     if hasattr(fit3, '_data'):
         raise AttributeError("The 'fit3' object has the attribute '_data', which should not be present.")
 
+
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
 
