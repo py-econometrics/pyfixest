@@ -352,7 +352,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="pyfixest.estimation.Feols" class="level1">
 <h1>estimation.Feols</h1>
-<p><code>estimation.Feols(self, Y, X, weights, collin_tol, coefnames, weights_name, weights_type, solver='np.linalg.solve')</code></p>
+<p><code>estimation.Feols(self, FixestFormula, data, ssc_dict, drop_singletons, drop_intercept, weights, weights_type, collin_tol, fixef_tol, lookup_demeaned_data, solver='np.linalg.solve', store_data=True, copy_data=True, lean=False)</code></p>
 <p>Non user-facing class to estimate a liner regression via OLS.</p>
 <p>Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
 <section id="parameters" class="level2">
@@ -428,9 +428,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 22%">
+<col style="width: 18%">
 <col style="width: 10%">
-<col style="width: 66%">
+<col style="width: 71%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -700,6 +700,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>str</td>
 <td>The solver used to fit the normal equation.</td>
 </tr>
+<tr class="odd">
+<td>_data</td>
+<td>pd.DataFrame</td>
+<td>The data frame used in the estimation. None if arguments <code>lean = True</code> or <code>store_data = False</code>.</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -730,6 +735,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Fitted model confidence intervals.</td>
 </tr>
 <tr class="odd">
+<td><a href="#pyfixest.estimation.Feols.demean">demean</a></td>
+<td>Demean the dependent variable and covariates by the fixed effect(s).</td>
+</tr>
+<tr class="even">
+<td><a href="#pyfixest.estimation.Feols.drop_multicol_vars">drop_multicol_vars</a></td>
+<td>Detect and drop multicollinear variables.</td>
+</tr>
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.fixef">fixef</a></td>
 <td>Compute the coefficients of (swept out) fixed effects for a regression model.</td>
 </tr>
@@ -758,28 +771,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Predict values of the model on new data.</td>
 </tr>
 <tr class="even">
+<td><a href="#pyfixest.estimation.Feols.prepare_model_matrix">prepare_model_matrix</a></td>
+<td>Prepare model matrices for estimation.</td>
+</tr>
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.pvalue">pvalue</a></td>
 <td>Fitted model p-values.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.resid">resid</a></td>
 <td>Fitted model residuals.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.ritest">ritest</a></td>
 <td>Conduct Randomization Inference (RI) test against a null hypothesis of</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.se">se</a></td>
 <td>Fitted model standard errors.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.solve_ols">solve_ols</a></td>
 <td>Solve the ordinary least squares problem using the specified solver.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.tidy">tidy</a></td>
 <td>Tidy model outputs.</td>
+</tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Feols.to_array">to_array</a></td>
+<td>Convert estimation data frames to np arrays.</td>
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.estimation.Feols.tstat">tstat</a></td>
@@ -801,11 +822,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><a href="#pyfixest.estimation.Feols.wildboottest">wildboottest</a></td>
 <td>Run a wild cluster bootstrap based on an object of type “Feols”.</td>
 </tr>
+<tr class="odd">
+<td><a href="#pyfixest.estimation.Feols.wls_transform">wls_transform</a></td>
+<td>Transform model matrices for WLS Estimation.</td>
+</tr>
 </tbody>
 </table>
 <section id="pyfixest.estimation.Feols.add_fixest_multi_context" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.add_fixest_multi_context">add_fixest_multi_context</h3>
-<p><code>estimation.Feols.add_fixest_multi_context(FixestFormula, depvar, Y, _data, _ssc_dict, _k_fe, fval, store_data)</code></p>
+<p><code>estimation.Feols.add_fixest_multi_context(depvar, Y, _data, _ssc_dict, _k_fe, fval, store_data)</code></p>
 <p>Enrich Feols object.</p>
 <p>Enrich an instance of <code>Feols</code> Class with additional attributes set in the <code>FixestMulti</code> class.</p>
 <section id="parameters-1" class="level4">
@@ -1114,6 +1139,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha<span class="op">=</span><span class="fl">0.10</span>, joint<span class="op">=</span><span class="va">True</span>, reps<span class="op">=</span><span class="dv">9999</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
+<section id="pyfixest.estimation.Feols.demean" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.demean">demean</h3>
+<p><code>estimation.Feols.demean()</code></p>
+<p>Demean the dependent variable and covariates by the fixed effect(s).</p>
+</section>
+<section id="pyfixest.estimation.Feols.drop_multicol_vars" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.drop_multicol_vars">drop_multicol_vars</h3>
+<p><code>estimation.Feols.drop_multicol_vars()</code></p>
+<p>Detect and drop multicollinear variables.</p>
+</section>
 <section id="pyfixest.estimation.Feols.fixef" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.fixef">fixef</h3>
 <p><code>estimation.Feols.fixef(atol=1e-06, btol=1e-06)</code></p>
@@ -1419,6 +1454,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
+</section>
+<section id="pyfixest.estimation.Feols.prepare_model_matrix" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.prepare_model_matrix">prepare_model_matrix</h3>
+<p><code>estimation.Feols.prepare_model_matrix()</code></p>
+<p>Prepare model matrices for estimation.</p>
 </section>
 <section id="pyfixest.estimation.Feols.pvalue" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.pvalue">pvalue</h3>
@@ -1741,6 +1781,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
+<section id="pyfixest.estimation.Feols.to_array" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.to_array">to_array</h3>
+<p><code>estimation.Feols.to_array()</code></p>
+<p>Convert estimation data frames to np arrays.</p>
+</section>
 <section id="pyfixest.estimation.Feols.tstat" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.tstat">tstat</h3>
 <p><code>estimation.Feols.tstat()</code></p>
@@ -2052,9 +2097,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </tbody>
 </table>
-
-
 </section>
+</section>
+<section id="pyfixest.estimation.Feols.wls_transform" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.wls_transform">wls_transform</h3>
+<p><code>estimation.Feols.wls_transform()</code></p>
+<p>Transform model matrices for WLS Estimation.</p>
+
+
 </section>
 </section>
 
