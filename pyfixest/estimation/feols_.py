@@ -13,7 +13,9 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -31,6 +33,7 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _drop_cols,
     _extract_variable_level,
     _polars_to_pandas,
     _select_order_coefs,
@@ -176,56 +179,46 @@ class Feols:
         Adjusted R-squared value computed on demeaned dependent variable.
     _solver: str
         The solver used to fit the normal equation.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
+
     """
 
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        weights: np.ndarray,
-        collin_tol: float,
-        coefnames: list[str],
-        weights_name: Optional[str],
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
         weights_type: Optional[str],
+        collin_tol: float,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
     ) -> None:
         self._method = "feols"
         self._is_iv = False
-
-        self._weights = weights
-        self._weights_name = weights_name
+        self.FixestFormula = FixestFormula
+        self._data = data.copy() if copy_data else data
+        self._ssc_dict = ssc_dict
+        self._drop_singletons = drop_singletons
+        self._drop_intercept = drop_intercept
+        self._weights_name = weights
         self._weights_type = weights_type
-        self._has_weights = False
-        if weights_name is not None:
-            self._has_weights = True
-
-        if self._has_weights:
-            w = np.sqrt(weights)
-            self._Y = Y * w
-            self._X = X * w
-        else:
-            self._Y = Y
-            self._X = X
-
-        self.get_nobs()
+        self._has_weights = weights is not None
+        self._collin_tol = collin_tol
+        self._fixef_tol = fixef_tol
         self._solver = solver
-        _feols_input_checks(Y, X, weights)
-
-        if self._X.shape[1] == 0:
-            self._X_is_empty = True
-        else:
-            self._X_is_empty = False
-            self._collin_tol = collin_tol
-            (
-                self._X,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
-
-        self._Z = self._X
-
-        _, self._k = self._X.shape
+        self._lookup_demeaned_data = lookup_demeaned_data
+        self._store_data = store_data
+        self._copy_data = copy_data
+        self._lean = lean
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -237,13 +230,11 @@ class Feols:
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._data = pd.DataFrame()
-        self._fml = ""
+        self._fml = FixestFormula.fml
         self._has_fixef = False
-        self._fixef = ""
+        self._fixef = FixestFormula._fval
         # self._coefnames = None
         self._icovars = None
-        self._ssc_dict: dict[str, Union[str, bool]] = {}
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -305,6 +296,85 @@ class Feols:
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
+    def prepare_model_matrix(self):
+        "Prepare model matrices for estimation."
+        mm_dict = model_matrix_fixest(
+            FixestFormula=self.FixestFormula,
+            data=self._data,
+            drop_singletons=self._drop_singletons,
+            drop_intercept=self._drop_intercept,
+            weights=self._weights_name,
+        )
+
+        self._Y = mm_dict.get("Y")
+        self._Y_untransformed = mm_dict.get("Y").copy()
+        self._X = mm_dict.get("X")
+        self._fe = mm_dict.get("fe")
+        self._endogvar = mm_dict.get("endogvar")
+        self._Z = mm_dict.get("Z")
+        self._weights_df = mm_dict.get("weights_df")
+        self._na_index = mm_dict.get("na_index")
+        self._na_index_str = mm_dict.get("na_index_str")
+        self._icovars = mm_dict.get("icovars")
+
+        self._coefnames = self._X.columns.tolist()
+        self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
+        self._depvar = self._Y.columns[0]
+        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+        self._has_fixef = self._fe is not None
+        self._N = self._X.shape[0]
+        self._fixef = self.FixestFormula._fval
+
+        if self._weights_name is not None:
+            self._weights = self._weights_df.to_numpy()
+        else:
+            self._weights = np.ones(self._N)
+        self._weights = self._weights.reshape((self._N, 1))
+
+        # update data:
+        self._data = _drop_cols(self._data, self._na_index)
+
+    def demean(self):
+        "Demean the dependent variable and covariates by the fixed effect(s)."
+        if self._has_fixef:
+            self._Yd, self._Xd = demean_model(
+                self._Y,
+                self._X,
+                self._fe,
+                self._weights.flatten(),
+                self._lookup_demeaned_data,
+                self._na_index_str,
+                self._fixef_tol,
+            )
+        else:
+            self._Yd, self._Xd = self._Y, self._X
+
+    def to_array(self):
+        "Convert estimation data frames to np arrays."
+        self._Y, self._X = (
+            self._Yd.to_numpy(),
+            self._Xd.to_numpy(),
+        )
+
+    def wls_transform(self):
+        "Transform model matrices for WLS Estimation."
+        if self._has_weights:
+            w = np.sqrt(self._weights)
+            self._Y = self._Y * w
+            self._X = self._X * w
+
+    def drop_multicol_vars(self):
+        "Detect and drop multicollinear variables."
+        (
+            self._X,
+            self._coefnames,
+            self._collin_vars,
+            self._collin_index,
+        ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
+
+        self._X_is_empty = self._X.shape[1] == 0
+        self._k = self._X.shape[1] if not self._X_is_empty else 0
+
     def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
         """
         Solve the ordinary least squares problem using the specified solver.
@@ -341,24 +411,28 @@ class Feols:
         -------
         None
         """
-        _X = self._X
-        _Y = self._Y
-        _Z = self._Z
-        _solver = self._solver
-        self._tZX = _Z.T @ _X
-        self._tZy = _Z.T @ _Y
+        if self._X_is_empty:
+            self._u_hat = self._Y
+        else:
+            _X = self._X
+            _Y = self._Y
+            self._Z = self._X
+            _Z = self._Z
+            _solver = self._solver
+            self._tZX = _Z.T @ _X
+            self._tZy = _Z.T @ _Y
 
-        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
-        self._Y_hat_link = self._X @ self._beta_hat
-        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+            self._Y_hat_link = self._X @ self._beta_hat
+            self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
 
-        self._scores = _X * self._u_hat[:, None]
-        self._hessian = self._tZX.copy()
+            self._scores = _X * self._u_hat[:, None]
+            self._hessian = self._tZX.copy()
 
-        # IV attributes, set to None for OLS, Poisson
-        self._tXZ = np.array([])
-        self._tZZinv = np.array([])
+            # IV attributes, set to None for OLS, Poisson
+            self._tXZ = np.array([])
+            self._tZZinv = np.array([])
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
@@ -471,6 +545,7 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
@@ -570,9 +645,7 @@ class Feols:
 
     def _vcov_crv1(self, clustid, cluster_col):
         _Z = self._Z
-        _weights = self._weights
         _u_hat = self._u_hat
-        _method = self._method
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
@@ -729,7 +802,6 @@ class Feols:
 
     def add_fixest_multi_context(
         self,
-        FixestFormula: FixestFormula,
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
@@ -768,8 +840,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = FixestFormula.fml
-        self._FixestFormula = FixestFormula
+        self._fml = self.FixestFormula.fml
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()
@@ -786,23 +857,32 @@ class Feols:
             self._has_fixef = False
 
     def _clear_attributes(self):
-        attributes = [
-            "_X",
-            "_Y",
-            "_Z",
-            "_data",
-            "_cluster_df",
-            "_tXZ",
-            "_tZy",
-            "_tZX",
-            "_weights",
-            "_scores",
-            "_tZZinv",
-            "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
-            "_Y_untransformed",
-        ]
+        attributes = []
+
+        if not self._store_data:
+            attributes += ["_data"]
+
+        if self._lean:
+            attributes += [
+                "_data",
+                "_X",
+                "_Y",
+                "_Z",
+                "_Xd",
+                "_Yd",
+                "_Zd",
+                "_cluster_df",
+                "_tXZ",
+                "_tZy",
+                "_tZX",
+                "_weights",
+                "_scores",
+                "_tZZinv",
+                "_u_hat",
+                "_Y_hat_link",
+                "_Y_hat_response",
+                "_Y_untransformed",
+            ]
 
         for attr in attributes:
             if hasattr(self, attr):
@@ -1805,10 +1885,7 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        if self._X_is_empty:
-            return self._u_hat.flatten()
-        else:
-            return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
 
     def ritest(
         self,
