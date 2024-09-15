@@ -321,6 +321,7 @@ class FixestMulti:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type, data=FIT._data)
+
                     FIT.get_inference()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:

@@ -229,6 +229,8 @@ class Feols:
         if self._has_weights or self._is_iv:
             self._supports_wildboottest = False
 
+        self._supports_only_cluster_fixef = False
+
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
         self._fml = FixestFormula.fml
@@ -491,6 +493,14 @@ class Feols:
             self._clustervar,
         ) = _deparse_vcov_input(vcov, _has_fixef, _is_iv)
 
+        if self._supports_only_cluster_fixef and self._vcov_type != "CRV":
+            raise NotImplementedError(
+                f"""
+                For Regression compression with use_mundlak = True, only clustered inference is
+                supported but you have specified {self._vcov_type_detail} inference.
+                """
+            )
+
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # compute vcov
@@ -522,7 +532,6 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
-
             if data is not None:
                 # use input data set
                 self._cluster_df = _get_cluster_df(

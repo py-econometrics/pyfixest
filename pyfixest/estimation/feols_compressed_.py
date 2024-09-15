@@ -105,12 +105,11 @@ class FeolsCompressed(Feols):
         self._has_weights = True
         self._reps = reps
         self._seed = seed
-        self._use_mundlak = False
 
-        if FixestFormula._fval != "0":
-            raise NotImplementedError(
-                "Compression is not supported with fixed effects syntax. Please use C(var) syntax to one-hot encode fixed effects instead."
-            )
+        # if FixestFormula._fval != "0":
+        #    raise NotImplementedError(
+        #        "Compression is not supported with fixed effects syntax. Please use C(var) syntax to one-hot encode fixed effects instead."
+        #    )
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -129,28 +128,35 @@ class FeolsCompressed(Feols):
         X_polars = pl.DataFrame(pd.DataFrame(self._X))
 
         fevars = []
-        if self._fe is not None:
+        data_long_mundlak = pl.DataFrame()
+
+        if self._has_fixef:
+            self._use_mundlak = True
+            self._supports_only_cluster_fixef = True
+
             fevars = self._fe.columns.tolist()
             fe_polars = pl.DataFrame(pd.DataFrame(self._fe))
             data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
 
             if self._use_mundlak:
-                if len(fevars) > 2:
-                    raise ValueError(
+                if len(fevars) > 1:
+                    raise NotImplementedError(
                         "The Mundlak transform is only supported for models with up to two fixed effects."
                     )
 
-                data_long, covars_updated = _mundlak_transform(
+                data_long_mundlak, covars_updated = _mundlak_transform(
                     covars=covars,
                     fevars=fevars,
                     data_long=data_long,
                 )
 
                 # add intercept
-                data_long = data_long.with_columns(pl.lit(1).alias("Intercept"))
-                data_long = data_long.select(
+                data_long_mundlak = data_long_mundlak.with_columns(
+                    pl.lit(1).alias("Intercept")
+                )
+                data_long_mundlak = data_long_mundlak.select(
                     ["Intercept"]
-                    + [col for col in data_long.columns if col != "Intercept"]
+                    + [col for col in data_long_mundlak.columns if col != "Intercept"]
                 )
 
                 self._coefnames = ["Intercept"] + covars_updated
@@ -159,14 +165,11 @@ class FeolsCompressed(Feols):
         else:
             data_long = pl.concat([Y_polars, X_polars], how="horizontal")
 
-        if self._fe is not None:
-            self._use_mundlak = True
-
         compressed_dict = _regression_compression(
             depvars=depvars,
             covars=self._coefnames,
             fevars=fevars,
-            data_long=data_long,
+            data_long=data_long_mundlak if self._use_mundlak else data_long,
         )
 
         depvar_string = depvars[0]
@@ -174,7 +177,7 @@ class FeolsCompressed(Feols):
         self._fml = self._fml.replace(self._depvar, f"mean_{self._depvar}")
 
         # overwrite Y, X, _data
-        self._data_long = data_long
+        self._data_long = data_long_mundlak if self._use_mundlak else data_long
         self._Yd = compressed_dict.Y.to_pandas()
         self._Xd = compressed_dict.X.to_pandas()
         self._fe = compressed_dict.fe.to_pandas()

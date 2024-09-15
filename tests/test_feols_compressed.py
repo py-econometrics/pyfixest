@@ -41,18 +41,34 @@ fmls = [
 
 
 @pytest.mark.parametrize("fml", fmls)
-@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "treat"}])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "unit"}])
 @pytest.mark.parametrize(
     "ssc", [pf.ssc(adj=True, cluster_adj=True), pf.ssc(adj=False, cluster_adj=False)]
 )
 @pytest.mark.parametrize("dropna", [False, True])
 def test_feols_compressed(data, fml, vcov, ssc, dropna):
+    """
+    Test FeolsCompressed.
+
+    We test equivalence of coeffients, standard errors, and p-values between Feols and FeolsCompressed.
+    We trigger the following errors:
+    - If fixef are specified, we trigger Mundlak, which is only supported with bootstrap inference.
+    - If the vcov is not iid or hetero, we relax the criteria for the standard errors and p-values.
+    - We trigger an error to check that when cluster robust variance is used, the cluster variable is in the model.
+    """
     data_copy = data.copy()
     if dropna:
         data_copy.loc[0, "Y"] = np.nan
         data_copy.loc[1, "year"] = np.nan
 
-    fit = pf.feols(fml=fml, data=data_copy, vcov=vcov, ssc=ssc)
+    feols_args = dict(
+        fml=fml,
+        data=data_copy,
+        vcov=vcov,
+        ssc=ssc,
+    )
+
+    fit = pf.feols(**feols_args)
 
     if fit._is_clustered:
         clustervar_in_model = (
@@ -62,22 +78,28 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
         if not clustervar_in_model:
             pytest.skip("Currently only testing for cluster fixed effects.")
 
-    if fit._has_fixef:
-        with pytest.raises(NotImplementedError):
-            fit_c = pf.feols(
-                fml=fml,
-                data=data_copy,
-                vcov=vcov,
-                use_compression=True,
-                ssc=ssc,
-                reps=500,
-            )
-    else:
-        fit_c = pf.feols(
-            fml=fml, data=data_copy, vcov=vcov, use_compression=True, ssc=ssc, reps=500
-        )
+    feols_args["use_compression"] = True
+    feols_args["reps"] = 500
+    feols_args["seed"] = 23
 
+    fit_c = None
+
+    try:
+        fit_c = pf.feols(**feols_args)
+    except NotImplementedError:
+        if fit._has_fixef:
+            if len(fit._fixef.split("+")) > 1:
+                pytest.raises(NotImplementedError)
+            if fit._vcov_type != "CRV":
+                pytest.raises(NotImplementedError)
+        else:
+            raise
+
+    if fit_c is not None:
         assert fit._N == fit_c._N, "Error in N"
+        assert fit_c._has_weights, "Compressed regression should have weights"
+        if fit_c._has_fixef:
+            assert fit_c._use_mundlak, "fixef estimaton should be based on Mundlak"
 
         check_absolute_diff(
             x1=fit.coef().xs("treat"),
@@ -86,30 +108,30 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
             msg="Error in coef",
         )
 
-        if True:
-            if vcov in ["iid", "hetero"]:
-                check_absolute_diff(
-                    x1=fit.se().xs("treat"),
-                    x2=fit_c.se().xs("treat"),
-                    tol=ATOL,
-                    msg="Error in se",
-                )
+        if vcov in ["iid", "hetero"]:
+            check_absolute_diff(
+                x1=fit.se().xs("treat"),
+                x2=fit_c.se().xs("treat"),
+                tol=ATOL,
+                msg="Error in se",
+            )
 
-                check_absolute_diff(
-                    x1=fit.pvalue().xs("treat"),
-                    x2=fit_c.pvalue().xs("treat"),
-                    tol=ATOL,
-                    msg="Error in pvalue",
-                )
+            check_absolute_diff(
+                x1=fit.pvalue().xs("treat"),
+                x2=fit_c.pvalue().xs("treat"),
+                tol=ATOL,
+                msg="Error in pvalue",
+            )
 
-            else:
-                assert np.all(
-                    np.abs(fit.se().xs("treat") / fit_c.se().xs("treat")) < RTOL_BOOT
-                ), "Error in se"
-                assert np.all(
-                    np.abs(fit.pvalue().xs("treat") / fit_c.pvalue().xs("treat"))
-                    < RTOL_BOOT
-                ), "Error in pvalue"
+        else:
+            # relaxed criteria for bootstrap inference (need not be identical)
+            assert np.all(
+                np.abs(fit.se().xs("treat") / fit_c.se().xs("treat")) < RTOL_BOOT
+            ), "Error in se"
+            assert np.all(
+                np.abs(fit.pvalue().xs("treat") / fit_c.pvalue().xs("treat"))
+                < RTOL_BOOT
+            ), "Error in pvalue"
 
 
 def test_identical_seed():
