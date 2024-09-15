@@ -25,7 +25,7 @@ class FixestMulti:
         fixef_tol: float,
         weights_type: str,
         use_compression: bool,
-        reps: int,
+        reps: Optional[int],
         seed: Optional[int],
     ) -> None:
         """
@@ -310,7 +310,7 @@ class FixestMulti:
                     )
 
                     FIT.prepare_model_matrix()
-                    # FIT.demean()
+                    # SFIT.demean()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
                     FIT.wls_transform()
