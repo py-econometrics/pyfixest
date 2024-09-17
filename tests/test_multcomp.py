@@ -17,7 +17,7 @@ stats = importr("stats")
 broom = importr("broom")
 
 
-@pytest.mark.slow
+@pytest.mark.extended
 def test_bonferroni():
     data = get_data().dropna()
     rng = np.random.default_rng(989)
@@ -52,7 +52,7 @@ def test_bonferroni():
     ), "bonferroni failed"
 
 
-@pytest.mark.slow
+@pytest.mark.extended
 @pytest.mark.parametrize("seed", [293, 912, 831])
 @pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
 def test_wildrwolf_hc(seed, sd):
@@ -92,7 +92,7 @@ def test_wildrwolf_hc(seed, sd):
         )
 
 
-@pytest.mark.slow
+@pytest.mark.extended
 @pytest.mark.parametrize("seed", [29090381, 32, 99932444])
 @pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
 def test_wildrwolf_crv(seed, sd):
@@ -134,7 +134,7 @@ def test_wildrwolf_crv(seed, sd):
         )
 
 
-@pytest.mark.slow
+@pytest.mark.extended
 def test_stepwise_function():
     B = 1000
     S = 5
@@ -152,7 +152,7 @@ def test_stepwise_function():
 # Import data from pyfixest
 
 
-@pytest.mark.slow
+@pytest.mark.extended
 @pytest.mark.parametrize("seed", [1000, 2000, 3000])
 @pytest.mark.parametrize("reps", [999, 1999])
 def test_sampling_scheme(seed, reps):
