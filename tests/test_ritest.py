@@ -8,6 +8,7 @@ import pyfixest as pf
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
@@ -45,6 +46,7 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [1000])
@@ -95,6 +97,7 @@ def data():
     return pf.get_data(N=1000, seed=2999)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
@@ -144,6 +147,7 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=0.005, atol=0.005)
 
 
+@pytest.mark.slow
 def test_fepois_ritest():
     data = pf.get_data(model="Fepois")
     fit = pf.fepois("Y ~ X1*f3", data=data)
@@ -158,6 +162,7 @@ def data_r_vs_t():
     return pf.get_data(N=5000, seed=2999)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
