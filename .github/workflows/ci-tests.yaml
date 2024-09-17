@@ -52,7 +52,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test_slow:
-    name: "Test Slow"
+    name: "Tests vs fixest"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

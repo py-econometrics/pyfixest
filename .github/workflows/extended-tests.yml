@@ -1,4 +1,4 @@
-name: CI / Run Extended Tests
+name: Tests Extended
 
 # Trigger on two events: push to master or labeled PR
 on:
