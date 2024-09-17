@@ -1,4 +1,4 @@
-name: Trigger Workflow on Push to Master or Specific PR Label
+name: CI / Run Optional Tests for Plots
 
 # Trigger on two events: push to master or labeled PR
 on:
@@ -23,7 +23,7 @@ jobs:
     steps:
       # Step for handling PR label 'run-plot-tests'
       - name: Check if label matches for PR
-        if: github.event_name == 'pull_request' && contains(github.event.label.name, 'run-plot-tests')
+        if: github.event_name == 'pull_request' && contains(github.event.label.name, 'plots')
         steps:
           - name: Checkout source
             uses: actions/checkout@v4
