@@ -1,0 +1,71 @@
+name: Trigger Workflow on Push to Master or Specific PR Label
+
+# Trigger on two events: push to master or labeled PR
+on:
+  # Trigger on push to master
+  push:
+    branches:
+      - master
+
+  # Trigger when a label is added to a PR
+  pull_request:
+    types: [labeled]
+
+jobs:
+  run-workflow:
+    runs-on: ubuntu-latest
+
+    # Matrix strategy for Python versions 3.9 and 3.12
+    strategy:
+      matrix:
+        python-version: [3.9, 3.12]
+
+    steps:
+      # Step for handling PR label 'run-plot-tests'
+      - name: Check if label matches for PR
+        if: github.event_name == 'pull_request' && contains(github.event.label.name, 'run-plot-tests')
+        steps:
+          - name: Checkout source
+            uses: actions/checkout@v4
+
+          - name: Setup python
+            uses: actions/setup-python@v5
+            with:
+              python-version: ${{ matrix.python-version }}
+
+          - name: Set up poetry
+            uses: snok/install-poetry@v1
+
+          - name: Install dependencies
+            run: poetry install --without docs
+
+          - name: Set numba parallel flags
+            run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+          - name: Run tests
+            run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml
+
+
+      # Step for handling push to master branch
+      - name: Check if it's a push to master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        steps:
+          - name: Checkout source
+            uses: actions/checkout@v4
+
+          - name: Setup python
+            uses: actions/setup-python@v5
+            with:
+              python-version: ${{ matrix.python-version }}
+
+          - name: Set up poetry
+            uses: snok/install-poetry@v1
+
+          - name: Install dependencies
+            run: poetry install --without docs
+
+          - name: Set numba parallel flags
+            run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+          - name: Run tests
+            run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml

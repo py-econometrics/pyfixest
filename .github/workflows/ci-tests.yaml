@@ -45,7 +45,7 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run pytest tests -m "not (extended or slow)" --cov=pyfixest --cov-report=xml
+          poetry run pytest tests -m "not (extended or slow or plots)" --cov=pyfixest --cov-report=xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -58,7 +58,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.12"]
+        python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
