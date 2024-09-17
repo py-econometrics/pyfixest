@@ -14,15 +14,7 @@ from pyfixest.estimation import (
     fepois,
     rwolf,
 )
-from pyfixest.report import (
-    coefplot, 
-    etable, 
-    dtable, 
-    make_table, 
-    iplot, 
-    summary
-)
-
+from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
 from pyfixest.utils import (
     get_data,
     get_ssc,
