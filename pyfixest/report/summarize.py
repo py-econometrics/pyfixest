@@ -27,7 +27,7 @@ def etable(
     show_fe: Optional[bool] = True,
     show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
-    notes: Optional[str] = None,
+    notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
     custom_model_stats: Optional[dict] = None,
@@ -374,9 +374,9 @@ def etable(
         # Relabel explanatory variables
         res_index = res.index.to_series()
         res_index = res_index.apply(
-            lambda x: _relabel_expvar(x, labels, interactionSymbol)
+            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol)
         )
-        res.index = res_index
+        res.set_index(res_index, inplace=True)
 
     # Relabel fixed effects
     if show_fe:
@@ -389,7 +389,7 @@ def etable(
         # When in neither then just use the original variable name
         fe_index=fe_df.index.to_series()
         fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
-        fe_df.index = fe_index
+        fe_df.set_index(fe_index, inplace=True)
  
     model_stats_df.columns = res.columns
     if show_fe:
@@ -423,10 +423,7 @@ def etable(
     elif type in ["tex", "gt"]:
         # Prepare Multiindex for columns
         id_dep = dep_var_list  # depvars
-        if model_heads is None:
-            id_head = [""] * len(models)
-        else:
-            id_head = model_heads  # model_heads provided by user
+        id_head = [""] * len(models) if model_heads is None else model_heads
         id_num = [f"({s})" for s in range(1, len(models) + 1)]  # model numbers
 
         # Concatenate the dataframes for coefficients, fixed effects, and model stats
@@ -736,14 +733,14 @@ def _number_formatter(x: float, **kwargs) -> str:
 
 def make_table(df: pd.DataFrame,
                 type: str = 'gt',
-                notes: str = None,
+                notes: str = "",
                 rgroup_sep: str ="tb",
                 rgroup_display: bool =True,
-                caption: str = None,
-                tab_label: str = None,
+                caption: Optional[str] = None,
+                tab_label: Optional[str] = None,
                 texlocation: str = 'htbp',
                 full_width: bool = False,
-                file_name: str = None,
+                file_name: Optional[str] = None,
                 **kwargs
                 ):
 
@@ -953,7 +950,7 @@ def make_table(df: pd.DataFrame,
             # Save the whole column index in order to generate table spanner labels later
             dfcols= dfs.columns.to_list()
             # Then flatten the column index just numbering the columns 
-            dfs.columns = col_numbers
+            dfs.columns = pd.Index(col_numbers)
             # Store the mapping of column numbers to column names
             col_dict = dict(zip(col_numbers, col_names))
             # Modify the last elements in each tuple in dfcols
@@ -990,7 +987,7 @@ def make_table(df: pd.DataFrame,
             # Add column spanners based on multiindex
             # Do this for every level in the multiindex (except the one with the column numbers)
             for i in range(nl-1):
-                col_spanners = {}
+                col_spanners: dict[str, list[str|int]] = {}
                 # Iterate over columns and group them by the labels in the respective level
                 for c in dfcols:
                     key = c[i]
@@ -1036,7 +1033,7 @@ def make_table(df: pd.DataFrame,
                 )
                 .cols_align(align="center")
         )
-           
+        
         # Full page width
         if full_width:
             gt = gt.tab_options(table_width = "100%")
@@ -1072,8 +1069,7 @@ def _relabel_index(index, labels=None , stats_labels=None):
         if isinstance(index, pd.MultiIndex):
             new_index=[]
             for i in index:
-                l= [labels.get(k, k) for k in i[:-1]] + [stats_labels.get(i[-1], i[-1])]
-                new_index.append(tuple(l))    
+                new_index.append(tuple([labels.get(k, k) for k in i[:-1]] + [stats_labels.get(i[-1], i[-1])]))    
             index = pd.MultiIndex.from_tuples(new_index)
         else:
             index = [stats_labels.get(k, k) for k in index]
@@ -1086,13 +1082,13 @@ def _relabel_index(index, labels=None , stats_labels=None):
 def dtable(df: pd.DataFrame, 
             vars : list, 
             stats: list =['count','mean', 'std'],
-            bycol: list = None, 
-            byrow: str = None,
+            bycol: Optional[list[str]] = None, 
+            byrow: Optional[str] = None,
             type: str = 'gt',
             labels: dict = {},
-            stats_labels: dict = None,
+            stats_labels: dict = {},
             digits: int = 2,
-            notes: str = None,
+            notes: str = "",
             counts_row_below: bool = False,
             **kwargs):
     
@@ -1150,15 +1146,15 @@ def dtable(df: pd.DataFrame,
 
     # Calculate the desired statistics
     agg_funcs = {var: stats for var in vars}
+    if (byrow is not None) and (bycol is not None):
+        bylist = [byrow]+bycol 
+        res = df.groupby(bylist).agg(agg_funcs)
     if (byrow is None) and (bycol is None):
         res = df.agg(agg_funcs)
     elif (byrow is not None) and (bycol is None):
         res = df.groupby(byrow).agg(agg_funcs)
     elif (byrow is None) and (bycol is not None):
         res = df.groupby(bycol).agg(agg_funcs)
-    else:  
-        bylist = [byrow]+bycol 
-        res = df.groupby(bylist).agg(agg_funcs)
     
     # Set counts_row_below to false when byrow is not None
     # or when 'count' is not in stats
@@ -1211,6 +1207,9 @@ def dtable(df: pd.DataFrame,
         if counts_row_below:
             # collect the number of obs for each row
             count_columns = res.xs('count', axis=1, level=-1)  
+            # Ensure count_columns is always a DataFrame
+            if isinstance(count_columns, pd.Series):
+                count_columns = count_columns.to_frame()
             # when all counts are the same within each row, 
             # generate a vector with the counts
             if count_columns.nunique(axis=1).eq(1).all():
@@ -1231,13 +1230,14 @@ def dtable(df: pd.DataFrame,
                 res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
         
         # Now some reshaping to bring the multiindex dataframe in the form of a typical descriptive statistics table 
-        res=res.stack(level=0, future_stack=True)
+        res=pd.DataFrame(res.stack(level=0, future_stack=True))
+
         # First bring the variables to the rows: 
         # Assign name to the column index
         res.columns.names = ['Statistics']
         if bycol is not None:
             # Then bring the column objects to the columns:    
-            res=res.unstack(level=bycol)
+            res=pd.DataFrame(res.unstack(level=bycol))
             # Finally we want to have the objects first and then the statistics
             res.columns=res.columns.reorder_levels(bycol+["Statistics"])
             # And sort it properly by the variables
