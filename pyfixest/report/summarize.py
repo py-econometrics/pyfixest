@@ -390,7 +390,7 @@ def etable(
         fe_index = fe_df.index.to_series()
         fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
         fe_df.set_index(fe_index, inplace=True)
- 
+
     model_stats_df.columns = res.columns
     if show_fe:
         fe_df.columns = res.columns
@@ -735,20 +735,19 @@ def _number_formatter(x: float, **kwargs) -> str:
     return _int if digits == 0 else f"{_int}.{_float}"
 
 
-
-def make_table(df: pd.DataFrame,
-                type: str = 'gt',
-                notes: str = "",
-                rgroup_sep: str ="tb",
-                rgroup_display: bool =True,
-                caption: Optional[str] = None,
-                tab_label: Optional[str] = None,
-                texlocation: str = 'htbp',
-                full_width: bool = False,
-                file_name: Optional[str] = None,
-                **kwargs
-                ):
-
+def make_table(
+    df: pd.DataFrame,
+    type: str = "gt",
+    notes: str = "",
+    rgroup_sep: str = "tb",
+    rgroup_display: bool = True,
+    caption: Optional[str] = None,
+    tab_label: Optional[str] = None,
+    texlocation: str = "htbp",
+    full_width: bool = False,
+    file_name: Optional[str] = None,
+    **kwargs,
+):
     r"""
     Create a booktab style table in the desired format (gt or tex) from a DataFrame.
     The DataFrame can have a multiindex. Column index used to generate horizonal
@@ -968,8 +967,8 @@ def make_table(df: pd.DataFrame,
             # we just assign column numbers to the lowest index level
             col_numbers = list(map(str, range(len(dfs.columns))))
             # Save the whole column index in order to generate table spanner labels later
-            dfcols= dfs.columns.to_list()
-            # Then flatten the column index just numbering the columns 
+            dfcols = dfs.columns.to_list()
+            # Then flatten the column index just numbering the columns
             dfs.columns = pd.Index(col_numbers)
             # Store the mapping of column numbers to column names
             col_dict = dict(zip(col_numbers, col_names))
@@ -1007,8 +1006,8 @@ def make_table(df: pd.DataFrame,
         if nl > 1:
             # Add column spanners based on multiindex
             # Do this for every level in the multiindex (except the one with the column numbers)
-            for i in range(nl-1):
-                col_spanners: dict[str, list[str|int]] = {}
+            for i in range(nl - 1):
+                col_spanners: dict[str, list[str | int]] = {}
                 # Iterate over columns and group them by the labels in the respective level
                 for c in dfcols:
                     key = c[i]
@@ -1054,7 +1053,7 @@ def make_table(df: pd.DataFrame,
             )
             .cols_align(align="center")
         )
-        
+
         # Full page width
         if full_width:
             gt = gt.tab_options(table_width="100%")
@@ -1090,29 +1089,32 @@ def _relabel_index(index, labels=None, stats_labels=None):
         if isinstance(index, pd.MultiIndex):
             new_index = []
             for i in index:
-                new_index.append(tuple([labels.get(k, k) for k in i[:-1]] + [stats_labels.get(i[-1], i[-1])]))    
+                new_index.append(
+                    tuple(
+                        [labels.get(k, k) for k in i[:-1]]
+                        + [stats_labels.get(i[-1], i[-1])]
+                    )
+                )
             index = pd.MultiIndex.from_tuples(new_index)
         else:
             index = [stats_labels.get(k, k) for k in index]
     return index
 
 
-
-
-
-def dtable(df: pd.DataFrame, 
-            vars : list, 
-            stats: list =['count','mean', 'std'],
-            bycol: Optional[list[str]] = None, 
-            byrow: Optional[str] = None,
-            type: str = 'gt',
-            labels: dict = {},
-            stats_labels: dict = {},
-            digits: int = 2,
-            notes: str = "",
-            counts_row_below: bool = False,
-            **kwargs):
-    
+def dtable(
+    df: pd.DataFrame,
+    vars: list,
+    stats: list = ["count", "mean", "std"],
+    bycol: Optional[list[str]] = None,
+    byrow: Optional[str] = None,
+    type: str = "gt",
+    labels: dict = {},
+    stats_labels: dict = {},
+    digits: int = 2,
+    notes: str = "",
+    counts_row_below: bool = False,
+    **kwargs,
+):
     r"""
     Generate descriptive statistics tables and create a booktab style table in
     the desired format (gt or tex).
@@ -1181,7 +1183,7 @@ def dtable(df: pd.DataFrame,
     # Calculate the desired statistics
     agg_funcs = {var: stats for var in vars}
     if (byrow is not None) and (bycol is not None):
-        bylist = [byrow]+bycol 
+        bylist = [byrow] + bycol
         res = df.groupby(bylist).agg(agg_funcs)
     if (byrow is None) and (bycol is None):
         res = df.agg(agg_funcs)
@@ -1189,7 +1191,7 @@ def dtable(df: pd.DataFrame,
         res = df.groupby(byrow).agg(agg_funcs)
     elif (byrow is None) and (bycol is not None):
         res = df.groupby(bycol).agg(agg_funcs)
-    
+
     # Set counts_row_below to false when byrow is not None
     # or when 'count' is not in stats
     if (byrow is not None) or ("count" not in stats):
@@ -1240,11 +1242,11 @@ def dtable(df: pd.DataFrame,
         # First check whether number of obs should be displayed at the bottom
         if counts_row_below:
             # collect the number of obs for each row
-            count_columns = res.xs('count', axis=1, level=-1)  
+            count_columns = res.xs("count", axis=1, level=-1)
             # Ensure count_columns is always a DataFrame
             if isinstance(count_columns, pd.Series):
                 count_columns = count_columns.to_frame()
-            # when all counts are the same within each row, 
+            # when all counts are the same within each row,
             # generate a vector with the counts
             if count_columns.nunique(axis=1).eq(1).all():
                 nobs = count_columns.iloc[:, 0]
@@ -1263,16 +1265,16 @@ def dtable(df: pd.DataFrame,
         for col in res.columns:
             if res[col].dtype == float:
                 res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
-        
-        # Now some reshaping to bring the multiindex dataframe in the form of a typical descriptive statistics table 
-        res=pd.DataFrame(res.stack(level=0, future_stack=True))
 
-        # First bring the variables to the rows: 
+        # Now some reshaping to bring the multiindex dataframe in the form of a typical descriptive statistics table
+        res = pd.DataFrame(res.stack(level=0, future_stack=True))
+
+        # First bring the variables to the rows:
         # Assign name to the column index
         res.columns.names = ["Statistics"]
         if bycol is not None:
-            # Then bring the column objects to the columns:    
-            res=pd.DataFrame(res.unstack(level=bycol))
+            # Then bring the column objects to the columns:
+            res = pd.DataFrame(res.unstack(level=bycol))
             # Finally we want to have the objects first and then the statistics
             res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
             # And sort it properly by the variables
