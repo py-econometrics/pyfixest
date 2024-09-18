@@ -10,13 +10,13 @@ on:
 
 jobs:
   test:
-    name: "Tests"
+    name: "Tests Core"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
@@ -48,6 +48,79 @@ jobs:
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test_slow:
+    name: "Tests vs fixest"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.9", "3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+
+      - name: set numba parallel flags
+        run: |
+          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: install R packages
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+        shell: bash
+
+      - name: Run tests
+        run: |
+          pixi run tests-slow
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+
+  test_notebooks:
+    name: "Test Notebooks"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.12"
+
+    - name: Set up pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
+
+
+    - name: set numba parallel flags
+      run: |
+        echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+    - name: Setup r2u
+      uses: eddelbuettel/github-actions/r2u-setup@master
+
+    - name: install R packages
+      run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+      shell: bash
+
+    - name: Install TeXlive
+      run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
+
+    - name: Run notebooks
+      run: |
+        pixi run render-notebooks
 
   build-docs:
     name: "Build Docs"

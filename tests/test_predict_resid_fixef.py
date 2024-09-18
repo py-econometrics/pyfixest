@@ -199,7 +199,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     # test 3
-    fml = "Y ~ X1 + X2 + f1| f1 "
+    fml = "Y ~ X1 + X2 | f1 "
     fit = feols(fml, data=data)
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)

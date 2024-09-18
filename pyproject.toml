@@ -28,12 +28,15 @@ docs = { features = ["docs"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
-tests-regular = "pytest tests -m 'not extended' -n 4"
+tests-regular = "pytest tests -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
+tests-extended = "pytest tests -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-slow = "pytest tests -m slow --cov=./ --cov-report=xml"
 tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r = "Rscript r_test_requirements.R"
+render-notebooks = "python scripts/run_notebooks.py"
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
@@ -45,19 +48,21 @@ docs-preview = "quarto preview docs"
 
 [tool.pytest.ini_options]
 addopts = [
-    "-v",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=pyfixest",
-    "--cov-report=term-missing",
-    "--color=yes",
+  "-v",
+  "--strict-markers",
+  "--strict-config",
+  "--cov=pyfixest",
+  "--cov-report=term-missing",
+  "--color=yes",
 ]
 markers = [
-    "extended: mark test to be part of the extended test suite"
+  "slow: mark test to be part of the slow test suite",
+  "extended: mark test to be part of the extended test suite",
+  "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
 ]
-filterwarnings =[
-    "ignore::FutureWarning:rpy2",
-    "ignore::DeprecationWarning:rpy2"
+filterwarnings = [
+  "ignore::FutureWarning:rpy2",
+  "ignore::DeprecationWarning:rpy2",
 ]
 
 [tool.ruff]
@@ -70,19 +75,19 @@ target-version = "py39"
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
 select = [
-  "F", # Pyflakes
-  "E", # pycodestyle errors
-  "W", # pycodestyle warnings
-  "I", # isort
-  "D", # flake8-docstrings
-  "UP", # pyupgrade
+  "F",   # Pyflakes
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "D",   # flake8-docstrings
+  "UP",  # pyupgrade
   "SIM", # flake8-simplify
   "TRY", # tryceratops
 ]
 
 ignore = [
-# do not enable if formatting
-# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  # do not enable if formatting
+  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "W191",   # tab indentation
   "E111",   # indentation
   "E114",   # indentation
@@ -104,6 +109,7 @@ ignore = [
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88

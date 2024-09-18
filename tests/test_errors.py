@@ -15,7 +15,6 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
@@ -452,32 +451,9 @@ def test_wald_test_R_q_column_consistency():
 
 def setup_feiv_instance():
     # Setup necessary data for Feiv
-    n = 100
-    Y = np.random.rand(n, 1)
-    X = np.random.rand(n, 1)
-    endogvar = np.random.rand(n, 1)
-    Z = np.random.rand(n, 2)
-    weights = np.random.rand(n, 1)
-    coefnames_x = ["x1", "x2"]
-    coefnames_z = ["z1", "z2"]
-    collin_tol = 1e-10
-    weights_name = "weights"
-    weights_type = "aweights"
-    solver = "np.linalg.solve"
 
-    return Feiv(
-        Y=Y,
-        X=X,
-        endogvar=endogvar,
-        Z=Z,
-        weights=weights,
-        coefnames_x=coefnames_x,
-        coefnames_z=coefnames_z,
-        collin_tol=collin_tol,
-        weights_name=weights_name,
-        weights_type=weights_type,
-        solver=solver,
-    )
+    data = pf.get_data()
+    return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
 def test_IV_first_stage_invalid_model_type():
