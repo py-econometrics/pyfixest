@@ -1276,7 +1276,9 @@ def dtable(
             # Then bring the column objects to the columns:
             res = pd.DataFrame(res.unstack(level=tuple(bycol)))
             # Finally we want to have the objects first and then the statistics
-            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])  # type: ignore
+            if not isinstance(res.columns, pd.MultiIndex):
+                res.columns = pd.MultiIndex.from_tuples(res.columns)
+            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
             # And sort it properly by the variables
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))
