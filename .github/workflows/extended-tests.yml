@@ -43,6 +43,13 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: install R packages
+        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+        shell: bash
+
       # Run tests for PRs with the label "plots"
       - name: Run tests for plots (only on PRs with the 'tests-extended' label)
         if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
