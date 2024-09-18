@@ -1274,9 +1274,9 @@ def dtable(
         res.columns.names = ["Statistics"]
         if bycol is not None:
             # Then bring the column objects to the columns:
-            res = pd.DataFrame(res.unstack(level=bycol)) # type: ignore
+            res = pd.DataFrame(res.unstack(level=bycol))  # type: ignore
             # Finally we want to have the objects first and then the statistics
-            res.columns = res.columns.reorder_levels(bycol + ["Statistics"]) # type: ignore
+            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])  # type: ignore
             # And sort it properly by the variables
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))
