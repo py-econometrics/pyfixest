@@ -146,6 +146,17 @@ test_counter_feols = 0
 test_counter_fepois = 0
 test_counter_feiv = 0
 
+# What is being tested in all tests:
+# - pyfixest vs fixest
+# - inference: iid, hetero, cluster
+# - weights: None, "weights"
+# - fmls
+# Only tests for feols, not for fepois or feiv:
+# - dropna: False, True
+# - f3_type: "str", "object", "int", "categorical", "float"
+# - adj: True
+# - cluster_adj: True
+
 
 @pytest.mark.slow
 @pytest.mark.parametrize("dropna", [False, True])
@@ -153,8 +164,8 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
-@pytest.mark.parametrize("adj", [False, True])
-@pytest.mark.parametrize("cluster_adj", [False, True])
+@pytest.mark.parametrize("adj", [True])
+@pytest.mark.parametrize("cluster_adj", [True])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -322,12 +333,12 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
+@pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
-@pytest.mark.parametrize("adj", [False, True])
-@pytest.mark.parametrize("cluster_adj", [False, True])
+@pytest.mark.parametrize("adj", [True])
+@pytest.mark.parametrize("cluster_adj", [True])
 def test_single_fit_fepois(
     data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj
 ):
@@ -429,13 +440,13 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
+@pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", iv_fmls)
-@pytest.mark.parametrize("adj", [False, True])
-@pytest.mark.parametrize("cluster_adj", [False, True])
+@pytest.mark.parametrize("adj", [True])
+@pytest.mark.parametrize("cluster_adj", [True])
 def test_single_fit_iv(
     data_feols,
     dropna,

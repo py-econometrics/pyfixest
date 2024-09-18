@@ -1,0 +1,54 @@
+name: Tests Extended
+
+# Trigger on two events: push to master or labeled PR
+on:
+  # Trigger on push to master
+  push:
+    branches:
+      - master
+
+  # Trigger when a label is added to a PR
+  pull_request:
+    types: [labeled]
+
+jobs:
+  run-workflow:
+    runs-on: ubuntu-latest
+
+    # Matrix strategy for Python versions 3.9 and 3.12
+    strategy:
+      matrix:
+        python-version: [3.9, 3.12]
+
+    steps:
+      # Checkout source code (common to both scenarios)
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Setup python (common to both scenarios)
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Set up poetry (common to both scenarios)
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
+
+      # Install dependencies (common to both scenarios)
+      - name: Install dependencies
+        run: poetry install --without docs
+
+      # Set numba parallel flags (common to both scenarios)
+      - name: Set numba parallel flags
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      # Run tests for PRs with the label "plots"
+      - name: Run tests for plots (only on PRs with the 'tests-extended' label)
+        if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
+        run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml
+
+      # Run tests for push to master
+      - name: Run tests for push to master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml
