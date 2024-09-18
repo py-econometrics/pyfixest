@@ -45,18 +45,20 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run pytest tests -m "not (extended or slow)" --cov=./ --cov-report=xml
+          poetry run pytest tests -m "not (extended or slow or plots)" --cov=pyfixest --cov-report=xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test_slow:
-    name: "Test Slow"
+    name: "Tests vs fixest"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.12"]
+        python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
@@ -88,6 +90,48 @@ jobs:
           poetry run pytest tests -m slow --cov=./ --cov-report=xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
+
+  test_notebooks:
+    name: "Test Notebooks"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.12"
+
+    - name: Set up poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Set up poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install
+      run: poetry install --without docs
+    - name: set numba parallel flags
+      run: |
+        echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+    - name: Setup r2u
+      uses: eddelbuettel/github-actions/r2u-setup@master
+
+    - name: install R packages
+      run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+      shell: bash
+
+    - name: Install TeXlive
+      run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
+
+    - name: Run notebooks
+      run: |
+        poetry install --with docs
+        poetry run python scripts/run_notebooks.py
+
 
   build-docs:
     name: "Build Docs"

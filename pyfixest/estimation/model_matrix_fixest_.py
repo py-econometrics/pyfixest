@@ -184,7 +184,7 @@ def model_matrix_fixest(
         "weights_df": weights_df,
         "na_index": na_index,
         "na_index_str": na_index_str,
-        "_icovars": _icovars,
+        "icovars": _icovars,
         "X_is_empty": X_is_empty,
     }
 
