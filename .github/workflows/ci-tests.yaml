@@ -48,12 +48,25 @@ jobs:
         run: |
           Rscript -e 'installed.packages()[, c("Package", "Version")]'
 
+      # Check R environment details (debugging step)
+      - name: Debug R environment
+        run: |
+          echo "R_HOME: $(R RHOME)"
+          echo "R_LIBS_USER: $R_LIBS_USER"
+          Rscript -e 'cat(.libPaths(), "\n")'
+
       # Set environment variables for R and rpy2
       - name: Export R and rpy2 environment
         run: |
           echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
           echo "R_HOME=$(R RHOME)" >> $GITHUB_ENV
           echo "R_LIBS_SITE=$(Rscript -e '.libPaths()[1]')" >> $GITHUB_ENV
+
+      # Force print rpy2 environment paths (debugging step)
+      - name: Check rpy2 configuration
+        run: |
+          python -c "import rpy2.robjects as ro; print(ro.r('R.home()'))"
+          python -c "import os; print('R_HOME:', os.getenv('R_HOME')); print('R_LIBS_USER:', os.getenv('R_LIBS_USER'))"
 
       # Run tests
       - name: Run tests
