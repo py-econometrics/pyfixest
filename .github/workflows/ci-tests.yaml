@@ -103,7 +103,10 @@ jobs:
 
       - name: Run tests
         run: |
+          export R_LIBS_USER=~/.R/library
+          echo "R environment set: $R_LIBS_USER"
           pixi run tests-slow
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
 
