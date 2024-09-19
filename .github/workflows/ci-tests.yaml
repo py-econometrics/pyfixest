@@ -35,13 +35,21 @@ jobs:
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
+          - name: Setup r2u
+          uses: eddelbuettel/github-actions/r2u-setup@master
 
-      - name: install R packages
+      # Set the R_LIBS_USER to a specific location and install R packages there
+      - name: Install R packages
         run: |
-          pixi run install-r
+          mkdir -p ~/.R/library
+          echo 'R_LIBS_USER="~/.R/library"' >> ~/.Renviron
+          Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
+        shell: bash
 
+      # Ensure pixi knows about the R library path
+      - name: Export R library path
+        run: |
+          echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
       - name: Run tests
         run: |
           pixi run tests-regular
