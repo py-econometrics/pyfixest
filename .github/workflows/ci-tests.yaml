@@ -35,8 +35,8 @@ jobs:
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-          - name: Setup r2u
-          uses: eddelbuettel/github-actions/r2u-setup@master
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
 
       # Set the R_LIBS_USER to a specific location and install R packages there
       - name: Install R packages
