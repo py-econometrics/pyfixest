@@ -55,12 +55,12 @@ jobs:
           echo "R_LIBS_USER: $R_LIBS_USER"
           Rscript -e 'cat(.libPaths(), "\n")'
 
-      # Set environment variables for R and rpy2
-      - name: Export R and rpy2 environment
+      - name: Activate Pixi Environment and Set R Paths
         run: |
-          echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
-          echo "R_HOME=$(R RHOME)" >> $GITHUB_ENV
-          echo "R_LIBS_SITE=$(Rscript -e '.libPaths()[1]')" >> $GITHUB_ENV
+          eval "$(pixi shell-hook)"
+          export R_LIBS_USER="$CONDA_PREFIX/lib/R/library"
+          export R_HOME="$(R RHOME)"
+          echo "Pixi environment activated with R_HOME: $R_HOME and R_LIBS_USER: $R_LIBS_USER"
 
       - name: run pixi install
         run: |
