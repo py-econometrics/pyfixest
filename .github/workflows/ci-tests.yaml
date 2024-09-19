@@ -97,19 +97,30 @@ jobs:
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-      - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
-        shell: bash
-
-      - name: Set R_HOME
+      - name: Install R and setup environment
         run: |
-          export R_HOME=$(R RHOME)
-          echo "R_HOME=$R_HOME"
+          mkdir -p ~/.R/library
+          echo 'R_LIBS_USER="~/.R/library"' >> ~/.Renviron
+          echo 'R_LIBS_USER="~/.R/library"' >> ~/.bashrc
+          export R_LIBS_USER=~/.R/library
+          Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"), repos="http://cran.us.r-project.org")'
+
+      # Check which R packages are installed
+      - name: Verify installed R packages
+        run: |
+          Rscript -e 'installed.packages()[, c("Package", "Version")]'
+
+      # Export the R_LIBS_USER path to make it available in the next steps
+      - name: Export R library path
+        run: |
+          echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
 
       - name: Run tests
         run: |
-          export R_LIBS_USER=~/.R/library
-          echo "R environment set: $R_LIBS_USER"
+          pixi run tests-regular
+
+      - name: Run tests
+        run: |
           pixi run tests-slow
 
       - name: Upload to Codecov
