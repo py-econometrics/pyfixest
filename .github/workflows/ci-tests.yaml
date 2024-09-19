@@ -38,7 +38,7 @@ jobs:
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-      # Set the R_LIBS_USER to a specific location and install R packages there
+
       - name: Install R packages
         run: |
           mkdir -p ~/.R/library
@@ -46,10 +46,15 @@ jobs:
           Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
         shell: bash
 
-      # Ensure pixi knows about the R library path
       - name: Export R library path
         run: |
           echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
+
+      # Verify that the R packages are installed
+      - name: Verify R packages
+        run: |
+          Rscript -e 'print(installed.packages()[,c(1,3)])'
+
       - name: Run tests
         run: |
           pixi run tests-regular
