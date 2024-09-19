@@ -62,6 +62,10 @@ jobs:
           echo "R_HOME=$(R RHOME)" >> $GITHUB_ENV
           echo "R_LIBS_SITE=$(Rscript -e '.libPaths()[1]')" >> $GITHUB_ENV
 
+      - name: run pixi install
+        run: |
+          pixi install
+
       # Force print rpy2 environment paths (debugging step)
       - name: Check rpy2 configuration
         run: |
