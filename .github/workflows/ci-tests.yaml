@@ -17,46 +17,45 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.12"]
-        pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: x64
 
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@v0.8.1
 
-      - name: set numba parallel flags
-        run: |
-          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+      - name: Set numba parallel flags
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-      # Set up R base using system package manager (or conda)
+      # Set up R and R environment
       - name: Install R and setup environment
         run: |
           mkdir -p ~/.R/library
           echo 'R_LIBS_USER="~/.R/library"' >> ~/.Renviron
-          echo 'R_LIBS_USER="~/.R/library"' >> ~/.bashrc
-          export R_LIBS_USER=~/.R/library
           Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"), repos="http://cran.us.r-project.org")'
 
-      # Check which R packages are installed
+      # Check installed R packages
       - name: Verify installed R packages
         run: |
           Rscript -e 'installed.packages()[, c("Package", "Version")]'
 
-      # Export the R_LIBS_USER path to make it available in the next steps
-      - name: Export R library path
+      # Set environment variables for R and rpy2
+      - name: Export R and rpy2 environment
         run: |
           echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
+          echo "R_HOME=$(R RHOME)" >> $GITHUB_ENV
+          echo "R_LIBS_SITE=$(Rscript -e '.libPaths()[1]')" >> $GITHUB_ENV
 
+      # Run tests
       - name: Run tests
         run: |
           pixi run tests-regular
