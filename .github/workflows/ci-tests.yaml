@@ -50,6 +50,10 @@ jobs:
         run: |
           echo "R_LIBS_USER=~/.R/library" >> $GITHUB_ENV
 
+      - name: Set R environment for testing
+        run: |
+          export R_LIBS_USER=~/.R/library
+          echo "R environment set: $R_LIBS_USER"
       # Verify that the R packages are installed
       - name: Verify R packages
         run: |
@@ -57,6 +61,7 @@ jobs:
 
       - name: Run tests
         run: |
+          export R_LIBS_USER=~/.R/library
           pixi run tests-regular
 
       - name: Upload to Codecov
