@@ -101,6 +101,11 @@ jobs:
         run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
         shell: bash
 
+      - name: Set R_HOME
+        run: |
+          export R_HOME=$(R RHOME)
+          echo "R_HOME=$R_HOME"
+
       - name: Run tests
         run: |
           export R_LIBS_USER=~/.R/library
