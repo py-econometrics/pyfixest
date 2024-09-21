@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyfixest"
-version = "0.24.2"
+version = "0.24.3"
 
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures (HC1-3, CRV1 & CRV3, wild bootstrap, randomization inference, simultaneous CIs, Romano-Wolf's multiple testing correction). Additionally, supports (some of) the regression based new Difference-in-Differences Estimators (Did2s, Linear Projections)."
 authors = [
@@ -57,6 +57,7 @@ addopts = [
   "--cov-report=term-missing",
   "--color=yes",
 ]
+
 markers = [
   "slow: mark test to be part of the slow test suite",
   "extended: mark test to be part of the extended test suite",
