@@ -134,7 +134,6 @@ class FeolsCompressed(Feols):
         if self._has_fixef:
             self._use_mundlak = True
             self._has_fixef = False
-            self._supports_only_cluster_fixef = True
 
             fevars = self._fe.columns.tolist()
             fe_polars = pl.DataFrame(pd.DataFrame(self._fe))
