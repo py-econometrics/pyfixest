@@ -45,18 +45,20 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run pytest tests -m "not (extended or slow)" --cov=./ --cov-report=xml
+          poetry run pytest tests -m "not (extended or slow or plots)" --cov=pyfixest --cov-report=xml
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test_slow:
-    name: "Test Slow"
+    name: "Tests vs fixest"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.12"]
+        python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:

@@ -61,6 +61,7 @@ addopts = [
 markers = [
   "slow: mark test to be part of the slow test suite",
   "extended: mark test to be part of the extended test suite",
+  "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
 ]
 filterwarnings = [
   "ignore::FutureWarning:rpy2",
