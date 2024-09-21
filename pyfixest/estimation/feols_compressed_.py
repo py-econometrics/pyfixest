@@ -93,6 +93,11 @@ class FeolsCompressed(Feols):
             lean,
         )
 
+        if FixestFormula.fml_first_stage is not None:
+            raise NotImplementedError(
+                "Compression is not supported with IV regression."
+            )
+
         self._is_iv = False
         self._support_crv3_inference = False
         self._support_iid_inference = True

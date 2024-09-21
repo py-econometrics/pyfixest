@@ -501,3 +501,17 @@ def test_errors_compressed():
     # prediction:
     with pytest.raises(NotImplementedError):
         pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+
+    # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
+
+    with pytest.raises(ValueError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
+
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
+
+    # no support for IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
