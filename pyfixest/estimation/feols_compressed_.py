@@ -139,7 +139,7 @@ class FeolsCompressed(Feols):
             data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
 
             if self._use_mundlak:
-                if len(fevars) > 1:
+                if len(fevars) > 2:
                     raise NotImplementedError(
                         "The Mundlak transform is only supported for models with up to two fixed effects."
                     )

@@ -325,17 +325,51 @@ class Feols:
         self._depvar = self._Y.columns[0]
         self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
         self._has_fixef = self._fe is not None
-        self._N = self._X.shape[0]
         self._fixef = self.FixestFormula._fval
-
-        if self._weights_name is not None:
-            self._weights = self._weights_df.to_numpy()
-        else:
-            self._weights = np.ones(self._N)
-        self._weights = self._weights.reshape((self._N, 1))
 
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
+
+        self._weights = self._set_weights()
+        self._N, self._N_rows = self._set_nobs()
+
+    def _set_nobs(self) -> tuple[int, int]:
+        """
+        Fetch the number of observations used in fitting the regression model.
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple containing the total number of observations and the number of rows
+            in the dependent variable array.
+        """
+        _N_rows = len(self._Y)
+        if self._weights_type == "aweights":
+            _N = _N_rows
+        elif self._weights_type == "fweights":
+            _N = np.sum(self._weights)
+
+        return _N, _N_rows
+
+    def _set_weights(self) -> np.ndarray:
+        """
+        Return the weights used in the regression model.
+
+        Returns
+        -------
+        np.ndarray
+            The weights used in the regression model.
+            If no weights are used, returns an array of ones
+            with the same length as the dependent variable array.
+        """
+        N = len(self._Y)
+
+        if self._weights_df is not None:
+            _weights = self._weights_df.to_numpy()
+        else:
+            _weights = np.ones(N)
+
+        return _weights.reshape((N, 1))
 
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
@@ -1594,20 +1628,6 @@ class Feols:
             y_hat += np.sum(_fixef_mat, axis=1)
 
         return y_hat.flatten()
-
-    def get_nobs(self):
-        """
-        Fetch the number of observations used in fitting the regression model.
-
-        Returns
-        -------
-        None
-        """
-        self._N_rows = len(self._Y)
-        if self._weights_type == "aweights":
-            self._N = self._N_rows
-        elif self._weights_type == "fweights":
-            self._N = np.sum(self._weights)
 
     def get_performance(self) -> None:
         """

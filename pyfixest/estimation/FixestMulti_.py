@@ -311,11 +311,6 @@ class FixestMulti:
                     FIT.prepare_model_matrix()
                     FIT.to_array()
                     FIT.drop_multicol_vars()
-
-                    FIT.prepare_model_matrix()
-                    # SFIT.demean()
-                    FIT.to_array()
-                    FIT.drop_multicol_vars()
                     FIT.wls_transform()
 
                 FIT.get_fit()

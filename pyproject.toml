@@ -57,6 +57,7 @@ addopts = [
   "--cov-report=term-missing",
   "--color=yes",
 ]
+
 markers = [
   "slow: mark test to be part of the slow test suite",
   "extended: mark test to be part of the extended test suite",
