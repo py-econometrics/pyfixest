@@ -198,6 +198,11 @@ class FeolsCompressed(Feols):
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
     ):
         "Compute the variance-covariance matrix for the compressed regression."
+        if self._use_mundlak and vcov in ["iid", "hetero", "HC1", "HC2", "HC3"]:
+            raise NotImplementedError(
+                "Only CRV1 inference is supported with the Mundlak transform."
+            )
+
         if isinstance(vcov, dict):
             if "CRV1" in vcov:
                 if vcov.get("CRV1") not in self._data_long.columns:

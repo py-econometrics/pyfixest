@@ -494,6 +494,10 @@ def test_errors_compressed():
     with pytest.raises(NotImplementedError):
         pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
 
+    # only CVR supported for Mundlak
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
+
     # crv3 inference:
     with pytest.raises(NotImplementedError):
         pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
