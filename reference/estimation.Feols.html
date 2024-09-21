@@ -755,74 +755,70 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Compute standard errors, t-statistics, and p-values for the regression model.</td>
 </tr>
 <tr class="even">
-<td><a href="#pyfixest.estimation.Feols.get_nobs">get_nobs</a></td>
-<td>Fetch the number of observations used in fitting the regression model.</td>
-</tr>
-<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.get_performance">get_performance</a></td>
 <td>Get Goodness-of-Fit measures.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.plot_ritest">plot_ritest</a></td>
 <td>Plot the distribution of the Randomization Inference Statistics.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.predict">predict</a></td>
 <td>Predict values of the model on new data.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.prepare_model_matrix">prepare_model_matrix</a></td>
 <td>Prepare model matrices for estimation.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.pvalue">pvalue</a></td>
 <td>Fitted model p-values.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.resid">resid</a></td>
 <td>Fitted model residuals.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.ritest">ritest</a></td>
 <td>Conduct Randomization Inference (RI) test against a null hypothesis of</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.se">se</a></td>
 <td>Fitted model standard errors.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.solve_ols">solve_ols</a></td>
 <td>Solve the ordinary least squares problem using the specified solver.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.tidy">tidy</a></td>
 <td>Tidy model outputs.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.to_array">to_array</a></td>
 <td>Convert estimation data frames to np arrays.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.tstat">tstat</a></td>
 <td>Fitted model t-statistics.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.update">update</a></td>
 <td>Update coefficients for new observations using Sherman-Morrison formula.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.vcov">vcov</a></td>
 <td>Compute covariance matrices for an estimated regression model.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.wald_test">wald_test</a></td>
 <td>Conduct Wald test.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.Feols.wildboottest">wildboottest</a></td>
 <td>Run a wild cluster bootstrap based on an object of type “Feols”.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.Feols.wls_transform">wls_transform</a></td>
 <td>Transform model matrices for WLS Estimation.</td>
 </tr>
@@ -1243,35 +1239,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
-<section id="pyfixest.estimation.Feols.get_nobs" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.get_nobs">get_nobs</h3>
-<p><code>estimation.Feols.get_nobs()</code></p>
-<p>Fetch the number of observations used in fitting the regression model.</p>
-<section id="returns-7" class="level4">
-<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>None</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-</section>
-</section>
 <section id="pyfixest.estimation.Feols.get_performance" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.get_performance">get_performance</h3>
 <p><code>estimation.Feols.get_performance()</code></p>
 <p>Get Goodness-of-Fit measures.</p>
 <p>Compute multiple additional measures commonly reported with linear regression output, including R-squared and adjusted R-squared. Note that variables with the suffix _within use demeaned dependent variables Y, while variables without do not or are invariant to demeaning.</p>
-<section id="returns-8" class="level4">
-<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
+<section id="returns-7" class="level4">
+<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 82%">
@@ -1351,8 +1325,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-9" class="level4">
-<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
+<section id="returns-8" class="level4">
+<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 83%">
@@ -1433,8 +1407,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-10" class="level4">
-<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
+<section id="returns-9" class="level4">
+<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 15%">
@@ -1464,8 +1438,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.pvalue">pvalue</h3>
 <p><code>estimation.Feols.pvalue()</code></p>
 <p>Fitted model p-values.</p>
-<section id="returns-11" class="level4">
-<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
+<section id="returns-10" class="level4">
+<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 15%">
@@ -1490,8 +1464,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.resid">resid</h3>
 <p><code>estimation.Feols.resid()</code></p>
 <p>Fitted model residuals.</p>
-<section id="returns-12" class="level4">
-<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
+<section id="returns-11" class="level4">
+<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 15%">
@@ -1591,8 +1565,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-13" class="level4">
-<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
+<section id="returns-12" class="level4">
+<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 83%">
@@ -1625,8 +1599,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.se">se</h3>
 <p><code>estimation.Feols.se()</code></p>
 <p>Fitted model standard errors.</p>
-<section id="returns-14" class="level4">
-<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
+<section id="returns-13" class="level4">
+<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 13%">
@@ -1684,8 +1658,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-15" class="level4">
-<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
+<section id="returns-14" class="level4">
+<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 81%">
@@ -1759,8 +1733,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-16" class="level4">
-<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
+<section id="returns-15" class="level4">
+<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 9%">
@@ -1790,8 +1764,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.tstat">tstat</h3>
 <p><code>estimation.Feols.tstat()</code></p>
 <p>Fitted model t-statistics.</p>
-<section id="returns-17" class="level4">
-<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
+<section id="returns-16" class="level4">
+<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 14%">
@@ -1816,8 +1790,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.Feols.update">update</h3>
 <p><code>estimation.Feols.update(X_new, y_new, inplace=False)</code></p>
 <p>Update coefficients for new observations using Sherman-Morrison formula.</p>
-<section id="returns-18" class="level4">
-<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
+<section id="returns-17" class="level4">
+<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -1871,8 +1845,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-19" class="level4">
-<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
+<section id="returns-18" class="level4">
+<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 9%">
@@ -1939,8 +1913,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-20" class="level4">
-<h4 class="anchored" data-anchor-id="returns-20">Returns</h4>
+<section id="returns-19" class="level4">
+<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -2077,8 +2051,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-21" class="level4">
-<h4 class="anchored" data-anchor-id="returns-21">Returns</h4>
+<section id="returns-20" class="level4">
+<h4 class="anchored" data-anchor-id="returns-20">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 4%">
