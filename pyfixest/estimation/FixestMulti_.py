@@ -7,6 +7,7 @@ import pandas as pd
 from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
+from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
@@ -23,6 +24,9 @@ class FixestMulti:
         lean: bool,
         fixef_tol: float,
         weights_type: str,
+        use_compression: bool,
+        reps: Optional[int],
+        seed: Optional[int],
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -43,6 +47,15 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
+        use_compression: bool
+            Whether to use sufficient statistics to losslessly fit the regression model
+            on compressed data. False by default.
+        reps : int
+            The number of bootstrap iterations to run. Only relevant for wild cluster
+            bootstrap for use_compression=True.
+        seed : Optional[int]
+            Option to provide a random seed. Default is None.
+            Only relevant for wild cluster bootstrap for use_compression=True.
 
         Returns
         -------
@@ -53,6 +66,9 @@ class FixestMulti:
         self._lean = lean
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
+        self._use_compression = use_compression
+        self._reps = reps if use_compression else None
+        self._seed = seed if use_compression else None
 
         data = _polars_to_pandas(data)
 
@@ -191,6 +207,7 @@ class FixestMulti:
         _lean = self._lean
         _store_data = self._store_data
         _copy_data = self._copy_data
+        self._use_compression = self._use_compression
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -273,12 +290,36 @@ class FixestMulti:
                     FIT.to_array()
                     FIT.drop_multicol_vars()
 
+                elif _method == "compression":
+                    FIT = FeolsCompressed(
+                        FixestFormula=FixestFormula,
+                        data=_data,
+                        ssc_dict=_ssc_dict,
+                        drop_singletons=_drop_singletons,
+                        drop_intercept=_drop_intercept,
+                        weights=_weights,
+                        weights_type=_weights_type,
+                        collin_tol=collin_tol,
+                        fixef_tol=_fixef_tol,
+                        lookup_demeaned_data=lookup_demeaned_data,
+                        store_data=_store_data,
+                        copy_data=_copy_data,
+                        lean=_lean,
+                        reps=self._reps,
+                        seed=self._seed,
+                    )
+                    FIT.prepare_model_matrix()
+                    FIT.to_array()
+                    FIT.drop_multicol_vars()
+                    FIT.wls_transform()
+
                 FIT.get_fit()
                 # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
                 if not FIT._X_is_empty:
                     # inference
                     vcov_type = _get_vcov_type(vcov, fval)
                     FIT.vcov(vcov=vcov_type, data=FIT._data)
+
                     FIT.get_inference()
                     # other regression stats
                     if _method == "feols" and not FIT._is_iv:
