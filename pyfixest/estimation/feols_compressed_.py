@@ -121,11 +121,6 @@ class FeolsCompressed(Feols):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        if self._is_iv:
-            raise NotImplementedError(
-                "Compression is not supported with IV regression."
-            )
-
         # now run compression algos
         depvars = self._Y.columns.tolist()
         covars = self._X.columns.tolist()
@@ -257,11 +252,12 @@ class FeolsCompressed(Feols):
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _data_long_pl = self._data_long
-        if "Intercept" in self._coefnames and "Intercept" not in _data_long_pl.columns:
-            _data_long_pl = _data_long_pl.with_columns([pl.lit(1).alias("Intercept")])
-            _data_long_pl = _data_long_pl.select(
-                ["Intercept"] + _data_long_pl.columns[:-1]
-            )
+
+        # if "Intercept" in self._coefnames and "Intercept" not in _data_long_pl.columns:
+        #    _data_long_pl = _data_long_pl.with_columns([pl.lit(1).alias("Intercept")])
+        #    _data_long_pl = _data_long_pl.select(
+        #        ["Intercept"] + _data_long_pl.columns[:-1]
+        #    )
 
         X_long = _data_long_pl.select(self._coefnames).to_numpy()
         Y_long = _data_long_pl.select(self._depvar).to_numpy()

@@ -643,10 +643,6 @@ class Feols:
             sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         elif _method == "fepois":
             sigma2 = 1
-        else:
-            raise NotImplementedError(
-                f"'iid' inference is not supported for {_method} regressions."
-            )
 
         _vcov = _bread * sigma2
 

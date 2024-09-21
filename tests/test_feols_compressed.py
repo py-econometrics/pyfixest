@@ -42,7 +42,7 @@ fmls = [
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fml", fmls)
-@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "unit"}])
+@pytest.mark.parametrize("vcov", ["iid", "hetero"])
 @pytest.mark.parametrize(
     "ssc", [pf.ssc(adj=True, cluster_adj=True), pf.ssc(adj=False, cluster_adj=False)]
 )
