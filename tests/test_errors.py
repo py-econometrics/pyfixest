@@ -475,3 +475,29 @@ def test_IV_Diag_unsupported_statistics():
 
     with pytest.raises(ValueError):
         feiv_instance.IV_Diag(statistics=unsupported_statistics)
+
+
+def test_errors_compressed():
+    data = pf.get_data()
+
+    # no more than two fixed effects
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+
+    # cluster variables not in model
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
+
+    # crv3 inference:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
+
+    # prediction:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()

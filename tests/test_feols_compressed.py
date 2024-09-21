@@ -89,7 +89,7 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
         fit_c = pf.feols(**feols_args)
     except NotImplementedError:
         if fit._has_fixef:
-            if len(fit._fixef.split("+")) > 1:
+            if len(fit._fixef.split("+")) > 2:
                 pytest.raises(NotImplementedError)
             if fit._vcov_type != "CRV":
                 pytest.raises(NotImplementedError)
@@ -108,6 +108,11 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
             tol=ATOL,
             msg="Error in coef",
         )
+
+        # test predict method
+        # assert fit.predict()[0:5] == fit_c.predict()[0:5], "Error in predict"
+        # data_predict = data.iloc[200:294]
+        # assert fit.predict(newdata = data_predict) == fit_c.predict(newdata = data_predict), "Error in predict"
 
         if vcov in ["iid", "hetero"]:
             check_absolute_diff(

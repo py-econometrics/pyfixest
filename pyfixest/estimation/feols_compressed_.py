@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.utils.dev_utils import DataFrameType
 
 
 class FeolsCompressed(Feols):
@@ -132,6 +133,7 @@ class FeolsCompressed(Feols):
 
         if self._has_fixef:
             self._use_mundlak = True
+            self._has_fixef = False
             self._supports_only_cluster_fixef = True
 
             fevars = self._fe.columns.tolist()
@@ -187,6 +189,24 @@ class FeolsCompressed(Feols):
         self._Yprime = compressed_dict.Yprime.to_pandas()
         self._Yprimeprime = compressed_dict.Yprimeprime.to_pandas()
         self._data = compressed_dict.df_compressed.to_pandas()
+
+    def vcov(
+        self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
+    ):
+        "Compute the variance-covariance matrix for the compressed regression."
+        if isinstance(vcov, dict):
+            if "CRV1" in vcov:
+                if vcov.get("CRV1") not in self._data_long.columns:
+                    raise NotImplementedError(
+                        f"The cluster variable {vcov.get('CRV1')} is not part of the model features."
+                        f"To use compressed regression with clustered errors, please include the cluster variable in the model features."
+                    )
+            else:
+                raise NotImplementedError(
+                    f"The only supported clustered vcov type for compressed regression is CRV1, but {vcov} was specified."
+                )
+
+        super().vcov(vcov, data)
 
     def _vcov_iid(self):
         _N = self._N
@@ -294,6 +314,36 @@ class FeolsCompressed(Feols):
             ].flatten()
 
         return np.cov(beta_boot.T)
+
+    def predict(
+        self,
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+        type: str = "link",
+    ) -> np.ndarray:
+        """
+        Compute predicted values.
+
+        Parameters
+        ----------
+        newdata : Optional[DataFrameType]
+            The new data. If None, makes a prediction based on the uncompressed data set.
+        atol : float
+            The absolute tolerance.
+        btol : float
+            The relative tolerance.
+        type : str
+            The type of prediction.
+
+        Returns
+        -------
+        np.ndarray
+            The predicted values. If newdata is None, the predicted values are based on the uncompressed data set.
+        """
+        raise NotImplementedError(
+            "Predictions are not supported for compressed regression."
+        )
 
 
 @dataclass
