@@ -50,7 +50,7 @@ jobs:
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
-      # Run tests for PRs with the label "plots"
+      # Run tests for PRs with the label "extended"
       - name: Run tests for plots (only on PRs with the 'tests-extended' label)
         if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
         run: pixi run tests-extended
