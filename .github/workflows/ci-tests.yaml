@@ -33,7 +33,15 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      # Set up R and install base R packages
+      - name: Install R and setup environment
+        run: |
+          pixi run install-r
+
       # Run tests
       - name: Run tests
         run: |
-          pixi run tests-slow
+          pixi run tests-regular

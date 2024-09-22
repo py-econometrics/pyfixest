@@ -41,8 +41,6 @@ render-notebooks = "python scripts/run_notebooks.py"
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
-r-fixest = ">=0.12.1,<0.13"
-r-broom = ">=1.0.5,<2"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
