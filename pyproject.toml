@@ -30,9 +30,9 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
-tests-regular = "pytest tests -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
-tests-extended = "pytest tests -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
-tests-slow = "pytest tests -m slow --cov=./ --cov-report=xml"
+tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
+tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-slow = "pytest tests -n 4 -m slow --cov=./ --cov-report=xml"
 tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
