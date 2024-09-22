@@ -144,3 +144,25 @@ jobs:
         with:
           name: docs-html
           path: docs/_site
+
+
+  publish-docs:
+    name: "Publish Docs"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    needs: ["build-docs", "test"]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-html
+          path: docs/_site
+      - name: Publish docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_site
