@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ["windows-latest"]
+        os: ["mac-latest"]
         python-version: ["3.9", "3.12"]
 
     steps:
@@ -32,9 +32,6 @@ jobs:
 
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
-
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
 
       # Set up R and install base R packages
       - name: Install R and setup environment
