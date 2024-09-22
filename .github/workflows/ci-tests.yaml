@@ -35,14 +35,8 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
-
-      # Set up R and install base R packages
-      - name: Install R packages
-        run: |
-          Rscript -e "install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'), repos='https://cran.rstudio.com')"
-          Rscript -e "install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
+      - name: install other r dependencies
+        run: pixi r install-r
 
       # Run tests
       - name: Run tests
