@@ -35,8 +35,23 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: install other r dependencies
-        run: pixi r install-r
+      # Set R library path to pixi's environment
+      - name: Set R library path for pixi environment
+        run: |
+          # Assuming pixi's R library path is this; adapt if needed
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          echo "R_LIBS_USER=$R_LIB_PATH" >> $GITHUB_ENV
+
+      # Install R packages into pixi's R library path
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'), repos='https://cran.rstudio.com')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
+
+      #- name: install other r dependencies
+      #    run: pixi r install-r
 
       # Run tests
       - name: Run tests
