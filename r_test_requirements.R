@@ -1,3 +1,5 @@
+options(pkgType = "binary")
+
 install.packages('fixest', repos = c('https://lrberge.r-universe.dev', 'https://cloud.r-project.org'))
 
 install.packages('broom', repos = c('https://tidymodels.r-universe.dev', 'https://cloud.r-project.org'))
