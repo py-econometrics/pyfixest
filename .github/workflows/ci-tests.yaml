@@ -35,7 +35,10 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      # Set R library path to pixi's environment
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+        # Set R library path to pixi's environment
       - name: Set R library path for pixi environment
         run: |
           # Assuming pixi's R library path is this; adapt if needed
