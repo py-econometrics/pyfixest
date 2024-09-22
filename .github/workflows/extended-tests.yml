@@ -31,8 +31,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set up pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.29.0
+          cache: true
 
       # Set numba parallel flags (common to both scenarios)
       - name: Set numba parallel flags
@@ -41,9 +43,12 @@ jobs:
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-      - name: install R packages
-        run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
-        shell: bash
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
       # Run tests for PRs with the label "plots"
       - name: Run tests for plots (only on PRs with the 'tests-extended' label)

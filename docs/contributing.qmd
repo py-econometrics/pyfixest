@@ -30,10 +30,6 @@ Please describe the behavior you want and why, and provide examples of how pyfix
 
 ### Setting up your local environment
 
-`pyfixest` development flow relies on Python. Testing statistical and econometric
-models is implement using Python and R. Documents are written with Quarto and
-Jupyter.
-
 Start by forking the pyfixest GitHub repository, then clone your forked repository
 using `git`:
 
@@ -43,72 +39,13 @@ cd pyfixest
 ```
 
 In order to work on `pyfixest`, you will need Python and R installed. If working
-on documentation, you will need Quarto installed.
+on documentation, you will need Quarto installed. Note that you only need
+a local R installation if you want to run unit tests locally.
 
-There are multiple ways of installing Python and R, but if you need to install
-them prior to development the following are potential options:
+For suggestions on how to install R and Python, see the sections below.
 
-#### Installing Python
 
-The minimal Python version to develop `pyfixest` is `3.9`. You can installed it on Mac/Linux via [Hombrew](https://brew.sh/):
-
-```{.bash .code-copy}
-brew install python@3.11 # specify the version of python you prefer
-```
-
-On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
-```{.bash .code-copy}
-winget install -e --id Python.Python.3.11
-```
-
-### Installing R
-
-Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation.
-You can also test against R by using github actions.
-
-On Mac/Linux:
-```{.bash .code-copy}
-brew install r
-```
-
-Depending on your local set up, you may need to install additional libraries, for
-example:
-
-```{.bash .code-copy}
-sudo apt install gcc-11 cmake
-```
-
-On Windows using [Winget](https://winget.run/pkg/RProject/R):
-
-```{.bash .code-copy}
-winget install -e --id RProject.R
-```
-
-Documentation for `pyfixest` is written, compiled, and published using Quarto.
-
-To install Quarto, run:
-
-On MacOS via [Homebrew](https://formulae.brew.sh/cask/quarto#default):
-
-```{.bash .code-copy}
-brew install --cask quarto
-```
-
-On Linux (Ubuntu using `gdebi`):
-
-```{.bash .code-copy}
-sudo curl -o quarto-linux-amd64.deb -L <https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb>
-sudo gdebi quarto-linux-amd64.deb
-```
-
-On Windows:
-
-```{.bash .code-copy}
-scoop bucket add extras
-scoop install extras/quarto
-```
-
-### Package Management
+### Package Management via `pixi`
 
 `PyFixest` is using [pixi](https://pixi.sh/latest/).
 
@@ -148,32 +85,104 @@ as `pixi` tasks.
 
 ```{.bash .code-copy}
 # install all R development dependencies
-pixi r install-r
+pixi run install-r
 # run all tests via pytest
-pixi r tests
+pixi run tests
 # run all tests excluding very computationally demanding tests
-pixi r tests-regular
+pixi run tests-regular
 ```
 
 To rebuild the documentation locally, you can run
 
 ```{.bash .code-copy}
 # Build documentation and website
-pixi r docs-build
+pixi run docs-build
 # render the docs
-pixi r docs-render
+pixi run docs-render
 # preview the docs
-pixi r docs-preview
+pixi run docs-preview
 ```
+
+Note that you need to have `quarto` installed in order to build the documentation locally.
 
 To run the linter, you can run
 
 ```{.bash .code-copy}
-just r lint
+pixi run lint
+```
+
+To build the package for PyPi, you can run
+
+```{.bash .code-copy}
+pixi run build-pip
 ```
 
 To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run
 
 ```{.bash .code-copy}
-`just update-tests-data`
+`pixi run update-tests-data`
+```
+
+## Installing Python, R and Quarto
+
+#### Installing Python
+
+The minimal Python version to develop `pyfixest` is `3.9`. You can installed it on Mac/Linux via [Hombrew](https://brew.sh/):
+
+```{.bash .code-copy}
+brew install python@3.11 # specify the version of python you prefer
+```
+
+On Windows via [Winget](https://winget.run/pkg/Python/Python.3.11):
+```{.bash .code-copy}
+winget install -e --id Python.Python.3.11
+```
+
+### Installing R
+
+Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation.
+You can also test against R by using github actions.
+
+On Mac/Linux:
+```{.bash .code-copy}
+brew install r
+```
+
+Depending on your local set up, you may need to install additional libraries, for
+example:
+
+```{.bash .code-copy}
+sudo apt install gcc-11 cmake
+```
+
+On Windows using [Winget](https://winget.run/pkg/RProject/R):
+
+```{.bash .code-copy}
+winget install -e --id RProject.R
+```
+
+### Installing Quarto
+
+Documentation for `pyfixest` is written, compiled, and published using Quarto.
+
+To install Quarto, run:
+
+On MacOS via [Homebrew](https://formulae.brew.sh/cask/quarto#default):
+
+```{.bash .code-copy}
+brew install --cask quarto
+```
+
+On Linux (Ubuntu using `gdebi`):
+
+```{.bash .code-copy}
+sudo curl -o quarto-linux-amd64.deb -L <https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb>
+sudo gdebi quarto-linux-amd64.deb
+```
+
+On Windows:
+
+```{.bash .code-copy}
+scoop bucket add extras
+scoop install extras/quarto
 ```
