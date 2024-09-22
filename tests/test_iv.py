@@ -6,7 +6,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 # Activate pandas2ri to enable conversion between pandas DataFrames and R DataFrames
 pandas2ri.activate()
