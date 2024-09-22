@@ -64,8 +64,7 @@ jobs:
     # Print R library paths that rpy2 is using
       - name: Debug rpy2 R library paths
         run: |
-          python -c "import rpy2.robjects as robjects; print(robjects.r('.libPaths()'))"
-
+          pixi r debug-env
 
       #- name: install other r dependencies
       #    run: pixi r install-r
