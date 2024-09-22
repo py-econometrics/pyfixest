@@ -39,9 +39,10 @@ jobs:
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       # Set up R and install base R packages
-      - name: Install R and setup environment
+      - name: Install R packages
         run: |
-          pixi run install-r
+          Rscript -e "install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'), repos='https://cran.rstudio.com')"
+          Rscript -e "install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
       # Run tests
       - name: Run tests
