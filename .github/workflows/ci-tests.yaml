@@ -38,7 +38,8 @@ jobs:
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-        # Set R library path to pixi's environment
+
+      # Set R library path to pixi's environment
       - name: Set R library path for pixi environment
         run: |
           # Assuming pixi's R library path is this; adapt if needed
@@ -52,6 +53,19 @@ jobs:
           mkdir -p $R_LIB_PATH
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'), repos='https://cran.rstudio.com')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
+
+
+      # Verify where R packages are installed
+      - name: Verify R package installation path
+        run: |
+          Rscript -e "print(.libPaths())"
+          Rscript -e "installed.packages()[, c('Package', 'LibPath')]"
+
+    # Print R library paths that rpy2 is using
+      - name: Debug rpy2 R library paths
+        run: |
+          python -c "import rpy2.robjects as robjects; print(robjects.r('.libPaths()'))"
+
 
       #- name: install other r dependencies
       #    run: pixi r install-r
