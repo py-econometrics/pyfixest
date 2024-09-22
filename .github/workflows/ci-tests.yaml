@@ -13,32 +13,32 @@ jobs:
     name: "Tests Core"
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.12"]
+        python-version: ["3.9", "3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
       - name: Setup python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
+      - name: Install
+        run: poetry install --without docs
 
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: v0.29.0
-          cache: true
-
-      - name: Set numba parallel flags
-        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+      - name: set numba parallel flags
+        run: |
+          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
-      # Install R packages into pixi's R library path
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
@@ -46,7 +46,55 @@ jobs:
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
-      # Run tests
-      - name: Run tests
+      - name: Run 'regular 'tests
         run: |
           pixi run tests-regular
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test_slow:
+    name: "Tests vs fixest"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.9", "3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Set up poetry
+        uses: snok/install-poetry@v1
+      - name: Install
+        run: poetry install --without docs
+
+      - name: set numba parallel flags
+        run: |
+          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
+
+      - name: Run 'slow 'tests
+        run: |
+          pixi run tests-slow
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
