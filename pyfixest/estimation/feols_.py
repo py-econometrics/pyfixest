@@ -822,12 +822,12 @@ class Feols:
         df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
-        if _method == "feols":
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
-        else:
+        if _method == "fepois":
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
+        else:
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
+            z = np.abs(t.ppf(alpha / 2, df))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
