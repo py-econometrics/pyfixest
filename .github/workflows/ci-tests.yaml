@@ -31,7 +31,6 @@ jobs:
         with:
           pixi-version: v0.29.0
           cache: true
-          auth-host: prefix.dev
 
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
