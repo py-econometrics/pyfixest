@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ["mac-latest"]
-        python-version: ["3.9", "3.12"]
+        os: ["windows-latest"]
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout source
