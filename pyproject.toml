@@ -6,6 +6,7 @@ version = "0.24.3"
 authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}, {name = "Styfen Schär"}]
 dependencies = ["lets-plot>=4.0.0", "scipy>=1.6", "formulaic>=1.0.0", "pandas>=1.1.0", "numba>=0.58.0", "seaborn>=0.13.2", "tabulate>=0.9.0", "polars>=0.20.1", "tqdm==4.66.4", "great-tables>=0.10.0", "numpy>=1.19.0", "jinja2>=3.1.4,<4"]
 
+
 [project.optional-dependencies]
 dev = ["pytest>=7.2.0", "pytest-cov>=4.1.0", "pytest-xdist>=3.5.0", "pyhdfe>=0.2.0", "pyarrow>=17.0.0", "pre-commit==3.6.0", "doubleml==0.7.1", "wildboottest>=0.3.2"]
 docs = ["quartodoc>=0.7.2", "jupyterlab>=4.0.12", "jupytext==1.16.1", "watermark==2.4.3"]
@@ -55,6 +56,7 @@ addopts = [
   "--cov-report=term-missing",
   "--color=yes",
 ]
+
 markers = [
   "slow: mark test to be part of the slow test suite",
   "extended: mark test to be part of the extended test suite",

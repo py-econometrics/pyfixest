@@ -175,6 +175,12 @@ def model_matrix_fixest(
     na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
 
+    # rename fixed effects columns wrapped in factorize()
+    if fe is not None:
+        fe.rename(
+            columns=lambda x: x.replace("factorize(", "").replace(")", ""), inplace=True
+        )
+
     return {
         "Y": Y,
         "X": X,

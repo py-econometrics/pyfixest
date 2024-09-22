@@ -141,6 +141,56 @@ def test_poisson_devpar_count():
         fepois(fml="Y ~ X1 | X4", data=data)
 
 
+def test_feols_errors():
+    data = pf.get_data()
+
+    with pytest.raises(TypeError):
+        pf.feols(fml=1, data=data)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, vcov=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm=1)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm="f1")
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=2)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol="2")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=-1.0)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, lean=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
+
+
+def test_poisson_errors():
+    data = pf.get_data(model="Fepois")
+    # iv not supported
+    with pytest.raises(NotImplementedError):
+        pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
+
+
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
@@ -475,3 +525,51 @@ def test_IV_Diag_unsupported_statistics():
 
     with pytest.raises(ValueError):
         feiv_instance.IV_Diag(statistics=unsupported_statistics)
+
+
+def test_errors_compressed():
+    data = pf.get_data()
+
+    # no more than two fixed effects
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+
+    # cluster variables not in model
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
+
+    # only CVR supported for Mundlak
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
+
+    # crv3 inference:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
+
+    # prediction:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+
+    # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
+
+    with pytest.raises(ValueError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
+
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
+
+    # no support for IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
+
+    # no support for WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
