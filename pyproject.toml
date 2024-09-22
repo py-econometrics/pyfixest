@@ -33,6 +33,7 @@ tests-regular = "pytest tests -m \"not (extended or slow or plots)\" --cov=pyfix
 tests-extended = "pytest tests -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
 tests-slow = "pytest tests -m slow --cov=./ --cov-report=xml"
 tests-rerun = "pytest --lf -n 4"
+set-rpy2-path = "python pyfixest/utils/set_rpy2_path.py"
 debug-env = "python -c \"import rpy2.robjects as robjects; print(robjects.r('.libPaths()'))\""
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
