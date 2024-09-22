@@ -1,7 +1,7 @@
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
 
-# Define the list of R library paths in Python
+# Set the R library paths again
 new_lib_paths = robjects.StrVector(
     [
         "/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library",
@@ -10,12 +10,11 @@ new_lib_paths = robjects.StrVector(
         "/usr/lib/R/library",
     ]
 )
-
-# Set the library paths in the R environment
 robjects.r[".libPaths"](new_lib_paths)
 
-# Verify that the paths have been set correctly
-print("Updated R library paths:", robjects.r(".libPaths()"))
-
-# Now attempt to import the did2s package
-did2s = importr("did2s")
+# Check if did2s is installed
+try:
+    did2s = importr("did2s")
+    print("did2s package imported successfully.")
+except Exception as e:
+    print(f"Error importing did2s: {e}")
