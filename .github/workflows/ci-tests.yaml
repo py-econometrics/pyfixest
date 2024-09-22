@@ -33,31 +33,7 @@ jobs:
       - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: Setup r2u
-        uses: eddelbuettel/github-actions/r2u-setup@master
-
-      # Set up R and install base R packages
-      - name: Install R and setup environment
-        run: |
-          mkdir -p ~/.R/library
-          Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"), repos="http://cran.us.r-project.org")'
-
-      # Set R_HOME and R_LIBS to base R path
-      - name: Set R_HOME and R_LIBS environment variables
-        run: |
-          echo "R_HOME=$(R RHOME)" >> $GITHUB_ENV
-          echo "R_LIBS=~/.R/library" >> $GITHUB_ENV
-
-      # Activate pixi environment and set R paths for rpy2
-      - name: Activate pixi environment and set R paths
-        run: |
-          pixi env activate  # Activate the conda environment created by Pixi
-          export R_HOME=$(R RHOME)  # Ensure R_HOME is set to the base R installation
-          export R_LIBS=~/.R/library  # Set R_LIBS to use the base R package library
-          echo "R_HOME is set to: $R_HOME"
-          echo "R_LIBS is set to: $R_LIBS"
-
       # Run tests
       - name: Run tests
         run: |
-          pixi run tests-regular
+          pixi run tests-slow
