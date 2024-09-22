@@ -1,6 +1,7 @@
-options(pkgType = "binary")
-
-install.packages('fixest', repos = c('https://lrberge.r-universe.dev', 'https://cloud.r-project.org'))
+install.packages(
+  "fixest",
+  repos = "https://packagemanager.rstudio.com/all/__linux__/focal/latest"
+)
 
 install.packages('broom', repos = c('https://tidymodels.r-universe.dev', 'https://cloud.r-project.org'))
 
