@@ -50,6 +50,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          partial: true
 
   test_slow:
     name: "Tests vs fixest"
@@ -93,6 +94,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          partial: true
 
   test_notebooks:
     name: "Test Notebooks"
