@@ -69,6 +69,17 @@ jobs:
       #- name: install other r dependencies
       #    run: pixi r install-r
 
+      - name: Ensure rpy2 uses all R library paths
+        run: |
+          python -c "
+          import rpy2.robjects as robjects;
+          new_lib_paths = robjects.StrVector(['/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', '/usr/local/lib/R/site-library', '/usr/lib/R/site-library', '/usr/lib/R/library']);
+          robjects.r('.libPaths(new_lib_paths)');
+          print('Updated R library paths:', robjects.r('.libPaths()'));
+          from rpy2.robjects.packages import importr;
+          did2s = importr('did2s')
+          "
+
       # Run tests
       - name: Run tests
         run: |
