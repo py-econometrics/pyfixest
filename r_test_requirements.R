@@ -1,5 +1,15 @@
-# note: fixest and broom are installed via conda
-install.packages(
-    c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag', 'ritest'),
-    repos = c('https://ropensci.r-universe.dev')
-)
+install.packages('fixest', repos = c('https://lrberge.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('broom', repos = c('https://tidymodels.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('clubSandwich', repos = c('https://jepusto.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('did2s', repos = c('https://kylebutts.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('wildrwolf', repos = c('https://s3alfisc.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('reticulate', repos = c('https://rstudio.r-universe.dev', 'https://cloud.r-project.org'))
+
+install.packages('ivDiag', repos = 'https://cloud.r-project.org')
+
+install.packages('ritest', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))
