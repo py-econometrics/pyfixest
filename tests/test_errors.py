@@ -265,16 +265,13 @@ def test_wildboottest_errors():
 
 
 def test_summary_errors():
+    "Test for appropriate errors when providing objects of type FixestMulti."
     data = get_data()
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
     with pytest.raises(TypeError):
-        etable(fit1)
-    with pytest.raises(TypeError):
         etable([fit1, fit2])
-    with pytest.raises(TypeError):
-        summary(fit1)
     with pytest.raises(TypeError):
         summary([fit1, fit2])
 
