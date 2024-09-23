@@ -55,6 +55,8 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          partial: true
+          flags: core-tests
 
   test_slow:
     name: "Tests vs fixest"
@@ -103,6 +105,9 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          partial: true
+          flags: tests-vs-fixest
+
 
 
   build-docs:
