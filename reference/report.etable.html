@@ -318,7 +318,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.etable" class="level1">
 <h1>report.etable</h1>
-<p><code>report.etable(models, type='gt', signif_code=[0.001, 0.01, 0.05], coef_fmt='b \n (se)', custom_stats=None, keep=None, drop=None, exact_match=False, labels=None, show_fe=True, show_se_type=True, felabels=None, notes=None, model_heads=None, head_order='dh', custom_model_stats=None, filename=None, print_tex=False, **kwargs)</code></p>
+<p><code>report.etable(models, type='gt', signif_code=[0.001, 0.01, 0.05], coef_fmt='b \n (se)', custom_stats=None, keep=None, drop=None, exact_match=False, labels=None, show_fe=True, show_se_type=True, felabels=None, notes='', model_heads=None, head_order='dh', custom_model_stats=None, filename=None, print_tex=False, **kwargs)</code></p>
 <p>Create an esttab-like table from a list of models.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
@@ -436,9 +436,9 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td><code>notes</code></td>
-<td>Optional[str]</td>
+<td>str</td>
 <td>Custom table notes. Default shows the significance levels and the format of the coefficient cell.</td>
-<td><code>None</code></td>
+<td><code>''</code></td>
 </tr>
 <tr class="even">
 <td><code>model_heads</code></td>
