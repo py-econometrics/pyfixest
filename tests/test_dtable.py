@@ -242,6 +242,89 @@ def test_counts_row_below(sample_df):
     assert_frame_equal(result_standardized, expected_standardized, check_dtype=False)
 
 
+def test_counts_row_below_equal(sample_df):
+    result = pf.dtable(
+        sample_df,
+        vars=["var1", "var2"],
+        bycol=["group"],
+        stats=["mean", "count"],
+        counts_row_below=True,
+        type="df",
+    )
+
+    expected = pd.DataFrame(
+        {
+            ("A", "Mean"): ["1.50", "4.50", "2.00"],  # Ensure '2.00' for consistency
+            ("B", "Mean"): ["4.00", "2.00", "3.00"],  # Ensure '3.00' for consistency
+        },
+        index=pd.MultiIndex.from_tuples(
+            [("stats", "var1"), ("stats", "var2"), ("nobs", "N")],
+            names=["stats", "var"],
+        ),
+    )
+
+    expected.columns = pd.MultiIndex.from_tuples(
+        expected.columns, names=["group", "Statistics"]
+    )
+    expected = expected.astype("object")
+
+    # Ensure the result has the correct MultiIndex row names
+    result.index.names = ["stats", "var"]
+
+    # Ensure the result has the correct MultiIndex column names
+    result.columns.names = ["group", "Statistics"]
+
+    # Standardize the result and expected DataFrames for comparison
+    result_standardized = standardize_dataframe(result)
+    expected_standardized = standardize_dataframe(expected)
+
+    assert_frame_equal(result_standardized, expected_standardized, check_dtype=False)
+
+
+def test_two_bycol_groups(sample_df):
+    # Create an additional column to group by
+    sample_df["group2"] = ["X", "X", "Y", "Y", "Y"]
+
+    result = pf.dtable(
+        sample_df,
+        vars=["var1", "var2"],
+        bycol=["group", "group2"],
+        stats=["mean", "count"],
+        type="df",
+    )
+
+    expected = pd.DataFrame(
+        {
+            ("A", "X", "Mean"): ["1.50", "4.50"],
+            ("A", "X", "N"): [2, 2],
+            ("B", "Y", "Mean"): ["4.00", "2.00"],
+            ("B", "Y", "N"): [3, 3],
+        },
+        index=["var1", "var2"],
+    )
+
+    expected.columns = pd.MultiIndex.from_tuples(
+        expected.columns, names=["group", "group2", "Statistics"]
+    )
+    expected = expected.astype(
+        {
+            "A": "object",
+            "B": "object",
+            ("A", "X", "N"): "int64",
+            ("B", "Y", "N"): "int64",
+        }
+    )
+
+    # Ensure the result has the correct MultiIndex column names
+    result.columns.names = ["group", "group2", "Statistics"]
+
+    # Standardize the result and expected DataFrames for comparison
+    result_standardized = standardize_dataframe(result)
+    expected_standardized = standardize_dataframe(expected)
+
+    assert_frame_equal(result_standardized, expected_standardized, check_dtype=False)
+
+
 def test_invalid_dataframe():
     """Test with an invalid dataframe and ensure it raises an error."""
     with pytest.raises(AssertionError, match="df must be a pandas DataFrame."):
