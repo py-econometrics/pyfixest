@@ -51,6 +51,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
+          flags: core-tests
 
   test_slow:
     name: "Tests vs fixest"
@@ -95,6 +96,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
+          flags: tests-vs-fixest
 
   test_notebooks:
     name: "Test Notebooks"
