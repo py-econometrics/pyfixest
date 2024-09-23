@@ -98,6 +98,7 @@ jobs:
           partial: true
           flags: tests-vs-fixest
 
+
   test_notebooks:
     name: "Test Notebooks"
     runs-on: ubuntu-latest
