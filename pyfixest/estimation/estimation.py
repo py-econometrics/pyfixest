@@ -25,6 +25,9 @@ def feols(
     store_data: bool = True,
     lean: bool = False,
     weights_type: str = "aweights",
+    use_compression: bool = False,
+    reps: int = 100,
+    seed: Optional[int] = None,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -99,6 +102,28 @@ def feols(
         Options include `aweights` or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
+    use_compression: bool
+        Whether to use sufficient statistics to losslessly fit the regression model
+        on compressed data. False by default. If True, the model is estimated on
+        compressed data, which can lead to a significant speed-up for large data sets.
+        See the paper by Wong et al (2021) for more details https://arxiv.org/abs/2102.11297.
+        Note that if `use_compression = True`, inference is lossless. If standard errors are
+        clustered, a wild cluster bootstrap is employed. Parameters for the wild bootstrap
+        can be specified via the `reps` and `seed` arguments. Additionally, note that for one-way
+        fixed effects, the estimation method uses a Mundlak transform to "control" for the
+        fixed effects. For two-way fixed effects, a two-way Mundlak transform is employed.
+        For two-way fixed effects, the Mundlak transform is only identical to a two-way
+        fixed effects model if the data set is a panel. We do not provide any checks for the
+        panel status of the data set.
+
+    reps: int
+        Number of bootstrap repetitions. Only relevant for boostrap inference applied to
+        compute cluster robust errors when `use_compression = True`.
+
+    seed: Optional[int]
+        Seed for the random number generator. Only relevant for boostrap inference applied to
+        compute cluster robust errors when `use_compression = True`.
 
 
     Returns
@@ -330,6 +355,9 @@ def feols(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=use_compression,
+        reps=reps,
+        seed=seed,
     )
 
     fixest = FixestMulti(
@@ -339,10 +367,15 @@ def feols(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=use_compression,
+        reps=reps,
+        seed=seed,
     )
 
+    estimation = "feols" if not use_compression else "compression"
+
     fixest._prepare_estimation(
-        "feols", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation, fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
@@ -494,6 +527,9 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
     )
 
     fixest = FixestMulti(
@@ -503,6 +539,9 @@ def fepois(
         lean=lean,
         fixef_tol=fixef_tol,
         weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
     )
 
     fixest._prepare_estimation(
@@ -539,6 +578,9 @@ def _estimation_input_checks(
     lean: bool,
     fixef_tol: float,
     weights_type: str,
+    use_compression: bool,
+    reps: Optional[int],
+    seed: Optional[int],
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -605,3 +647,20 @@ def _estimation_input_checks(
             (for frequency weights) but it is {weights_type}.
             """
         )
+
+    if not isinstance(use_compression, bool):
+        raise TypeError("The function argument `use_compression` must be of type bool.")
+    if use_compression and weights is not None:
+        raise NotImplementedError(
+            "Compressed regression is not supported with weights."
+        )
+
+    if reps is not None:
+        if not isinstance(reps, int):
+            raise TypeError("The function argument `reps` must be of type int.")
+
+        if reps <= 0:
+            raise ValueError("The function argument `reps` must be strictly positive.")
+
+    if seed is not None and not isinstance(seed, int):
+        raise TypeError("The function argument `seed` must be of type int.")

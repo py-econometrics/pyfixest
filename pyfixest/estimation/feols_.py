@@ -219,6 +219,7 @@ class Feols:
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
+        self._use_mundlak = False
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -322,17 +323,51 @@ class Feols:
         self._depvar = self._Y.columns[0]
         self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
         self._has_fixef = self._fe is not None
-        self._N = self._X.shape[0]
         self._fixef = self.FixestFormula._fval
-
-        if self._weights_name is not None:
-            self._weights = self._weights_df.to_numpy()
-        else:
-            self._weights = np.ones(self._N)
-        self._weights = self._weights.reshape((self._N, 1))
 
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
+
+        self._weights = self._set_weights()
+        self._N, self._N_rows = self._set_nobs()
+
+    def _set_nobs(self) -> tuple[int, int]:
+        """
+        Fetch the number of observations used in fitting the regression model.
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple containing the total number of observations and the number of rows
+            in the dependent variable array.
+        """
+        _N_rows = len(self._Y)
+        if self._weights_type == "aweights":
+            _N = _N_rows
+        elif self._weights_type == "fweights":
+            _N = np.sum(self._weights)
+
+        return _N, _N_rows
+
+    def _set_weights(self) -> np.ndarray:
+        """
+        Return the weights used in the regression model.
+
+        Returns
+        -------
+        np.ndarray
+            The weights used in the regression model.
+            If no weights are used, returns an array of ones
+            with the same length as the dependent variable array.
+        """
+        N = len(self._Y)
+
+        if self._weights_df is not None:
+            _weights = self._weights_df.to_numpy()
+        else:
+            _weights = np.ones(N)
+
+        return _weights.reshape((N, 1))
 
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
@@ -461,6 +496,7 @@ class Feols:
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
         # Assuming `data` is the DataFrame in question
+
         if isinstance(data, pl.DataFrame):
             data = _polars_to_pandas(data)
 
@@ -607,10 +643,6 @@ class Feols:
             sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         elif _method == "fepois":
             sigma2 = 1
-        else:
-            raise NotImplementedError(
-                f"'iid' inference is not supported for {_method} regressions."
-            )
 
         _vcov = _bread * sigma2
 
@@ -643,7 +675,7 @@ class Feols:
 
         return _vcov
 
-    def _vcov_crv1(self, clustid, cluster_col):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _Z = self._Z
         _u_hat = self._u_hat
         _is_iv = self._is_iv
@@ -790,12 +822,12 @@ class Feols:
         df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
-        if _method == "feols":
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
-        else:
+        if _method == "fepois":
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
+        else:
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
+            z = np.abs(t.ppf(alpha / 2, df))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -1582,20 +1614,6 @@ class Feols:
             y_hat += np.sum(_fixef_mat, axis=1)
 
         return y_hat.flatten()
-
-    def get_nobs(self):
-        """
-        Fetch the number of observations used in fitting the regression model.
-
-        Returns
-        -------
-        None
-        """
-        self._N_rows = len(self._Y)
-        if self._weights_type == "aweights":
-            self._N = self._N_rows
-        elif self._weights_type == "fweights":
-            self._N = np.sum(self._weights)
 
     def get_performance(self) -> None:
         """

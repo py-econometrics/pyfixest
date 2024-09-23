@@ -50,12 +50,20 @@ jobs:
         run: Rscript -e 'install.packages(c("fixest", "broom", "did2s", "clubSandwich", "wildrwolf", "ivDiag"))'
         shell: bash
 
-      # Run tests for PRs with the label "plots"
+      # Run tests for PRs with the label "extended"
       - name: Run tests for plots (only on PRs with the 'tests-extended' label)
         if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
-        run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml
+        run: poetry run pytest tests -m "extended" --cov=pyfixest --cov-report=xml
 
       # Run tests for push to master
       - name: Run tests for push to master
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: poetry run pytest tests -m "plots" --cov=pyfixest --cov-report=xml
+        run: poetry run pytest tests -m "extended" --cov=pyfixest --cov-report=xml
+
+      # upload to codecov
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: extended-tests
+          partial: true
