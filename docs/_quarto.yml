@@ -27,8 +27,8 @@ website:
         file: difference-in-differences.ipynb
       - text: "Replicating 'The Effect' with PyFixest"
         file: replicating-the-effect.ipynb
-      - text: "Regression Tables with `pf.etable()` and `Stargazer`"
-        file: stargazer.ipynb
+      - text: "Regression Tables with `pf.etable()` and Summary Statistics via `pf.dtable()`"
+        file: table-layout.ipynb
       - text: "Hypothesis testing and Marginal Effects with `py-marginaleffects`"
         file: marginaleffects.ipynb
       - text: "Documentation"
