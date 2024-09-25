@@ -59,11 +59,4 @@ jobs:
       - name: Run tests for push to master
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: pixi run tests-extended
-
-      # upload to codecov
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: extended-tests
-          partial: true
+        
