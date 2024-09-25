@@ -40,6 +40,10 @@ jobs:
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
+      - name: Print R version
+        run: |
+          Rscript -e 'R.version'
+
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
