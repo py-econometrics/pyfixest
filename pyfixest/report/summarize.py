@@ -768,9 +768,6 @@ def make_table(
         DataFrame containing the table to be displayed.
     type : str, optional
         Type of table to be created. The default is 'gt'.
-        Note: when type = 'gt' but a file_name with a '.tex'
-        extension is provided, then the table will be displayed as
-        gt but also saved as a tex file.
     notes : str
         Table notes to be displayed at the bottom of the table.
     rgroup_sep : str
@@ -1075,7 +1072,7 @@ def make_table(
                 row_group_padding="0px",
             )
         # Save the html code of the table to a file
-        if file_name is not None:
+        if file_name is not None and file_name.endswith(".html"):
             with open(file_name, "w") as f:
                 f.write(gt.as_raw_html())
 
@@ -1137,7 +1134,7 @@ def _format_mean_std(data: pd.Series,
         if type =="gt":
             return f"{mean:.{digits}f}<br>({std:.{digits}f})"
         elif type == "tex":
-            return f"{mean:.{digits}f}\\\({std:.{digits}f})"
+            return f"{mean:.{digits}f}\\\\({std:.{digits}f})"
     return f"{mean:.{digits}f} ({std:.{digits}f})"
 
 
