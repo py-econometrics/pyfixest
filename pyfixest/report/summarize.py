@@ -1107,6 +1107,40 @@ def _relabel_index(index, labels=None, stats_labels=None):
     return index
 
 
+def _format_mean_std(data: pd.Series,
+                     digits: int=2,
+                     newline: bool= True,
+                     type= str) -> str:
+    """
+    Calculate the mean and standard deviation of a pandas Series and return as a string of the format "mean /n (std)".
+
+    Parameters
+    ----------
+    data : pd.Series
+        The pandas Series for which to calculate the mean and standard deviation.
+    digits : int, optional
+        The number of decimal places to round the mean and standard deviation to. The default is 2.
+    newline : bool, optional
+        Whether to add a newline character between the mean and standard deviation. The default is True.
+    type : str, optional
+        The type of the table output.
+
+    Returns
+    -------
+    _format_mean_std : str
+        The mean and standard deviation of the pandas Series formated as a string.
+
+    """
+    mean = data.mean()
+    std = data.std()
+    if newline:
+        if type =="gt":
+            return f"{mean:.{digits}f}<br>({std:.{digits}f})"
+        elif type == "tex":
+            return f"{mean:.{digits}f}\\\({std:.{digits}f})"
+    return f"{mean:.{digits}f} ({std:.{digits}f})"
+
+
 def dtable(
     df: pd.DataFrame,
     vars: list,
@@ -1119,6 +1153,7 @@ def dtable(
     digits: int = 2,
     notes: str = "",
     counts_row_below: bool = False,
+    hide_stats: bool = False,
     **kwargs,
 ):
     r"""
@@ -1155,6 +1190,10 @@ def dtable(
         Whether to display the number of observations at the bottom of the table.
         Will only be carried out when each var has the same number of obs and when
         byrow is None. The default is False
+    hide_stats : bool
+        Whether to hide the names of the statistics in the table header. When stats
+        are hidden and the user provides no notes string the labels of the stats are
+        listed in the table notes. The default is False.
     kwargs : dict
         Additional arguments to be passed to the make_table function.
 
@@ -1174,11 +1213,13 @@ def dtable(
         col in df.columns for col in bycol
     ), "bycol must be a list of columns in the DataFrame."
 
-    # Default stats dictionary
+    # Default stats labels dictionary
     stats_dict = {
         "count": "N",
         "mean": "Mean",
         "std": "Std. Dev.",
+        "mean_std": "Mean (Std. Dev.)",
+        "mean_newline_std": "Mean (Std. Dev.)",
         "min": "Min",
         "max": "Max",
         "var": "Variance",
@@ -1186,8 +1227,21 @@ def dtable(
     }
     stats_dict.update(stats_labels or {})
 
-    # Calculate the desired statistics
-    agg_funcs = {var: stats for var in vars}
+    # Define custom aggregation functions
+    def mean_std(x):
+        return _format_mean_std(x, digits=digits, newline=False, type=type)
+    def mean_newline_std(x):
+        return _format_mean_std(x, digits=digits, newline=True, type=type)
+
+    # Create a dictionary to map stat names to custom functions
+    custom_funcs = {
+        'mean_std': mean_std,
+        'mean_newline_std': mean_newline_std
+    }
+
+    # Prepare the aggregation dictionary allowing custom functions
+    agg_funcs = {var: [custom_funcs.get(stat, stat) for stat in stats] for var in vars}
+
     if (byrow is not None) and (bycol is not None):
         bylist = [byrow] + bycol
         res = df.groupby(bylist).agg(agg_funcs)
@@ -1289,6 +1343,14 @@ def dtable(
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))
             res = res.sort_index(axis=1, level=levels_to_sort, sort_remaining=False)
+
+        # When hide_stats is True, we remove the names of the statistics
+        # And add a note to the table listing the statistics when the user
+        # has not provided a notes string
+        if hide_stats:
+            res.columns = res.columns.droplevel(-1)
+            if notes=="":
+                notes= "Note: Displayed statistics are " + ", ".join([stats_dict.get(k, k) for k in stats]) + "."
 
     # Replace all NaNs with empty strings
     res = res.fillna("")
