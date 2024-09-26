@@ -89,10 +89,21 @@ def r_results():
         data=data_r,
         weights="weights",
         cl=cl_r,
+        run_ar=False,
+        parallel=False,
+        bootstrap=False,
     )
 
     result_without_weights = ivDiag.ivDiag(
-        Y=Y_r, D=D_r, Z=Z_r, controls=controls_r, data=data_r, cl=cl_r
+        Y=Y_r,
+        D=D_r,
+        Z=Z_r,
+        controls=controls_r,
+        data=data_r,
+        cl=cl_r,
+        run_ar=False,
+        parallel=False,
+        bootstrap=False,
     )
 
     return {
