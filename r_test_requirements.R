@@ -1,6 +1,6 @@
 # note: fixest and broom are installed via conda
 install.packages(
-    c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag', 'stats', 'base'),
+    c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag', 'stats', 'base', 'car'),
     repos='https://cran.rstudio.com'
 );
 install.packages(
