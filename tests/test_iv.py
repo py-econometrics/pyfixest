@@ -89,7 +89,7 @@ def r_results():
         data=data_r,
         weights="weights",
         cl=cl_r,
-        run_ar=False,
+        run_AR=False,
         parallel=False,
         bootstrap=False,
     )
@@ -101,7 +101,7 @@ def r_results():
         controls=controls_r,
         data=data_r,
         cl=cl_r,
-        run_ar=False,
+        run_AR=False,
         parallel=False,
         bootstrap=False,
     )
@@ -155,7 +155,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     _N = fit_iv._N
     if adj_vcov == {"CRV1": "cluster"}:
         F_stat_R = F_cl
-        F_eff_R = result[4]
+        F_eff_R = result[3]
     elif adj_vcov == "iid":
         F_stat_R = F_naive
         F_eff_R = result[1]  # * _N / (_N - 1)
