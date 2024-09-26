@@ -131,12 +131,6 @@ jobs:
           pixi-version: v0.29.0
           cache: true
 
-      - name: Set up poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install dependencies
-        run: poetry install --with docs
-
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
