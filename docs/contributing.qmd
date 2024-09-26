@@ -82,6 +82,14 @@ and you're ready to go!
 There are several command line targets that assist with development included
 as `pixi` tasks.
 
+To avtivate relevant pixi environments, you can type
+
+```{.bash .code-copy}
+pixi shell                      # open the base environment
+pixi shell --environment dev    # open the dev environment
+```
+
+For development, it is recommended to activate the dev environment (as it includes all development dependencies).
 
 ```{.bash .code-copy}
 # install all R development dependencies
