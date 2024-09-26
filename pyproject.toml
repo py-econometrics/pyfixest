@@ -25,7 +25,7 @@ pyfixest = { path = ".", editable = true }
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "dev" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
