@@ -47,7 +47,7 @@ jobs:
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
           mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
       # Run tests for PRs with the label "extended"
@@ -59,4 +59,3 @@ jobs:
       - name: Run tests for push to master
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: pixi run tests-extended
-        
