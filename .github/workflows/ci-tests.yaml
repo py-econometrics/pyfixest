@@ -51,8 +51,7 @@ jobs:
 
       - name: Install R packages
         run: |
-          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p $R_LIB_PATH
+          $env:R_LIB_PATH="D:\a\pyfixest\pyfixest/.pixi/envs/dev/lib/R/library"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
@@ -103,8 +102,7 @@ jobs:
 
       - name: Install R packages
         run: |
-          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p $R_LIB_PATH
+          $env:R_LIB_PATH="D:\a\pyfixest\pyfixest/.pixi/envs/dev/lib/R/library"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos='https://cran.rstudio.com')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
 
