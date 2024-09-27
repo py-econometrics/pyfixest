@@ -226,7 +226,7 @@ def etable(
         else:
             se_type_list.append(model._vcov_type)
 
-        if model._fixef is not None:
+        if model._fixef is not None and model._fixef!="0":
             fixef_list += model._fixef.split("+")
 
     # find all fixef variables when the user does not want to hide the FE rows
