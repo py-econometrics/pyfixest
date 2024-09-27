@@ -30,57 +30,47 @@ Please describe the behavior you want and why, and provide examples of how pyfix
 
 ### Setting up your local environment
 
-Start by forking the pyfixest GitHub repository, then clone your forked repository
-using `git`:
+Would you like to contribute to pyfixest, or run some of the unit tests locally? Awesome!
+Here's how you can get started:
+
+First, you'll want to fork the pyfixest GitHub repository. Then, clone your forked repo with git:
 
 ```{.bash .code-copy}
 git clone https://github.com/<username>/pyfixest.git
 cd pyfixest
 ```
 
-In order to work on `pyfixest`, you will need Python and R installed. If working
-on documentation, you will need Quarto installed. Note that you only need
-a local R installation if you want to run unit tests locally.
+To work on pyfixest, you'll need Python and R installed. If you're planning to work on the documentation, be sure to have Quarto installed as well.
+Note: an R installation is only needed if you plan to run the unit tests locally.
 
-For suggestions on how to install R and Python, see the sections below.
-
+For guidance on installing R and Python, check out the sections below.
 
 ### Package Management via `pixi`
 
+
 `PyFixest` is using [pixi](https://pixi.sh/latest/).
 
-Please follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation.
+Just follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation
+to set up `pixi`.
 
-Afterwards, you can initiate the project environment and install all dependencies by running
+Once `pixi` is installed, initialize the project environment and install all dependencies with:
 
 ```{.bash .code-copy}
 cd path-to-pyfixest
 pixi install
 ```
 
-If you type
+After installation, activate your custom `pixi` environment for `pyfixest` by typing:
+
 ```{.bash .code-copy}
 pixi shell
 ```
 
-you will see that you have activated a custom `pixi` environment for `pyfixest`.
-
-### Code Style
-
-We use `ruff` and `pre-commit` to ensure a consistent code style.
-
-To install the required hooks, run
-
-```{.bash .code-copy}
-pixi run lint
-```
-
-and you're ready to go!
+You'll now be in the `pixi` environment and ready to go!
 
 ### `Pixi` tasks
 
-There are several command line targets that assist with development included
-as `pixi` tasks.
+To help with development, we've included several handy pixi tasks.
 
 To avtivate relevant pixi environments, you can type
 
@@ -89,7 +79,19 @@ pixi shell                      # open the base environment
 pixi shell --environment dev    # open the dev environment
 ```
 
-For development, it is recommended to activate the dev environment (as it includes all development dependencies).
+For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.
+
+For example, we use `ruff` and `pre-commit` to ensure code consistency across the project.
+
+To install the required hooks, simply run
+
+```{.bash .code-copy}
+pixi run lint
+```
+
+and you're ready to go!
+
+We’ve also included additional tasks to help you install the necessary R packages for running unit tests or to run different test suites, whether they’re lightweight or more computationally demanding:
 
 ```{.bash .code-copy}
 # install all R development dependencies
@@ -98,9 +100,11 @@ pixi run install-r
 pixi run tests
 # run all tests excluding very computationally demanding tests
 pixi run tests-regular
+# rerun failed tests
+pixi run tests-rerun
 ```
 
-To rebuild the documentation locally, you can run
+Building the documentation is also straightforward. We’ve got tasks to build, render, and preview the docs:
 
 ```{.bash .code-copy}
 # Build documentation and website
@@ -111,25 +115,7 @@ pixi run docs-render
 pixi run docs-preview
 ```
 
-Note that you need to have `quarto` installed in order to build the documentation locally.
-
-To run the linter, you can run
-
-```{.bash .code-copy}
-pixi run lint
-```
-
-To build the package for PyPi, you can run
-
-```{.bash .code-copy}
-pixi run build-pip
-```
-
-To re-create the csv files in `tests/data` that contain results from R packages for testing, you can run
-
-```{.bash .code-copy}
-`pixi run update-tests-data`
-```
+Keep in mind that you’ll need quarto installed to build the documentation locally.
 
 ## Installing Python, R and Quarto
 
