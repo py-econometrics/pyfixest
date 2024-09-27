@@ -9,6 +9,9 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import fepois
+from pyfixest.utils.set_rpy2_path import update_r_paths
+
+update_r_paths()
 
 pandas2ri.activate()
 

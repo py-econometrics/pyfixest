@@ -10,7 +10,10 @@ from rpy2.robjects.packages import importr
 from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.dev_utils import _extract_variable_level
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 pandas2ri.activate()
 
