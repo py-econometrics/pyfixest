@@ -4,12 +4,46 @@ description = "Fast high dimensional fixed effect estimation following syntax of
 requires-python = ">= 3.9"
 version = "0.24.3"
 authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}, {name = "Styfen Schär"}]
-dependencies = ["lets-plot>=4.0.0", "scipy>=1.6", "formulaic>=1.0.0", "pandas>=1.1.0", "numba>=0.58.0", "seaborn>=0.13.2", "tabulate>=0.9.0", "polars>=0.20.1", "tqdm==4.66.4", "great-tables>=0.10.0", "numpy>=1.19.0", "jinja2>=3.1.4,<4"]
 
+dependencies = [
+  "lets-plot>=4.0.0",
+  "scipy>=1.6",
+  "formulaic>=1.0.0",
+  "pandas>=1.1.0",
+  "numba>=0.58.0",
+  "seaborn>=0.13.2",
+  "tabulate>=0.9.0",
+  "polars>=0.20.1",
+  "tqdm==4.66.4",
+  "great-tables>=0.10.0",
+  "numpy>=1.19.0",
+  "jinja2>=3.1.4,<4"
+]
+
+[tool.pixi.feature.dev.dependencies]
+rpy2 = ">=3.5.11,<4"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.2.0", "pytest-cov>=4.1.0", "pytest-xdist>=3.5.0", "pyhdfe>=0.2.0", "pyarrow>=17.0.0", "pre-commit==3.6.0", "doubleml==0.7.1", "wildboottest>=0.3.2"]
-docs = ["quartodoc>=0.7.2", "jupyterlab>=4.0.12", "jupytext==1.16.1", "watermark==2.4.3"]
+dev = [
+  "pytest>=7.2.0",
+  "pytest-cov>=4.1.0",
+  "pytest-xdist>=3.5.0",
+  "pyhdfe>=0.2.0",
+  "pyarrow>=17.0.0",
+  "pre-commit==3.6.0",
+  "doubleml==0.7.1",
+   "wildboottest>=0.3.2"
+]
+
+docs = [
+  "quartodoc>=0.7.2",
+  "jupyterlab>=4.0.12",
+  "jupytext==1.16.1",
+  "watermark==2.4.3"
+]
+
+[tool.pixi.feature.build.dependencies]
+python-build = ">=1.2.2,<2"
 
 [build-system]
 build-backend = "hatchling.build"
@@ -42,12 +76,6 @@ render-notebooks = "python scripts/run_notebooks.py"
 
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
-
-[tool.pixi.feature.build.dependencies]
-python-build = ">=1.2.2,<2"
-
-[tool.pixi.feature.dev.dependencies]
-rpy2 = ">=3.5.11,<4"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
