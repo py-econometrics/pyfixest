@@ -52,7 +52,7 @@ requires = ["hatchling"]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["linux-64", "win-64"]
+platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true }
