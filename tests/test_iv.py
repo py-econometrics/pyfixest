@@ -6,7 +6,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 # Activate pandas2ri to enable conversion between pandas DataFrames and R DataFrames
 pandas2ri.activate()
@@ -86,10 +89,21 @@ def r_results():
         data=data_r,
         weights="weights",
         cl=cl_r,
+        run_AR=False,
+        parallel=False,
+        bootstrap=False,
     )
 
     result_without_weights = ivDiag.ivDiag(
-        Y=Y_r, D=D_r, Z=Z_r, controls=controls_r, data=data_r, cl=cl_r
+        Y=Y_r,
+        D=D_r,
+        Z=Z_r,
+        controls=controls_r,
+        data=data_r,
+        cl=cl_r,
+        run_AR=False,
+        parallel=False,
+        bootstrap=False,
     )
 
     return {
@@ -141,7 +155,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     _N = fit_iv._N
     if adj_vcov == {"CRV1": "cluster"}:
         F_stat_R = F_cl
-        F_eff_R = result[4]
+        F_eff_R = result[3]
     elif adj_vcov == "iid":
         F_stat_R = F_naive
         F_eff_R = result[1]  # * _N / (_N - 1)

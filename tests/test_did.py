@@ -10,6 +10,9 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
+from pyfixest.utils.set_rpy2_path import update_r_paths
+
+update_r_paths()
 
 pandas2ri.activate()
 did2s = importr("did2s")

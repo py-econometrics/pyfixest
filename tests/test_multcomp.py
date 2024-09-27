@@ -7,7 +7,10 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 pandas2ri.activate()
 
