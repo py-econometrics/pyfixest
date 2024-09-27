@@ -226,26 +226,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="package-management-via-pixi" class="level3">
 <h3 class="anchored" data-anchor-id="package-management-via-pixi">Package Management via <code>pixi</code></h3>
 <p><code>PyFixest</code> is using <a href="https://pixi.sh/latest/">pixi</a>.</p>
-<p>Just follow the <a href="https://pixi.sh/latest/#installation">installation instructions</a> from the <code>pixi</code> documentation to set up <code>pixi</code>.</p>
-<p>Once <code>pixi</code> is installed, initialize the project environment and install all dependencies with:</p>
+<p>To install <code>pixi</code>, just follow the <a href="https://pixi.sh/latest/#installation">installation instructions</a> from the <code>pixi</code> documentation.</p>
+<p>Once <code>pixi</code> is installed, you can initialize the project environment and install all dependencies with</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> path-to-pyfixest</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> install</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>After installation, activate your custom <code>pixi</code> environment for <code>pyfixest</code> by typing:</p>
+<p>After installation, you can activate a custom <code>pixi</code> environment for <code>pyfixest</code> by typing:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> shell</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>You’ll now be in the <code>pixi</code> environment and ready to go!</p>
+<p>For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> shell <span class="at">--environment</span> dev    <span class="co"># open the dev environment</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="pixi-tasks" class="level3">
 <h3 class="anchored" data-anchor-id="pixi-tasks"><code>Pixi</code> tasks</h3>
 <p>To help with development, we’ve included several handy pixi tasks.</p>
-<p>To avtivate relevant pixi environments, you can type</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> shell                      <span class="co"># open the base environment</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> shell <span class="at">--environment</span> dev    <span class="co"># open the dev environment</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.</p>
 <p>For example, we use <code>ruff</code> and <code>pre-commit</code> to ensure code consistency across the project.</p>
 <p>To install the required hooks, simply run</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> run lint</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>and you’re ready to go!</p>
-<p>We’ve also included additional tasks to help you install the necessary R packages for running unit tests or to run different test suites, whether they’re lightweight or more computationally demanding:</p>
+<p>and you’re ready to go! After installation, the task will run all linting rules via <code>ruff</code>.</p>
+<p>We’ve included other tasks to help install the necessary R packages for running unit tests or to run different sets of tests:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode bash code-copy code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install all R development dependencies</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> run install-r</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># run all tests via pytest</span></span>
