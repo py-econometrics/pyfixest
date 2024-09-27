@@ -39,7 +39,8 @@ docs = [
   "quartodoc>=0.7.2",
   "jupyterlab>=4.0.12",
   "jupytext==1.16.1",
-  "watermark==2.4.3"
+  "watermark==2.4.3",
+  "wildboottest>=0.3.2"
 ]
 
 [tool.pixi.feature.build.dependencies]
@@ -59,7 +60,7 @@ pyfixest = { path = ".", editable = true }
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "dev" }
+docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
