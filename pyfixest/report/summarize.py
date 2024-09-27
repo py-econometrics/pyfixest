@@ -226,7 +226,7 @@ def etable(
         else:
             se_type_list.append(model._vcov_type)
 
-        if model._fixef is not None and model._fixef!="0":
+        if model._fixef is not None and model._fixef != "0":
             fixef_list += model._fixef.split("+")
 
     # find all fixef variables when the user does not want to hide the FE rows
@@ -1104,10 +1104,9 @@ def _relabel_index(index, labels=None, stats_labels=None):
     return index
 
 
-def _format_mean_std(data: pd.Series,
-                     digits: int=2,
-                     newline: bool= True,
-                     type= str) -> str:
+def _format_mean_std(
+    data: pd.Series, digits: int = 2, newline: bool = True, type=str
+) -> str:
     """
     Calculate the mean and standard deviation of a pandas Series and return as a string of the format "mean /n (std)".
 
@@ -1131,7 +1130,7 @@ def _format_mean_std(data: pd.Series,
     mean = data.mean()
     std = data.std()
     if newline:
-        if type =="gt":
+        if type == "gt":
             return f"{mean:.{digits}f}<br>({std:.{digits}f})"
         elif type == "tex":
             return f"{mean:.{digits}f}\\\\({std:.{digits}f})"
@@ -1227,14 +1226,12 @@ def dtable(
     # Define custom aggregation functions
     def mean_std(x):
         return _format_mean_std(x, digits=digits, newline=False, type=type)
+
     def mean_newline_std(x):
         return _format_mean_std(x, digits=digits, newline=True, type=type)
 
     # Create a dictionary to map stat names to custom functions
-    custom_funcs = {
-        'mean_std': mean_std,
-        'mean_newline_std': mean_newline_std
-    }
+    custom_funcs = {"mean_std": mean_std, "mean_newline_std": mean_newline_std}
 
     # Prepare the aggregation dictionary allowing custom functions
     agg_funcs = {var: [custom_funcs.get(stat, stat) for stat in stats] for var in vars}
@@ -1345,8 +1342,12 @@ def dtable(
         # has not provided a notes string
         if hide_stats:
             res.columns = res.columns.droplevel(-1)
-            if notes=="":
-                notes= "Note: Displayed statistics are " + ", ".join([stats_dict.get(k, k) for k in stats]) + "."
+            if notes == "":
+                notes = (
+                    "Note: Displayed statistics are "
+                    + ", ".join([stats_dict.get(k, k) for k in stats])
+                    + "."
+                )
 
     # Replace all NaNs with empty strings
     res = res.fillna("")
