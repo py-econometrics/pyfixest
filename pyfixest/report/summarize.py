@@ -768,9 +768,6 @@ def make_table(
         DataFrame containing the table to be displayed.
     type : str, optional
         Type of table to be created. The default is 'gt'.
-        Note: when type = 'gt' but a file_name with a '.tex'
-        extension is provided, then the table will be displayed as
-        gt but also saved as a tex file.
     notes : str
         Table notes to be displayed at the bottom of the table.
     rgroup_sep : str
