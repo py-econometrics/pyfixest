@@ -50,17 +50,16 @@ For guidance on installing R and Python, check out the sections below.
 
 `PyFixest` is using [pixi](https://pixi.sh/latest/).
 
-Just follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation
-to set up `pixi`.
+To install `pixi`, just follow the [installation instructions](https://pixi.sh/latest/#installation) from the `pixi` documentation.
 
-Once `pixi` is installed, initialize the project environment and install all dependencies with:
+Once `pixi` is installed, you can initialize the project environment and install all dependencies with
 
 ```{.bash .code-copy}
 cd path-to-pyfixest
 pixi install
 ```
 
-After installation, activate your custom `pixi` environment for `pyfixest` by typing:
+After installation, you can activate a custom `pixi` environment for `pyfixest` by typing:
 
 ```{.bash .code-copy}
 pixi shell
@@ -68,18 +67,15 @@ pixi shell
 
 You'll now be in the `pixi` environment and ready to go!
 
-### `Pixi` tasks
-
-To help with development, we've included several handy pixi tasks.
-
-To avtivate relevant pixi environments, you can type
+For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.
 
 ```{.bash .code-copy}
-pixi shell                      # open the base environment
 pixi shell --environment dev    # open the dev environment
 ```
 
-For most development tasks, it’s best to activate the development environment since it includes all the necessary dependencies for development.
+### `Pixi` tasks
+
+To help with development, we've included several handy pixi tasks.
 
 For example, we use `ruff` and `pre-commit` to ensure code consistency across the project.
 
@@ -89,10 +85,9 @@ To install the required hooks, simply run
 pixi run lint
 ```
 
-and you're ready to go!
+and you're ready to go! After installation, the task will run all linting rules via `ruff`.
 
-We’ve also included additional tasks to help you install the necessary R packages for running unit tests or to run different test suites, whether they’re lightweight or more computationally demanding:
-
+We’ve included other tasks to help install the necessary R packages for running unit tests or to run different sets of tests:
 ```{.bash .code-copy}
 # install all R development dependencies
 pixi run install-r
