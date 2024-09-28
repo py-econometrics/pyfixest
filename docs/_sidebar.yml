@@ -3,8 +3,8 @@ website:
   - contents:
     - reference/index.qmd
     - contents:
-      - reference/estimation.feols.qmd
-      - reference/estimation.fepois.qmd
+      - reference/estimation.estimation.feols.qmd
+      - reference/estimation.estimation.fepois.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
@@ -12,13 +12,16 @@ website:
       - reference/estimation.rwolf.qmd
       section: Estimation Functions
     - contents:
-      - reference/estimation.Feols.qmd
-      - reference/estimation.Fepois.qmd
-      - reference/estimation.Feiv.qmd
+      - reference/estimation.feols_.Feols.qmd
+      - reference/estimation.fepois_.Fepois.qmd
+      - reference/estimation.feiv_.Feiv.qmd
+      - reference/estimation.feols_compressed_.FeolsCompressed.qmd
       section: Estimation Classes
     - contents:
+      - reference/did.visualize.panelview.qmd
       - reference/report.summary.qmd
       - reference/report.etable.qmd
+      - reference/report.dtable.qmd
       - reference/report.coefplot.qmd
       - reference/report.iplot.qmd
       - reference/did.visualize.panelview.qmd

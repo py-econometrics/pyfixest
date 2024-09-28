@@ -1,10 +1,13 @@
 import warnings
+from importlib import import_module
 from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.FormulaParser import FixestFormula
 
 
 class Feiv(Feols):
@@ -111,6 +114,9 @@ class Feiv(Feols):
         clusters if users set specification of variance-covariance matrix type
     _eff_F : scalar
         Effective F-statistics of first stage regression as in Olea and Pflueger 2013
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
 
 
     Raises
@@ -123,62 +129,83 @@ class Feiv(Feols):
     # Constructor and methods implementation...
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        endogvar: np.ndarray,
-        Z: np.ndarray,
-        weights: np.ndarray,
-        coefnames_x: list,
-        coefnames_z: list,
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
         collin_tol: float,
-        weights_name: Optional[str],
-        weights_type: str,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
     ) -> None:
         super().__init__(
-            Y=Y,
-            X=X,
-            weights=weights,
-            coefnames=coefnames_x,
-            collin_tol=collin_tol,
-            weights_name=weights_name,
-            weights_type=weights_type,
-            solver=solver,
+            FixestFormula,
+            data,
+            ssc_dict,
+            drop_singletons,
+            drop_intercept,
+            weights,
+            weights_type,
+            collin_tol,
+            fixef_tol,
+            lookup_demeaned_data,
+            solver,
+            store_data,
+            copy_data,
+            lean,
         )
-        self._weights_type_feiv: str
-
-        # check if Z is two dimensional array
-        if len(Z.shape) != 2:
-            raise ValueError("Z must be a two-dimensional array")
-
-        # Store weights type in Feiv class.
-        self._weights_type_feiv = weights_type
-
-        w = np.sqrt(weights) if self._has_weights else 1.0
-
-        # Weight endgvar first. We will weight Z
-        # after handling multicolinearity
-        endogvar_1st_stage = endogvar
-        endogvar = endogvar * w
-
-        # handle multicollinearity in Z
-        (
-            self._Z,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = _drop_multicollinear_variables(Z, coefnames_z, self._collin_tol)
 
         self._is_iv = True
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
 
-        # Define variables to be used in the next methods
-        self._endogvar = endogvar
-        self._endogvar_1st_stage = endogvar_1st_stage
-        self._Z_1st_stage = self._Z
-        self._Z = self._Z * w
+    def wls_transform(self) -> None:
+        "Transform variables for WLS estimation."
+        super().wls_transform()
+        if self._has_weights:
+            w = np.sqrt(self._weights)
+            self._endogvar = self._endogvar * w
+            self._Z = self._Z * w
+
+    def to_array(self) -> None:
+        "Transform estimation DataFrames to arrays."
+        super().to_array()
+        self._Z = self._Zd.to_numpy()
+        self._endogvar = self._endogvar.to_numpy()
+
+    def demean(self) -> None:
+        "Demean instruments and endogeneous variable."
+        super().demean()
+        if self._has_fixef:
+            self._endogvard, self._Zd = demean_model(
+                self._endogvar,
+                self._Z,
+                self._fe,
+                self._weights.flatten(),
+                self._lookup_demeaned_data,
+                self._na_index_str,
+                self._fixef_tol,
+            )
+        else:
+            self._endogvard = self._endogvar
+            self._Zd = self._Z
+
+    def drop_multicol_vars(self) -> None:
+        "Drop multicollinear variables in matrix of instruments Z."
+        super().drop_multicol_vars()
+        (
+            self._Z,
+            self._coefnames_z,
+            self._collin_vars_z,
+            self._collin_index_z,
+        ) = _drop_multicollinear_variables(self._Z, self._coefnames_z, self._collin_tol)
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
@@ -213,34 +240,15 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-        from pyfixest.estimation.estimation import feols
-
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
-        # Prepare your data
-        # Select the columns from self._data that match the variable names
-        data = pd.DataFrame(self._Z_1st_stage, columns=self._coefnames_z)
+        fixest_module = import_module("pyfixest.estimation")
+        fit_ = getattr(fixest_module, "feols")
 
-        # Store instrument variable matrix for future use
-        _Z_iv = data[self._non_exo_instruments]
-        self._Z_iv = _Z_iv.to_numpy()
-        # Dynamically create the formula string
-        # Extract names of fixed effect
-
-        data["Y"] = self._endogvar_1st_stage
-        independent_vars = " + ".join(
-            data.columns[:-1]
-        )  # All columns except the last one ('Y')
-
-        # Set fix effects, cluster, and weight options to be passed to feols.
-
+        fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:
-            FE_vars = self._fixef.split("+")
-            data[FE_vars] = self._data[FE_vars]
-            formula = f"Y ~ {independent_vars} | {self._fixef}"
-        else:
-            formula = f"Y ~ {independent_vars}"
+            fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: Union[dict[str, str], str]
@@ -248,24 +256,19 @@ class Feiv(Feols):
         if self._is_clustered:
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
-            data[a] = self._data[a]
         else:
             vcov_detail = self._vcov_type_detail
 
-        if self._has_weights:
-            data["weights"] = self._weights
-            weight_detail = "weights"
-        else:
-            weight_detail = None
+        weight_detail = "weights" if self._has_weights else None
 
         # Do first stage regression
-        model1 = feols(
-            fml=formula,
-            data=data,
+        model1 = fit_(
+            fml=fml_first_stage,
+            data=self._data,
             vcov=vcov_detail,
             weights=weight_detail,
-            weights_type=self._weights_type_feiv,
-            collin_tol=1e-10,
+            weights_type=self._weights_type,
+            collin_tol=self._collin_tol,
         )
 
         # Ensure model1 is of type Feols
@@ -453,6 +456,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         # If vcov is iid, redo first stage regression
+
         if self._vcov_type_detail == "iid":
             self._vcov_type_detail = "hetero"
             self._model_1st_stage.vcov("hetero")
@@ -470,14 +474,12 @@ class Feiv(Feols):
 
         # Extract coefficients for the non-exogenous instruments
 
-        pi_hat = np.array(
-            [
-                self._model_1st_stage.coef()[instrument]
-                for instrument in self._non_exo_instruments
-            ]
-        )
-
-        Z = self._Z_iv
+        pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        iv_positions = [
+            self._coefnames_z.index(instrument)
+            for instrument in self._non_exo_instruments
+        ]
+        Z = self._model_1st_stage._X[:, iv_positions]
 
         # Calculate the cross-product of the instrument matrix
         Q_zz = Z.T @ Z
