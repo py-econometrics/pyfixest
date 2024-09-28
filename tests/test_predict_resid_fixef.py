@@ -10,7 +10,10 @@ from rpy2.robjects.packages import importr
 from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.dev_utils import _extract_variable_level
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 pandas2ri.activate()
 
@@ -199,7 +202,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     # test 3
-    fml = "Y ~ X1 + X2 + f1| f1 "
+    fml = "Y ~ X1 + X2 | f1 "
     fit = feols(fml, data=data)
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)

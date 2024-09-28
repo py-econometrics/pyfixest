@@ -1,61 +1,106 @@
-[tool.poetry]
+[project]
 name = "pyfixest"
-version = "0.24.2"
+description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
+requires-python = ">= 3.9"
+version = "0.24.3"
+authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}, {name = "Styfen Schär"}]
 
-description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package. Supports OLS, IV and Poisson regression and a range of inference procedures (HC1-3, CRV1 & CRV3, wild bootstrap, randomization inference, simultaneous CIs, Romano-Wolf's multiple testing correction). Additionally, supports (some of) the regression based new Difference-in-Differences Estimators (Did2s, Linear Projections)."
-authors = ["Alexander Fischer <alexander-fischer1801@t-online.de>", "Styfen Schär"]
-license = "MIT"
-readme = "README.md"
-homepage = "https://py-econometrics.github.io/pyfixest/"
-repository = "https://github.com/py-econometrics/pyfixest"
+dependencies = [
+  "lets-plot>=4.0.0",
+  "scipy>=1.6",
+  "formulaic>=1.0.0",
+  "pandas>=1.1.0",
+  "numba>=0.58.0",
+  "seaborn>=0.13.2",
+  "tabulate>=0.9.0",
+  "polars>=0.20.1",
+  "tqdm==4.66.4",
+  "great-tables>=0.10.0",
+  "numpy>=1.19.0",
+  "jinja2>=3.1.4,<4"
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4.0"
-pandas = ">=1.1.0"
-numpy = ">=1.19.0"
-scipy = ">=1.6"
-formulaic = ">=1.0.0"
-lets-plot = ">=4.0.1"
-seaborn = ">=0.13.2"
-numba = ">=0.58.0"
-tabulate = ">=0.9.0"
-polars = ">=0.20.1"
-tqdm = "^4.66.4"
-great-tables = ">=0.10.0"
+[tool.pixi.feature.dev.dependencies]
+rpy2 = ">=3.5.11,<4"
 
-[tool.poetry.group.dev.dependencies]
-pytest=">=7.0.0"
-rpy2 = "3.5.15"
-pytest-cov = "^4.1.0"
-pytest-xdist = ">=3.5.0"
-pyhdfe = ">=0.2.0"
-pyarrow = ">=14.0.2"
-wildboottest = ">=0.2.0"
-pre-commit = "^3.6.0"
-doubleml = "^0.7.1"
-marginaleffects = "^0.0.10"
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.2.0",
+  "pytest-cov>=4.1.0",
+  "pytest-xdist>=3.5.0",
+  "pyhdfe>=0.2.0",
+  "pyarrow>=17.0.0",
+  "pre-commit==3.6.0",
+  "doubleml==0.7.1",
+   "wildboottest>=0.3.2"
+]
 
-[tool.poetry.group.docs.dependencies]
-quartodoc = ">=0.7.2"
-jupyterlab = "^4.0.12"
-jupytext = "^1.16.1"
-watermark = "^2.4.3"
+docs = [
+  "quartodoc>=0.7.2",
+  "jupyterlab>=4.0.12",
+  "jupytext==1.16.1",
+  "watermark==2.4.3",
+  "wildboottest>=0.3.2"
+]
+
+[tool.pixi.feature.build.dependencies]
+python-build = ">=1.2.2,<2"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64", "osx-64"]
+
+[tool.pixi.pypi-dependencies]
+pyfixest = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }
+
+[tool.pixi.feature.dev.tasks]
+tests = "pytest -n 4 --cov-report=term tests"
+tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
+tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-slow = "pytest tests -n 4 -m slow --cov=./ --cov-report=xml"
+tests-rerun = "pytest --lf -n 4"
+debug = "python pyfixest/debug.py"
+lint = "pre-commit run ruff --all-files"
+update-test-data = "Rscript tests/r_test_comparisons.R"
+install-r = "Rscript r_test_requirements.R"
+render-notebooks = "python scripts/run_notebooks.py"
+
+[tool.pixi.feature.build.tasks]
+build-pip = 'python -m build .'
+
+[tool.pixi.feature.docs.tasks]
+docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
+docs-render = "quarto render docs"
+docs-preview = "quarto preview docs"
 
 [tool.pytest.ini_options]
 addopts = [
-    "-v",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=pyfixest",
-    "--cov-report=term-missing",
-    "--color=yes",
+  "-v",
+  "--strict-markers",
+  "--strict-config",
+  "--cov=pyfixest",
+  "--cov-report=term-missing",
+  "--color=yes",
 ]
+
 markers = [
-    "extended: mark test to be part of the extended test suite"
+  "slow: mark test to be part of the slow test suite",
+  "extended: mark test to be part of the extended test suite",
+  "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
 ]
-filterwarnings =[
-    "ignore::FutureWarning:rpy2",
-    "ignore::DeprecationWarning:rpy2"
+filterwarnings = [
+  "ignore::FutureWarning:rpy2",
+  "ignore::DeprecationWarning:rpy2",
 ]
 
 [tool.ruff]
@@ -68,19 +113,19 @@ target-version = "py39"
 [tool.ruff.lint]
 # docs: https://docs.astral.sh/ruff/rules/
 select = [
-  "F", # Pyflakes
-  "E", # pycodestyle errors
-  "W", # pycodestyle warnings
-  "I", # isort
-  "D", # flake8-docstrings
-  "UP", # pyupgrade
+  "F",   # Pyflakes
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "D",   # flake8-docstrings
+  "UP",  # pyupgrade
   "SIM", # flake8-simplify
   "TRY", # tryceratops
 ]
 
 ignore = [
-# do not enable if formatting
-# docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  # do not enable if formatting
+  # docs: https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "W191",   # tab indentation
   "E111",   # indentation
   "E114",   # indentation
@@ -102,6 +147,7 @@ ignore = [
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]
+"scripts/*.py" = ["D103"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
@@ -112,7 +158,3 @@ convention = "numpy"
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 88
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

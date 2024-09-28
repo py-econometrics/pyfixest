@@ -9,12 +9,13 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import ssc
+
+update_r_paths()
 
 pandas2ri.activate()
 
-
-clubSandwich = importr("clubSandwich")
 fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
@@ -57,19 +58,10 @@ def test_F_test_single_equation_no_clustering(R):
     # Compare with R
 
     r_fit = stats.lm(fml, data=data)
+    r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
 
-    unique_cluster = base.seq_len(len(data))
-
-    r_wald = clubSandwich.Wald_test(
-        r_fit,
-        constraints=base.matrix(R, 3, 3),
-        vcov="CR0",
-        cluster=unique_cluster,
-        test="Naive-F",
-    )
-
-    r_fstat = pd.DataFrame(r_wald).T[1].values[0]
-    r_pvalue = pd.DataFrame(r_wald).T[5].values[0]
+    r_fstat = r_wald.rx2("F")[1]
+    r_pvalue = r_wald.rx2("Pr(>F)")[1]
 
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-03, atol=1e-02)
     np.testing.assert_allclose(p_stat, r_pvalue, rtol=1e-03, atol=1e-02)
@@ -98,16 +90,14 @@ def test_F_test_single_equation(R):
     p_value = fit._p_value
 
     # Compare with R
-    r_fit = stats.lm(fml, data=data)
-    r_wald = clubSandwich.Wald_test(
-        r_fit,
-        constraints=base.matrix(R, 1, 2),
-        vcov="CR1",
-        cluster=data["year"],
-        test="Naive-F",
+    r_fit = fixest.feols(
+        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
     )
-    r_fstat = pd.DataFrame(r_wald).T[1].values[0]
-    r_pvalue = pd.DataFrame(r_wald).T[5].values[0]
+
+    r_wald = car.linearHypothesis(r_fit, base.matrix(R, 1, 2), test="F")
+
+    r_fstat = r_wald.rx2("F")[1]
+    r_pvalue = r_wald.rx2("Pr(>F)")[1]
 
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-03, atol=1e-03)
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
@@ -130,7 +120,7 @@ def test_F_test_multiple_equation(seedn):
     n = 3000
     treat = np.random.choice([0, 1], size=n)
     X1 = 1 + np.random.randn(n)
-    dep_var = 0.0 + 0.0 * treat + 0.0 * X1 + np.random.randn(n)
+    dep_var = 0.0 + 1.0 * treat + 0.0 * X1 + np.random.randn(n)
 
     data = pd.DataFrame(
         {
@@ -149,17 +139,14 @@ def test_F_test_multiple_equation(seedn):
     f_stat = fit._f_statistic
     p_value = fit._p_value
 
-    # Compare with R
-    r_fit = stats.lm(fml, data=data)
-    r_wald = clubSandwich.Wald_test(
-        r_fit,
-        constraints=base.matrix(R, 3, 3),
-        vcov="CR1",
-        cluster=data["year"],
-        test="Naive-F",
+    r_fit = fixest.feols(
+        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
     )
-    r_fstat = pd.DataFrame(r_wald).T[1].values[0]
-    r_pvalue = pd.DataFrame(r_wald).T[5].values[0]
+
+    r_wald = car.linearHypothesis(r_fit, base.matrix(R, 3, 3), test="F")
+
+    r_fstat = r_wald.rx2("F")[1]
+    r_pvalue = r_wald.rx2("Pr(>F)")[1]
 
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-03, atol=1e-03)
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
@@ -213,22 +200,15 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     fit.wald_test(R=R)
     f_stat = fit._f_statistic
 
-    # Compare with R
-    r_fit = stats.lm(fml, data=data)
-    r_wald = clubSandwich.Wald_test(
-        r_fit,
-        constraints=base.matrix(R, Rsize1, Rsize2),
-        vcov="CR1",
-        cluster=data["year"],
-        test="Naive-F",
+    r_fit = fixest.feols(
+        ro.Formula(fml), data=data, vcov=ro.Formula("~year"), ssc=fixest.ssc(adj=False)
     )
-    r_fstat = pd.DataFrame(r_wald).T[1].values[0]
+
+    r_wald = car.linearHypothesis(r_fit, base.matrix(R, Rsize1, Rsize2), test="F")
+
+    r_fstat = r_wald.rx2("F")[1]
+
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
-
-
-# We test "Wald-test" cases, where R and q are not trivial
-# Note that clubSandwich R package does not allow non-zero q vector
-car = importr("car")
 
 
 @pytest.mark.parametrize(

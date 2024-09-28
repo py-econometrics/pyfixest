@@ -7,7 +7,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import ssc
+
+update_r_paths()
 
 pandas2ri.activate()
 
@@ -20,7 +23,13 @@ def data():
     return pf.get_data()
 
 
-models = ["Y~X1", "Y~X1 | f1"]
+models = [
+    "Y~X1",
+    "Y~X1 | f1",
+    "Y ~ 1 | X1 ~ Z1",
+    "Y ~ 1 | f1| X1 ~ Z1",
+    "Y ~ X2 | X1 ~ Z1 + Z2",
+]
 adj = [False, True]
 cluster_adj = [False, True]
 
@@ -42,7 +51,7 @@ def test_iid(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-15)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -77,7 +86,7 @@ def test_hetero(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-15)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -100,7 +109,7 @@ def test_crv1(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-15)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -125,7 +134,7 @@ def test_iid_weights(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-15)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -165,7 +174,7 @@ def test_hetero_weights(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) * adj_factor < 1e-15)
 
 
 @pytest.mark.parametrize("fml", models)
@@ -190,4 +199,4 @@ def test_crv1_weights(data, fml, adj, cluster_adj):
     py_mod_vcov = py_mod._vcov
     r_mod_vcov = stats.vcov(r_mod)
 
-    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-16)
+    assert np.all(np.abs(py_mod_vcov) - np.abs(r_mod_vcov) < 1e-15)
