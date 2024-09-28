@@ -29,7 +29,7 @@ dev = [
   "pytest-cov>=4.1.0",
   "pytest-xdist>=3.5.0",
   "pyhdfe>=0.2.0",
-  "pyarrow>=17.0.0",
+  "pyarrow>=14.0.0",
   "pre-commit==3.6.0",
   "doubleml==0.7.1",
    "wildboottest>=0.3.2"
@@ -40,8 +40,10 @@ docs = [
   "jupyterlab>=4.0.12",
   "jupytext==1.16.1",
   "watermark==2.4.3",
-  "wildboottest>=0.3.2"
-]
+  "wildboottest>=0.3.2",
+  "causaldata>=0.1.4,<0.2",
+  "pylatex>=1.4.2,<2"
+, "marginaleffects>=0.0.10"]
 
 [tool.pixi.feature.build.dependencies]
 python-build = ">=1.2.2,<2"
@@ -82,6 +84,9 @@ build-pip = 'python -m build .'
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
 docs-render = "quarto render docs"
 docs-preview = "quarto preview docs"
+
+[tool.pixi.feature.docs.dependencies]
+rpy2 = ">=3.5.11,<4"
 
 [tool.pytest.ini_options]
 addopts = [
