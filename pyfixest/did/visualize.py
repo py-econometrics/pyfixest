@@ -12,6 +12,7 @@ def panelview(
     outcome: Optional[str] = None,
     collapse_to_cohort: Optional[bool] = False,
     subsamp: Optional[int] = None,
+    units_to_plot: Optional[list] = None,
     sort_by_timing: Optional[bool] = False,
     xlab: Optional[str] = None,
     ylab: Optional[str] = None,
@@ -22,7 +23,6 @@ def panelview(
     ax: Optional[plt.Axes] = None,
     xlim: Optional[tuple] = None,
     ylim: Optional[tuple] = None,
-    units_to_plot: Optional[list] = None,
 ) -> None:
     """
     Generate a panel view of the treatment variable over time for each unit.
@@ -77,12 +77,12 @@ def panelview(
     ```python
     import pandas as pd
     import numpy as np
-    from pyfixest.did.visualize import panelview
+    import pyfixest as pf
 
     df_het = pd.read_csv("pd.read_csv("pyfixest/did/data/df_het.csv")
 
     # Inspect treatment assignment
-    panelview(
+    pf.panelview(
         data = df_het,
         unit = "unit",
         time = "year",
@@ -92,7 +92,7 @@ def panelview(
     )
 
     # Outcome plot
-    panelview(
+    pf.panelview(
         data = df_het,
         unit = "unit",
         time = "year",
@@ -103,6 +103,18 @@ def panelview(
     )
     ```
     """
+    # check if unit, time, treat and outcome are in the data
+    for col in [unit, time, treat]:
+        if col not in data.columns:
+            raise ValueError(f"Column '{col}' not found in data.")
+    if outcome and outcome not in data.columns:
+        raise ValueError(f"Outcome column '{outcome}' not found in data.")
+
+    if collapse_to_cohort and (subsamp or units_to_plot):
+        raise ValueError(
+            "Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'."
+        )
+
     if outcome:
         data_pivot = _prepare_panelview_df_for_outcome_plot(
             data=data,
