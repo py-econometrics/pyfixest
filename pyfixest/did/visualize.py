@@ -9,7 +9,6 @@ def panelview(
     unit: str,
     time: str,
     treat: str,
-    type: Optional[str] = None,
     outcome: Optional[str] = None,
     collapse_to_cohort: Optional[bool] = False,
     subsamp: Optional[int] = None,
@@ -38,10 +37,8 @@ def panelview(
         The column name representing the time identifier.
     treat : str
         The column name representing the treatment variable.
-    type : str, optional
-        Optional type of plot. Currently supported: 'outcome'.
     outcome : str, optional
-        The column name representing the outcome variable. Used when `type` is 'outcome'.
+        The column name representing the outcome variable. If not None, an outcome plot is generated.
     collapse_to_cohort : bool, optional
         Whether to collapse units into treatment cohorts.
     subsamp : int, optional
@@ -99,7 +96,6 @@ def panelview(
         data = df_het,
         unit = "unit",
         time = "year",
-        type = "outcome",
         outcome = "dep_var",
         treat = "treat",
         subsamp = 50,
@@ -107,118 +103,228 @@ def panelview(
     )
     ```
     """
-    if type == "outcome" and outcome:
-        if units_to_plot:
-            data = data[data[unit].isin(units_to_plot)]
-        data_pivot = data.pivot(index=unit, columns=time, values=outcome)
-        if subsamp:
-            data_pivot = data_pivot.sample(subsamp)
-        if collapse_to_cohort:
-
-            def get_treatment_start(x: pd.DataFrame) -> pd.Timestamp:
-                return x[x[treat]][time].min()
-
-            treatment_starts = (
-                data.groupby(unit)
-                .apply(get_treatment_start, include_groups=False)
-                .reset_index(name="treatment_start")
-            )
-            data = data.merge(treatment_starts, on=unit, how="left")
-            data_agg = (
-                data.groupby(["treatment_start", time], dropna=False)[outcome]
-                .mean()
-                .reset_index()
-            )
-            data_agg[treat] = data_agg.apply(
-                lambda row: row[time] >= row["treatment_start"]
-                if pd.notna(row["treatment_start"])
-                else False,
-                axis=1,
-            )
-            data_agg = data_agg.rename(columns={"treatment_start": unit})
-            data = data_agg.copy()
-            data_pivot = data_agg.pivot(index=unit, columns=time, values=outcome)
-        if not ax:
-            f, ax = plt.subplots(figsize=figsize, dpi=300)
-        for unit_id in data_pivot.index:
-            unit_data = data_pivot.loc[unit_id]
-            treatment_times = data[(data[unit] == unit_id) & (data[treat])][time]
-
-            # If the unit never receives treatment, plot the line in grey
-            if treatment_times.empty:
-                ax.plot(
-                    unit_data.index,
-                    unit_data.values,
-                    color="#999999",
-                    linewidth=0.5,
-                    alpha=0.5,
-                )
-            else:
-                treatment_start = treatment_times.min()
-
-                # Plot the entire line with the initial color (orange), then change to red after treatment
-                ax.plot(
-                    unit_data.index,
-                    unit_data.values,
-                    color="#FF8343",
-                    linewidth=0.5,
-                    label=f"Unit {unit_id}" if legend else None,
-                    alpha=0.5,
-                )
-                ax.plot(
-                    unit_data.index[unit_data.index >= treatment_start],
-                    unit_data.values[unit_data.index >= treatment_start],
-                    color="#ff0000",
-                    linewidth=0.9,
-                    alpha=0.5,
-                )
-
-        ax.set_xlabel(xlab if xlab else time)
-        ax.set_ylabel(ylab if ylab else outcome)
-        ax.set_title(
-            title if title else "Outcome over Time with Treatment Effect",
-            fontweight="bold",
+    if outcome:
+        data_pivot = _prepare_panelview_df_for_outcome_plot(
+            data=data,
+            unit=unit,
+            time=time,
+            treat=treat,
+            outcome=outcome,
+            subsamp=subsamp,
+            collapse_to_cohort=collapse_to_cohort,
+            units_to_plot=units_to_plot,
         )
-        ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle="-")
-        if xlim:
-            ax.set_xlim(xlim)
-        if ylim:
-            ax.set_ylim(ylim)
-        if legend:
-            custom_lines = [
-                plt.Line2D([0], [0], color="#999999", lw=1.5),
-                plt.Line2D([0], [0], color="#FF8343", lw=1.5),
-                plt.Line2D([0], [0], color="#ff0000", lw=1.5),
-            ]
-            ax.legend(
-                custom_lines,
-                ["Control", "Treatment (Pre)", "Treatment (Post)"],
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.15),
-                ncol=3,
-                frameon=False,
-            )
+
+        return _plot_panelview_output_plot(
+            data_pivot=data_pivot,
+            data=data,
+            unit=unit,
+            time=time,
+            treat=treat,
+            outcome=outcome,
+            ax=ax,
+            xlab=xlab,
+            ylab=ylab,
+            title=title,
+            legend=legend,
+            xlim=xlim,
+            ylim=ylim,
+            figsize=figsize,
+        )
+
     else:
-        treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
-        treatment_quilt = (
-            treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
+        treatment_quilt = _prepare_df_for_panelview(
+            data=data,
+            unit=unit,
+            time=time,
+            treat=treat,
+            subsamp=subsamp,
+            collapse_to_cohort=collapse_to_cohort,
+            sort_by_timing=sort_by_timing,
         )
-        if collapse_to_cohort:
-            treatment_quilt = treatment_quilt.drop_duplicates()
-        if sort_by_timing:
-            treatment_quilt = treatment_quilt.loc[
-                treatment_quilt.sum(axis=1).sort_values().index
-            ]
-        if not ax:
-            f, ax = plt.subplots()
-        cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
-        f.colorbar(cax) if legend else None
-        ax.set_xlabel(xlab) if xlab else None
-        ax.set_ylabel(ylab) if ylab else None
 
-        if noticks:
-            ax.set_xticks([])
-            ax.set_yticks([])
-        if title:
-            ax.set_title(title)
+        return _plot_panelview(
+            treatment_quilt=treatment_quilt,
+            ax=ax,
+            xlab=xlab,
+            ylab=ylab,
+            legend=legend,
+            noticks=noticks,
+            title=title,
+        )
+
+
+def _prepare_panelview_df_for_outcome_plot(
+    data: pd.DataFrame,
+    unit: str,
+    time: str,
+    treat: str,
+    outcome: str,
+    subsamp: Optional[int] = None,
+    collapse_to_cohort: Optional[bool] = None,
+    units_to_plot: Optional[list[str]] = None,
+) -> pd.DataFrame:
+    if units_to_plot:
+        data = data[data[unit].isin(units_to_plot)]
+
+    data_pivot = data.pivot(index=unit, columns=time, values=outcome)
+
+    if subsamp:
+        data_pivot = data_pivot.sample(subsamp)
+
+    if collapse_to_cohort:
+
+        def get_treatment_start(x: pd.DataFrame) -> pd.Timestamp:
+            return x[x[treat]][time].min()
+
+        treatment_starts = (
+            data.groupby(unit)
+            .apply(get_treatment_start, include_groups=False)
+            .reset_index(name="treatment_start")
+        )
+
+        data = data.merge(treatment_starts, on=unit, how="left")
+        data_agg = (
+            data.groupby(["treatment_start", time], dropna=False)[outcome]
+            .mean()
+            .reset_index()
+        )
+
+        data_agg[treat] = data_agg.apply(
+            lambda row: row[time] >= row["treatment_start"]
+            if pd.notna(row["treatment_start"])
+            else False,
+            axis=1,
+        )
+
+        data_agg = data_agg.rename(columns={"treatment_start": unit})
+        data = data_agg.copy()
+        data_pivot = data_agg.pivot(index=unit, columns=time, values=outcome)
+
+    return data_pivot
+
+
+def _plot_panelview_output_plot(
+    data: pd.DataFrame,
+    data_pivot: pd.DataFrame,
+    unit: str,
+    time: str,
+    treat: str,
+    outcome: str,
+    ax: Optional[plt.Axes] = None,
+    xlab: Optional[str] = None,
+    ylab: Optional[str] = None,
+    title: Optional[str] = None,
+    legend: Optional[bool] = None,
+    xlim: Optional[tuple[float, float]] = None,
+    ylim: Optional[tuple[float, float]] = None,
+    figsize: Optional[tuple] = (11, 3),
+) -> plt.Axes:
+    if not ax:
+        f, ax = plt.subplots(figsize=figsize, dpi=300)
+    for unit_id in data_pivot.index:
+        unit_data = data_pivot.loc[unit_id]
+        treatment_times = data[(data[unit] == unit_id) & (data[treat])][time]
+
+        # If the unit never receives treatment, plot the line in grey
+        if treatment_times.empty:
+            ax.plot(
+                unit_data.index,
+                unit_data.values,
+                color="#999999",
+                linewidth=0.5,
+                alpha=0.5,
+            )
+        else:
+            treatment_start = treatment_times.min()
+
+            # Plot the entire line with the initial color (orange), then change to red after treatment
+            ax.plot(
+                unit_data.index,
+                unit_data.values,
+                color="#FF8343",
+                linewidth=0.5,
+                label=f"Unit {unit_id}" if legend else None,
+                alpha=0.5,
+            )
+            ax.plot(
+                unit_data.index[unit_data.index >= treatment_start],
+                unit_data.values[unit_data.index >= treatment_start],
+                color="#ff0000",
+                linewidth=0.9,
+                alpha=0.5,
+            )
+
+    ax.set_xlabel(xlab if xlab else time)
+    ax.set_ylabel(ylab if ylab else outcome)
+    ax.set_title(
+        title if title else "Outcome over Time with Treatment Effect",
+        fontweight="bold",
+    )
+    ax.grid(True, color="#e0e0e0", linewidth=0.3, linestyle="-")
+    if xlim:
+        ax.set_xlim(xlim)
+    if ylim:
+        ax.set_ylim(ylim)
+    if legend:
+        custom_lines = [
+            plt.Line2D([0], [0], color="#999999", lw=1.5),
+            plt.Line2D([0], [0], color="#FF8343", lw=1.5),
+            plt.Line2D([0], [0], color="#ff0000", lw=1.5),
+        ]
+        ax.legend(
+            custom_lines,
+            ["Control", "Treatment (Pre)", "Treatment (Post)"],
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.15),
+            ncol=3,
+            frameon=False,
+        )
+
+    return ax
+
+
+def _prepare_df_for_panelview(
+    data: pd.DataFrame,
+    unit: str,
+    time: str,
+    treat: str,
+    subsamp: Optional[int] = None,
+    collapse_to_cohort: Optional[bool] = None,
+    sort_by_timing: Optional[bool] = None,
+) -> pd.DataFrame:
+    treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
+    treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
+    if collapse_to_cohort:
+        treatment_quilt = treatment_quilt.drop_duplicates()
+    if sort_by_timing:
+        treatment_quilt = treatment_quilt.loc[
+            treatment_quilt.sum(axis=1).sort_values().index
+        ]
+
+    return treatment_quilt
+
+
+def _plot_panelview(
+    treatment_quilt: pd.DataFrame,
+    ax: Optional[plt.Axes] = None,
+    xlab: Optional[str] = None,
+    ylab: Optional[str] = None,
+    legend: Optional[bool] = False,
+    noticks: Optional[bool] = False,
+    title: Optional[str] = None,
+) -> plt.Axes:
+    if not ax:
+        f, ax = plt.subplots()
+    cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
+    f.colorbar(cax) if legend else None
+    ax.set_xlabel(xlab) if xlab else None
+    ax.set_ylabel(ylab) if ylab else None
+
+    if noticks:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    if title:
+        ax.set_title(title)
+
     return ax
