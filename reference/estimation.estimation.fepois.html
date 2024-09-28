@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.fepois</title>
+<title>estimation.estimation.fepois</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,10 +20,44 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -66,6 +100,9 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -91,37 +128,40 @@ ul.task-list li input[type="checkbox"] {
 <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../compare-fixest-pyfixest.html"> 
-<span class="menu-text">Compare fixest &amp; pyfixest</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../difference-in-differences.html"> 
-<span class="menu-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../replicating-the-effect.html"> 
-<span class="menu-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../table-layout.html"> 
-<span class="menu-text">Regression Tables with <code>pf.etable()</code> and Summary Statistics via <code>pf.dtable()</code></span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../marginaleffects.html"> 
-<span class="menu-text">Hypothesis testing and Marginal Effects with <code>py-marginaleffects</code></span></a>
-  </li>  
-  <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
-<span class="menu-text">Documentation</span></a>
+<span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../news.html"> 
-<span class="menu-text">Changelog</span></a>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Learn more</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
+        <li>
+    <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../replicating-the-effect.html">
+ <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../table-layout.html">
+ <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../marginaleffects.html">
+ <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
+  </li>  
+    </ul>
+  </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
@@ -140,7 +180,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.Fepois.html">estimation.Fepois</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.fepois.html">estimation.estimation.fepois</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -169,14 +209,14 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols</span></a>
+  <a href="../reference/estimation.estimation.feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.estimation.feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fepois</span></a>
+  <a href="../reference/estimation.estimation.fepois.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">estimation.estimation.fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -222,20 +262,26 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.Feols</span></a>
+  <a href="../reference/estimation.feols_.Feols.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feols_.Feols</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Fepois.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">estimation.Fepois</span></a>
+  <a href="../reference/estimation.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.fepois_.Fepois</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.Feiv</span></a>
+  <a href="../reference/estimation.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feiv_.Feiv</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
   </div>
 </li>
       </ul>
@@ -251,6 +297,12 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">did.visualize.panelview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">report.summary</span></a>
   </div>
@@ -259,6 +311,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">report.etable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/report.dtable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">report.dtable</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -313,231 +371,35 @@ ul.task-list li input[type="checkbox"] {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.fepois.html">estimation.estimation.fepois</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">estimation.estimation.fepois</h1>
+</div>
 
 
 
-<section id="pyfixest.estimation.Fepois" class="level1">
-<h1>estimation.Fepois</h1>
-<p><code>estimation.Fepois(self, FixestFormula, data, ssc_dict, drop_singletons, drop_intercept, weights, weights_type, collin_tol, fixef_tol, lookup_demeaned_data, tol, maxiter, solver='np.linalg.solve', store_data=True, copy_data=True, lean=False)</code></p>
-<p>Estimate a Poisson regression model.</p>
-<p>Non user-facing class to estimate a Poisson regression model via Iterated Weighted Least Squares (IWLS).</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.fepois.html">fepois()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
-<p>The method implements the algorithm from Stata’s <code>ppmlhdfe</code> module.</p>
-<section id="attributes" class="level2">
-<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 11%">
-<col style="width: 23%">
-<col style="width: 65%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Y</td>
-<td>np.ndarray</td>
-<td>Dependent variable, a two-dimensional numpy array.</td>
-</tr>
-<tr class="even">
-<td>X</td>
-<td>np.ndarray</td>
-<td>Independent variables, a two-dimensional numpy array.</td>
-</tr>
-<tr class="odd">
-<td>fe</td>
-<td>np.ndarray</td>
-<td>Fixed effects, a two-dimensional numpy array or None.</td>
-</tr>
-<tr class="even">
-<td>weights</td>
-<td>np.ndarray</td>
-<td>Weights, a one-dimensional numpy array or None.</td>
-</tr>
-<tr class="odd">
-<td>coefnames</td>
-<td>list[str]</td>
-<td>Names of the coefficients in the design matrix X.</td>
-</tr>
-<tr class="even">
-<td>drop_singletons</td>
-<td>bool</td>
-<td>Whether to drop singleton fixed effects.</td>
-</tr>
-<tr class="odd">
-<td>collin_tol</td>
-<td>float</td>
-<td>Tolerance level for the detection of collinearity.</td>
-</tr>
-<tr class="even">
-<td>maxiter</td>
-<td>Optional[int], default=25</td>
-<td>Maximum number of iterations for the IRLS algorithm.</td>
-</tr>
-<tr class="odd">
-<td>tol</td>
-<td>Optional[float], default=1e-08</td>
-<td>Tolerance level for the convergence of the IRLS algorithm.</td>
-</tr>
-<tr class="even">
-<td>solver</td>
-<td>(str, default is np.linalg.solve)</td>
-<td>Solver to use for the estimation. Alternative is ‘np.linalg.lstsq’.</td>
-</tr>
-<tr class="odd">
-<td>fixef_tol</td>
-<td>float, default = 1e-08.</td>
-<td>Tolerance level for the convergence of the demeaning algorithm.</td>
-</tr>
-<tr class="even">
-<td>solver</td>
-<td></td>
-<td></td>
-</tr>
-<tr class="odd">
-<td>weights_name</td>
-<td>Optional[str]</td>
-<td>Name of the weights variable.</td>
-</tr>
-<tr class="even">
-<td>weights_type</td>
-<td>Optional[str]</td>
-<td>Type of weights variable.</td>
-</tr>
-<tr class="odd">
-<td>_data</td>
-<td>pd.DataFrame</td>
-<td>The data frame used in the estimation. None if arguments <code>lean = True</code> or <code>store_data = False</code>.</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="methods" class="level2">
-<h2 class="anchored" data-anchor-id="methods">Methods</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="#pyfixest.estimation.Fepois.get_fit">get_fit</a></td>
-<td>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.estimation.Fepois.predict">predict</a></td>
-<td>Return predicted values from regression model.</td>
-</tr>
-<tr class="odd">
-<td><a href="#pyfixest.estimation.Fepois.prepare_model_matrix">prepare_model_matrix</a></td>
-<td>Prepare model inputs for estimation.</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.estimation.Fepois.resid">resid</a></td>
-<td>Return residuals from regression model.</td>
-</tr>
-<tr class="odd">
-<td><a href="#pyfixest.estimation.Fepois.to_array">to_array</a></td>
-<td>Turn estimation DataFrames to np arrays.</td>
-</tr>
-</tbody>
-</table>
-<section id="pyfixest.estimation.Fepois.get_fit" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.get_fit">get_fit</h3>
-<p><code>estimation.Fepois.get_fit()</code></p>
-<p>Fit a Poisson Regression Model via Iterated Weighted Least Squares (IWLS).</p>
-<section id="returns" class="level4">
-<h4 class="anchored" data-anchor-id="returns">Returns</h4>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>None</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="attributes-1" class="level4">
-<h4 class="anchored" data-anchor-id="attributes-1">Attributes</h4>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 9%">
-<col style="width: 11%">
-<col style="width: 78%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>beta_hat</td>
-<td>np.ndarray</td>
-<td>Estimated coefficients.</td>
-</tr>
-<tr class="even">
-<td>Y_hat</td>
-<td>np.ndarray</td>
-<td>Estimated dependent variable.</td>
-</tr>
-<tr class="odd">
-<td>u_hat</td>
-<td>np.ndarray</td>
-<td>Estimated residuals.</td>
-</tr>
-<tr class="even">
-<td>weights</td>
-<td>np.ndarray</td>
-<td>Weights (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="odd">
-<td>X</td>
-<td>np.ndarray</td>
-<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="even">
-<td>Z</td>
-<td>np.ndarray</td>
-<td>Demeaned independent variables (from the last iteration of the IRLS algorithm).</td>
-</tr>
-<tr class="odd">
-<td>Y</td>
-<td>np.ndarray</td>
-<td>Demeaned dependent variable (from the last iteration of the IRLS algorithm).</td>
-</tr>
-</tbody>
-</table>
-</section>
-</section>
-<section id="pyfixest.estimation.Fepois.predict" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.predict">predict</h3>
-<p><code>estimation.Fepois.predict(newdata=None, atol=1e-06, btol=1e-06, type='link')</code></p>
-<p>Return predicted values from regression model.</p>
-<p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters" class="level4">
-<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><code>estimation.estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', fixef_tol=1e-08, iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, drop_intercept=False, i_ref1=None, copy_data=True, store_data=True, lean=False)</code></p>
+<p>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</p>
+<section id="parameters" class="level2">
+<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 3%">
-<col style="width: 8%">
-<col style="width: 85%">
-<col style="width: 3%">
+<col style="width: 6%">
+<col style="width: 87%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -549,108 +411,98 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>newdata</code></td>
-<td>Union[None, pd.DataFrame]</td>
-<td>A pd.DataFrame with the new data, to be used for prediction. If None (default), uses the data used for fitting the model.</td>
+<td><code>fml</code></td>
+<td>str</td>
+<td>A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2”. “|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>data</code></td>
+<td>DataFrameType</td>
+<td>A pandas or polars dataframe containing the variables in the formula.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td><code>vcov</code></td>
+<td>Union[str, dict[str, str]]</td>
+<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>atol</code></td>
-<td>Float</td>
-<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
-<td><code>1e-6</code></td>
-</tr>
-<tr class="odd">
-<td><code>btol</code></td>
-<td>Float</td>
-<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
-<td><code>1e-6</code></td>
-</tr>
-<tr class="even">
-<td><code>type</code></td>
+<td><code>ssc</code></td>
 <td>str</td>
-<td>The type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta.</td>
-<td><code>'link'</code></td>
+<td>A ssc object specifying the small sample correction for inference.</td>
+<td><code>ssc()</code></td>
 </tr>
 <tr class="odd">
-<td><code>atol</code></td>
-<td>Float</td>
-<td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
-<td><code>1e-6</code></td>
+<td><code>fixef_rm</code></td>
+<td>str</td>
+<td>Specifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.</td>
+<td><code>'none'</code></td>
 </tr>
 <tr class="even">
-<td><code>btol</code></td>
-<td>Float</td>
-<td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
-<td><code>1e-6</code></td>
+<td><code>fixef_tol</code></td>
+<td>float</td>
+<td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.</td>
+<td><code>1e-08</code></td>
 </tr>
-</tbody>
-</table>
-</section>
-<section id="returns-1" class="level4">
-<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 15%">
-<col style="width: 84%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr class="odd">
-<td>np.ndarray</td>
-<td>A flat array with the predicted values of the regression model.</td>
+<td><code>iwls_tol</code></td>
+<td>Optional[float]</td>
+<td>Tolerance for IWLS convergence, by default 1e-08.</td>
+<td><code>1e-08</code></td>
+</tr>
+<tr class="even">
+<td><code>iwls_maxiter</code></td>
+<td>Optional[float]</td>
+<td>Maximum number of iterations for IWLS convergence, by default 25.</td>
+<td><code>25</code></td>
+</tr>
+<tr class="odd">
+<td><code>collin_tol</code></td>
+<td>float</td>
+<td>Tolerance for collinearity check, by default 1e-10.</td>
+<td><code>1e-10</code></td>
+</tr>
+<tr class="even">
+<td><code>drop_intercept</code></td>
+<td>bool</td>
+<td>Whether to drop the intercept from the model, by default False.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="odd">
+<td><code>i_ref1</code></td>
+<td></td>
+<td>Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.&nbsp;fepois(‘Y~ i(f1, ref=1)’, data = data) instead of the former fepois(‘Y~ i(f1)’, data = data, i_ref=1).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>copy_data</code></td>
+<td>bool</td>
+<td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="odd">
+<td><code>store_data</code></td>
+<td>bool</td>
+<td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
+<td><code>lean</code></td>
+<td>bool</td>
+<td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
+<td><code>False</code></td>
 </tr>
 </tbody>
 </table>
 </section>
-</section>
-<section id="pyfixest.estimation.Fepois.prepare_model_matrix" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.prepare_model_matrix">prepare_model_matrix</h3>
-<p><code>estimation.Fepois.prepare_model_matrix()</code></p>
-<p>Prepare model inputs for estimation.</p>
-</section>
-<section id="pyfixest.estimation.Fepois.resid" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.resid">resid</h3>
-<p><code>estimation.Fepois.resid(type='response')</code></p>
-<p>Return residuals from regression model.</p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<section id="returns" class="level2">
+<h2 class="anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 6%">
-<col style="width: 74%">
-<col style="width: 11%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>type</code></td>
-<td>str</td>
-<td>The type of residuals to be computed. Can be either “response” (default) or “working”.</td>
-<td><code>'response'</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns-2" class="level4">
-<h4 class="anchored" data-anchor-id="returns-2">Returns</h4>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 17%">
-<col style="width: 82%">
+<col style="width: 93%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -660,21 +512,108 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td>np.ndarray</td>
-<td>A flat array with the residuals of the regression model.</td>
+<td>object</td>
+<td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
 </tr>
 </tbody>
 </table>
 </section>
-</section>
-<section id="pyfixest.estimation.Fepois.to_array" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.Fepois.to_array">to_array</h3>
-<p><code>estimation.Fepois.to_array()</code></p>
-<p>Turn estimation DataFrames to np arrays.</p>
+<section id="examples" class="level2">
+<h2 class="anchored" data-anchor-id="examples">Examples</h2>
+<p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
+<div id="5473f2ae" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+            <div id="OGTkqY"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("OGTkqY").appendChild(div);
+                    };
+                    var e = document.getElementById("OGTkqY");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="hUff8M"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("hUff8M").appendChild(div);
+                    };
+                    var e = document.getElementById("hUff8M");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  Poisson
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.007 |        0.035 |    -0.190 |      0.850 | -0.075 |   0.062 |
+| X2            |     -0.015 |        0.010 |    -1.449 |      0.147 | -0.035 |   0.005 |
+---
+Deviance: 1068.169 </code></pre>
+</div>
+</div>
+<p>For more examples, please take a look at the documentation of the <code>feols()</code> function.</p>
 
 
-</section>
-</section>
 </section>
 
 </main> <!-- /main -->
