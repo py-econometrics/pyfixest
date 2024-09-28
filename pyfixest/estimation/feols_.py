@@ -393,6 +393,7 @@ class Feols:
 
     def wls_transform(self):
         "Transform model matrices for WLS Estimation."
+        self._X_untransformed = self._X.copy()
         if self._has_weights:
             w = np.sqrt(self._weights)
             self._Y = self._Y * w
