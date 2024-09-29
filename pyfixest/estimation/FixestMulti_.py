@@ -73,6 +73,7 @@ class FixestMulti:
         self._use_compression = use_compression
         self._reps = reps if use_compression else None
         self._seed = seed if use_compression else None
+        self._separation_check = separation_check
 
         data = _polars_to_pandas(data)
 

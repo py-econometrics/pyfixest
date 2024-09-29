@@ -131,11 +131,14 @@ class Fepois(Feols):
         # check for separation
         na_separation: list[int] = []
         if self._fe is not None:
-            na_separation = _check_for_separation(Y=self._Y, fe=self._fe)
-            if na_separation:
-                warnings.warn(
-                    f"{str(len(na_separation))} observations removed because of separation."
-                )
+            na_separation = _check_for_separation(
+                Y=self._Y,
+                X=self._X,
+                fe=self._fe,
+                fml=self._fml,
+                data=self._data,
+                methods=self._separation_check,
+            )
 
         if na_separation:
             self._Y.drop(na_separation, axis=0, inplace=True)
@@ -428,7 +431,7 @@ def _check_for_separation(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
-    method: list[str], optional
+    methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
 
@@ -454,6 +457,11 @@ def _check_for_separation(
     for method in methods:
         separation_na = separation_na.union(
             valid_methods[method](fml=fml, data=data, Y=Y, X=X, fe=fe)
+        )
+
+    if separation_na:
+        warnings.warn(
+            f"{str(len(separation_na))} observations removed because of separation."
         )
 
     return list(separation_na)
