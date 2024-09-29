@@ -1,0 +1,48 @@
+\documentclass{article}%
+\usepackage[T1]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{lmodern}%
+\usepackage{textcomp}%
+\usepackage{lastpage}%
+\usepackage{booktabs}%
+\usepackage{threeparttable}%
+\usepackage{makecell}%
+%
+%
+%
+\begin{document}%
+\normalsize%
+\section{A PyFixest LateX Table}%
+\label{sec:APyFixestLateXTable}%
+
+
+\begin{table}[htbp]%
+\renewcommand\cellalign{t}
+\begin{threeparttable}
+\begin{tabular}{lccccccc}
+\toprule
+ & \multicolumn{3}{c}{Y} & \multicolumn{3}{c}{Y2} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+ & (1) & (2) & (3) & (4) & (5) & (6) \\
+\midrule
+\addlinespace
+X1 & \makecell{-0.95*** \\ (0.07)} & \makecell{-0.92*** \\ (0.06)} & \makecell{-0.92*** \\ (0.06)} & \makecell{-1.27*** \\ (0.17)} & \makecell{-1.23*** \\ (0.19)} & \makecell{-1.23*** \\ (0.19)} \\
+X2 & \makecell{-0.17*** \\ (0.02)} & \makecell{-0.17*** \\ (0.01)} & \makecell{-0.19*** \\ (0.03)} & \makecell{-0.13*** \\ (0.04)} & \makecell{-0.12*** \\ (0.04)} & \makecell{-0.07 \\ (0.10)} \\
+X1:X2 &  &  & \makecell{0.01 \\ (0.02)} &  &  & \makecell{-0.04 \\ (0.08)} \\
+\midrule
+\addlinespace
+f2 & - & x & x & - & x & x \\
+f1 & x & x & x & x & x & x \\
+\midrule
+\addlinespace
+Observations & 997 & 997 & 997 & 998 & 998 & 998 \\
+S.E. type & by: f1 & by: f1 & by: f1 & by: f1 & by: f1 & by: f1 \\
+$R^2$ & 0.49 & 0.66 & 0.66 & 0.12 & 0.17 & 0.17 \\
+\bottomrule
+\end{tabular}
+\footnotesize
+\end{threeparttable}%
+\end{table}
+
+%
+\end{document}

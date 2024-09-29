@@ -1,0 +1,49 @@
+\documentclass{article}%
+\usepackage[T1]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{lmodern}%
+\usepackage{textcomp}%
+\usepackage{lastpage}%
+\usepackage{booktabs}%
+\usepackage{threeparttable}%
+\usepackage{makecell}%
+%
+%
+%
+\begin{document}%
+\normalsize%
+\section{A PyFixest LateX Table}%
+\label{sec:APyFixestLateXTable}%
+
+
+\begin{table}[htbp]%
+\renewcommand\cellalign{t}
+\begin{threeparttable}
+\begin{tabular}{lccccccc}
+\toprule
+ & \multicolumn{2}{c}{US} & \multicolumn{2}{c}{China} & \multicolumn{2}{c}{EU} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+ & Wage & Wealth & Wage & Wealth & Wage & Wealth \\
+ & (1) & (2) & (3) & (4) & (5) & (6) \\
+\midrule
+\addlinespace
+Age & \makecell{-0.950*** \\ (0.067)} & \makecell{-1.267*** \\ (0.174)} & \makecell{-0.924*** \\ (0.061)} & \makecell{-1.232*** \\ (0.192)} & \makecell{-0.924*** \\ (0.061)} & \makecell{-1.231*** \\ (0.192)} \\
+Years of Schooling & \makecell{-0.174*** \\ (0.018)} & \makecell{-0.131** \\ (0.042)} & \makecell{-0.174*** \\ (0.015)} & \makecell{-0.118** \\ (0.042)} & \makecell{-0.185*** \\ (0.025)} & \makecell{-0.074 \\ (0.104)} \\
+Age $\times$ Years of Schooling &  &  &  &  & \makecell{0.011 \\ (0.018)} & \makecell{-0.041 \\ (0.081)} \\
+\midrule
+\addlinespace
+Year & - & - & x & x & x & x \\
+Industry & x & x & x & x & x & x \\
+\midrule
+\addlinespace
+Number of Clusters & 42 & 42 & 42 & 37 & 37 & 37 \\
+Observations & 997 & 998 & 997 & 998 & 997 & 998 \\
+$R^2$ & 0.489 & 0.120 & 0.659 & 0.172 & 0.659 & 0.172 \\
+\bottomrule
+\end{tabular}
+\footnotesize Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+\end{threeparttable}%
+\end{table}
+
+%
+\end{document}

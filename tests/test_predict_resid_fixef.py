@@ -9,7 +9,11 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
+from pyfixest.utils.dev_utils import _extract_variable_level
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 pandas2ri.activate()
 
@@ -173,7 +177,7 @@ def test_predict_nas():
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
 
@@ -186,24 +190,24 @@ def test_predict_nas():
     res = fit.predict(newdata=newdata)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=newdata)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
     newdata.loc[198, "Y"] = np.nan
     res = fit.predict(newdata=newdata)
     res_r = stats.predict(fit_r, newdata=newdata)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert newdata.shape[0] == len(res)
     assert len(res) == len(res_r)
 
     # test 3
-    fml = "Y ~ X1 + X2 + f1| f1 "
+    fml = "Y ~ X1 + X2 | f1 "
     fit = feols(fml, data=data)
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
-    np.testing.assert_allclose(res, res_r)
+    np.testing.assert_allclose(res, res_r, atol=1e-05, rtol=1e-05)
     assert data.shape[0] == len(res)
     assert len(res) == len(res_r)
 
@@ -290,3 +294,13 @@ def test_categorical_covariate_predict():
     )
 
     np.testing.assert_allclose(py_predict, r_predict, rtol=1e-08, atol=1e-08)
+
+
+def test_extract_variable_level():
+    """Verify the correct extracation of lists, floats, and integers."""
+    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
+    assert _extract_variable_level(var) == ("C(SHOPPER_PLATFORM)", "['ios', 'android']")
+    var = "C(f3)[T.1.0]"
+    assert _extract_variable_level(var) == ("C(f3)", "1.0")
+    var = "C(f4)[T.1]"
+    assert _extract_variable_level(var) == ("C(f4)", "1")

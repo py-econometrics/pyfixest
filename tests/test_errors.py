@@ -18,7 +18,7 @@ from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
-from pyfixest.utils.utils import get_data
+from pyfixest.utils.utils import get_data, ssc
 
 
 @pytest.fixture
@@ -141,6 +141,56 @@ def test_poisson_devpar_count():
         fepois(fml="Y ~ X1 | X4", data=data)
 
 
+def test_feols_errors():
+    data = pf.get_data()
+
+    with pytest.raises(TypeError):
+        pf.feols(fml=1, data=data)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, vcov=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm=1)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm="f1")
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=2)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol="2")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=-1.0)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, lean=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
+
+
+def test_poisson_errors():
+    data = pf.get_data(model="Fepois")
+    # iv not supported
+    with pytest.raises(NotImplementedError):
+        pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
+
+
 def test_all_variables_multicollinear():
     data = get_data()
     with pytest.raises(ValueError):
@@ -187,6 +237,26 @@ def test_multcomp_errors():
         rwolf(fit1.to_list(), param="X2", reps=999, seed=92)
 
 
+def test_multcomp_sampling_errors():
+    data = get_data().dropna()
+    # Sampling method not supported in "rwolf"
+    fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
+    with pytest.raises(ValueError):
+        rwolf(fit1.to_list(), param="X1", reps=999, seed=92, sampling_method="abc")
+
+
+def test_rwolf_error():
+    rng = np.random.default_rng(123)
+
+    data = get_data()
+    data["f1"] = rng.choice(range(5), len(data), True)
+    fit = feols("Y + Y2 ~ X1 | f1", data=data)
+
+    # test for full enumeration warning
+    with pytest.warns(UserWarning):
+        pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
@@ -195,16 +265,13 @@ def test_wildboottest_errors():
 
 
 def test_summary_errors():
+    "Test for appropriate errors when providing objects of type FixestMulti."
     data = get_data()
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
     with pytest.raises(TypeError):
-        etable(fit1)
-    with pytest.raises(TypeError):
         etable([fit1, fit2])
-    with pytest.raises(TypeError):
-        summary(fit1)
     with pytest.raises(TypeError):
         summary([fit1, fit2])
 
@@ -222,9 +289,6 @@ def test_errors_etable():
 
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
-
-    with pytest.raises(ValueError):
-        etable([fit1, fit2], coef_fmt="b (se)\nt [p]", type="tex")
 
     with pytest.raises(AssertionError):
         etable(
@@ -340,13 +404,20 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref=a)", data)
 
 
-def test_coefplot_backend_error():
+def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
     ):
         fit.coefplot(plot_backend="plotnine")
+
+    fit_multi = feols("Y + Y2 ~ i(f1)", data=df)
+    with pytest.raises(ValueError):
+        fit_multi.coefplot(joint=True)
+
+    with pytest.raises(ValueError):
+        fit_multi.iplot(joint="both")
 
 
 def test_ritest_error(data):
@@ -387,3 +458,115 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+def test_wald_test_invalid_distribution():
+    data = pd.read_csv("pyfixest/did/data/df_het.csv")
+    data = data.iloc[1:3000]
+
+    fml = "dep_var ~ treat"
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, -1]]), distribution="abc")
+
+
+def test_wald_test_R_q_column_consistency():
+    data = pd.read_csv("pyfixest/did/data/df_het.csv")
+    data = data.iloc[1:3000]
+    fml = "dep_var ~ treat"
+    fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
+
+    # Test with R.size[1] == number of coeffcients
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0, 0]]))
+
+    # Test with q type
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0]]), q="invalid type q")
+
+    # Test with q being a one-dimensional array or a scalar.
+    with pytest.raises(ValueError):
+        fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0, 1]]))
+
+    # q must have the same number of rows as R
+    with pytest.raises(ValueError):
+        fit.wald_test(
+            R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
+        )
+
+
+def setup_feiv_instance():
+    # Setup necessary data for Feiv
+
+    data = pf.get_data()
+    return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+
+
+def test_IV_first_stage_invalid_model_type():
+    class NotFeols:
+        # Dummy class for testing invalid model type
+        pass
+
+    invalid_model = NotFeols()
+
+    with pytest.raises(TypeError):
+        feiv_instance = setup_feiv_instance()
+        feiv_instance.first_stage(invalid_model)  # This should raise TypeError
+
+
+def test_IV_Diag_unsupported_statistics():
+    feiv_instance = setup_feiv_instance()
+
+    unsupported_statistics = ["unsupported_stat"]
+
+    with pytest.raises(ValueError):
+        feiv_instance.IV_Diag(statistics=unsupported_statistics)
+
+
+def test_errors_compressed():
+    data = pf.get_data()
+
+    # no more than two fixed effects
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+
+    # cluster variables not in model
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
+
+    # only CVR supported for Mundlak
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
+
+    # crv3 inference:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
+
+    # prediction:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+
+    # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
+
+    with pytest.raises(ValueError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
+
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
+
+    # no support for IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
+
+    # no support for WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)

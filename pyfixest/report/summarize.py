@@ -3,24 +3,36 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from great_tables import GT
 from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-    type: str = "md",
+    type: str = "gt",
     signif_code: list = [0.001, 0.01, 0.05],
-    coef_fmt: str = "b (se)",
+    coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
+    labels: Optional[dict] = None,
+    show_fe: Optional[bool] = True,
+    show_se_type: Optional[bool] = True,
+    felabels: Optional[dict] = None,
+    notes: str = "",
+    model_heads: Optional[list] = None,
+    head_order: Optional[str] = "dh",
+    custom_model_stats: Optional[dict] = None,
+    filename: Optional[str] = None,
+    print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -32,15 +44,14 @@ def etable(
         A list of models of type Feols, Feiv, Fepois.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        or "tex" for LaTeX table. Default is "md".
+        "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
         Significance levels for the stars. Default is [0.001, 0.01, 0.05].
         If None, no stars are printed.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
-        p-value (p). Default is `"b (se)"`.
+        p-value (p). Default is `"b \n (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
-        Newline is not support for LaTeX output.
     custom_stats: dict, optional
         A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
     keep: str or list of str, optional
@@ -60,6 +71,20 @@ def etable(
         Whether to use exact match for `keep` and `drop`. Default is False.
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
+    labels: dict, optional
+        A dictionary to relabel the variables. The keys are the original variable
+        names and the values the new names. Note that interaction terms will also be
+        relabeled using the labels of the individual variables.
+        The command is applied after the `keep` and `drop` commands.
+    show_fe: bool, optional
+        Whether to show the rows with fixed effects markers. Default is True.
+    show_se_type: bool, optional
+        Whether to show the rows with standard error type. Default is True.
+    felabels: dict, optional
+        A dictionary to relabel the fixed effects. Only needed if you want to relabel
+        the FE lines with a different label than the one specied for the respective
+        variable in the labels dictionary.
+        The command is applied after the `keep` and `drop` commands.
     digits: int
         The number of digits to round to.
     thousands_sep: bool, optional
@@ -68,15 +93,34 @@ def etable(
         Whether to use scientific notation. Default is True.
     scientific_notation_threshold: int, optional
         The threshold for using scientific notation. Default is 10_000.
+    notes: str, optional
+        Custom table notes. Default shows the significance levels and the format of
+        the coefficient cell.
+    model_heads: list, optional
+        Add custom headlines to models when output as df or latex. Length of list
+        must correspond to number of models. Default is None.
+    head_order: str, optional
+        String to determine the display of the table header when output as df or latex.
+        Allowed values are "dh", "hd", "d", "h", or "". When head_order is "dh",
+        the dependent variable is displayed first, followed by the custom model_heads
+        (provided the user has specified them). With "hd" it is the other way around.
+        When head_order is "d", only the dependent variable and model numbers are displayed
+        and with "" only the model numbers. Default is "dh".
+    filename: str, optional
+        The filename to save the LaTeX table to. If None, the LaTeX code is returned
+        as a string. Default is None.
+    print_tex: bool, optional
+        Whether to print the LaTeX code to the console. Default is False.
 
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with the coefficients and standard errors of the models.
+        A styled DataFrame with the coefficients and standard errors of the models.
+        When output is "tex", the LaTeX code is returned as a string.
     """  # noqa: D301
     assert (
-        signif_code is None or len(signif_code) == 3
-    ), "signif_code must be a list of length 3 or None"
+        isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
+    ), "signif_code must be a list of length 3"
     if signif_code:
         assert all(
             [0 < i < 1 for i in signif_code]
@@ -85,6 +129,12 @@ def etable(
         assert (
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
+
+    # Check if models is of type FixestMulti
+    # If so, convert it to a list of models
+    if isinstance(models, FixestMulti):
+        models = models.to_list()
+
     models = _post_processing_input_checks(models)
 
     if custom_stats is None:
@@ -109,7 +159,34 @@ def etable(
         "tex",
         "md",
         "html",
-    ], "type must be either 'df', 'md', 'html' or 'tex'"
+        "gt",
+    ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
+
+    if model_heads is not None:
+        assert len(model_heads) == len(
+            models
+        ), "model_heads must have the same length as models"
+
+    # Check if head_order is allowed string & remove h when no model_heads provided
+    assert head_order in [
+        "dh",
+        "hd",
+        "d",
+        "h",
+        "",
+    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    if model_heads is None and "h" in head_order:
+        head_order = head_order.replace("h", "")
+
+    # Check if custom_model_stats is a dictionary and the provided lists have the same length as models
+    if custom_model_stats is not None:
+        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
+        for stat, values in custom_model_stats.items():
+            assert isinstance(stat, str), "custom_model_stats keys must be strings"
+            assert isinstance(values, list), "custom_model_stats values must lists"
+            assert len(values) == len(
+                models
+            ), "lists in custom_model_stats values must have the same length as models"
 
     dep_var_list = []
     nobs_list = []
@@ -118,6 +195,17 @@ def etable(
     se_type_list = []
     r2_list = []
     r2_within_list: list[float] = []  # noqa: F841
+
+    # Define code for R2 & interaction symbol depending on output type
+    if type in ["gt", "html"]:
+        interactionSymbol = " &#215; "
+        R2code = "R<sup>2</sup>"
+    elif type == "tex":
+        interactionSymbol = " $\\times$ "
+        R2code = "$R^2$"
+    else:
+        interactionSymbol = " x "
+        R2code = "R2"
 
     for i, model in enumerate(models):
         dep_var_list.append(model._depvar)
@@ -138,36 +226,58 @@ def etable(
         else:
             se_type_list.append(model._vcov_type)
 
-        if model._fixef is not None:
+        if model._fixef is not None and model._fixef != "0":
             fixef_list += model._fixef.split("+")
 
-    # find all fixef variables
-    # drop "" from fixef_list
-    fixef_list = [x for x in fixef_list if x]
-    # keep only unique values
-    fixef_list = list(set(fixef_list))
-    n_fixef = len(fixef_list)
+    # find all fixef variables when the user does not want to hide the FE rows
+    if show_fe:
+        # drop "" from fixef_list
+        fixef_list = [x for x in fixef_list if x]
+        # keep only unique values
+        fixef_list = list(set(fixef_list))
+        n_fixef = len(fixef_list)
+    else:
+        fixef_list = []
+        n_fixef = 0
 
-    # create a pd.dataframe with the depvar, nobs, and fixef as keys
-    nobs_fixef_df = pd.DataFrame(
-        {"Observations": nobs_list, "S.E. type": se_type_list, "R2": r2_list}
-    )
+    # First create a dataframe for the model stats such as R2, nobs, etc.
+    model_stats_df = pd.DataFrame()
+    if custom_model_stats is not None:
+        for stat, values in custom_model_stats.items():
+            model_stats_df[stat] = values
+    model_stats_df["Observations"] = nobs_list
+    if show_se_type:
+        model_stats_df["S.E. type"] = se_type_list
+    model_stats_df[R2code] = r2_list
+    n_model_stats = model_stats_df.shape[1]
+    # Transpose
+    model_stats_df = model_stats_df.T
 
-    if fixef_list:  # only when at least one model has a fixed effect
+    # Create a dataframe for the Fixed Effects markers
+    fe_df = pd.DataFrame()
+    # when at least one model has a fixed effect & the user wants to show them
+    if fixef_list:
         for fixef in fixef_list:
             # check if not empty string
             if fixef:
-                nobs_fixef_df[fixef] = "-"
                 for i, model in enumerate(models):
-                    if model._fixef is not None and fixef in model._fixef.split("+"):
-                        nobs_fixef_df.loc[i, fixef] = "x"
+                    if (
+                        model._fixef is not None
+                        and fixef in model._fixef.split("+")
+                        and not model._use_mundlak
+                    ):
+                        fe_df.loc[i, fixef] = "x"
+                    else:
+                        fe_df.loc[i, fixef] = "-"
+        # Sort by model
+        fe_df.sort_index(inplace=True)
+        # Transpose
+        fe_df = fe_df.T
+    else:
+        show_fe = False
 
-    colnames = nobs_fixef_df.columns.tolist()
-    colnames.reverse()
-    nobs_fixef_df = nobs_fixef_df[colnames].T.reset_index()
-
+    # Finally, collect & format estimated coefficients and standard errors etc.
     coef_fmt_elements, coef_fmt_title = _parse_coef_fmt(coef_fmt, custom_stats)
-
     etable_list = []
     for i, model in enumerate(models):
         model_tidy_df = model.tidy()
@@ -213,8 +323,13 @@ def etable(
                 model_tidy_df[coef_fmt_title] += pd.Series(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
-            elif element == "\n" and type == "tex":
-                raise ValueError("Newline is currently not supported for LaTeX output.")
+            elif element == "\n":  # Replace output specific code for newline
+                if type in ["html", "gt"]:
+                    model_tidy_df[coef_fmt_title] += "<br>"
+                elif type == "tex":
+                    model_tidy_df[coef_fmt_title] += r"\\"
+                elif type in ["md", "df"]:
+                    model_tidy_df[coef_fmt_title] += "\n"
             else:
                 model_tidy_df[coef_fmt_title] += element
         model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
@@ -247,27 +362,104 @@ def etable(
         res[column] = res[column].fillna("")
 
     res.rename(columns={"Coefficient": "index"}, inplace=True)
-    nobs_fixef_df.columns = res.columns
+    res.set_index("index", inplace=True)
 
-    depvars = pd.DataFrame({"depvar": dep_var_list}).T.reset_index()
+    # Move the intercept row (if there is one) to the bottom of the table
+    if "Intercept" in res.index:
+        intercept_row = res.loc["Intercept"]
+        res = res.drop("Intercept")
+        res = pd.concat([res, pd.DataFrame([intercept_row])])
+
+    # Relabel variables
+    if labels is not None:
+        # Relabel dependent variables
+        dep_var_list = [labels.get(k, k) for k in dep_var_list]
+
+        # Relabel explanatory variables
+        res_index = res.index.to_series()
+        res_index = res_index.apply(
+            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol)
+        )
+        res.set_index(res_index, inplace=True)
+
+    # Relabel fixed effects
+    if show_fe:
+        if felabels is None:
+            felabels = dict()
+        if labels is None:
+            labels = dict()
+        # When the user provides a dictionary for fixed effects, then use it
+        # When a corresponsing variable is not in the felabel dictionary, then use the labels dictionary
+        # When in neither then just use the original variable name
+        fe_index = fe_df.index.to_series()
+        fe_index = fe_index.apply(lambda x: felabels.get(x, labels.get(x, x)))
+        fe_df.set_index(fe_index, inplace=True)
+
+    model_stats_df.columns = res.columns
+    if show_fe:
+        fe_df.columns = res.columns
+
+    depvars = pd.DataFrame({"depvar": dep_var_list}).T
     depvars.columns = res.columns
 
-    res_all = pd.concat([depvars, res, nobs_fixef_df], ignore_index=True)
-    res_all.columns = pd.Index([""] + list(res_all.columns[1:]))
-
-    if type == "tex":
-        return res_all.to_latex()
-    elif type == "md":
-        res_all = _tabulate_etable(res_all, len(models), n_fixef)
-        print(res_all)
-        if signif_code:
-            print(
-                f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
-            )
-        print(f"Format of coefficient cell:\n{coef_fmt_title}")
-        return None
-    else:
+    if type == "df":
+        res_all = pd.concat([depvars, res, fe_df, model_stats_df])
         return res_all
+    elif type == "md":
+        res_all = pd.concat([depvars, res, fe_df, model_stats_df]).reset_index()
+        # Generate notes string if user has not provided any
+        if notes is None:
+            if signif_code:
+                notes = f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}"
+            else:
+                notes = f"Format of coefficient cell: {coef_fmt_title}"
+        res_all = _tabulate_etable_md(
+            df=res_all,
+            n_coef=res.shape[0],
+            n_fixef=n_fixef,
+            n_models=len(models),
+            n_model_stats=n_model_stats,
+        )
+        print(res_all)
+        print(notes)
+        return None
+
+    elif type in ["tex", "gt"]:
+        # Prepare Multiindex for columns
+        id_dep = dep_var_list  # depvars
+        id_head = [""] * len(models) if model_heads is None else model_heads
+        id_num = [f"({s})" for s in range(1, len(models) + 1)]  # model numbers
+
+        # Concatenate the dataframes for coefficients, fixed effects, and model stats
+        # and add keys identifying the three parts which will allow make_table
+        # to format the table correctly inserting line between the parts
+        res_all = pd.concat([res, fe_df, model_stats_df], keys=["coef", "fe", "stats"])
+
+        # When no depvars & headlines should be displayed then use simple index
+        # otherwise generate MultiIndex & determine order of index levels as specified by head_order
+        if head_order == "":
+            res_all.columns = pd.Index(id_num)
+        else:
+            cindex = [{"h": id_head, "d": id_dep}[c] for c in head_order] + [id_num]
+            res_all.columns = pd.MultiIndex.from_arrays(cindex)
+
+        # Generate generic note string if none is provided
+        if notes is None:
+            if type == "gt":
+                notes = (
+                    f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
+                    + f"Format of coefficient cell:\n{coef_fmt_title}"
+                )
+            elif type == "tex":
+                notes = (
+                    f"Significance levels: $*$ p $<$ {signif_code[2]}, $**$ p $<$ {signif_code[1]}, $***$ p $<$ {signif_code[0]}. "
+                    + f"Format of coefficient cell: {coef_fmt_title}"
+                )
+        return make_table(
+            res_all, type=type, notes=notes, rgroup_display=False, **kwargs
+        )
+
+    return None
 
 
 def summary(
@@ -322,13 +514,15 @@ def summary(
             estimation_method = "DID2S"
         else:
             raise ValueError("Unknown estimation method.")
-
         print("###")
         print("")
         print("Estimation: ", estimation_method)
         depvar_fixef = f"Dep. var.: {depvar}"
         if fxst._fixef is not None:
-            depvar_fixef += f", Fixed effects: {fxst._fixef}"
+            if not fxst._use_mundlak:
+                depvar_fixef += f", Fixed effects: {fxst._fixef}"
+            else:
+                depvar_fixef += f", Mundlak: by {fxst._fixef}"
         print(depvar_fixef)
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
@@ -403,15 +597,17 @@ def _post_processing_input_checks(
     return models
 
 
-def _tabulate_etable(df, n_models, n_fixef):
+def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
     """
     Format and tabulate a DataFrame.
 
     Parameters
     ----------
     - df (pandas.DataFrame): The DataFrame to be formatted and tabulated.
-    - n_models (int): The number of models.
+    - n_coef (int): The number of coefficients.
     - n_fixef (int): The number of fixed effects.
+    - n_models (int): The number of models.
+    - n_model_stats (int): The number of rows with model statistics.
 
     Returns
     -------
@@ -419,7 +615,10 @@ def _tabulate_etable(df, n_models, n_fixef):
     """
     # Format the DataFrame for tabulate
     table = tabulate(
-        df, headers="keys", showindex=False, colalign=["left"] + n_models * ["right"]
+        df,
+        headers="keys",
+        showindex=False,
+        colalign=["left"] + n_models * ["right"],
     )
 
     # Split the table into header and body
@@ -428,8 +627,9 @@ def _tabulate_etable(df, n_models, n_fixef):
     # Add separating line after the third row
     body_lines = body.split("\n")
     body_lines.insert(2, "-" * len(body_lines[0]))
-    body_lines.insert(-3 - n_fixef, "-" * len(body_lines[0]))
-    body_lines.insert(-3, "-" * len(body_lines[0]))
+    if n_fixef > 0:
+        body_lines.insert(-n_model_stats - n_fixef, "-" * len(body_lines[0]))
+    body_lines.insert(-n_model_stats, "-" * len(body_lines[0]))
     body_lines.append("-" * len(body_lines[0]))
 
     # Join the lines back together
@@ -539,3 +739,641 @@ def _number_formatter(x: float, **kwargs) -> str:
     _int, _float = str(x_str).split(".")
     _float = _float.ljust(digits, "0")
     return _int if digits == 0 else f"{_int}.{_float}"
+
+
+def make_table(
+    df: pd.DataFrame,
+    type: str = "gt",
+    notes: str = "",
+    rgroup_sep: str = "tb",
+    rgroup_display: bool = True,
+    caption: Optional[str] = None,
+    tab_label: Optional[str] = None,
+    texlocation: str = "htbp",
+    full_width: bool = False,
+    file_name: Optional[str] = None,
+    **kwargs,
+):
+    r"""
+    Create a booktab style table in the desired format (gt or tex) from a DataFrame.
+    The DataFrame can have a multiindex. Column index used to generate horizonal
+    table spanners. Row index used to generate row group names and
+    row names. The table can have multiple index levels in columns and up to
+    two levels in rows.
+
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the table to be displayed.
+    type : str, optional
+        Type of table to be created. The default is 'gt'.
+    notes : str
+        Table notes to be displayed at the bottom of the table.
+    rgroup_sep : str
+        Whether group names are separated by lines. The default is "tb".
+        When output type = 'gt', the options are 'tb', 't', 'b', or '', i.e.
+        you can specify whether to have a line above, below, both or none.
+        When output type = 'tex' no line will be added between the row groups
+        when rgroup_sep is '' and otherwise a line before the group name will be added.
+    rgroup_display : bool
+        Whether to display row group names. The default is
+        True.
+    caption : str
+        Table caption to be displayed at the top of the table. The default is None.
+        When either caption or label is provided the table will be wrapped in a
+        table environment.
+    tab_label : str
+        LaTex label of the table. The default is None. When either caption or label
+        is provided the table will be wrapped in a table environment.
+    texlocation : str
+        Location of the table. The default is 'htbp'.
+    full_width : bool
+        Whether to expand the table to the full width of the page. The default is False.
+    file_name : str
+        Name of the file to save the table to. The default is None.
+        gt tables will be saved as html files and latex tables as tex files.
+
+    Returns
+    -------
+    A table in the specified format.
+    """
+    assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
+    assert (
+        not isinstance(df.index, pd.MultiIndex) or df.index.nlevels <= 2
+    ), "Row index can have at most two levels."
+    assert type in ["gt", "tex"], "type must be either 'gt' or 'tex'."
+    assert rgroup_sep in [
+        "tb",
+        "t",
+        "b",
+        "",
+    ], "rgroup_sep must be either 'tb', 't', 'b', or ''."
+    assert file_name is None or (
+        isinstance(file_name, str) and file_name.endswith((".html", ".tex"))
+    ), "file_name must end with '.html' or '.tex'."
+
+    # Make a copy of the DataFrame to avoid modifying the original
+    dfs = df.copy()
+
+    # Produce LaTeX code if either type is 'tex' or the
+    # user has passed a file_name which ends with '.tex'
+    if type == "tex" or (isinstance(file_name, str) and file_name.endswith(".tex")):
+        # First wrap all cells which contain a line break in a makecell command
+        dfs = dfs.map(
+            lambda x: f"\\makecell{{{x}}}" if isinstance(x, str) and "\\\\" in x else x
+        )
+        row_levels = dfs.index.nlevels
+        # when the row index has more than one level, we will store
+        # the top level to use later to add clines and row group titles
+        # and then remove it
+        if row_levels > 1:
+            # Store the top level of the row index
+            top_row_id = dfs.index.get_level_values(0).to_list()
+            # Generate a list of the distinct values
+            row_groups = list(dict.fromkeys(top_row_id))
+            # Generate a list containing the number of rows for each group
+            row_groups_len = [top_row_id.count(group) for group in row_groups]
+            # Drop the top level of the row index:
+            dfs.index = dfs.index.droplevel(0)
+
+        # Style the table
+        styler = dfs.style
+        # if caption is not None:
+        #     styler.set_caption(caption)
+
+        # Generate LaTeX code
+        latex_res = styler.to_latex(
+            hrules=True,
+            multicol_align="c",
+            multirow_align="t",
+            column_format="l" + "c" * (dfs.shape[1] + dfs.index.nlevels),
+        )
+
+        # # Now perform post-processing of the LaTeX code
+        # # First split the LaTeX code into lines
+        lines = latex_res.splitlines()
+        # Find the line number of the \midrule
+        line_at = next(i for i, line in enumerate(lines) if "\\midrule" in line)
+        # Add space after this \midrule:
+        lines.insert(line_at + 1, "\\addlinespace")
+        line_at += 1
+
+        # When there are row groups then insert midrules and groupname
+        if row_levels > 1 and len(row_groups) > 1:
+            # Insert a midrule after each row group
+            for i, row_group in enumerate(row_groups):
+                if rgroup_display:
+                    # Insert a line with the row group name & same space around it
+                    # lines.insert(line_at+1, "\\addlinespace")
+                    lines.insert(line_at + 1, "\\emph{" + row_groups[i] + "} \\\\")
+                    lines.insert(line_at + 2, "\\addlinespace")
+                    lines.insert(line_at + 3 + row_groups_len[i], "\\addlinespace")
+                    line_at += 3
+                if (rgroup_sep != "") and (i < len(row_groups) - 1):
+                    # For tex output we only either at a line between the row groups or not
+                    # And we don't add a line after the last row group
+                    line_at += row_groups_len[i] + 1
+                    lines.insert(line_at, "\\midrule")
+                    lines.insert(line_at + 1, "\\addlinespace")
+                    line_at += 1
+        else:
+            # Add line space before the end of the table
+            lines.insert(line_at + dfs.shape[0] + 1, "\\addlinespace")
+
+        # Insert cmidrules (equivalent to column spanners in gt)
+        # First find the first line with an occurrence of "multicolumn"
+        cmidrule_line_number = None
+        for i, line in enumerate(lines):
+            if "multicolumn" in line:
+                cmidrule_line_number = i + 1
+                # Regular expression to find \multicolumn{number}
+                pattern = r"\\multicolumn\{(\d+)\}"
+                # Find all matches (i.e. values of d) in the LaTeX string & convert to integers
+                ncols = [int(match) for match in re.findall(pattern, line)]
+
+                cmidrule_string = ""
+                leftcol = 2
+                for n in ncols:
+                    cmidrule_string += (
+                        r"\cmidrule(lr){"
+                        + str(leftcol)
+                        + "-"
+                        + str(leftcol + n - 1)
+                        + "} "
+                    )
+                    leftcol += n
+                lines.insert(cmidrule_line_number, cmidrule_string)
+
+        # # Put the lines back together
+        latex_res = "\n".join(lines)
+
+        # Wrap in threeparttable to allow for table notes
+        if notes is not None:
+            latex_res = (
+                "\\begin{threeparttable}\n"
+                + latex_res
+                + "\n\\footnotesize "
+                + notes
+                + "\n\\end{threeparttable}"
+            )
+        else:
+            latex_res = (
+                "\\begin{threeparttable}\n" + latex_res + "\n\\end{threeparttable}"
+            )
+
+        # If caption or label specified then wrap in table environment
+        if (caption is not None) or (tab_label is not None):
+            latex_res = (
+                "\\begin{table}["
+                + texlocation
+                + "]\n"
+                + "\\centering\n"
+                + ("\\caption{" + caption + "}\n" if caption is not None else "")
+                + ("\\label{" + tab_label + "}\n" if tab_label is not None else "")
+                + latex_res
+                + "\n\\end{table}"
+            )
+
+        # Set cell aligment to top
+        latex_res = "\\renewcommand\\cellalign{t}\n" + latex_res
+
+        # Set table width to full page width if full_width is True
+        # This is done by changing the tabular environment to tabular*
+        if full_width:
+            latex_res = latex_res.replace(
+                "\\begin{tabular}{l", "\\begin{tabularx}{\\linewidth}{X"
+            )
+            latex_res = latex_res.replace(
+                "\\end{tabular}", "\\end{tabularx}\n \\vspace{3pt}"
+            )
+            # with tabular*
+            # latex_res = latex_res.replace("\\begin{tabular}{", "\\begin{tabular*}{\linewidth}{@{\extracolsep{\\fill}}")
+            # latex_res = latex_res.replace("\\end{tabular}", "\\end{tabular*}")
+
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(latex_res)  # Write the latex code to a file
+
+        # Only when type is 'tex' return the latex code as
+        # otherwise a GT object will be returned
+        if type == "tex":
+            return latex_res
+
+    if type == "gt":
+        # GT does not support MultiIndex columns, so we need to flatten the columns
+        if isinstance(dfs.columns, pd.MultiIndex):
+            # Store labels of the last level of the column index (to use as column names)
+            col_names = dfs.columns.get_level_values(-1)
+            nl = dfs.columns.nlevels
+            # As GT does not accept non-unique column names: so to allow for them
+            # we just assign column numbers to the lowest index level
+            col_numbers = list(map(str, range(len(dfs.columns))))
+            # Save the whole column index in order to generate table spanner labels later
+            dfcols = dfs.columns.to_list()
+            # Then flatten the column index just numbering the columns
+            dfs.columns = pd.Index(col_numbers)
+            # Store the mapping of column numbers to column names
+            col_dict = dict(zip(col_numbers, col_names))
+            # Modify the last elements in each tuple in dfcols
+            dfcols = [(t[:-1] + (col_numbers[i],)) for i, t in enumerate(dfcols)]
+            # And drop the first column as we don't want table spanners on top of the variables
+            # WE DON'T NEED THIS WITH ROW INDEX dfcols = dfcols[1:]
+        else:
+            nl = 1
+
+        rowindex = dfs.index
+
+        # Now reset row index to have the index as columns to be displayed in the table
+        dfs.reset_index(inplace=True)
+
+        # And specify the rowname_col and groupname_col
+        if isinstance(rowindex, pd.MultiIndex):
+            rowname_col = dfs.columns[1]
+            groupname_col = dfs.columns[0]
+        else:
+            rowname_col = dfs.columns[0]
+            groupname_col = None
+
+        # Generate the table with GT
+        gt = GT(dfs, auto_align=False)
+
+        # When caption is provided, add it to the table
+        if caption is not None:
+            gt = (
+                gt.tab_header(title=caption).tab_options(
+                    table_border_top_style="hidden",
+                )  # Otherwise line above caption
+            )
+
+        if nl > 1:
+            # Add column spanners based on multiindex
+            # Do this for every level in the multiindex (except the one with the column numbers)
+            for i in range(nl - 1):
+                col_spanners: dict[str, list[str | int]] = {}
+                # Iterate over columns and group them by the labels in the respective level
+                for c in dfcols:
+                    key = c[i]
+                    if key not in col_spanners:
+                        col_spanners[key] = []
+                    col_spanners[key].append(c[-1])
+                for label, columns in col_spanners.items():
+                    gt = gt.tab_spanner(label=label, columns=columns, level=nl - 1 - i)
+            # Restore column names
+            gt = gt.cols_label(**col_dict)
+
+        # Customize the table layout
+        gt = (
+            gt.tab_source_note(notes)
+            .tab_stub(rowname_col=rowname_col, groupname_col=groupname_col)
+            .tab_options(
+                table_border_bottom_style="hidden",
+                stub_border_style="hidden",
+                column_labels_border_top_style="solid",
+                column_labels_border_top_color="black",
+                column_labels_border_bottom_style="solid",
+                column_labels_border_bottom_color="black",
+                column_labels_border_bottom_width="0.5px",
+                column_labels_vlines_color="white",
+                column_labels_vlines_width="0px",
+                table_body_border_top_style="solid",
+                table_body_border_top_width="0.5px",
+                table_body_border_top_color="black",
+                table_body_hlines_style="none",
+                table_body_vlines_color="white",
+                table_body_vlines_width="0px",
+                table_body_border_bottom_color="black",
+                row_group_border_top_style="solid",
+                row_group_border_top_width="0.5px",
+                row_group_border_top_color="black",
+                row_group_border_bottom_style="solid",
+                row_group_border_bottom_width="0.5px",
+                row_group_border_bottom_color="black",
+                row_group_border_left_color="white",
+                row_group_border_right_color="white",
+                data_row_padding="4px",
+                column_labels_padding="4px",
+            )
+            .cols_align(align="center")
+        )
+
+        # Full page width
+        if full_width:
+            gt = gt.tab_options(table_width="100%")
+
+        # Customize row group display
+        if "t" not in rgroup_sep:
+            gt = gt.tab_options(row_group_border_top_style="none")
+        if "b" not in rgroup_sep:
+            gt = gt.tab_options(row_group_border_bottom_style="none")
+        if not rgroup_display:
+            gt = gt.tab_options(
+                row_group_font_size="0px",
+                row_group_padding="0px",
+            )
+        # Save the html code of the table to a file
+        if file_name is not None:
+            with open(file_name, "w") as f:
+                f.write(gt.as_raw_html())
+
+        return gt
+
+
+def _relabel_index(index, labels=None, stats_labels=None):
+    if stats_labels is None:
+        if isinstance(index, pd.MultiIndex):
+            index = pd.MultiIndex.from_tuples(
+                [tuple(labels.get(k, k) for k in i) for i in index]
+            )
+        else:
+            index = [labels.get(k, k) for k in index]
+    else:
+        # if stats_labels is provided, we relabel the lowest level of the index with it
+        if isinstance(index, pd.MultiIndex):
+            new_index = []
+            for i in index:
+                new_index.append(
+                    tuple(
+                        [labels.get(k, k) for k in i[:-1]]
+                        + [stats_labels.get(i[-1], i[-1])]
+                    )
+                )
+            index = pd.MultiIndex.from_tuples(new_index)
+        else:
+            index = [stats_labels.get(k, k) for k in index]
+    return index
+
+
+def _format_mean_std(
+    data: pd.Series, digits: int = 2, newline: bool = True, type=str
+) -> str:
+    """
+    Calculate the mean and standard deviation of a pandas Series and return as a string of the format "mean /n (std)".
+
+    Parameters
+    ----------
+    data : pd.Series
+        The pandas Series for which to calculate the mean and standard deviation.
+    digits : int, optional
+        The number of decimal places to round the mean and standard deviation to. The default is 2.
+    newline : bool, optional
+        Whether to add a newline character between the mean and standard deviation. The default is True.
+    type : str, optional
+        The type of the table output.
+
+    Returns
+    -------
+    _format_mean_std : str
+        The mean and standard deviation of the pandas Series formated as a string.
+
+    """
+    mean = data.mean()
+    std = data.std()
+    if newline:
+        if type == "gt":
+            return f"{mean:.{digits}f}<br>({std:.{digits}f})"
+        elif type == "tex":
+            return f"{mean:.{digits}f}\\\\({std:.{digits}f})"
+    return f"{mean:.{digits}f} ({std:.{digits}f})"
+
+
+def dtable(
+    df: pd.DataFrame,
+    vars: list,
+    stats: list = ["count", "mean", "std"],
+    bycol: Optional[list[str]] = None,
+    byrow: Optional[str] = None,
+    type: str = "gt",
+    labels: dict = {},
+    stats_labels: dict = {},
+    digits: int = 2,
+    notes: str = "",
+    counts_row_below: bool = False,
+    hide_stats: bool = False,
+    **kwargs,
+):
+    r"""
+    Generate descriptive statistics tables and create a booktab style table in
+    the desired format (gt or tex).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the table to be displayed.
+    vars : list
+        List of variables to be included in the table.
+    stats : list, optional
+        List of statistics to be calculated. The default is ['count','mean', 'std'].
+        All pandas aggregation functions are supported.
+    bycol : list, optional
+        List of variables to be used to group the data by columns. The default is None.
+    byrow : str, optional
+        Variable to be used to group the data by rows. The default is None.
+    type : str, optional
+        Type of table to be created. The default is 'gt'.
+        Type can be 'gt' for great_tables, 'tex' for LaTeX or 'df' for dataframe.
+    labels : dict, optional
+        Dictionary containing the labels for the variables. The default is None.
+    stats_labels : dict, optional
+        Dictionary containing the labels for the statistics. The default is None.
+        The function uses a default labeling which will be replaced by the labels
+        in the dictionary.
+    digits : int, optional
+        Number of decimal places to round the statistics to. The default is 2.
+    notes : str
+        Table notes to be displayed at the bottom of the table.
+    counts_row_below : bool
+        Whether to display the number of observations at the bottom of the table.
+        Will only be carried out when each var has the same number of obs and when
+        byrow is None. The default is False
+    hide_stats : bool
+        Whether to hide the names of the statistics in the table header. When stats
+        are hidden and the user provides no notes string the labels of the stats are
+        listed in the table notes. The default is False.
+    kwargs : dict
+        Additional arguments to be passed to the make_table function.
+
+    Returns
+    -------
+    A table in the specified format.
+    """
+    assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
+    assert all(
+        pd.api.types.is_numeric_dtype(df[var]) for var in vars
+    ), "Variables must be numerical."
+    assert type in ["gt", "tex", "df"], "type must be either 'gt' or 'tex' or 'df'."
+    assert (
+        byrow is None or byrow in df.columns
+    ), "byrow must be a column in the DataFrame."
+    assert bycol is None or all(
+        col in df.columns for col in bycol
+    ), "bycol must be a list of columns in the DataFrame."
+
+    # Default stats labels dictionary
+    stats_dict = {
+        "count": "N",
+        "mean": "Mean",
+        "std": "Std. Dev.",
+        "mean_std": "Mean (Std. Dev.)",
+        "mean_newline_std": "Mean (Std. Dev.)",
+        "min": "Min",
+        "max": "Max",
+        "var": "Variance",
+        "median": "Median",
+    }
+    stats_dict.update(stats_labels or {})
+
+    # Define custom aggregation functions
+    def mean_std(x):
+        return _format_mean_std(x, digits=digits, newline=False, type=type)
+
+    def mean_newline_std(x):
+        return _format_mean_std(x, digits=digits, newline=True, type=type)
+
+    # Create a dictionary to map stat names to custom functions
+    custom_funcs = {"mean_std": mean_std, "mean_newline_std": mean_newline_std}
+
+    # Prepare the aggregation dictionary allowing custom functions
+    agg_funcs = {var: [custom_funcs.get(stat, stat) for stat in stats] for var in vars}
+
+    # Calculate the desired statistics
+    if (byrow is not None) and (bycol is not None):
+        bylist = [byrow] + bycol
+        res = df.groupby(bylist).agg(agg_funcs)
+    if (byrow is None) and (bycol is None):
+        res = df.agg(agg_funcs)
+    elif (byrow is not None) and (bycol is None):
+        res = df.groupby(byrow).agg(agg_funcs)
+    elif (byrow is None) and (bycol is not None):
+        res = df.groupby(bycol).agg(agg_funcs)
+
+    # Set counts_row_below to false when byrow is not None
+    # or when 'count' is not in stats
+    if (byrow is not None) or ("count" not in stats):
+        counts_row_below = False
+
+    # Round all floats to required decimal places
+    # Convert to string to preserve the formatting
+    format_string = ",." + str(digits) + "f"
+
+    # Reshaping of table (just transpose when no multiindex)
+    if res.columns.nlevels == 1:
+        # Check whether number of obs should be displayed at the bottom
+        if counts_row_below:
+            # Only when all counts are the same within each row
+            if res.loc["count"].nunique() == 1:
+                # collect the number of obs
+                nobs = res.loc["count"].iloc[0]
+                # Drop the count row
+                res = res.drop("count", axis=0)
+                if "count" in stats:
+                    stats.remove("count")
+            else:
+                counts_row_below = False
+
+        # Transpose
+        res = res.transpose(copy=True)
+
+        # print(res)
+        # Format the statistics
+        for col in res.columns:
+            # Format the statistics
+            # for some reason count stats are displayed as floats when no multiindex,
+            # so we need to convert them to integers
+            if res[col].name == "count":
+                res[col] = res[col].apply(lambda x: f"{x:.0f}")
+            elif res[col].dtype == float:
+                res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
+
+        # Add the number of observations at the bottom of the table
+        if counts_row_below:
+            obs_row = [str(int(nobs))] + [""] * (len(res.columns) - 1)
+            res.loc[stats_dict["count"]] = obs_row
+
+    else:
+        # When there is a multiindex in the columns
+        # First check whether number of obs should be displayed at the bottom
+        if counts_row_below:
+            # collect the number of obs for each row
+            count_columns = res.xs("count", axis=1, level=-1)
+            # Ensure count_columns is always a DataFrame
+            if isinstance(count_columns, pd.Series):
+                count_columns = count_columns.to_frame()
+            # when all counts are the same within each row,
+            # generate a vector with the counts
+            if count_columns.nunique(axis=1).eq(1).all():
+                nobs = count_columns.iloc[:, 0]
+                # Drop the count column
+                res = res.drop("count", axis=1, level=-1)
+                if "count" in stats:
+                    stats.remove("count")
+                # And append the counts as an additional column
+                # with the value being assigned to the column of the first stat
+                # and labeled as defined in the stats_dict
+                res[stats_dict["count"], stats[0]] = nobs
+            else:
+                counts_row_below = False
+
+        # Format the statistics
+        for col in res.columns:
+            if res[col].dtype == float:
+                res[col] = res[col].apply(lambda x: f"{x:{format_string}}")
+
+        # Now some reshaping to bring the multiindex dataframe in the form of a typical descriptive statistics table
+        res = pd.DataFrame(res.stack(level=0, future_stack=True))
+
+        # First bring the variables to the rows:
+        # Assign name to the column index
+        res.columns.names = ["Statistics"]
+        if bycol is not None:
+            # Then bring the column objects to the columns:
+            res = pd.DataFrame(res.unstack(level=tuple(bycol)))
+            # Finally we want to have the objects first and then the statistics
+            if not isinstance(res.columns, pd.MultiIndex):
+                res.columns = pd.MultiIndex.from_tuples(res.columns)
+            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
+            # And sort it properly by the variables
+            # (we want to preserve the order of the lowest level for the stats)
+            levels_to_sort = list(range(res.columns.nlevels - 1))
+            res = res.sort_index(axis=1, level=levels_to_sort, sort_remaining=False)
+
+        # When hide_stats is True, we remove the names of the statistics
+        # And add a note to the table listing the statistics when the user
+        # has not provided a notes string
+        if hide_stats:
+            res.columns = res.columns.droplevel(-1)
+            if notes == "":
+                notes = (
+                    "Note: Displayed statistics are "
+                    + ", ".join([stats_dict.get(k, k) for k in stats])
+                    + "."
+                )
+
+    # Replace all NaNs with empty strings
+    res = res.fillna("")
+
+    # Relabel Variable names in row and column indices
+    res.columns = _relabel_index(res.columns, labels, stats_dict)
+    res.index = _relabel_index(res.index, labels)
+
+    # When counts_row_below: Turn row index into a multiindex
+    # to set up a second panel for the number of observations
+    # that make_table will thus separate by a line
+    if counts_row_below:
+        res.index = pd.MultiIndex.from_tuples([("stats", i) for i in res.index])
+        # Modify the last tuple in the MultiIndex
+        new_index = list(res.index)
+        new_index[-1] = ("nobs", stats_dict["count"])
+        res.index = pd.MultiIndex.from_tuples(new_index)
+
+    # Show row groups iff byrow is not None
+    rgroup_display = byrow is not None
+
+    # Generate the table
+    if type in ["gt", "tex"]:
+        # And make a booktab
+        return make_table(
+            res, type=type, notes=notes, rgroup_display=rgroup_display, **kwargs
+        )
+    else:
+        return res

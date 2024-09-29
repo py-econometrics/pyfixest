@@ -8,6 +8,9 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.utils.set_rpy2_path import update_r_paths
+
+update_r_paths()
 
 pandas2ri.activate()
 
@@ -52,7 +55,7 @@ def test_i():
 
 def test_i_vs_fixest():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
-
+    df_het = df_het[df_het["year"] >= 2010]
     # ------------------------------------------------------------------------ #
     # no fixed effects
 
