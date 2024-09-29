@@ -48,15 +48,14 @@ def test_separation():
     ):
         fepois("Y ~ X1 | X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
 
-
     data_01 = pd.read_csv("data/pplmhdfe_separations_examples/data_01.csv")
 
     # pplmhdfe test data sets:
     with pytest.warns(
-        UserWarning, match=f"{str(data_01.sum())} observations removed because of separation."
+        UserWarning,
+        match=f"{str(data_01.sum())} observations removed because of separation.",
     ):
-
-        pf.fepois("y ~ x1 + x2 | id1 + id2", data = data_01, separation_check = ["ir"])
+        pf.fepois("y ~ x1 + x2 | id1 + id2", data=data_01, separation_check=["ir"])
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])

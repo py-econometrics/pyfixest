@@ -1,4 +1,4 @@
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import pandas as pd
 
@@ -589,7 +589,7 @@ def _estimation_input_checks(
     use_compression: bool,
     reps: Optional[int],
     seed: Optional[int],
-    separation_check: List[str]=None,
+    separation_check: List[str] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
