@@ -82,8 +82,7 @@ class Fepois(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
             FixestFormula,
@@ -111,6 +110,7 @@ class Fepois(Feols):
         self.tol = tol
         self._method = "fepois"
         self.convergence = False
+        self.separation_check = separation_check
 
         self._support_crv3_inference = True
         self._support_iid_inference = True
@@ -134,14 +134,14 @@ class Fepois(Feols):
 
         # check for separation
         na_separation: list[int] = []
-        if self._fe is not None:
+        if self._fe is not None and self.separation_check:
             na_separation = _check_for_separation(
                 Y=self._Y,
                 X=self._X,
                 fe=self._fe,
                 fml=self._fml,
                 data=self._data,
-                methods=self._separation_check,
+                methods=self.separation_check,
             )
 
         if na_separation:
@@ -448,8 +448,6 @@ def _check_for_separation(
         "fe": _check_for_separation_fe,
         "ir": _check_for_separation_ir,
     }
-    if methods is None:
-        methods = list(valid_methods)
 
     invalid_methods = [method for method in methods if method not in valid_methods]
     if invalid_methods:

@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import pandas as pd
 
@@ -6,12 +6,6 @@ from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.literals import (
-    FixedRmOptions,
-    SolverOptions,
-    VcovTypeOptions,
-    WeightsTypeOptions,
-)
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import ssc
 
@@ -19,10 +13,10 @@ from pyfixest.utils.utils import ssc
 def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: dict[str, Union[str, bool]] = ssc(),
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: str = "none",
     fixef_tol=1e-08,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
@@ -30,8 +24,7 @@ def feols(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
-    weights_type: WeightsTypeOptions = "aweights",
-    solver: SolverOptions = "np.linalg.solve",
+    weights_type: str = "aweights",
     use_compression: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
@@ -53,7 +46,7 @@ def feols(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
+    vcov : Union[str, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
@@ -65,7 +58,7 @@ def feols(
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : str
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -107,14 +100,10 @@ def feols(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
-    weights_type: WeightsTypeOptions, optional
+    weights_type: str, optional
         Options include `aweights` or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
-
-    solver : SolverOptions, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -382,8 +371,7 @@ def feols(
         use_compression=use_compression,
         reps=reps,
         seed=seed,
-        split=split,
-        fsplit=fsplit,
+        separation_check=None,
     )
 
     fixest = FixestMulti(
@@ -407,7 +395,7 @@ def feols(
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, collin_tol=collin_tol, solver=solver)
+    fixest._estimate_all_models(vcov, collin_tol=collin_tol)
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -418,15 +406,14 @@ def feols(
 def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    vcov: Optional[Union[str, dict[str, str]]] = None,
     ssc: dict[str, Union[str, bool]] = ssc(),
-    fixef_rm: FixedRmOptions = "none",
+    fixef_rm: str = "none",
     fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = ["fe"],
-    solver: SolverOptions = "np.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -455,14 +442,14 @@ def fepois(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
+    vcov : Union[str, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : str
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -481,10 +468,6 @@ def fepois(
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default.
-
-    solver : SolverOptions, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -578,8 +561,6 @@ def fepois(
         use_compression=False,
         reps=None,
         seed=None,
-        split=split,
-        fsplit=fsplit,
         separation_check=separation_check,
     )
 
@@ -611,7 +592,6 @@ def fepois(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
-        solver=solver,
     )
 
     if fixest._is_multiple_estimation:
@@ -636,9 +616,7 @@ def _estimation_input_checks(
     use_compression: bool,
     reps: Optional[int],
     seed: Optional[int],
-    split: Optional[str],
-    fsplit: Optional[str],
-    separation_check: Optional[list[str]] = None,
+    separation_check: List[str]=None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -722,24 +700,6 @@ def _estimation_input_checks(
 
     if seed is not None and not isinstance(seed, int):
         raise TypeError("The function argument `seed` must be of type int.")
-
-    if split is not None and not isinstance(split, str):
-        raise TypeError("The function argument split needs to be of type str.")
-
-    if fsplit is not None and not isinstance(fsplit, str):
-        raise TypeError("The function argument fsplit needs to be of type str.")
-
-    if split is not None and fsplit is not None and split != fsplit:
-        raise ValueError(f"""
-                        Arguments split and fsplit are both specified, but not identical.
-                        split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """)
-
-    if isinstance(split, str) and split not in data.columns:
-        raise KeyError(f"Column '{split}' not found in data.")
-
-    if isinstance(fsplit, str) and fsplit not in data.columns:
-        raise KeyError(f"Column '{fsplit}' not found in data.")
 
     if separation_check is not None:
         if not isinstance(separation_check, list):
