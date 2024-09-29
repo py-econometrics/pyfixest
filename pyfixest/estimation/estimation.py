@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import pandas as pd
 
@@ -358,6 +358,7 @@ def feols(
         use_compression=use_compression,
         reps=reps,
         seed=seed,
+        separation_check=None,
     )
 
     fixest = FixestMulti(
@@ -397,7 +398,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    separation_check: Optional[list[str]] = None,
+    separation_check: Optional[list[str]] = ["fe"],
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -449,7 +450,7 @@ def fepois(
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
-        Either "fe" or "ir". Executes both by default.
+        Either "fe" or "ir". Executes "fe" by default.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -535,6 +536,7 @@ def fepois(
         use_compression=False,
         reps=None,
         seed=None,
+        separation_check=separation_check,
     )
 
     fixest = FixestMulti(
@@ -587,6 +589,7 @@ def _estimation_input_checks(
     use_compression: bool,
     reps: Optional[int],
     seed: Optional[int],
+    separation_check: List[str]=None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -670,3 +673,14 @@ def _estimation_input_checks(
 
     if seed is not None and not isinstance(seed, int):
         raise TypeError("The function argument `seed` must be of type int.")
+
+    if separation_check is not None:
+        if not isinstance(separation_check, list):
+            raise TypeError(
+                "The function argument `separation_check` must be of type list."
+            )
+
+        if not all(x in ["fe", "ir"] for x in separation_check):
+            raise ValueError(
+                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
+            )

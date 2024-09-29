@@ -293,6 +293,7 @@ class FixestMulti:
                         store_data=_store_data,
                         copy_data=_copy_data,
                         lean=_lean,
+                        separation_check=separation_check,
                         # solver=_solver
                     )
                     FIT.prepare_model_matrix()
