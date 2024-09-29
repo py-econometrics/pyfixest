@@ -51,7 +51,6 @@ def test_panelview():
     # Test with basic functionality for outcome plot
     ax = panelview(
         data=df_het,
-        type="outcome",
         outcome="dep_var",
         unit="unit",
         time="year",
