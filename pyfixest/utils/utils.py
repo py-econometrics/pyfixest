@@ -1,4 +1,3 @@
-import re
 from typing import Optional, Union
 
 import numpy as np
@@ -36,6 +35,48 @@ def ssc(
             the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
             is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
             all summands are multiplied with the same value, min(G) / (min(G) - 1)
+
+    Details
+    -------
+    The small sample correction choices mimic fixest's behavior. For details, see
+    https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
+
+    In general, if adj = True, we multiply the variance covariance matrix V with a
+    small sample correction factor of (N-1) / (N-k), where N is the number of
+    observations and k is the number of estimated coefficients.
+
+    If fixef_k = "none", the fixed effects parameters are discarded when
+    calculating k. This is the default behavior and currently the only
+    option. Note that it is not r-fixest's default behavior.
+
+    Hence if adj = True, the covariance matrix is computed as
+    V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
+
+    If adj = False, no small sample correction is applied of the type
+    above is applied.
+
+    If cluster_adj = True, a cluster correction of G/(G-1) is performed,
+    with G the number of clusters.
+
+    If adj = True and cluster_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
+    for cluster robust errors where G is the number of clusters.
+
+    If adj = False and cluster_adj = True, V = V x G/(G-1) for cluster robust
+    errors, i.e. we drop the (N-1) / (N-k) factor. And if cluster_adj = False,
+    no cluster correction is applied.
+
+    Things are slightly more complicated for multiway clustering. In this
+    case, we compute the variance covariance matrix as V = V1 + V2 - V_12.
+
+    If cluster_adj = True and cluster_df = "conventional", then
+    V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
+    covariance matrix G_i is multiplied with a small sample adjustment
+    G_i / (G_i - 1) corresponding to the number of clusters in the
+    respective covariance matrix. This is the default behavior
+    for clustered errors.
+
+    If cluster_df = "min", then
+    V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
 
     Returns
     -------
@@ -108,15 +149,10 @@ def get_ssc(
     cluster_adj_value = 1.0
     adj_value = 1.0
 
-    if vcov_type == "hetero":
-        adj_value = N / (N - k) if adj else N / (N - 1)
-    elif vcov_type in ["iid", "CRV"]:
-        if adj:
-            adj_value = (N - 1) / (N - k)
-    else:
-        raise ValueError("vcov_type must be either iid, hetero or CRV.")
+    if adj:
+        adj_value = (N - 1) / (N - k)
 
-    if vcov_type == "CRV" and cluster_adj:
+    if vcov_type in ["hetero", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
             cluster_adj_value = G / (G - 1)
         elif cluster_df == "min":
@@ -286,44 +322,3 @@ def simultaneous_crit_val(
     p = C.shape[0]
     tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
-
-
-def _select_order_coefs(res: pd.DataFrame, keep: list, drop: list):
-    """
-    Select and order the coefficients based on the pattern.
-
-    Parameters
-    ----------
-    res: pd.DataFrame
-        The DataFrame to be ordered.
-    keep: list
-        Refer to the `keep` parameter in the `etable` function.
-    drop: list
-        Refer to the `drop` parameter in the `etable` function.
-
-    Returns
-    -------
-    res: pd.DataFrame
-        The ordered DataFrame.
-    """
-    coefs = list(res.index)
-    coef_order = [] if keep else coefs[:]  # Store matched coefs
-    for pattern in keep:
-        _coefs = []  # Store remaining coefs
-        for coef in coefs:
-            if re.findall(pattern, coef):
-                coef_order.append(coef)
-            else:
-                _coefs.append(coef)
-        coefs = _coefs
-
-    for pattern in drop:
-        _coefs = []
-        for (
-            coef
-        ) in coef_order:  # Remove previously matched coefs that match the drop pattern
-            if not re.findall(pattern, coef):
-                _coefs.append(coef)
-        coef_order = _coefs
-
-    return res.loc[coef_order]

@@ -9,12 +9,17 @@ from pyfixest.utils.utils import get_data, ssc
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
     fit1 = feols(
-        fml="Y~X1", data=data, vcov="HC1", ssc=ssc(adj=False, cluster_adj=False)
+        fml="Y~X1",
+        data=data,
+        vcov="HC1",
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights=weights,
     )
     res_hc1 = fit1.tidy()
 
@@ -23,50 +28,89 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type):
         data=data,
         vcov={"CRV1": "id"},
         ssc=ssc(adj=False, cluster_adj=False),
+        weights=weights,
     )
     res_crv1 = fit2.tidy()
 
-    N = fit1._N
+    _N = fit1._N
+    _k = fit1._k
 
-    # adj: default adjustments are different for HC3 and CRV3
-    adj_correction = np.sqrt((N - 1) / N)
+    adj = False
+    cluster_adj = False
 
-    if not np.allclose(res_hc1["t value"] / adj_correction, res_crv1["t value"]):
+    adj1 = _N / (_N - 1)
+    adj2 = (_N - 1) / (_N - _k)
+    adj3 = _N / (_N - _k)
+    if adj and cluster_adj:
+        adj_factor = adj3
+    elif adj and not cluster_adj:
+        adj_factor = adj2
+    elif not adj and cluster_adj:
+        adj_factor = adj1
+    elif not adj and not cluster_adj:
+        adj_factor = 1
+
+    if not np.allclose(res_hc1["t value"] * np.sqrt(adj_factor), res_crv1["t value"]):
         raise ValueError("HC1 and CRV1 t values are not the same.")
 
-    # if not np.allclose(res_hc1["Pr(>|t|)"], res_crv1["Pr(>|t|)"]):
-    #    raise ValueError("HC1 and CRV1 p values are not the same.")
+    if not np.allclose(fit1._vcov / adj_factor, fit2._vcov):
+        raise ValueError("HC1 and CRV1 vcov are not the same.")
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
 @pytest.mark.parametrize("error_type", ["1", "2", "3"])
-def test_HC3_vs_CRV3(N, seed, beta_type, error_type):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type).dropna()
     data["id"] = list(range(data.shape[0]))
 
     fit1 = feols(
-        fml="Y~X1", data=data, vcov="HC3", ssc=ssc(adj=False, cluster_adj=False)
+        fml="Y~X1",
+        data=data,
+        vcov="HC3",
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights=weights,
     )
     res_hc3 = fit1.tidy()
 
-    fit1.vcov({"CRV3": "id"})
+    fit2 = feols(
+        fml="Y~X1",
+        data=data,
+        vcov={"CRV3": "id"},
+        ssc=ssc(adj=False, cluster_adj=False),
+        weights=weights,
+    )
+
     res_crv3 = fit1.tidy()
 
-    N = fit1._N
+    _N = fit1._N
+    _k = fit1._k
 
-    # adj: default adjustments are different for HC3 and CRV3
-    adj_correction = np.sqrt((N - 1) / N)
+    adj = False
+    cluster_adj = False
 
-    # if not np.allclose(np.sort(res_hc3["Std. Error"]) * adj_correction , np.sort(res_crv3["Std. Error"])):  # noqa: W505
-    #    raise ValueError("HC3 and CRV3 ses are not the same.")
-    if not np.allclose(res_hc3["t value"] / adj_correction, res_crv3["t value"]):
+    adj1 = _N / (_N - 1)
+    adj2 = (_N - 1) / (_N - _k)
+    adj3 = _N / (_N - _k)
+    if adj and cluster_adj:
+        adj_factor = adj3
+    elif adj and not cluster_adj:
+        adj_factor = adj2
+    elif not adj and cluster_adj:
+        adj_factor = adj1
+    elif not adj and not cluster_adj:
+        adj_factor = 1
+
+    if not np.allclose(res_hc3["t value"] * np.sqrt(adj_factor), res_crv3["t value"]):
         raise ValueError("HC3 and CRV3 t values are not the same.")
-    # if not np.allclose(res_hc3["Pr(>|t|)"], res_crv3["Pr(>|t|)"]):
-    #    raise ValueError("HC3 and CRV3 p values are not the same.")
+
+    if not np.allclose(fit1._vcov / adj_factor, fit2._vcov):
+        raise ValueError("HC1 and CRV1 vcov are not the same.")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
@@ -158,6 +202,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         raise ValueError("HC3 and CRV3 t values with fweights are not the same.")
 
 
+@pytest.mark.slow
 def run_crv3_poisson():
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
     fit = fepois(  # noqa: F841

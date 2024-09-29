@@ -1,0 +1,61 @@
+name: Tests Extended
+
+# Trigger on two events: push to master or labeled PR
+on:
+  # Trigger on push to master
+  push:
+    branches:
+      - master
+
+  # Trigger when a label is added to a PR
+  pull_request:
+    types: [labeled]
+
+jobs:
+  run-workflow:
+    runs-on: ubuntu-latest
+
+    # Matrix strategy for Python versions 3.9 and 3.12
+    strategy:
+      matrix:
+        python-version: [3.9, 3.12]
+
+    steps:
+      # Checkout source code (common to both scenarios)
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Setup python (common to both scenarios)
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.29.0
+          cache: true
+
+      # Set numba parallel flags (common to both scenarios)
+      - name: Set numba parallel flags
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev', 'https://cloud.r-project.org'))"
+
+      # Run tests for PRs with the label "extended"
+      - name: Run tests for plots (only on PRs with the 'tests-extended' label)
+        if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
+        run: pixi run tests-extended
+
+      # Run tests for push to master
+      - name: Run tests for push to master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: pixi run tests-extended

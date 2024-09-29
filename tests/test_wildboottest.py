@@ -1,53 +1,35 @@
 import numpy as np
 import pytest
 
-from pyfixest.estimation.estimation import feols
+import pyfixest as pf
 from pyfixest.utils.utils import get_data, ssc
 
 
 @pytest.fixture
 def data():
-    return get_data()
+    return get_data(N=2_000, seed=9)
 
 
 # note - tests currently fail because of ssc adjustments
-def test_hc_equivalence(data):
-    fixest = feols(fml="Y~X2", data=data, ssc=ssc(adj=False, cluster_adj=False))
-    tstat = fixest.tstat()
-    boot_tstat = fixest.wildboottest(
-        param="X2", reps=999, adj=False, cluster_adj=False
-    )["t value"]
-
-    np.allclose(tstat, boot_tstat)
-
-    fixest = feols(fml="Y ~ X1 + X2 | f1 + f2", data=data, vcov="hetero")
-    tstat = fixest.tstat()
-    boot_tstat = fixest.wildboottest(
-        param="X1", reps=999, adj=False, cluster_adj=False
-    )["t value"]
-
-    np.allclose(tstat, boot_tstat)
-
-
-def test_crv1_equivalence(data):
-    fixest = feols(fml="Y~X1", data=data, vcov={"CRV1": "group_id"})
-    tstat = fixest.tstat()
+@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
+def test_hc_equivalence(data, fml):
+    # note: cannot turn of ssc for wildboottest HC
+    fixest = pf.feols(fml=fml, data=data)
+    tstat = fixest.tstat().xs("X1")
     boot_tstat = fixest.wildboottest(param="X1", reps=999)["t value"]
 
-    np.allclose(tstat, boot_tstat)
+    # cannot test for for equality because of ssc adjustments
+    np.testing.assert_allclose(tstat, boot_tstat, rtol=0.02, atol=0.01)
 
-    fixest = feols(fml="Y ~ X1 + X2 | f1 + f2", data=data)
-    tstat = fixest.tstat()
+
+@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
+def test_crv1_equivalence(data, fml):
+    fixest = pf.feols(
+        fml, data=data, vcov={"CRV1": "group_id"}, ssc=ssc(adj=False, cluster_adj=False)
+    )
+    tstat = fixest.tstat().xs("X1")
     boot_tstat = fixest.wildboottest(
         param="X1", reps=999, adj=False, cluster_adj=False
     )["t value"]
 
-    np.allclose(tstat, boot_tstat)
-
-    fixest = feols(fml="Y ~ X1 | f1", vcov="hetero", data=data)
-    boot_tstat = fixest.wildboottest(
-        param="X1", cluster="f1", reps=999, adj=False, cluster_adj=False
-    )["t value"]
-    tstat = fixest.vcov("hetero").tstat()
-
-    np.allclose(tstat, boot_tstat)
+    np.testing.assert_allclose(tstat, boot_tstat)

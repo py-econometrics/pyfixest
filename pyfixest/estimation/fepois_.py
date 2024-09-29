@@ -11,6 +11,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -49,54 +50,75 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
+    solver: str, default is 'np.linalg.solve'
+        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
+    solver:
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
         Type of weights variable.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
     """
 
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        fe: Union[np.ndarray, None],
-        weights: np.ndarray,
-        coefnames: list[str],
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
         collin_tol: float,
-        maxiter: int = 25,
-        tol: float = 1e-08,
-        fixef_tol: float = 1e-08,
-        weights_name: Optional[str] = None,
-        weights_type: Optional[str] = None,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        tol: float,
+        maxiter: int,
+        solver: str = "np.linalg.solve",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
     ):
         super().__init__(
-            Y=Y,
-            X=X,
-            weights=weights,
-            coefnames=coefnames,
-            collin_tol=collin_tol,
-            weights_name=weights_name,
-            weights_type=weights_type,
+            FixestFormula,
+            data,
+            ssc_dict,
+            drop_singletons,
+            drop_intercept,
+            weights,
+            weights_type,
+            collin_tol,
+            fixef_tol,
+            lookup_demeaned_data,
+            solver,
+            store_data,
+            copy_data,
+            lean,
         )
 
         # input checks
-        _fepois_input_checks(fe, drop_singletons, tol, maxiter)
+        _fepois_input_checks(drop_singletons, tol, maxiter)
 
-        self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
-        self.fixef_tol = fixef_tol
-        self._drop_singletons = drop_singletons
         self._method = "fepois"
         self.convergence = False
 
-        if self.fe is not None:
-            self._has_fixef = True
-        else:
-            self._has_fixef = False
+        self._support_crv3_inference = True
+        self._support_iid_inference = True
+        self._supports_cluster_causal_variance = False
+
+        self._Y_hat_response = np.array([])
+        self.deviance = None
+        self._Xbeta = np.array([])
+
+    def prepare_model_matrix(self):
+        "Prepare model inputs for estimation."
+        super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
         self._Y = _to_integer(self._Y)
@@ -106,13 +128,36 @@ class Fepois(Feols):
                 "The dependent variable must be a weakly positive integer."
             )
 
-        self._support_crv3_inference = True
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
+        # check for separation
+        na_separation: list[int] = []
+        if self._fe is not None:
+            na_separation = _check_for_separation(Y=self._Y, fe=self._fe)
+            if na_separation:
+                warnings.warn(
+                    f"{str(len(na_separation))} observations removed because of separation."
+                )
 
-        self._Y_hat_response = np.array([])
-        self.deviance = None
-        self._Xbeta = np.array([])
+        if na_separation:
+            self._Y.drop(na_separation, axis=0, inplace=True)
+            self._X.drop(na_separation, axis=0, inplace=True)
+            self._fe.drop(na_separation, axis=0, inplace=True)
+            self._data.drop(na_separation, axis=0, inplace=True)
+            self._N = self._Y.shape[0]
+
+            self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
+            self.n_separation_na = len(na_separation)
+
+    def to_array(self):
+        "Turn estimation DataFrames to np arrays."
+        self._Y, self._X, self._Z = (
+            self._Y.to_numpy(),
+            self._X.to_numpy(),
+            self._X.to_numpy(),
+        )
+        if self._fe is not None:
+            self._fe = self._fe.to_numpy()
+            if self._fe.ndim == 1:
+                self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self) -> None:
         """
@@ -144,14 +189,13 @@ class Fepois(Feols):
         """
         _Y = self._Y
         _X = self._X
-        _fe = self.fe
+        _fe = self._fe
         _N = self._N
-        _drop_singletons = self._drop_singletons
         _convergence = self.convergence  # False
         _maxiter = self.maxiter
-        _iwls_maxiter = 25
         _tol = self.tol
-        _fixef_tol = self.fixef_tol
+        _fixef_tol = self._fixef_tol
+        _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
@@ -171,7 +215,7 @@ class Fepois(Feols):
             if i == _maxiter:
                 raise NonConvergenceError(
                     f"""
-                    The IRLS algorithm did not converge with {_iwls_maxiter}
+                    The IRLS algorithm did not converge with {_maxiter}
                     iterations. Try to increase the maximum number of iterations.
                     """
                 )
@@ -216,7 +260,9 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = np.linalg.solve(XWX, XWZ)  # eq (10), delta_new -> reg_z
+            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+                (-1, 1)
+            )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
 
             mu_old = mu.copy()
@@ -240,14 +286,17 @@ class Fepois(Feols):
 
         # updat for inference
         self._weights = mu_old
+        self._irls_weights = mu
         # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat = resid.flatten()
+        self._u_hat = (WZ - WX @ delta_new).flatten()
+        self._u_hat_working = resid
+        self._u_hat_response = self._Y - np.exp(eta)
 
-        self._Y = Z_resid
-        self._X = X_resid
+        self._Y = WZ
+        self._X = WX
         self._Z = self._X
         self.deviance = deviance
 
@@ -255,15 +304,40 @@ class Fepois(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
 
-        self._scores = self._u_hat[:, None] * self._weights * X_resid
+        self._scores = self._u_hat[:, None] * self._X
         self._hessian = XWX
-        self._T = self._weights * X_resid
 
         if _convergence:
             self._convergence = True
 
+    def resid(self, type: str = "response") -> np.ndarray:
+        """
+        Return residuals from regression model.
+
+        Parameters
+        ----------
+        type : str, optional
+            The type of residuals to be computed.
+            Can be either "response" (default) or "working".
+
+        Returns
+        -------
+        np.ndarray
+            A flat array with the residuals of the regression model.
+        """
+        if type == "response":
+            return self._u_hat_response.flatten()
+        elif type == "working":
+            return self._u_hat_working.flatten()
+        else:
+            raise ValueError("type must be one of 'response' or 'working'.")
+
     def predict(
-        self, newdata: Optional[DataFrameType] = None, type: str = "link"
+        self,
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+        type: str = "link",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -278,6 +352,14 @@ class Fepois(Feols):
         newdata : Union[None, pd.DataFrame], optional
             A pd.DataFrame with the new data, to be used for prediction.
             If None (default), uses the data used for fitting the model.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type : str, optional
             The type of prediction to be computed.
             Can be either "response" (default) or "link".
@@ -285,13 +367,21 @@ class Fepois(Feols):
             i.e., it is the expected predictor E(Y|X).
             If "link", the output is at the level of the explanatory variables,
             i.e., the linear predictor X @ beta.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+
+
 
         Returns
         -------
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        _Xbeta = self._Xbeta
+        _Xbeta = self._Xbeta.flatten()
         _has_fixef = self._has_fixef
 
         if _has_fixef:
@@ -303,14 +393,13 @@ class Fepois(Feols):
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
 
-        if type not in ["response", "link"]:
-            raise ValueError("type must be one of 'response' or 'link'.")
-
-        y_hat = super().predict(newdata=newdata)
+        # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
         if type == "link":
-            y_hat = np.exp(y_hat)
-
-        return y_hat
+            return _Xbeta  # np.exp(_Xbeta)
+        elif type == "response":
+            return np.exp(_Xbeta)
+        else:
+            raise ValueError("type must be one of 'response' or 'link'.")
 
 
 def _check_for_separation(
@@ -553,16 +642,12 @@ def _check_for_separation_ir(
     return separation_na
 
 
-def _fepois_input_checks(
-    fe: Union[np.ndarray, None], drop_singletons: bool, tol: float, maxiter: int
-):
+def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
     """
     Perform input checks for Fepois constructor arguments.
 
     Parameters
     ----------
-    fe : Union[np.ndarray, None]
-        Fixed effects. None if no fixed effects are used.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
     tol : float
@@ -574,12 +659,6 @@ def _fepois_input_checks(
     -------
     None
     """
-    # fe must be np.array of dimension 2 or None
-    if fe is not None:
-        if not isinstance(fe, np.ndarray):
-            raise AssertionError("fe must be a numpy array.")
-        if fe.ndim != 2:
-            raise AssertionError("fe must be a numpy array of dimension 2.")
     # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")

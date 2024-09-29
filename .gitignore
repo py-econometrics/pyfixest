@@ -9,6 +9,7 @@ dist
 .mypy_cache
 .pytest_cache
 .vscode
+.coverage
 *.pyc
 __pycache__/
 #docs/figures
@@ -21,3 +22,10 @@ readme.ipynb
 #objects.json
 #docs/site_libs
 #site_libs
+tests/.coverage
+.venv/# pixi environments
+.pixi
+*.egg-info
+# pixi environments
+.pixi
+*.egg-info

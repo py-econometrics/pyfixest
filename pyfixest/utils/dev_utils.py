@@ -131,12 +131,15 @@ def docstring_from(func, custom_doc=""):
     return decorator
 
 
-def _to_integer(x):
-    if x.dtype == int:
+def _to_integer(x: Union[pd.Series, pd.DataFrame]):
+    if not isinstance(x, (pd.Series, pd.DataFrame)):
+        raise TypeError("Input must be a pandas Series or DataFrame")
+
+    if pd.api.types.is_integer_dtype(x):
         return x
+
     try:
-        x = x.astype(np.int64)
-        return x  # noqa: TRY300
+        x = x.astype("int64")
     except ValueError as e:
         raise ValueError(
             """
@@ -144,6 +147,8 @@ def _to_integer(x):
             Please do so manually.
             """
         ) from e
+    else:
+        return x
 
 
 def _to_list(x):
@@ -176,3 +181,35 @@ def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
         return _data[keep]
     else:
         return _data
+
+
+def _extract_variable_level(fe_string: str):
+    """
+    Extract the variable and level from a given string.
+
+    Parameters
+    ----------
+    fe_string: str
+        The string encapsulating the fixed effect factor variable and level.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the extracted variable and level for the fixed
+        effect.
+    """
+    c_pattern = r"C\((.+?)\)"
+    t_pattern = r"\[T\.(.*\])"
+    c_match = re.search(c_pattern, fe_string)
+    t_match = re.search(t_pattern, fe_string, re.DOTALL)
+
+    if not c_match or not t_match:
+        raise ValueError(
+            f"feols() failed after regex encountered the following value as a fixed effect:\n {fe_string}."
+            + "\nThis may due to the presence of line separation and/or escape sequences within the string."
+            + " If so, consider recoding the underlying string. Otherwise, please open a PR in the github repo!"
+        )
+
+    variable = c_match.group(1)
+    level = t_match.group(1)
+    return "C(" + variable + ")", level[0 : level.rfind("]")]

@@ -26,7 +26,9 @@ def test_iid(params):
 
 
 def test_HC(params):
-    N, k, G, vcov_sign = params
+    N, k, _, vcov_sign = params
+
+    G = N
 
     ssc_dict = {
         "adj": False,
@@ -35,15 +37,19 @@ def test_HC(params):
         "cluster_df": "conventional",
     }
     res = get_ssc(ssc_dict, N, k, G, vcov_sign, "hetero")
-    assert res == N / (N - 1)
+    assert res == 1
 
     ssc_dict["adj"] = True
     res = get_ssc(ssc_dict, N, k, G, vcov_sign, "hetero")
-    assert res == N / (N - k)
+    assert res == (N - 1) / (N - k)
 
     ssc_dict["cluster_adj"] = True
     res = get_ssc(ssc_dict, N, k, G, vcov_sign, "hetero")
-    assert res == N / (N - k)
+    assert res == (N - 1) / (N - k) * N / (N - 1)
+
+    ssc_dict["adj"] = False
+    res = get_ssc(ssc_dict, N, k, G, vcov_sign, "hetero")
+    assert res == N / (N - 1)
 
 
 def test_CRV(params):
