@@ -74,7 +74,6 @@ def test_panelview():
     # Test with collapse_to_cohort for outcome plot
     ax = panelview(
         data=df_het,
-        type="outcome",
         outcome="dep_var",
         unit="unit",
         time="year",
@@ -87,7 +86,6 @@ def test_panelview():
     # Test with units_to_plot for outcome plot
     ax = panelview(
         data=df_het,
-        type="outcome",
         outcome="dep_var",
         unit="unit",
         time="year",
