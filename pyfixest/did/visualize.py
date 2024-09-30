@@ -191,7 +191,7 @@ def _prepare_panelview_df_for_outcome_plot(
 
         treatment_starts = (
             data.groupby(unit)
-            .apply(get_treatment_start, include_groups=False)
+            .apply(get_treatment_start)
             .reset_index(name="treatment_start")
         )
 
