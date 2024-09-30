@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from pyfixest.did.visualize import panelview
+from pyfixest.did.visualize import panelview, _prepare_panelview_df_for_outcome_plot, _plot_panelview_output_plot, _prepare_df_for_panelview, _plot_panelview
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.visualize import coefplot, iplot
 from pyfixest.utils.utils import get_data
