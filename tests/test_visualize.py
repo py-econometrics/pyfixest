@@ -164,4 +164,27 @@ def test_panelview():
     )
     assert isinstance(ax, plt.Axes)
     assert ax.get_title() == "Full Test"
+
+    # Test df for outcome plot
+    ax = _prepare_panelview_df_for_outcome_plot(
+        
+    )
+    plt.close()
+
+    # Test df for panelview output plot
+    ax = _plot_panelview_output_plot(
+        
+    )
+    plt.close()
+
+    # Test df prepare for panelview
+    ax = _prepare_df_for_panelview(
+        
+    )
+    plt.close()
+
+    # Test plot panelview
+    ax = _plot_panelview(
+        
+    )
     plt.close()
