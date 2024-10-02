@@ -166,25 +166,46 @@ def test_panelview():
     assert ax.get_title() == "Full Test"
 
     # Test df for outcome plot
-    ax = _prepare_panelview_df_for_outcome_plot(
-        
+    outcome_df = _prepare_panelview_df_for_outcome_plot(
+        data=df_het,
+        unit="unit",
+        time="year",
+        treat="treat",
+        outcome="dep_var",
+        subsamp=50
     )
-    plt.close()
+    assert isinstance(outcome_df, pd.DataFrame)
+    assert not outcome_df.empty
 
     # Test df for panelview output plot
     ax = _plot_panelview_output_plot(
-        
+        data=df_het,
+        data_pivot=outcome_df,
+        unit="unit",
+        time="year",
+        treat="treat",
+        outcome="dep_var",
     )
+    assert isinstance(ax, plt.Axes)
     plt.close()
 
     # Test df prepare for panelview
-    ax = _prepare_df_for_panelview(
-        
+    treatment_df = _prepare_df_for_panelview(
+        data=df_het,
+        unit="unit",
+        time="year",
+        treat="treat",
+        subsamp=50
     )
-    plt.close()
+    assert isinstance(treatment_df, pd.DataFrame)
+    assert not treatment_df.empty
 
     # Test plot panelview
     ax = _plot_panelview(
-        
+        treatment_quilt=treatment_df,
+        xlab="Year",
+        ylab="Unit",
+        title="Test Plot"
     )
+    assert isinstance(ax, plt.Axes)
     plt.close()
