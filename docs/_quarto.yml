@@ -20,7 +20,7 @@ website:
       - text: "PyFixest"
         file: pyfixest.md
       - text: "Quickstart"
-        file: quickstart.ipynb
+        file: quickstart.qmd
       - text: "Function Reference"
         file: reference/index.qmd
       - text: "Contributing"
@@ -28,15 +28,16 @@ website:
       - text: Learn more
         menu:
         - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.ipynb
-        - text: "Difference-in-Differences Estimation"
-          file: difference-in-differences.ipynb
-        - text: "Replicating 'The Effect' with PyFixest"
-          file: replicating-the-effect.ipynb
+          file: compare-fixest-pyfixest.qmd
         - text: "Regression Tables and Summary Statistics"
-          file: table-layout.ipynb
+          file: table-layout.qmd
         - text: "Hypothesis Testing and Marginal Effects"
-          file: marginaleffects.ipynb
+          file: marginaleffects.qmd
+        - text: "Difference-in-Differences Estimation"
+          file: difference-in-differences.qmd
+        - text: "Replicating 'The Effect' with PyFixest"
+          file: replicating-the-effect.qmd
+
 
 quartodoc:
   package: pyfixest
