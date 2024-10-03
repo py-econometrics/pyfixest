@@ -56,12 +56,12 @@ def event_study(
     --------
     ```{python}
     import pandas as pd
-    import pyfixest as pf
+    from pyfixest.did.estimation import event_study
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
-    fit_twfe = pf.event_study(
+    fit_twfe = event_study(
         df_het,
         yname="dep_var",
         idname="unit",
@@ -171,7 +171,7 @@ def did2s(
     ```{python}
     import pandas as pd
     import numpy as np
-    import pyfixest as pf
+    from pyfixest.did.estimation import did2s
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
@@ -182,7 +182,7 @@ def did2s(
 
     ```{python}
     # estimate the model
-    fit = pf.did2s(
+    fit = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -203,7 +203,7 @@ def did2s(
     To estimate a pooled effect, we need to slightly update the second stage formula:
 
     ```{python}
-    fit = pf.did2s(
+    fit = did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -319,12 +319,12 @@ def lpdid(
     --------
     ```{python}
     import pandas as pd
-    import pyfixest as pf
+    from pyfixest.did.estimation import lpdid
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
-    fit = pf.lpdid(
+    fit = lpdid(
         df_het,
         yname="dep_var",
         idname="unit",
@@ -343,7 +343,7 @@ def lpdid(
     To get the ATT, set `att=True`:
 
     ```{python}
-    fit = pf.lpdid(
+    fit = lpdid(
         df_het,
         yname="dep_var",
         idname="unit",
