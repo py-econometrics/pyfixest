@@ -6,6 +6,7 @@ from pyfixest import (
     report,
     utils,
 )
+from pyfixest.did import did2s, event_study, lpdid, panelview
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (
@@ -41,6 +42,10 @@ __all__ = [
     "estimation",
     "report",
     "utils",
+    "event_study",
+    "lpdid",
+    "did2s",
+    "panelview",
 ]
 
 from importlib.metadata import PackageNotFoundError, version
