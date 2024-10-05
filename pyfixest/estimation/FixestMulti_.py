@@ -27,13 +27,14 @@ class FixestMulti:
         use_compression: bool,
         reps: Optional[int],
         seed: Optional[int],
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
 
         Parameters
         ----------
-        data : panda.DataFrame
+        data : pandas.DataFrame
             The input DataFrame for the object.
         copy_data : bool
             Whether to copy the data or not.
@@ -56,6 +57,9 @@ class FixestMulti:
         seed : Optional[int]
             Option to provide a random seed. Default is None.
             Only relevant for wild cluster bootstrap for use_compression=True.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
 
         Returns
         -------
@@ -69,6 +73,7 @@ class FixestMulti:
         self._use_compression = use_compression
         self._reps = reps if use_compression else None
         self._seed = seed if use_compression else None
+        self._separation_check = separation_check
 
         data = _polars_to_pandas(data)
 
@@ -170,6 +175,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -190,6 +196,9 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
 
         Returns
         -------
@@ -284,6 +293,7 @@ class FixestMulti:
                         store_data=_store_data,
                         copy_data=_copy_data,
                         lean=_lean,
+                        separation_check=separation_check,
                         # solver=_solver
                     )
                     FIT.prepare_model_matrix()
