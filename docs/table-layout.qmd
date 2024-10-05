@@ -158,7 +158,10 @@ def make_pdf(tab, file):
 
 
 # Compile latex to pdf & display a button with the hyperlink to the pdf
-make_pdf(tab, "latexdocs/SampleTableDoc")
+# requires tex installation
+run = False
+if run:
+    make_pdf(tab, "latexdocs/SampleTableDoc")
 display(FileLink("latexdocs/SampleTableDoc.pdf"))
 ```
 
