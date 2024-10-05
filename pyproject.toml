@@ -32,7 +32,7 @@ dev = [
   "pyarrow>=14.0.0",
   "pre-commit==3.6.0",
   "doubleml==0.7.1",
-   "wildboottest>=0.3.2"
+  "wildboottest>=0.3.2"
 ]
 
 docs = [
@@ -87,6 +87,8 @@ docs-preview = "quarto preview docs"
 
 [tool.pixi.feature.docs.dependencies]
 rpy2 = ">=3.5.11,<4"
+r-fixest = ">=0.12.1,<0.13"
+r-broom = ">=1.0.5,<2"
 
 [tool.pytest.ini_options]
 addopts = [

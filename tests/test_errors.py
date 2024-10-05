@@ -572,7 +572,7 @@ def test_errors_compressed():
         pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
 
 
-def test_errors_panelview(sample_df):
+def test_errors_panelview():
     """Test all ValueError conditions in panelview."""
     sample_df = pd.DataFrame(
         {
