@@ -138,6 +138,15 @@ jobs:
         run: |
           quarto install tinytex
 
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+
       - name: Compile docstrings with quartodoc
         run: |
           pixi run docs-build
