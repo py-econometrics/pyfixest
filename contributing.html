@@ -104,7 +104,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-fixed fullcontent">
+<body class="floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -138,24 +138,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
         <li>
-    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
- <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="./table-layout.html">
  <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="./marginaleffects.html">
  <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./replicating-the-effect.html">
+ <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
   </li>  
     </ul>
   </li>
@@ -176,8 +176,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#reporting-bugs" id="toc-reporting-bugs" class="nav-link" data-scroll-target="#reporting-bugs">Reporting bugs</a></li>
+  <li><a href="#suggesting-enhancements" id="toc-suggesting-enhancements" class="nav-link" data-scroll-target="#suggesting-enhancements">Suggesting enhancements</a></li>
+  <li><a href="#contributing-to-the-codebase" id="toc-contributing-to-the-codebase" class="nav-link" data-scroll-target="#contributing-to-the-codebase">Contributing to the codebase</a>
+  <ul class="collapse">
+  <li><a href="#setting-up-your-local-environment" id="toc-setting-up-your-local-environment" class="nav-link" data-scroll-target="#setting-up-your-local-environment">Setting up your local environment</a></li>
+  <li><a href="#package-management-via-pixi" id="toc-package-management-via-pixi" class="nav-link" data-scroll-target="#package-management-via-pixi">Package Management via <code>pixi</code></a></li>
+  <li><a href="#pixi-tasks" id="toc-pixi-tasks" class="nav-link" data-scroll-target="#pixi-tasks"><code>Pixi</code> tasks</a></li>
+  </ul></li>
+  <li><a href="#installing-python-r-and-quarto" id="toc-installing-python-r-and-quarto" class="nav-link" data-scroll-target="#installing-python-r-and-quarto">Installing Python, R and Quarto</a>
+  <ul class="collapse">
+  <li><a href="#installing-r" id="toc-installing-r" class="nav-link" data-scroll-target="#installing-r">Installing R</a></li>
+  <li><a href="#installing-quarto" id="toc-installing-quarto" class="nav-link" data-scroll-target="#installing-quarto">Installing Quarto</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -200,10 +224,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="overview" class="level1">
-<h1>Overview</h1>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>Thanks for showing interest in contributing to <code>pyfixest</code>! We appreciate all contributions and constructive feedback, whether that be reporting bugs, requesting new features, or suggesting improvements to documentation.</p>
 <p>If you’d like to get involved, but are not yet sure how, please feel free to send us an <a href="alexander-fischer1801@t-online.de">email</a>. Some familiarity with either Python or econometrics will help, but you really don’t need to be a <code>numpy</code> core developer or have published in <a href="https://onlinelibrary.wiley.com/journal/14680262">Econometrica</a> =) We’d be more than happy to invest time to help you get started!</p>
+</section>
 <section id="reporting-bugs" class="level2">
 <h2 class="anchored" data-anchor-id="reporting-bugs">Reporting bugs</h2>
 <p>We use <a href="https://github.com/py-econometrics/pyfixest/issues">GitHub issues</a> to track bugs. You can report a bug by opening a new issue or contribute to an existing issue if related to the bug you are reporting.</p>
@@ -298,7 +323,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">scoop</span> install extras/quarto</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
-</section>
 </section>
 </section>
 

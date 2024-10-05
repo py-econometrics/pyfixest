@@ -136,7 +136,7 @@ window.Quarto = {
 
 </head>
 
-<body class="nav-fixed fullcontent">
+<body class="floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -170,24 +170,24 @@ window.Quarto = {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
         <li>
-    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
- <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./replicating-the-effect.html">
- <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
-        <li>
     <a class="dropdown-item" href="./table-layout.html">
  <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="./marginaleffects.html">
  <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./replicating-the-effect.html">
+ <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
   </li>  
     </ul>
   </li>
@@ -208,8 +208,23 @@ window.Quarto = {
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#non-linear-hypothesis-tests-ratio-estimates" id="toc-non-linear-hypothesis-tests-ratio-estimates" class="nav-link active" data-scroll-target="#non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</a>
+  <ul class="collapse">
+  <li><a href="#the-multivariate-delta-method" id="toc-the-multivariate-delta-method" class="nav-link" data-scroll-target="#the-multivariate-delta-method">The Multivariate Delta Method</a></li>
+  <li><a href="#using-the-delta-method-via-marginaleffects" id="toc-using-the-delta-method-via-marginaleffects" class="nav-link" data-scroll-target="#using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -233,7 +248,7 @@ window.Quarto = {
 
 
 <p>We can compute marginal effects and linear and non-linear hypothesis tests via the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package.</p>
-<div id="cell-3" class="cell" data-execution_count="1">
+<div id="373be119" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> hypotheses</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -243,12 +258,12 @@ window.Quarto = {
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>c:\Users\alexa\Documents\pyfixest\.pixi\envs\docs\Lib\site-packages\marginaleffects\model_pyfixest.py:45: SyntaxWarning: invalid escape sequence '\['
+<pre><code>/home/runner/work/pyfixest/pyfixest/.pixi/envs/docs/lib/python3.12/site-packages/marginaleffects/model_pyfixest.py:45: SyntaxWarning: invalid escape sequence '\['
   variables = [re.sub("\[.*\]", "", x) for x in variables]</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Xnamba"></div>
+            <div id="pQ4Xdo"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -272,9 +287,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Xnamba").appendChild(div);
+                        document.getElementById("pQ4Xdo").appendChild(div);
                     };
-                    var e = document.getElementById("Xnamba");
+                    var e = document.getElementById("pQ4Xdo");
                     e.appendChild(script);
                 })()
             </script>
@@ -282,7 +297,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="yNSjbL"></div>
+            <div id="10aS0g"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -306,9 +321,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("yNSjbL").appendChild(div);
+                        document.getElementById("10aS0g").appendChild(div);
                     };
-                    var e = document.getElementById("yNSjbL");
+                    var e = document.getElementById("10aS0g");
                     e.appendChild(script);
                 })()
             </script>
@@ -375,7 +390,7 @@ window.Quarto = {
 </div>
 <p>Suppose we were interested in testing the hypothesis that <span class="math inline">\(X_{1} = X_{2}\)</span>. Given the relatively large differences in coefficients and small standard errors, we will likely reject the null that the two parameters are equal.</p>
 <p>We can run the formal test via the <code>hypotheses</code> function from the <code>marginaleffects</code> package.</p>
-<div id="cell-5" class="cell" data-execution_count="2">
+<div id="cffd93aa" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div><style>
@@ -426,12 +441,12 @@ window.Quarto = {
 </div>
 </div>
 <p>And indeed, we reject the null of equality of coefficients: we get a p-value of zero and a confidence interval that does not contain 0.</p>
-<section id="ratio-estimates" class="level2">
-<h2 class="anchored" data-anchor-id="ratio-estimates">Ratio Estimates</h2>
+<section id="non-linear-hypothesis-tests-ratio-estimates" class="level2">
+<h2 class="anchored" data-anchor-id="non-linear-hypothesis-tests-ratio-estimates">Non-Linear Hypothesis Tests: Ratio Estimates</h2>
 <p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>
 <p>For the moment, let’s assume that <span class="math inline">\(X1\)</span> is a randomly assigned treatment variable. As before, <span class="math inline">\(Y\)</span> is our variable / KPI of interest.</p>
 <p>Under randomization, the model intercept measures the “baseline”, i.e.&nbsp;the population average of <span class="math inline">\(Y\)</span> in the absence of treatment. To compute a relative uplift, we might compute</p>
-<div id="cell-8" class="cell" data-execution_count="3">
+<div id="0cac20cf" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <pre><code>-211.71906665561212</code></pre>
@@ -458,7 +473,7 @@ window.Quarto = {
 <section id="using-the-delta-method-via-marginaleffects" class="level3">
 <h3 class="anchored" data-anchor-id="using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</h3>
 <p>We can employ the Delta Method via <code>marginaleffects</code> via the <code>hypotheses</code> function:</p>
-<div id="cell-12" class="cell" data-execution_count="4">
+<div id="2bdbf656" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div><style>
