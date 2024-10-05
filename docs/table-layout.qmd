@@ -281,7 +281,9 @@ tab = pf.etable(
 )
 
 # Compile latex to pdf & display a button with the hyperlink to the pdf
-make_pdf(tab, "latexdocs/SampleTableDoc2")
+run = False
+if run:
+    make_pdf(tab, "latexdocs/SampleTableDoc2")
 display(FileLink("latexdocs/SampleTableDoc2.pdf"))
 ```
 
@@ -406,7 +408,9 @@ dtab = pf.dtable(
     type="tex",
 )
 
-make_pdf(dtab, "latexdocs/SampleTableDoc3")
+run = False
+if run:
+    make_pdf(dtab, "latexdocs/SampleTableDoc3")
 display(FileLink("latexdocs/SampleTableDoc3.pdf"))
 ```
 
