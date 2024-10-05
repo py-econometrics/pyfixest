@@ -27,8 +27,8 @@ website:
         file: contributing.qmd
       - text: Learn more
         menu:
-        - text: "Compare fixest & PyFixest"
-          file: compare-fixest-pyfixest.qmd
+        #- text: "Compare fixest & PyFixest"
+        #  file: compare-fixest-pyfixest.qmd
         - text: "Regression Tables and Summary Statistics"
           file: table-layout.qmd
         - text: "Hypothesis Testing and Marginal Effects"
