@@ -27,14 +27,14 @@ website:
         file: contributing.qmd
       - text: Learn more
         menu:
-        #- text: "Compare fixest & PyFixest"
-        #  file: compare-fixest-pyfixest.qmd
         - text: "Regression Tables and Summary Statistics"
           file: table-layout.qmd
         - text: "Hypothesis Testing and Marginal Effects"
           file: marginaleffects.qmd
         - text: "Difference-in-Differences Estimation"
           file: difference-in-differences.qmd
+        - text: "Compare fixest & PyFixest"
+          file: compare-fixest-pyfixest.qmd
         - text: "Replicating 'The Effect' with PyFixest"
           file: replicating-the-effect.qmd
 

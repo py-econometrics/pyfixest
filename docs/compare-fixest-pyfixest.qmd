@@ -24,6 +24,7 @@ pandas2ri.activate()
 # Import R packages
 fixest = importr("fixest")
 stats = importr("stats")
+broom = importr("broom")
 
 # IPython magic commands for autoreloading
 %load_ext autoreload
@@ -97,16 +98,22 @@ And for WLS:
 fit_weights._vcov - stats.vcov(r_fit_weights)
 ```
 
-
-We conclude by comparing all estimation results via the `etable` function:
-
+We conclude by comparing all estimation results via the `tidy` methods:
 
 ```{python}
-pf.etable([fit, fit_weights], digits=6)
+fit.tidy()
 ```
 
 ```{python}
-pd.DataFrame(fixest.etable(r_fit, r_fit_weights, digits=6)).T
+pd.DataFrame(broom.tidy_fixest(r_fit)).T
+```
+
+```{python}
+fit_weights.tidy()
+```
+
+```{python}
+pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T
 ```
 
 
@@ -124,14 +131,14 @@ fit_weights = pf.feols(
 
 
 ```{python}
-fit_r = fixest.feols(
+r_fit = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov="hetero",
     ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 
-fit_weights_r = fixest.feols(
+r_fit_weights = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     weights=ro.Formula("~weights"),
@@ -144,20 +151,31 @@ As before, we compare the variance covariance matrices:
 
 
 ```{python}
-fit._vcov - stats.vcov(fit_r)
+fit._vcov - stats.vcov(r_fit)
 ```
 
 ```{python}
-fit_weights._vcov - stats.vcov(fit_weights_r)
+fit_weights._vcov - stats.vcov(r_fit_weights)
+```
+
+We conclude by comparing all estimation results via the `tidy` methods:
+
+```{python}
+fit.tidy()
 ```
 
 ```{python}
-pf.etable([fit, fit_weights], digits=6)
+pd.DataFrame(broom.tidy_fixest(r_fit)).T
 ```
 
 ```{python}
-pd.DataFrame(fixest.etable(fit_r, fit_weights_r, digits=6)).T
+fit_weights.tidy()
 ```
+
+```{python}
+pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T
+```
+
 
 ### Cluster-Robust Errors
 
@@ -170,13 +188,13 @@ fit_weights = pf.feols(
     fml="Y ~ X1 + X2 | f1 + f2", data=data, vcov={"CRV1": "f1"}, weights="weights"
 )
 
-fit_r = fixest.feols(
+r_fit = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov=ro.Formula("~f1"),
     ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
-fit_r_weights = fixest.feols(
+r_fit_weights = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     weights=ro.Formula("~weights"),
@@ -186,20 +204,29 @@ fit_r_weights = fixest.feols(
 ```
 
 ```{python}
-fit._vcov - stats.vcov(fit_r)
+fit._vcov - stats.vcov(r_fit)
 ```
 
 ```{python}
-fit_weights._vcov - stats.vcov(fit_weights_r)
+fit_weights._vcov - stats.vcov(r_fit_weights)
+```
+
+We conclude by comparing all estimation results via the `tidy` methods:
+
+```{python}
+fit.tidy()
 ```
 
 ```{python}
-pf.etable([fit, fit_weights], digits=6)
+pd.DataFrame(broom.tidy_fixest(r_fit)).T
 ```
 
+```{python}
+fit_weights.tidy()
+```
 
 ```{python}
-pd.DataFrame(fixest.etable(fit_r, fit_r_weights, digits=6)).T
+pd.DataFrame(broom.tidy_fixest(r_fit_weights)).T
 ```
 
 ## Poisson Regression
@@ -253,10 +280,29 @@ fit_hetero._vcov - stats.vcov(fit_r_hetero)
 fit_crv._vcov - stats.vcov(fit_r_crv)
 ```
 
+We conclude by comparing all estimation results via the `tidy` methods:
+
+
 ```{python}
-pf.etable([fit_iid, fit_hetero, fit_crv], digits=6)
+fit_iid.tidy()
 ```
 
 ```{python}
-pd.DataFrame(fixest.etable(fit_r_iid, fit_r_hetero, fit_r_crv, digits=6)).T
+pd.DataFrame(broom.tidy_fixest(fit_r_iid)).T
+```
+
+```{python}
+fit_hetero.tidy()
+```
+
+```{python}
+pd.DataFrame(broom.tidy_fixest(fit_r_hetero)).T
+```
+
+```{python}
+fit_crv.tidy()
+```
+
+```{python}
+pd.DataFrame(broom.tidy_fixest(fit_r_crv)).T
 ```
