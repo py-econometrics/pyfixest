@@ -87,7 +87,6 @@ docs-preview = "quarto preview docs"
 
 [tool.pixi.feature.docs.dependencies]
 rpy2 = ">=3.5.11,<4"
-pylatex = ">=1.4.2,<2"
 
 [tool.pytest.ini_options]
 addopts = [

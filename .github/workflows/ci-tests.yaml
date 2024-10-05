@@ -139,7 +139,7 @@ jobs:
           quarto install tinytex
 
       - name: Compile docstrings with quartodoc
-        run : |
+        run: |
           pixi run docs-build
       - name: Render docs
         run: |
