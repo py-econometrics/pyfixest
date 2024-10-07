@@ -3,9 +3,12 @@ name = "pyfixest"
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 requires-python = ">= 3.9"
 version = "0.25.2"
-authors = [{name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de"}, {name = "Styfen Schär"}]
+authors = [
+  { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
+  { name = "Styfen Schär" },
+]
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 
 dependencies = [
   "lets-plot>=4.0.0",
@@ -19,7 +22,7 @@ dependencies = [
   "tqdm==4.66.4",
   "great-tables>=0.10.0",
   "numpy>=1.19.0",
-  "jinja2>=3.1.4,<4"
+  "jinja2>=3.1.4,<4",
 ]
 
 [tool.pixi.feature.dev.dependencies]
@@ -34,7 +37,7 @@ dev = [
   "pyarrow>=14.0.0",
   "pre-commit==3.6.0",
   "doubleml==0.7.1",
-  "wildboottest>=0.3.2"
+  "wildboottest>=0.3.2",
 ]
 
 docs = [
@@ -44,8 +47,9 @@ docs = [
   "watermark==2.4.3",
   "wildboottest>=0.3.2",
   "causaldata>=0.1.4,<0.2",
-  "pylatex>=1.4.2,<2"
-, "marginaleffects>=0.0.10"]
+  "pylatex>=1.4.2,<2",
+  "marginaleffects>=0.0.10",
+]
 
 [tool.pixi.feature.build.dependencies]
 python-build = ">=1.2.2,<2"
@@ -167,3 +171,19 @@ convention = "numpy"
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 88
+
+[tool.mypy]
+plugins = "numpy.typing.mypy_plugin"
+
+[[tool.mypy.overrides]]
+module = [
+  "pandas.*",
+  "numpy.*",
+  "scipy.*",
+  "numba.*",
+  "lets_plot.*",
+  "formulaic.*",
+  "wildboottest.*",
+  "tabulate.*",
+]
+ignore_missing_imports = true
