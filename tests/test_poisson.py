@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -48,14 +50,35 @@ def test_separation():
     ):
         fepois("Y ~ X1 | X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
 
-    data_01 = pd.read_csv("data/pplmhdfe_separations_examples/data_01.csv")
+    # ppmlhdfe test data sets:
+    folder = r"data/pplmhdfe_separations_examples"
+    fns = os.listdir(folder)
+    for fn in fns:
+        if fn == "07.csv":
+            # this case fails but is not tested in ppmlhdfe
+            # https://github.com/sergiocorreia/ppmlhdfe/blob/master/test/validate_tagsep.do#L27
+            continue
+        data = pd.read_csv(os.path.join(folder, fn))
+        # build formula dynamically from dataframe
+        # datasets have fixed structure of the form:
+        # dependent variable y
+        # regressors x1,...,xN
+        # fixed effects id1,...,id2
+        # last column indicator if observation is separated
+        fml = "y"
+        regressors = data.columns[data.columns.str.startswith("x")]
+        fixed_effects = data.columns[data.columns.str.startswith("id")]
+        if regressors.empty:
+            regressors = [1]
+        fml += f" ~ {' + '.join(regressors)}"
+        if not fixed_effects.empty:
+            fml += f" | {' + '.join(fixed_effects)}"
 
-    # pplmhdfe test data sets:
-    with pytest.warns(
-        UserWarning,
-        match=f"{str(data_01.sum())} observations removed because of separation.",
-    ):
-        pf.fepois("y ~ x1 + x2 | id1 + id2", data=data_01, separation_check=["ir"])
+        with pytest.warns(
+            UserWarning,
+            match=f"{data.separated.sum()} observations removed because of separation.",
+        ):
+            pf.fepois(fml, data=data, separation_check=["ir"])
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
