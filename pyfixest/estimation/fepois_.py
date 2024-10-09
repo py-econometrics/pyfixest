@@ -132,7 +132,11 @@ class Fepois(Feols):
 
         # check for separation
         na_separation: list[int] = []
-        if self._fe is not None and self.separation_check:
+        if (
+            self._fe is not None
+            and self.separation_check is not None
+            and self.separation_check
+        ):
             na_separation = _check_for_separation(
                 Y=self._Y,
                 X=self._X,
@@ -446,6 +450,8 @@ def _check_for_separation(
         "fe": _check_for_separation_fe,
         "ir": _check_for_separation_ir,
     }
+    if methods is None:
+        methods = list(valid_methods)
 
     invalid_methods = [method for method in methods if method not in valid_methods]
     if invalid_methods:
