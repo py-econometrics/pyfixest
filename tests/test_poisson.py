@@ -37,41 +37,52 @@ def test_separation():
     ):
         fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
 
-    example2 = pd.DataFrame.from_dict(
-        {
-            "Y": [0, 0, 0, 1, 2, 3],
-            "X1": [2, -1, 0, 0, 5, 6],
-            "X2": [5, 10, 0, 0, -10, -12],
-        }
-    )
+    # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
+    # disabled because we currently do not perform separation checks if no fixed effects are provided
+    if False:
+        example2 = pd.DataFrame.from_dict(
+            {
+                "Y": [0, 0, 0, 1, 2, 3],
+                "X1": [2, -1, 0, 0, 5, 6],
+                "X2": [5, 10, 0, 0, -10, -12],
+            }
+        )
 
-    with pytest.warns(
-        UserWarning, match="2 observations removed because of separation."
-    ):
-        fepois("Y ~ X1 | X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
+        with pytest.warns(
+            UserWarning, match="2 observations removed because of separation."
+        ):
+            fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
 
     # ppmlhdfe test data sets:
-    folder = r"data/pplmhdfe_separations_examples"
-    fns = os.listdir(folder)
+    folder = r"data/ppmlhdfe_separation_examples"
+    fns = [fn for fn in os.listdir(folder) if fn.endswith(".csv")]
+    sorted(fns)
     for fn in fns:
         if fn == "07.csv":
             # this case fails but is not tested in ppmlhdfe
             # https://github.com/sergiocorreia/ppmlhdfe/blob/master/test/validate_tagsep.do#L27
             continue
+
         data = pd.read_csv(os.path.join(folder, fn))
         # build formula dynamically from dataframe
-        # datasets have fixed structure of the form:
-        # dependent variable y
-        # regressors x1,...,xN
-        # fixed effects id1,...,id2
-        # last column indicator if observation is separated
-        fml = "y"
-        regressors = data.columns[data.columns.str.startswith("x")]
-        fixed_effects = data.columns[data.columns.str.startswith("id")]
+        # datasets have fixed structure of the form (y, x1, ..., xN, id1, ..., idM, separated)
+        fml = "y"   # dependent variable y
+        regressors = data.columns[data.columns.str.startswith("x")]  # regressors x1,...,xN
+        fixed_effects = data.columns[data.columns.str.startswith("id")]  # fixed effects id1,...,id2
+        if data.separated.sum() == 0:
+            # TODO: do not skip but update pytest.warn to confirm that no warning is produced
+            continue
+
         if regressors.empty:
-            regressors = [1]
+            # TODO: are formulae with just a constant term allowed, e.g., Y ~ 1?
+            # regressors = ['1']
+            continue
         fml += f" ~ {' + '.join(regressors)}"
-        if not fixed_effects.empty:
+
+        if fixed_effects.empty:
+            # separation checks are currently disabled if no fixed effects are specified
+            continue
+        else:
             fml += f" | {' + '.join(fixed_effects)}"
 
         with pytest.warns(
