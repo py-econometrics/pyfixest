@@ -118,7 +118,8 @@ pf.panelview(
     time="year",
     treat="treat",
     collapse_to_cohort=True,
-    title = "Outcome Plot"
+    title = "Outcome Plot",
+    figsize=(1, 0.5),
 )
 ```
 
