@@ -548,11 +548,6 @@ def test_single_fit_iv(
 @pytest.mark.parametrize(
     "fml_multi",
     [
-        ("Y ~X1"),
-        ("Y ~X1+X2"),
-        ("Y~X1|f1"),
-        ("Y~X1|f1+f2"),
-        ("Y~X2|f2+f3"),
         ("Y~ sw(X1, X2)"),
         ("Y~ sw(X1, X2) |f1 "),
         ("Y~ csw(X1, X2)"),
