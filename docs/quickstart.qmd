@@ -413,6 +413,10 @@ fit.wald_test(R=R1, q=q1)
 > - `csw`: it stands for cumulative stepwise. It adds to the formula each of its arguments sequentially. E.g. `y ~ x1 + csw(x2, x3)` will become `y ~ x1 + x2` and `y ~ x1 + x2 + x3`.
 > - `csw0`: identical to csw but first adds the empty element. E.g. `y ~ x1 + csw0(x2, x3)` leads to three estimations: `y ~ x1`, `y ~ x1 + x`2 and `y ~ x1 + x2 + x3`.
 
+Additionally, we support `split` and `fsplit` function arguments.
+> - `split` allows to split a sample by a given variable. If specified, `pf.feols()` and `pf.fepois()` will loop through all resulting sample splits.
+> - `fsplit` works just as `split`, but fits the model on the full sample as well.
+
 If multiple regression syntax is used,
 `feols()` and `fepois` returns an instance of a `FixestMulti` object, which essentially consists of a dicionary of `Fepois` or [Feols](/reference/Feols.qmd) instances.
 
