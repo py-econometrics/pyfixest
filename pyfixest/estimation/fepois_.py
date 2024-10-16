@@ -81,6 +81,8 @@ class Fepois(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int]] = None,
     ):
         super().__init__(
             FixestFormula,
@@ -97,6 +99,8 @@ class Fepois(Feols):
             store_data,
             copy_data,
             lean,
+            sample_split_var,
+            sample_split_value,
         )
 
         # input checks

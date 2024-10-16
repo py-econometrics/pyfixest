@@ -28,6 +28,8 @@ def feols(
     use_compression: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
+    split: Optional[str] = None,
+    fsplit: Optional[str] = None,
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -125,6 +127,13 @@ def feols(
         Seed for the random number generator. Only relevant for boostrap inference applied to
         compute cluster robust errors when `use_compression = True`.
 
+    split: Optional[str]
+        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+        variable and one estimation is performed for each value of that variable. If you also want
+        to include the estimation for the full sample, use the argument fsplit instead.
+
+    fsplit: Optional[str]
+        This argument is the same as split but also includes the full sample as the first estimation.
 
     Returns
     -------
@@ -213,7 +222,7 @@ def feols(
     via the `etable()` function:
 
     ```{python}
-    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
+    pf.etable(fit)
     ```
 
     Other supported multiple estimation syntax include `sw0()`, `csw()` and `csw0()`.
@@ -221,7 +230,7 @@ def feols(
 
     ```{python}
     fit = pf.feols("Y ~ X1 + X2 | csw(f1, f2)", data)
-    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
+    pf.etable(fit)
     ```
 
     The `sw0()` and `csw0()` syntax are similar to `sw()` and `csw()`, but start
@@ -229,7 +238,7 @@ def feols(
 
     ```{python}
     fit = pf.feols("Y ~ X1 + X2 | sw0(f1, f2)", data)
-    pf.etable([fit.fetch_model(0), fit.fetch_model(1), fit.fetch_model(2)])
+    pf.etable(fit)
     ```
 
     The `feols()` function also supports multiple dependent variables. The following
@@ -238,25 +247,30 @@ def feols(
 
     ```{python}
     fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
-    pf.etable([fit.fetch_model(0), fit.fetch_model(1)])
+    pf.etable(fit)
     ```
 
     It is possible to combine different multiple estimation operators:
 
     ```{python}
     fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
-    pf.etable([fit.fetch_model(0),
-            fit.fetch_model(1),
-            fit.fetch_model(2),
-            fit.fetch_model(3)
-            ]
-        )
+    pf.etable(fit)
     ```
 
     In general, using muliple estimation syntax can improve the estimation time
     as covariates that are demeaned in one model and are used in another model do
     not need to be demeaned again: `feols()` implements a caching mechanism that
     stores the demeaned covariates.
+
+    Additionally, you can fit models on different samples via the split and fsplit
+    arguments. The split argument splits the sample according to the variable
+    specified in the argument, while the fsplit argument also includes the full
+    sample in the estimation.
+
+    ```{python}
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data, split = "f1")
+    pf.etable(fit)
+    ```
 
     Besides OLS, `feols()` also supports IV estimation via three part formulas:
 
@@ -331,7 +345,6 @@ def feols(
     fit_D = pf.feols("Y ~ D", data = data)
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
-
     """
     if i_ref1 is not None:
         raise FeatureDeprecationError(
@@ -358,6 +371,8 @@ def feols(
         use_compression=use_compression,
         reps=reps,
         seed=seed,
+        split=split,
+        fsplit=fsplit,
     )
 
     fixest = FixestMulti(
@@ -370,6 +385,8 @@ def feols(
         use_compression=use_compression,
         reps=reps,
         seed=seed,
+        split=split,
+        fsplit=fsplit,
     )
 
     estimation = "feols" if not use_compression else "compression"
@@ -402,6 +419,8 @@ def fepois(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
+    split: Optional[str] = None,
+    fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -478,6 +497,14 @@ def fepois(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
+    split: Optional[str]
+        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+        variable and one estimation is performed for each value of that variable. If you also want
+        to include the estimation for the full sample, use the argument fsplit instead.
+
+    fsplit: Optional[str]
+        This argument is the same as split but also includes the full sample as the first estimation.
+
     Returns
     -------
     object
@@ -530,6 +557,8 @@ def fepois(
         use_compression=False,
         reps=None,
         seed=None,
+        split=split,
+        fsplit=fsplit,
     )
 
     fixest = FixestMulti(
@@ -542,6 +571,8 @@ def fepois(
         use_compression=False,
         reps=None,
         seed=None,
+        split=split,
+        fsplit=fsplit,
     )
 
     fixest._prepare_estimation(
@@ -581,6 +612,8 @@ def _estimation_input_checks(
     use_compression: bool,
     reps: Optional[int],
     seed: Optional[int],
+    split: Optional[str],
+    fsplit: Optional[str],
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -664,3 +697,21 @@ def _estimation_input_checks(
 
     if seed is not None and not isinstance(seed, int):
         raise TypeError("The function argument `seed` must be of type int.")
+
+    if split is not None and not isinstance(split, str):
+        raise TypeError("The function argument split needs to be of type str.")
+
+    if fsplit is not None and not isinstance(fsplit, str):
+        raise TypeError("The function argument fsplit needs to be of type str.")
+
+    if split is not None and fsplit is not None and split != fsplit:
+        raise ValueError(f"""
+                        Arguments split and fsplit are both specified, but not identical.
+                        split is specified as {split}, while fsplit is specified as {fsplit}.
+                        """)
+
+    if isinstance(split, str) and split not in data.columns:
+        raise KeyError(f"Column '{split}' not found in data.")
+
+    if isinstance(fsplit, str) and fsplit not in data.columns:
+        raise KeyError(f"Column '{fsplit}' not found in data.")

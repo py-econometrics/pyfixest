@@ -75,6 +75,8 @@ class FeolsCompressed(Feols):
         lean: bool = False,
         reps=100,
         seed: Optional[int] = None,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int]] = None,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -91,6 +93,8 @@ class FeolsCompressed(Feols):
             store_data,
             copy_data,
             lean,
+            sample_split_var,
+            sample_split_value,
         )
 
         if FixestFormula.fml_first_stage is not None:

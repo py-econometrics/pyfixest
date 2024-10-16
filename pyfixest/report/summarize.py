@@ -524,6 +524,9 @@ def summary(
             else:
                 depvar_fixef += f", Mundlak: by {fxst._fixef}"
         print(depvar_fixef)
+        if fxst._sample_split_value != "all":
+            split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
+            print(split)
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
         print("")
