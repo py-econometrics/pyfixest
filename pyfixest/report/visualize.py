@@ -591,7 +591,7 @@ def _get_model_df(
         A tidy model frame.
     """
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}%"
+    df_model["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}%"
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
@@ -603,7 +603,7 @@ def _get_model_df(
             .drop([lb, ub], axis=1)
             .merge(df_joint, on="Coefficient", how="left")
         )
-        df_joint_full["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
+        df_joint_full["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}% joint CIs"
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
         else:

@@ -9,7 +9,6 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FeatureDeprecationError,
     InstrumentsAsCovarsError,
-    MultiEstNotSupportedError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
@@ -119,11 +118,11 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # multi estimation error
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ", data=data)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
@@ -623,3 +622,38 @@ def test_errors_panelview():
             collapse_to_cohort=True,
             units_to_plot=[1, 2],
         )
+
+
+@pytest.mark.parametrize(
+    "split, fsplit, expected_exception, error_message",
+    [
+        # Test TypeError for non-string 'split'
+        (123, None, TypeError, "The function argument split needs to be of type str."),
+        # Test TypeError for non-string 'fsplit'
+        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        # Test ValueError for split and fsplit not being identical
+        (
+            "split_column",
+            "different_column",
+            ValueError,
+            r"Arguments split and fsplit are both specified, but not identical",
+        ),
+        # Test KeyError for invalid 'split' column
+        (
+            "invalid_column",
+            None,
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+        # Test KeyError for invalid 'fsplit' column
+        (
+            None,
+            "invalid_column",
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+    ],
+)
+def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
+    with pytest.raises(expected_exception, match=error_message):
+        pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
