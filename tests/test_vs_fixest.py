@@ -11,6 +11,7 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data, ssc
 
@@ -607,6 +608,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 
     try:
         pyfixest = feols(fml=fml_multi, data=data)
+        assert isinstance(pyfixest, FixestMulti)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
@@ -680,6 +682,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 
     try:
         pyfixest = feols(fml=fml_multi, data=data, split=split, fsplit=fsplit)
+        assert isinstance(pyfixest, FixestMulti)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
