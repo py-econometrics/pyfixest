@@ -4,7 +4,6 @@ from typing import Optional, Union
 
 import pandas as pd
 
-from pyfixest.errors import MultiEstNotSupportedError
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
@@ -171,6 +170,8 @@ class FixestMulti:
         self._drop_intercept = drop_intercept
 
         FML = FixestFormulaParser(fml)
+        FML.set_fixest_multi_flag()
+        self._is_multiple_estimation = FML._is_multiple_estimation
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
@@ -287,6 +288,8 @@ class FixestMulti:
                             store_data=_store_data,
                             copy_data=_copy_data,
                             lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
                         )
                         FIT.prepare_model_matrix()
                         FIT.demean()
@@ -310,6 +313,8 @@ class FixestMulti:
                             store_data=_store_data,
                             copy_data=_copy_data,
                             lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
                             # solver=_solver
                         )
                         FIT.prepare_model_matrix()
@@ -333,6 +338,8 @@ class FixestMulti:
                             lean=_lean,
                             reps=self._reps,
                             seed=self._seed,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
                         )
                         FIT.prepare_model_matrix()
                         FIT.to_array()
@@ -364,32 +371,6 @@ class FixestMulti:
                         FIT._model_name = FixestFormula.fml
 
                     self.all_fitted_models[FIT._model_name] = FIT
-
-        self.set_fixest_multi_flag()
-
-    def set_fixest_multi_flag(self):
-        """
-        Set a flag to indicate whether multiple estimations are being performed or not.
-
-        Simple check if `all_fitted_models` has length greater than 1.
-        Throws an error if multiple estimations are being performed with IV estimation.
-        Args:
-            None
-        Returns:
-            None
-        """
-        if len(self.all_fitted_models) > 1:
-            self._is_multiple_estimation = True
-            if self._is_iv:
-                raise MultiEstNotSupportedError(
-                    """
-                    Multiple Estimations is currently not supported with IV.
-                    This is mostly due to insufficient testing and will be possible
-                    with a future release of PyFixest.
-                    """
-                )
-        else:
-            self._is_multiple_estimation = False
 
     def to_list(self):
         """

@@ -199,6 +199,34 @@ class FixestFormulaParser:
             ):
                 self.add_to_FixestFormulaDict(depvar, covar, fval)
 
+    def set_fixest_multi_flag(self):
+        """
+        Set a flag to indicate whether multiple estimations are being performed or not.
+
+        Simple check if `all_fitted_models` has length greater than 1.
+        Throws an error if multiple estimations are being performed with IV estimation.
+        Args:
+            None
+        Returns:
+            None
+        """
+        if (
+            len(self.FixestFormulaDict) == 1
+            and isinstance(next(iter(self.FixestFormulaDict.values())), list)
+            and len(next(iter(self.FixestFormulaDict.values()))) == 1
+        ):
+            self._is_multiple_estimation = False
+        else:
+            self._is_multiple_estimation = True
+            if self.is_iv:
+                raise NotImplementedError(
+                    """
+                    Multiple Estimations is currently not supported with IV.
+                    This is mostly due to insufficient testing and will be possible
+                    with a future release of PyFixest.
+                    """
+                )
+
 
 class FixestFormula:
     """

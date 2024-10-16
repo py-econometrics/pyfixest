@@ -657,11 +657,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
-    [
-        "Y ~ X1",
-        "Y ~ X1 | f2",
-        "Y ~ sw(X1, X2)",
-    ],
+    ["Y ~ X1", "Y ~ X1 | f2", "Y ~ sw(X1, X2)", "Y ~ 1 | X1 ~ Z1"],
 )
 @pytest.mark.parametrize("split", [None, "f1"])
 @pytest.mark.parametrize("fsplit", [None, "f1"])
