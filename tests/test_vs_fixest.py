@@ -623,7 +623,86 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         ssc=fixest.ssc(True, "none", True, "min", "min", False),
     )
 
-    for x, _ in range(0):
+    for x in range(0):
+        mod = pyfixest.fetch_model(x)
+        py_coef = mod.coef().values
+        py_se = mod.se().values
+
+        # sort py_coef, py_se
+        py_coef, py_se = (np.sort(x) for x in [py_coef, py_se])
+
+        fixest_object = r_fixest.rx2(x + 1)
+        fixest_coef = fixest_object.rx2("coefficients")
+        fixest_se = fixest_object.rx2("se")
+
+        # fixest_coef = stats.coef(r_fixest)
+        # fixest_se = fixest.se(r_fixest)
+
+        # sort fixest_coef, fixest_se
+        fixest_coef, fixest_se = (np.sort(x) for x in [fixest_coef, fixest_se])
+
+        np.testing.assert_allclose(
+            py_coef, fixest_coef, rtol=rtol, atol=atol, err_msg="Coefs are not equal."
+        )
+        np.testing.assert_allclose(
+            py_se, fixest_se, rtol=rtol, atol=atol, err_msg="SEs are not equal."
+        )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("N", [100])
+@pytest.mark.parametrize("seed", [31])
+@pytest.mark.parametrize("beta_type", ["1"])
+@pytest.mark.parametrize("error_type", ["3"])
+@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize(
+    "fml_multi",
+    [
+        "Y ~ X1",
+        "Y ~ X1 | f2",
+        "Y ~ sw(X1, X2)",
+    ],
+)
+@pytest.mark.parametrize("split", [None, "f1"])
+@pytest.mark.parametrize("fsplit", [None, "f1"])
+def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsplit):
+    if split is not None and split == fsplit:
+        pytest.skip("split and fsplit are the same.")
+    if split is None and fsplit is None:
+        pytest.skip("split and fsplit are both None.")
+
+    data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
+    data[data == "nan"] = np.nan
+
+    if dropna:
+        data = data.dropna()
+
+    # suppress correction for fixed effects
+    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
+
+    r_fml = _py_fml_to_r_fml(fml_multi)
+
+    try:
+        pyfixest = feols(fml=fml_multi, data=data, split=split, fsplit=fsplit)
+    except ValueError as e:
+        if "is not of type 'O' or 'category'" in str(e):
+            data["f1"] = pd.Categorical(data.f1.astype(str))
+            data["f2"] = pd.Categorical(data.f2.astype(str))
+            data["f3"] = pd.Categorical(data.f3.astype(str))
+            data[data == "nan"] = np.nan
+            pyfixest = feols(fml=fml_multi, data=data)
+        else:
+            raise ValueError("Code fails with an uninformative error message.")
+
+    r_fixest = fixest.feols(
+        ro.Formula(r_fml),
+        data=data,
+        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        **({"split": ro.Formula("~" + split)} if split is not None else {}),
+        **({"fsplit": ro.Formula("~" + fsplit)} if fsplit is not None else {}),
+    )
+
+    for x in range(0):
         mod = pyfixest.fetch_model(x)
         py_coef = mod.coef().values
         py_se = mod.se().values
