@@ -37,9 +37,9 @@ def test_separation():
     ):
         fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
 
-    # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
-    # disabled because we currently do not perform separation checks if no fixed effects are provided
     if False:
+        # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
+        # disabled because we currently do not perform separation checks if no fixed effects are provided
         example2 = pd.DataFrame.from_dict(
             {
                 "Y": [0, 0, 0, 1, 2, 3],
@@ -54,16 +54,15 @@ def test_separation():
             fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
 
     # ppmlhdfe test data sets:
+    path = os.path.dirname(os.path.abspath(__file__))
     folder = r"data/ppmlhdfe_separation_examples"
-    fns = [fn for fn in os.listdir(folder) if fn.endswith(".csv")]
-    sorted(fns)
+    fns = sorted([fn for fn in os.listdir(os.path.join(path, folder)) if fn.endswith(".csv")])
     for fn in fns:
         if fn == "07.csv":
             # this case fails but is not tested in ppmlhdfe
             # https://github.com/sergiocorreia/ppmlhdfe/blob/master/test/validate_tagsep.do#L27
             continue
-
-        data = pd.read_csv(os.path.join(folder, fn))
+        data = pd.read_csv(os.path.join(path, folder, fn))
         # build formula dynamically from dataframe
         # datasets have fixed structure of the form (y, x1, ..., xN, id1, ..., idM, separated)
         fml = "y"   # dependent variable y
@@ -74,8 +73,7 @@ def test_separation():
             continue
 
         if regressors.empty:
-            # TODO: are formulae with just a constant term allowed, e.g., Y ~ 1?
-            # regressors = ['1']
+            # TODO: formulae with just a constant term and fixed effects throw error in FIT.get_fit(), e.g., for 03.csv and Y ~ 1 | id1 + id2 + id3?
             continue
         fml += f" ~ {' + '.join(regressors)}"
 
