@@ -71,7 +71,8 @@ class FixestMulti:
         self._reps = reps if use_compression else None
         self._seed = seed if use_compression else None
 
-        self._run_split = split or fsplit
+        self._run_split = split is not None or fsplit is not None
+        self._run_full = not (split and not fsplit)
 
         self._splitvar: Optional[str] = None
         if self._run_split:
@@ -81,8 +82,6 @@ class FixestMulti:
                 self._splitvar = fsplit
         else:
             self._splitvar = None
-
-        self._run_full = not (split and not fsplit)
 
         data = _polars_to_pandas(data)
 
@@ -171,7 +170,7 @@ class FixestMulti:
 
         FML = FixestFormulaParser(fml)
         FML.set_fixest_multi_flag()
-        self._is_multiple_estimation = FML._is_multiple_estimation
+        self._is_multiple_estimation = FML._is_multiple_estimation or self._run_split
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
@@ -231,9 +230,7 @@ class FixestMulti:
         _fixef_keys = list(FixestFormulaDict.keys())
 
         all_splits = (["all"] if _run_full else []) + (
-            _data[_splitvar].dropna().unique().tolist()
-            if _run_split is not None
-            else []
+            _data[_splitvar].dropna().unique().tolist() if _run_split else []
         )
 
         for sample_split_value in all_splits:
