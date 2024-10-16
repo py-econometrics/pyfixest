@@ -623,3 +623,38 @@ def test_errors_panelview():
             collapse_to_cohort=True,
             units_to_plot=[1, 2],
         )
+
+
+@pytest.mark.parametrize(
+    "split, fsplit, expected_exception, error_message",
+    [
+        # Test TypeError for non-string 'split'
+        (123, None, TypeError, "The function argument split needs to be of type str."),
+        # Test TypeError for non-string 'fsplit'
+        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        # Test ValueError for split and fsplit not being identical
+        (
+            "split_column",
+            "different_column",
+            ValueError,
+            r"Arguments split and fsplit are both specified, but not identical",
+        ),
+        # Test KeyError for invalid 'split' column
+        (
+            "invalid_column",
+            None,
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+        # Test KeyError for invalid 'fsplit' column
+        (
+            None,
+            "invalid_column",
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+    ],
+)
+def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
+    with pytest.raises(expected_exception, match=error_message):
+        pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)

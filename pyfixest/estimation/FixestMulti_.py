@@ -79,7 +79,7 @@ class FixestMulti:
             if split:
                 self._splitvar = split
             else:
-                self._splivar = fsplit
+                self._splitvar = fsplit
         else:
             self._splitvar = None
 
@@ -236,13 +236,6 @@ class FixestMulti:
         )
 
         for sample_split_value in all_splits:
-            if all_splits == "all":
-                data_split = _data.copy()
-            else:
-                data_split = _data[_data[self._splitvar] == sample_split_value].copy()
-            # set index to 0:N
-            data_split.reset_index(drop=True, inplace=True)
-
             for _, fval in enumerate(_fixef_keys):
                 fixef_key_models = FixestFormulaDict.get(fval)
 
@@ -259,7 +252,7 @@ class FixestMulti:
                     if _method == "feols" and not _is_iv:
                         FIT = Feols(
                             FixestFormula=FixestFormula,
-                            data=data_split,
+                            data=_data,
                             ssc_dict=_ssc_dict,
                             drop_singletons=_drop_singletons,
                             drop_intercept=_drop_intercept,
@@ -271,6 +264,8 @@ class FixestMulti:
                             store_data=_store_data,
                             copy_data=_copy_data,
                             lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
                         )
                         FIT.prepare_model_matrix()
                         FIT.demean()
@@ -280,7 +275,7 @@ class FixestMulti:
                     elif _method == "feols" and _is_iv:
                         FIT = Feiv(
                             FixestFormula=FixestFormula,
-                            data=data_split,
+                            data=_data,
                             ssc_dict=_ssc_dict,
                             drop_singletons=_drop_singletons,
                             drop_intercept=_drop_intercept,
@@ -301,7 +296,7 @@ class FixestMulti:
                     elif _method == "fepois":
                         FIT = Fepois(
                             FixestFormula=FixestFormula,
-                            data=data_split,
+                            data=_data,
                             ssc_dict=_ssc_dict,
                             drop_singletons=_drop_singletons,
                             drop_intercept=_drop_intercept,
@@ -324,7 +319,7 @@ class FixestMulti:
                     elif _method == "compression":
                         FIT = FeolsCompressed(
                             FixestFormula=FixestFormula,
-                            data=data_split,
+                            data=_data,
                             ssc_dict=_ssc_dict,
                             drop_singletons=_drop_singletons,
                             drop_intercept=_drop_intercept,
@@ -360,14 +355,15 @@ class FixestMulti:
 
                     # delete large attributescl
                     FIT._clear_attributes()
+                    FIT._sample_split_value = sample_split_value
 
                     # store fitted model
                     if sample_split_value != "all":
-                        self.all_fitted_models[
-                            f"{FixestFormula.fml} + {_splitvar} = {sample_split_value}"
-                        ] = FIT
+                        FIT._model_name = f"{FixestFormula.fml} (sample: {FIT._sample_split_var} = {FIT._sample_split_value})"
                     else:
-                        self.all_fitted_models[FixestFormula.fml] = FIT
+                        FIT._model_name = FixestFormula.fml
+
+                    self.all_fitted_models[FIT._model_name] = FIT
 
         self.set_fixest_multi_flag()
 
