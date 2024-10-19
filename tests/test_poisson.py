@@ -21,42 +21,17 @@ stats = importr("stats")
 
 def test_separation():
     """Test separation detection."""
-    example1 = pd.DataFrame.from_dict(
-        {
-            "Y": [0, 0, 0, 1, 2, 3],
-            "fe1": ["a", "a", "b", "b", "b", "c"],
-            "fe2": ["c", "c", "d", "d", "d", "e"],
-            "X": np.random.normal(0, 1, 6),
-        }
-    )
+    y = np.array([0, 0, 0, 1, 2, 3])
+    df1 = np.array(["a", "a", "b", "b", "b", "c"])
+    df2 = np.array(["c", "c", "d", "d", "d", "e"])
+    x = np.random.normal(0, 1, 6)
+
+    df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x": x})
 
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
-
-    example2 = pd.DataFrame.from_dict(
-        {
-            "Y": [0, 0, 0, 1, 2, 3],
-            "X1": [2, -1, 0, 0, 5, 6],
-            "X2": [5, 10, 0, 0, -10, -12],
-        }
-    )
-
-    with pytest.warns(
-        UserWarning, match="2 observations removed because of separation."
-    ):
-        fepois("Y ~ X1 | X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
-
-
-    data_01 = pd.read_csv("data/pplmhdfe_separations_examples/data_01.csv")
-
-    # pplmhdfe test data sets:
-    with pytest.warns(
-        UserWarning, match=f"{str(data_01.sum())} observations removed because of separation."
-    ):
-
-        pf.fepois("y ~ x1 + x2 | id1 + id2", data = data_01, separation_check = ["ir"])
+        mod = fepois("Y ~ x  | fe1", data=df, vcov="hetero")  # noqa: F841
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])

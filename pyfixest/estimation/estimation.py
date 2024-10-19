@@ -1,4 +1,4 @@
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -371,7 +371,8 @@ def feols(
         use_compression=use_compression,
         reps=reps,
         seed=seed,
-        separation_check=None,
+        split=split,
+        fsplit=fsplit,
     )
 
     fixest = FixestMulti(
@@ -413,7 +414,6 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    separation_check: Optional[list[str]] = ["fe"],
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -464,10 +464,6 @@ def fepois(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
-
-    separation_check: list[str], optional
-        Methods to identify and drop separated observations.
-        Either "fe" or "ir". Executes "fe" by default.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -561,7 +557,8 @@ def fepois(
         use_compression=False,
         reps=None,
         seed=None,
-        separation_check=separation_check,
+        split=split,
+        fsplit=fsplit,
     )
 
     fixest = FixestMulti(
@@ -591,7 +588,6 @@ def fepois(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
-        separation_check=separation_check,
     )
 
     if fixest._is_multiple_estimation:
@@ -616,7 +612,8 @@ def _estimation_input_checks(
     use_compression: bool,
     reps: Optional[int],
     seed: Optional[int],
-    separation_check: List[str]=None,
+    split: Optional[str],
+    fsplit: Optional[str],
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -701,13 +698,20 @@ def _estimation_input_checks(
     if seed is not None and not isinstance(seed, int):
         raise TypeError("The function argument `seed` must be of type int.")
 
-    if separation_check is not None:
-        if not isinstance(separation_check, list):
-            raise TypeError(
-                "The function argument `separation_check` must be of type list."
-            )
+    if split is not None and not isinstance(split, str):
+        raise TypeError("The function argument split needs to be of type str.")
 
-        if not all(x in ["fe", "ir"] for x in separation_check):
-            raise ValueError(
-                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
-            )
+    if fsplit is not None and not isinstance(fsplit, str):
+        raise TypeError("The function argument fsplit needs to be of type str.")
+
+    if split is not None and fsplit is not None and split != fsplit:
+        raise ValueError(f"""
+                        Arguments split and fsplit are both specified, but not identical.
+                        split is specified as {split}, while fsplit is specified as {fsplit}.
+                        """)
+
+    if isinstance(split, str) and split not in data.columns:
+        raise KeyError(f"Column '{split}' not found in data.")
+
+    if isinstance(fsplit, str) and fsplit not in data.columns:
+        raise KeyError(f"Column '{fsplit}' not found in data.")
