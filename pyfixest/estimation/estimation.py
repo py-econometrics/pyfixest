@@ -373,6 +373,7 @@ def feols(
         seed=seed,
         split=split,
         fsplit=fsplit,
+        separation_check=None,
     )
 
     fixest = FixestMulti(
@@ -414,6 +415,7 @@ def fepois(
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
+    separation_check: Optional[list[str]] = ["fe"],
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -464,6 +466,10 @@ def fepois(
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
+
+    separation_check: list[str], optional
+        Methods to identify and drop separated observations.
+        Either "fe" or "ir". Executes "fe" by default.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -559,6 +565,7 @@ def fepois(
         seed=None,
         split=split,
         fsplit=fsplit,
+        separation_check=separation_check,
     )
 
     fixest = FixestMulti(
@@ -588,6 +595,7 @@ def fepois(
         iwls_tol=iwls_tol,
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
+        separation_check=separation_check,
     )
 
     if fixest._is_multiple_estimation:
@@ -614,6 +622,7 @@ def _estimation_input_checks(
     seed: Optional[int],
     split: Optional[str],
     fsplit: Optional[str],
+    separation_check: Optional[list[str]] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -715,3 +724,13 @@ def _estimation_input_checks(
 
     if isinstance(fsplit, str) and fsplit not in data.columns:
         raise KeyError(f"Column '{fsplit}' not found in data.")
+    if separation_check is not None:
+        if not isinstance(separation_check, list):
+            raise TypeError(
+                "The function argument `separation_check` must be of type list."
+            )
+
+        if not all(x in ["fe", "ir"] for x in separation_check):
+            raise ValueError(
+                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
+            )
