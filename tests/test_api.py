@@ -4,6 +4,8 @@ import pyfixest as pf
 from pyfixest.utils.utils import get_data
 
 
+
+
 def test_api():
     df1 = get_data()
     df2 = get_data(model="Fepois")
@@ -79,7 +81,7 @@ def test_fepois_args():
     fit4 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.solve")
     fit5 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.lstsq")
 
-    assert (fit4.coef() == fit5.coef()).all()
+    np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
 def test_lean():
