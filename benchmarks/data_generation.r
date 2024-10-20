@@ -7,7 +7,7 @@
 ####
 #### SIMULATION ####
 ####
-setwd("C:/Users/alexa/Documents/pyfixest/benchmarks/DATA/")
+setwd("/Users/marc/Documents/pyfixest/benchmarks/DATA/")
 
 library(MASS)
 library(here)
@@ -15,10 +15,9 @@ library(data.table)
 library(haven)
 
 # Some constants
-
-DATA_DIR <- "C:/Users/alexa/Documents/pyfixest/benchmarks/DATA/data"
-STATA_DIR <- "C:/Users/alexa/Documents/pyfixest/benchmarks/DATA/_STATA"
-RESULTS_DIR <- "C:/Users/alexa/Documents/pyfixest/benchmarks/DATA/results"
+DATA_DIR <- "/Users/marc/Documents/pyfixest/benchmarks/DATA/data"
+STATA_DIR <- "/Users/marc/Documents/pyfixest/benchmarks/DATA/_STATA"
+RESULTS_DIR <- "/Users/marc/Documents/pyfixest/benchmarks/DATA/results"
 
 
 dir.create(DATA_DIR, showWarnings = FALSE)

@@ -43,7 +43,7 @@ from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
 class Feols:
     """
-    Non user-facing class to estimate a liner regression via OLS.
+    Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
     but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
