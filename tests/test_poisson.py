@@ -52,7 +52,9 @@ def test_separation():
     # ppmlhdfe test data sets (check readme in data/ppmlhdfe_separation_examples)
     path = os.path.dirname(os.path.abspath(__file__))
     folder = r"data/ppmlhdfe_separation_examples"
-    fns = sorted([fn for fn in os.listdir(os.path.join(path, folder)) if fn.endswith(".csv")])
+    fns = sorted(
+        [fn for fn in os.listdir(os.path.join(path, folder)) if fn.endswith(".csv")]
+    )
     for fn in fns:
         if fn == "07.csv":
             # this case fails but is not tested in ppmlhdfe
@@ -61,9 +63,13 @@ def test_separation():
         data = pd.read_csv(os.path.join(path, folder, fn))
         # build formula dynamically from dataframe
         # datasets have fixed structure of the form (y, x1, ..., xN, id1, ..., idM, separated)
-        fml = "y"   # dependent variable y
-        regressors = data.columns[data.columns.str.startswith("x")]  # regressors x1,...,xN
-        fixed_effects = data.columns[data.columns.str.startswith("id")]  # fixed effects id1,...,id2
+        fml = "y"  # dependent variable y
+        regressors = data.columns[
+            data.columns.str.startswith("x")
+        ]  # regressors x1,...,xN
+        fixed_effects = data.columns[
+            data.columns.str.startswith("id")
+        ]  # fixed effects id1,...,id2
         if data.separated.sum() == 0:
             # TODO: do not skip but update pytest.warn to confirm that no warning is produced
             continue
