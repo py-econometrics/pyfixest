@@ -31,7 +31,7 @@ def test_separation():
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
+        fepois("Y ~ X  | fe1", data=df, vcov="hetero", separation_check=["fe"])  # noqa: F841
 
     if False:
         # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
