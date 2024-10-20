@@ -4,8 +4,6 @@ import pyfixest as pf
 from pyfixest.utils.utils import get_data
 
 
-
-
 def test_api():
     df1 = get_data()
     df2 = get_data(model="Fepois")
