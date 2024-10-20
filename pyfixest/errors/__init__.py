@@ -30,10 +30,6 @@ class VcovTypeNotSupportedError(Exception):  # noqa: D101
     pass
 
 
-class MultiEstNotSupportedError(Exception):  # noqa: D101
-    pass
-
-
 class NanInClusterVarError(Exception):  # noqa: D101
     pass
 
