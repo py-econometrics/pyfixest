@@ -53,7 +53,7 @@ def test_separation():
         ):
             fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
 
-    # ppmlhdfe test data sets:
+    # ppmlhdfe test data sets (check readme in data/ppmlhdfe_separation_examples)
     path = os.path.dirname(os.path.abspath(__file__))
     folder = r"data/ppmlhdfe_separation_examples"
     fns = sorted([fn for fn in os.listdir(os.path.join(path, folder)) if fn.endswith(".csv")])
@@ -78,7 +78,7 @@ def test_separation():
         fml += f" ~ {' + '.join(regressors)}"
 
         if fixed_effects.empty:
-            # separation checks are currently disabled if no fixed effects are specified
+            # TODO: separation checks are currently disabled if no fixed effects are specified; enable tests once we run separation check without fixed effects
             continue
         else:
             fml += f" | {' + '.join(fixed_effects)}"
