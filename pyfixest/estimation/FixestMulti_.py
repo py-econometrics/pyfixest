@@ -182,7 +182,7 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
-        solver: str,
+        solver: str = "np.linalg.solve",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
