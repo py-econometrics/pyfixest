@@ -9,7 +9,6 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FeatureDeprecationError,
     InstrumentsAsCovarsError,
-    MultiEstNotSupportedError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
@@ -119,11 +118,11 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # multi estimation error
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ", data=data)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
@@ -570,3 +569,91 @@ def test_errors_compressed():
     # no support for WLS
     with pytest.raises(NotImplementedError):
         pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
+
+
+def test_errors_panelview():
+    """Test all ValueError conditions in panelview."""
+    sample_df = pd.DataFrame(
+        {
+            "unit": [1, 2, 3, 4],
+            "year": [2001, 2002, 2003, 2004],
+            "treat": [0, 1, 1, 0],
+            "dep_var": [10, 20, 30, 40],
+        }
+    )
+
+    # 1. Test for missing 'unit' column
+    with pytest.raises(ValueError, match="Column 'unit' not found in data."):
+        pf.panelview(sample_df.drop(columns=["unit"]), "unit", "year", "treat")
+
+    # 2. Test for missing 'year' column (time)
+    with pytest.raises(ValueError, match="Column 'year' not found in data."):
+        pf.panelview(sample_df.drop(columns=["year"]), "unit", "year", "treat")
+
+    # 3. Test for missing 'treat' column
+    with pytest.raises(ValueError, match="Column 'treat' not found in data."):
+        pf.panelview(sample_df.drop(columns=["treat"]), "unit", "year", "treat")
+
+    # 4. Test for missing outcome column
+    with pytest.raises(
+        ValueError, match="Outcome column 'nonexistent_col' not found in data."
+    ):
+        pf.panelview(sample_df, "unit", "year", "treat", outcome="nonexistent_col")
+
+    # 5. Test for 'collapse_to_cohort' and 'subsamp' used together
+    with pytest.raises(
+        ValueError,
+        match="Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'.",
+    ):
+        pf.panelview(
+            sample_df, "unit", "year", "treat", collapse_to_cohort=True, subsamp=10
+        )
+
+    # 6. Test for 'collapse_to_cohort' and 'units_to_plot' used together
+    with pytest.raises(
+        ValueError,
+        match="Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'.",
+    ):
+        pf.panelview(
+            sample_df,
+            "unit",
+            "year",
+            "treat",
+            collapse_to_cohort=True,
+            units_to_plot=[1, 2],
+        )
+
+
+@pytest.mark.parametrize(
+    "split, fsplit, expected_exception, error_message",
+    [
+        # Test TypeError for non-string 'split'
+        (123, None, TypeError, "The function argument split needs to be of type str."),
+        # Test TypeError for non-string 'fsplit'
+        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        # Test ValueError for split and fsplit not being identical
+        (
+            "split_column",
+            "different_column",
+            ValueError,
+            r"Arguments split and fsplit are both specified, but not identical",
+        ),
+        # Test KeyError for invalid 'split' column
+        (
+            "invalid_column",
+            None,
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+        # Test KeyError for invalid 'fsplit' column
+        (
+            None,
+            "invalid_column",
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+    ],
+)
+def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
+    with pytest.raises(expected_exception, match=error_message):
+        pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)

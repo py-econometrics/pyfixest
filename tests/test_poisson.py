@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -23,14 +21,12 @@ stats = importr("stats")
 
 def test_separation():
     """Test separation detection."""
-    example1 = pd.DataFrame.from_dict(
-        {
-            "Y": [0, 0, 0, 1, 2, 3],
-            "fe1": ["a", "a", "b", "b", "b", "c"],
-            "fe2": ["c", "c", "d", "d", "d", "e"],
-            "X": np.random.normal(0, 1, 6),
-        }
-    )
+    y = np.array([0, 0, 0, 1, 2, 3])
+    df1 = np.array(["a", "a", "b", "b", "b", "c"])
+    df2 = np.array(["c", "c", "d", "d", "d", "e"])
+    x = np.random.normal(0, 1, 6)
+
+    df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x": x})
 
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."

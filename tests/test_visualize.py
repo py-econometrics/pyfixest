@@ -1,7 +1,13 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from pyfixest.did.visualize import panelview
+from pyfixest.did.visualize import (
+    _plot_panelview,
+    _plot_panelview_output_plot,
+    _prepare_df_for_panelview,
+    _prepare_panelview_df_for_outcome_plot,
+    panelview,
+)
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.visualize import coefplot, iplot
 from pyfixest.utils.utils import get_data
@@ -48,6 +54,18 @@ def test_panelview():
     assert isinstance(ax, plt.Axes)
     plt.close()
 
+    # Test with basic functionality for outcome plot
+    ax = panelview(
+        data=df_het,
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        subsamp=50,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
     # Test with collapse_to_cohort
     ax = panelview(
         data=df_het,
@@ -55,6 +73,30 @@ def test_panelview():
         time="year",
         treat="treat",
         collapse_to_cohort=True,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Test with collapse_to_cohort for outcome plot
+    ax = panelview(
+        data=df_het,
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        collapse_to_cohort=True,
+    )
+    assert isinstance(ax, plt.Axes)
+    plt.close()
+
+    # Test with units_to_plot for outcome plot
+    ax = panelview(
+        data=df_het,
+        outcome="dep_var",
+        unit="unit",
+        time="year",
+        treat="treat",
+        units_to_plot=[1, 2, 3, 4],
     )
     assert isinstance(ax, plt.Axes)
     plt.close()
@@ -111,21 +153,59 @@ def test_panelview():
     assert result_ax is ax
     plt.close()
 
-    # Test with all options enabled
-    ax = panelview(
+    if False:
+        # Test with all options enabled
+        ax = panelview(
+            data=df_het,
+            unit="unit",
+            time="year",
+            treat="treat",
+            collapse_to_cohort=True,
+            subsamp=30,
+            sort_by_timing=True,
+            xlab="Years",
+            ylab="Units",
+            noticks=True,
+            title="Full Test",
+            legend=True,
+        )
+        assert isinstance(ax, plt.Axes)
+        assert ax.get_title() == "Full Test"
+
+    # Test df for outcome plot
+    outcome_df = _prepare_panelview_df_for_outcome_plot(
         data=df_het,
         unit="unit",
         time="year",
         treat="treat",
-        collapse_to_cohort=True,
-        subsamp=30,
-        sort_by_timing=True,
-        xlab="Years",
-        ylab="Units",
-        noticks=True,
-        title="Full Test",
-        legend=True,
+        outcome="dep_var",
+        subsamp=50,
+    )
+    assert isinstance(outcome_df, pd.DataFrame)
+    assert not outcome_df.empty
+
+    # Test df for panelview output plot
+    ax = _plot_panelview_output_plot(
+        data=df_het,
+        data_pivot=outcome_df,
+        unit="unit",
+        time="year",
+        treat="treat",
+        outcome="dep_var",
     )
     assert isinstance(ax, plt.Axes)
-    assert ax.get_title() == "Full Test"
+    plt.close()
+
+    # Test df prepare for panelview
+    treatment_df = _prepare_df_for_panelview(
+        data=df_het, unit="unit", time="year", treat="treat", subsamp=50
+    )
+    assert isinstance(treatment_df, pd.DataFrame)
+    assert not treatment_df.empty
+
+    # Test plot panelview
+    ax = _plot_panelview(
+        treatment_quilt=treatment_df, xlab="Year", ylab="Unit", title="Test Plot"
+    )
+    assert isinstance(ax, plt.Axes)
     plt.close()

@@ -201,11 +201,23 @@ class Feols:
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
+        self._sample_split_value = sample_split_value
+        self._sample_split_var = sample_split_var
+        self._model_name = f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         self._method = "feols"
         self._is_iv = False
         self.FixestFormula = FixestFormula
-        self._data = data.copy() if copy_data else data
+
+        if sample_split_value == "all":
+            data_split = data.copy()
+        else:
+            data_split = data[data[sample_split_var] == sample_split_value].copy()
+        data_split.reset_index(drop=True, inplace=True)  # set index to 0:N
+
+        self._data = data_split.copy() if copy_data else data_split
         self._ssc_dict = ssc_dict
         self._drop_singletons = drop_singletons
         self._drop_intercept = drop_intercept
