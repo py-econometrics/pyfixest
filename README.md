@@ -62,8 +62,8 @@ All benchmarks follow the [fixest
 benchmarks](https://github.com/lrberge/fixest/tree/master/_BENCHMARK).
 All non-pyfixest timings are taken from the `fixest` benchmarks.
 
-![](figures/benchmarks_ols.svg)
-![](figures/benchmarks_poisson.svg)
+![](benchmarks/lets-plot-images/benchmarks_ols.svg)
+![](benchmarks/lets-plot-images/benchmarks_poisson.svg)
 
 ## Quickstart
 
