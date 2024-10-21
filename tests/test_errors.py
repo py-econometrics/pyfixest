@@ -657,3 +657,30 @@ def test_errors_panelview():
 def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
     with pytest.raises(expected_exception, match=error_message):
         pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
+
+
+def test_separation_check_validations():
+    data = pd.DataFrame(
+        {
+            "Y": [1, 2, 3],
+            "X1": [4, 5, 6],
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check=["a"])
+
+    with pytest.raises(
+        TypeError,
+        match="The function argument `separation_check` must be of type list.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check="fe")
+
+    with pytest.raises(
+        ValueError,
+        match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])

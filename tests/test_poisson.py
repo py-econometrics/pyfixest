@@ -75,9 +75,6 @@ def test_separation():
         fixed_effects = data.columns[
             data.columns.str.startswith("id")
         ]  # fixed effects id1,...,id2
-        if data.separated.sum() == 0:
-            # TODO: do not skip but update pytest.warn to confirm that no warning is produced
-            continue
 
         if regressors.empty:
             # TODO: formulae with just a constant term and fixed effects throw error in FIT.get_fit(), e.g., for 03.csv and Y ~ 1 | id1 + id2 + id3?
@@ -90,15 +87,18 @@ def test_separation():
         else:
             fml += f" | {' + '.join(fixed_effects)}"
 
-        print("Testing separation check for", fn)
         with (
             pytest.warns(
                 UserWarning,
                 match=f"{data.separated.sum()} observations removed because of separation.",
-            ),
+            ) as record,
             contextlib.suppress(Exception),
         ):
-            pf.fepois(fml, data=data, separation_check=["ir"])  # noqa: F841
+            pf.fepois(fml, data=data, separation_check=["ir"])
+
+        # if no separation, no warning is raised
+        if data.separated.sum() == 0:
+            assert len(record) == 0
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
