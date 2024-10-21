@@ -26,6 +26,7 @@ def test_feols_args():
     - copy_data
     - store_data
     - fixef_tol
+    - solver
     """
     df = pf.get_data()
 
@@ -43,6 +44,11 @@ def test_feols_args():
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
 
+    fit4 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.solve")
+    fit5 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.lstsq")
+
+    assert (fit4.coef() == fit5.coef()).all()
+
 
 def test_fepois_args():
     """
@@ -52,6 +58,7 @@ def test_fepois_args():
     - copy_data
     - store_data
     - fixef_tol
+    - solver
     """
     df = pf.get_data(model="Fepois")
 
@@ -68,6 +75,11 @@ def test_fepois_args():
 
     assert fit1.coef().xs("X1") != fit3.coef().xs("X1")
     assert np.abs(fit1.coef().xs("X1") - fit3.coef().xs("X1")) < 0.01
+
+    fit4 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.solve")
+    fit5 = pf.feols(fml="Y ~ X1 | f1 + f2", data=df, solver="np.linalg.lstsq")
+
+    np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
 def test_lean():

@@ -187,6 +187,7 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
+        solver: str = "np.linalg.solve",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -203,6 +204,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        solver: str, default is 'np.linalg.solve'.
+            Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -265,6 +268,7 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
+                            solver=solver,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -288,6 +292,7 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
+                            solver=solver,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -311,6 +316,7 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
+                            solver=solver,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -337,6 +343,7 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
+                            solver=solver,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
