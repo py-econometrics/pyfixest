@@ -137,9 +137,9 @@ class Fepois(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-                self._fe is not None
-                and self.separation_check is not None
-                and self.separation_check  # not an empty list
+            self._fe is not None
+            and self.separation_check is not None
+            and self.separation_check  # not an empty list
         ):
             na_separation = _check_for_separation(
                 Y=self._Y,
