@@ -23,21 +23,23 @@ stats = importr("stats")
 
 def test_separation():
     """Test separation detection."""
-    y = np.array([0, 0, 0, 1, 2, 3])
-    df1 = np.array(["a", "a", "b", "b", "b", "c"])
-    df2 = np.array(["c", "c", "d", "d", "d", "e"])
-    x = np.random.normal(0, 1, 6)
-
-    df = pd.DataFrame({"Y": y, "fe1": df1, "fe2": df2, "x": x})
-
+    example1 = pd.DataFrame.from_dict(
+        {
+            "Y": [0, 0, 0, 1, 2, 3],
+            "fe1": ["a", "a", "b", "b", "b", "c"],
+            "fe2": ["c", "c", "d", "d", "d", "e"],
+            "X": np.random.normal(0, 1, 6)
+        }
+    )
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        fepois("Y ~ X  | fe1", data=df, vcov="hetero", separation_check=["fe"])  # noqa: F841
+        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
 
     if False:
         # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
         # disabled because we currently do not perform separation checks if no fixed effects are provided
+        # TODO: enable once separation checks without fixed effects are enabled
         example2 = pd.DataFrame.from_dict(
             {
                 "Y": [0, 0, 0, 1, 2, 3],
