@@ -25,6 +25,7 @@ def feols(
     store_data: bool = True,
     lean: bool = False,
     weights_type: str = "aweights",
+    solver: str = "np.linalg.solve",
     use_compression: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
@@ -104,6 +105,10 @@ def feols(
         Options include `aweights` or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -396,7 +401,7 @@ def feols(
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, collin_tol=collin_tol)
+    fixest._estimate_all_models(vcov, collin_tol=collin_tol, solver=solver)
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -415,6 +420,7 @@ def fepois(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = ["fe"],
+    solver: str = "np.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -469,6 +475,10 @@ def fepois(
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default.
+
+    solver : str, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -595,6 +605,7 @@ def fepois(
         iwls_maxiter=iwls_maxiter,
         collin_tol=collin_tol,
         separation_check=separation_check,
+        solver=solver,
     )
 
     if fixest._is_multiple_estimation:
