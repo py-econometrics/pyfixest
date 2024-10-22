@@ -444,7 +444,7 @@ def etable(
             res_all.columns = pd.MultiIndex.from_arrays(cindex)
 
         # Generate generic note string if none is provided
-        if notes is None:
+        if notes == "":
             if type == "gt":
                 notes = (
                     f"Significance levels: * p < {signif_code[2]}, ** p < {signif_code[1]}, *** p < {signif_code[0]}. "
