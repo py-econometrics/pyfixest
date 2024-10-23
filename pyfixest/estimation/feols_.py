@@ -13,6 +13,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.decomposition import LinearMediation
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -240,6 +241,7 @@ class Feols:
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
             self._supports_wildboottest = False
+        self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -1471,6 +1473,43 @@ class Feols:
             qk=qk,
             n_splits=n_splits,
         )
+
+    def decompose(self, param, type="gelbach", reps=1000, seed=None):
+        """
+        Implement the Gelbach (2016) decomposition method for mediation analysis.
+
+        Parameters
+        ----------
+        param : str
+            The name of the parameter to decompose.
+        type : str, optional
+            The type of decomposition method to use. Defaults to "gelbach".
+        reps : int, optional
+            The number of bootstrap iterations to run. Defaults to 1000.
+        seed : int, optional
+            An integer to set the random seed. Defaults to None.
+        """
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+
+        param_idx = self._coefnames.index(param)
+        X_demean = np.atleast_2d(self._X[:, param_idx]).T
+        W_demean = np.atleast_2d(self._X[:, ~param_idx]).T
+        Y_demean = self._Y
+
+        if type == "gelbach":
+            med = LinearMediation()
+            med.fit(X=X_demean, W=W_demean, y=Y_demean)
+            med.bootstrap(rng=rng)
+            med.summary()
+
+        else:
+            raise ValueError(
+                "Only 'gelbach' method is supported for mediation analysis."
+            )
+
+        return med.summary_table
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06

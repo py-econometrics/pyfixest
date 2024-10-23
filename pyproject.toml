@@ -37,7 +37,8 @@ dev = [
   "pyarrow>=14.0.0",
   "pre-commit==3.6.0",
   "doubleml==0.7.1",
-  "wildboottest>=0.3.2", "ipykernel>=6.29.5,<7",
+  "wildboottest>=0.3.2",
+  "ipykernel>=6.29.5,<7",
 ]
 
 docs = [

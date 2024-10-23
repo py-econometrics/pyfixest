@@ -169,6 +169,7 @@ class Feiv(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
 
     def wls_transform(self) -> None:
         "Transform variables for WLS estimation."
