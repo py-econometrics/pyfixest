@@ -1,6 +1,7 @@
 # from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 class LinearMediation:
@@ -53,8 +54,8 @@ class LinearMediation:
         # self._bootstrapped = Parallel(n_jobs=-1)(
         #    delayed(self._bootstrap)() for _ in range(B)
         # )
-        self._bootstrapped = [self._bootstrap(rng=rng) for _ in range(B)]
-        self._bootstrapped = np.c_[self._bootstrapped]
+
+        self._bootstrapped = np.c_[[self._bootstrap(rng=rng) for _ in tqdm(range(B))]]
         self.ci = np.percentile(
             self._bootstrapped, 100 * np.array([alpha / 2, 1 - alpha / 2]), axis=0
         )
