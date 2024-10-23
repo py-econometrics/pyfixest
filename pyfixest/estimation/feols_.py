@@ -1474,7 +1474,7 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def decompose(self, param, type="gelbach", reps=1000, seed=None):
+    def decompose(self, param, agg=True, type="gelbach", reps=1000, seed=None):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
@@ -1494,14 +1494,17 @@ class Feols:
         )
 
         param_idx = self._coefnames.index(param)
-        X_demean = np.atleast_2d(self._X[:, param_idx]).T
-        W_demean = np.atleast_2d(self._X[:, ~param_idx]).T
+        mask = np.ones(self._X.shape[1], dtype=bool)
+        mask[param_idx] = False
+
+        X_demean = (self._X[:, ~param_idx]).reshape((self._N, np.sum(not mask)))
+        W_demean = (self._X[:, mask]).reshape((self._N, np.sum(mask)))
         Y_demean = self._Y
 
         if type == "gelbach":
-            med = LinearMediation()
+            med = LinearMediation(agg=agg, param=param, coefnames=self._coefnames)
             med.fit(X=X_demean, W=W_demean, y=Y_demean)
-            med.bootstrap(rng=rng)
+            med.bootstrap(rng=rng, B=reps)
             med.summary()
 
         else:

@@ -12,7 +12,12 @@ class LinearMediation:
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
     """
 
-    def __init__(self):
+    def __init__(self, agg, param, coefnames):
+        self.param = param
+        self.coefnames = coefnames
+        # Get the names of the mediator variables
+        self.mediator_names = [name for name in coefnames if param not in name]
+        self.agg = agg
         pass
 
     def fit(self, X, W, y, store=True):
@@ -34,18 +39,27 @@ class LinearMediation:
             self.beta_tilde = np.linalg.lstsq(X, y, rcond=1)[0]
             self.delta_tilde = np.linalg.lstsq(X, W, rcond=1)[0]
             self.gamma_tilde = np.linalg.lstsq(W, y, rcond=1)[0]
-            self.total_effect, self.mediated_effect = (
-                self.beta_tilde,
-                self.delta_tilde @ self.gamma_tilde,
+            self.total_effect = self.beta_tilde.flatten()
+            self.mediated_effect = (
+                (self.delta_tilde @ self.gamma_tilde).flatten()
+                if self.agg
+                else self.delta_tilde.flatten() * self.gamma_tilde.flatten()
             )
-            self.direct_effect = self.total_effect - self.mediated_effect
+            self.direct_effect = self.total_effect - np.sum(self.mediated_effect)
         else:
             beta_tilde = np.linalg.lstsq(X, y, rcond=1)[0]
             delta_tilde = np.linalg.lstsq(X, W, rcond=1)[0]
             gamma_tilde = np.linalg.lstsq(W, y, rcond=1)[0]
-            total_effect, mediated_effect = beta_tilde, delta_tilde @ gamma_tilde
-            direct_effect = total_effect - mediated_effect
-            return np.c_[total_effect, mediated_effect, direct_effect].flatten()
+            total_effect = beta_tilde.flatten()
+            mediated_effect = (
+                (delta_tilde @ gamma_tilde).flatten()
+                if self.agg
+                else delta_tilde.flatten() * gamma_tilde.flatten()
+            )
+            direct_effect = total_effect - np.sum(mediated_effect)
+            return np.concatenate(
+                [total_effect, mediated_effect, direct_effect]
+            ).flatten()
 
     def bootstrap(self, rng, B=1_000, alpha=0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -62,11 +76,15 @@ class LinearMediation:
 
     def summary(self):
         "Summary Table for Total, Mediated and Direct Effects."
-        effects = np.c_[self.total_effect, self.mediated_effect, self.direct_effect]
-        summary_arr = np.concatenate([effects, self.ci], axis=0)
+        effects = np.concatenate(
+            [self.total_effect, self.mediated_effect, self.direct_effect], axis=0
+        )
+        summary_arr = np.concatenate([effects.reshape(1, -1), self.ci], axis=0)
         self.summary_table = pd.DataFrame(
             summary_arr,
-            columns=["Total Effect", "Mediated Effect", "Direct Effect"],
+            columns=["Total Effect:"]
+            + [f"Mediated Effect: {var}" for var in self.mediator_names]
+            + [f"Direct Effect: {self.param}"],
             index=[
                 "Estimate",
                 f"CI Lower ({self.alpha/2})",
