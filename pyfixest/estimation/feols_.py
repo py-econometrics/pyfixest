@@ -1474,7 +1474,16 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def decompose(self, param, agg=True, type="gelbach", reps=1000, seed=None):
+    def decompose(
+        self,
+        param: str,
+        agg: bool = True,
+        type: str = "gelbach",
+        cluster: Optional[str] = None,
+        reps: int = 1000,
+        seed: Optional[int] = None,
+        nthreads: Optional[int] = None,
+    ):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
@@ -1484,6 +1493,7 @@ class Feols:
             The name of the parameter to decompose.
         type : str, optional
             The type of decomposition method to use. Defaults to "gelbach".
+        cluster: Optional
         reps : int, optional
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
@@ -1497,12 +1507,26 @@ class Feols:
         mask = np.ones(self._X.shape[1], dtype=bool)
         mask[param_idx] = False
 
-        X_demean = (self._X[:, ~param_idx]).reshape((self._N, np.sum(not mask)))
+        cluster_df: Optional[pd.Series] = None
+        if cluster is not None:
+            cluster_df = self._data[cluster]
+        elif self._is_clustered:
+            cluster_df = self._data[self._clustervar[0]]
+        else:
+            cluster_df = None
+
+        X_demean = (self._X[:, ~param_idx]).reshape((self._N, np.sum(~mask)))
         W_demean = (self._X[:, mask]).reshape((self._N, np.sum(mask)))
         Y_demean = self._Y
 
         if type == "gelbach":
-            med = LinearMediation(agg=agg, param=param, coefnames=self._coefnames)
+            med = LinearMediation(
+                agg=agg,
+                param=param,
+                coefnames=self._coefnames,
+                cluster_df=cluster_df,
+                nthreads=nthreads,
+            )
             med.fit(X=X_demean, W=W_demean, y=Y_demean)
             med.bootstrap(rng=rng, B=reps)
             med.summary()

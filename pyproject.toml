@@ -23,6 +23,7 @@ dependencies = [
   "great-tables>=0.10.0",
   "numpy>=1.19.0",
   "jinja2>=3.1.4,<4",
+  "joblib",
 ]
 
 [tool.pixi.feature.dev.dependencies]
