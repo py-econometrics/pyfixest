@@ -106,6 +106,8 @@ class FeolsCompressed(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
+
         if weights is not None:
             raise ValueError(
                 "weights argument needs to be None. WLS not supported for compressed regression."
