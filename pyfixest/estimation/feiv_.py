@@ -231,8 +231,7 @@ class Feiv(Feols):
         self._beta_hat = self.solve_ols(A, B, _solver)
 
         # Predicted values and residuals
-        self._Y_hat_link = self._X @ self._beta_hat
-        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+        self._get_residuals_and_predictors()
 
         # Compute scores and hessian
         self._scores = self._Z * self._u_hat[:, None]
