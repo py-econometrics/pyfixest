@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Optional, Union, Literal, get_args
 
 import numba as nb
 import numpy as np
@@ -40,6 +40,7 @@ from pyfixest.utils.dev_utils import (
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
+prediction_type = Literal["response", "link"]
 
 class Feols:
     """
@@ -80,9 +81,9 @@ class Feols:
         Indicates whether instrumental variables are used, initialized as False.
 
     _Y : np.ndarray
-        The dependent variable array.
+        The demeaned dependent variable, a two-dimensional numpy array.
     _X : np.ndarray
-        The independent variables array.
+        The demeaned independent variables, a two-dimensional numpy array.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -128,9 +129,9 @@ class Feols:
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
-        Predicted values of the dependent variable.
+        Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.
     _Y_hat_response : np.ndarray
-        Response predictions of the model.
+        Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
     _scores : np.ndarray
@@ -472,8 +473,9 @@ class Feols:
 
             self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
-            self._Y_hat_link = self._X @ self._beta_hat
-            self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+            self._u_hat = self._Y.flatten() -  (self._X @ self._beta_hat).flatten()
+            self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
+            self._Y_hat_response = self._Y_hat_link
 
             self._scores = _X * self._u_hat[:, None]
             self._hessian = self._tZX.copy()
@@ -1550,7 +1552,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: str = "link",
+        type: prediction_type = "link",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1590,9 +1592,15 @@ class Feols:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
+        valid_types = get_args(prediction_type)
+        if type not in valid_types:
+            raise ValueError(f"Invalid prediction type. Expecting one of {valid_types}. Got {type}")
 
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self.resid()
+            if type == "link" or self._method == 'feols':
+                return self._Y_hat_link
+            else:
+                return self._Y_hat_response
 
         newdata = _polars_to_pandas(newdata).reset_index(drop=False)
 
