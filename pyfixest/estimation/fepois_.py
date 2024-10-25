@@ -392,7 +392,6 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-
         if self._has_fixef:
             raise NotImplementedError(
                 "Prediction with fixed effects is not yet implemented for Poisson regression."

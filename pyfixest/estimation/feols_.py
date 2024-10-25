@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union, Literal, get_args
+from typing import Literal, Optional, Union, get_args
 
 import numba as nb
 import numpy as np
@@ -452,6 +452,11 @@ class Feols:
         else:
             raise ValueError(f"Solver {solver} not supported.")
 
+    def _get_residuals_and_predictors(self) -> None:
+        self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
+        self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
+        self._Y_hat_response = self._Y_hat_link
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -473,9 +478,7 @@ class Feols:
 
             self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
-            self._u_hat = self._Y.flatten() -  (self._X @ self._beta_hat).flatten()
-            self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
-            self._Y_hat_response = self._Y_hat_link
+            self._get_residuals_and_predictors()
 
             self._scores = _X * self._u_hat[:, None]
             self._hessian = self._tZX.copy()
