@@ -452,8 +452,7 @@ class Feols:
         else:
             raise ValueError(f"Solver {solver} not supported.")
 
-    def _get_residuals_and_predictors(self) -> None:
-        self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
+    def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
 
@@ -478,7 +477,7 @@ class Feols:
 
             self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
 
-            self._get_residuals_and_predictors()
+            self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
             self._scores = _X * self._u_hat[:, None]
             self._hessian = self._tZX.copy()
@@ -486,6 +485,8 @@ class Feols:
             # IV attributes, set to None for OLS, Poisson
             self._tXZ = np.array([])
             self._tZZinv = np.array([])
+
+        self._get_predictors()
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
