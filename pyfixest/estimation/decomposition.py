@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -12,7 +14,17 @@ class LinearMediation:
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
     """
 
-    def __init__(self, agg, param, coefnames, nthreads: int = -1, cluster_df=None):
+    def __init__(
+        self,
+        agg: bool,
+        param: str,
+        coefnames: list[str],
+        nthreads: int = -1,
+        cluster_df: Optional[pd.Series] = None,
+    ):
+        self.cluster_dict: Optional[dict[Any, Any]]
+        self.unique_clusters = Optional[np.ndarray[Any, Any]]
+
         self.param = param
 
         self.cluster_df = cluster_df
@@ -32,14 +44,15 @@ class LinearMediation:
         self.agg = agg
         self.nthreads = nthreads
 
-    def fit(self, X, W, y, store=True):
-        """Fit Linear Mediation Model
-        Args:
-            X (2D Array): Treatment variable matrix (N x K)
-            W (2D Array): Mediator variable matrix (N x L)
-            y (1D Array): Outcome variable array (N x 1)
-            store (bool, optional): Store estimates in class? Defaults to True. Same method is used for bootstrapping with False.
-        """
+        # prepare dicts for cluster bootstrapping
+
+
+        self.X_dict: dict[Any, Any] = {}
+        self.W_dict: dict[Any, Any] = {}
+        self.y_dict: dict[Any, Any] = {}
+
+    def fit(self, X: np.ndarray, W: np.ndarray, y: np.ndarray, store: bool = True):
+        "Fit Linear Mediation Model."
         if store:
             self.X = X
             self.W = W
@@ -58,6 +71,14 @@ class LinearMediation:
                 else self.delta_tilde.flatten() * self.gamma_tilde.flatten()
             )
             self.direct_effect = self.total_effect - np.sum(self.mediated_effect)
+
+            # prepare bootstrap in first iteration
+            for g in self.unique_clusters:
+                cluster_idx = np.where(self.cluster_df == g)[0]
+                self.X_dict[g] = self.X[cluster_idx]
+                self.W_dict[g] = self.W[cluster_idx]
+                self.y_dict[g] = self.y[cluster_idx]
+
         else:
             beta_tilde = np.linalg.lstsq(X, y, rcond=1)[0]
             delta_tilde = np.linalg.lstsq(X, W, rcond=1)[0]
@@ -73,13 +94,10 @@ class LinearMediation:
                 [total_effect, mediated_effect, direct_effect]
             ).flatten()
 
-    def bootstrap(self, rng, B=1_000, alpha=0.05):
+    def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
         self.alpha = alpha
         self.B = B
-        # self._bootstrapped = Parallel(n_jobs=-1)(
-        #    delayed(self._bootstrap)() for _ in range(B)
-        # )
 
         self._bootstrapped = np.c_[
             Parallel(n_jobs=self.nthreads)(
@@ -90,7 +108,8 @@ class LinearMediation:
             self._bootstrapped, 100 * np.array([alpha / 2, 1 - alpha / 2]), axis=0
         )
 
-    def summary(self):
+    def summary(self) -> pd.DataFrame:
+
         "Summary Table for Total, Mediated and Direct Effects."
         effects = np.concatenate(
             [self.total_effect, self.mediated_effect, self.direct_effect], axis=0
@@ -122,7 +141,7 @@ class LinearMediation:
 
         return self.summary_table
 
-    def _bootstrap(self, rng):
+    def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
         if self.cluster_df is not None:
             idx = rng.choice(
@@ -133,12 +152,11 @@ class LinearMediation:
             W_list = []
             y_list = []
 
-            for cluster in idx:
-                cluster_idx = np.where(self.cluster_df == cluster)[0]
+            for g in idx:
 
-                X_list.append(self.X[cluster_idx])
-                W_list.append(self.W[cluster_idx])
-                y_list.append(self.y[cluster_idx])
+                X_list.append(self.X_dict[g])
+                W_list.append(self.W_dict[g])
+                y_list.append(self.y_dict[g])
 
             X = np.concatenate(X_list)
             W = np.concatenate(W_list)

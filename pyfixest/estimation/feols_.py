@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import numba as nb
 import numpy as np
@@ -40,6 +40,8 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+
+decomposition_type = Literal["gelbach"]
 
 
 class Feols:
@@ -1478,7 +1480,7 @@ class Feols:
         self,
         param: str,
         agg: bool = True,
-        type: str = "gelbach",
+        type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
         reps: int = 1000,
         seed: Optional[int] = None,
@@ -1499,9 +1501,20 @@ class Feols:
         seed : int, optional
             An integer to set the random seed. Defaults to None.
         """
+
+        supported_decomposition_types = ["gelbach"]
+        if type not in supported_decomposition_types:
+            raise ValueError(
+                f"'type' {type} is not in supported types {supported_decomposition_types}."
+            )
+
+        nthreads_int = -1 if nthreads is None else nthreads
+
         rng = (
             np.random.default_rng(seed) if seed is not None else np.random.default_rng()
         )
+
+        param_deparsed = param.split("+")
 
         param_idx = self._coefnames.index(param)
         mask = np.ones(self._X.shape[1], dtype=bool)
@@ -1516,25 +1529,24 @@ class Feols:
             cluster_df = None
 
         X_demean = (self._X[:, ~param_idx]).reshape((self._N, np.sum(~mask)))
+        if not self._has_fixef: # add intercept (not needed for W, already inclueded if no fixed effect)
+            X_demean = np.concatenate([np.ones((self._N, 1)), X_demean])
         W_demean = (self._X[:, mask]).reshape((self._N, np.sum(mask)))
+        if W_demean.shape[1] == 0:
+            raise ValueError("W_demean has no columns, but we expected at least one column (else there is no mediator).")
+
         Y_demean = self._Y
 
-        if type == "gelbach":
-            med = LinearMediation(
-                agg=agg,
-                param=param,
-                coefnames=self._coefnames,
-                cluster_df=cluster_df,
-                nthreads=nthreads,
-            )
-            med.fit(X=X_demean, W=W_demean, y=Y_demean)
-            med.bootstrap(rng=rng, B=reps)
-            med.summary()
-
-        else:
-            raise ValueError(
-                "Only 'gelbach' method is supported for mediation analysis."
-            )
+        med = LinearMediation(
+            agg=agg,
+            param=param,
+            coefnames=self._coefnames,
+            cluster_df=cluster_df,
+            nthreads=nthreads_int,
+        )
+        med.fit(X=X_demean, W=W_demean, y=Y_demean)
+        med.bootstrap(rng=rng, B=reps)
+        med.summary()
 
         return med.summary_table
 
