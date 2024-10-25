@@ -281,7 +281,9 @@ class Feiv(Feols):
             self._pi_hat = model1._beta_hat
 
             # Use fitted values from the first stage
-            self._X_hat = model1._X @ model1._beta_hat  # note that model1._X is demeaned
+            self._X_hat = (
+                model1._X @ model1._beta_hat
+            )  # note that model1._X is demeaned
 
             # Residuals from the first stage
             self._v_hat = model1._u_hat

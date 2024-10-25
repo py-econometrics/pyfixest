@@ -42,6 +42,7 @@ from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
 
 prediction_type = Literal["response", "link"]
 
+
 class Feols:
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -1598,10 +1599,12 @@ class Feols:
             )
         valid_types = get_args(prediction_type)
         if type not in valid_types:
-            raise ValueError(f"Invalid prediction type. Expecting one of {valid_types}. Got {type}")
+            raise ValueError(
+                f"Invalid prediction type. Expecting one of {valid_types}. Got {type}"
+            )
 
         if newdata is None:
-            if type == "link" or self._method == 'feols':
+            if type == "link" or self._method == "feols":
                 return self._Y_hat_link
             else:
                 return self._Y_hat_response
