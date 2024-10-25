@@ -292,8 +292,8 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu
-        self._Y_hat_link = eta
+        self._Y_hat_response = mu.flatten()
+        self._Y_hat_link = eta.flatten()
         # (Y - self._Y_hat)
         # needed for the calculation of the vcov
 
