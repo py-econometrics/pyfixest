@@ -7,6 +7,7 @@ from pyfixest.estimation.detect_singletons_ import (
 from pyfixest.estimation.estimation import (
     feols,
     fepois,
+    feglm
 )
 from pyfixest.estimation.feiv_ import (
     Feiv,
@@ -17,6 +18,11 @@ from pyfixest.estimation.feols_ import (
 from pyfixest.estimation.fepois_ import (
     Fepois,
 )
+
+from pyfixest.estimation.felogit_ import (
+    Felogit
+)
+
 from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
@@ -31,6 +37,7 @@ from pyfixest.estimation.multcomp import (
 __all__ = [
     "feols",
     "fepois",
+    "feglm",
     "bonferroni",
     "rwolf",
     "demean",
