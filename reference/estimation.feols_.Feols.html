@@ -480,12 +480,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>_Y</td>
 <td>np.ndarray</td>
-<td>The dependent variable array.</td>
+<td>The demeaned dependent variable, a two-dimensional numpy array.</td>
 </tr>
 <tr class="even">
 <td>_X</td>
 <td>np.ndarray</td>
-<td>The independent variables array.</td>
+<td>The demeaned independent variables, a two-dimensional numpy array.</td>
 </tr>
 <tr class="odd">
 <td>_X_is_empty</td>
@@ -600,12 +600,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>_Y_hat_link</td>
 <td>np.ndarray</td>
-<td>Predicted values of the dependent variable.</td>
+<td>Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.</td>
 </tr>
 <tr class="even">
 <td>_Y_hat_response</td>
 <td>np.ndarray</td>
-<td>Response predictions of the model.</td>
+<td>Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).</td>
 </tr>
 <tr class="odd">
 <td>_u_hat</td>
