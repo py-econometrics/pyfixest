@@ -10,7 +10,7 @@ from pyfixest.errors import (
     NotImplementedError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols, prediction_type
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
@@ -32,11 +32,11 @@ class Fepois(Feols):
 
     Attributes
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional numpy array.
-    X : np.ndarray
-        Independent variables, a two-dimensional numpy array.
-    fe : np.ndarray
+    _Y : np.ndarray
+        The demeaned dependent variable, a two-dimensional numpy array.
+    _X : np.ndarray
+        The demeaned independent variables, a two-dimensional numpy array.
+    _fe : np.ndarray
         Fixed effects, a two-dimensional numpy array or None.
     weights : np.ndarray
         Weights, a one-dimensional numpy array or None.
@@ -292,12 +292,12 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu
-        self._Y_hat_link = eta
+        self._Y_hat_response = mu.flatten()
+        self._Y_hat_link = eta.flatten()
         # (Y - self._Y_hat)
         # needed for the calculation of the vcov
 
-        # updat for inference
+        # update for inference
         self._weights = mu_old
         self._irls_weights = mu
         # if only one dim
@@ -350,7 +350,7 @@ class Fepois(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: str = "link",
+        type: prediction_type = "link",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -387,17 +387,12 @@ class Fepois(Feols):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
-
-
         Returns
         -------
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        _Xbeta = self._Xbeta.flatten()
-        _has_fixef = self._has_fixef
-
-        if _has_fixef:
+        if self._has_fixef:
             raise NotImplementedError(
                 "Prediction with fixed effects is not yet implemented for Poisson regression."
             )
@@ -405,14 +400,7 @@ class Fepois(Feols):
             raise NotImplementedError(
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
-
-        # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
-        if type == "link":
-            return _Xbeta  # np.exp(_Xbeta)
-        elif type == "response":
-            return np.exp(_Xbeta)
-        else:
-            raise ValueError("type must be one of 'response' or 'link'.")
+        return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 
 def _check_for_separation(
