@@ -242,6 +242,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://dsliwka.github.io/"><img src="https://avatars.githubusercontent.com/u/49401450?v=4?s=100" width="100px;" alt="Dirk Sliwka"/><br /><sub><b>Dirk Sliwka</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=dsliwka" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=dsliwka" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/daltonm-bls"><img src="https://avatars.githubusercontent.com/u/78225214?v=4?s=100" width="100px;" alt="daltonm-bls"/><br /><sub><b>daltonm-bls</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Adaltonm-bls" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/marcandre259"><img src="https://avatars.githubusercontent.com/u/19809475?v=4?s=100" width="100px;" alt="Marc-André"/><br /><sub><b>Marc-André</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=marcandre259" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/kylebutts"><img src="https://avatars.githubusercontent.com/u/19961439?v=4?s=100" width="100px;" alt="Kyle F Butts"/><br /><sub><b>Kyle F Butts</b></sub></a><br /><a href="#data-kylebutts" title="Data">🔣</a></td>
     </tr>
   </tbody>
 </table>
