@@ -13,7 +13,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.decomposition import LinearMediation
+from pyfixest.estimation.decomposition import GelbachDecomposition
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -1501,7 +1501,6 @@ class Feols:
         seed : int, optional
             An integer to set the random seed. Defaults to None.
         """
-
         supported_decomposition_types = ["gelbach"]
         if type not in supported_decomposition_types:
             raise ValueError(
@@ -1514,12 +1513,6 @@ class Feols:
             np.random.default_rng(seed) if seed is not None else np.random.default_rng()
         )
 
-        param_deparsed = param.split("+")
-
-        param_idx = self._coefnames.index(param)
-        mask = np.ones(self._X.shape[1], dtype=bool)
-        mask[param_idx] = False
-
         cluster_df: Optional[pd.Series] = None
         if cluster is not None:
             cluster_df = self._data[cluster]
@@ -1528,23 +1521,17 @@ class Feols:
         else:
             cluster_df = None
 
-        X_demean = (self._X[:, ~param_idx]).reshape((self._N, np.sum(~mask)))
-        if not self._has_fixef: # add intercept (not needed for W, already inclueded if no fixed effect)
-            X_demean = np.concatenate([np.ones((self._N, 1)), X_demean])
-        W_demean = (self._X[:, mask]).reshape((self._N, np.sum(mask)))
-        if W_demean.shape[1] == 0:
-            raise ValueError("W_demean has no columns, but we expected at least one column (else there is no mediator).")
-
-        Y_demean = self._Y
-
-        med = LinearMediation(
+        med = GelbachDecomposition(
             agg=agg,
             param=param,
             coefnames=self._coefnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
         )
-        med.fit(X=X_demean, W=W_demean, y=Y_demean)
+        med.fit(
+            X=self._X,
+            Y=self._Y,
+        )
         med.bootstrap(rng=rng, B=reps)
         med.summary()
 
