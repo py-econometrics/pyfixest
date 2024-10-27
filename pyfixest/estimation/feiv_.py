@@ -231,9 +231,9 @@ class Feiv(Feols):
         B = H @ self._tZy
         self._beta_hat = self.solve_ols(A, B, _solver)
 
-        # Predicted values and residuals
-        self._Y_hat_link = self._X @ self._beta_hat
-        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+        # residuals
+        self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
+        self._get_predictors()
 
         # Compute scores and hessian
         self._scores = self._Z * self._u_hat[:, None]
@@ -282,7 +282,9 @@ class Feiv(Feols):
             self._pi_hat = model1._beta_hat
 
             # Use fitted values from the first stage
-            self._X_hat = model1._Y_hat_link
+            self._X_hat = (
+                model1._X @ model1._beta_hat
+            )  # note that model1._X is demeaned
 
             # Residuals from the first stage
             self._v_hat = model1._u_hat

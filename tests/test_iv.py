@@ -219,7 +219,7 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     _F_pval_iv = fit_iv._p_value_1st_stage
 
     _pi_hat_ols = fit_ols._beta_hat
-    _X_hat_ols = fit_ols._Y_hat_link
+    _X_hat_ols = fit_ols._X @ fit_ols._beta_hat
     _v_hat_ols = fit_ols._u_hat
     _F_stat_ols = fit_ols._f_statistic
     _F_pval_ols = fit_ols._p_value
