@@ -10,7 +10,6 @@ from pyfixest.estimation.literals import vcov_type_options
 from pyfixest.report.visualize import _coefplot
 
 
-
 class LPDID(DID):
     """
     A class used to represent the Local Projections Diff-in-Diff Estimator.
@@ -221,7 +220,7 @@ def _lpdid_estimate(
         Variable name for calendar period.
     gname:  str
         unit-specific time of initial treatment.
-    vcov: str
+    vcov: vcov_type_options, dict[str, str], None
         The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
         Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
         {"CRV3": "idname"}. You can pass anything that is accepted by the vcov
