@@ -7,7 +7,7 @@ fixef_rm_options = Literal["singleton", "none"]
 solver_options = Literal["np.linalg.solve", "np.linalg.lstsq"]
 
 
-def validate_literal_argument(arg: Any, literal: Literal) -> None:
+def validate_literal_argument(arg: Any, literal: Literal[str]) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -19,7 +19,7 @@ def validate_literal_argument(arg: Any, literal: Literal) -> None:
     ----------
     arg : Any
         The argument to validate.
-    literal : Literal[ValidTypes]
+    literal : Literal[str]
         A Literal type that defines the allowed values for `arg`.
 
     Raises
