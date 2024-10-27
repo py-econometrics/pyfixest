@@ -2,10 +2,10 @@ from typing import Optional, Union
 
 import pandas as pd
 
-from pyfixest.estimation.literals import vcov_type_options
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
+from pyfixest.estimation.literals import vcov_type_options
 
 
 def event_study(

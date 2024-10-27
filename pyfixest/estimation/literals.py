@@ -1,4 +1,4 @@
-from typing import Literal, Any, get_args
+from typing import Any, Literal, get_args
 
 prediction_type = Literal["response", "link"]
 vcov_type_options = Literal["iid", "hetero", "HC1", "HC2", "HC3"]

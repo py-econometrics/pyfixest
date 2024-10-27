@@ -41,5 +41,5 @@ __all__ = [
     "Fepois",
     "Feiv",
     "FixestMulti",
-    "literals"
+    "literals",
 ]
