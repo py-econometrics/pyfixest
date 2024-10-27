@@ -1500,11 +1500,30 @@ class Feols:
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
             An integer to set the random seed. Defaults to None.
+
+        Examples
+        ---------
+
+        ```{python}
+        # we start by fitting the **long** model
+        import pyfixest as pf
+        data = pf.get_data()
+        fit_long = pf.feols("Y ~ X1 + f1 + f2", data = data)
+
+        # we are interested in how the effect of X1 on Y changes when including
+        # covariates X2, f1, f2
+        fit.decompose(param = "X1")
+        ```
         """
         supported_decomposition_types = ["gelbach"]
         if type not in supported_decomposition_types:
             raise ValueError(
                 f"'type' {type} is not in supported types {supported_decomposition_types}."
+            )
+
+        if self._has_fixef:
+            raise ValueError(
+                "The Gelbach Decomposition does not support fixed effects."
             )
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1528,10 +1547,12 @@ class Feols:
             cluster_df=cluster_df,
             nthreads=nthreads_int,
         )
+
         med.fit(
             X=self._X,
             Y=self._Y,
         )
+
         med.bootstrap(rng=rng, B=reps)
         med.summary()
 
