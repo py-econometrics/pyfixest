@@ -7,7 +7,6 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.dev_utils import _extract_variable_level
 from pyfixest.utils.set_rpy2_path import update_r_paths
@@ -30,7 +29,15 @@ def data():
 
 
 @pytest.mark.parametrize(
-    "fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2", "Y ~ 1 | f1"]
+    "fml",
+    [
+        "Y ~ X1",
+        "Y~X1 |f1",
+        "Y ~ X1 | f1 + f2",
+        "Y ~ 1 | f1",
+        "Y ~ X1*X2",
+        "Y ~ X1*X2 | f1",
+    ],
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_ols_prediction_internally(data, fml, weights):
@@ -58,14 +65,11 @@ def test_ols_prediction_internally(data, fml, weights):
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
-    # fepois NotImplementedError(s)
-    fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
+        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)
-
-    # fepois with fixed effect
-    fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
+        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict()
 
 
