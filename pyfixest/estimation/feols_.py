@@ -1500,6 +1500,7 @@ class Feols:
         _method = self._method
         _fml = self._fml
         _data = self._data
+        _weights_sqrt = np.sqrt(self._weights).flatten()
 
         if not _has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
@@ -1522,23 +1523,22 @@ class Feols:
         Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
             Y = Y.to_numpy()
-            uhat = Y
-            if self._has_weights:
-                uhat = uhat * np.sqrt(self._weights)
+            uhat = Y.flatten()
 
         else:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
             Y = Y.to_numpy().flatten().astype(np.float64)
             X = X.to_numpy()
             uhat = (Y - X @ self._beta_hat).flatten()
-            uhat = np.sqrt(self._weights).flatten() * uhat
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
+
         if self._has_weights:
-            weights_array = np.sqrt(self._weights).flatten()
-            weights_diag = diags(weights_array, 0)
+            uhat *= _weights_sqrt
+            weights_diag = diags(_weights_sqrt, 0)
             D2 = weights_diag.dot(D2)
+
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         res: dict[str, dict[str, float]] = {}
