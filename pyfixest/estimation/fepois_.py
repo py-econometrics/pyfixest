@@ -392,11 +392,13 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        if newdata is not None:
-            raise NotImplementedError(
-                "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
-            )
-        return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+        if newdata is not None and self._has_fixef:
+            raise NotImplementedError()
+
+        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+        if newdata is not None and type == "response":
+            y_hat = np.exp(y_hat)
+        return y_hat
 
 
 def _check_for_separation(
