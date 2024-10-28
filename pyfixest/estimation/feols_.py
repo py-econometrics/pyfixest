@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from formulaic import Formula
+from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
@@ -669,7 +670,7 @@ class Feols:
         return _vcov
 
     def _vcov_hetero(self):
-        _scores = self._scores
+        _scores = self._scores  # / np.sqrt(self._weights)
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
@@ -1520,18 +1521,25 @@ class Feols:
         fml_linear = f"{depvars} ~ {covars}"
         Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
+            print("update")
             Y = Y.to_numpy()
             uhat = Y
+            if self._has_weights:
+                uhat = uhat * np.sqrt(self._weights)
 
         else:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
             Y = Y.to_numpy().flatten().astype(np.float64)
             X = X.to_numpy()
             uhat = (Y - X @ self._beta_hat).flatten()
+            uhat = np.sqrt(self._weights).flatten() * uhat
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
-
+        if self._has_weights:
+            weights_array = np.sqrt(self._weights).flatten()
+            weights_diag = diags(weights_array, 0)
+            D2 = weights_diag.dot(D2)
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
         res: dict[str, dict[str, float]] = {}
