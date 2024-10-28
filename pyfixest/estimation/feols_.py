@@ -670,7 +670,7 @@ class Feols:
         return _vcov
 
     def _vcov_hetero(self):
-        _scores = self._scores  # / np.sqrt(self._weights)
+        _scores = self._scores
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
@@ -1521,7 +1521,6 @@ class Feols:
         fml_linear = f"{depvars} ~ {covars}"
         Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
-            print("update")
             Y = Y.to_numpy()
             uhat = Y
             if self._has_weights:
