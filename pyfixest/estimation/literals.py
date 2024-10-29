@@ -1,13 +1,13 @@
-from typing import Any, Literal, get_args
+from typing import Literal, _LiteralGenericAlias, get_args, Any
 
-prediction_type = Literal["response", "link"]
-vcov_type_options = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
-weights_type_options = Literal["aweights", "fweights"]
-fixef_rm_options = Literal["singleton", "none"]
-solver_options = Literal["np.linalg.solve", "np.linalg.lstsq"]
+PredictionTypeOptions = Literal["response", "link"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
+WeightsTypeOptions = Literal["aweights", "fweights"]
+FixedRmOptions = Literal["singleton", "none"]
+SolverOptions = Literal["np.linalg.solve", "np.linalg.lstsq"]
 
 
-def validate_literal_argument(arg: Any, literal: Any) -> None:
+def _validate_literal_argument(arg: Any, literal: _LiteralGenericAlias) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -19,7 +19,7 @@ def validate_literal_argument(arg: Any, literal: Any) -> None:
     ----------
     arg : Any
         The argument to validate.
-    literal : Any
+    literal : _LiteralGenericAlias
         A Literal type that defines the allowed values for `arg`.
 
     Raises
@@ -27,10 +27,10 @@ def validate_literal_argument(arg: Any, literal: Any) -> None:
     ValueError
         If `arg` is not one of the valid types defined by `literal`.
     """
-    valid_types = get_args(literal)
+    if type(literal) is _LiteralGenericAlias:
+        valid_types = get_args(literal)
+    else:
+        raise TypeError(f"{literal} must be of Literal[...] type")
 
     if arg not in valid_types:
-        raise ValueError(
-            f"Invalid prediction type. Expecting one of {valid_types}.\
-                Got {arg}"
-        )
+        raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
