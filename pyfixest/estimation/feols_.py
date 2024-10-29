@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Literal, Optional, Union, get_args
 
 import numba as nb
 import numpy as np
@@ -16,7 +16,6 @@ from scipy.stats import chi2, f, norm, t
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
@@ -41,6 +40,8 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+
+prediction_type = Literal["response", "link"]
 
 
 class Feols:
@@ -1501,13 +1502,6 @@ class Feols:
         _data = self._data
         _weights_sqrt = np.sqrt(self._weights).flatten()
 
-        blocked_transforms = ["i(", "^", "poly("]
-        for bt in blocked_transforms:
-            if bt in _fml:
-                raise NotImplementedError(
-                    f"The fixef() method is currently not supported for models with '{bt}' transformations."
-                )
-
         if not _has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
@@ -1570,7 +1564,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: PredictionType = "link",
+        type: prediction_type = "link",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1610,8 +1604,11 @@ class Feols:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
-
-        _validate_literal_argument(type, PredictionType)
+        valid_types = get_args(prediction_type)
+        if type not in valid_types:
+            raise ValueError(
+                f"Invalid prediction type. Expecting one of {valid_types}. Got {type}"
+            )
 
         if newdata is None:
             if type == "link" or self._method == "feols":
@@ -1623,10 +1620,6 @@ class Feols:
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
-            if self._icovars is not None:
-                raise NotImplementedError(
-                    "predict() with argument newdata is not supported with i() syntax to interact variables."
-                )
             X = Formula(xfml).get_model_matrix(newdata)
             X_index = X.index
             coef_idx = np.isin(self._coefnames, X.columns)
