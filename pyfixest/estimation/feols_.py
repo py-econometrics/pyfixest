@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from formulaic import Formula
+from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
@@ -1499,6 +1500,7 @@ class Feols:
         _method = self._method
         _fml = self._fml
         _data = self._data
+        _weights_sqrt = np.sqrt(self._weights).flatten()
 
         if not _has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
@@ -1521,7 +1523,7 @@ class Feols:
         Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
             Y = Y.to_numpy()
-            uhat = Y
+            uhat = Y.flatten()
 
         else:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
@@ -1531,6 +1533,11 @@ class Feols:
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
+
+        if self._has_weights:
+            uhat *= _weights_sqrt
+            weights_diag = diags(_weights_sqrt, 0)
+            D2 = weights_diag.dot(D2)
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
