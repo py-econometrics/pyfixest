@@ -232,7 +232,6 @@ def test_single_fit_feols(
 
     py_nobs = mod._N
     py_resid = mod.resid()
-    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
     r_coef = df_X1["estimate"]
@@ -243,14 +242,27 @@ def test_single_fit_feols(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = stats.residuals(r_fixest)
-    r_predict = stats.predict(r_fixest)
 
     if inference == "iid" and adj and cluster_adj:
+        py_resid = mod.resid()
+        r_resid = stats.residuals(r_fixest)
+
+        py_predict = mod.predict()
+        r_predict = stats.predict(r_fixest)
+
+        py_predict_newsample = mod.predict(newdata=data.iloc[0:100])
+        r_predict_newsample = stats.predict(r_fixest, newdata=data.iloc[0:100])
+
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(
             py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+        )
+        check_absolute_diff(
+            py_predict_newsample[0:5],
+            r_predict_newsample[0:5],
+            1e-07,
+            "py_predict_newdata != r_predict_newdata",
         )
         check_absolute_diff(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
