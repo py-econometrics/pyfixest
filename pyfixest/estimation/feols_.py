@@ -15,7 +15,7 @@ from scipy.stats import chi2, f, norm, t
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import prediction_type, _validate_literal_argument
+from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
@@ -1556,7 +1556,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: prediction_type = "link",
+        type: PredictionType = "link",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1597,7 +1597,7 @@ class Feols:
                 "The predict() method is currently not supported for IV models."
             )
 
-        _validate_literal_argument(type, prediction_type)
+        _validate_literal_argument(type, PredictionType)
 
         if newdata is None:
             if type == "link" or self._method == "feols":

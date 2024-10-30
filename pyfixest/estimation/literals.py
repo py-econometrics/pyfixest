@@ -1,6 +1,6 @@
 from typing import Literal, _LiteralGenericAlias, get_args, Any
 
-PredictionTypeOptions = Literal["response", "link"]
+PredictionType = Literal["response", "link"]
 VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
