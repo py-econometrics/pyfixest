@@ -1502,6 +1502,13 @@ class Feols:
         _data = self._data
         _weights_sqrt = np.sqrt(self._weights).flatten()
 
+        blocked_transforms = ["i(", "^","poly("]
+        for bt in blocked_transforms:
+            if bt in _fml:
+                raise NotImplementedError(
+                    f"The fixef() method is currently not supported for models with '{bt}' transformations."
+                )
+
         if not _has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 

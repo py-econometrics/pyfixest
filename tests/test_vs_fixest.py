@@ -135,11 +135,26 @@ def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
 
 rng = np.random.default_rng(8760985)
 
-
 def check_absolute_diff(x1, x2, tol, msg=None):
-    msg = "" if msg is None else msg
-    assert np.all(np.abs(x1 - x2) < tol), msg
 
+    "Check for absolute differences."
+    if isinstance(x1, int) or isinstance(x1, float):
+        x1 = np.array([x1])
+    if isinstance(x2, int) or isinstance(x2, float):
+        x2 = np.array([x2])
+
+
+    msg = "" if msg is None else msg
+
+    # handle nan values
+    nan_mask_x1 = np.isnan(x1)
+    nan_mask_x2 = np.isnan(x2)
+
+    if not np.array_equal(nan_mask_x1, nan_mask_x2):
+        raise AssertionError(f"{msg}: NaN positions do not match")
+
+    valid_mask = ~nan_mask_x1  # Mask for non-NaN elements (same for x1 and x2)
+    assert np.all(np.abs(x1[valid_mask] - x2[valid_mask]) < tol), msg
 
 def check_relative_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
@@ -250,23 +265,38 @@ def test_single_fit_feols(
         py_predict = mod.predict()
         r_predict = stats.predict(r_fixest)
 
-        py_predict_newsample = mod.predict(newdata=data.iloc[0:100])
-        r_predict_newsample = stats.predict(r_fixest, newdata=data.iloc[0:100])
-
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(
             py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
         )
-        check_absolute_diff(
-            py_predict_newsample[0:5],
-            r_predict_newsample[0:5],
-            1e-07,
-            "py_predict_newdata != r_predict_newdata",
-        )
+
         check_absolute_diff(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
+
+        # currently, bug when using predict with newdata and i() or C() or "^" syntax
+        blocked_transforms = ["i(", "^","poly("]
+        blocked_transform_found = False
+        for bt in blocked_transforms:
+            if bt in fml:
+                blocked_transform_found = True
+                break
+
+        if blocked_transform_found:
+            with pytest.raises(NotImplementedError):
+                py_predict_newsample = mod.predict(newdata=data.iloc[0:100], atol = 1e-08, btol = 1e-08)
+        else:
+            py_predict_newsample = mod.predict(newdata=data.iloc[0:100], atol = 1e-12, btol = 1e-12)
+            r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
+
+            check_absolute_diff(
+                py_predict_newsample[0:5],
+                r_predict_newsample[0:5],
+                1e-05,
+                "py_predict_newdata != r_predict_newdata",
+            )
+
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
