@@ -1502,7 +1502,7 @@ class Feols:
         _data = self._data
         _weights_sqrt = np.sqrt(self._weights).flatten()
 
-        blocked_transforms = ["i(", "^","poly("]
+        blocked_transforms = ["i(", "^", "poly("]
         for bt in blocked_transforms:
             if bt in _fml:
                 raise NotImplementedError(
@@ -1627,6 +1627,10 @@ class Feols:
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
+            if self._icovars is not None:
+                raise NotImplementedError(
+                    "predict() with argument newdata is not supported with i() syntax to interact variables."
+                )
             X = Formula(xfml).get_model_matrix(newdata)
             X_index = X.index
             coef_idx = np.isin(self._coefnames, X.columns)

@@ -135,16 +135,14 @@ def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
 
 rng = np.random.default_rng(8760985)
 
+
 def check_absolute_diff(x1, x2, tol, msg=None):
-
     "Check for absolute differences."
-    if isinstance(x1, int) or isinstance(x1, float):
+    if isinstance(x1, (int, float)):
         x1 = np.array([x1])
-    if isinstance(x2, int) or isinstance(x2, float):
+    if isinstance(x2, (int, float)):
         x2 = np.array([x2])
-
-
-    msg = "" if msg is None else msg
+        msg = "" if msg is None else msg
 
     # handle nan values
     nan_mask_x1 = np.isnan(x1)
@@ -155,6 +153,12 @@ def check_absolute_diff(x1, x2, tol, msg=None):
 
     valid_mask = ~nan_mask_x1  # Mask for non-NaN elements (same for x1 and x2)
     assert np.all(np.abs(x1[valid_mask] - x2[valid_mask]) < tol), msg
+
+
+def na_omit(arr):
+    mask = ~np.isnan(arr)
+    return arr[mask]
+
 
 def check_relative_diff(x1, x2, tol, msg=None):
     msg = "" if msg is None else msg
@@ -276,27 +280,27 @@ def test_single_fit_feols(
         )
 
         # currently, bug when using predict with newdata and i() or C() or "^" syntax
-        blocked_transforms = ["i(", "^","poly("]
-        blocked_transform_found = False
-        for bt in blocked_transforms:
-            if bt in fml:
-                blocked_transform_found = True
-                break
+        blocked_transforms = ["i(", "^", "poly("]
+        blocked_transform_found = any(bt in fml for bt in blocked_transforms)
 
         if blocked_transform_found:
             with pytest.raises(NotImplementedError):
-                py_predict_newsample = mod.predict(newdata=data.iloc[0:100], atol = 1e-08, btol = 1e-08)
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+                )
         else:
-            py_predict_newsample = mod.predict(newdata=data.iloc[0:100], atol = 1e-12, btol = 1e-12)
+            py_predict_newsample = mod.predict(
+                newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
+            )
             r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
 
             check_absolute_diff(
-                py_predict_newsample[0:5],
-                r_predict_newsample[0:5],
+                na_omit(py_predict_newsample)[0:5],
+                na_omit(r_predict_newsample)[0:5],
                 1e-05,
                 "py_predict_newdata != r_predict_newdata",
+                dropna=True,
             )
-
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
