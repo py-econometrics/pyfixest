@@ -149,6 +149,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
+    weights: Optional[str] = None,
 ):
     """
     Estimate the two-step DID2S model.
@@ -209,6 +210,7 @@ def _did2s_estimate(
             fml=_first_stage_full,
             data=_not_yet_treated_data,
             vcov="iid",
+            weights=weights,
         ),
     )  # iid as it might be faster than CRV
 
@@ -228,6 +230,7 @@ def _did2s_estimate(
             data=data,
             vcov="iid",
             drop_intercept=True,
+            weights=weights,
         ),
     )
     _second_u = fit2.resid()
@@ -244,6 +247,7 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
+    weights: Optional[str] = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -279,6 +283,11 @@ def _did2s_vcov(
 
     _G = clustid.nunique()  # actually not used here, neither in did2s
 
+    if weights is None:
+        weights_array = np.repeat(1.0, data.shape[0])
+    else:
+        weights_array = np.sqrt(data[weights].to_numpy())
+
     # some formula parsing to get the correct formula for the first and second stage model matrix  # noqa: W505
     first_stage_x, first_stage_fe = first_stage.split("|")
     first_stage_fe_list = [f"C({i})" for i in first_stage_fe.split("+")]
@@ -313,8 +322,12 @@ def _did2s_vcov(
     )  # reference values not dropped, multicollinearity error
     X2 = cast(pd.DataFrame, mm_second_stage.get("X"))
 
-    X1 = csr_matrix(X1.to_numpy())
-    X2 = csr_matrix(X2.to_numpy())
+    X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
+    X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])
+
+    # Weight first and second stage residuals
+    first_u *= weights_array
+    second_u *= weights_array
 
     X10 = X1.copy().tocsr()  # type: ignore
     treated_rows = np.where(data[treatment], 0, 1)
