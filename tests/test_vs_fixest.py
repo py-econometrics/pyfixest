@@ -297,9 +297,8 @@ def test_single_fit_feols(
             check_absolute_diff(
                 na_omit(py_predict_newsample)[0:5],
                 na_omit(r_predict_newsample)[0:5],
-                1e-05,
+                1e-07,
                 "py_predict_newdata != r_predict_newdata",
-                dropna=True,
             )
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
