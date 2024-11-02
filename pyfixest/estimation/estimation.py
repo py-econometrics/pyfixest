@@ -6,6 +6,12 @@ from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.literals import (
+    FixedRmOptions,
+    SolverOptions,
+    VcovTypeOptions,
+    WeightsTypeOptions,
+)
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import ssc
 
@@ -13,10 +19,10 @@ from pyfixest.utils.utils import ssc
 def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: dict[str, Union[str, bool]] = ssc(),
-    fixef_rm: str = "none",
+    fixef_rm: FixedRmOptions = "none",
     fixef_tol=1e-08,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
@@ -24,8 +30,8 @@ def feols(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
-    weights_type: str = "aweights",
-    solver: str = "np.linalg.solve",
+    weights_type: WeightsTypeOptions = "aweights",
+    solver: SolverOptions = "np.linalg.solve",
     use_compression: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
@@ -47,7 +53,7 @@ def feols(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[str, dict[str, str]]
+    vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
@@ -59,7 +65,7 @@ def feols(
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : str
+    fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -101,12 +107,12 @@ def feols(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
-    weights_type: str, optional
+    weights_type: WeightsTypeOptions, optional
         Options include `aweights` or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
-    solver : str, optional.
+    solver : SolverOptions, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
@@ -412,15 +418,15 @@ def feols(
 def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: dict[str, Union[str, bool]] = ssc(),
-    fixef_rm: str = "none",
+    fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = ["fe"],
-    solver: str = "np.linalg.solve",
+    solver: SolverOptions = "np.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -449,14 +455,14 @@ def fepois(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[str, dict[str, str]]
+    vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
 
-    fixef_rm : str
+    fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
         Options: "none" (default), "singleton".
 
@@ -476,7 +482,7 @@ def fepois(
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default.
 
-    solver : str, optional.
+    solver : SolverOptions, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
 

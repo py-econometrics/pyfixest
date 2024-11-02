@@ -5,6 +5,7 @@ import pandas as pd
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
+from pyfixest.estimation.literals import VcovTypeOptions
 
 
 def event_study(
@@ -268,7 +269,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,

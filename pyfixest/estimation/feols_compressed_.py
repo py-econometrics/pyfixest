@@ -6,7 +6,7 @@ import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, prediction_type
+from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -331,7 +331,7 @@ class FeolsCompressed(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: prediction_type = "link",
+        type: PredictionType = "link",
     ) -> np.ndarray:
         """
         Compute predicted values.
