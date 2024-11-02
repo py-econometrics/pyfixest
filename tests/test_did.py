@@ -28,7 +28,7 @@ def data():
 
 @pytest.fixture
 def castle_data():
-    df_castle = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_castle = pd.read_csv("pyfixest/did/data/cheng_castle.csv")
 
 
 def test_event_study(data):
