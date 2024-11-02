@@ -8,6 +8,8 @@ source("./notebooks/did2s_utils.R")
 
 df_castle <- read_dta("https://github.com/scunning1975/mixtape/raw/master/castle.dta")
 
+write.csv(df_castle, "./pyfixest/did/data/cheng_castle", sep=",", row.names=FALSE)
+
 fit_unwgt = did2s(data=df_castle, 
       yname="l_homicide",
       first_stage=~ 0 | sid + year,

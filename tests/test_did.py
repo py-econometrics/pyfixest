@@ -26,6 +26,11 @@ def data():
     return df_het
 
 
+@pytest.fixture
+def castle_data():
+    df_castle = pd.read_csv("pyfixest/did/data/df_het.csv")
+
+
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -194,6 +199,23 @@ def test_did2s(data):
             treatment="treat",
             cluster="state",
         )
+
+
+def test_did2s_weights(castle_data):
+    # analytical weights
+    # Run check
+    fit_wght = did2s_pyfixest(
+        data=castle_data,
+        yname="l_homicide",
+        first_stage="~ 0 | sid + year",
+        second_stage="~ i(post, ref=0)",
+        treatment="post",
+        cluster="state",
+        weights="popwt"
+    )
+
+    if True:
+        fit
 
 
 def test_errors(data):
