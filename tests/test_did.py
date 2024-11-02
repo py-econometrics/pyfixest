@@ -204,7 +204,7 @@ def test_did2s(data):
 def test_did2s_weights(castle_data):
     # analytical weights
     # Run check
-    fit_wght = did2s_pyfixest(
+    fit_py = did2s_pyfixest(
         data=castle_data,
         yname="l_homicide",
         first_stage="~ 0 | sid + year",
@@ -214,8 +214,26 @@ def test_did2s_weights(castle_data):
         weights="popwt"
     )
 
+    fit_r = did2s.did2s(
+        data=castle_data,
+        yname="l_homicide",
+        first_stage=ro.Formula("~ 0 | sid + year"),
+        second_stage=ro.Formula("~ i(post, ref=0"),
+        treatment="post",
+        cluster_var="state",
+        weights="popwt"
+    )
+
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
+
     if True:
-        fit
+        np.testing.assert_allclose(
+            fit_py.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05
+        )
+        np.testing.assert_allclose(
+            fit_py.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+        )
 
 
 def test_errors(data):
