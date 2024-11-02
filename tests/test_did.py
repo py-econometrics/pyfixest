@@ -219,7 +219,7 @@ def test_did2s_weights(castle_data):
         data=castle_data,
         yname="l_homicide",
         first_stage=ro.Formula("~ 0 | sid + year"),
-        second_stage=ro.Formula("~ i(post, ref = 0"),
+        second_stage=ro.Formula("~ i(post, ref = 0)"),
         treatment="post",
         cluster_var="state",
         weights="popwt"
