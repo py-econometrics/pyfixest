@@ -99,7 +99,6 @@ class DID2S(DID):
             _second_stage=self._fml2,
             weights=self._weights,
             treatment="ATT",
-
         )  # returns triple Feols, first_u, second_u
 
     def vcov(self):
