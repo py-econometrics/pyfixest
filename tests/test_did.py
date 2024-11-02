@@ -29,6 +29,7 @@ def data():
 @pytest.fixture
 def castle_data():
     df_castle = pd.read_csv("pyfixest/did/data/cheng_castle.csv")
+    return df_castle
 
 
 def test_event_study(data):
@@ -218,7 +219,7 @@ def test_did2s_weights(castle_data):
         data=castle_data,
         yname="l_homicide",
         first_stage=ro.Formula("~ 0 | sid + year"),
-        second_stage=ro.Formula("~ i(post, ref=0"),
+        second_stage=ro.Formula("~ i(post, ref = 0"),
         treatment="post",
         cluster_var="state",
         weights="popwt"
