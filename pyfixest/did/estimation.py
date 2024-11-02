@@ -46,6 +46,8 @@ def event_study(
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
         lags. Default is True.
+    cluster: Optional[str]
+        The name of the cluster variable.
 
     Returns
     -------
