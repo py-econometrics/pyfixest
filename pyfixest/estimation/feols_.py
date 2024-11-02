@@ -1482,6 +1482,7 @@ class Feols:
         agg: bool = True,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
+        combine_covariates: Optional[dict[str, list[str]]] = None,
         reps: int = 1000,
         seed: Optional[int] = None,
         nthreads: Optional[int] = None,
@@ -1502,8 +1503,7 @@ class Feols:
             An integer to set the random seed. Defaults to None.
 
         Examples
-        ---------
-
+        --------
         ```{python}
         # we start by fitting the **long** model
         import pyfixest as pf
@@ -1516,6 +1516,7 @@ class Feols:
         ```
         """
         supported_decomposition_types = ["gelbach"]
+
         if type not in supported_decomposition_types:
             raise ValueError(
                 f"'type' {type} is not in supported types {supported_decomposition_types}."
@@ -1546,6 +1547,7 @@ class Feols:
             coefnames=self._coefnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
+            combine_covariates=combine_covariates,
         )
 
         med.fit(
@@ -1556,7 +1558,7 @@ class Feols:
         med.bootstrap(rng=rng, B=reps)
         med.summary()
 
-        return med.summary_table
+        return med.summary_table.T
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06
