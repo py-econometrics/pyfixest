@@ -6,7 +6,7 @@ import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols, prediction_type
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -186,6 +186,8 @@ class FeolsCompressed(Feols):
         # overwrite Y, X, _data
         self._data_long = data_long_mundlak if self._use_mundlak else data_long
         self._Yd = compressed_dict.Y.to_pandas()
+        # store compressed dependent variable before demeaning
+        self._Y_untransformed = self._Yd.copy()
         self._Xd = compressed_dict.X.to_pandas()
         self._fe = compressed_dict.fe.to_pandas()
         # covars = X.columns
@@ -331,7 +333,7 @@ class FeolsCompressed(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: str = "link",
+        type: prediction_type = "link",
     ) -> np.ndarray:
         """
         Compute predicted values.
