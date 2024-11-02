@@ -1,2 +1,0 @@
-library(did2s)
-
