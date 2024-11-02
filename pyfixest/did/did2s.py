@@ -88,7 +88,7 @@ class DID2S(DID):
         self._second_u = np.array([])
 
         # column name with weights. None by default
-        self._weights = weights
+        self._weights_name = weights
 
     def estimate(self):
         """Estimate the two-step DID2S model."""
@@ -97,7 +97,7 @@ class DID2S(DID):
             yname=self._yname,
             _first_stage=self._fml1,
             _second_stage=self._fml2,
-            weights=self._weights,
+            weights=self._weights_name,
             treatment="ATT",
         )  # returns triple Feols, first_u, second_u
 
@@ -122,7 +122,7 @@ class DID2S(DID):
             first_u=self._first_u,
             second_u=self._second_u,
             cluster=self._cluster,
-            weights=self._weights,
+            weights=self._weights_name,
         )
 
     def iplot(
