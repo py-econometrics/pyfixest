@@ -72,7 +72,6 @@ class DID2S(DID):
             xfml=xfml,
             att=att,
             cluster=cluster,
-            weights=weights,
         )
 
         self._estimator = "did2s"
