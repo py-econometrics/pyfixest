@@ -88,7 +88,7 @@ class DID2S(DID):
         self._first_u = np.array([])
         self._second_u = np.array([])
 
-        # column name with weights if not None
+        # column name with weights. None by default
         self._weights = weights
 
     def estimate(self):
