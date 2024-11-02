@@ -212,7 +212,7 @@ def test_did2s_weights(castle_data):
         second_stage="~ i(post, ref=0)",
         treatment="post",
         cluster="state",
-        weights="popwt"
+        weights="popwt",
     )
 
     fit_r = did2s.did2s(
@@ -222,7 +222,7 @@ def test_did2s_weights(castle_data):
         second_stage=ro.Formula("~ i(post, ref = 0)"),
         treatment="post",
         cluster_var="state",
-        weights="popwt"
+        weights="popwt",
     )
 
     did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
