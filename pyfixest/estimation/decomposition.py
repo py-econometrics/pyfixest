@@ -204,12 +204,32 @@ class GelbachDecomposition:
         ub = 1 - lb
         index = ["Estimate", f"{lb*100:.1f}%", f"{ub*100:.1f}%"]
 
-        est = pd.DataFrame(self.contribution_dict)
-        ci = pd.DataFrame(self.ci)
-        ci.columns = est.columns
+        mediators = list(self.combine_covariates.keys())
+        n_df = len(mediators) + 1
+        index = [self.param] + mediators
 
-        self.summary_table = pd.concat([est, ci], axis=0)
-        self.summary_table.index = index
+        direct_effect = np.full(n_df, np.nan)
+        direct_effect[0] = self.contribution_dict["direct_effect"]
+        full_effect = np.full(n_df, np.nan)
+        full_effect[0] = self.contribution_dict["full_effect"]
+        explained_effect = np.full(n_df, np.nan)
+        explained_effect[0] = self.contribution_dict["explained_effect"]
+
+        for i, mediator in enumerate(mediators):
+            explained_effect[i + 1] = self.contribution_dict[mediator]
+
+        self.summary_table = (
+            pd.DataFrame(
+                {
+                    "direct_effect": direct_effect,
+                    "full_effect": full_effect,
+                    "explained_effect": explained_effect,
+                },
+                index=index,
+            )
+            .fillna("")
+            .T
+        )
 
         return self.summary_table
 
