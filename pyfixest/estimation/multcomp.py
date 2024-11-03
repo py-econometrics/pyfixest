@@ -134,10 +134,12 @@ def rwolf(
             # for oneway clusering: repeated three times
             G = min(model._G)
             if reps > 2**G:
-                warnings.warn(f"""
+                warnings.warn(
+                    f"""
                               2^(the number of clusters) < the number of boot iterations for at least one model,
                               setting full_enumeration to True and reps = {2**G}.
-                              """)
+                              """
+                )
                 full_enumeration = True
 
         model_tidy = model.tidy().xs(param)
@@ -306,10 +308,12 @@ def wyoung(
             # for oneway clusering: repeated three times
             G = min(model._G)
             if reps > 2**G:
-                warnings.warn(f"""
+                warnings.warn(
+                    f"""
                               2^(the number of clusters) < the number of boot iterations for at least one model,
                               setting full_enumeration to True and reps = {2**G}.
-                              """)
+                              """
+                )
                 full_enumeration = True
 
         model_tidy = model.tidy().xs(param)
@@ -354,6 +358,7 @@ def wyoung(
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats
 
+
 def _get_wyoung_pval(t_stats, boot_t_stats):
     """
     Compute Westfall-Young adjusted p-values based on bootstrapped(or "ri") t-statistics.
@@ -381,6 +386,6 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
     ro = np.argsort(stepdown_index)
 
     # TODO: Complete below
-    print()
+    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[::-1]
 
     return pval
