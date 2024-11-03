@@ -248,7 +248,7 @@ class Feiv(Feols):
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
         fixest_module = import_module("pyfixest.estimation")
-        fit_ = getattr(fixest_module, "feols")
+        fit_ = fixest_module.feols
 
         fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:

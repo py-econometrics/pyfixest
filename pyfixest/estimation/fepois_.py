@@ -584,7 +584,7 @@ def _check_for_separation_ir(
     """
     # lazy load to avoid circular import
     fixest_module = import_module("pyfixest.estimation")
-    feols = getattr(fixest_module, "feols")
+    feols = fixest_module.feols
     # initialize
     separation_na: set[int] = set()
     tmp_suffix = "_separationTmp"
