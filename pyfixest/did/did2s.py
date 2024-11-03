@@ -1,4 +1,3 @@
-import warnings
 from typing import Optional, cast
 
 import numpy as np
@@ -45,6 +44,10 @@ class DID2S(DID):
         ATT for each period. Default is True.
     cluster : str
         The name of the cluster variable.
+    weights : Optional[str].
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights.
     """
 
     def __init__(
@@ -55,6 +58,7 @@ class DID2S(DID):
         tname: str,
         gname: str,
         cluster: str,
+        weights: Optional[str] = None,
         att: bool = True,
         xfml: Optional[str] = None,
     ):
@@ -82,6 +86,9 @@ class DID2S(DID):
         self._first_u = np.array([])
         self._second_u = np.array([])
 
+        # column name with weights. None by default
+        self._weights_name = weights
+
     def estimate(self):
         """Estimate the two-step DID2S model."""
         return _did2s_estimate(
@@ -89,6 +96,7 @@ class DID2S(DID):
             yname=self._yname,
             _first_stage=self._fml1,
             _second_stage=self._fml2,
+            weights=self._weights_name,
             treatment="ATT",
         )  # returns triple Feols, first_u, second_u
 
@@ -113,6 +121,7 @@ class DID2S(DID):
             first_u=self._first_u,
             second_u=self._second_u,
             cluster=self._cluster,
+            weights=self._weights_name,
         )
 
     def iplot(
@@ -149,6 +158,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
+    weights: Optional[str] = None,
 ):
     """
     Estimate the two-step DID2S model.
@@ -165,6 +175,10 @@ def _did2s_estimate(
         The formula for the second stage.
     treatment: str
         The name of the treatment variable. Must be boolean.
+    weights : Optional[str].
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights.
 
     Returns
     -------
@@ -177,19 +191,16 @@ def _did2s_estimate(
     if treatment is not None:
         if treatment not in data.columns:
             raise ValueError(f"The variable {treatment} is not in the data.")
-        # check that treatment is boolean
-        if data[treatment].dtype != "bool" and data[treatment].dtype in [
-            "int64",
-            "int32",
-            "int8",
-            "float64",
-            "float32",
-        ]:
-            if data[treatment].nunique() != 2:
-                raise ValueError(f"The treatment variable {treatment} must be boolean.")
+        treat_u = data[treatment].unique()
+        if len(treat_u) != 2:
+            raise ValueError(
+                f"The treatment variable {treatment} must have 2 unique values but it has unique values {treat_u}."
+            )
+        if data[treatment].dtype in ["bool", "int64", "int32", "float64", "float32"]:
             data[treatment] = data[treatment].astype(bool)
-            warnings.warn(
-                f"The treatment variable {treatment} was converted to boolean."
+        else:
+            raise ValueError(
+                f"The treatment variable {treatment} must be boolean or numeric but it is of type {data[treatment].dtype}."
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
@@ -209,6 +220,7 @@ def _did2s_estimate(
             fml=_first_stage_full,
             data=_not_yet_treated_data,
             vcov="iid",
+            weights=weights,
         ),
     )  # iid as it might be faster than CRV
 
@@ -228,6 +240,7 @@ def _did2s_estimate(
             data=data,
             vcov="iid",
             drop_intercept=True,
+            weights=weights,
         ),
     )
     _second_u = fit2.resid()
@@ -244,6 +257,7 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
+    weights: Optional[str] = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -269,6 +283,10 @@ def _did2s_vcov(
         The second stage residuals.
     cluster: str
         The name of the cluster variable.
+    weights : Optional[str].
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights.
 
     Returns
     -------
@@ -278,6 +296,11 @@ def _did2s_vcov(
     _, clustid = pd.factorize(cluster_col)
 
     _G = clustid.nunique()  # actually not used here, neither in did2s
+
+    if weights is None:
+        weights_array = np.repeat(1.0, data.shape[0])
+    else:
+        weights_array = np.sqrt(data[weights].to_numpy())
 
     # some formula parsing to get the correct formula for the first and second stage model matrix  # noqa: W505
     first_stage_x, first_stage_fe = first_stage.split("|")
@@ -313,8 +336,12 @@ def _did2s_vcov(
     )  # reference values not dropped, multicollinearity error
     X2 = cast(pd.DataFrame, mm_second_stage.get("X"))
 
-    X1 = csr_matrix(X1.to_numpy())
-    X2 = csr_matrix(X2.to_numpy())
+    X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
+    X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])
+
+    # Weight first and second stage residuals
+    first_u *= weights_array
+    second_u *= weights_array
 
     X10 = X1.copy().tocsr()  # type: ignore
     treated_rows = np.where(data[treatment], 0, 1)

@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union, get_args
+from typing import Optional, Union
 
 import numba as nb
 import numpy as np
@@ -16,6 +16,7 @@ from scipy.stats import chi2, f, norm, t
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
@@ -40,8 +41,6 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
-
-prediction_type = Literal["response", "link"]
 
 
 class Feols:
@@ -1571,7 +1570,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: prediction_type = "link",
+        type: PredictionType = "link",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1611,11 +1610,8 @@ class Feols:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
-        valid_types = get_args(prediction_type)
-        if type not in valid_types:
-            raise ValueError(
-                f"Invalid prediction type. Expecting one of {valid_types}. Got {type}"
-            )
+
+        _validate_literal_argument(type, PredictionType)
 
         if newdata is None:
             if type == "link" or self._method == "feols":
