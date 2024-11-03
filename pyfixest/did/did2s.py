@@ -1,4 +1,3 @@
-import warnings
 from typing import Optional, cast
 
 import numpy as np
@@ -192,19 +191,16 @@ def _did2s_estimate(
     if treatment is not None:
         if treatment not in data.columns:
             raise ValueError(f"The variable {treatment} is not in the data.")
-        # check that treatment is boolean
-        if data[treatment].dtype != "bool" and data[treatment].dtype in [
-            "int64",
-            "int32",
-            "int8",
-            "float64",
-            "float32",
-        ]:
-            if data[treatment].nunique() != 2:
-                raise ValueError(f"The treatment variable {treatment} must be boolean.")
+        treat_u = data[treatment].unique()
+        if len(treat_u) != 2:
+            raise ValueError(
+                f"The treatment variable {treatment} must have 2 unique values but it has unique values {treat_u}."
+            )
+        if data[treatment].dtype in ["bool", "int64", "int32", "float64", "float32"]:
             data[treatment] = data[treatment].astype(bool)
-            warnings.warn(
-                f"The treatment variable {treatment} was converted to boolean."
+        else:
+            raise ValueError(
+                f"The treatment variable {treatment} must be boolean or numeric but it is of type {data[treatment].dtype}."
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
