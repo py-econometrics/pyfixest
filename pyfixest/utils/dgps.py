@@ -157,8 +157,8 @@ def get_sharkfin(
 def get_panel_dgp_stagg(
     num_units=1_000,
     num_periods=30,
-    num_treated=[250, 500, 150],
-    treatment_start_cohorts=[10, 15, 20],
+    num_treated=None,
+    treatment_start_cohorts=None,
     sigma_unit=1,
     sigma_time=0.5,
     sigma_epsilon=0.2,
@@ -168,6 +168,10 @@ def get_panel_dgp_stagg(
     ar_coef=0.8,
 ):
     """Panel DGP with staggered treatment effects and effect heterogeneity."""
+    if num_treated is None:
+        num_treated = [250, 500, 150]
+    if treatment_start_cohorts is None:
+        treatment_start_cohorts = [10, 15, 20]
     if base_treatment_effects is None:
         # Cohort 1: mean reversal: big bump that decays to zero within 10 days, then zero
         # Cohort 2: shark-fin - logarithmic for the first week, then 0

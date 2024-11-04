@@ -301,13 +301,13 @@ class Feols:
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
-        _tmp = getattr(_module, "coefplot")
+        _tmp = _module.coefplot
         self.coefplot = functools.partial(_tmp, models=[self])
         self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "iplot")
+        _tmp = _module.iplot
         self.iplot = functools.partial(_tmp, models=[self])
         self.iplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "summary")
+        _tmp = _module.summary
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
@@ -757,7 +757,7 @@ class Feols:
         beta_center = _beta_hat
 
         vcov_mat = np.zeros((_k, _k))
-        for ixg, g in enumerate(clustid):
+        for ixg, _ in enumerate(clustid):
             beta_centered = beta_jack[ixg, :] - beta_center
             vcov_mat += np.outer(beta_centered, beta_centered)
 
@@ -778,10 +778,7 @@ class Feols:
 
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        if _method == "feols":
-            fit_ = getattr(fixest_module, "feols")
-        else:
-            fit_ = getattr(fixest_module, "fepois")
+        fit_ = fixest_module.feols if _method == "feols" else fixest_module.fepois
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -804,7 +801,7 @@ class Feols:
         beta_center = _beta_hat
 
         vcov_mat = np.zeros((_k, _k))
-        for ixg, g in enumerate(clustid):
+        for ixg, _ in enumerate(clustid):
             beta_centered = beta_jack[ixg, :] - beta_center
             vcov_mat += np.outer(beta_centered, beta_centered)
 
@@ -1412,7 +1409,7 @@ class Feols:
         G = len(unique_clusters)
 
         ccv_module = import_module("pyfixest.estimation.ccv")
-        _compute_CCV = getattr(ccv_module, "_compute_CCV")
+        _compute_CCV = ccv_module._compute_CCV
 
         vcov_splits = 0.0
         for _ in range(n_splits):
@@ -1465,7 +1462,7 @@ class Feols:
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
         ccv_module = import_module("pyfixest.estimation.ccv")
-        _ccv = getattr(ccv_module, "_ccv")
+        _ccv = ccv_module._ccv
 
         return _ccv(
             data=data,
@@ -2482,7 +2479,7 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
     elif isinstance(vcov, (list, str)):
         vcov_type_detail = vcov
     else:
-        assert False, "arg vcov needs to be a dict, string or list"
+        raise TypeError("arg vcov needs to be a dict, string or list")
 
     if vcov_type_detail == "iid":
         vcov_type = "iid"
@@ -2520,7 +2517,7 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
 
 def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
+    for i, (_, subdict) in enumerate(fixef_dicts.items()):
         unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
         mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
         fixef_mat[:, i] = mapping[inverse]

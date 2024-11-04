@@ -846,5 +846,3 @@ def _check_duplicate_key(my_dict: dict, key: str):
                 only be used once on the rhs of the two-sided formula.
                 """
             )
-        else:
-            None
