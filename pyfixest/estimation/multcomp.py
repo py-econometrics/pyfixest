@@ -275,7 +275,7 @@ def wyoung(
     ```python
     from pyfixest.estimation import feols
     from pyfixest.utils import get_data
-    from pyfixest.multcomp import rwolf
+    from pyfixest.multcomp import wyoung
 
     data = get_data().dropna()
     fit = feols("Y ~ Y2 + X1 + X2", data=data)
@@ -283,8 +283,8 @@ def wyoung(
 
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2", data=data)
-    rwolf_df = wyoung([fit1, fit2], "X1", reps=9999, seed=123)
-    rwolf_df
+    wyoung_df = wyoung([fit1, fit2], "X1", reps=9999, seed=123)
+    wyoung_df
     ```
     """
     models = _post_processing_input_checks(models)
