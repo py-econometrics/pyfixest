@@ -13,7 +13,7 @@ from pyfixest.estimation.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import ssc
+from pyfixest.utils.utils import ssc as ssc_func
 
 
 def feols(
@@ -21,7 +21,7 @@ def feols(
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
-    ssc: dict[str, Union[str, bool]] = ssc(),
+    ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol=1e-08,
     collin_tol: float = 1e-10,
@@ -357,6 +357,8 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
+    if ssc is None:
+        ssc = ssc_func()
     if i_ref1 is not None:
         raise FeatureDeprecationError(
             """
@@ -419,13 +421,13 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    ssc: dict[str, Union[str, bool]] = ssc(),
+    ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
-    separation_check: Optional[list[str]] = ["fe"],
+    separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "np.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
@@ -480,7 +482,7 @@ def fepois(
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
-        Either "fe" or "ir". Executes "fe" by default.
+        Either "fe" or "ir". Executes "fe" by default (when None).
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
@@ -549,6 +551,10 @@ def fepois(
     For more examples, please take a look at the documentation of the `feols()`
     function.
     """
+    if separation_check is None:
+        separation_check = ["fe"]
+    if ssc is None:
+        ssc = ssc_func()
     if i_ref1 is not None:
         raise FeatureDeprecationError(
             """
