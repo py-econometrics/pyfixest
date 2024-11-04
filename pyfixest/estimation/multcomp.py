@@ -243,7 +243,6 @@ def wyoung(
     param: str,
     reps: int,
     seed: int,
-    sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
     """
     Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
@@ -264,10 +263,6 @@ def wyoung(
         The number of bootstrap replications.
     seed : int
         The seed for the random number generator.
-    sampling_method : str
-        Sampling method for computing resampled statistics.
-        Users can choose either bootstrap('wild-bootstrap')
-        or randomization inference('ri')
 
     Returns
     -------
@@ -326,31 +321,15 @@ def wyoung(
     for i in range(S):
         model = models[i]
 
-        if sampling_method == "wild-bootstrap":
-            wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-                param=param,
-                reps=reps,
-                return_bootstrapped_t_stats=True,
-                seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
-            )
+        wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
+            param=param,
+            reps=reps,
+            return_bootstrapped_t_stats=True,
+            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
+        )
 
-            t_stats[i] = wildboot_res_df["t value"]
-            boot_t_stats[:, i] = bootstrapped_t_stats
-
-        elif sampling_method == "ri":
-            rng = np.random.default_rng(seed)
-            model.ritest(
-                resampvar=param,
-                rng=rng,
-                reps=reps,
-                type="randomization-t",
-                store_ritest_statistics=True,
-            )
-
-            t_stats[i] = model._ritest_sample_stat
-            boot_t_stats[:, i] = model._ritest_statistics
-        else:
-            raise ValueError("Invalid sampling method specified")
+        t_stats[i] = wildboot_res_df["t value"]
+        boot_t_stats[:, i] = bootstrapped_t_stats
 
     pval = _get_wyoung_pval(t_stats, boot_t_stats)
 
