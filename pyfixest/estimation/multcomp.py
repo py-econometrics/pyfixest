@@ -385,7 +385,18 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
     stepdown_index = np.argsort(t_stats)[::-1]
     ro = np.argsort(stepdown_index)
 
-    # TODO: Complete below
+    # Step 3 (p.28 -- Westfall and Young Free step-down resampling method)
+    # We sample t-stats instead of p-values
     Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[::-1]
+
+    # Step 4 and 5
+    t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
+
+    pinit = t_against_null.sum(axis=0) / B
+
+    # Step 6: Enforce monotonicity of adjusted p-values
+    corr_padj = np.maximum.accumulate(pinit)
+
+    pval = corr_padj[ro]
 
     return pval
