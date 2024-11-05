@@ -366,7 +366,7 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
 
     # Step 3 (p.28 -- Westfall and Young Free step-down resampling method)
     # We sample t-stats instead of p-values
-    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[::-1]
+    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
 
     # Step 4 and 5
     t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
@@ -379,3 +379,66 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
     pval = corr_padj[ro]
 
     return pval
+
+
+def _get_wyoung_pval_slow(t_stats, boot_t_stats):
+    """
+    Compute Westfall-Young adjusted p-values based on bootstrapped(or "ri") t-statistics.
+
+    Parameters
+    ----------
+    t_stats (np.ndarray): A vector of length S - where S is the number of
+                        tested hypotheses - containing the original,
+                        non-bootstrappe t-statisics.
+    boot_t_stats (np.ndarray): A (B x S) matrix containing the
+                            bootstrapped(or "ri") t-statistics.
+
+    Returns
+    -------
+    np.ndarray: A vector of Westfall-Young corrected p-values.
+    """
+    t_stats = np.abs(t_stats)
+    boot_t_stats = np.abs(boot_t_stats)
+
+    S = boot_t_stats.shape[1]
+    B = boot_t_stats.shape[0]
+
+    pinit = corr_padj = pval = np.zeros(S)
+    stepdown_index = np.argsort(t_stats)[::-1]
+    ro = np.argsort(stepdown_index)
+
+    null_counts = np.zeros(S)
+
+    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
+    t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
+
+    for b in range(B):
+        boot_t_stats_row = boot_t_stats[b, :]
+        qs = [boot_t_stats_row[stepdown_index][-1]]
+        null_counts[-1] += (qs[-1] >= t_stats[stepdown_index][-1])
+        _Qs_row = Qs[b]
+
+        for s in range(1, S):
+            ts = boot_t_stats_row[stepdown_index][-1 - s]
+            qs.append(max(qs[-1], ts))
+            null_counts[-1 - s] += (qs[s] >= t_stats[stepdown_index][-1 - s])
+
+    pinit = null_counts / B
+    corr_padj[0] = pinit[0]
+
+    for s in range(1, S):
+        corr_padj[s] = max(corr_padj[s-1], pinit[s])
+
+    pval = corr_padj[ro]
+
+    return pval
+
+if __name__ == "__main__":
+    tstats = np.random.normal(0.0, 1.0, 4)
+    bstats = np.random.normal(0.0, 1.0, (9999, 4))
+
+    orig = _get_wyoung_pval(tstats, bstats)
+
+    slow = _get_wyoung_pval_slow(tstats, bstats)
+
+    print()
