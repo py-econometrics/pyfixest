@@ -176,7 +176,7 @@ def test_errors(data):
     rng = np.random.default_rng(12)
     data["treat2"] = rng.choice([0, 1, 2], size=len(data))
     with pytest.raises(ValueError):
-        fit = did2s_pyfixest(  # noqa: F841
+        fit = did2s_pyfixest(
             data,
             yname="dep_var",
             first_stage="~ X | state + year",

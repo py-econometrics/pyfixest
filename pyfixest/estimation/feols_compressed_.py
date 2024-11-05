@@ -164,7 +164,7 @@ class FeolsCompressed(Feols):
                     + [col for col in data_long_mundlak.columns if col != "Intercept"]
                 )
 
-                self._coefnames = ["Intercept"] + covars_updated
+                self._coefnames = ["Intercept", *covars_updated]
                 self._fe = None
 
         else:

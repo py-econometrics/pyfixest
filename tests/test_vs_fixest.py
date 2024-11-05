@@ -50,14 +50,14 @@ ols_fmls = [
     ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
     ("Y ~ X1 + i(f1) + i(f2)"),
     ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
-    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
-    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
+    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
+    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
     ("Y ~ X1 + X2:f1"),
     ("Y ~ X1 + X2:f1 | f3"),
     ("Y ~ X1 + X2:f1 | f3 + f1"),
-    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
+    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
+    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
     ("Y ~ X1 + i(f1,X2)"),
     ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
     ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
@@ -69,14 +69,14 @@ ols_fmls = [
     ("Y ~ X1 + i(f2,X2, ref=2.0)"),
     ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
     ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
-    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
+    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
     # ("Y ~ C(f1):C(f2)"),                       # currently does not work
     ("Y ~ X1 + I(X2 ** 2)"),
     ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
     ("Y ~ X1*X2"),
     ("Y ~ X1*X2 | f1+f2"),
-    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
-    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
+    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
+    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
     ("Y ~ X1 + poly(X2, 2) | f1"),
 ]
 
@@ -470,10 +470,10 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
-        py_predict_response = mod.predict(type="response")  # noqa: F841
-        py_predict_link = mod.predict(type="link")  # noqa: F841
-        r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
-        r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
+        py_predict_response = mod.predict(type="response")
+        py_predict_link = mod.predict(type="link")
+        r_predict_response = stats.predict(r_fixest, type="response")
+        r_predict_link = stats.predict(r_fixest, type="link")
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],

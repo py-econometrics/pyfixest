@@ -232,7 +232,7 @@ def _did2s_estimate(
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 
-    # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage  # noqa: W505
+    # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage
     fit2 = cast(
         Feols,
         feols(
@@ -302,7 +302,7 @@ def _did2s_vcov(
     else:
         weights_array = np.sqrt(data[weights].to_numpy())
 
-    # some formula parsing to get the correct formula for the first and second stage model matrix  # noqa: W505
+    # some formula parsing to get the correct formula for the first and second stage model matrix
     first_stage_x, first_stage_fe = first_stage.split("|")
     first_stage_fe_list = [f"C({i})" for i in first_stage_fe.split("+")]
     first_stage_fe_fml = "+".join(first_stage_fe_list)
