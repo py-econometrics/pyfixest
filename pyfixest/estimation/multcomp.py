@@ -409,14 +409,14 @@ def _get_wyoung_pval_slow(t_stats, boot_t_stats):
 
     null_counts = np.zeros(S)
 
-    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
-    t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
+    # Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
+    # t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
 
     for b in range(B):
         boot_t_stats_row = boot_t_stats[b, :]
         qs = [boot_t_stats_row[stepdown_index][-1]]
         null_counts[-1] += (qs[-1] >= t_stats[stepdown_index][-1])
-        _Qs_row = Qs[b]
+        # _Qs_row = Qs[b]
 
         for s in range(1, S):
             ts = boot_t_stats_row[stepdown_index][-1 - s]
@@ -441,4 +441,5 @@ if __name__ == "__main__":
 
     slow = _get_wyoung_pval_slow(tstats, bstats)
 
-    print()
+    print(slow)
+    print(orig)
