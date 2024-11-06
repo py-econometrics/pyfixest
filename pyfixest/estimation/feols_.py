@@ -738,7 +738,7 @@ class Feols:
         tXX = np.transpose(_X) @ _X
         tXy = np.transpose(_X) @ _Y
 
-        # compute leave-one-out regression coefficients (aka clusterjacks')  # noqa: W505
+        # compute leave-one-out regression coefficients (aka clusterjacks')
         for ixg, g in enumerate(clustid):
             Xg = _X[np.equal(g, cluster_col)]
             Yg = _Y[np.equal(g, cluster_col)]
@@ -2420,14 +2420,14 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
     """
     assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
     if isinstance(vcov, dict):
-        assert list(vcov.keys())[0] in [
+        assert next(iter(vcov.keys())) in [
             "CRV1",
             "CRV3",
         ], "vcov dict key must be CRV1 or CRV3"
         assert isinstance(
-            list(vcov.values())[0], str
+            next(iter(vcov.values())), str
         ), "vcov dict value must be a string"
-        deparse_vcov = list(vcov.values())[0].split("+")
+        deparse_vcov = next(iter(vcov.values())).split("+")
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
@@ -2471,8 +2471,8 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         The name of the cluster variable.
     """
     if isinstance(vcov, dict):
-        vcov_type_detail = list(vcov.keys())[0]
-        deparse_vcov = list(vcov.values())[0].split("+")
+        vcov_type_detail = next(iter(vcov.keys()))
+        deparse_vcov = next(iter(vcov.values())).split("+")
         if isinstance(deparse_vcov, str):
             deparse_vcov = [deparse_vcov]
         deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]

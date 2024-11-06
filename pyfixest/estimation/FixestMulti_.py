@@ -361,7 +361,7 @@ class FixestMulti:
                         FIT.wls_transform()
 
                     FIT.get_fit()
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)

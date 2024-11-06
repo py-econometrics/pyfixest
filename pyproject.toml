@@ -135,6 +135,7 @@ select = [
   "D",   # flake8-docstrings
   "UP",  # pyupgrade
   "SIM", # flake8-simplify
+  "RUF", # ruff,
   "TRY", # tryceratops
 ]
 
