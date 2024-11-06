@@ -340,7 +340,7 @@ def wyoung(
 
 def _get_wyoung_pval(t_stats, boot_t_stats):
     """
-    Compute Westfall-Young adjusted p-values based on bootstrapped(or "ri") t-statistics.
+    Compute Westfall-Young adjusted p-values based on bootstrapped t-statistics.
 
     Parameters
     ----------
@@ -383,7 +383,7 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
 
 def _get_wyoung_pval_slow(t_stats, boot_t_stats):
     """
-    Compute Westfall-Young adjusted p-values based on bootstrapped(or "ri") t-statistics.
+    Compute Westfall-Young adjusted p-values based on bootstrapped t-statistics.
 
     Parameters
     ----------
