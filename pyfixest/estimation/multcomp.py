@@ -432,14 +432,3 @@ def _get_wyoung_pval_slow(t_stats, boot_t_stats):
     pval = corr_padj[ro]
 
     return pval
-
-if __name__ == "__main__":
-    tstats = np.random.normal(0.0, 1.0, 4)
-    bstats = np.random.normal(0.0, 1.0, (9999, 4))
-
-    orig = _get_wyoung_pval(tstats, bstats)
-
-    slow = _get_wyoung_pval_slow(tstats, bstats)
-
-    print(slow)
-    print(orig)

@@ -6,7 +6,13 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
+from pyfixest.estimation.multcomp import (
+    _get_rwolf_pval,
+    bonferroni,
+    rwolf,
+    _get_wyoung_pval_slow,
+    _get_wyoung_pval,
+)
 from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
 
@@ -15,7 +21,7 @@ update_r_paths()
 pandas2ri.activate()
 
 fixest = importr("fixest")
-wildrwolf = importr("wildrwolf")
+# wildrwolf = importr("wildrwolf")
 stats = importr("stats")
 broom = importr("broom")
 
@@ -195,3 +201,18 @@ def test_sampling_scheme(seed, reps):
     assert (
         np.abs(percent_diff) < 1.0
     ), f"Percentage difference is too large: {percent_diff}%"
+
+
+# Tests for Westfall-Young p-value adjustment
+@pytest.mark.parametrize("seed", [123, 923, 110])
+def test_wyoung(seed):
+    p = 3
+    m = 10000
+    np.random.default_rng(seed)
+    t_stats = np.random.normal(0., 1., p)
+    boot_t_stats = np.random.normal(0., 1., (m, p))
+
+    pvals = _get_wyoung_pval(t_stats, boot_t_stats)
+    pvals_slow = _get_wyoung_pval_slow(t_stats, boot_t_stats)
+
+    np.testing.assert_allclose(pvals, pvals_slow)
