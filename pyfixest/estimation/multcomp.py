@@ -409,25 +409,21 @@ def _get_wyoung_pval_slow(t_stats, boot_t_stats):
 
     null_counts = np.zeros(S)
 
-    # Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
-    # t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
-
     for b in range(B):
         boot_t_stats_row = boot_t_stats[b, :]
         qs = [boot_t_stats_row[stepdown_index][-1]]
-        null_counts[-1] += (qs[-1] >= t_stats[stepdown_index][-1])
-        # _Qs_row = Qs[b]
+        null_counts[-1] += qs[-1] >= t_stats[stepdown_index][-1]
 
         for s in range(1, S):
             ts = boot_t_stats_row[stepdown_index][-1 - s]
             qs.append(max(qs[-1], ts))
-            null_counts[-1 - s] += (qs[s] >= t_stats[stepdown_index][-1 - s])
+            null_counts[-1 - s] += qs[s] >= t_stats[stepdown_index][-1 - s]
 
     pinit = null_counts / B
     corr_padj[0] = pinit[0]
 
     for s in range(1, S):
-        corr_padj[s] = max(corr_padj[s-1], pinit[s])
+        corr_padj[s] = max(corr_padj[s - 1], pinit[s])
 
     pval = corr_padj[ro]
 
