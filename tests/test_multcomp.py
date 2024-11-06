@@ -8,10 +8,10 @@ from rpy2.robjects.packages import importr
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.multcomp import (
     _get_rwolf_pval,
+    _get_wyoung_pval,
+    _get_wyoung_pval_slow,
     bonferroni,
     rwolf,
-    _get_wyoung_pval_slow,
-    _get_wyoung_pval,
 )
 from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
@@ -209,8 +209,8 @@ def test_wyoung(seed):
     p = 3
     m = 10000
     np.random.default_rng(seed)
-    t_stats = np.random.normal(0., 1., p)
-    boot_t_stats = np.random.normal(0., 1., (m, p))
+    t_stats = np.random.normal(0.0, 1.0, p)
+    boot_t_stats = np.random.normal(0.0, 1.0, (m, p))
 
     pvals = _get_wyoung_pval(t_stats, boot_t_stats)
     pvals_slow = _get_wyoung_pval_slow(t_stats, boot_t_stats)
