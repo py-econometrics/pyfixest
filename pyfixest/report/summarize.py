@@ -117,7 +117,7 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
-    """  # noqa: D301
+    """
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
     assert (
@@ -689,7 +689,8 @@ def _parse_coef_fmt(coef_fmt: str, custom_stats: dict):
         r"\[",
         r"\]",
         ",",
-    ] + custom_elements
+        *custom_elements,
+    ]
     allowed_elements.sort(key=len, reverse=True)
 
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
@@ -1249,7 +1250,7 @@ def dtable(
 
     # Calculate the desired statistics
     if (byrow is not None) and (bycol is not None):
-        bylist = [byrow] + bycol
+        bylist = [byrow, *bycol]
         res = df.groupby(bylist).agg(agg_funcs)
     if (byrow is None) and (bycol is None):
         res = df.agg(agg_funcs)
@@ -1342,7 +1343,7 @@ def dtable(
             # Finally we want to have the objects first and then the statistics
             if not isinstance(res.columns, pd.MultiIndex):
                 res.columns = pd.MultiIndex.from_tuples(res.columns)
-            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
+            res.columns = res.columns.reorder_levels([*bycol, "Statistics"])
             # And sort it properly by the variables
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))

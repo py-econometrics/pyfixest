@@ -205,7 +205,7 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
 @pytest.mark.slow
 def run_crv3_poisson():
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
-    fit = fepois(  # noqa: F841
+    fit = fepois(
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},
