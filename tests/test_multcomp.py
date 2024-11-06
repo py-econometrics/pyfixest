@@ -21,7 +21,7 @@ update_r_paths()
 pandas2ri.activate()
 
 fixest = importr("fixest")
-# wildrwolf = importr("wildrwolf")
+wildrwolf = importr("wildrwolf")
 stats = importr("stats")
 broom = importr("broom")
 
