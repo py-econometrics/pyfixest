@@ -35,7 +35,7 @@ def test_separation():
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
-        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])  # noqa: F841
+        fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])
 
     if False:
         # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
@@ -52,7 +52,7 @@ def test_separation():
         with pytest.warns(
             UserWarning, match="2 observations removed because of separation."
         ):
-            fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])  # noqa: F841
+            fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])
 
     # ppmlhdfe test data sets (check readme in data/ppmlhdfe_separation_examples)
     path = os.path.dirname(os.path.abspath(__file__))
