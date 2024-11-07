@@ -17,7 +17,7 @@ from pyfixest.utils.dev_utils import _select_order_coefs
 def etable(
     models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
     type: str = "gt",
-    signif_code: list = [0.001, 0.01, 0.05],
+    signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
@@ -46,7 +46,7 @@ def etable(
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
-        Significance levels for the stars. Default is [0.001, 0.01, 0.05].
+        Significance levels for the stars. Default is None, which sets [0.001, 0.01, 0.05].
         If None, no stars are printed.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
@@ -117,9 +117,11 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
-    """  # noqa: D301
+    """
+    if signif_code is None:
+        signif_code = [0.001, 0.01, 0.05]
     assert (
-        isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
+        isinstance(signif_code, list) and len(signif_code) == 3
     ), "signif_code must be a list of length 3"
     if signif_code:
         assert all(
@@ -207,7 +209,7 @@ def etable(
         interactionSymbol = " x "
         R2code = "R2"
 
-    for i, model in enumerate(models):
+    for model in models:
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
 
@@ -687,7 +689,8 @@ def _parse_coef_fmt(coef_fmt: str, custom_stats: dict):
         r"\[",
         r"\]",
         ",",
-    ] + custom_elements
+        *custom_elements,
+    ]
     allowed_elements.sort(key=len, reverse=True)
 
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
@@ -865,7 +868,7 @@ def make_table(
         # When there are row groups then insert midrules and groupname
         if row_levels > 1 and len(row_groups) > 1:
             # Insert a midrule after each row group
-            for i, row_group in enumerate(row_groups):
+            for i in range(len(row_groups)):
                 if rgroup_display:
                     # Insert a line with the row group name & same space around it
                     # lines.insert(line_at+1, "\\addlinespace")
@@ -1143,12 +1146,12 @@ def _format_mean_std(
 def dtable(
     df: pd.DataFrame,
     vars: list,
-    stats: list = ["count", "mean", "std"],
+    stats: Optional[list] = None,
     bycol: Optional[list[str]] = None,
     byrow: Optional[str] = None,
     type: str = "gt",
-    labels: dict = {},
-    stats_labels: dict = {},
+    labels: dict | None = None,
+    stats_labels: dict | None = None,
     digits: int = 2,
     notes: str = "",
     counts_row_below: bool = False,
@@ -1166,7 +1169,7 @@ def dtable(
     vars : list
         List of variables to be included in the table.
     stats : list, optional
-        List of statistics to be calculated. The default is ['count','mean', 'std'].
+        List of statistics to be calculated. The default is None, that sets ['count','mean', 'std'].
         All pandas aggregation functions are supported.
     bycol : list, optional
         List of variables to be used to group the data by columns. The default is None.
@@ -1200,6 +1203,12 @@ def dtable(
     -------
     A table in the specified format.
     """
+    if stats is None:
+        stats = ["count", "mean", "std"]
+    if labels is None:
+        labels = {}
+    if stats_labels is None:
+        stats_labels = {}
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
     assert all(
         pd.api.types.is_numeric_dtype(df[var]) for var in vars
@@ -1241,7 +1250,7 @@ def dtable(
 
     # Calculate the desired statistics
     if (byrow is not None) and (bycol is not None):
-        bylist = [byrow] + bycol
+        bylist = [byrow, *bycol]
         res = df.groupby(bylist).agg(agg_funcs)
     if (byrow is None) and (bycol is None):
         res = df.agg(agg_funcs)
@@ -1334,7 +1343,7 @@ def dtable(
             # Finally we want to have the objects first and then the statistics
             if not isinstance(res.columns, pd.MultiIndex):
                 res.columns = pd.MultiIndex.from_tuples(res.columns)
-            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
+            res.columns = res.columns.reorder_levels([*bycol, "Statistics"])
             # And sort it properly by the variables
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))

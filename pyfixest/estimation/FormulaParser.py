@@ -746,7 +746,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
         else:
             variable_fml = [res["variable"][i] for i in range(len(res["variable"]))]
         if variable_type in ["sw0", "csw0"]:
-            variable_fml = ["0"] + variable_fml
+            variable_fml = ["0", *variable_fml]
 
     fml_list = []
     if variable_fml:
@@ -846,5 +846,3 @@ def _check_duplicate_key(my_dict: dict, key: str):
                 only be used once on the rhs of the two-sided formula.
                 """
             )
-        else:
-            None
