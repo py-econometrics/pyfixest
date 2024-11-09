@@ -5,20 +5,21 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
+import narwhals as nw
+from narwhals.typing import IntoDataFrame
+
 DataFrameType = Union[pd.DataFrame, pl.DataFrame]
 
 
-def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
-    if not isinstance(data, pd.DataFrame):
-        try:
-            import polars as pl  # noqa: F401
+def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
 
-            data = data.to_pandas()
-        except ImportError:
-            raise ImportError(
-                """Polars is not installed. Please install Polars to use it as
-                an alternative."""
-            )
+    try:
+        data = nw.from_native(data).to_pandas()
+
+    except ImportError:
+        raise ImportError(
+            """Unable to use Narwhals to convert the DataFrame to Pandas."""
+        )
 
     return data
 

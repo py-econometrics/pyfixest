@@ -6,6 +6,7 @@ from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.estimation.literals import (
     FixedRmOptions,
     SolverOptions,
@@ -649,13 +650,7 @@ def _estimation_input_checks(
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
-        try:
-            import polars as pl
-
-            if not isinstance(data, pl.DataFrame):
-                raise TypeError("data must be a pandas or polars dataframe")
-        except ImportError:
-            raise TypeError("data must be a pandas or polars dataframe")
+        data = _narwhals_to_pandas(data)
     if not isinstance(vcov, (str, dict, type(None))):
         raise TypeError("vcov must be a string, dictionary, or None")
     if not isinstance(fixef_rm, str):
