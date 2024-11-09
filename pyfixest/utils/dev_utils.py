@@ -1,11 +1,10 @@
 import re
 from typing import Optional, Union
 
+import narwhals as nw
 import numpy as np
 import pandas as pd
 import polars as pl
-
-import narwhals as nw
 from narwhals.typing import IntoDataFrame
 
 DataFrameType = Union[pd.DataFrame, pl.DataFrame]
