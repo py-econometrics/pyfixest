@@ -11,7 +11,6 @@ DataFrameType = Union[pd.DataFrame, pl.DataFrame]
 
 
 def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
-
     try:
         data = nw.from_native(data).to_pandas()
 
