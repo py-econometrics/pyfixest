@@ -29,6 +29,7 @@ def data():
     return df_het
 
 
+@pytest.mark.extended
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -40,17 +41,30 @@ def test_event_study(data):
         estimator="did2s",
     )
 
-    fit_did2s_r = did2s.did2s(
-        data=data,
-        yname="dep_var",
-        first_stage=ro.Formula("~ 0 | state + year"),
-        second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
-        treatment="treat",
-        cluster_var="state",
-    )
+    run_did2s_r = False
+    if run_did2s_r:
+        fit_did2s_r = did2s.did2s(
+            data=data,
+            yname="dep_var",
+            first_stage=ro.Formula("~ 0 | state + year"),
+            second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
+            treatment="treat",
+            cluster_var="state",
+        )
 
-    did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
+        did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
+        did2s_df = pd.DataFrame(did2s_df).T
+    else:
+        did2s_df = {
+            0: ["treat::TRUE"],
+            1: [2.152215],
+            2: [0.047607],
+            3: [45.20833],
+            4: [0.0],
+            5: [2.058905],
+            6: [2.245524],
+        }
+        did2s_df = pd.DataFrame(did2s_df)
 
     if True:
         np.testing.assert_allclose(
