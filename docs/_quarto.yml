@@ -23,6 +23,8 @@ website:
         file: quickstart.qmd
       - text: "Function Reference"
         file: reference/index.qmd
+      - text: "Changelog"
+        file: changelog.qmd
       - text: "Contributing"
         file: contributing.qmd
       - text: Learn more
