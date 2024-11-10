@@ -1,5 +1,4 @@
 import duckdb
-
 import numpy as np
 
 import pyfixest as pf
