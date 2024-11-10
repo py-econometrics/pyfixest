@@ -1,7 +1,7 @@
 import re
 from typing import Optional, Union
 
-import narwhals as nw
+import narwhals.stable.v1 as nw
 import numpy as np
 import pandas as pd
 from narwhals.typing import IntoDataFrame
@@ -10,15 +10,7 @@ DataFrameType = IntoDataFrame
 
 
 def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
-    try:
-        data = nw.from_native(data).to_pandas()
-
-    except ImportError:
-        raise ImportError(
-            """Unable to use Narwhals to convert the DataFrame to Pandas."""
-        )
-
-    return data
+    return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 
 def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
