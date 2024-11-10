@@ -4,10 +4,9 @@ from typing import Optional, Union
 import narwhals as nw
 import numpy as np
 import pandas as pd
-import polars as pl
 from narwhals.typing import IntoDataFrame
 
-DataFrameType = Union[pd.DataFrame, pl.DataFrame]
+DataFrameType = IntoDataFrame
 
 
 def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
