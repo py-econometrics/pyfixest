@@ -61,6 +61,7 @@ def test_event_study(data):
         )
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""

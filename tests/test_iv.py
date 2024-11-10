@@ -22,6 +22,7 @@ ivDiag = importr("ivDiag")
 pandas2ri.activate()
 
 
+@pytest.mark.extended
 @pytest.fixture(scope="module")
 def r_results():
     np.random.seed(1)
@@ -113,6 +114,7 @@ def r_results():
     }
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize("has_weight", [False, True])
 @pytest.mark.parametrize("adj_vcov", ["iid", "hetero", {"CRV1": "cluster"}])
 def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
