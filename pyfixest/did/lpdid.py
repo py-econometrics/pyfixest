@@ -6,6 +6,7 @@ import pandas as pd
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.literals import VcovTypeOptions
 from pyfixest.report.visualize import _coefplot
 
 
@@ -51,7 +52,7 @@ class LPDID(DID):
         xfml: str,
         att: bool,
         cluster: str,
-        vcov: Optional[Union[str, dict[str, str]]] = None,
+        vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
         pre_window: Optional[int] = None,
         post_window: Optional[int] = None,
         never_treated: Optional[int] = 0,
@@ -201,7 +202,7 @@ def _lpdid_estimate(
     pre_window: int,
     post_window: int,
     att: bool = True,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     xfml: Optional[str] = None,
 ) -> pd.DataFrame:
     """
@@ -219,7 +220,7 @@ def _lpdid_estimate(
         Variable name for calendar period.
     gname:  str
         unit-specific time of initial treatment.
-    vcov: str
+    vcov: VcovTypeOptions, dict[str, str], None
         The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
         Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
         {"CRV3": "idname"}. You can pass anything that is accepted by the vcov

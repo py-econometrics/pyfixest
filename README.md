@@ -21,6 +21,8 @@ The package aims to mimic `fixest` syntax and functionality as closely as Python
 
 Nevertheless, for a quick introduction, you can take a look at the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
+For questions on `PyFixest`, head on over to our [PyFixest Discourse forum](https://pyfixest.discourse.group/).
+
 ## Features
 
 -   **OLS**, **WLS** and **IV** Regression
@@ -239,7 +241,7 @@ Thanks goes to these wonderful people:
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://dsliwka.github.io/"><img src="https://avatars.githubusercontent.com/u/49401450?v=4?s=100" width="100px;" alt="Dirk Sliwka"/><br /><sub><b>Dirk Sliwka</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=dsliwka" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=dsliwka" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/daltonm-bls"><img src="https://avatars.githubusercontent.com/u/78225214?v=4?s=100" width="100px;" alt="daltonm-bls"/><br /><sub><b>daltonm-bls</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Adaltonm-bls" title="Bug reports">🐛</a></td>
-      <td align="center" valign="top" width="12.5%"><a href="https://github.com/marcandre259"><img src="https://avatars.githubusercontent.com/u/19809475?v=4?s=100" width="100px;" alt="Marc-André"/><br /><sub><b>Marc-André</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=marcandre259" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/marcandre259"><img src="https://avatars.githubusercontent.com/u/19809475?v=4?s=100" width="100px;" alt="Marc-André"/><br /><sub><b>Marc-André</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=marcandre259" title="Code">💻</a> <a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Amarcandre259" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/kylebutts"><img src="https://avatars.githubusercontent.com/u/19961439?v=4?s=100" width="100px;" alt="Kyle F Butts"/><br /><sub><b>Kyle F Butts</b></sub></a><br /><a href="#data-kylebutts" title="Data">🔣</a></td>
     </tr>
   </tbody>

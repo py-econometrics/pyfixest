@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from formulaic.errors import FactorEvaluationError
 from rpy2.robjects import pandas2ri
 
 # rpy2 imports
@@ -22,7 +21,11 @@ broom = importr("broom")
 
 @pytest.fixture
 def data():
+    rng = np.random.default_rng(1243)
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_het["weights"] = rng.uniform(0, 10, size=len(df_het))
+    df_het["X"] = rng.normal(size=len(df_het))
+
     return df_het
 
 
@@ -58,29 +61,37 @@ def test_event_study(data):
         )
 
 
-def test_did2s(data):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s(data, weights):
     """Test the did2s() function."""
+    r_args = {
+        "data": data,
+        "yname": "dep_var",
+        "first_stage": ro.Formula("~ 0 | state + year"),
+        "second_stage": ro.Formula("~ i(treat, ref = FALSE)"),
+        "treatment": "treat",
+        "cluster_var": "state",
+    }
+
+    py_args = {
+        "data": data,
+        "yname": "dep_var",
+        "first_stage": "~ 0 | state + year",
+        "second_stage": "~ treat",
+        "treatment": "treat",
+        "cluster": "state",
+    }
+
+    if weights:
+        r_args["weights"] = "weights"
+        py_args["weights"] = "weights"
+
     rng = np.random.default_rng(12345)
     data["X"] = rng.normal(size=len(data))
 
     # ATT, no covariates
-    fit_did2s = did2s_pyfixest(
-        data=data,
-        yname="dep_var",
-        first_stage="~ 0 | state + year",
-        second_stage="~ treat",
-        treatment="treat",
-        cluster="state",
-    )
-
-    fit_did2s_r = did2s.did2s(
-        data=data,
-        yname="dep_var",
-        first_stage=ro.Formula("~ 0 | state + year"),
-        second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
-        treatment="treat",
-        cluster_var="state",
-    )
+    fit_did2s = did2s_pyfixest(**py_args)
+    fit_did2s_r = did2s.did2s(**r_args)
 
     did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
     did2s_df = pd.DataFrame(did2s_df).T
@@ -92,108 +103,59 @@ def test_did2s(data):
         fit_did2s.se(), float(did2s_df[2]), atol=1e-05, rtol=1e-05
     )
 
-    if True:
-        # ATT, event study
+    r_args["second_stage"] = ro.Formula("~ i(rel_year, ref = c(-1))")
+    py_args["second_stage"] = "~i(rel_year, ref = -1.0)"
 
-        fit = did2s_pyfixest(
-            data,
-            yname="dep_var",
-            first_stage="~ 0 | state + year",
-            second_stage="~i(rel_year, ref = -1.0)",
-            treatment="treat",
-            cluster="state",
-        )
+    fit = did2s_pyfixest(**py_args)
+    fit_r = did2s.did2s(**r_args)
 
-        fit_r = did2s.did2s(
-            data=data,
-            yname="dep_var",
-            first_stage=ro.Formula("~ 0 | state + year"),
-            second_stage=ro.Formula("~ i(rel_year, ref = c(-1))"),
-            treatment="treat",
-            cluster_var="state",
-        )
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
 
-        did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-        did2s_df = pd.DataFrame(did2s_df).T
+    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(
+        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+    )
 
-        np.testing.assert_allclose(
-            fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05
-        )
-        np.testing.assert_allclose(
-            fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
-        )
+    r_args["first_stage"] = ro.Formula("~ X | state + year")
+    py_args["first_stage"] = "~ X | state + year"
 
-    if True:
-        # test event study with covariate in first stage
-        fit = did2s_pyfixest(
-            data,
-            yname="dep_var",
-            first_stage="~ X | state + year",
-            second_stage="~i(rel_year, ref = -1.0)",
-            treatment="treat",
-            cluster="state",
-        )
+    fit = did2s_pyfixest(**py_args)
+    fit_r = did2s.did2s(**r_args)
 
-        fit_r = did2s.did2s(
-            data=data,
-            yname="dep_var",
-            first_stage=ro.Formula("~ X | state + year"),
-            second_stage=ro.Formula("~ i(rel_year, ref = c(-1))"),
-            treatment="treat",
-            cluster_var="state",
-        )
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
 
-        did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-        did2s_df = pd.DataFrame(did2s_df).T
+    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(
+        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+    )
 
-        np.testing.assert_allclose(
-            fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05
-        )
-        np.testing.assert_allclose(
-            fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
-        )
+    r_args["first_stage"] = ro.Formula("~ X | state + year")
+    py_args["first_stage"] = "~ X | state + year"
 
-    if True:
-        # test event study with covariate in first stage and second stage
-        fit = did2s_pyfixest(
-            data,
-            yname="dep_var",
-            first_stage="~ X | state + year",
-            second_stage="~ X + i(rel_year, ref = -1.0)",
-            treatment="treat",
-            cluster="state",
-        )
+    fit = did2s_pyfixest(**py_args)
+    fit_r = did2s.did2s(**r_args)
 
-        fit_r = did2s.did2s(
-            data=data,
-            yname="dep_var",
-            first_stage=ro.Formula("~ X | state + year"),
-            second_stage=ro.Formula("~ X + i(rel_year, ref = c(-1))"),
-            treatment="treat",
-            cluster_var="state",
-        )
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
 
-        did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-        did2s_df = pd.DataFrame(did2s_df).T
+    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(
+        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+    )
 
-        np.testing.assert_allclose(
-            fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05
-        )
-        np.testing.assert_allclose(
-            fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
-        )
-
-    if True:
-        # binary non boolean treatment variable, just check that it runs
-        data["treat"] = data["treat"].astype(int)
-        fit = did2s_pyfixest(
-            data,
-            yname="dep_var",
-            first_stage="~ X | state + year",
-            second_stage="~ X + i(rel_year, ref = -1.0)",
-            treatment="treat",
-            cluster="state",
-        )
+    # binary non boolean treatment variable, just check that it runs
+    data["treat"] = data["treat"].astype(int)
+    fit = did2s_pyfixest(
+        data,
+        yname="dep_var",
+        first_stage="~ X | state + year",
+        second_stage="~ X + i(rel_year, ref = -1.0)",
+        treatment="treat",
+        cluster="state",
+        weights="weights",
+    )
 
 
 def test_errors(data):
@@ -201,7 +163,7 @@ def test_errors(data):
 
     # boolean strings cannot be converted
     data["treat"] = data["treat"].astype(str)
-    with pytest.raises(FactorEvaluationError):
+    with pytest.raises(ValueError):
         fit = did2s_pyfixest(
             data,
             yname="dep_var",
@@ -213,7 +175,18 @@ def test_errors(data):
 
     rng = np.random.default_rng(12)
     data["treat2"] = rng.choice([0, 1, 2], size=len(data))
-    with pytest.raises(FactorEvaluationError):
+    with pytest.raises(ValueError):
+        fit = did2s_pyfixest(
+            data,
+            yname="dep_var",
+            first_stage="~ X | state + year",
+            second_stage="~ X + i(rel_year)",
+            treatment="treat",
+            cluster="state",
+        )
+
+    data["treat3"] = rng.choice([0], size=len(data))
+    with pytest.raises(ValueError):
         fit = did2s_pyfixest(  # noqa: F841
             data,
             yname="dep_var",
