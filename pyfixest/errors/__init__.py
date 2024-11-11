@@ -38,10 +38,6 @@ class DepvarIsNotNumericError(Exception):  # noqa: D101
     pass
 
 
-class NotImplementedError(Exception):  # noqa: D101
-    pass
-
-
 class NonConvergenceError(Exception):  # noqa: D101
     pass
 
@@ -67,10 +63,8 @@ __all__ = [
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",
-    "MultiEstNotSupportedError",
     "NanInClusterVarError",
     "DepvarIsNotNumericError",
-    "NotImplementedError",
     "NonConvergenceError",
     "MatrixNotFullRankError",
     "EmptyDesignMatrixError",

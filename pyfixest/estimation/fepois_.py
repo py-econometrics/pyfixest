@@ -7,7 +7,6 @@ import pandas as pd
 
 from pyfixest.errors import (
     NonConvergenceError,
-    NotImplementedError,
 )
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionType
