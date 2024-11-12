@@ -22,7 +22,6 @@ ivDiag = importr("ivDiag")
 pandas2ri.activate()
 
 
-@pytest.mark.extended
 @pytest.fixture(scope="module")
 def r_results():
     np.random.seed(1)
