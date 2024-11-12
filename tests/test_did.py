@@ -40,38 +40,46 @@ def test_event_study(data):
         estimator="did2s",
     )
 
-    fit_did2s_r = did2s.did2s(
-        data=data,
-        yname="dep_var",
-        first_stage=ro.Formula("~ 0 | state + year"),
-        second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
-        treatment="treat",
-        cluster_var="state",
-    )
-
-    did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
-
-    if True:
-        np.testing.assert_allclose(
-            fit_did2s.coef(), stats.coef(fit_did2s_r), atol=1e-05, rtol=1e-05
+    run_did2s_r = False
+    if run_did2s_r:
+        fit_did2s_r = did2s.did2s(
+            data=data,
+            yname="dep_var",
+            first_stage=ro.Formula("~ 0 | state + year"),
+            second_stage=ro.Formula("~ i(treat, ref = FALSE)"),
+            treatment="treat",
+            cluster_var="state",
         )
-        np.testing.assert_allclose(
-            fit_did2s.se(), float(did2s_df[2]), atol=1e-05, rtol=1e-05
-        )
+
+        r_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
+        r_df = pd.DataFrame(r_df).T
+    else:
+        r_df = {
+            0: ["treat::TRUE"],
+            1: [2.152215],
+            2: [0.047607],
+            3: [45.20833],
+            4: [0.0],
+            5: [2.058905],
+            6: [2.245524],
+        }
+        r_df = pd.DataFrame(r_df)
+
+    np.testing.assert_allclose(fit_did2s.coef(), r_df[1], atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""
-    r_args = {
-        "data": data,
-        "yname": "dep_var",
-        "first_stage": ro.Formula("~ 0 | state + year"),
-        "second_stage": ro.Formula("~ i(treat, ref = FALSE)"),
-        "treatment": "treat",
-        "cluster_var": "state",
-    }
+    run_r = False
+    if run_r:
+        _get_r_did2s_results(data, weights)
+
+    r_results = pd.read_csv(
+        f"tests/data/all_did2s_dfs{'_weights' if weights is not None else ''}.csv",
+        index_col=[0],
+    )
 
     py_args = {
         "data": data,
@@ -83,71 +91,68 @@ def test_did2s(data, weights):
     }
 
     if weights:
-        r_args["weights"] = "weights"
         py_args["weights"] = "weights"
 
     rng = np.random.default_rng(12345)
     data["X"] = rng.normal(size=len(data))
 
-    # ATT, no covariates
-    fit_did2s = did2s_pyfixest(**py_args)
-    fit_did2s_r = did2s.did2s(**r_args)
-
-    did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
+    # Model 1: ATT, no covariates
+    fit_did2s_py1 = did2s_pyfixest(**py_args)
+    fit_did2s_r1 = pd.DataFrame(r_results.xs("model1")).T
 
     np.testing.assert_allclose(
-        fit_did2s.coef(), stats.coef(fit_did2s_r), atol=1e-05, rtol=1e-05
-    )
-    np.testing.assert_allclose(
-        fit_did2s.se(), float(did2s_df[2]), atol=1e-05, rtol=1e-05
+        np.asarray(fit_did2s_py1.coef(), dtype=np.float64),
+        np.asarray(fit_did2s_r1.iloc[:, 2], dtype=np.float64),
+        atol=1e-05,
+        rtol=1e-05,
     )
 
-    r_args["second_stage"] = ro.Formula("~ i(rel_year, ref = c(-1))")
+    np.testing.assert_allclose(
+        fit_did2s_py1.se(), float(fit_did2s_r1.iloc[:, 3]), atol=1e-05, rtol=1e-05
+    )
+
+    # Model 2
     py_args["second_stage"] = "~i(rel_year, ref = -1.0)"
 
-    fit = did2s_pyfixest(**py_args)
-    fit_r = did2s.did2s(**r_args)
+    fit_py2 = did2s_pyfixest(**py_args)
+    fit_did2s_r2 = r_results.xs("model2")
 
-    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
-
-    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
     np.testing.assert_allclose(
-        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+        np.asarray(fit_py2.coef(), dtype=np.float64),
+        np.asarray(fit_did2s_r2.iloc[:, 2], dtype=np.float64),
+        atol=1e-05,
+        rtol=1e-05,
+    )
+    np.testing.assert_allclose(
+        fit_py2.se(),
+        fit_did2s_r2.iloc[:, 3].values.astype(float),
+        atol=1e-05,
+        rtol=1e-05,
     )
 
-    r_args["first_stage"] = ro.Formula("~ X | state + year")
+    # Model 3
     py_args["first_stage"] = "~ X | state + year"
 
-    fit = did2s_pyfixest(**py_args)
-    fit_r = did2s.did2s(**r_args)
+    fit_py3 = did2s_pyfixest(**py_args)
+    fit_did2s_r3 = r_results.xs("model3")
 
-    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
-
-    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
     np.testing.assert_allclose(
-        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+        np.asarray(fit_py3.coef(), dtype=np.float64),
+        np.asarray(fit_did2s_r3.iloc[:, 2], dtype=np.float64),
+        atol=1e-05,
+        rtol=1e-05,
     )
 
-    r_args["first_stage"] = ro.Formula("~ X | state + year")
-    py_args["first_stage"] = "~ X | state + year"
-
-    fit = did2s_pyfixest(**py_args)
-    fit_r = did2s.did2s(**r_args)
-
-    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
-    did2s_df = pd.DataFrame(did2s_df).T
-
-    np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), atol=1e-05, rtol=1e-05)
     np.testing.assert_allclose(
-        fit.se(), did2s_df[2].values.astype(float), atol=1e-05, rtol=1e-05
+        fit_py3.se(),
+        fit_did2s_r3.iloc[:, 3].values.astype(float),
+        atol=1e-05,
+        rtol=1e-05,
     )
 
     # binary non boolean treatment variable, just check that it runs
     data["treat"] = data["treat"].astype(int)
-    fit = did2s_pyfixest(
+    did2s_pyfixest(
         data,
         yname="dep_var",
         first_stage="~ X | state + year",
@@ -268,3 +273,55 @@ def test_lpdid():
 
     fit.iplot()
     fit.tidy()
+
+
+def _get_r_did2s_results(data, weights):
+    """Test the did2s() function."""
+    all_did2s_dict = {}
+
+    r_args = {
+        "data": data,
+        "yname": "dep_var",
+        "first_stage": ro.Formula("~ 0 | state + year"),
+        "second_stage": ro.Formula("~ i(treat, ref = FALSE)"),
+        "treatment": "treat",
+        "cluster_var": "state",
+    }
+
+    if weights:
+        r_args["weights"] = "weights"
+
+    rng = np.random.default_rng(12345)
+    data["X"] = rng.normal(size=len(data))
+
+    # Step 1
+    fit_did2s_r = did2s.did2s(**r_args)
+    did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
+    all_did2s_dict["model1"] = did2s_df
+
+    # Step
+
+    # Step 2
+    r_args["second_stage"] = ro.Formula("~ i(rel_year, ref = c(-1))")
+    fit_r = did2s.did2s(**r_args)
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
+    all_did2s_dict["model2"] = did2s_df
+
+    # Step 3
+    r_args["first_stage"] = ro.Formula("~ X | state + year")
+    fit_r = did2s.did2s(**r_args)
+    did2s_df = broom.tidy_fixest(fit_r, conf_int=ro.BoolVector([True]))
+    did2s_df = pd.DataFrame(did2s_df).T
+    all_did2s_dict["model3"] = did2s_df
+
+    all_dfs = pd.concat(all_did2s_dict)
+
+    all_dfs.to_csv(
+        f"tests/data/all_did2s_dfs{'_weights' if weights is not None else ''}.csv",
+        index=True,
+    )
+
+    # Return combined DataFrame if needed
+    return all_dfs
