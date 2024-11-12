@@ -51,10 +51,10 @@ def test_event_study(data):
             cluster_var="state",
         )
 
-        did2s_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
-        did2s_df = pd.DataFrame(did2s_df).T
+        r_df = broom.tidy_fixest(fit_did2s_r, conf_int=ro.BoolVector([True]))
+        r_df = pd.DataFrame(r_df).T
     else:
-        did2s_df = {
+        r_df = {
             0: ["treat::TRUE"],
             1: [2.152215],
             2: [0.047607],
@@ -63,14 +63,10 @@ def test_event_study(data):
             5: [2.058905],
             6: [2.245524],
         }
-        did2s_df = pd.DataFrame(did2s_df)
+        r_df = pd.DataFrame(r_df)
 
-    np.testing.assert_allclose(
-        fit_did2s.coef(), stats.coef(fit_did2s_r), atol=1e-05, rtol=1e-05
-    )
-    np.testing.assert_allclose(
-        fit_did2s.se(), float(did2s_df[2]), atol=1e-05, rtol=1e-05
-    )
+    np.testing.assert_allclose(fit_did2s.coef(), r_df[1], atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
 @pytest.mark.parametrize("weights", [None, "weights"])
