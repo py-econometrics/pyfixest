@@ -132,6 +132,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -396,16 +400,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>did.estimation.lpdid(data, yname, idname, tname, gname, vcov=None, pre_window=None, post_window=None, never_treated=0, att=True, xfml=None)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>did.estimation.lpdid(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    yname</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    idname</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    tname</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    gname</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    never_treated<span class="op">=</span><span class="dv">0</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    xfml<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Local projections approach to estimation.</p>
 <p>Estimate a Difference-in-Differences / Event Study Model via the Local Projections Approach.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
+<col style="width: 8%">
 <col style="width: 7%">
-<col style="width: 76%">
+<col style="width: 77%">
 <col style="width: 6%">
 </colgroup>
 <thead>
@@ -418,67 +434,67 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
+<td>data</td>
 <td>DataFrame</td>
 <td>The DataFrame containing all variables.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>yname</code></td>
+<td>yname</td>
 <td>str</td>
 <td>The name of the dependent variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>idname</code></td>
+<td>idname</td>
 <td>str</td>
 <td>The name of the id variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>tname</code></td>
+<td>tname</td>
 <td>str</td>
 <td>Variable name for calendar period.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>gname</code></td>
+<td>gname</td>
 <td>str</td>
 <td>Unit-specific time of initial treatment.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>vcov</code></td>
+<td>vcov</td>
 <td>(str, dict)</td>
 <td>The type of inference to employ. Defaults to {“CRV1”: idname}. Options include “iid”, “hetero”, or a dictionary like {“CRV1”: idname}.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>pre_window</code></td>
+<td>pre_window</td>
 <td>int</td>
 <td>The number of periods before the treatment to include in the estimation. Default is the minimum relative year in the data.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>post_window</code></td>
+<td>post_window</td>
 <td>int</td>
 <td>The number of periods after the treatment to include in the estimation. Default is the maximum relative year in the data.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>never_treated</code></td>
+<td>never_treated</td>
 <td>int</td>
 <td>Value in gname indicating units never treated. Default is 0.</td>
 <td><code>0</code></td>
 </tr>
 <tr class="even">
-<td><code>att</code></td>
+<td>att</td>
 <td>bool</td>
 <td>If True, estimates the pooled average treatment effect on the treated (ATT). Default is False.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="odd">
-<td><code>xfml</code></td>
+<td>xfml</td>
 <td>str</td>
 <td>Formula for the covariates. Not yet supported.</td>
 <td><code>None</code></td>
@@ -486,49 +502,51 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>DataFrame</td>
 <td>A DataFrame with the estimated coefficients.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="206ee5ea" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.lpdid(</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div id="408e54b2" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.lpdid(</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">False</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="Vea32c"></div>
+            <div id="OtdCUT"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -539,7 +557,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -552,9 +570,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Vea32c").appendChild(div);
+                        document.getElementById("OtdCUT").appendChild(div);
                     };
-                    var e = document.getElementById("Vea32c");
+                    var e = document.getElementById("OtdCUT");
                     e.appendChild(script);
                 })()
             </script>
@@ -562,7 +580,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="cjquYC"></div>
+            <div id="h7KyRv"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -573,7 +591,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -586,19 +604,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("cjquYC").appendChild(div);
+                        document.getElementById("h7KyRv").appendChild(div);
                     };
-                    var e = document.getElementById("cjquYC");
+                    var e = document.getElementById("h7KyRv");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display">
-   <div id="v8uUa2"></div>
+   <div id="lEMAA5"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
-       (function() {
-           var plotSpec={
+   
+   (function() {
+   // ----------
+   
+   var containerDiv = document.getElementById("lEMAA5");
+   var observer = new ResizeObserver(function(entries) {
+       for (let entry of entries) {
+           var width = containerDiv.clientWidth
+           if (entry.contentBoxSize && width > 0) {
+           
+               // Render plot
+               if (observer) {
+                   observer.disconnect();
+                   observer = null;
+               }
+
+               var plotSpec={
 "data":{
 "Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
 "Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.07556131947831908,-0.051277562684252105,0.047891216349789587,0.030061024401231366,0.039869683844842616,0.04845789728984681,-0.012820133350277497,0.013685361040923884,0.005199898128597303,0.016416277464837318,0.056416738856818846,0.0016957198969680782,-0.06496834258802509,0.010741616233677878,0.04275993550129887,0.003229015933287125,1.4520234748273066,1.6676220565025497,1.7336997045580052,1.843611819985164,1.962093749379402,2.0880835635857604,2.18196604372757,2.254678404642131,2.348473587127565,2.360384864306778,2.5161139333617535,2.552977994310089,2.603938509344383,2.578044287902035,2.7229688455567262,2.9092747255962252,2.859325154708493,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
@@ -689,30 +722,54 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 }
 }],
-"metainfo_list":[]
+"metainfo_list":[],
+"spec_id":"1"
 };
-           var plotContainer = document.getElementById("v8uUa2");
-           window.letsPlotCall(function() {{
-               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
-           }});
-       })();
+               window.letsPlotCall(function() {
+       
+               var toolbar = null;
+               var plotContainer = containerDiv;               
+               
+                   var options = {
+                       sizing: {
+                           width_mode: "min",
+                           height_mode: "scaled",
+                           width: width
+                       }
+                   };
+                   var fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer, options);
+                   if (toolbar) {
+                     toolbar.bind(fig);
+                   }
+               });
+               
+               break;
+           }
+       }
+   });
+   
+   observer.observe(containerDiv);
+   
+   // ----------
+   })();
+   
    </script>
 </div>
 </div>
 <p>To get the ATT, set <code>att=True</code>:</p>
-<div id="337ec368" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.lpdid(</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="863fe613" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.lpdid(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    idname<span class="op">=</span><span class="st">"unit"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    tname<span class="op">=</span><span class="st">"year"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    gname<span class="op">=</span><span class="st">"g"</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"state"</span>},</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    pre_window<span class="op">=-</span><span class="dv">20</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    post_window<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    att<span class="op">=</span><span class="va">True</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 

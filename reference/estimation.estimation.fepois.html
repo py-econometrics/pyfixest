@@ -132,6 +132,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -396,15 +400,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>estimation.estimation.fepois(fml, data, vcov=None, ssc=ssc(), fixef_rm='none', fixef_tol=1e-08, iwls_tol=1e-08, iwls_maxiter=25, collin_tol=1e-10, separation_check=['fe'], solver='np.linalg.solve', drop_intercept=False, i_ref1=None, copy_data=True, store_data=True, lean=False, split=None, fsplit=None)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.estimation.fepois(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'none'</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-10</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 3%">
-<col style="width: 6%">
-<col style="width: 85%">
+<col style="width: 8%">
+<col style="width: 83%">
 <col style="width: 4%">
 </colgroup>
 <thead>
@@ -417,109 +440,109 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>fml</code></td>
+<td>fml</td>
 <td>str</td>
 <td>A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2”. “|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>data</code></td>
+<td>data</td>
 <td>DataFrameType</td>
 <td>A pandas or polars dataframe containing the variables in the formula.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>vcov</code></td>
-<td>Union[str, dict[str, str]]</td>
+<td>vcov</td>
+<td>Union[VcovTypeOptions, dict[str, str]]</td>
 <td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>ssc</code></td>
+<td>ssc</td>
 <td>str</td>
 <td>A ssc object specifying the small sample correction for inference.</td>
-<td><code>ssc()</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>fixef_rm</code></td>
-<td>str</td>
+<td>fixef_rm</td>
+<td>FixedRmOptions</td>
 <td>Specifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.</td>
 <td><code>'none'</code></td>
 </tr>
 <tr class="even">
-<td><code>fixef_tol</code></td>
+<td>fixef_tol</td>
 <td>float</td>
 <td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.</td>
 <td><code>1e-08</code></td>
 </tr>
 <tr class="odd">
-<td><code>iwls_tol</code></td>
+<td>iwls_tol</td>
 <td>Optional[float]</td>
 <td>Tolerance for IWLS convergence, by default 1e-08.</td>
 <td><code>1e-08</code></td>
 </tr>
 <tr class="even">
-<td><code>iwls_maxiter</code></td>
+<td>iwls_maxiter</td>
 <td>Optional[float]</td>
 <td>Maximum number of iterations for IWLS convergence, by default 25.</td>
 <td><code>25</code></td>
 </tr>
 <tr class="odd">
-<td><code>collin_tol</code></td>
+<td>collin_tol</td>
 <td>float</td>
 <td>Tolerance for collinearity check, by default 1e-10.</td>
 <td><code>1e-10</code></td>
 </tr>
 <tr class="even">
-<td><code>separation_check</code></td>
+<td>separation_check</td>
 <td>Optional[list[str]]</td>
-<td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default.</td>
-<td><code>['fe']</code></td>
+<td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default (when None).</td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>solver</code></td>
-<td>str, optional.</td>
+<td>solver</td>
+<td>SolverOptions, optional.</td>
 <td>The solver to use for the regression. Can be either “np.linalg.solve” or “np.linalg.lstsq”. Defaults to “np.linalg.solve”.</td>
 <td><code>'np.linalg.solve'</code></td>
 </tr>
 <tr class="even">
-<td><code>drop_intercept</code></td>
+<td>drop_intercept</td>
 <td>bool</td>
 <td>Whether to drop the intercept from the model, by default False.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>i_ref1</code></td>
+<td>i_ref1</td>
 <td></td>
 <td>Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.&nbsp;fepois(‘Y~ i(f1, ref=1)’, data = data) instead of the former fepois(‘Y~ i(f1)’, data = data, i_ref=1).</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>copy_data</code></td>
+<td>copy_data</td>
 <td>bool</td>
 <td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="odd">
-<td><code>store_data</code></td>
+<td>store_data</td>
 <td>bool</td>
 <td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="even">
-<td><code>lean</code></td>
+<td>lean</td>
 <td>bool</td>
 <td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>split</code></td>
+<td>split</td>
 <td>Optional[str]</td>
 <td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>fsplit</code></td>
+<td>fsplit</td>
 <td>Optional[str]</td>
 <td>This argument is the same as split but also includes the full sample as the first estimation.</td>
 <td><code>None</code></td>
@@ -527,39 +550,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 93%">
+<col style="width: 6%">
+<col style="width: 87%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>object</td>
 <td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="fd4ad124" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="a5eb810f" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.fepois(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="g2r5YD"></div>
+            <div id="zcGST9"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -570,7 +596,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -583,9 +609,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("g2r5YD").appendChild(div);
+                        document.getElementById("zcGST9").appendChild(div);
                     };
-                    var e = document.getElementById("g2r5YD");
+                    var e = document.getElementById("zcGST9");
                     e.appendChild(script);
                 })()
             </script>
@@ -593,7 +619,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="KB25Rj"></div>
+            <div id="ezW3fh"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -604,7 +630,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -617,9 +643,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("KB25Rj").appendChild(div);
+                        document.getElementById("ezW3fh").appendChild(div);
                     };
-                    var e = document.getElementById("KB25Rj");
+                    var e = document.getElementById("ezW3fh");
                     e.appendChild(script);
                 })()
             </script>

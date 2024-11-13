@@ -129,6 +129,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -379,13 +383,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="pyfixest.did.visualize.panelview" class="level1">
 <h1>did.visualize.panelview</h1>
-<p><code>did.visualize.panelview(data, unit, time, treat, outcome=None, collapse_to_cohort=False, subsamp=None, units_to_plot=None, sort_by_timing=False, xlab=None, ylab=None, figsize=(11, 3), noticks=False, title=None, legend=False, ax=None, xlim=None, ylim=None)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>did.visualize.panelview(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    unit</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    time</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    treat</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    subsamp<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    units_to_plot<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="dv">3</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    noticks<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    legend<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    xlim<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    ylim<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate a panel view of the treatment variable over time for each unit.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 14%">
+<col style="width: 13%">
 <col style="width: 15%">
 <col style="width: 62%">
 <col style="width: 7%">
@@ -400,109 +423,109 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
+<td>data</td>
 <td>pandas.DataFrame</td>
 <td>The input dataframe containing the data.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>unit</code></td>
+<td>unit</td>
 <td>str</td>
 <td>The column name representing the unit identifier.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>time</code></td>
+<td>time</td>
 <td>str</td>
 <td>The column name representing the time identifier.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>treat</code></td>
+<td>treat</td>
 <td>str</td>
 <td>The column name representing the treatment variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>outcome</code></td>
+<td>outcome</td>
 <td>str</td>
 <td>The column name representing the outcome variable. If not None, an outcome plot is generated.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>collapse_to_cohort</code></td>
+<td>collapse_to_cohort</td>
 <td>bool</td>
 <td>Whether to collapse units into treatment cohorts.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>subsamp</code></td>
+<td>subsamp</td>
 <td>int</td>
 <td>The number of samples to draw from data set for display (default is None).</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>sort_by_timing</code></td>
+<td>sort_by_timing</td>
 <td>bool</td>
 <td>Whether to sort the treatment cohorts by the number of treated periods.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>xlab</code></td>
+<td>xlab</td>
 <td>str</td>
 <td>The label for the x-axis. Default is None, in which case default labels are used.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>ylab</code></td>
+<td>ylab</td>
 <td>str</td>
 <td>The label for the y-axis. Default is None, in which case default labels are used.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>figsize</code></td>
+<td>figsize</td>
 <td>tuple</td>
 <td>The figure size for the outcome plot. Default is (11, 3).</td>
 <td><code>(11, 3)</code></td>
 </tr>
 <tr class="even">
-<td><code>noticks</code></td>
+<td>noticks</td>
 <td>bool</td>
 <td>Whether to display ticks on the plot. Default is False.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>title</code></td>
+<td>title</td>
 <td>str</td>
 <td>The title for the plot. Default is None, in which case no title is displayed.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>legend</code></td>
+<td>legend</td>
 <td>bool</td>
 <td>Whether to display a legend. Default is False (since binary treatments are self-explanatory).</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>ax</code></td>
+<td>ax</td>
 <td>matplotlib.pyplot.Axes</td>
 <td>The axes on which to draw the plot. Default is None, in which case a new figure is created.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>xlim</code></td>
+<td>xlim</td>
 <td>tuple</td>
 <td>The limits for the x-axis of the plot. Default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>ylim</code></td>
+<td>ylim</td>
 <td>tuple</td>
 <td>The limits for the y-axis of the plot. Default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>units_to_plot</code></td>
+<td>units_to_plot</td>
 <td>list</td>
 <td>A list of unit to include in the plot. If None, all units in the dataset are plotted.</td>
 <td><code>None</code></td>
@@ -510,51 +533,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td>ax</td>
 <td>matplotlib.pyplot.Axes</td>
 <td></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"pd.read_csv("</span>pyfixest<span class="op">/</span>did<span class="op">/</span>data<span class="op">/</span>df_het.csv<span class="st">")</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="er"># Inspect treatment assignment</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    unit <span class="op">=</span> <span class="st">"unit"</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> <span class="st">"year"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    subsamp <span class="op">=</span> <span class="dv">50</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> <span class="st">"Treatment Assignment"</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Outcome plot</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    unit <span class="op">=</span> <span class="st">"unit"</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> <span class="st">"year"</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    outcome <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    subsamp <span class="op">=</span> <span class="dv">50</span>,</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> <span class="st">"Outcome Plot"</span></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(<span class="st">"pd.read_csv("</span>pyfixest<span class="op">/</span>did<span class="op">/</span>data<span class="op">/</span>df_het.csv<span class="st">")</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="er"># Inspect treatment assignment</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    unit <span class="op">=</span> <span class="st">"unit"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> <span class="st">"year"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    subsamp <span class="op">=</span> <span class="dv">50</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> <span class="st">"Treatment Assignment"</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Outcome plot</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> df_het,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    unit <span class="op">=</span> <span class="st">"unit"</span>,</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    time <span class="op">=</span> <span class="st">"year"</span>,</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    outcome <span class="op">=</span> <span class="st">"dep_var"</span>,</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    treat <span class="op">=</span> <span class="st">"treat"</span>,</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    subsamp <span class="op">=</span> <span class="dv">50</span>,</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    title <span class="op">=</span> <span class="st">"Outcome Plot"</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
 </section>

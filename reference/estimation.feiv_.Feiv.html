@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -93,6 +127,10 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
@@ -340,21 +378,53 @@ ul.task-list li input[type="checkbox"] {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.feols_.Feols.html">Estimation Classes</a></li><li class="breadcrumb-item"><a href="../reference/estimation.feiv_.Feiv.html">estimation.feiv_.Feiv</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">estimation.feiv_.Feiv</h1>
+</div>
 
 
 
-<section id="pyfixest.estimation.feiv_.Feiv" class="level1">
-<h1>estimation.feiv_.Feiv</h1>
-<p><code>estimation.feiv_.Feiv(self, FixestFormula, data, ssc_dict, drop_singletons, drop_intercept, weights, weights_type, collin_tol, fixef_tol, lookup_demeaned_data, solver='np.linalg.solve', store_data=True, copy_data=True, lean=False, sample_split_var=None, sample_split_value=None)</code></p>
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    FixestFormula</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ssc_dict</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_singletons</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    drop_intercept</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    weights_type</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_tol</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
 <p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.qmd">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
+<col style="width: 8%">
 <col style="width: 10%">
-<col style="width: 66%">
+<col style="width: 67%">
 <col style="width: 13%">
 </colgroup>
 <thead>
@@ -367,67 +437,67 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>Y</code></td>
+<td>Y</td>
 <td>np.ndarray</td>
 <td>Dependent variable, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>X</code></td>
+<td>X</td>
 <td>np.ndarray</td>
 <td>Independent variables, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>endgvar</code></td>
+<td>endgvar</td>
 <td>np.ndarray</td>
 <td>Endogenous Indenpendent variables, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>Z</code></td>
+<td>Z</td>
 <td>np.ndarray</td>
 <td>Instruments, a two-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>weights</code></td>
+<td>weights</td>
 <td>np.ndarray</td>
 <td>Weights, a one-dimensional np.array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>coefnames_x</code></td>
+<td>coefnames_x</td>
 <td>list</td>
 <td>Names of the coefficients of X.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>coefnames_z</code></td>
+<td>coefnames_z</td>
 <td>list</td>
 <td>Names of the coefficients of Z.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>collin_tol</code></td>
+<td>collin_tol</td>
 <td>float</td>
 <td>Tolerance for collinearity check.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>solver</code></td>
+<td>solver</td>
 <td>str</td>
 <td>Solver to use for the estimation. Alternative is ‘np.linalg.lstsq’.</td>
 <td><code>'np.linalg.solve'</code></td>
 </tr>
 <tr class="even">
-<td><code>weights_name</code></td>
+<td>weights_name</td>
 <td>Optional[str]</td>
 <td>Name of the weights variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>weights_type</code></td>
+<td>weights_type</td>
 <td>Optional[str]</td>
 <td>Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
 <td><em>required</em></td>
@@ -435,8 +505,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="attributes" class="level2">
-<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 5%">
@@ -599,17 +669,19 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="raises" class="level2">
-<h2 class="anchored" data-anchor-id="raises">Raises</h2>
+<section id="raises" class="level2 doc-section doc-section-raises">
+<h2 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>ValueError</td>
 <td>If Z is not a two-dimensional array.</td>
 </tr>
@@ -666,19 +738,19 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="pyfixest.estimation.feiv_.Feiv.IV_Diag" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.IV_Diag">IV_Diag</h3>
-<p><code>estimation.feiv_.Feiv.IV_Diag(statistics=None)</code></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.IV_Diag(statistics<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Implement IV diagnostic tests.</p>
-<section id="notes" class="level4">
-<h4 class="anchored" data-anchor-id="notes">Notes</h4>
+<section id="notes" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h4>
 <p>This method covers diagnostic tests related with IV regression. We currently have IV weak tests only. More test will be updated in future updates!</p>
 </section>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 19%">
+<col style="width: 17%">
 <col style="width: 18%">
-<col style="width: 47%">
+<col style="width: 48%">
 <col style="width: 15%">
 </colgroup>
 <thead>
@@ -691,7 +763,7 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>statistics</code></td>
+<td>statistics</td>
 <td>list[str]</td>
 <td>List of IV diagnostic statistics</td>
 <td><code>None</code></td>
@@ -699,8 +771,8 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="example" class="level4">
-<h4 class="anchored" data-anchor-id="example">Example</h4>
+<section id="example" class="level4 doc-section doc-section-example">
+<h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
 <pre><code>import numpy as np
 import pandas as pd
@@ -767,24 +839,24 @@ print("Effective F stat :", F_stat_eff_pf)
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.IV_weakness_test" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.IV_weakness_test">IV_weakness_test</h3>
-<p><code>estimation.feiv_.Feiv.IV_weakness_test(iv_diag_statistics=None)</code></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.IV_weakness_test(iv_diag_statistics<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Implement IV weakness test (F-test).</p>
 <p>This method covers hetero-robust and clustered-robust F statistics. It produces two statistics:</p>
 <ul>
 <li>self._f_stat_1st_stage: F statistics of first stage regression</li>
 <li>self._eff_F: Effective F statistics (Olea and Pflueger 2013) of first stage regression</li>
 </ul>
-<section id="notes-1" class="level4">
-<h4 class="anchored" data-anchor-id="notes-1">Notes</h4>
+<section id="notes-1" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-1">Notes</h4>
 <p>“self._f_stat_1st_stage” is adjusted to the specification of vcov. If vcov_detail = “iid”, F statistics is not adjusted, otherwise it is always adjusted.</p>
 </section>
-<section id="parameters-2" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 30%">
-<col style="width: 10%">
-<col style="width: 43%">
+<col style="width: 28%">
+<col style="width: 11%">
+<col style="width: 45%">
 <col style="width: 15%">
 </colgroup>
 <thead>
@@ -797,7 +869,7 @@ print("Effective F stat :", F_stat_eff_pf)
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>iv_diag_statistics</code></td>
+<td>iv_diag_statistics</td>
 <td>list</td>
 <td>List of IV weakness statistics</td>
 <td><code>None</code></td>
@@ -808,41 +880,40 @@ print("Effective F stat :", F_stat_eff_pf)
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.demean" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.demean">demean</h3>
-<p><code>estimation.feiv_.Feiv.demean()</code></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.demean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Demean instruments and endogeneous variable.</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.drop_multicol_vars" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.drop_multicol_vars">drop_multicol_vars</h3>
-<p><code>estimation.feiv_.Feiv.drop_multicol_vars()</code></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.drop_multicol_vars()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Drop multicollinear variables in matrix of instruments Z.</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.eff_F" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.eff_F">eff_F</h3>
-<p><code>estimation.feiv_.Feiv.eff_F()</code></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.eff_F()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Compute Effective F stat (Olea and Pflueger 2013).</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.first_stage" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.first_stage">first_stage</h3>
-<p><code>estimation.feiv_.Feiv.first_stage()</code></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.first_stage()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Implement First stage regression.</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.get_fit">get_fit</h3>
-<p><code>estimation.feiv_.Feiv.get_fit()</code></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.get_fit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fit a IV model using a 2SLS estimator.</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.to_array" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.to_array">to_array</h3>
-<p><code>estimation.feiv_.Feiv.to_array()</code></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.to_array()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Transform estimation DataFrames to arrays.</p>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.wls_transform" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feiv_.Feiv.wls_transform">wls_transform</h3>
-<p><code>estimation.feiv_.Feiv.wls_transform()</code></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>estimation.feiv_.Feiv.wls_transform()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Transform variables for WLS estimation.</p>
 
 
-</section>
 </section>
 </section>
 

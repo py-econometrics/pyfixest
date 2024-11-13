@@ -129,6 +129,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -379,16 +383,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="pyfixest.estimation.feols_.Feols" class="level1">
 <h1>estimation.feols_.Feols</h1>
-<p><code>estimation.feols_.Feols(self, FixestFormula, data, ssc_dict, drop_singletons, drop_intercept, weights, weights_type, collin_tol, fixef_tol, lookup_demeaned_data, solver='np.linalg.solve', store_data=True, copy_data=True, lean=False, sample_split_var=None, sample_split_value=None)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">self</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    FixestFormula</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ssc_dict</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_singletons</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    drop_intercept</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    weights_type</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_tol</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Non user-facing class to estimate a linear regression via OLS.</p>
 <p>Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.feols.qmd">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the <a href="../reference/estimation.fixest_multi.qmd">FixestMulti</a> class (to allow for caching of demeaned variables for multiple estimation).</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
+<col style="width: 7%">
 <col style="width: 9%">
-<col style="width: 69%">
+<col style="width: 70%">
 <col style="width: 11%">
 </colgroup>
 <thead>
@@ -401,49 +423,49 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>Y</code></td>
+<td>Y</td>
 <td>np.ndarray</td>
 <td>Dependent variable, a two-dimensional numpy array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>X</code></td>
+<td>X</td>
 <td>np.ndarray</td>
 <td>Independent variables, a two-dimensional numpy array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>weights</code></td>
+<td>weights</td>
 <td>np.ndarray</td>
 <td>Weights, a one-dimensional numpy array.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>collin_tol</code></td>
+<td>collin_tol</td>
 <td>float</td>
 <td>Tolerance level for collinearity checks.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>coefnames</code></td>
+<td>coefnames</td>
 <td>list[str]</td>
 <td>Names of the coefficients (of the design matrix X).</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>weights_name</code></td>
+<td>weights_name</td>
 <td>Optional[str]</td>
 <td>Name of the weights variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>weights_type</code></td>
+<td>weights_type</td>
 <td>Optional[str]</td>
 <td>Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>solver</code></td>
+<td>solver</td>
 <td>str, optional.</td>
 <td>The solver to use for the regression. Can be either “np.linalg.solve” or “np.linalg.lstsq”. Defaults to “np.linalg.solve”.</td>
 <td><code>'np.linalg.solve'</code></td>
@@ -451,8 +473,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="attributes" class="level2">
-<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 18%">
@@ -853,16 +875,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="pyfixest.estimation.feols_.Feols.add_fixest_multi_context" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.add_fixest_multi_context">add_fixest_multi_context</h3>
-<p><code>estimation.feols_.Feols.add_fixest_multi_context(depvar, Y, _data, _ssc_dict, _k_fe, fval, store_data)</code></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.add_fixest_multi_context(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    depvar</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    Y</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    _data</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    _ssc_dict</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    _k_fe</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    fval</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    store_data</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Enrich Feols object.</p>
 <p>Enrich an instance of <code>Feols</code> Class with additional attributes set in the <code>FixestMulti</code> class.</p>
-<section id="parameters-1" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 14%">
-<col style="width: 12%">
-<col style="width: 62%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 63%">
 <col style="width: 10%">
 </colgroup>
 <thead>
@@ -875,49 +905,49 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>FixestFormula</code></td>
+<td>FixestFormula</td>
 <td>FixestFormula</td>
 <td>The formula(s) used for estimation encoded in a <code>FixestFormula</code> object.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>depvar</code></td>
+<td>depvar</td>
 <td>str</td>
 <td>The dependent variable of the regression model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>Y</code></td>
+<td>Y</td>
 <td>pd.Series</td>
 <td>The dependent variable of the regression model.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>_data</code></td>
+<td>_data</td>
 <td>pd.DataFrame</td>
 <td>The data used for estimation.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>_ssc_dict</code></td>
+<td>_ssc_dict</td>
 <td>dict</td>
 <td>A dictionary with the sum of squares and cross products matrices.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>_k_fe</code></td>
+<td>_k_fe</td>
 <td>int</td>
 <td>The number of fixed effects.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>fval</code></td>
+<td>fval</td>
 <td>str</td>
 <td>The fixed effects formula.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>store_data</code></td>
+<td>store_data</td>
 <td>bool</td>
 <td>Indicates whether to save the data used for estimation in the object</td>
 <td><em>required</em></td>
@@ -925,17 +955,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level4">
-<h4 class="anchored" data-anchor-id="returns">Returns</h4>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>None</td>
 <td></td>
 </tr>
@@ -945,15 +977,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.ccv" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.ccv">ccv</h3>
-<p><code>estimation.feols_.Feols.ccv(treatment, cluster=None, seed=None, n_splits=8, pk=1, qk=1)</code></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.ccv(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    treatment</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="va">None</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    n_splits<span class="op">=</span><span class="dv">8</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    pk<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    qk<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Compute the Causal Cluster Variance following Abadie et al (QJE 2023).</p>
-<section id="parameters-2" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
+<col style="width: 6%">
 <col style="width: 4%">
-<col style="width: 81%">
+<col style="width: 82%">
 <col style="width: 6%">
 </colgroup>
 <thead>
@@ -966,37 +1005,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>treatment</code></td>
+<td>treatment</td>
 <td></td>
 <td>The name of the treatment variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>cluster</code></td>
+<td>cluster</td>
 <td>str</td>
 <td>The name of the cluster variable. None by default. If None, uses the cluster variable from the model fit.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>seed</code></td>
+<td>seed</td>
 <td>int</td>
 <td>An integer to set the random seed. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>n_splits</code></td>
+<td>n_splits</td>
 <td>int</td>
 <td>The number of splits to use in the cross-fitting procedure. Defaults to 8.</td>
 <td><code>8</code></td>
 </tr>
 <tr class="odd">
-<td><code>pk</code></td>
+<td>pk</td>
 <td>float</td>
 <td>The proportion of sampled clusters. Defaults to 1, which corresponds to all clusters of the population being sampled.</td>
 <td><code>1</code></td>
 </tr>
 <tr class="even">
-<td><code>qk</code></td>
+<td>qk</td>
 <td>float</td>
 <td>The proportion of sampled observations within each cluster. Defaults to 1, which corresponds to all observations within each cluster being sampled.</td>
 <td><code>1</code></td>
@@ -1004,58 +1043,64 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-1" class="level4">
-<h4 class="anchored" data-anchor-id="returns-1">Returns</h4>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 12%">
-<col style="width: 87%">
+<col style="width: 6%">
+<col style="width: 11%">
+<col style="width: 81%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.DataFrame</td>
 <td>A DataFrame with inference based on the “Causal Cluster Variance” and “regular” CRV1 inference.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level4">
-<h4 class="anchored" data-anchor-id="examples">Examples</h4>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"D1"</span>] <span class="op">=</span> np.random.choice([<span class="dv">0</span>, <span class="dv">1</span>], size<span class="op">=</span>data.shape[<span class="dv">0</span>])</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ D"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.ccv(treatment<span class="op">=</span><span class="st">"D"</span>, pk<span class="op">=</span><span class="fl">0.05</span>, gk<span class="op">=</span><span class="fl">0.5</span>, n_splits<span class="op">=</span><span class="dv">8</span>, seed<span class="op">=</span><span class="dv">123</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="examples" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h4>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"D1"</span>] <span class="op">=</span> np.random.choice([<span class="dv">0</span>, <span class="dv">1</span>], size<span class="op">=</span>data.shape[<span class="dv">0</span>])</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ D"</span>, data<span class="op">=</span>data, vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"group_id"</span>})</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>fit.ccv(treatment<span class="op">=</span><span class="st">"D"</span>, pk<span class="op">=</span><span class="fl">0.05</span>, gk<span class="op">=</span><span class="fl">0.5</span>, n_splits<span class="op">=</span><span class="dv">8</span>, seed<span class="op">=</span><span class="dv">123</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.coef" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.coef">coef</h3>
-<p><code>estimation.feols_.Feols.coef()</code></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.coef()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model coefficents.</p>
-<section id="returns-2" class="level4">
-<h4 class="anchored" data-anchor-id="returns-2">Returns</h4>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 13%">
-<col style="width: 86%">
+<col style="width: 8%">
+<col style="width: 12%">
+<col style="width: 78%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.Series</td>
 <td>A pd.Series with the estimated coefficients of the regression model.</td>
 </tr>
@@ -1065,15 +1110,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.confint" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.confint">confint</h3>
-<p><code>estimation.feols_.Feols.confint(alpha=0.05, keep=None, drop=None, exact_match=False, joint=False, seed=None, reps=10000)</code></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.confint(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.05</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    keep<span class="op">=</span><span class="va">None</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    drop<span class="op">=</span><span class="va">None</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    exact_match<span class="op">=</span><span class="va">False</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="va">False</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="dv">10000</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model confidence intervals.</p>
-<section id="parameters-3" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
+<section id="parameters-3" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 2%">
 <col style="width: 6%">
-<col style="width: 88%">
+<col style="width: 89%">
 <col style="width: 2%">
 </colgroup>
 <thead>
@@ -1086,43 +1139,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>alpha</code></td>
+<td>alpha</td>
 <td>float</td>
 <td>The significance level for confidence intervals. Defaults to 0.05. keep: str or list of str, optional</td>
 <td><code>0.05</code></td>
 </tr>
 <tr class="even">
-<td><code>joint</code></td>
+<td>joint</td>
 <td>bool</td>
 <td>Whether to compute simultaneous confidence interval for joint null of parameters selected by <code>keep</code> and <code>drop</code>. Defaults to False. See https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf, Remark 4.4.1 for details.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>keep</code></td>
+<td>keep</td>
 <td>Optional[Union[list, str]]</td>
 <td>The pattern for retaining coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Default is keeping all coefficients. You should use regular expressions to select coefficients. “age”, # would keep all coefficients containing age r”^tr”, # would keep all coefficients starting with tr r”\d$“, # would keep all coefficients ending with number Output will be in the order of the patterns.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>drop</code></td>
+<td>drop</td>
 <td>Optional[Union[list, str]]</td>
 <td>The pattern for excluding coefficient names. You can pass a string (one pattern) or a list (multiple patterns). Syntax is the same as for <code>keep</code>. Default is keeping all coefficients. Parameter <code>keep</code> and <code>drop</code> can be used simultaneously.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>exact_match</code></td>
+<td>exact_match</td>
 <td>Optional[bool]</td>
 <td>Whether to use exact match for <code>keep</code> and <code>drop</code>. Default is False. If True, the pattern will be matched exactly to the coefficient name instead of using regular expressions.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
-<td><code>reps</code></td>
+<td>reps</td>
 <td>int</td>
 <td>The number of bootstrap iterations to run for joint confidence intervals. Defaults to 10_000. Only used if <code>joint</code> is True.</td>
 <td><code>10000</code></td>
 </tr>
 <tr class="odd">
-<td><code>seed</code></td>
+<td>seed</td>
 <td>int</td>
 <td>The seed for the random number generator. Defaults to None. Only used if <code>joint</code> is True.</td>
 <td><code>None</code></td>
@@ -1130,64 +1183,69 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-3" class="level4">
-<h4 class="anchored" data-anchor-id="returns-3">Returns</h4>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 11%">
-<col style="width: 88%">
+<col style="width: 6%">
+<col style="width: 10%">
+<col style="width: 82%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.DataFrame</td>
 <td>A pd.DataFrame with confidence intervals of the estimated regression model for the selected coefficients.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples-1" class="level4">
-<h4 class="anchored" data-anchor-id="examples-1">Examples</h4>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ C(f1)"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha<span class="op">=</span><span class="fl">0.10</span>).head()</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha<span class="op">=</span><span class="fl">0.10</span>, joint<span class="op">=</span><span class="va">True</span>, reps<span class="op">=</span><span class="dv">9999</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="examples-1" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation <span class="im">import</span> feols</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data()</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> feols(<span class="st">"Y ~ C(f1)"</span>, data<span class="op">=</span>data)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha<span class="op">=</span><span class="fl">0.10</span>).head()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>fit.confint(alpha<span class="op">=</span><span class="fl">0.10</span>, joint<span class="op">=</span><span class="va">True</span>, reps<span class="op">=</span><span class="dv">9999</span>).head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.demean" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.demean">demean</h3>
-<p><code>estimation.feols_.Feols.demean()</code></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.demean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Demean the dependent variable and covariates by the fixed effect(s).</p>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.drop_multicol_vars" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.drop_multicol_vars">drop_multicol_vars</h3>
-<p><code>estimation.feols_.Feols.drop_multicol_vars()</code></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.drop_multicol_vars()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Detect and drop multicollinear variables.</p>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.fixef" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.fixef">fixef</h3>
-<p><code>estimation.feols_.Feols.fixef(atol=1e-06, btol=1e-06)</code></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.fixef(atol<span class="op">=</span><span class="fl">1e-06</span>, btol<span class="op">=</span><span class="fl">1e-06</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Compute the coefficients of (swept out) fixed effects for a regression model.</p>
 <p>This method creates the following attributes: - <code>alphaDF</code> (pd.DataFrame): A DataFrame with the estimated fixed effects. - <code>sumFE</code> (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).</p>
-<section id="returns-4" class="level4">
-<h4 class="anchored" data-anchor-id="returns-4">Returns</h4>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>None</td>
 <td></td>
 </tr>
@@ -1197,19 +1255,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.get_fit">get_fit</h3>
-<p><code>estimation.feols_.Feols.get_fit()</code></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.get_fit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fit an OLS model.</p>
-<section id="returns-5" class="level4">
-<h4 class="anchored" data-anchor-id="returns-5">Returns</h4>
+<section id="returns-5" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>None</td>
 <td></td>
 </tr>
@@ -1219,16 +1279,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.get_inference" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.get_inference">get_inference</h3>
-<p><code>estimation.feols_.Feols.get_inference(alpha=0.05)</code></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.get_inference(alpha<span class="op">=</span><span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Compute standard errors, t-statistics, and p-values for the regression model.</p>
-<section id="parameters-4" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
+<section id="parameters-4" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 6%">
 <col style="width: 5%">
-<col style="width: 79%">
-<col style="width: 7%">
+<col style="width: 5%">
+<col style="width: 80%">
+<col style="width: 8%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1240,7 +1300,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>alpha</code></td>
+<td>alpha</td>
 <td>float</td>
 <td>The significance level for confidence intervals. Defaults to 0.05, which produces a 95% confidence interval.</td>
 <td><code>0.05</code></td>
@@ -1248,17 +1308,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-6" class="level4">
-<h4 class="anchored" data-anchor-id="returns-6">Returns</h4>
+<section id="returns-6" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-6">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>None</td>
 <td></td>
 </tr>
@@ -1268,52 +1330,62 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.get_performance" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.get_performance">get_performance</h3>
-<p><code>estimation.feols_.Feols.get_performance()</code></p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.get_performance()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Get Goodness-of-Fit measures.</p>
 <p>Compute multiple additional measures commonly reported with linear regression output, including R-squared and adjusted R-squared. Note that variables with the suffix _within use demeaned dependent variables Y, while variables without do not or are invariant to demeaning.</p>
-<section id="returns-7" class="level4">
-<h4 class="anchored" data-anchor-id="returns-7">Returns</h4>
+<section id="returns-7" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-7">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 82%">
-<col style="width: 17%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 16%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>None</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>Creates the following instances:</td>
 <td></td>
 </tr>
 <tr class="odd">
+<td></td>
 <td>- r2 (float): R-squared of the regression model.</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>- adj_r2 (float): Adjusted R-squared of the regression model.</td>
 <td></td>
 </tr>
 <tr class="odd">
+<td></td>
 <td>- r2_within (float): R-squared of the regression model, computed on</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>demeaned dependent variable.</td>
 <td></td>
 </tr>
 <tr class="odd">
+<td></td>
 <td>- adj_r2_within (float): Adjusted R-squared of the regression model,</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>computed on demeaned dependent variable.</td>
 <td></td>
 </tr>
@@ -1323,15 +1395,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.plot_ritest" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.plot_ritest">plot_ritest</h3>
-<p><code>estimation.feols_.Feols.plot_ritest(plot_backend='lets_plot')</code></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.plot_ritest(plot_backend<span class="op">=</span><span class="st">'lets_plot'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Plot the distribution of the Randomization Inference Statistics.</p>
-<section id="parameters-5" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
+<section id="parameters-5" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 11%">
+<col style="width: 10%">
 <col style="width: 5%">
-<col style="width: 71%">
+<col style="width: 72%">
 <col style="width: 11%">
 </colgroup>
 <thead>
@@ -1344,7 +1416,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>plot_backend</code></td>
+<td>plot_backend</td>
 <td>str</td>
 <td>The plotting backend to use. Defaults to “lets_plot”. Alternatively, “matplotlib” is available.</td>
 <td><code>'lets_plot'</code></td>
@@ -1352,25 +1424,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-8" class="level4">
-<h4 class="anchored" data-anchor-id="returns-8">Returns</h4>
+<section id="returns-8" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-8">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 83%">
-<col style="width: 16%">
+<col style="width: 8%">
+<col style="width: 77%">
+<col style="width: 15%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>A lets_plot or matplotlib figure with the distribution of the Randomization</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>Inference Statistics.</td>
 <td></td>
 </tr>
@@ -1380,14 +1456,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.predict" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.predict">predict</h3>
-<p><code>estimation.feols_.Feols.predict(newdata=None, atol=1e-06, btol=1e-06, type='link')</code></p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.predict(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    newdata<span class="op">=</span><span class="va">None</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    atol<span class="op">=</span><span class="fl">1e-06</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    btol<span class="op">=</span><span class="fl">1e-06</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">'link'</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Predict values of the model on new data.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
-<section id="parameters-6" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
+<section id="parameters-6" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
+<col style="width: 4%">
 <col style="width: 12%">
 <col style="width: 76%">
 <col style="width: 5%">
@@ -1402,31 +1483,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>newdata</code></td>
+<td>newdata</td>
 <td>Optional[DataFrameType]</td>
 <td>A pd.DataFrame or pl.DataFrame with the data to be used for prediction. If None (default), the data used for fitting the model is used.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>type</code></td>
+<td>type</td>
 <td>str</td>
 <td>The type of prediction to be computed. Can be either “response” (default) or “link”. For linear models, both are identical.</td>
 <td><code>'link'</code></td>
 </tr>
 <tr class="odd">
-<td><code>atol</code></td>
+<td>atol</td>
 <td>Float</td>
 <td>Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
 <td><code>1e-6</code></td>
 </tr>
 <tr class="even">
-<td><code>btol</code></td>
+<td>btol</td>
 <td>Float</td>
 <td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
 <td><code>1e-6</code></td>
 </tr>
 <tr class="odd">
-<td><code>link</code></td>
+<td>link</td>
 <td></td>
 <td>The type of prediction to be made. Can be either ‘link’ or ‘response’. Defaults to ‘link’. ‘link’ and ‘response’ lead to identical results for linear models.</td>
 <td><em>required</em></td>
@@ -1434,21 +1515,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-9" class="level4">
-<h4 class="anchored" data-anchor-id="returns-9">Returns</h4>
+<section id="returns-9" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-9">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 84%">
+<col style="width: 9%">
+<col style="width: 14%">
+<col style="width: 76%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td>y_hat</td>
 <td>np.ndarray</td>
 <td>A flat np.array with predicted values of the regression model.</td>
 </tr>
@@ -1458,28 +1542,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.prepare_model_matrix" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.prepare_model_matrix">prepare_model_matrix</h3>
-<p><code>estimation.feols_.Feols.prepare_model_matrix()</code></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.prepare_model_matrix()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Prepare model matrices for estimation.</p>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.pvalue" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.pvalue">pvalue</h3>
-<p><code>estimation.feols_.Feols.pvalue()</code></p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.pvalue()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model p-values.</p>
-<section id="returns-10" class="level4">
-<h4 class="anchored" data-anchor-id="returns-10">Returns</h4>
+<section id="returns-10" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-10">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 84%">
+<col style="width: 9%">
+<col style="width: 13%">
+<col style="width: 76%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.Series</td>
 <td>A pd.Series with p-values of the estimated regression model.</td>
 </tr>
@@ -1489,23 +1576,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.resid" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.resid">resid</h3>
-<p><code>estimation.feols_.Feols.resid()</code></p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.resid()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model residuals.</p>
-<section id="returns-11" class="level4">
-<h4 class="anchored" data-anchor-id="returns-11">Returns</h4>
+<section id="returns-11" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-11">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 15%">
-<col style="width: 85%">
+<col style="width: 9%">
+<col style="width: 13%">
+<col style="width: 77%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>np.ndarray</td>
 <td>A np.ndarray with the residuals of the estimated regression model.</td>
 </tr>
@@ -1515,13 +1605,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.ritest" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.ritest">ritest</h3>
-<p><code>estimation.feols_.Feols.ritest(resampvar, cluster=None, reps=100, type='randomization-c', rng=None, choose_algorithm='auto', store_ritest_statistics=False, level=0.95)</code></p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.ritest(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    resampvar</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="va">None</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="dv">100</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">'randomization-c'</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    rng<span class="op">=</span><span class="va">None</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    choose_algorithm<span class="op">=</span><span class="st">'auto'</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    store_ritest_statistics<span class="op">=</span><span class="va">False</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    level<span class="op">=</span><span class="fl">0.95</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Conduct Randomization Inference (RI) test against a null hypothesis of <code>resampvar = 0</code>.</p>
-<section id="parameters-7" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
+<section id="parameters-7" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-7">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
+<col style="width: 7%">
 <col style="width: 6%">
 <col style="width: 78%">
 <col style="width: 6%">
@@ -1536,55 +1635,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>resampvar</code></td>
+<td>resampvar</td>
 <td>str</td>
 <td>The name of the variable to be resampled.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>cluster</code></td>
+<td>cluster</td>
 <td>str</td>
 <td>The name of the cluster variable in case of cluster random assignment. If provided, <code>resampvar</code> is held constant within each <code>cluster</code>. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>reps</code></td>
+<td>reps</td>
 <td>int</td>
 <td>The number of randomization iterations. Defaults to 100.</td>
 <td><code>100</code></td>
 </tr>
 <tr class="even">
-<td><code>type</code></td>
+<td>type</td>
 <td>str</td>
 <td>The type of the randomization inference test. Can be “randomization-c” or “randomization-t”. Note that the “randomization-c” is much faster, while the “randomization-t” is recommended by Wu &amp; Ding (JASA, 2021).</td>
 <td><code>'randomization-c'</code></td>
 </tr>
 <tr class="odd">
-<td><code>rng</code></td>
+<td>rng</td>
 <td>np.random.Generator</td>
 <td>A random number generator. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>choose_algorithm</code></td>
+<td>choose_algorithm</td>
 <td>str</td>
 <td>The algorithm to use for the computation. Defaults to “auto”. The alternative is “fast” and “slow”, and should only be used for running CI tests. Ironically, this argument is not tested for any input errors from the user! So please don’t use it =)</td>
 <td><code>'auto'</code></td>
 </tr>
 <tr class="odd">
-<td><code>include_plot</code></td>
+<td>include_plot</td>
 <td></td>
 <td>Whether to include a plot of the distribution p-values. Defaults to False.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>store_ritest_statistics</code></td>
+<td>store_ritest_statistics</td>
 <td>bool</td>
 <td>Whether to store the simulated statistics of the RI procedure. Defaults to False. If True, stores the simulated statistics in the model object via the <code>ritest_statistics</code> attribute as a numpy array.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>level</code></td>
+<td>level</td>
 <td>float</td>
 <td>The level for the confidence interval of the randomization inference p-value. Defaults to 0.95.</td>
 <td><code>0.95</code></td>
@@ -1592,29 +1691,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-12" class="level4">
-<h4 class="anchored" data-anchor-id="returns-12">Returns</h4>
+<section id="returns-12" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-12">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 83%">
-<col style="width: 16%">
+<col style="width: 8%">
+<col style="width: 77%">
+<col style="width: 15%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>A pd.Series with the regression coefficient of <code>resampvar</code> and the p-value</td>
 <td></td>
 </tr>
 <tr class="even">
+<td></td>
 <td>of the RI test. Additionally, reports the standard error and the confidence</td>
 <td></td>
 </tr>
 <tr class="odd">
+<td></td>
 <td>interval of the p-value.</td>
 <td></td>
 </tr>
@@ -1624,23 +1728,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.se" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.se">se</h3>
-<p><code>estimation.feols_.Feols.se()</code></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.se()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model standard errors.</p>
-<section id="returns-13" class="level4">
-<h4 class="anchored" data-anchor-id="returns-13">Returns</h4>
+<section id="returns-13" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-13">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 13%">
-<col style="width: 86%">
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 79%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.Series</td>
 <td>A pd.Series with the standard errors of the estimated regression model.</td>
 </tr>
@@ -1650,10 +1757,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.solve_ols" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.solve_ols">solve_ols</h3>
-<p><code>estimation.feols_.Feols.solve_ols(tZX, tZY, solver)</code></p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.solve_ols(tZX, tZY, solver)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Solve the ordinary least squares problem using the specified solver.</p>
-<section id="parameters-8" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
+<section id="parameters-8" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-8">Parameters</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -1665,19 +1772,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>tZX</code></td>
+<td>tZX</td>
 <td>np.ndarray</td>
 <td></td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>tZY</code></td>
+<td>tZY</td>
 <td>np.ndarray</td>
 <td></td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>solver</code></td>
+<td>solver</td>
 <td>str</td>
 <td></td>
 <td><em>required</em></td>
@@ -1685,42 +1792,48 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-14" class="level4">
-<h4 class="anchored" data-anchor-id="returns-14">Returns</h4>
+<section id="returns-14" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-14">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 81%">
-<col style="width: 18%">
+<col style="width: 9%">
+<col style="width: 73%">
+<col style="width: 17%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>array-like: The solution to the ordinary least squares problem.</td>
 <td></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="raises" class="level4">
-<h4 class="anchored" data-anchor-id="raises">Raises</h4>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 78%">
-<col style="width: 21%">
+<col style="width: 10%">
+<col style="width: 70%">
+<col style="width: 19%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>ValueError: If the specified solver is not supported.</td>
 <td></td>
 </tr>
@@ -1730,16 +1843,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.tidy" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.tidy">tidy</h3>
-<p><code>estimation.feols_.Feols.tidy(alpha=None)</code></p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.tidy(alpha<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Tidy model outputs.</p>
 <p>Return a tidy pd.DataFrame with the point estimates, standard errors, t-statistics, and p-values.</p>
-<section id="parameters-9" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
+<section id="parameters-9" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-9">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 5%">
 <col style="width: 12%">
-<col style="width: 74%">
+<col style="width: 75%">
 <col style="width: 7%">
 </colgroup>
 <thead>
@@ -1752,7 +1865,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>alpha</code></td>
+<td>alpha</td>
 <td>Optional[float]</td>
 <td>The significance level for the confidence intervals. If None, computes a 95% confidence interval (<code>alpha = 0.05</code>).</td>
 <td><code>None</code></td>
@@ -1760,21 +1873,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-15" class="level4">
-<h4 class="anchored" data-anchor-id="returns-15">Returns</h4>
+<section id="returns-15" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-15">Returns</h4>
 <table class="caption-top table">
 <colgroup>
+<col style="width: 5%">
 <col style="width: 9%">
-<col style="width: 90%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td>tidy_df</td>
 <td>pd.DataFrame</td>
 <td>A tidy pd.DataFrame containing the regression results, including point estimates, standard errors, t-statistics, and p-values.</td>
 </tr>
@@ -1784,28 +1900,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.to_array" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.to_array">to_array</h3>
-<p><code>estimation.feols_.Feols.to_array()</code></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.to_array()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Convert estimation data frames to np arrays.</p>
 </section>
 <section id="pyfixest.estimation.feols_.Feols.tstat" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.tstat">tstat</h3>
-<p><code>estimation.feols_.Feols.tstat()</code></p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.tstat()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Fitted model t-statistics.</p>
-<section id="returns-16" class="level4">
-<h4 class="anchored" data-anchor-id="returns-16">Returns</h4>
+<section id="returns-16" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-16">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 14%">
-<col style="width: 85%">
+<col style="width: 9%">
+<col style="width: 12%">
+<col style="width: 77%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.Series</td>
 <td>A pd.Series with t-statistics of the estimated regression model.</td>
 </tr>
@@ -1815,19 +1934,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.update" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.update">update</h3>
-<p><code>estimation.feols_.Feols.update(X_new, y_new, inplace=False)</code></p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.update(X_new, y_new, inplace<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Update coefficients for new observations using Sherman-Morrison formula.</p>
-<section id="returns-17" class="level4">
-<h4 class="anchored" data-anchor-id="returns-17">Returns</h4>
+<section id="returns-17" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-17">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>np.ndarray</td>
 <td>Updated coefficients</td>
 </tr>
@@ -1837,10 +1958,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.vcov" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.vcov">vcov</h3>
-<p><code>estimation.feols_.Feols.vcov(vcov, data=None)</code></p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.vcov(vcov, data<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Compute covariance matrices for an estimated regression model.</p>
-<section id="parameters-10" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-10">Parameters</h4>
+<section id="parameters-10" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-10">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 1%">
@@ -1858,13 +1979,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>vcov</code></td>
+<td>vcov</td>
 <td>Union[str, dict[str, str]]</td>
 <td>A string or dictionary specifying the type of variance-covariance matrix to use for inference. If a string, it can be one of “iid”, “hetero”, “HC1”, “HC2”, “HC3”. If a dictionary, it should have the format {“CRV1”: “clustervar”} for CRV1 inference or {“CRV3”: “clustervar”} for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>data</code></td>
+<td>data</td>
 <td>Optional[DataFrameType]</td>
 <td>The data used for estimation. If None, tries to fetch the data from the model object. Defaults to None.</td>
 <td><code>None</code></td>
@@ -1872,21 +1993,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-18" class="level4">
-<h4 class="anchored" data-anchor-id="returns-18">Returns</h4>
+<section id="returns-18" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-18">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 90%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 82%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>Feols</td>
 <td>An instance of class [Feols(/reference/Feols.qmd) with updated inference.</td>
 </tr>
@@ -1896,18 +2020,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.wald_test" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.wald_test">wald_test</h3>
-<p><code>estimation.feols_.Feols.wald_test(R=None, q=None, distribution='F')</code></p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.wald_test(R<span class="op">=</span><span class="va">None</span>, q<span class="op">=</span><span class="va">None</span>, distribution<span class="op">=</span><span class="st">'F'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Conduct Wald test.</p>
 <p>Compute a Wald test for a linear hypothesis of the form R * β = q. where R is m x k matrix, β is a k x 1 vector of coefficients, and q is m x 1 vector. By default, tests the joint null hypothesis that all coefficients are zero.</p>
 <p>This method producues the following attriutes</p>
 <p>_dfd : int degree of freedom in denominator _dfn : int degree of freedom in numerator _wald_statistic : scalar Wald-statistics computed for hypothesis testing _f_statistic : scalar Wald-statistics(when R is an indentity matrix, and q being zero vector) computed for hypothesis testing _p_value : scalar corresponding p-value for statistics</p>
-<section id="parameters-11" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-11">Parameters</h4>
+<section id="parameters-11" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-11">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 12%">
-<col style="width: 10%">
-<col style="width: 68%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 69%">
 <col style="width: 8%">
 </colgroup>
 <thead>
@@ -1920,19 +2044,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>R</code></td>
+<td>R</td>
 <td>array - like</td>
 <td>The matrix R of the linear hypothesis. If None, defaults to an identity matrix.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>q</code></td>
+<td>q</td>
 <td>array - like</td>
 <td>The vector q of the linear hypothesis. If None, defaults to a vector of zeros.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>distribution</code></td>
+<td>distribution</td>
 <td>str</td>
 <td>The distribution to use for the p-value. Can be either “F” or “chi2”. Defaults to “F”.</td>
 <td><code>'F'</code></td>
@@ -1940,25 +2064,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-19" class="level4">
-<h4 class="anchored" data-anchor-id="returns-19">Returns</h4>
+<section id="returns-19" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-19">Returns</h4>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 15%">
+<col style="width: 72%">
+</colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.Series</td>
 <td>A pd.Series with the Wald statistic and p-value.</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples-2" class="level4">
-<h4 class="anchored" data-anchor-id="examples-2">Examples</h4>
+<section id="examples-2" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-2">Examples</h4>
 <p>import numpy as np import pandas as pd</p>
 <p>from pyfixest.estimation.estimation import feols</p>
 <p>data = pd.read_csv(“pyfixest/did/data/df_het.csv”) data = data.iloc[1:3000]</p>
@@ -1983,15 +2114,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>Python p_stat: 9.67406627744023e-58</h1>
 <section id="pyfixest.estimation.feols_.Feols.wildboottest" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.wildboottest">wildboottest</h3>
-<p><code>estimation.feols_.Feols.wildboottest(reps, cluster=None, param=None, weights_type='rademacher', impose_null=True, bootstrap_type='11', seed=None, adj=True, cluster_adj=True, parallel=False, return_bootstrapped_t_stats=False)</code></p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.wildboottest(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    reps</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="va">None</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    param<span class="op">=</span><span class="va">None</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    weights_type<span class="op">=</span><span class="st">'rademacher'</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    impose_null<span class="op">=</span><span class="va">True</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    bootstrap_type<span class="op">=</span><span class="st">'11'</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    adj<span class="op">=</span><span class="va">True</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>    cluster_adj<span class="op">=</span><span class="va">True</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    parallel<span class="op">=</span><span class="va">False</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>    return_bootstrapped_t_stats<span class="op">=</span><span class="va">False</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Run a wild cluster bootstrap based on an object of type “Feols”.</p>
-<section id="parameters-12" class="level4">
-<h4 class="anchored" data-anchor-id="parameters-12">Parameters</h4>
+<section id="parameters-12" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-12">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 10%">
-<col style="width: 6%">
-<col style="width: 76%">
+<col style="width: 7%">
+<col style="width: 77%">
 <col style="width: 5%">
 </colgroup>
 <thead>
@@ -2004,73 +2147,73 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>reps</code></td>
+<td>reps</td>
 <td>int</td>
 <td>The number of bootstrap iterations to run.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>cluster</code></td>
+<td>cluster</td>
 <td>Union[str, None]</td>
 <td>The variable used for clustering. Defaults to None. If None, then uses the variable specified in the model’s <code>clustervar</code> attribute. If no <code>_clustervar</code> attribute is found, runs a heteroskedasticity- robust bootstrap.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>param</code></td>
+<td>param</td>
 <td>Union[str, None]</td>
 <td>A string of length one, containing the test parameter of interest. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>weights_type</code></td>
+<td>weights_type</td>
 <td>str</td>
 <td>The type of bootstrap weights. Options are ‘rademacher’, ‘mammen’, ‘webb’, or ‘normal’. Defaults to ‘rademacher’.</td>
 <td><code>'rademacher'</code></td>
 </tr>
 <tr class="odd">
-<td><code>impose_null</code></td>
+<td>impose_null</td>
 <td>bool</td>
 <td>Indicates whether to impose the null hypothesis on the bootstrap DGP. Defaults to True.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="even">
-<td><code>bootstrap_type</code></td>
+<td>bootstrap_type</td>
 <td>str</td>
 <td>A string of length one to choose the bootstrap type. Options are ‘11’, ‘31’, ‘13’, or ‘33’. Defaults to ‘11’.</td>
 <td><code>'11'</code></td>
 </tr>
 <tr class="odd">
-<td><code>seed</code></td>
+<td>seed</td>
 <td>Union[int, None]</td>
 <td>An option to provide a random seed. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>adj</code></td>
+<td>adj</td>
 <td>bool</td>
 <td>Indicates whether to apply a small sample adjustment for the number of observations and covariates. Defaults to True.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="odd">
-<td><code>cluster_adj</code></td>
+<td>cluster_adj</td>
 <td>bool</td>
 <td>Indicates whether to apply a small sample adjustment for the number of clusters. Defaults to True.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="even">
-<td><code>parallel</code></td>
+<td>parallel</td>
 <td>bool</td>
 <td>Indicates whether to run the bootstrap in parallel. Defaults to False.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>seed</code></td>
+<td>seed</td>
 <td>Union[str, None]</td>
 <td>An option to provide a random seed. Defaults to None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>return_bootstrapped_t_stats</code></td>
+<td>return_bootstrapped_t_stats</td>
 <td>bool, optional:</td>
 <td>If True, the method returns a tuple of the regular output and the bootstrapped t-stats. Defaults to False.</td>
 <td><code>False</code></td>
@@ -2078,21 +2221,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-20" class="level4">
-<h4 class="anchored" data-anchor-id="returns-20">Returns</h4>
+<section id="returns-20" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-20">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 4%">
-<col style="width: 95%">
+<col style="width: 2%">
+<col style="width: 3%">
+<col style="width: 93%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>pd.DataFrame</td>
 <td>A DataFrame with the original, non-bootstrapped t-statistic and bootstrapped p-value, along with the bootstrap type, inference type (HC vs CRV), and whether the null hypothesis was imposed on the bootstrap DGP. If <code>return_bootstrapped_t_stats</code> is True, the method returns a tuple of the regular output and the bootstrapped t-stats.</td>
 </tr>
@@ -2102,7 +2248,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="pyfixest.estimation.feols_.Feols.wls_transform" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.feols_.Feols.wls_transform">wls_transform</h3>
-<p><code>estimation.feols_.Feols.wls_transform()</code></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>estimation.feols_.Feols.wls_transform()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Transform model matrices for WLS Estimation.</p>
 
 

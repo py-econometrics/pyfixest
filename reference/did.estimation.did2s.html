@@ -132,6 +132,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -396,15 +400,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>did.estimation.did2s(data, yname, first_stage, second_stage, treatment, cluster)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>did.estimation.did2s(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    yname</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    first_stage</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    second_stage</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    treatment</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    cluster</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 16%">
 <col style="width: 14%">
-<col style="width: 56%">
+<col style="width: 14%">
+<col style="width: 57%">
 <col style="width: 12%">
 </colgroup>
 <thead>
@@ -417,37 +429,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>data</code></td>
+<td>data</td>
 <td>pd.DataFrame</td>
 <td>The DataFrame containing all variables.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>yname</code></td>
+<td>yname</td>
 <td>str</td>
 <td>The name of the dependent variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>first_stage</code></td>
+<td>first_stage</td>
 <td>str</td>
 <td>The formula for the first stage, starting with ‘~’.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>second_stage</code></td>
+<td>second_stage</td>
 <td>str</td>
 <td>The formula for the second stage, starting with ‘~’.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>treatment</code></td>
+<td>treatment</td>
 <td>str</td>
 <td>The name of the treatment variable.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>cluster</code></td>
+<td>cluster</td>
 <td>str</td>
 <td>The name of the cluster variable.</td>
 <td><em>required</em></td>
@@ -455,40 +467,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 11%">
-<col style="width: 88%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 79%">
 </colgroup>
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>object</td>
 <td>A fitted model object of class [Feols(/reference/Feols.qmd).</td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="examples" class="level2">
-<h2 class="anchored" data-anchor-id="examples">Examples</h2>
-<div id="4ce9424a" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="examples" class="level2 doc-section doc-section-examples">
+<h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
+<div id="089d62fc" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>df_het <span class="op">=</span> pd.read_csv(url)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>df_het.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="uKg16z"></div>
+            <div id="h51Uy4"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -499,7 +514,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -512,9 +527,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("uKg16z").appendChild(div);
+                        document.getElementById("h51Uy4").appendChild(div);
                     };
-                    var e = document.getElementById("uKg16z");
+                    var e = document.getElementById("h51Uy4");
                     e.appendChild(script);
                 })()
             </script>
@@ -522,7 +537,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="DrQmzV"></div>
+            <div id="Da7zDu"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -533,7 +548,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -546,9 +561,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("DrQmzV").appendChild(div);
+                        document.getElementById("Da7zDu").appendChild(div);
                     };
-                    var e = document.getElementById("DrQmzV");
+                    var e = document.getElementById("Da7zDu");
                     e.appendChild(script);
                 })()
             </script>
@@ -671,18 +686,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>In a first step, we estimate a classical event study model:</p>
-<div id="924f294b" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year, ref=-1.0)"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b3154c91" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate the model</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(rel_year, ref=-1.0)"</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 
@@ -761,13 +776,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can also inspect the model visually:</p>
-<div id="a3d9b9b2" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="e731d30e" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="IVClX8"></div>
+   <div id="wpr0iM"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
-       (function() {
-           var plotSpec={
+   
+   (function() {
+   // ----------
+   
+   var containerDiv = document.getElementById("wpr0iM");
+   var observer = new ResizeObserver(function(entries) {
+       for (let entry of entries) {
+           var width = containerDiv.clientWidth
+           if (entry.contentBoxSize && width > 0) {
+           
+               // Render plot
+               if (observer) {
+                   observer.disconnect();
+                   observer = null;
+               }
+
+               var plotSpec={
 "data":{
 "Coefficient":["C(rel_year, contr.treatment(base=-1.0))[T.-inf]","C(rel_year, contr.treatment(base=-1.0))[T.-20.0]","C(rel_year, contr.treatment(base=-1.0))[T.-19.0]","C(rel_year, contr.treatment(base=-1.0))[T.-18.0]","C(rel_year, contr.treatment(base=-1.0))[T.-17.0]","C(rel_year, contr.treatment(base=-1.0))[T.-16.0]","C(rel_year, contr.treatment(base=-1.0))[T.-15.0]","C(rel_year, contr.treatment(base=-1.0))[T.-14.0]","C(rel_year, contr.treatment(base=-1.0))[T.-13.0]","C(rel_year, contr.treatment(base=-1.0))[T.-12.0]","C(rel_year, contr.treatment(base=-1.0))[T.-11.0]","C(rel_year, contr.treatment(base=-1.0))[T.-10.0]","C(rel_year, contr.treatment(base=-1.0))[T.-9.0]","C(rel_year, contr.treatment(base=-1.0))[T.-8.0]","C(rel_year, contr.treatment(base=-1.0))[T.-7.0]","C(rel_year, contr.treatment(base=-1.0))[T.-6.0]","C(rel_year, contr.treatment(base=-1.0))[T.-5.0]","C(rel_year, contr.treatment(base=-1.0))[T.-4.0]","C(rel_year, contr.treatment(base=-1.0))[T.-3.0]","C(rel_year, contr.treatment(base=-1.0))[T.-2.0]","C(rel_year, contr.treatment(base=-1.0))[T.0.0]","C(rel_year, contr.treatment(base=-1.0))[T.1.0]","C(rel_year, contr.treatment(base=-1.0))[T.2.0]","C(rel_year, contr.treatment(base=-1.0))[T.3.0]","C(rel_year, contr.treatment(base=-1.0))[T.4.0]","C(rel_year, contr.treatment(base=-1.0))[T.5.0]","C(rel_year, contr.treatment(base=-1.0))[T.6.0]","C(rel_year, contr.treatment(base=-1.0))[T.7.0]","C(rel_year, contr.treatment(base=-1.0))[T.8.0]","C(rel_year, contr.treatment(base=-1.0))[T.9.0]","C(rel_year, contr.treatment(base=-1.0))[T.10.0]","C(rel_year, contr.treatment(base=-1.0))[T.11.0]","C(rel_year, contr.treatment(base=-1.0))[T.12.0]","C(rel_year, contr.treatment(base=-1.0))[T.13.0]","C(rel_year, contr.treatment(base=-1.0))[T.14.0]","C(rel_year, contr.treatment(base=-1.0))[T.15.0]","C(rel_year, contr.treatment(base=-1.0))[T.16.0]","C(rel_year, contr.treatment(base=-1.0))[T.17.0]","C(rel_year, contr.treatment(base=-1.0))[T.18.0]","C(rel_year, contr.treatment(base=-1.0))[T.19.0]","C(rel_year, contr.treatment(base=-1.0))[T.20.0]"],
 "Estimate":[-3.551929536210318E-8,-0.05822583251533651,-0.006032211992613522,-0.006152375190415712,-0.012533269577187376,-0.034697606166936165,0.03782821313278836,2.1315091505167194E-4,-0.0011267317909735854,0.026530166495163123,-0.02684163867727671,0.007378356801149751,0.002339696605279026,0.008999954415031963,0.03275225811843527,2.589201081122684E-4,-0.03932617050693799,0.005630355477915762,0.024642835056253226,0.0011693818689868186,1.3730782812938136,1.6021020425516928,1.6657197436428295,1.7874633310303911,1.914912712719568,2.0592032799014506,2.1474988919626194,2.2340155728160327,2.327566440967995,2.346379081884324,2.501338373713534,2.5534424556739195,2.604402978845574,2.5785087568520995,2.7234333114983915,2.9097391899350957,2.859789620054618,2.9084076338706337,2.874142643269005,2.8832717144918742,2.9119654874923606],
@@ -858,27 +888,51 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 }
 }],
-"metainfo_list":[]
+"metainfo_list":[],
+"spec_id":"1"
 };
-           var plotContainer = document.getElementById("IVClX8");
-           window.letsPlotCall(function() {{
-               LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer);
-           }});
-       })();
+               window.letsPlotCall(function() {
+       
+               var toolbar = null;
+               var plotContainer = containerDiv;               
+               
+                   var options = {
+                       sizing: {
+                           width_mode: "min",
+                           height_mode: "scaled",
+                           width: width
+                       }
+                   };
+                   var fig = LetsPlot.buildPlotFromProcessedSpecs(plotSpec, -1, -1, plotContainer, options);
+                   if (toolbar) {
+                     toolbar.bind(fig);
+                   }
+               });
+               
+               break;
+           }
+       }
+   });
+   
+   observer.observe(containerDiv);
+   
+   // ----------
+   })();
+   
    </script>
 </div>
 </div>
 <p>To estimate a pooled effect, we need to slightly update the second stage formula:</p>
-<div id="53afced7" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="3d647b5e" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.did2s(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    first_stage<span class="op">=</span><span class="st">"~ 0 | unit + year"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    second_stage<span class="op">=</span><span class="st">"~i(treat)"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    treatment<span class="op">=</span><span class="st">"treat"</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    cluster<span class="op">=</span><span class="st">"state"</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>fit.tidy().head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div>
 

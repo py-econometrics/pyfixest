@@ -161,6 +161,10 @@ window.Quarto = {
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="./changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
@@ -248,7 +252,7 @@ window.Quarto = {
 
 
 <p>We can compute marginal effects and linear and non-linear hypothesis tests via the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package.</p>
-<div id="46a828f0" class="cell" data-execution_count="1">
+<div id="8b8fcead" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> hypotheses</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -257,13 +261,9 @@ window.Quarto = {
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/pyfixest/pyfixest/.pixi/envs/docs/lib/python3.12/site-packages/marginaleffects/model_pyfixest.py:45: SyntaxWarning: invalid escape sequence '\['
-  variables = [re.sub("\[.*\]", "", x) for x in variables]</code></pre>
-</div>
 <div class="cell-output cell-output-display">
 
-            <div id="h3UMKW"></div>
+            <div id="522Jql"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -274,7 +274,7 @@ window.Quarto = {
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -287,9 +287,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("h3UMKW").appendChild(div);
+                        document.getElementById("522Jql").appendChild(div);
                     };
-                    var e = document.getElementById("h3UMKW");
+                    var e = document.getElementById("522Jql");
                     e.appendChild(script);
                 })()
             </script>
@@ -297,7 +297,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="KvNh8x"></div>
+            <div id="4C4cKh"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -308,7 +308,7 @@ window.Quarto = {
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.4.1/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -321,9 +321,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("KvNh8x").appendChild(div);
+                        document.getElementById("4C4cKh").appendChild(div);
                     };
-                    var e = document.getElementById("KvNh8x");
+                    var e = document.getElementById("4C4cKh");
                     e.appendChild(script);
                 })()
             </script>
@@ -390,8 +390,8 @@ window.Quarto = {
 </div>
 <p>Suppose we were interested in testing the hypothesis that <span class="math inline">\(X_{1} = X_{2}\)</span>. Given the relatively large differences in coefficients and small standard errors, we will likely reject the null that the two parameters are equal.</p>
 <p>We can run the formal test via the <code>hypotheses</code> function from the <code>marginaleffects</code> package.</p>
-<div id="076822f8" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4124f578" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div><style>
 .dataframe > thead > tr,
@@ -446,10 +446,10 @@ window.Quarto = {
 <p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>
 <p>For the moment, let’s assume that <span class="math inline">\(X1\)</span> is a randomly assigned treatment variable. As before, <span class="math inline">\(Y\)</span> is our variable / KPI of interest.</p>
 <p>Under randomization, the model intercept measures the “baseline”, i.e.&nbsp;the population average of <span class="math inline">\(Y\)</span> in the absence of treatment. To compute a relative uplift, we might compute</p>
-<div id="b3143547" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b8c08854" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
-<pre><code>-211.71906665561212</code></pre>
+<pre><code>np.float64(-211.71906665561212)</code></pre>
 </div>
 </div>
 <p>So we have a really big negative treatment effect of around minus 212%! To conduct correct inference on this ratio statistic, we need to use the delta method.</p>
@@ -473,8 +473,8 @@ window.Quarto = {
 <section id="using-the-delta-method-via-marginaleffects" class="level3">
 <h3 class="anchored" data-anchor-id="using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</h3>
 <p>We can employ the Delta Method via <code>marginaleffects</code> via the <code>hypotheses</code> function:</p>
-<div id="fe70af11" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="41e546a7" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div><style>
 .dataframe > thead > tr,

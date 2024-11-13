@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -93,6 +127,10 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../changelog.html"> 
+<span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item">
     <a class="nav-link" href="../contributing.html"> 
@@ -345,16 +383,30 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="pyfixest.report.dtable" class="level1">
 <h1>report.dtable</h1>
-<p><code>report.dtable(df, vars, stats=['count', 'mean', 'std'], bycol=None, byrow=None, type='gt', labels={}, stats_labels={}, digits=2, notes='', counts_row_below=False, hide_stats=False, **kwargs)</code></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>report.dtable(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    df</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">vars</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    stats<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    bycol<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    byrow<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">'gt'</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    stats_labels<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    digits<span class="op">=</span><span class="dv">2</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    notes<span class="op">=</span><span class="st">''</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    counts_row_below<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    hide_stats<span class="op">=</span><span class="va">False</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">**</span>kwargs</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate descriptive statistics tables and create a booktab style table in the desired format (gt or tex).</p>
-<section id="parameters" class="level2">
-<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<section id="parameters" class="level2 doc-section doc-section-parameters">
+<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 7%">
 <col style="width: 5%">
-<col style="width: 76%">
-<col style="width: 10%">
+<col style="width: 82%">
+<col style="width: 4%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -366,79 +418,79 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>df</code></td>
+<td>df</td>
 <td>pd.DataFrame</td>
 <td>DataFrame containing the table to be displayed.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td><code>vars</code></td>
+<td>vars</td>
 <td>list</td>
 <td>List of variables to be included in the table.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td><code>stats</code></td>
+<td>stats</td>
 <td>list</td>
-<td>List of statistics to be calculated. The default is [‘count’,‘mean’, ‘std’]. All pandas aggregation functions are supported.</td>
-<td><code>['count', 'mean', 'std']</code></td>
+<td>List of statistics to be calculated. The default is None, that sets [‘count’,‘mean’, ‘std’]. All pandas aggregation functions are supported.</td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>bycol</code></td>
+<td>bycol</td>
 <td>list</td>
 <td>List of variables to be used to group the data by columns. The default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>byrow</code></td>
+<td>byrow</td>
 <td>str</td>
 <td>Variable to be used to group the data by rows. The default is None.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>type</code></td>
+<td>type</td>
 <td>str</td>
 <td>Type of table to be created. The default is ‘gt’. Type can be ‘gt’ for great_tables, ‘tex’ for LaTeX or ‘df’ for dataframe.</td>
 <td><code>'gt'</code></td>
 </tr>
 <tr class="odd">
-<td><code>labels</code></td>
+<td>labels</td>
 <td>dict</td>
 <td>Dictionary containing the labels for the variables. The default is None.</td>
-<td><code>{}</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>stats_labels</code></td>
+<td>stats_labels</td>
 <td>dict</td>
 <td>Dictionary containing the labels for the statistics. The default is None. The function uses a default labeling which will be replaced by the labels in the dictionary.</td>
-<td><code>{}</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
-<td><code>digits</code></td>
+<td>digits</td>
 <td>int</td>
 <td>Number of decimal places to round the statistics to. The default is 2.</td>
 <td><code>2</code></td>
 </tr>
 <tr class="even">
-<td><code>notes</code></td>
+<td>notes</td>
 <td>str</td>
 <td>Table notes to be displayed at the bottom of the table.</td>
 <td><code>''</code></td>
 </tr>
 <tr class="odd">
-<td><code>counts_row_below</code></td>
+<td>counts_row_below</td>
 <td>bool</td>
 <td>Whether to display the number of observations at the bottom of the table. Will only be carried out when each var has the same number of obs and when byrow is None. The default is False</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
-<td><code>hide_stats</code></td>
+<td>hide_stats</td>
 <td>bool</td>
 <td>Whether to hide the names of the statistics in the table header. When stats are hidden and the user provides no notes string the labels of the stats are listed in the table notes. The default is False.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="odd">
-<td><code>kwargs</code></td>
+<td>kwargs</td>
 <td>dict</td>
 <td>Additional arguments to be passed to the make_table function.</td>
 <td><code>{}</code></td>
@@ -446,17 +498,19 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
-<section id="returns" class="level2">
-<h2 class="anchored" data-anchor-id="returns">Returns</h2>
+<section id="returns" class="level2 doc-section doc-section-returns">
+<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <thead>
 <tr class="header">
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td></td>
 <td>A table in the specified format.</td>
 <td></td>
 </tr>
