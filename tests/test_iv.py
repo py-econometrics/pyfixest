@@ -80,35 +80,42 @@ def r_results():
     controls_r = ro.StrVector(controls)
     cl_r = ro.StrVector([cl])
 
-    # Call the ivDiag function from the ivDiag package
-    result_with_weights = ivDiag.ivDiag(
-        Y=Y_r,
-        D=D_r,
-        Z=Z_r,
-        controls=controls_r,
-        data=data_r,
-        weights="weights",
-        cl=cl_r,
-        run_AR=False,
-        parallel=False,
-        bootstrap=False,
-    )
+    # set to True to run ivDiag R package
+    run_r = False
+    if run_r:
+        # Call the ivDiag function from the ivDiag package
+        F_stat_weights = ivDiag.ivDiag(
+            Y=Y_r,
+            D=D_r,
+            Z=Z_r,
+            controls=controls_r,
+            data=data_r,
+            weights="weights",
+            cl=cl_r,
+            run_AR=False,
+            parallel=False,
+            bootstrap=False,
+        ).rx2("F_stat")
 
-    result_without_weights = ivDiag.ivDiag(
-        Y=Y_r,
-        D=D_r,
-        Z=Z_r,
-        controls=controls_r,
-        data=data_r,
-        cl=cl_r,
-        run_AR=False,
-        parallel=False,
-        bootstrap=False,
-    )
+        F_stat_no_weights = ivDiag.ivDiag(
+            Y=Y_r,
+            D=D_r,
+            Z=Z_r,
+            controls=controls_r,
+            data=data_r,
+            cl=cl_r,
+            run_AR=False,
+            parallel=False,
+            bootstrap=False,
+        ).rx2("F_stat")
+
+    else:
+        F_stat_weights = np.array([20.1279, 18.9532, 17.3067, 17.3067])
+        F_stat_no_weights = np.array([19.7981, 19.9658, 17.0545, 17.0545])
 
     return {
-        "with_weights": result_with_weights.rx2("F_stat"),
-        "without_weights": result_without_weights.rx2("F_stat"),
+        "with_weights": F_stat_weights,
+        "without_weights": F_stat_no_weights,
         "data": data,
     }
 

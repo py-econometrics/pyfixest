@@ -22,7 +22,6 @@ dependencies = [
   "tqdm==4.66.4",
   "great-tables>=0.10.0",
   "numpy>=1.19.0",
-  "jinja2>=3.1.4,<4",
   "narwhals>=1.13.3",
 ]
 
