@@ -37,7 +37,7 @@ from pyfixest.utils.dev_utils import (
     DataFrameType,
     _drop_cols,
     _extract_variable_level,
-    _polars_to_pandas,
+    _narwhals_to_pandas,
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
@@ -518,7 +518,7 @@ class Feols:
         # Assuming `data` is the DataFrame in question
 
         if isinstance(data, pl.DataFrame):
-            data = _polars_to_pandas(data)
+            data = _narwhals_to_pandas(data)
 
         _data = self._data
         _has_fixef = self._has_fixef
@@ -1616,7 +1616,7 @@ class Feols:
             else:
                 return self._Y_hat_response
 
-        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]

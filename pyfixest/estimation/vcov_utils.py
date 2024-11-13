@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _polars_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 
 
 def _compute_bread(
@@ -20,7 +20,7 @@ def _compute_bread(
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
-        data_pandas = _polars_to_pandas(data)
+        data_pandas = _narwhals_to_pandas(data)
         cluster_df = data_pandas[clustervar].copy()
     else:
         raise AttributeError(
