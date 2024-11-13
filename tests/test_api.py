@@ -1,3 +1,4 @@
+import duckdb
 import numpy as np
 
 import pyfixest as pf
@@ -89,3 +90,13 @@ def test_lean():
     assert not hasattr(fit, "_data")
     assert not hasattr(fit, "_X")
     assert not hasattr(fit, "_Y")
+
+
+def test_duckdb_input():
+    data_pandas = pf.get_data()
+    data_duckdb = duckdb.query("SELECT * FROM data_pandas")
+    fit_pandas = pf.feols("Y ~ X1 | f1 + f2", data=data_pandas)
+    fit_duckdb = pf.feols("Y ~ X1 | f1 + f2", data=data_duckdb)
+    assert type(fit_pandas) is type(fit_duckdb)
+    np.testing.assert_allclose(fit_pandas.coef(), fit_duckdb.coef(), rtol=1e-12)
+    np.testing.assert_allclose(fit_pandas.se(), fit_duckdb.se(), rtol=1e-12)

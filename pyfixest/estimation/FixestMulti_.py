@@ -9,7 +9,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 
 
 class FixestMulti:
@@ -88,7 +88,7 @@ class FixestMulti:
         else:
             self._splitvar = None
 
-        data = _polars_to_pandas(data)
+        data = _narwhals_to_pandas(data)
 
         if self._copy_data:
             self._data = data.copy()
