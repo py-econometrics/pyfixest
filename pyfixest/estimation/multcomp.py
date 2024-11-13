@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import t
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
@@ -118,71 +119,7 @@ def rwolf(
     rwolf_df
     ```
     """
-    models = _post_processing_input_checks(models)
-    all_model_stats = pd.DataFrame()
-    full_enumeration = False
-
-    S = 0
-    for model in models:
-        if param not in model._coefnames:
-            raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
-            )
-
-        if model._is_clustered:
-            # model._G a list of length 3
-            # for oneway clusering: repeated three times
-            G = min(model._G)
-            if reps > 2**G:
-                warnings.warn(
-                    f"""
-                              2^(the number of clusters) < the number of boot iterations for at least one model,
-                              setting full_enumeration to True and reps = {2**G}.
-                              """
-                )
-                full_enumeration = True
-
-        model_tidy = model.tidy().xs(param)
-        all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
-        S += 1
-
-    t_stats = np.zeros(S)
-    boot_t_stats = np.zeros((2**G, S)) if full_enumeration else np.zeros((reps, S))
-
-    for i in range(S):
-        model = models[i]
-
-        if sampling_method == "wild-bootstrap":
-            wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-                param=param,
-                reps=reps,
-                return_bootstrapped_t_stats=True,
-                seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
-            )
-
-            t_stats[i] = wildboot_res_df["t value"]
-            boot_t_stats[:, i] = bootstrapped_t_stats
-
-        elif sampling_method == "ri":
-            rng = np.random.default_rng(seed)
-            model.ritest(
-                resampvar=param,
-                rng=rng,
-                reps=reps,
-                type="randomization-t",
-                store_ritest_statistics=True,
-            )
-
-            t_stats[i] = model._ritest_sample_stat
-            boot_t_stats[:, i] = model._ritest_statistics
-        else:
-            raise ValueError("Invalid sampling method specified")
-
-    pval = _get_rwolf_pval(t_stats, boot_t_stats)
-
-    all_model_stats.loc["RW Pr(>|t|)"] = pval
-    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
-    return all_model_stats
+    return _multcomp_resample("rwolf", models, param, reps, seed, sampling_method)
 
 
 def _get_rwolf_pval(t_stats, boot_t_stats):
@@ -287,58 +224,10 @@ def wyoung(
     wyoung_df
     ```
     """
-    models = _post_processing_input_checks(models)
-    all_model_stats = pd.DataFrame()
-    full_enumeration = False
-
-    S = 0
-    for model in models:
-        if param not in model._coefnames:
-            raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
-            )
-
-        if model._is_clustered:
-            # model._G a list of length 3
-            # for oneway clusering: repeated three times
-            G = min(model._G)
-            if reps > 2**G:
-                warnings.warn(
-                    f"""
-                              2^(the number of clusters) < the number of boot iterations for at least one model,
-                              setting full_enumeration to True and reps = {2**G}.
-                              """
-                )
-                full_enumeration = True
-
-        model_tidy = model.tidy().xs(param)
-        all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
-        S += 1
-
-    t_stats = np.zeros(S)
-    boot_t_stats = np.zeros((2**G, S)) if full_enumeration else np.zeros((reps, S))
-
-    for i in range(S):
-        model = models[i]
-
-        wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-            param=param,
-            reps=reps,
-            return_bootstrapped_t_stats=True,
-            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
-        )
-
-        t_stats[i] = wildboot_res_df["t value"]
-        boot_t_stats[:, i] = bootstrapped_t_stats
-
-    pval = _get_wyoung_pval(t_stats, boot_t_stats)
-
-    all_model_stats.loc["WY Pr(>|t|)"] = pval
-    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
-    return all_model_stats
+    return _multcomp_resample("wyoung", models, param, reps, seed)
 
 
-def _get_wyoung_pval(t_stats, boot_t_stats):
+def _get_wyoung_pval(p_vals, boot_p_vals):
     """
     Compute Westfall-Young adjusted p-values based on bootstrapped t-statistics.
 
@@ -354,24 +243,20 @@ def _get_wyoung_pval(t_stats, boot_t_stats):
     -------
     np.ndarray: A vector of Westfall-Young corrected p-values.
     """
-    t_stats = np.abs(t_stats)
-    boot_t_stats = np.abs(boot_t_stats)
-
-    S = boot_t_stats.shape[1]
-    B = boot_t_stats.shape[0]
+    S = boot_p_vals.shape[1]
+    B = boot_p_vals.shape[0]
 
     pinit = corr_padj = pval = np.zeros(S)
-    stepdown_index = np.argsort(t_stats)[::-1]
+    stepdown_index = np.argsort(p_vals)
     ro = np.argsort(stepdown_index)
 
     # Step 3 (p.28 -- Westfall and Young Free step-down resampling method)
-    # We sample t-stats instead of p-values
-    Qs = np.maximum.accumulate(boot_t_stats[:, stepdown_index[::-1]], axis=1)[:, ::-1]
+    Qs = np.minimum.accumulate(boot_p_vals[:, stepdown_index[::-1]], axis=1)[:, ::-1]
 
     # Step 4 and 5
-    t_against_null = np.greater_equal(Qs, t_stats[stepdown_index])
+    p_against_null = np.less_equal(Qs, p_vals[stepdown_index])
 
-    pinit = t_against_null.sum(axis=0) / B
+    pinit = p_against_null.sum(axis=0) / B
 
     # Step 6: Enforce monotonicity of adjusted p-values
     corr_padj = np.maximum.accumulate(pinit)
@@ -428,3 +313,85 @@ def _get_wyoung_pval_slow(t_stats, boot_t_stats):
     pval = corr_padj[ro]
 
     return pval
+
+
+def _multcomp_resample(
+    type: str,
+    models: list[Union[Feols, Fepois]],
+    param: str,
+    reps: int,
+    seed: int,
+) -> pd.DataFrame:
+
+    models = _post_processing_input_checks(models)
+    if type not in ["rwolf", "wyoung"]:
+        raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
+
+    all_model_stats = pd.DataFrame()
+    full_enumeration = False
+
+    S = 0
+    for model in models:
+        if param not in model._coefnames:
+            raise ValueError(
+                f"Parameter '{param}' not found in the model {model._fml}."
+            )
+
+        if model._is_clustered:
+            # model._G a list of length 3
+            # for oneway clusering: repeated three times
+            G = min(model._G)
+            if reps > 2**G:
+                warnings.warn(
+                    f"""
+                              2^(the number of clusters) < the number of boot iterations for at least one model,
+                              setting full_enumeration to True and reps = {2**G}.
+                              """
+                )
+                full_enumeration = True
+
+        model_tidy = model.tidy().xs(param)
+        all_model_stats = pd.concat([all_model_stats, model_tidy], axis=1)
+        S += 1
+
+    t_stats = np.zeros(S)
+    boot_t_stats = np.zeros((2**G, S)) if full_enumeration else np.zeros((reps, S))
+
+    for i in range(S):
+        model = models[i]
+
+        wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
+            param=param,
+            reps=reps,
+            return_bootstrapped_t_stats=True,
+            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
+        )
+        # TODO: add RI option
+        t_stats[i] = wildboot_res_df["t value"]
+        boot_t_stats[:, i] = bootstrapped_t_stats
+
+    if type == "rwolf":
+        pval = _get_rwolf_pval(t_stats, boot_t_stats)
+        all_model_stats.loc["RW Pr(>|t|)"] = pval
+    else:
+        _df = model._N - fit._k if fit._vcov_type in ["iid", "hetero"] else fit._G - 1
+        p_vals = 2 * (1 - t.cdf(np.abs(t_stats), _df))
+        boot_p_vals = 2 * (1 - t.cdf(np.abs(boot_t_stats), _df))
+        pval = _get_wyoung_pval(p_vals, boot_p_vals)
+        all_model_stats.loc["WY Pr(>|t|)"] = pval
+
+    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
+    return all_model_stats
+
+
+if __name__ == "__main__":
+    from pyfixest import get_data, feols
+
+    data = get_data()
+    data = data.dropna()
+    fit = feols("Y ~ X1", data=data)
+
+    # output = fit.wildboottest(param="X1", reps=10)
+    output = wyoung(fit, "X1", reps=9999, seed=123)
+
+    print(output)
