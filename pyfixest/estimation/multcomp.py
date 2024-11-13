@@ -180,6 +180,7 @@ def wyoung(
     param: str,
     reps: int,
     seed: int,
+    sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
     """
     Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
@@ -204,7 +205,7 @@ def wyoung(
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Romano-Wolf
+        A DataFrame containing estimation statistics, including the Westfall and Young
         adjusted p-values.
 
     Examples
@@ -224,7 +225,7 @@ def wyoung(
     wyoung_df
     ```
     """
-    return _multcomp_resample("wyoung", models, param, reps, seed)
+    return _multcomp_resample("wyoung", models, param, reps, seed, sampling_method)
 
 
 def _get_wyoung_pval(p_vals, boot_p_vals):
@@ -321,11 +322,16 @@ def _multcomp_resample(
     param: str,
     reps: int,
     seed: int,
+    sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
 
     models = _post_processing_input_checks(models)
     if type not in ["rwolf", "wyoung"]:
         raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
+    if sampling_method not in ["wild-bootstrap", "ri"]:
+        raise ValueError(
+            "Adjustment procedure should be one of 'wild-bootstrap' and 'ri'"
+        )
 
     all_model_stats = pd.DataFrame()
     full_enumeration = False
@@ -360,25 +366,40 @@ def _multcomp_resample(
     for i in range(S):
         model = models[i]
 
-        wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
-            param=param,
-            reps=reps,
-            return_bootstrapped_t_stats=True,
-            seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
-        )
-        # TODO: add RI option
-        t_stats[i] = wildboot_res_df["t value"]
-        boot_t_stats[:, i] = bootstrapped_t_stats
+        if sampling_method == "wild-bootstrap":
+            wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
+                param=param,
+                reps=reps,
+                return_bootstrapped_t_stats=True,
+                seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
+            )
+            t_stats[i] = wildboot_res_df["t value"]
+            boot_t_stats[:, i] = bootstrapped_t_stats
+
+        elif sampling_method == "ri":
+            rng = np.random.default_rng(seed)
+            model.ritest(
+                resampvar=param,
+                rng=rng,
+                reps=reps,
+                type="randomization-t",
+                store_ritest_statistics=True,
+            )
+
+            t_stats[i] = model._ritest_sample_stat
+            boot_t_stats[:, i] = model._ritest_statistics
 
     if type == "rwolf":
         pval = _get_rwolf_pval(t_stats, boot_t_stats)
         all_model_stats.loc["RW Pr(>|t|)"] = pval
-    else:
+    elif type == "wyoung":
         _df = model._N - fit._k if fit._vcov_type in ["iid", "hetero"] else fit._G - 1
         p_vals = 2 * (1 - t.cdf(np.abs(t_stats), _df))
         boot_p_vals = 2 * (1 - t.cdf(np.abs(boot_t_stats), _df))
         pval = _get_wyoung_pval(p_vals, boot_p_vals)
         all_model_stats.loc["WY Pr(>|t|)"] = pval
+    else:
+        raise ValueError("Invalid adjustment procedure specified")
 
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats
@@ -392,6 +413,8 @@ if __name__ == "__main__":
     fit = feols("Y ~ X1", data=data)
 
     # output = fit.wildboottest(param="X1", reps=10)
-    output = wyoung(fit, "X1", reps=9999, seed=123)
+    output = wyoung(fit, "X1", reps=9999, seed=123, sampling_method="ri")
+
+    output_rw = rwolf(fit, "X1", reps=9999, seed=124)
 
     print(output)
