@@ -1,4 +1,14 @@
-# News
+# Changelog
+
+## PyFixest 0.26.0 (In Development)
+
+- Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
+  As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames.
+
+## PyFixest 0.22.0 - 0.25.4
+
+See the github changelog for details: [link](https://github.com/py-econometrics/pyfixest/releases).
+
 
 ## PyFixest 0.22.0
 
