@@ -23,6 +23,7 @@ from lets_plot import (
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
@@ -151,6 +152,9 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
+    if isinstance(models, FixestMulti): 
+        models = models.to_list()
+
     models = _post_processing_input_checks(models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
@@ -297,6 +301,9 @@ def coefplot(
 
     ```
     """
+    if isinstance(models, FixestMulti): 
+        models = models.to_list()
+        
     models = _post_processing_input_checks(models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(

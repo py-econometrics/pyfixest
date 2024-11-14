@@ -6,6 +6,7 @@ import pandas as pd
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 
 
@@ -44,6 +45,9 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
     bonf_df
     ```
     """
+    if isinstance(models, FixestMulti): 
+        models = models.to_list()
+
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
     S = len(models)
@@ -118,6 +122,9 @@ def rwolf(
     rwolf_df
     ```
     """
+    if isinstance(models, FixestMulti): 
+        models = models.to_list()
+        
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
     full_enumeration = False
