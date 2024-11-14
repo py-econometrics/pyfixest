@@ -152,7 +152,7 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    if isinstance(models, FixestMulti): 
+    if isinstance(models, FixestMulti):
         models = models.to_list()
 
     models = _post_processing_input_checks(models)
@@ -301,9 +301,9 @@ def coefplot(
 
     ```
     """
-    if isinstance(models, FixestMulti): 
+    if isinstance(models, FixestMulti):
         models = models.to_list()
-        
+
     models = _post_processing_input_checks(models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(

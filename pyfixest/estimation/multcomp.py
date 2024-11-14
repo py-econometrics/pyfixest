@@ -45,7 +45,7 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
     bonf_df
     ```
     """
-    if isinstance(models, FixestMulti): 
+    if isinstance(models, FixestMulti):
         models = models.to_list()
 
     models = _post_processing_input_checks(models)
@@ -122,9 +122,9 @@ def rwolf(
     rwolf_df
     ```
     """
-    if isinstance(models, FixestMulti): 
+    if isinstance(models, FixestMulti):
         models = models.to_list()
-        
+
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
     full_enumeration = False
