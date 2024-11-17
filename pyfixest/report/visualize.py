@@ -28,6 +28,11 @@ from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
+
 LetsPlot.setup_html()
 
 
@@ -61,7 +66,7 @@ def set_figsize(
 
 
 def iplot(
-    models,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: Union[int, str, None] = None,
@@ -84,9 +89,8 @@ def iplot(
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or
-        `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -152,17 +156,14 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
-
     models = _post_processing_input_checks(models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
         )
 
-    df_all = []
-    all_icovars = []
+    df_all: list[pd.DataFrame] = []
+    all_icovars: list[str] = []
 
     if keep is None:
         keep = []
@@ -209,7 +210,7 @@ def iplot(
 
 
 def coefplot(
-    models: list,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: float = 0,
@@ -231,8 +232,8 @@ def coefplot(
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -301,9 +302,6 @@ def coefplot(
 
     ```
     """
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
-
     models = _post_processing_input_checks(models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
