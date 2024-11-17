@@ -195,3 +195,18 @@ def test_sampling_scheme(seed, reps):
     assert (
         np.abs(percent_diff) < 1.0
     ), f"Percentage difference is too large: {percent_diff}%"
+
+# Compare the results when passing a list of Feols/Feiv/Fepois objects vs. a FixestMulti object
+@pytest.mark.extended
+@pytest.mark.parametrize("seed", [1000, 2000, 3000])
+@pytest.mark.parametrize("reps", [999, 1999])
+def test_multi_vs_list(seed, reps):
+
+    data = get_data()
+    fit_all = feols("Y + Y2 ~ X1 + X2", data=data)
+
+    fit1 = feols("Y ~ X1 + X2", data=data)
+    fit2 = feols("Y2 ~ X1 + X2", data=data)
+
+    assert bonferroni(fit_all, "X1").equals(bonferroni([fit1, fit2], "X1"))
+    assert rwolf(fit_all, "X1",reps = reps, seed = seed).equals(rwolf([fit1, fit2], "X1", reps = reps, seed = seed))
