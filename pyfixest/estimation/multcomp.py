@@ -4,12 +4,16 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
+from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 
+ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
 
-def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
+
+def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
@@ -18,9 +22,8 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
     Parameters
     ----------
-    models : list[Feols, Fepois], Feols or Fepois
-        A list of models for which the p-values should be adjusted, or a Feols or
-        Fepois object.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -65,7 +68,7 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: list[Union[Feols, Fepois]],
+    models: Union[FixestMulti, list[Union[Feols, Fepois]]],
     param: str,
     reps: int,
     seed: int,
