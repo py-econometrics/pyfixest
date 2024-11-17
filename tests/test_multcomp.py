@@ -197,6 +197,7 @@ def test_sampling_scheme(seed, reps):
         np.abs(percent_diff) < 1.0
     ), f"Percentage difference is too large: {percent_diff}%"
 
+
 @pytest.mark.extended
 def test_multi_vs_list(seeds, reps):
     "Test that lists of models and FixestMulti input produce identical results."
