@@ -5,6 +5,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
 from pyfixest.utils.set_rpy2_path import update_r_paths
@@ -196,17 +197,18 @@ def test_sampling_scheme(seed, reps):
         np.abs(percent_diff) < 1.0
     ), f"Percentage difference is too large: {percent_diff}%"
 
-# Compare the results when passing a list of Feols/Feiv/Fepois objects vs. a FixestMulti object
-@pytest.mark.extended
-@pytest.mark.parametrize("seed", [1000, 2000, 3000])
-@pytest.mark.parametrize("reps", [999, 1999])
-def test_multi_vs_list(seed, reps):
 
-    data = get_data()
-    fit_all = feols("Y + Y2 ~ X1 + X2", data=data)
+def test_multi_vs_list():
+    "Test that lists of models and FixestMulti input produce identical results."
+    seed = 1232
+    reps = 100
+    data = pf.get_data(N=100)
 
-    fit1 = feols("Y ~ X1 + X2", data=data)
-    fit2 = feols("Y2 ~ X1 + X2", data=data)
+    fit_all = pf.feols("Y + Y2 ~ X1 + X2", data=data)
+    fit1 = pf.feols("Y ~ X1 + X2", data=data)
+    fit2 = pf.feols("Y2 ~ X1 + X2", data=data)
 
     assert bonferroni(fit_all, "X1").equals(bonferroni([fit1, fit2], "X1"))
-    assert rwolf(fit_all, "X1",reps = reps, seed = seed).equals(rwolf([fit1, fit2], "X1", reps = reps, seed = seed))
+    assert rwolf(fit_all, "X1", seed=seed, reps=reps).equals(
+        rwolf([fit1, fit2], "X1", seed=seed, reps=reps)
+    )

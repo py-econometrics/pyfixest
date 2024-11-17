@@ -13,10 +13,16 @@ def test_api():
     fit2 = pf.estimation.fepois(
         "Y ~ X1 + X2 + f2 | f1", data=df2, vcov={"CRV1": "f1+f2"}
     )
+    fit_multi = pf.feols("Y + Y2 ~ X1", data=df2)
+
     pf.summary(fit1)
     pf.report.summary(fit2)
     pf.etable([fit1, fit2])
     pf.coefplot([fit1, fit2])
+
+    pf.summary(fit_multi)
+    pf.etable(fit_multi)
+    pf.coefplot(fit_multi)
 
 
 def test_feols_args():

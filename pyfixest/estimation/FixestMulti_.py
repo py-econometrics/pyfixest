@@ -386,7 +386,7 @@ class FixestMulti:
 
                     self.all_fitted_models[FIT._model_name] = FIT
 
-    def to_list(self):
+    def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
         """
         Return a list of all fitted models.
 

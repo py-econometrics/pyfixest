@@ -13,9 +13,13 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 def etable(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
+    models: ModelInputType,
     type: str = "gt",
     signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
@@ -40,8 +44,8 @@ def etable(
 
     Parameters
     ----------
-    models : list
-        A list of models of type Feols, Feiv, Fepois.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
@@ -131,11 +135,6 @@ def etable(
         assert (
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
-
-    # Check if models is of type FixestMulti
-    # If so, convert it to a list of models
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
 
     models = _post_processing_input_checks(models)
 
@@ -464,9 +463,7 @@ def etable(
     return None
 
 
-def summary(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti], digits: int = 3
-) -> None:
+def summary(models: ModelInputType, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -476,8 +473,8 @@ def summary(
 
     Parameters
     ----------
-    models : list[Union[Feols, Fepois, Feiv]] or FixestMulti.
-            The models to be summarized.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
 
@@ -550,8 +547,8 @@ def summary(
 
 
 def _post_processing_input_checks(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-) -> list[Union[Feols, Fepois]]:
+    models: ModelInputType,
+) -> list[Union[Feols, Fepois, Feiv]]:
     """
     Perform input checks for post-processing models.
 
@@ -572,34 +569,23 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    # check if models instance of Feols or Fepois
-    if isinstance(models, (Feols, Fepois)):
-        models = [models]
+    models_list: list[Union[Feols, Fepois, Feiv]] = []
 
-    else:
-        if isinstance(models, (list, type({}.values()))):
-            for model in models:
-                if not isinstance(model, (Feols, Fepois)):
-                    raise TypeError(
-                        f"""
-                        Each element of the passed list needs to be of type Feols
-                        or Fepois, but {type(model)} was passed. If you want to
-                        summarize a FixestMulti object, please use FixestMulti.to_list()
-                        to convert it to a list of Feols or Fepois instances.
-                        """
-                    )
-
+    if isinstance(models, (Feols, Fepois, Feiv)):
+        models_list = [models]
+    elif isinstance(models, FixestMulti):
+        models_list = models.to_list()
+    elif isinstance(models, list):
+        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
+            models_list = models
         else:
             raise TypeError(
-                """
-                The models argument must be either a list of Feols or Fepois instances, or
-                simply a single Feols or Fepois instance. The models argument does not accept instances
-                of type FixestMulti - please use models.to_list() to convert the FixestMulti
-                instance to a list of Feols or Fepois instances.
-                """
+                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
             )
+    else:
+        raise TypeError("Invalid type for models argument.")
 
-    return models
+    return models_list
 
 
 def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
