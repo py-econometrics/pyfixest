@@ -516,8 +516,13 @@ class Feols:
         """
         # Assuming `data` is the DataFrame in question
 
-        if not isinstance(data, pd.DataFrame):
-            data = _narwhals_to_pandas(data)
+        _data = data if data is not None else self._data
+        try:
+            _data = _narwhals_to_pandas(_data)
+        except TypeError as e:
+            raise TypeError(
+                f"The data set must be a DataFrame type. Received: {type(data)}"
+            ) from e
 
         _data = self._data
         _has_fixef = self._has_fixef

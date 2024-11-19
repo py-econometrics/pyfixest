@@ -129,18 +129,16 @@ class FeolsCompressed(Feols):
         depvars = self._Y.columns.tolist()
         covars = self._X.columns.tolist()
 
-        Y_polars = nw.DataFrame(pd.DataFrame(self._Y))
-        X_polars = nw.DataFrame(pd.DataFrame(self._X))
+        Y_polars = nw.from_native(pd.DataFrame(self._Y))
+        X_polars = nw.from_native(pd.DataFrame(self._X))
 
         fevars = []
-        data_long_mundlak = nw.DataFrame()
-
         if self._has_fixef:
             self._use_mundlak = True
             self._has_fixef = False
 
             fevars = self._fe.columns.tolist()
-            fe_polars = nw.DataFrame(pd.DataFrame(self._fe))
+            fe_polars = nw.from_native(pd.DataFrame(self._fe))
             data_long = nw.concat([Y_polars, X_polars, fe_polars], how="horizontal")
 
             if self._use_mundlak:
@@ -284,7 +282,7 @@ class FeolsCompressed(Feols):
         _data_long_nw = _data_long_nw.with_columns(nw.col(clustervar[0]).cast(nw.Int32))
 
         for b in tqdm(range(boot_iter)):
-            boot_df = nw.DataFrame(
+            boot_df = nw.from_native(
                 {
                     "coin_flip": rng.integers(0, 2, size=len(cluster_ids)),
                     f"{clustervar[0]}": cluster_ids,
