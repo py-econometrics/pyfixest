@@ -618,6 +618,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/58/4d/8245e6f76a93c98aab285a43ea71ff1b171bcd90c9d238bf81f7021fb233/psutil-6.1.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8d/1f/9bb3b3a644892d631dbbe99053cdb5295092d2696b4bcd3d21f29624c689/pyarrow-18.0.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/ec/2eb3cd785efd67806c46c13a17339708ddc346cbb684eade7a6e6f79536a/pyparsing-3.2.0-py3-none-any.whl
@@ -806,6 +807,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/01/9e/8be43078a171381953cfee33c07c0d628594b5dbfc5157847b85022c2c1b/psutil-6.1.0-cp36-abi3-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/79/8a/a3af902af623a1cf4f9d4d27d81e634caf1585a819b7530728a8147e391c/pyarrow-18.0.0-cp312-cp312-macosx_12_0_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/ec/2eb3cd785efd67806c46c13a17339708ddc346cbb684eade7a6e6f79536a/pyparsing-3.2.0-py3-none-any.whl
@@ -994,6 +996,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/1d/cb/313e80644ea407f04f6602a9e23096540d9dc1878755f3952ea8d3d104be/psutil-6.1.0-cp36-abi3-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/e4/ea/a7f77688e6c529723b37589af4db3e7179414e223878301907c5bd49d6bc/pyarrow-18.0.0-cp312-cp312-macosx_12_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/ec/2eb3cd785efd67806c46c13a17339708ddc346cbb684eade7a6e6f79536a/pyparsing-3.2.0-py3-none-any.whl
@@ -1148,6 +1151,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a9/6a/fd08d94654f7e67c52ca30523a178b3f8ccc4237fce4be90d39c938a831a/prompt_toolkit-3.0.48-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/91/87fa6f060e649b1e1a7b19a4f5869709fbf750b7c8c262ee776ec32f3028/psutil-6.1.0-cp37-abi3-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/74/39/323621402c2b1ce7ba600d03c81cf9645b862350d7c495f3fcef37850d1d/pyarrow-18.0.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/ec/2eb3cd785efd67806c46c13a17339708ddc346cbb684eade7a6e6f79536a/pyparsing-3.2.0-py3-none-any.whl
@@ -10171,6 +10175,54 @@ packages:
   sha256: 1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0
   requires_dist:
   - pytest ; extra == 'tests'
+- kind: pypi
+  name: pyarrow
+  version: 18.0.0
+  url: https://files.pythonhosted.org/packages/74/39/323621402c2b1ce7ba600d03c81cf9645b862350d7c495f3fcef37850d1d/pyarrow-18.0.0-cp312-cp312-win_amd64.whl
+  sha256: fe92efcdbfa0bcf2fa602e466d7f2905500f33f09eb90bf0bcf2e6ca41b574c8
+  requires_dist:
+  - pytest ; extra == 'test'
+  - hypothesis ; extra == 'test'
+  - cffi ; extra == 'test'
+  - pytz ; extra == 'test'
+  - pandas ; extra == 'test'
+  requires_python: '>=3.9'
+- kind: pypi
+  name: pyarrow
+  version: 18.0.0
+  url: https://files.pythonhosted.org/packages/79/8a/a3af902af623a1cf4f9d4d27d81e634caf1585a819b7530728a8147e391c/pyarrow-18.0.0-cp312-cp312-macosx_12_0_x86_64.whl
+  sha256: 03f40b65a43be159d2f97fd64dc998f769d0995a50c00f07aab58b0b3da87e1f
+  requires_dist:
+  - pytest ; extra == 'test'
+  - hypothesis ; extra == 'test'
+  - cffi ; extra == 'test'
+  - pytz ; extra == 'test'
+  - pandas ; extra == 'test'
+  requires_python: '>=3.9'
+- kind: pypi
+  name: pyarrow
+  version: 18.0.0
+  url: https://files.pythonhosted.org/packages/8d/1f/9bb3b3a644892d631dbbe99053cdb5295092d2696b4bcd3d21f29624c689/pyarrow-18.0.0-cp312-cp312-manylinux_2_28_x86_64.whl
+  sha256: a71ab0589a63a3e987beb2bc172e05f000a5c5be2636b4b263c44034e215b5d7
+  requires_dist:
+  - pytest ; extra == 'test'
+  - hypothesis ; extra == 'test'
+  - cffi ; extra == 'test'
+  - pytz ; extra == 'test'
+  - pandas ; extra == 'test'
+  requires_python: '>=3.9'
+- kind: pypi
+  name: pyarrow
+  version: 18.0.0
+  url: https://files.pythonhosted.org/packages/e4/ea/a7f77688e6c529723b37589af4db3e7179414e223878301907c5bd49d6bc/pyarrow-18.0.0-cp312-cp312-macosx_12_0_arm64.whl
+  sha256: e7ab04f272f98ebffd2a0661e4e126036f6936391ba2889ed2d44c5006237802
+  requires_dist:
+  - pytest ; extra == 'test'
+  - hypothesis ; extra == 'test'
+  - cffi ; extra == 'test'
+  - pytz ; extra == 'test'
+  - pandas ; extra == 'test'
+  requires_python: '>=3.9'
 - kind: conda
   name: pycparser
   version: '2.22'
