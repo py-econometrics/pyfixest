@@ -1700,10 +1700,12 @@ class Feols:
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
         if _has_weights:
+            ssy = np.sum(_Y**2) - np.sum(_Y**2) / np.sum(_weights)
             self._rmse = np.nan
             self._r2 = np.nan
             self._adj_r2 = np.nan
         else:
+            ssy = np.sum((_Y - np.mean(_Y)) ** 2)
             self._rmse = np.sqrt(ssu / _N)
             self._r2 = 1 - (ssu / ssy)
             self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
