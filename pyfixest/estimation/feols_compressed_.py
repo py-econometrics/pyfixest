@@ -376,12 +376,15 @@ def _regression_compression(
 
     data_long = data_long.lazy()
 
-    agg_expressions.append(nw.count(depvars[0]).alias("count"))
+    agg_expressions.append(nw.col(depvars[0]).count().alias("count"))
+    # agg_expressions.append(nw.count(depvars[0]).alias("count"))
 
     if not short:
         for var in depvars:
             agg_expressions.append(nw.sum(var).alias(f"sum_{var}"))
-            agg_expressions.append(nw.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
+            agg_expressions.append(
+                (nw.col(var) * nw.col(var)).sum().alias(f"sum_{var}_sq")
+            )
 
     df_compressed = data_long.group_by(covars_updated).agg(agg_expressions)
 
