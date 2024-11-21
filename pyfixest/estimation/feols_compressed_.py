@@ -265,8 +265,8 @@ class FeolsCompressed(Feols):
 
         _data_long_nw = _data_long_nw.with_columns(
             [
-                nw.lit(yhat).alias("yhat"),
-                nw.lit(uhat).alias("uhat"),
+                nw.lit(yhat.tolist()).alias("yhat"),
+                nw.lit(uhat.tolist()).alias("uhat"),
                 nw.lit(yhat + uhat).alias("yhat_g_boot_pos"),  # rademacher weights = 1
                 nw.lit(yhat - uhat).alias("yhat_g_boot_neg"),  # rademacher weights = -1
             ]
