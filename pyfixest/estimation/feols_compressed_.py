@@ -377,7 +377,6 @@ def _regression_compression(
     data_long = data_long.lazy()
 
     agg_expressions.append(nw.col(depvars[0]).count().alias("count"))
-    # agg_expressions.append(nw.count(depvars[0]).alias("count"))
 
     if not short:
         for var in depvars:
