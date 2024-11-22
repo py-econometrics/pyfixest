@@ -122,6 +122,21 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    fit1 = pf.feols("Y~X1 + X2 | f1", df)
+    fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
+
+    pf.etable([fit1, fit2])
+    ```
     """
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
@@ -1189,6 +1204,18 @@ def dtable(
     Returns
     -------
     A table in the specified format.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
+    ```
     """
     if stats is None:
         stats = ["count", "mean", "std"]

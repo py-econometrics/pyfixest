@@ -374,9 +374,7 @@ class Feiv(Feols):
             print("(Unadjusted) F stat :", F_stat_pf)
             print("Effective F stat :", F_stat_eff_pf)
 
-            # The example above generates the following results
-            # (Unadjusted) F stat : 52.81535560457482
-            # Effective F stat : 48.661542741328205
+            ```
         """
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]

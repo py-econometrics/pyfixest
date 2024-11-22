@@ -980,19 +980,16 @@ class Feols:
 
         Examples
         --------
+        ```{python}
         import numpy as np
         import pandas as pd
+        import pyfixest as pf
 
-        from pyfixest.estimation.estimation import feols
-
-        data = pd.read_csv("pyfixest/did/data/df_het.csv")
-        data = data.iloc[1:3000]
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(adj=False))
 
         R = np.array([[1,-1]] )
         q = np.array([0.0])
-
-        fml = "dep_var ~ treat"
-        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
 
         # Wald test
         fit.wald_test(R=R, q=q, distribution = "chi2")
@@ -1001,10 +998,7 @@ class Feols:
 
         print(f"Python f_stat: {f_stat}")
         print(f"Python p_stat: {p_stat}")
-
-        # The code above produces the following results :
-        # Python f_stat: 256.55432910297003
-        # Python p_stat: 9.67406627744023e-58
+        ```
         """
         _vcov = self._vcov
         _N = self._N
@@ -1328,15 +1322,15 @@ class Feols:
 
         Examples
         --------
-        ```python
-        from pyfixest.estimation import feols
-        from pyfixest.utils import get_data
+        ```{python}
+        import pyfixest as pf
+        import numpy as np
 
-        data = get_data()
-        data["D1"] = np.random.choice([0, 1], size=data.shape[0])
+        data = pf.get_data()
+        data["D"] = np.random.choice([0, 1], size=data.shape[0])
 
-        fit = feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
-        fit.ccv(treatment="D", pk=0.05, gk=0.5, n_splits=8, seed=123).head()
+        fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
         assert (
@@ -1869,7 +1863,7 @@ class Feols:
 
         Examples
         --------
-        ```python
+        ```{python}
         from pyfixest.utils import get_data
         from pyfixest.estimation import feols
 

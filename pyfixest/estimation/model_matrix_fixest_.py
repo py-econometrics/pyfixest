@@ -68,6 +68,20 @@ def model_matrix_fixest(
             List of variables interacted with i() syntax, None if not applicable.
         - 'X_is_empty' : bool
             Flag indicating whether X is empty.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + f1 + f2", data=data)
+    FixestFormula = fit.FixestFormula
+
+    mm = model_matrix_fixest(FixestFormula, data)
+    mm
+    ```
     """
     FixestFormula.check_syntax()
 
