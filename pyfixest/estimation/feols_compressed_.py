@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Optional, Union
 
@@ -9,6 +10,15 @@ from tqdm import tqdm
 from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
+
+logging.basicConfig(level=logging.INFO)
+
+try:
+    import polars as pl
+
+    polars_installed = True
+except ImportError:
+    polars_installed = False
 
 
 class FeolsCompressed(Feols):
@@ -129,8 +139,15 @@ class FeolsCompressed(Feols):
         depvars = self._Y.columns.tolist()
         covars = self._X.columns.tolist()
 
-        Y_polars = nw.from_native(pd.DataFrame(self._Y))
-        X_polars = nw.from_native(pd.DataFrame(self._X))
+        if polars_installed:
+            Y_nw = nw.from_native(pl.from_pandas(self._Y))
+            X_nw = nw.from_native(pl.from_pandas(self._X))
+        else:
+            logging.info(
+                "Polars is not installed. Falling back to pandas. You can likely speed up the compression drastically by installing polars."
+            )
+            Y_nw = nw.from_native(self._Y)
+            X_nw = nw.from_native(self._X)
 
         fevars = []
         if self._has_fixef:
@@ -138,8 +155,12 @@ class FeolsCompressed(Feols):
             self._has_fixef = False
 
             fevars = self._fe.columns.tolist()
-            fe_polars = nw.from_native(pd.DataFrame(self._fe))
-            data_long = nw.concat([Y_polars, X_polars, fe_polars], how="horizontal")
+            if polars_installed:
+                fe_nw = nw.from_native(pl.from_pandas(self._fe))
+            else:
+                fe_nw = nw.from_native(self._fe)
+
+            data_long = nw.concat([Y_nw, X_nw, fe_nw], how="horizontal")
 
             if self._use_mundlak:
                 if len(fevars) > 2:
@@ -166,7 +187,7 @@ class FeolsCompressed(Feols):
                 self._fe = None
 
         else:
-            data_long = nw.concat([Y_polars, X_polars], how="horizontal")
+            data_long = nw.concat([Y_nw, X_nw], how="horizontal")
 
         compressed_dict = _regression_compression(
             depvars=depvars,
@@ -381,9 +402,7 @@ def _regression_compression(
     if not short:
         for var in depvars:
             agg_expressions.append(nw.sum(var).alias(f"sum_{var}"))
-            agg_expressions.append(
-                (nw.col(var) * nw.col(var)).sum().alias(f"sum_{var}_sq")
-            )
+            agg_expressions.append((nw.col(var) ** 2).sum().alias(f"sum_{var}_sq"))
 
     df_compressed = data_long.group_by(covars_updated).agg(agg_expressions)
 
