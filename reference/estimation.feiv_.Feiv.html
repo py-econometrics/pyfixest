@@ -57,7 +57,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
 <script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
@@ -100,6 +100,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
 
 </head>
@@ -774,7 +777,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>import numpy as np
+<pre><code>::: {#eef22c8f .cell execution_count=1}
+``` {.python .cell-code}
+import numpy as np
 import pandas as pd
 from pyfixest.estimation.estimation import feols
 
@@ -831,10 +836,93 @@ F_stat_eff_pf = fit_iv._eff_F
 
 print("(Unadjusted) F stat :", F_stat_pf)
 print("Effective F stat :", F_stat_eff_pf)
+```
 
-# The example above generates the following results
-# (Unadjusted) F stat : 52.81535560457482
-# Effective F stat : 48.661542741328205</code></pre>
+::: {.cell-output .cell-output-display}
+
+```{=html}
+
+            &lt;div id="hAdkmL"&gt;&lt;/div&gt;
+            &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("hAdkmL").appendChild(div);
+                    };
+                    var e = document.getElementById("hAdkmL");
+                    e.appendChild(script);
+                })()
+            &lt;/script&gt;
+            
+```
+
+:::
+
+::: {.cell-output .cell-output-display}
+
+```{=html}
+
+            &lt;div id="pjGi70"&gt;&lt;/div&gt;
+            &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.1/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("pjGi70").appendChild(div);
+                    };
+                    var e = document.getElementById("pjGi70");
+                    e.appendChild(script);
+                })()
+            &lt;/script&gt;
+            
+```
+
+:::
+
+::: {.cell-output .cell-output-stdout}
+```
+(Unadjusted) F stat : 52.81535560457482
+Effective F stat : 48.61288119858688
+```
+:::
+:::</code></pre>
 </section>
 </section>
 <section id="pyfixest.estimation.feiv_.Feiv.IV_weakness_test" class="level3">
