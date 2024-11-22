@@ -13,6 +13,7 @@ from pyfixest.estimation import (
     bonferroni,
     feols,
     fepois,
+    feglm,
     rwolf,
 )
 from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
@@ -25,7 +26,7 @@ from pyfixest.utils import (
 __all__ = [
     "feols",
     "fepois",
-    "Stargazer",
+    "feglm",
     "etable",
     "dtable",
     "make_table",
