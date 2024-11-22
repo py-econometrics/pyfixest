@@ -7,7 +7,6 @@ from typing import Optional, Union
 import numba as nb
 import numpy as np
 import pandas as pd
-import polars as pl
 from formulaic import Formula
 from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
@@ -517,8 +516,13 @@ class Feols:
         """
         # Assuming `data` is the DataFrame in question
 
-        if isinstance(data, pl.DataFrame):
-            data = _narwhals_to_pandas(data)
+        _data = data if data is not None else self._data
+        try:
+            _data = _narwhals_to_pandas(_data)
+        except TypeError as e:
+            raise TypeError(
+                f"The data set must be a DataFrame type. Received: {type(data)}"
+            ) from e
 
         _data = self._data
         _has_fixef = self._has_fixef
@@ -1579,7 +1583,7 @@ class Feols:
         Parameters
         ----------
         newdata : Optional[DataFrameType], optional
-            A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
+            A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
             If None (default), the data used for fitting the model is used.
         type : str, optional
             The type of prediction to be computed.
