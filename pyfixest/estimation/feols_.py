@@ -1482,7 +1482,6 @@ class Feols:
     def decompose(
         self,
         param: str,
-        agg: bool = True,
         type: decomposition_type = "gelbach",
         cluster: Optional[str] = None,
         combine_covariates: Optional[dict[str, list[str]]] = None,
@@ -1494,15 +1493,24 @@ class Feols:
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
         Compares the short model depvar on {param} with the long model
-        specified in the original feols() call.
+        specified in the original feols() call. For details, take a look at
+        "When do covariates matter?" by Gelbach (2016, JoLe). You can find
+        an ungated version of the paper on SSRN under the following link:
+        https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
 
         Parameters
         ----------
         param : str
             The name of the parameter to decompose.
         type : str, optional
-            The type of decomposition method to use. Defaults to "gelbach".
+            The type of decomposition method to use. Defaults to "gelbach", which
+            currently is the only supported option.
         cluster: Optional
+            The name of the cluster variable. If None, uses the cluster variable
+            from the model fit. Defaults to None.
+        combine_covariates: Optional.
+            A dictionary that specifies which covariates to combine into groups.
+            See the example for how to use this argument. Defaults to None.
         reps : int, optional
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
@@ -1511,14 +1519,18 @@ class Feols:
         Examples
         --------
         ```{python}
-        # we start by fitting the **long** model
+        from pyfixest.utils.dgps import gelbach_data
         import pyfixest as pf
-        data = pf.get_data()
-        fit_long = pf.feols("Y ~ X1 + f1 + f2", data = data)
 
-        # we are interested in how the effect of X1 on Y changes when including
-        # covariates X2, f1, f2
-        fit.decompose(param = "X1")
+        data = gelbach_data(nobs = 1000)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+        # simple decomposition
+        res = fit.decompose(param = "x1")
+        pf.make_table(res)
+        # group covariates via "combine_covariates" argument
+        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+        pf.make_table(res)
         ```
         """
         supported_decomposition_types = ["gelbach"]
@@ -1548,7 +1560,6 @@ class Feols:
             cluster_df = None
 
         med = GelbachDecomposition(
-            agg=agg,
             param=param,
             coefnames=self._coefnames,
             cluster_df=cluster_df,

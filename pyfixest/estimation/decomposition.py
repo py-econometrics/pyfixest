@@ -16,7 +16,6 @@ class GelbachDecomposition:
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
     """
 
-    agg: bool
     param: str
     coefnames: list[str]
     nthreads: int = -1

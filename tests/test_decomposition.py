@@ -1,38 +1,14 @@
 import pandas as pd
 import numpy as np
 import pyfixest as pf
+from pyfixest.utils.dgps import gelbach_data
 
-def gelbach_test_data(nobs):
-
-    rng = np.random.default_rng(49392)
-    df = pd.DataFrame(index=range(nobs))
-    df['x1'] = rng.normal(size=nobs)
-
-    df['x21'] = df['x1'] * 1 + rng.normal(loc = 0, scale = 0.1, size=nobs)
-    df['x22'] = df['x1'] * 0.25 + df['x21'] * 0.75 + rng.normal(size=nobs)
-    df['x23'] = (df['x1'] * 0.4 +
-                df['x21'] * 0.6 +
-                df['x22'] * 0.4 +
-                rng.normal(loc = 0, scale = 0.1, size=nobs)
-    )
-    df['y'] = (df['x1'] * 1 +
-            df['x21'] * 2 +
-            df['x22'] * 0.5 +
-            df['x23'] * 0.75 +
-            rng.normal(loc = 0, scale = 0.1, size=nobs)
-    )
-
-    return df
-
-data = gelbach_test_data(nobs = 100_000)
-fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
 
 def test_gelbach_example():
 
     test_ci = False
 
-    data = gelbach_test_data()
+    data = gelbach_data()
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
     res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}).GelbachDecompositionResults
 

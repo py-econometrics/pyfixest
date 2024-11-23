@@ -283,3 +283,26 @@ def get_panel_dgp_stagg(
         )
         result["dataframe"] = df
     return result
+
+
+def gelbach_data(nobs):
+
+    rng = np.random.default_rng(49392)
+    df = pd.DataFrame(index=range(nobs))
+    df['x1'] = rng.normal(size=nobs)
+
+    df['x21'] = df['x1'] * 1 + rng.normal(loc = 0, scale = 0.1, size=nobs)
+    df['x22'] = df['x1'] * 0.25 + df['x21'] * 0.75 + rng.normal(size=nobs)
+    df['x23'] = (df['x1'] * 0.4 +
+                df['x21'] * 0.6 +
+                df['x22'] * 0.4 +
+                rng.normal(loc = 0, scale = 0.1, size=nobs)
+    )
+    df['y'] = (df['x1'] * 1 +
+            df['x21'] * 2 +
+            df['x22'] * 0.5 +
+            df['x23'] * 0.75 +
+            rng.normal(loc = 0, scale = 0.1, size=nobs)
+    )
+
+    return df
