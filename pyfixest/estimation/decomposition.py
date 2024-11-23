@@ -4,7 +4,7 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
-# from joblib import Parallel, delayed
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
@@ -186,16 +186,19 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        # self._bootstrapped = np.c_[
-        #    Parallel(n_jobs=self.nthreads)(
-        #        delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
-        #    )
-        # ]
-
-        #self._bootstrapped = np.c_[[self._bootstrap(rng=rng) for _ in tqdm(range(B))]]
-        _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
-        self._bootstrapped = {key: np.concatenate([d[key] for d in _bootstrapped]) for key in _bootstrapped[0].keys()}
-        self.ci = {key: np.percentile(self._bootstrapped[key], 100 * np.array([alpha / 2, 1 - alpha / 2]), axis=0) for key in self._bootstrapped.keys()}
+        _bootstrapped = Parallel(n_jobs=self.nthreads)(delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B)))
+        self._bootstrapped = {
+            key: np.concatenate([d[key] for d in _bootstrapped])
+            for key in _bootstrapped[0].keys()
+        }
+        self.ci = {
+            key: np.percentile(
+                self._bootstrapped[key],
+                100 * np.array([alpha / 2, 1 - alpha / 2]),
+                axis=0,
+            )
+            for key in self._bootstrapped.keys()
+        }
 
     def summary(self, digits: int = 4) -> pd.DataFrame:
         """
@@ -206,7 +209,6 @@ class GelbachDecomposition:
         digits : int, optional
             Number of digits to display in the summary table, by default 4.
         """
-
         mediators = list(self.combine_covariates.keys())
 
         rows = []
@@ -226,13 +228,25 @@ class GelbachDecomposition:
         )
 
         for mediator in mediators:
-            rows.append([None, None, f"{self.contribution_dict[mediator].item():.{digits}f}"])
-            rows.append([None, None, f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]"])
+            rows.append(
+                [None, None, f"{self.contribution_dict[mediator].item():.{digits}f}"]
+            )
+            rows.append(
+                [
+                    None,
+                    None,
+                    f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]",
+                ]
+            )
 
-        index = [self.param, ""] + [item for mediator in mediators for item in [f"{mediator}", ""]]
+        index = [self.param, ""] + [
+            item for mediator in mediators for item in [f"{mediator}", ""]
+        ]
         columns = ["direct_effect", "full_effect", "explained_effect"]
 
-        self.summary_table = pd.DataFrame(rows, index=index, columns=columns).fillna("").T
+        self.summary_table = (
+            pd.DataFrame(rows, index=index, columns=columns).fillna("").T
+        )
 
         return self.summary_table
 
