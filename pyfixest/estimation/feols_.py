@@ -1493,6 +1493,9 @@ class Feols:
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
+        Compares the short model depvar on {param} with the long model
+        specified in the original feols() call.
+
         Parameters
         ----------
         param : str
@@ -1560,6 +1563,8 @@ class Feols:
 
         med.bootstrap(rng=rng, B=reps)
         med.summary()
+
+        self.GelbachDecompositionResults = med
 
         return med.summary_table.T
 

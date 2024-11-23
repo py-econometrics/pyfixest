@@ -21,7 +21,7 @@ class GelbachDecomposition:
     coefnames: list[str]
     nthreads: int = -1
     cluster_df: Optional[pd.Series] = None
-    combine_covariates: dict[str, list[str]] = None
+    combine_covariates: Optional[dict[str, list[str]]] = None
 
     # Define attributes initialized post-creation
     cluster_dict: Optional[dict[Any, Any]] = field(init=False, default=None)
@@ -106,20 +106,23 @@ class GelbachDecomposition:
             self.direct_effect = np.array([self.direct_effect])
 
             # Gelbach Method:
-            self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2, rcond=1)[0].flatten()
-            self.beta_full = np.linalg.lstsq(self.X, self.Y, rcond=1)[0].flatten()
+            self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2, rcond=[1])[
+                0
+            ].flatten()
+            self.beta_full = np.linalg.lstsq(self.X, self.Y, rcond=[1])[0].flatten()
             self.beta2 = self.beta_full[self.mask].flatten()
             self.delta = self.gamma * self.beta2.flatten()
 
-            for name, covariates in self.combine_covariates.items():
-                variable_idx = (
-                    self.mediator_names.index(covariates)
-                    if isinstance(covariates, str)
-                    else [self.mediator_names.index(cov) for cov in covariates]
-                )
-                self.contribution_dict[name] = np.array(
-                    [np.sum(self.delta[variable_idx])]
-                )
+            if self.combine_covariates is not None:
+                for name, covariates in self.combine_covariates.items():
+                    variable_idx = (
+                        self.mediator_names.index(covariates)
+                        if isinstance(covariates, str)
+                        else [self.mediator_names.index(cov) for cov in covariates]
+                    )
+                    self.contribution_dict[name] = np.array(
+                        [np.sum(self.delta[variable_idx])]
+                    )
 
             self.contribution_dict["explained_effect"] = np.sum(
                 list(self.contribution_dict.values()), keepdims=True
@@ -151,13 +154,13 @@ class GelbachDecomposition:
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
-            direct_effect = np.linalg.lstsq(X1, Y, rcond=1)[0].flatten()[
+            direct_effect = np.linalg.lstsq(X1, Y, rcond=[1])[0].flatten()[
                 self.param_in_X1_idx
             ]
             direct_effect = np.array([direct_effect])
 
-            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=1)[0].flatten()
-            beta_full = np.linalg.lstsq(X, Y, rcond=1)[0].flatten()
+            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=[1])[0].flatten()
+            beta_full = np.linalg.lstsq(X, Y, rcond=[1])[0].flatten()
             beta2 = beta_full[self.mask].flatten()
             delta = gamma * beta2
 
