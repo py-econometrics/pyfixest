@@ -684,3 +684,10 @@ def test_separation_check_validations():
         match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
+
+
+with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+    fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+
+with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+    fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})

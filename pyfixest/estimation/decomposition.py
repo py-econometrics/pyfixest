@@ -66,7 +66,9 @@ class GelbachDecomposition:
             key: 0 for key in self.combine_covariates if key != "Intercept"
         }
 
+
     def _check_combine_covariates(self):
+
         # Check that each value in self.combine_covariates is in self.mediator_names
         for _, values in self.combine_covariates.items():
             if isinstance(values, str):
