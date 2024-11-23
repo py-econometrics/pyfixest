@@ -72,7 +72,7 @@ class GelbachDecomposition:
         # Check that each value in self.combine_covariates is in self.mediator_names
         for _, values in self.combine_covariates.items():
             if isinstance(values, str):
-                values = [values]  # Convert to list for consistent handling
+                values = [values]
             for v in values:
                 if v not in self.mediator_names:
                     raise ValueError(f"{v} is not in the mediator names.")
@@ -84,7 +84,7 @@ class GelbachDecomposition:
         }
         for key1, values1 in all_values.items():
             for key2, values2 in all_values.items():
-                if key1 != key2 and values1 & values2:  # Check intersection
+                if key1 != key2 and values1 & values2:
                     overlap = values1 & values2
                     raise ValueError(f"{overlap} is in both {key1} and {key2}.")
 
@@ -106,7 +106,6 @@ class GelbachDecomposition:
             ].flatten()[self.param_in_X1_idx]
             self.direct_effect = np.array([self.direct_effect])
 
-            # Gelbach Method:
             self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2, rcond=[1])[
                 0
             ].flatten()
