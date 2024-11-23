@@ -7,7 +7,7 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
-from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
+from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf, wyoung
 from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
 
@@ -213,3 +213,20 @@ def test_multi_vs_list(seeds, reps):
     assert rwolf(fit_all, "X1", seed=seed, reps=reps).equals(
         rwolf([fit1, fit2], "X1", seed=seed, reps=reps)
     )
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("seed", [1])
+@pytest.mark.parametrize("reps", [999, 9999])
+@pytest.mark.parametrize("sampling_method", ["ri", "wild-bootstrap"])
+def test_wyoung(seed, reps, sampling_method):
+    data = pf.get_data(N=100)
+
+    fit1 = pf.feols("Y ~ X1 + X2", data=data)
+    fit2 = pf.feols("Y2 ~ X1 + X2", data=data)
+
+    wyoung_output = pf.wyoung(
+        [fit1, fit2], "X1", reps=reps, seed=seed, sampling_method=sampling_method
+    )
+
+    assert isinstance(wyoung_output, pd.DataFrame)

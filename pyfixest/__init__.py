@@ -14,6 +14,7 @@ from pyfixest.estimation import (
     feols,
     fepois,
     rwolf,
+    wyoung,
 )
 from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
 from pyfixest.utils import (
@@ -34,6 +35,7 @@ __all__ = [
     "coefplot",
     "bonferroni",
     "rwolf",
+    "wyoung",
     "get_data",
     "ssc",
     "get_ssc",
