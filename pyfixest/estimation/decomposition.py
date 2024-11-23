@@ -65,7 +65,9 @@ class GelbachDecomposition:
         self._check_combine_covariates()
 
         self.contribution_dict = {
-            key: 0 for key in self.combine_covariates_dict if key != "Intercept"
+            key: np.zeros(1)
+            for key in self.combine_covariates_dict
+            if key != "Intercept"
         }
 
     def _check_combine_covariates(self):
@@ -116,7 +118,9 @@ class GelbachDecomposition:
                     variable_idx = [
                         self.mediator_names.index(cov) for cov in covariates
                     ]
-                    self.contribution_dict[name] = np.sum(self.delta[variable_idx])
+                    self.contribution_dict[name] = np.array(
+                        [np.sum(self.delta[variable_idx])]
+                    )
 
             self.contribution_dict["explained_effect"] = np.sum(
                 list(self.contribution_dict.values()), keepdims=True
@@ -142,7 +146,9 @@ class GelbachDecomposition:
             # Gelbach Method:
 
             contribution_dict = {
-                key: 0.0 for key in self.combine_covariates_dict if key != "Intercept"
+                key: np.zeros(1)
+                for key in self.combine_covariates_dict
+                if key != "Intercept"
             }
 
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
@@ -160,7 +166,7 @@ class GelbachDecomposition:
 
             for name, covariates in self.combine_covariates_dict.items():
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-                contribution_dict[name] = float(np.sum(delta[variable_idx]))
+                contribution_dict[name] = np.array([(np.sum(delta[variable_idx]))])
 
             contribution_dict["explained_effect"] = np.sum(
                 list(contribution_dict.values()), keepdims=True
@@ -185,6 +191,7 @@ class GelbachDecomposition:
             key: np.concatenate([d[key] for d in _bootstrapped])
             for key in _bootstrapped[0]
         }
+
         self.ci = {
             key: np.percentile(
                 self._bootstrapped[key],
