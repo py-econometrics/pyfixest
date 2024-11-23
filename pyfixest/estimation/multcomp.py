@@ -3,14 +3,13 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import t
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
-
-from scipy.stats import t
 
 ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
 
@@ -285,7 +284,6 @@ def _multcomp_resample(
     seed: int,
     sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
-
     models = _post_processing_input_checks(models)
     if type not in ["rwolf", "wyoung"]:
         raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
