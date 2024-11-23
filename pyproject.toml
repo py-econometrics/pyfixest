@@ -191,5 +191,8 @@ module = [
   "formulaic.*",
   "wildboottest.*",
   "tabulate.*",
+  "joblib.*",
+  "narwhals.*",
+  "tqdm.*",
 ]
 ignore_missing_imports = true

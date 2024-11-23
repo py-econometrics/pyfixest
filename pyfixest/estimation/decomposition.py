@@ -56,21 +56,21 @@ class GelbachDecomposition:
             self.cluster_dict = None
 
         if self.combine_covariates is None:
-            self.combine_covariates = {
+            self.combine_covariates_dict = {
                 x: x for x in self.mediator_names if x != "Intercept"
             }
+        else:
+            self.combine_covariates_dict = self.combine_covariates
 
         self._check_combine_covariates()
 
         self.contribution_dict = {
-            key: 0 for key in self.combine_covariates if key != "Intercept"
+            key: 0 for key in self.combine_covariates_dict if key != "Intercept"
         }
 
-
     def _check_combine_covariates(self):
-
-        # Check that each value in self.combine_covariates is in self.mediator_names
-        for _, values in self.combine_covariates.items():
+        # Check that each value in self.combine_covariates_dict is in self.mediator_names
+        for _, values in self.combine_covariates_dict.items():
             if isinstance(values, str):
                 values = [values]
             for v in values:
@@ -80,7 +80,7 @@ class GelbachDecomposition:
         # Check for overlap in values between different keys
         all_values = {
             k: set([v] if isinstance(v, str) else v)
-            for k, v in self.combine_covariates.items()
+            for k, v in self.combine_covariates_dict.items()
         }
         for key1, values1 in all_values.items():
             for key2, values2 in all_values.items():
@@ -101,28 +101,22 @@ class GelbachDecomposition:
             self.X2 = self.X[:, self.mask]
             self.Y = Y
 
-            self.direct_effect = np.linalg.lstsq(self.X1, self.Y, rcond=[1])[
+            self.direct_effect = np.linalg.lstsq(self.X1, self.Y, rcond=None)[
                 0
             ].flatten()[self.param_in_X1_idx]
             self.direct_effect = np.array([self.direct_effect])
 
-            self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2, rcond=[1])[
-                0
-            ].flatten()
-            self.beta_full = np.linalg.lstsq(self.X, self.Y, rcond=[1])[0].flatten()
+            self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2)[0].flatten()
+            self.beta_full = np.linalg.lstsq(self.X, self.Y)[0].flatten()
             self.beta2 = self.beta_full[self.mask].flatten()
             self.delta = self.gamma * self.beta2.flatten()
 
             if self.combine_covariates is not None:
                 for name, covariates in self.combine_covariates.items():
-                    variable_idx = (
-                        self.mediator_names.index(covariates)
-                        if isinstance(covariates, str)
-                        else [self.mediator_names.index(cov) for cov in covariates]
-                    )
-                    self.contribution_dict[name] = np.array(
-                        [np.sum(self.delta[variable_idx])]
-                    )
+                    variable_idx = [
+                        self.mediator_names.index(cov) for cov in covariates
+                    ]
+                    self.contribution_dict[name] = np.sum(self.delta[variable_idx])
 
             self.contribution_dict["explained_effect"] = np.sum(
                 list(self.contribution_dict.values()), keepdims=True
@@ -136,7 +130,7 @@ class GelbachDecomposition:
             ].flatten()
 
             # prepare bootstrap in first iteration
-            if self.cluster_df is not None:
+            if self.unique_clusters is not None:
                 for g in self.unique_clusters:
                     cluster_idx = np.where(self.cluster_df == g)[0]
                     self.X_dict[g] = self.X[cluster_idx]
@@ -148,29 +142,25 @@ class GelbachDecomposition:
             # Gelbach Method:
 
             contribution_dict = {
-                key: 0 for key in self.combine_covariates if key != "Intercept"
+                key: 0.0 for key in self.combine_covariates_dict if key != "Intercept"
             }
 
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
-            direct_effect = np.linalg.lstsq(X1, Y, rcond=[1])[0].flatten()[
+            direct_effect = np.linalg.lstsq(X1, Y, rcond=None)[0].flatten()[
                 self.param_in_X1_idx
             ]
             direct_effect = np.array([direct_effect])
 
-            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=[1])[0].flatten()
-            beta_full = np.linalg.lstsq(X, Y, rcond=[1])[0].flatten()
+            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=None)[0].flatten()
+            beta_full = np.linalg.lstsq(X, Y, rcond=None)[0].flatten()
             beta2 = beta_full[self.mask].flatten()
             delta = gamma * beta2
 
-            for name, covariates in self.combine_covariates.items():
-                variable_idx = (
-                    self.mediator_names.index(covariates)
-                    if isinstance(covariates, str)
-                    else [self.mediator_names.index(cov) for cov in covariates]
-                )
-                contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
+            for name, covariates in self.combine_covariates_dict.items():
+                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+                contribution_dict[name] = float(np.sum(delta[variable_idx]))
 
             contribution_dict["explained_effect"] = np.sum(
                 list(contribution_dict.values()), keepdims=True
@@ -213,7 +203,7 @@ class GelbachDecomposition:
         digits : int, optional
             Number of digits to display in the summary table, by default 4.
         """
-        mediators = list(self.combine_covariates.keys())
+        mediators = list(self.combine_covariates_dict.keys())
 
         rows = []
         rows.append(
@@ -233,12 +223,12 @@ class GelbachDecomposition:
 
         for mediator in mediators:
             rows.append(
-                [None, None, f"{self.contribution_dict[mediator].item():.{digits}f}"]
+                ["", "", f"{self.contribution_dict[mediator].item():.{digits}f}"]
             )
             rows.append(
                 [
-                    None,
-                    None,
+                    "",
+                    "",
                     f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]",
                 ]
             )
@@ -256,7 +246,7 @@ class GelbachDecomposition:
 
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
-        if self.cluster_df is not None:
+        if self.unique_clusters is not None:
             idx = rng.choice(
                 self.unique_clusters, len(self.unique_clusters), replace=True
             )
