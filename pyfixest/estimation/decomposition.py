@@ -3,7 +3,6 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
@@ -70,7 +69,7 @@ class GelbachDecomposition:
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates is in self.mediator_names
-        for key, values in self.combine_covariates.items():
+        for _, values in self.combine_covariates.items():
             if isinstance(values, str):
                 values = [values]  # Convert to list for consistent handling
             for v in values:
@@ -95,7 +94,7 @@ class GelbachDecomposition:
             self.N = X.shape[0]
             self.X1 = self.X[:, ~self.mask]
             self.X1 = np.concatenate([np.ones((self.N, 1)), self.X1], axis=1)
-            self.names_X1 = ["Intercept"] + [self.param]
+            self.names_X1 = ["Intercept", self.param]
             self.param_in_X1_idx = self.names_X1.index(self.param)
 
             self.X2 = self.X[:, self.mask]
@@ -186,10 +185,12 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        _bootstrapped = Parallel(n_jobs=self.nthreads)(delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B)))
+        _bootstrapped = Parallel(n_jobs=self.nthreads)(
+            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+        )
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])
-            for key in _bootstrapped[0].keys()
+            for key in _bootstrapped[0]
         }
         self.ci = {
             key: np.percentile(
@@ -197,7 +198,7 @@ class GelbachDecomposition:
                 100 * np.array([alpha / 2, 1 - alpha / 2]),
                 axis=0,
             )
-            for key in self._bootstrapped.keys()
+            for key in self._bootstrapped
         }
 
     def summary(self, digits: int = 4) -> pd.DataFrame:
