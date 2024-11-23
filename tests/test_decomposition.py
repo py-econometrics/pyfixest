@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 
 import pyfixest as pf
@@ -7,7 +9,7 @@ from pyfixest.utils.dgps import gelbach_data
 def test_gelbach_example():
     test_ci = False
 
-    data = gelbach_data()
+    data = gelbach_data(nobs = 10_000)
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
     res = fit.decompose(
         param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}
@@ -38,4 +40,24 @@ def test_gelbach_example():
         )
         np.testing.assert_allclose(
             res.ci.get("explained_effect"), np.array([3.3262, 3.746298])
+        )
+
+
+def test_regex():
+    "Test the regex functionality for combine_covariates."
+    data = gelbach_data(nobs = 100)
+    fit1 = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    fit2 = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    fit1.decompose(
+        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, seed = 3, reps = 100
+    )
+
+    fit2.decompose(
+        param = "x1", combine_covariates = {"g1": re.compile(r"x2[1-2]"), "g2": ["x23"]}, seed = 3, reps = 100
+    )
+
+    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+        np.testing.assert_allclose(
+            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
         )

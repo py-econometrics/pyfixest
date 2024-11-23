@@ -286,6 +286,7 @@ def get_panel_dgp_stagg(
 
 
 def gelbach_data(nobs):
+    "Create data for testing of Gelbach Decomposition."
     rng = np.random.default_rng(49392)
     df = pd.DataFrame(index=range(nobs))
     df["x1"] = rng.normal(size=nobs)

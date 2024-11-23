@@ -1,5 +1,6 @@
 import functools
 import gc
+import re
 import warnings
 from importlib import import_module
 from typing import Literal, Optional, Union
@@ -1558,6 +1559,14 @@ class Feols:
             cluster_df = self._data[self._clustervar[0]]
         else:
             cluster_df = None
+
+        if combine_covariates is not None:
+            for key, value in combine_covariates.items():
+                if isinstance(value, re.Pattern):
+                    matched = [x for x in self._coefnames if value.match(x)]
+                    if len(matched) == 0:
+                        raise ValueError(f"No covariates match the regex {value}.")
+                    combine_covariates[key] = matched
 
         med = GelbachDecomposition(
             param=param,

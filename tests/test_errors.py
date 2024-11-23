@@ -17,6 +17,7 @@ from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
+from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -685,9 +686,14 @@ def test_separation_check_validations():
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
+def gelbach_errors():
 
-with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
-    fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+    data = gelbach_data()
 
-with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
-    fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+
+    with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
