@@ -9,7 +9,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.utils.dev_utils import DataFrameType, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 
 
 class FixestMulti:
@@ -88,7 +88,7 @@ class FixestMulti:
         else:
             self._splitvar = None
 
-        data = _polars_to_pandas(data)
+        data = _narwhals_to_pandas(data)
 
         if self._copy_data:
             self._data = data.copy()
@@ -101,16 +101,16 @@ class FixestMulti:
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
-        _tmp = getattr(_module, "coefplot")
+        _tmp = _module.coefplot
         self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "iplot")
+        _tmp = _module.iplot
         self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.iplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "summary")
+        _tmp = _module.summary
         self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.summary.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "etable")
+        _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
 
@@ -120,7 +120,7 @@ class FixestMulti:
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
         weights: Union[None, str] = None,
-        ssc: dict[str, Union[str, bool]] = {},
+        ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
         drop_intercept: bool = False,
     ) -> None:
@@ -181,7 +181,7 @@ class FixestMulti:
         self._is_iv = FML.is_iv
         # self._fml_dict = fxst_fml.condensed_fml_dict
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
-        self._ssc_dict = ssc
+        self._ssc_dict = ssc if ssc is not None else {}
         self._drop_singletons = _drop_singletons(fixef_rm)
 
     def _estimate_all_models(
@@ -361,7 +361,7 @@ class FixestMulti:
                         FIT.wls_transform()
 
                     FIT.get_fit()
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
@@ -386,7 +386,7 @@ class FixestMulti:
 
                     self.all_fitted_models[FIT._model_name] = FIT
 
-    def to_list(self):
+    def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
         """
         Return a list of all fitted models.
 

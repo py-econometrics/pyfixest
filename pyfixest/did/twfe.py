@@ -36,7 +36,7 @@ class TWFE(DID):
     att: bool
         Whether to estimate the average treatment effect on the treated (ATT) or the
         canonical event study design with all leads and lags. Default is True.
-    cluster: str
+    cluster: Optional[str]
         The name of the cluster variable.
     """
 

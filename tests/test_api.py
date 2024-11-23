@@ -1,3 +1,4 @@
+import duckdb
 import numpy as np
 
 import pyfixest as pf
@@ -12,10 +13,16 @@ def test_api():
     fit2 = pf.estimation.fepois(
         "Y ~ X1 + X2 + f2 | f1", data=df2, vcov={"CRV1": "f1+f2"}
     )
+    fit_multi = pf.feols("Y + Y2 ~ X1", data=df2)
+
     pf.summary(fit1)
     pf.report.summary(fit2)
     pf.etable([fit1, fit2])
     pf.coefplot([fit1, fit2])
+
+    pf.summary(fit_multi)
+    pf.etable(fit_multi)
+    pf.coefplot(fit_multi)
 
 
 def test_feols_args():
@@ -89,3 +96,13 @@ def test_lean():
     assert not hasattr(fit, "_data")
     assert not hasattr(fit, "_X")
     assert not hasattr(fit, "_Y")
+
+
+def test_duckdb_input():
+    data_pandas = pf.get_data()
+    data_duckdb = duckdb.query("SELECT * FROM data_pandas")
+    fit_pandas = pf.feols("Y ~ X1 | f1 + f2", data=data_pandas)
+    fit_duckdb = pf.feols("Y ~ X1 | f1 + f2", data=data_duckdb)
+    assert type(fit_pandas) is type(fit_duckdb)
+    np.testing.assert_allclose(fit_pandas.coef(), fit_duckdb.coef(), rtol=1e-12)
+    np.testing.assert_allclose(fit_pandas.se(), fit_duckdb.se(), rtol=1e-12)

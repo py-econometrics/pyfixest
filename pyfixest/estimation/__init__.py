@@ -1,3 +1,4 @@
+from pyfixest.estimation import literals
 from pyfixest.estimation.demean_ import (
     demean,
 )
@@ -40,4 +41,5 @@ __all__ = [
     "Fepois",
     "Feiv",
     "FixestMulti",
+    "literals",
 ]

@@ -1,4 +1,5 @@
 import re
+from collections.abc import ValuesView
 from typing import Optional, Union
 
 import numpy as np
@@ -13,11 +14,15 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 def etable(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
+    models: ModelInputType,
     type: str = "gt",
-    signif_code: list = [0.001, 0.01, 0.05],
+    signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
@@ -40,13 +45,13 @@ def etable(
 
     Parameters
     ----------
-    models : list
-        A list of models of type Feols, Feiv, Fepois.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
     signif_code : list, optional
-        Significance levels for the stars. Default is [0.001, 0.01, 0.05].
+        Significance levels for the stars. Default is None, which sets [0.001, 0.01, 0.05].
         If None, no stars are printed.
     coef_fmt : str, optional
         The format of the coefficient (b), standard error (se), t-stats (t), and
@@ -117,9 +122,26 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
-    """  # noqa: D301
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    fit1 = pf.feols("Y~X1 + X2 | f1", df)
+    fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
+
+    pf.etable([fit1, fit2])
+    ```
+    """
+    if signif_code is None:
+        signif_code = [0.001, 0.01, 0.05]
     assert (
-        isinstance([0.1, 0.2, 0.3], list) and len(signif_code) == 3
+        isinstance(signif_code, list) and len(signif_code) == 3
     ), "signif_code must be a list of length 3"
     if signif_code:
         assert all(
@@ -129,11 +151,6 @@ def etable(
         assert (
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
-
-    # Check if models is of type FixestMulti
-    # If so, convert it to a list of models
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
 
     models = _post_processing_input_checks(models)
 
@@ -207,7 +224,7 @@ def etable(
         interactionSymbol = " x "
         R2code = "R2"
 
-    for i, model in enumerate(models):
+    for model in models:
         dep_var_list.append(model._depvar)
         n_coefs.append(len(model._coefnames))
 
@@ -462,9 +479,7 @@ def etable(
     return None
 
 
-def summary(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti], digits: int = 3
-) -> None:
+def summary(models: ModelInputType, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -474,8 +489,8 @@ def summary(
 
     Parameters
     ----------
-    models : list[Union[Feols, Fepois, Feiv]] or FixestMulti.
-            The models to be summarized.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
 
@@ -548,8 +563,8 @@ def summary(
 
 
 def _post_processing_input_checks(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-) -> list[Union[Feols, Fepois]]:
+    models: ModelInputType,
+) -> list[Union[Feols, Fepois, Feiv]]:
     """
     Perform input checks for post-processing models.
 
@@ -570,34 +585,23 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    # check if models instance of Feols or Fepois
-    if isinstance(models, (Feols, Fepois)):
-        models = [models]
+    models_list: list[Union[Feols, Fepois, Feiv]] = []
 
-    else:
-        if isinstance(models, (list, type({}.values()))):
-            for model in models:
-                if not isinstance(model, (Feols, Fepois)):
-                    raise TypeError(
-                        f"""
-                        Each element of the passed list needs to be of type Feols
-                        or Fepois, but {type(model)} was passed. If you want to
-                        summarize a FixestMulti object, please use FixestMulti.to_list()
-                        to convert it to a list of Feols or Fepois instances.
-                        """
-                    )
-
+    if isinstance(models, (Feols, Fepois, Feiv)):
+        models_list = [models]
+    elif isinstance(models, FixestMulti):
+        models_list = models.to_list()
+    elif isinstance(models, (list, ValuesView)):
+        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
+            models_list = models
         else:
             raise TypeError(
-                """
-                The models argument must be either a list of Feols or Fepois instances, or
-                simply a single Feols or Fepois instance. The models argument does not accept instances
-                of type FixestMulti - please use models.to_list() to convert the FixestMulti
-                instance to a list of Feols or Fepois instances.
-                """
+                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
             )
+    else:
+        raise TypeError("Invalid type for models argument.")
 
-    return models
+    return models_list
 
 
 def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
@@ -687,7 +691,8 @@ def _parse_coef_fmt(coef_fmt: str, custom_stats: dict):
         r"\[",
         r"\]",
         ",",
-    ] + custom_elements
+        *custom_elements,
+    ]
     allowed_elements.sort(key=len, reverse=True)
 
     coef_fmt_elements = re.findall("|".join(allowed_elements), coef_fmt)
@@ -865,7 +870,7 @@ def make_table(
         # When there are row groups then insert midrules and groupname
         if row_levels > 1 and len(row_groups) > 1:
             # Insert a midrule after each row group
-            for i, row_group in enumerate(row_groups):
+            for i in range(len(row_groups)):
                 if rgroup_display:
                     # Insert a line with the row group name & same space around it
                     # lines.insert(line_at+1, "\\addlinespace")
@@ -1143,12 +1148,12 @@ def _format_mean_std(
 def dtable(
     df: pd.DataFrame,
     vars: list,
-    stats: list = ["count", "mean", "std"],
+    stats: Optional[list] = None,
     bycol: Optional[list[str]] = None,
     byrow: Optional[str] = None,
     type: str = "gt",
-    labels: dict = {},
-    stats_labels: dict = {},
+    labels: dict | None = None,
+    stats_labels: dict | None = None,
     digits: int = 2,
     notes: str = "",
     counts_row_below: bool = False,
@@ -1166,7 +1171,7 @@ def dtable(
     vars : list
         List of variables to be included in the table.
     stats : list, optional
-        List of statistics to be calculated. The default is ['count','mean', 'std'].
+        List of statistics to be calculated. The default is None, that sets ['count','mean', 'std'].
         All pandas aggregation functions are supported.
     bycol : list, optional
         List of variables to be used to group the data by columns. The default is None.
@@ -1199,7 +1204,25 @@ def dtable(
     Returns
     -------
     A table in the specified format.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
+    ```
     """
+    if stats is None:
+        stats = ["count", "mean", "std"]
+    if labels is None:
+        labels = {}
+    if stats_labels is None:
+        stats_labels = {}
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
     assert all(
         pd.api.types.is_numeric_dtype(df[var]) for var in vars
@@ -1241,7 +1264,7 @@ def dtable(
 
     # Calculate the desired statistics
     if (byrow is not None) and (bycol is not None):
-        bylist = [byrow] + bycol
+        bylist = [byrow, *bycol]
         res = df.groupby(bylist).agg(agg_funcs)
     if (byrow is None) and (bycol is None):
         res = df.agg(agg_funcs)
@@ -1334,7 +1357,7 @@ def dtable(
             # Finally we want to have the objects first and then the statistics
             if not isinstance(res.columns, pd.MultiIndex):
                 res.columns = pd.MultiIndex.from_tuples(res.columns)
-            res.columns = res.columns.reorder_levels(bycol + ["Statistics"])
+            res.columns = res.columns.reorder_levels([*bycol, "Statistics"])
             # And sort it properly by the variables
             # (we want to preserve the order of the lowest level for the stats)
             levels_to_sort = list(range(res.columns.nlevels - 1))

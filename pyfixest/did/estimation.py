@@ -5,6 +5,7 @@ import pandas as pd
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
+from pyfixest.estimation.literals import VcovTypeOptions
 
 
 def event_study(
@@ -46,6 +47,8 @@ def event_study(
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
         lags. Default is True.
+    cluster: Optional[str]
+        The name of the cluster variable.
 
     Returns
     -------
@@ -142,6 +145,7 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
+    weights: Optional[str] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -237,6 +241,7 @@ def did2s(
         _first_stage=first_stage,
         _second_stage=second_stage,
         treatment=treatment,
+        weights=weights,
     )
 
     vcov, _G = _did2s_vcov(
@@ -248,6 +253,7 @@ def did2s(
         first_u=first_u,
         second_u=second_u,
         cluster=cluster,
+        weights=weights,
     )
 
     fit._vcov = vcov
@@ -268,7 +274,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,

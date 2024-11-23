@@ -50,14 +50,14 @@ ols_fmls = [
     ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
     ("Y ~ X1 + i(f1) + i(f2)"),
     ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
-    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented # noqa: W505
-    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented # noqa: W505
+    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
+    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
     ("Y ~ X1 + X2:f1"),
     ("Y ~ X1 + X2:f1 | f3"),
     ("Y ~ X1 + X2:f1 | f3 + f1"),
-    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time) # noqa: W505
-    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time) # noqa: W505
+    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
+    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
+    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
     ("Y ~ X1 + i(f1,X2)"),
     ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
     ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
@@ -69,14 +69,14 @@ ols_fmls = [
     ("Y ~ X1 + i(f2,X2, ref=2.0)"),
     ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
     ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
-    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented # noqa: W505
+    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
     # ("Y ~ C(f1):C(f2)"),                       # currently does not work
     ("Y ~ X1 + I(X2 ** 2)"),
     ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
     ("Y ~ X1*X2"),
     ("Y ~ X1*X2 | f1+f2"),
-    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented # noqa: W505
-    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented # noqa: W505
+    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
+    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
     ("Y ~ X1 + poly(X2, 2) | f1"),
 ]
 
@@ -137,8 +137,27 @@ rng = np.random.default_rng(8760985)
 
 
 def check_absolute_diff(x1, x2, tol, msg=None):
-    msg = "" if msg is None else msg
-    assert np.all(np.abs(x1 - x2) < tol), msg
+    "Check for absolute differences."
+    if isinstance(x1, (int, float)):
+        x1 = np.array([x1])
+    if isinstance(x2, (int, float)):
+        x2 = np.array([x2])
+        msg = "" if msg is None else msg
+
+    # handle nan values
+    nan_mask_x1 = np.isnan(x1)
+    nan_mask_x2 = np.isnan(x2)
+
+    if not np.array_equal(nan_mask_x1, nan_mask_x2):
+        raise AssertionError(f"{msg}: NaN positions do not match")
+
+    valid_mask = ~nan_mask_x1  # Mask for non-NaN elements (same for x1 and x2)
+    assert np.all(np.abs(x1[valid_mask] - x2[valid_mask]) < tol), msg
+
+
+def na_omit(arr):
+    mask = ~np.isnan(arr)
+    return arr[mask]
 
 
 def check_relative_diff(x1, x2, tol, msg=None):
@@ -232,7 +251,6 @@ def test_single_fit_feols(
 
     py_nobs = mod._N
     py_resid = mod.resid()
-    py_predict = mod.predict()
 
     df_X1 = _get_r_df(r_fixest)
     r_coef = df_X1["estimate"]
@@ -243,18 +261,45 @@ def test_single_fit_feols(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
-    r_resid = stats.residuals(r_fixest)
-    r_predict = stats.predict(r_fixest)
 
     if inference == "iid" and adj and cluster_adj:
+        py_resid = mod.resid()
+        r_resid = stats.residuals(r_fixest)
+
+        py_predict = mod.predict()
+        r_predict = stats.predict(r_fixest)
+
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
         check_absolute_diff(py_coef, r_coef, 1e-08, "py_coef != r_coef")
         check_absolute_diff(
             py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
         )
+
         check_absolute_diff(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
+
+        # currently, bug when using predict with newdata and i() or C() or "^" syntax
+        blocked_transforms = ["i(", "^", "poly("]
+        blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+
+        if blocked_transform_found:
+            with pytest.raises(NotImplementedError):
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+                )
+        else:
+            py_predict_newsample = mod.predict(
+                newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
+            )
+            r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
+
+            check_absolute_diff(
+                na_omit(py_predict_newsample)[0:5],
+                na_omit(r_predict_newsample)[0:5],
+                1e-07,
+                "py_predict_newdata != r_predict_newdata",
+            )
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
@@ -425,10 +470,10 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
-        py_predict_response = mod.predict(type="response")  # noqa: F841
-        py_predict_link = mod.predict(type="link")  # noqa: F841
-        r_predict_response = stats.predict(r_fixest, type="response")  # noqa: F841
-        r_predict_link = stats.predict(r_fixest, type="link")  # noqa: F841
+        py_predict_response = mod.predict(type="response")
+        py_predict_link = mod.predict(type="link")
+        r_predict_response = stats.predict(r_fixest, type="response")
+        r_predict_link = stats.predict(r_fixest, type="link")
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],

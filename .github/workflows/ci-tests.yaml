@@ -55,6 +55,16 @@ jobs:
         run: |
           pixi run tests-regular
 
+      # Run tests for PRs with the label "tests-extended"
+      #- name: Run tests for plots (only on PRs with the 'tests-extended' label)
+      #  if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
+      #  run: pixi run tests-extended
+
+      # Run tests for push to master
+      #- name: Run tests for push to master
+      #  if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      #  run: pixi run tests-extended
+
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:

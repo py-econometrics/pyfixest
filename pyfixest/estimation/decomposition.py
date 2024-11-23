@@ -107,7 +107,7 @@ class GelbachDecomposition:
             self.direct_effect = np.array([self.direct_effect])
 
             # Gelbach Method:
-            self.gamma = np.linalg.lstsq(self.X2, self.X1[:, 1:], rcond=1)[0].flatten()
+            self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2, rcond=1)[0].flatten()
             self.beta_full = np.linalg.lstsq(self.X, self.Y, rcond=1)[0].flatten()
             self.beta2 = self.beta_full[self.mask].flatten()
             self.delta = self.gamma * self.beta2.flatten()

@@ -249,7 +249,7 @@ class Feiv(Feols):
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
         fixest_module = import_module("pyfixest.estimation")
-        fit_ = getattr(fixest_module, "feols")
+        fit_ = fixest_module.feols
 
         fml_first_stage = self.FixestFormula.fml_first_stage.replace(" ", "")
         if self._has_fixef:
@@ -375,9 +375,7 @@ class Feiv(Feols):
             print("(Unadjusted) F stat :", F_stat_pf)
             print("Effective F stat :", F_stat_eff_pf)
 
-            # The example above generates the following results
-            # (Unadjusted) F stat : 52.81535560457482
-            # Effective F stat : 48.661542741328205
+            ```
         """
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]

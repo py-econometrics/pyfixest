@@ -7,10 +7,9 @@ import pandas as pd
 
 from pyfixest.errors import (
     NonConvergenceError,
-    NotImplementedError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, prediction_type
+from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
@@ -351,7 +350,7 @@ class Fepois(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: prediction_type = "link",
+        type: PredictionType = "link",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -460,7 +459,7 @@ def _check_for_separation(
 
     if separation_na:
         warnings.warn(
-            f"{str(len(separation_na))} observations removed because of separation."
+            f"{len(separation_na)!s} observations removed because of separation."
         )
 
     return list(separation_na)
@@ -585,7 +584,7 @@ def _check_for_separation_ir(
     """
     # lazy load to avoid circular import
     fixest_module = import_module("pyfixest.estimation")
-    feols = getattr(fixest_module, "feols")
+    feols = fixest_module.feols
     # initialize
     separation_na: set[int] = set()
     tmp_suffix = "_separationTmp"

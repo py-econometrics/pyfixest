@@ -4,12 +4,16 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
+from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 
+ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
 
-def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
+
+def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
@@ -18,9 +22,8 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
     Parameters
     ----------
-    models : list[Feols, Fepois], Feols or Fepois
-        A list of models for which the p-values should be adjusted, or a Feols or
-        Fepois object.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -32,15 +35,14 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
     Examples
     --------
-    ```python
-    from pyfixest.estimation import feols
+    ```{python}
+    import pyfixest as pf
     from pyfixest.utils import get_data
-    from pyfixest.multcomp import bonferroni
 
     data = get_data().dropna()
-    fit1 = feols("Y ~ X1", data=data)
-    fit2 = feols("Y ~ X1 + X2", data=data)
-    bonf_df = bonferroni([fit1, fit2], param="X1")
+    fit1 = pf.feols("Y ~ X1", data=data)
+    fit2 = pf.feols("Y ~ X1 + X2", data=data)
+    bonf_df = pf.bonferroni([fit1, fit2], param="X1")
     bonf_df
     ```
     """
@@ -65,7 +67,7 @@ def bonferroni(models: list[Union[Feols, Fepois]], param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: list[Union[Feols, Fepois]],
+    models: Union[FixestMulti, list[Union[Feols, Fepois]]],
     param: str,
     reps: int,
     seed: int,
@@ -103,18 +105,21 @@ def rwolf(
 
     Examples
     --------
-    ```python
-    from pyfixest.estimation import feols
+    ```{python}
+    import pyfixest as pf
     from pyfixest.utils import get_data
-    from pyfixest.multcomp import rwolf
 
     data = get_data().dropna()
-    fit = feols("Y ~ Y2 + X1 + X2", data=data)
-    rwolf(fit.to_list(), "X1", reps=9999, seed=123)
+    fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
+    pf.rwolf(fit, "X1", reps=9999, seed=123)
 
-    fit1 = feols("Y ~ X1", data=data)
-    fit2 = feols("Y ~ X1 + X2", data=data)
-    rwolf_df = rwolf([fit1, fit2], "X1", reps=9999, seed=123)
+    fit1 = pf.feols("Y ~ X1", data=data)
+    fit2 = pf.feols("Y ~ X1 + X2", data=data)
+    rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123)
+
+    # use randomization inference
+    rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123, sampling_method = "ri")
+
     rwolf_df
     ```
     """
