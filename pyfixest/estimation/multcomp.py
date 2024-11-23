@@ -358,7 +358,7 @@ def _multcomp_resample(
             _df[i] = (
                 model._N - model._k
                 if model._vcov_type in ["iid", "hetero"]
-                else model._G - 1
+                else min(model._G) - 1
             )
             p_vals[i] = 2 * (1 - t.cdf(np.abs(t_stats[i]), _df[i]))
             boot_p_vals[:, i] = 2 * (1 - t.cdf(np.abs(boot_t_stats[:, i]), _df[i]))
