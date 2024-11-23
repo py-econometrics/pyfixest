@@ -10,6 +10,8 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 
+from scipy.stats import t
+
 ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
 
 
@@ -67,7 +69,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: Union[FixestMulti, list[Union[Feols, Fepois]]],
+    models: list[Union[Feols, Fepois]],
     param: str,
     reps: int,
     seed: int,
@@ -180,7 +182,7 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
 
 
 def wyoung(
-    models: Union[FixestMulti, list[Union[Feols, Fepois]]],
+    models: list[Union[Feols, Fepois]],
     param: str,
     reps: int,
     seed: int,
