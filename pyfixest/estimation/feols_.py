@@ -2,7 +2,7 @@ import functools
 import gc
 import warnings
 from importlib import import_module
-from typing import Optional, Union, Literal
+from typing import Literal, Optional, Union
 
 import numba as nb
 import numpy as np

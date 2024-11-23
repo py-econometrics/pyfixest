@@ -157,7 +157,7 @@ class GelbachDecomposition:
             ]
             direct_effect = np.array([direct_effect])
 
-            gamma = np.linalg.lstsq(X2, X1[:, 1:], rcond=1)[0].flatten()
+            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=1)[0].flatten()
             beta_full = np.linalg.lstsq(X, Y, rcond=1)[0].flatten()
             beta2 = beta_full[self.mask].flatten()
             delta = gamma * beta2
@@ -179,7 +179,7 @@ class GelbachDecomposition:
             contribution_dict["direct_effect"] = direct_effect
             contribution_dict["full_effect"] = beta_full[self.param_in_X1_idx].flatten()
 
-            return np.concatenate(list(contribution_dict.values()))
+            return contribution_dict
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -192,44 +192,47 @@ class GelbachDecomposition:
         #    )
         # ]
 
-        self._bootstrapped = np.c_[[self._bootstrap(rng=rng) for _ in tqdm(range(B))]]
+        #self._bootstrapped = np.c_[[self._bootstrap(rng=rng) for _ in tqdm(range(B))]]
+        _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
+        self._bootstrapped = {key: np.concatenate([d[key] for d in _bootstrapped]) for key in _bootstrapped[0].keys()}
+        self.ci = {key: np.percentile(self._bootstrapped[key], 100 * np.array([alpha / 2, 1 - alpha / 2]), axis=0) for key in self._bootstrapped.keys()}
 
-        self.ci = np.percentile(
-            self._bootstrapped, 100 * np.array([alpha / 2, 1 - alpha / 2]), axis=0
-        )
+    def summary(self, digits: int = 4) -> pd.DataFrame:
+        """
+        Summary Table for Total, Mediated and Direct Effects.
 
-    def summary(self) -> pd.DataFrame:
-        "Summary Table for Total, Mediated and Direct Effects."
-        lb = self.alpha / 2
-        ub = 1 - lb
-        index = ["Estimate", f"{lb*100:.1f}%", f"{ub*100:.1f}%"]
+        Parameters
+        ----------
+        digits : int, optional
+            Number of digits to display in the summary table, by default 4.
+        """
 
         mediators = list(self.combine_covariates.keys())
-        n_df = len(mediators) + 1
-        index = [self.param] + mediators
 
-        direct_effect = np.full(n_df, np.nan)
-        direct_effect[0] = self.contribution_dict["direct_effect"]
-        full_effect = np.full(n_df, np.nan)
-        full_effect[0] = self.contribution_dict["full_effect"]
-        explained_effect = np.full(n_df, np.nan)
-        explained_effect[0] = self.contribution_dict["explained_effect"]
-
-        for i, mediator in enumerate(mediators):
-            explained_effect[i + 1] = self.contribution_dict[mediator]
-
-        self.summary_table = (
-            pd.DataFrame(
-                {
-                    "direct_effect": direct_effect,
-                    "full_effect": full_effect,
-                    "explained_effect": explained_effect,
-                },
-                index=index,
-            )
-            .fillna("")
-            .T
+        rows = []
+        rows.append(
+            [
+                f"{self.contribution_dict['direct_effect'].item():.{digits}f}",
+                f"{self.contribution_dict['full_effect'].item():.{digits}f}",
+                f"{self.contribution_dict['explained_effect'].item():.{digits}f}",
+            ]
         )
+        rows.append(
+            [
+                f"[{self.ci['direct_effect'][0]:.{digits}f}, {self.ci['direct_effect'][1]:.{digits}f}]",
+                f"[{self.ci['full_effect'][0]:.{digits}f}, {self.ci['full_effect'][1]:.{digits}f}]",
+                f"[{self.ci['explained_effect'][0]:.{digits}f}, {self.ci['explained_effect'][1]:.{digits}f}]",
+            ]
+        )
+
+        for mediator in mediators:
+            rows.append([None, None, f"{self.contribution_dict[mediator].item():.{digits}f}"])
+            rows.append([None, None, f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]"])
+
+        index = [self.param, ""] + [item for mediator in mediators for item in [f"{mediator}", ""]]
+        columns = ["direct_effect", "full_effect", "explained_effect"]
+
+        self.summary_table = pd.DataFrame(rows, index=index, columns=columns).fillna("").T
 
         return self.summary_table
 
