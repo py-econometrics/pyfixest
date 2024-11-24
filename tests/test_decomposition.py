@@ -9,7 +9,9 @@ from pyfixest.utils.dgps import gelbach_data
 def test_gelbach_example():
     test_ci = False
 
-    data = gelbach_data(nobs=100_000)
+    data = gelbach_data(nobs=10_000)
+    data["f"] = np.random.choice(10, size=data.shape[0])
+
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
     fit.decompose(
         param="x1",
@@ -50,6 +52,19 @@ def test_gelbach_example():
             res.ci.get("explained_effect"), np.array([3.3262, 3.746298])
         )
 
+    if False:
+        # clustered errors:
+        fit.vcov({"CRV1": "f"})
+        fit.decompose(
+            param="x1",
+            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+            reps=100,
+            seed=8,
+        )
+
+        # no combine covariates
+        fit.decompose(param="x1", reps=100, seed=8)
+
 
 def test_regex():
     "Test the regex functionality for combine_covariates."
@@ -75,3 +90,60 @@ def test_regex():
         np.testing.assert_allclose(
             value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
         )
+
+
+def test_agg_first():
+    "Test that choosing agg_first = True or False does not change the results."
+    data = pf.get_data()
+    fit1 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
+    fit2 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
+
+    fit1.decompose(
+        param="X1",
+        combine_covariates={
+            "f1": re.compile(r"\b\w*f1\w*\b"),
+            "f2": re.compile(r"\b\w*f2\w*\b"),
+        },
+        nthreads=2,
+        agg_first=False,
+        reps=100,
+        seed=123,
+    )
+
+    fit2.decompose(
+        param="X1",
+        combine_covariates={
+            "f1": re.compile(r"\b\w*f1\w*\b"),
+            "f2": re.compile(r"\b\w*f2\w*\b"),
+        },
+        nthreads=2,
+        agg_first=True,
+        reps=100,
+        seed=123,
+    )
+
+    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+        np.testing.assert_allclose(
+            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+        )
+
+
+stata_code = """
+// Create data for Gelbach example
+set obs 500
+gen double x1 = invnorm(uniform())
+gen double x21 = x1*1 + invnorm(uniform())
+gen double x22 = x1*0.25 + x21*0.75 + invnorm(uniform())
+gen double x23 = x1*0.4 + x21*0.6 + x22*0.4 + invnorm(uniform())
+gen double y = x1*1 + x21*2 + x22*0.5 + x23*0.75 + invnorm(uniform())
+gen cluster = floor((_n - 1) / 50) + 1
+
+b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1), robust
+b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1), cluster(cluster)
+
+b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1), robust
+b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1), cluster(cluster)
+
+b1x2 y, x1all(x1) x2all(x2*) x1only(x1), robust
+b1x2 y, x1all(x1) x2all(x2*) x1only(x1), cluster(cluster)
+"""

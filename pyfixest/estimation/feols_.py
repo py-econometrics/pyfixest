@@ -1489,6 +1489,7 @@ class Feols:
         reps: int = 1000,
         seed: Optional[int] = None,
         nthreads: Optional[int] = None,
+        agg_first: Optional[bool] = None,
     ):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
@@ -1516,6 +1517,13 @@ class Feols:
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
             An integer to set the random seed. Defaults to None.
+        nthreads : int, optional
+            The number of threads to use for the bootstrap. Defaults to None.
+            If None, uses all available threads minus one.
+        agg_first : bool, optional
+            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
+            Recommended in cases with many (potentially high-dimensional) covariates.
+            False by default if the 'combine_covariates' argument is None, True otherwise.
 
         Examples
         --------
@@ -1552,6 +1560,9 @@ class Feols:
             np.random.default_rng(seed) if seed is not None else np.random.default_rng()
         )
 
+        if agg_first is None:
+            agg_first = combine_covariates is not None
+
         cluster_df: Optional[pd.Series] = None
         if cluster is not None:
             cluster_df = self._data[cluster]
@@ -1563,7 +1574,7 @@ class Feols:
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
                 if isinstance(value, re.Pattern):
-                    matched = [x for x in self._coefnames if value.match(x)]
+                    matched = [x for x in self._coefnames if value.search(x)]
                     if len(matched) == 0:
                         raise ValueError(f"No covariates match the regex {value}.")
                     combine_covariates[key] = matched
@@ -1574,6 +1585,7 @@ class Feols:
             cluster_df=cluster_df,
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
+            agg_first=agg_first,
         )
 
         med.fit(
