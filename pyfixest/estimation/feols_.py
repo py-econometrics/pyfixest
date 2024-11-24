@@ -1490,6 +1490,7 @@ class Feols:
         seed: Optional[int] = None,
         nthreads: Optional[int] = None,
         agg_first: Optional[bool] = None,
+        inference: bool = True,
     ):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
@@ -1524,6 +1525,9 @@ class Feols:
             If True, use the 'aggregate first' algorithm described in Gelbach (2016).
             Recommended in cases with many (potentially high-dimensional) covariates.
             False by default if the 'combine_covariates' argument is None, True otherwise.
+        inference : bool, optional
+            Indicates whether to compute inference for the decomposition. Defaults to True.
+            If False, skips the inference step and only returns the decomposition results.
 
         Examples
         --------
@@ -1586,6 +1590,7 @@ class Feols:
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
             agg_first=agg_first,
+            inference=inference,
         )
 
         med.fit(
@@ -1593,7 +1598,9 @@ class Feols:
             Y=self._Y,
         )
 
-        med.bootstrap(rng=rng, B=reps)
+        if inference:
+            med.bootstrap(rng=rng, B=reps)
+
         med.summary()
 
         self.GelbachDecompositionResults = med

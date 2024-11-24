@@ -1,14 +1,14 @@
 import re
 
 import numpy as np
+import pytest
 
 import pyfixest as pf
 from pyfixest.utils.dgps import gelbach_data
 
 
-def test_gelbach_example():
-    test_ci = False
-
+@pytest.mark.parametrize("inference", [True, False])
+def test_gelbach_example(inference):
     data = gelbach_data(nobs=10_000)
     data["f"] = np.random.choice(10, size=data.shape[0])
 
@@ -18,6 +18,7 @@ def test_gelbach_example():
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         reps=100,
         seed=8,
+        inference=inference,
     )
 
     res = fit.GelbachDecompositionResults
@@ -38,7 +39,7 @@ def test_gelbach_example():
     np.testing.assert_allclose(
         res.contribution_dict.get("explained_effect"), np.array([3.536249]), atol=1e-1
     )
-    if test_ci:
+    if False:
         np.testing.assert_allclose(res.ci.get("g1"), np.array([2.293714, 2.64247]))
         np.testing.assert_allclose(res.ci.get("g2"), np.array([2.9546626, 1.18165]))
 

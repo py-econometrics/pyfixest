@@ -22,6 +22,7 @@ class GelbachDecomposition:
     cluster_df: Optional[pd.Series] = None
     combine_covariates: Optional[dict[str, list[str]]] = None
     agg_first: Optional[bool] = False
+    inference: bool = True
 
     # Define attributes initialized post-creation
     cluster_dict: Optional[dict[Any, Any]] = field(init=False, default=None)
@@ -263,29 +264,36 @@ class GelbachDecomposition:
                 f"{self.contribution_dict['explained_effect'].item():.{digits}f}",
             ]
         )
-        rows.append(
-            [
-                f"[{self.ci['direct_effect'][0]:.{digits}f}, {self.ci['direct_effect'][1]:.{digits}f}]",
-                f"[{self.ci['full_effect'][0]:.{digits}f}, {self.ci['full_effect'][1]:.{digits}f}]",
-                f"[{self.ci['explained_effect'][0]:.{digits}f}, {self.ci['explained_effect'][1]:.{digits}f}]",
-            ]
-        )
+
+        if self.inference:
+            rows.append(
+                [
+                    f"[{self.ci['direct_effect'][0]:.{digits}f}, {self.ci['direct_effect'][1]:.{digits}f}]",
+                    f"[{self.ci['full_effect'][0]:.{digits}f}, {self.ci['full_effect'][1]:.{digits}f}]",
+                    f"[{self.ci['explained_effect'][0]:.{digits}f}, {self.ci['explained_effect'][1]:.{digits}f}]",
+                ]
+            )
 
         for mediator in mediators:
             rows.append(
                 ["", "", f"{self.contribution_dict[mediator].item():.{digits}f}"]
             )
-            rows.append(
-                [
-                    "",
-                    "",
-                    f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]",
-                ]
-            )
+            if self.inference:
+                rows.append(
+                    [
+                        "",
+                        "",
+                        f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]",
+                    ]
+                )
 
-        index = [self.param, ""] + [
-            item for mediator in mediators for item in [f"{mediator}", ""]
-        ]
+        if self.inference:
+            index = [self.param, ""] + [
+                item for mediator in mediators for item in [f"{mediator}", ""]
+            ]
+        else:
+            index = [self.param] + [mediator for mediator in mediators]
+
         columns = ["direct_effect", "full_effect", "explained_effect"]
 
         self.summary_table = (
