@@ -1,10 +1,12 @@
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from tqdm import tqdm
+
+logging.basicConfig(level=logging.INFO)
 
 
 @dataclass
@@ -22,7 +24,7 @@ class GelbachDecomposition:
     cluster_df: Optional[pd.Series] = None
     combine_covariates: Optional[dict[str, list[str]]] = None
     agg_first: Optional[bool] = False
-    inference: bool = True
+    only_coef: bool = True
 
     # Define attributes initialized post-creation
     cluster_dict: Optional[dict[Any, Any]] = field(init=False, default=None)
@@ -227,6 +229,17 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
+        if self.nthreads > 1:
+            try:
+                from joblib import Parallel, delayed
+
+                logging.info("Joblib successfully loaded. Parallel processing enabled.")
+            except ImportError:
+                logging.warning(
+                    "Joblib is not installed. Parallel processing will not be available. "
+                    "Please install the joblib module to enable parallelization."
+                )
+
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
             delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
         )
@@ -265,7 +278,7 @@ class GelbachDecomposition:
             ]
         )
 
-        if self.inference:
+        if not self.only_coef:
             rows.append(
                 [
                     f"[{self.ci['direct_effect'][0]:.{digits}f}, {self.ci['direct_effect'][1]:.{digits}f}]",
@@ -278,7 +291,7 @@ class GelbachDecomposition:
             rows.append(
                 ["", "", f"{self.contribution_dict[mediator].item():.{digits}f}"]
             )
-            if self.inference:
+            if not self.only_coef:
                 rows.append(
                     [
                         "",
@@ -287,7 +300,7 @@ class GelbachDecomposition:
                     ]
                 )
 
-        if self.inference:
+        if not self.only_coef:
             index = [self.param, ""] + [
                 item for mediator in mediators for item in [f"{mediator}", ""]
             ]

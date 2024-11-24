@@ -10294,7 +10294,7 @@ packages:
   name: pyfixest
   version: 0.26.2
   path: .
-  sha256: 90faa6dadedf1f29681426f4007e09fffa1b5fa147e657a751b61f550524c2da
+  sha256: 807598b8e67c77e73a4e281f5aef663b7a1f194cc400cba2b1b2343576e475f3
   requires_dist:
   - lets-plot>=4.0.0
   - scipy>=1.6
@@ -10318,6 +10318,7 @@ packages:
   - duckdb>=1.1.3 ; extra == 'dev'
   - polars>=1.0.0 ; extra == 'dev'
   - pyarrow>=14.0 ; extra == 'dev'
+  - joblib>=1.4.2,<2 ; extra == 'dev'
   - quartodoc>=0.7.2 ; extra == 'docs'
   - jupyterlab>=4.0.12 ; extra == 'docs'
   - jupytext==1.16.1 ; extra == 'docs'
