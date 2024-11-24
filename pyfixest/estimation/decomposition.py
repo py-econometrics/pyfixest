@@ -113,72 +113,30 @@ class GelbachDecomposition:
             self.X1_sparse = csc_matrix(self.X1)
             self.X_sparse = csc_matrix(self.X)
 
-            direct_effect = lsqr(self.X1_sparse, self.Y)[0]
-            self.direct_effect = np.array([direct_effect[self.param_in_X1_idx]])
-            self.beta_full = lsqr(self.X_sparse, self.Y)[0]
-            self.beta2 = self.beta_full[self.mask]
-            self.beta2_sparse = csc_matrix(self.beta2)
+            results = self.compute_gelbach(
+                X1_sparse=self.X1_sparse,
+                X2_sparse=self.X2_sparse,
+                X_sparse=self.X_sparse,
+                X1=self.X1,
+                X2=self.X2,
+                Y=self.Y,
+                agg_first=self.agg_first,
+                is_first_iteration=True,
+            )
 
-            if self.agg_first:
-                H = self.X2_sparse.multiply(self.beta2_sparse)
-                Hg = np.zeros((self.N, len(self.combine_covariates_dict)))
-                for i, (_, covariates) in enumerate(
-                    self.combine_covariates_dict.items()
-                ):
-                    variable_idx = [
-                        self.mediator_names.index(cov) for cov in covariates
-                    ]
-                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
-
-                self.delta = np.linalg.lstsq(self.X1[:, 1:], Hg, rcond=None)[
-                    0
-                ].flatten()
-                for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
-                    self.contribution_dict[name] = np.array([self.delta[i]])
-
-            else:
-                self.gamma = lsqr(self.X1_sparse[:, 1:], self.X2_sparse)[0]
-                self.delta = self.gamma * self.beta2.flatten()
-
-                if self.combine_covariates is not None:
-                    for name, covariates in self.combine_covariates.items():
-                        variable_idx = [
-                            self.mediator_names.index(cov) for cov in covariates
-                        ]
-                        self.contribution_dict[name] = np.array(
-                            [np.sum(self.delta[variable_idx])]
-                        )
-
-            self.contribution_dict["explained_effect"] = np.sum(
-                list(self.contribution_dict.values()), keepdims=True
-            ).flatten()
-            self.contribution_dict["unexplained_effect"] = (
-                self.direct_effect - self.contribution_dict["explained_effect"]
-            ).flatten()
-            self.contribution_dict["direct_effect"] = self.direct_effect
-            self.contribution_dict["full_effect"] = self.beta_full[
-                self.param_in_X1_idx
-            ].flatten()
-
-            # prepare bootstrap in first iteration
-            if self.unique_clusters is not None:
-                for g in self.unique_clusters:
-                    cluster_idx = np.where(self.cluster_df == g)[0]
-                    self.X_dict[g] = self.X[cluster_idx]
-                    self.Y_dict[g] = self.Y[cluster_idx]
+            (
+                self.direct_effect,
+                self.beta_full,
+                self.beta2,
+                self.beta2_sparse,
+                self.contribution_dict,
+                self.X_dict,
+                self.Y_dict,
+            ) = results
 
             return self.contribution_dict
 
         else:
-            # Gelbach Method:
-
-            contribution_dict = {
-                key: np.zeros(1)
-                for key in self.combine_covariates_dict
-                if key != "Intercept"
-            }
-
-            N = X.shape[0]
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
@@ -186,47 +144,18 @@ class GelbachDecomposition:
             X1_sparse = csc_matrix(X1)
             X2_sparse = csc_matrix(X2)
 
-            direct_effect = np.array([lsqr(X1_sparse, Y)[0][self.param_in_X1_idx]])
-            beta_full = lsqr(X_sparse, Y)[0]
-            beta2 = beta_full[self.mask]
-            beta2_sparse = csc_matrix(beta2)
+            results = self.compute_gelbach(
+                X1_sparse=X1_sparse,
+                X2_sparse=X2_sparse,
+                X_sparse=X_sparse,
+                X1=X1,
+                X2=X2,
+                Y=Y,
+                agg_first=self.agg_first,
+                is_first_iteration=False,
+            )
 
-            if self.agg_first:
-                H = X2_sparse.multiply(beta2_sparse)
-                Hg = np.zeros((N, len(self.combine_covariates_dict)))
-                for i, (_, covariates) in enumerate(
-                    self.combine_covariates_dict.items()
-                ):
-                    variable_idx = [
-                        self.mediator_names.index(cov) for cov in covariates
-                    ]
-                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
-
-                delta = np.linalg.lstsq(X1[:, 1:], Hg, rcond=None)[0].flatten()
-                for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
-                    contribution_dict[name] = np.array([delta[i]])
-
-            else:
-                gamma = lsqr(X1[:, 1:], X2)[0]
-                delta = gamma * beta2.flatten()
-
-                if self.combine_covariates is not None:
-                    for name, covariates in self.combine_covariates.items():
-                        variable_idx = [
-                            self.mediator_names.index(cov) for cov in covariates
-                        ]
-                        contribution_dict[name] = np.array(
-                            [np.sum(delta[variable_idx])]
-                        )
-
-            contribution_dict["explained_effect"] = np.sum(
-                list(contribution_dict.values()), keepdims=True
-            ).flatten()
-            contribution_dict["unexplained_effect"] = (
-                direct_effect - contribution_dict["explained_effect"]
-            ).flatten()
-            contribution_dict["direct_effect"] = direct_effect
-            contribution_dict["full_effect"] = beta_full[self.param_in_X1_idx].flatten()
+            _, _, _, _, contribution_dict, _, _ = results
 
             return contribution_dict
 
@@ -346,3 +275,94 @@ class GelbachDecomposition:
             Y = self.Y[idx]
 
         return self.fit(X=X, Y=Y, store=False)
+
+    def compute_gelbach(
+        self,
+        X1_sparse: csc_matrix,
+        X2_sparse: csc_matrix,
+        X_sparse: csc_matrix,
+        X1: np.ndarray,
+        X2: np.ndarray,
+        Y: np.ndarray,
+        agg_first: Optional[bool],
+        is_first_iteration: bool = False,
+    ) -> tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        csc_matrix,
+        dict[str, np.ndarray],
+        dict[Any, np.ndarray],
+        dict[Any, np.ndarray],
+    ]:
+        "Run the Gelbach decomposition."
+        N = X1.shape[0]
+        # Compute direct effect
+        direct_effect = lsqr(X1_sparse, Y)[0]
+        direct_effect_array = np.array([direct_effect[self.param_in_X1_idx]])
+
+        # Compute beta_full and beta2
+        beta_full = lsqr(X_sparse, Y)[0]
+        beta2 = beta_full[self.mask]
+        beta2_sparse = csc_matrix(beta2)
+
+        # Initialize contribution_dict
+        contribution_dict = {}
+
+        if self.agg_first:
+            # Compute H and Hg
+            H = X2_sparse.multiply(beta2_sparse)
+            Hg = np.zeros((N, len(self.combine_covariates_dict)))
+            for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
+                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+                Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
+
+            # Compute delta
+            delta = np.linalg.lstsq(self.X1[:, 1:], Hg, rcond=None)[0].flatten()
+            for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
+                contribution_dict[name] = np.array([delta[i]])
+
+        else:
+            # Compute gamma and delta
+            gamma = lsqr(X1_sparse[:, 1:], X2_sparse)[0]
+            delta = gamma * beta2.flatten()
+
+            if self.combine_covariates is not None:
+                for name, covariates in self.combine_covariates.items():
+                    variable_idx = [
+                        self.mediator_names.index(cov) for cov in covariates
+                    ]
+                    contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
+
+        # Compute explained and unexplained effects
+        contribution_dict["explained_effect"] = np.sum(
+            list(contribution_dict.values()), keepdims=True
+        ).flatten()
+        contribution_dict["unexplained_effect"] = (
+            direct_effect_array - contribution_dict["explained_effect"]
+        ).flatten()
+        contribution_dict["direct_effect"] = direct_effect_array
+        contribution_dict["full_effect"] = beta_full[self.param_in_X1_idx].flatten()
+
+        # Prepare bootstrap in first iteration
+        X_dict = {}
+        Y_dict = {}
+
+        if is_first_iteration and self.unique_clusters is not None:
+            for g in self.unique_clusters:
+                cluster_idx = np.where(self.cluster_df == g)[0]
+                X_dict[g] = self.X[cluster_idx]
+                Y_dict[g] = self.Y[cluster_idx]
+
+        # Collect all created elements into a tuple
+        results = (
+            direct_effect_array,
+            beta_full,
+            beta2,
+            beta2_sparse,
+            contribution_dict,
+            X_dict,
+            Y_dict,
+        )
+
+        return results
