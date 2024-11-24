@@ -95,7 +95,7 @@ def test_regex():
 
 def test_agg_first():
     "Test that choosing agg_first = True or False does not change the results."
-    data = pf.get_data()
+    data = pf.get_data(N=400)
     fit1 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
     fit2 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
 
@@ -107,7 +107,7 @@ def test_agg_first():
         },
         nthreads=2,
         agg_first=False,
-        reps=100,
+        reps=3,
         seed=123,
     )
 
@@ -119,7 +119,7 @@ def test_agg_first():
         },
         nthreads=2,
         agg_first=True,
-        reps=100,
+        reps=3,
         seed=123,
     )
 

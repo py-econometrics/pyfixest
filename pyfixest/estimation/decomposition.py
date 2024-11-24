@@ -109,17 +109,11 @@ class GelbachDecomposition:
             self.X2 = self.X[:, self.mask]
             self.Y = Y
 
-            self.X2_sparse = csc_matrix(self.X2)
-            self.X1_sparse = csc_matrix(self.X1)
-            self.X_sparse = csc_matrix(self.X)
-
             results = self.compute_gelbach(
-                X1_sparse=self.X1_sparse,
-                X2_sparse=self.X2_sparse,
-                X_sparse=self.X_sparse,
                 X1=self.X1,
                 X2=self.X2,
                 Y=self.Y,
+                X=self.X,
                 agg_first=self.agg_first,
                 is_first_iteration=True,
             )
@@ -140,17 +134,11 @@ class GelbachDecomposition:
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
-            X_sparse = csc_matrix(X)
-            X1_sparse = csc_matrix(X1)
-            X2_sparse = csc_matrix(X2)
-
             results = self.compute_gelbach(
-                X1_sparse=X1_sparse,
-                X2_sparse=X2_sparse,
-                X_sparse=X_sparse,
                 X1=X1,
                 X2=X2,
                 Y=Y,
+                X=X,
                 agg_first=self.agg_first,
                 is_first_iteration=False,
             )
@@ -278,12 +266,10 @@ class GelbachDecomposition:
 
     def compute_gelbach(
         self,
-        X1_sparse: csc_matrix,
-        X2_sparse: csc_matrix,
-        X_sparse: csc_matrix,
         X1: np.ndarray,
         X2: np.ndarray,
         Y: np.ndarray,
+        X: np.ndarray,
         agg_first: Optional[bool],
         is_first_iteration: bool = False,
     ) -> tuple[
@@ -297,6 +283,9 @@ class GelbachDecomposition:
     ]:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
+        X_sparse = csc_matrix(X)
+        X1_sparse = csc_matrix(X1)
+
         # Compute direct effect
         direct_effect = lsqr(X1_sparse, Y)[0]
         direct_effect_array = np.array([direct_effect[self.param_in_X1_idx]])
@@ -309,7 +298,9 @@ class GelbachDecomposition:
         # Initialize contribution_dict
         contribution_dict = {}
 
-        if self.agg_first:
+        if agg_first:
+            X2_sparse = csc_matrix(X2)
+
             # Compute H and Hg
             H = X2_sparse.multiply(beta2_sparse)
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
@@ -324,7 +315,8 @@ class GelbachDecomposition:
 
         else:
             # Compute gamma and delta
-            gamma = lsqr(X1_sparse[:, 1:], X2_sparse)[0]
+
+            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=None)[0].flatten()
             delta = gamma * beta2.flatten()
 
             if self.combine_covariates is not None:
