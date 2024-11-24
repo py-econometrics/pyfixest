@@ -4,6 +4,8 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import csc_matrix
+from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
@@ -107,15 +109,18 @@ class GelbachDecomposition:
             self.X2 = self.X[:, self.mask]
             self.Y = Y
 
-            self.direct_effect = np.linalg.lstsq(self.X1, self.Y, rcond=None)[
-                0
-            ].flatten()[self.param_in_X1_idx]
-            self.direct_effect = np.array([self.direct_effect])
-            self.beta_full = np.linalg.lstsq(self.X, self.Y)[0].flatten()
-            self.beta2 = self.beta_full[self.mask].flatten()
+            self.X2_sparse = csc_matrix(self.X2)
+            self.X1_sparse = csc_matrix(self.X1)
+            self.X_sparse = csc_matrix(self.X)
+
+            direct_effect = lsqr(self.X1_sparse, self.Y)[0]
+            self.direct_effect = np.array([direct_effect[self.param_in_X1_idx]])
+            self.beta_full = lsqr(self.X_sparse, self.Y)[0]
+            self.beta2 = self.beta_full[self.mask]
+            self.beta2_sparse = csc_matrix(self.beta2)
 
             if self.agg_first:
-                H = self.X2 * self.beta2
+                H = self.X2_sparse.multiply(self.beta2_sparse)
                 Hg = np.zeros((self.N, len(self.combine_covariates_dict)))
                 for i, (_, covariates) in enumerate(
                     self.combine_covariates_dict.items()
@@ -123,7 +128,7 @@ class GelbachDecomposition:
                     variable_idx = [
                         self.mediator_names.index(cov) for cov in covariates
                     ]
-                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1)
+                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
                 self.delta = np.linalg.lstsq(self.X1[:, 1:], Hg, rcond=None)[
                     0
@@ -132,7 +137,7 @@ class GelbachDecomposition:
                     self.contribution_dict[name] = np.array([self.delta[i]])
 
             else:
-                self.gamma = np.linalg.lstsq(self.X1[:, 1:], self.X2)[0].flatten()
+                self.gamma = lsqr(self.X1_sparse[:, 1:], self.X2_sparse)[0]
                 self.delta = self.gamma * self.beta2.flatten()
 
                 if self.combine_covariates is not None:
@@ -177,16 +182,17 @@ class GelbachDecomposition:
             X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
-            direct_effect = np.linalg.lstsq(X1, Y, rcond=None)[0].flatten()[
-                self.param_in_X1_idx
-            ]
-            direct_effect = np.array([direct_effect])
+            X_sparse = csc_matrix(X)
+            X1_sparse = csc_matrix(X1)
+            X2_sparse = csc_matrix(X2)
 
-            beta_full = np.linalg.lstsq(X, Y, rcond=None)[0].flatten()
-            beta2 = beta_full[self.mask].flatten()
+            direct_effect = np.array([lsqr(X1_sparse, Y)[0][self.param_in_X1_idx]])
+            beta_full = lsqr(X_sparse, Y)[0]
+            beta2 = beta_full[self.mask]
+            beta2_sparse = csc_matrix(beta2)
 
             if self.agg_first:
-                H = X2 * beta2
+                H = X2_sparse.multiply(beta2_sparse)
                 Hg = np.zeros((N, len(self.combine_covariates_dict)))
                 for i, (_, covariates) in enumerate(
                     self.combine_covariates_dict.items()
@@ -194,14 +200,14 @@ class GelbachDecomposition:
                     variable_idx = [
                         self.mediator_names.index(cov) for cov in covariates
                     ]
-                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1)
+                    Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
                 delta = np.linalg.lstsq(X1[:, 1:], Hg, rcond=None)[0].flatten()
                 for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                     contribution_dict[name] = np.array([delta[i]])
 
             else:
-                gamma = np.linalg.lstsq(X1[:, 1:], X2)[0].flatten()
+                gamma = lsqr(X1[:, 1:], X2)[0]
                 delta = gamma * beta2.flatten()
 
                 if self.combine_covariates is not None:
