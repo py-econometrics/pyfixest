@@ -229,20 +229,22 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        if self.nthreads > 1:
+        if self.nthreads != 1:
             try:
                 from joblib import Parallel, delayed
 
                 logging.info("Joblib successfully loaded. Parallel processing enabled.")
+                _bootstrapped = Parallel(n_jobs=self.nthreads)(
+                    delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+                )
             except ImportError:
                 logging.warning(
                     "Joblib is not installed. Parallel processing will not be available. "
                     "Please install the joblib module to enable parallelization."
                 )
-
-        _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
-        )
+                _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
+        else:
+            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])
