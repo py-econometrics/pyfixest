@@ -1,70 +1,210 @@
 import re
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import pyfixest as pf
 from pyfixest.utils.dgps import gelbach_data
 
 
-@pytest.mark.parametrize("only_coef", [True, False])
-def test_gelbach_example(only_coef):
-    data = gelbach_data(nobs=10_000)
-    data["f"] = np.random.choice(10, size=data.shape[0])
+@pytest.fixture
+def stata_results():
+    # Define the data
+    data = {
+        "Coefficient": [
+            2.432692,
+            1.006828,
+            3.43952,
+            2.432692,
+            1.006828,
+            3.43952,
+            1.919585,
+            1.519934,
+            3.43952,
+            1.919585,
+            1.519934,
+            3.43952,
+        ],
+        "CI Lower": [
+            2.190102,
+            0.860606,
+            3.142896,
+            2.248167,
+            0.833734,
+            3.236171,
+            1.7081,
+            1.338977,
+            3.142896,
+            1.771888,
+            1.356208,
+            3.236171,
+        ],
+        "CI Upper": [
+            2.675282,
+            1.153049,
+            3.736144,
+            2.617217,
+            1.179921,
+            3.642868,
+            2.13107,
+            1.700891,
+            3.736144,
+            2.067283,
+            1.68366,
+            3.642868,
+        ],
+        "model": [
+            "model 1",
+            "model 1",
+            "model 1",
+            "model 1",
+            "model 1",
+            "model 1",
+            "model 2",
+            "model 2",
+            "model 2",
+            "model 2",
+            "model 2",
+            "model 2",
+        ],
+        "se": [
+            "hetero",
+            "hetero",
+            "hetero",
+            "cluster",
+            "cluster",
+            "cluster",
+            "hetero",
+            "hetero",
+            "hetero",
+            "cluster",
+            "cluster",
+            "cluster",
+        ],
+    }
 
+    # Define the index
+    coef_names = [
+        "g1",
+        "g2",
+        "explained_effect",
+        "g1",
+        "g2",
+        "explained_effect",
+        "g1",
+        "g2",
+        "explained_effect",
+        "g1",
+        "g2",
+        "explained_effect",
+    ]
+
+    # Create the DataFrame
+    df = pd.DataFrame(data, index=coef_names)
+
+    return df
+
+
+def test_against_stata(stata_results):
+    import pandas as pd
+
+    import pyfixest as pf
+
+    data = pd.read_stata("tests/data/gelbach.dta")
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-    fit.decompose(
+
+    def decompose_and_compare(
+        fit,
+        stata_results,
+        param,
+        combine_covariates,
+        seed,
+        reps,
+        model,
+        se,
+        cluster=None,
+        agg_first=True,
+    ):
+        fit.decompose(
+            param=param,
+            combine_covariates=combine_covariates,
+            seed=seed,
+            reps=reps,
+            cluster=cluster,
+            agg_first=agg_first,
+        )
+        results = fit.GelbachDecompositionResults
+        contribution_dict = results.contribution_dict
+        ci = results.ci
+        filtered_df = stata_results.query(f"model == '{model}' and se == '{se}'")
+
+        for g in ["g1", "g2", "explained_effect"]:
+            coef_diff = filtered_df.xs(g).Coefficient - contribution_dict[g]
+            lower_diff = filtered_df.xs(g)["CI Lower"] - ci[g][0]
+            upper_diff = filtered_df.xs(g)["CI Upper"] - ci[g][1]
+
+            assert np.all(
+                np.abs(coef_diff) < 1e-4
+            ), f"Failed for {g} with values {filtered_df.xs(g).Coefficient} and {contribution_dict[g]}"
+            assert np.all(
+                np.abs(lower_diff) < 1e-4
+            ), f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci[g][0]}"
+            assert np.all(
+                np.abs(upper_diff) < 1e-4
+            ), f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci[g][1]}"
+
+    # Agg 1: Heteroskedastic SE
+    decompose_and_compare(
+        fit=fit,
+        stata_results=stata_results,
         param="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        seed=3,
         reps=100,
-        seed=8,
-        only_coef=only_coef,
+        model="model 1",
+        se="hetero",
     )
 
-    res = fit.GelbachDecompositionResults
-
-    np.testing.assert_allclose(
-        res.contribution_dict.get("g1"), np.array([2.468092]), atol=1e-1
+    # Agg 1: Clustered SE
+    decompose_and_compare(
+        fit=fit,
+        stata_results=stata_results,
+        param="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        seed=3,
+        reps=100,
+        model="model 1",
+        se="cluster",
+        cluster="cluster",
+        agg_first=False,
     )
-    np.testing.assert_allclose(
-        res.contribution_dict.get("g2"), np.array([1.068156]), atol=1e-1
+
+    # Agg 2: Heteroskedastic SE
+    decompose_and_compare(
+        fit=fit,
+        stata_results=stata_results,
+        param="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
+        seed=3,
+        reps=100,
+        model="model 2",
+        se="hetero",
     )
 
-    np.testing.assert_allclose(
-        res.contribution_dict.get("direct_effect"), np.array([4.608666]), atol=1e-1
+    # Agg 2: Clustered SE
+    decompose_and_compare(
+        fit=fit,
+        stata_results=stata_results,
+        param="x1",
+        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
+        seed=3,
+        reps=100,
+        model="model 2",
+        se="cluster",
+        cluster="cluster",
+        agg_first=False,
     )
-    np.testing.assert_allclose(
-        res.contribution_dict.get("full_effect"), np.array([1.072417]), atol=1e-1
-    )
-    np.testing.assert_allclose(
-        res.contribution_dict.get("explained_effect"), np.array([3.536249]), atol=1e-1
-    )
-    if False:
-        np.testing.assert_allclose(res.ci.get("g1"), np.array([2.293714, 2.64247]))
-        np.testing.assert_allclose(res.ci.get("g2"), np.array([2.9546626, 1.18165]))
-
-        np.testing.assert_allclose(
-            res.ci.get("direct_effect"), np.array([4.401328, 4.816004])
-        )
-        np.testing.assert_allclose(
-            res.ci.get("full_effect"), np.array([0.9775936, 1.167241])
-        )
-        np.testing.assert_allclose(
-            res.ci.get("explained_effect"), np.array([3.3262, 3.746298])
-        )
-
-    if False:
-        # clustered errors:
-        fit.vcov({"CRV1": "f"})
-        fit.decompose(
-            param="x1",
-            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
-            reps=100,
-            seed=8,
-        )
-
-        # no combine covariates
-        fit.decompose(param="x1", reps=100, seed=8)
 
 
 def test_regex():

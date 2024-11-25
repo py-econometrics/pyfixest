@@ -1587,6 +1587,8 @@ class Feols:
             combine_covariates=combine_covariates,
             agg_first=agg_first,
             only_coef=only_coef,
+            atol=1e-12,
+            btol=1e-12,
         )
 
         med.fit(

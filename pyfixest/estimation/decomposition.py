@@ -27,6 +27,8 @@ class GelbachDecomposition:
     combine_covariates: Optional[dict[str, list[str]]] = None
     agg_first: Optional[bool] = False
     only_coef: bool = True
+    atol: Optional[float] = None
+    btol: Optional[float] = None
 
     # Define attributes initialized post-creation
     cluster_dict: Optional[dict[Any, Any]] = field(init=False, default=None)
@@ -287,11 +289,11 @@ class GelbachDecomposition:
         X1_sparse = csc_matrix(X1)
 
         # Compute direct effect
-        direct_effect = lsqr(X1_sparse, Y)[0]
+        direct_effect = lsqr(X1_sparse, Y, atol=self.atol, btol=self.btol)[0]
         direct_effect_array = np.array([direct_effect[self.param_in_X1_idx]])
 
         # Compute beta_full and beta2
-        beta_full = lsqr(X_sparse, Y)[0]
+        beta_full = lsqr(X_sparse, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
         beta2_sparse = csc_matrix(beta2)
 
