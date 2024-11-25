@@ -14,7 +14,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.decomposition import GelbachDecomposition
+from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
@@ -1546,17 +1546,13 @@ class Feols:
         pf.make_table(res)
         ```
         """
-        supported_decomposition_types = ["gelbach"]
-
-        if type not in supported_decomposition_types:
-            raise ValueError(
-                f"'type' {type} is not in supported types {supported_decomposition_types}."
-            )
-
-        if self._has_fixef:
-            raise ValueError(
-                "The Gelbach Decomposition does not support fixed effects."
-            )
+        _decompose_arg_check(
+            type=type,
+            has_weights=self._has_weights,
+            is_iv=self._is_iv,
+            method=self._method,
+            has_fixef=self._has_fixef,
+        )
 
         nthreads_int = -1 if nthreads is None else nthreads
 

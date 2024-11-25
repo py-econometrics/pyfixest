@@ -358,3 +358,36 @@ class GelbachDecomposition:
         )
 
         return results
+
+
+def _decompose_arg_check(
+    type: str, has_weights: bool, is_iv: bool, method: str, has_fixef: bool
+) -> None:
+    supported_decomposition_types = ["gelbach"]
+
+    if type not in supported_decomposition_types:
+        raise ValueError(
+            f"'type' {type} is not in supported types {supported_decomposition_types}."
+        )
+
+    if has_weights:
+        raise NotImplementedError(
+            "Decomposition is currently not supported for models with weights."
+        )
+
+    if is_iv:
+        raise NotImplementedError(
+            "Decomposition is currently not supported for IV models."
+        )
+
+    if method == "fepois":
+        raise NotImplementedError(
+            "Decomposition is currently not supported for Poisson regression."
+        )
+
+    if has_fixef:
+        raise NotImplementedError(
+            "The Gelbach Decomposition does not support fixed effects."
+        )
+
+    return None

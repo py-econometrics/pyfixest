@@ -686,9 +686,13 @@ def test_separation_check_validations():
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
-def gelbach_errors():
 
-    data = gelbach_data()
+def test_gelbach_errors():
+    rng = np.random.default_rng(123)
+
+    data = gelbach_data(nobs=100)
+    data["f1"] = rng.choice(range(5), len(data), True)
+    data["weights"] = rng.uniform(0.5, 1.5, len(data))
 
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
@@ -697,3 +701,28 @@ def gelbach_errors():
 
     with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
+
+    # error with fixed effects
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ x1 | f1", data=data).decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ x1", data=data, weights="weights").decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with Poisson
+    with pytest.raises(NotImplementedError):
+        dt = pf.get_data(model="Fepois")
+        pf.fepois("Y ~ X1", data=dt).decompose(
+            param="X1", combine_covariates={"g1": ["x21"]}
+        )
