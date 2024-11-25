@@ -9,7 +9,7 @@ from pyfixest.did.visualize import (
 
 __all__ = [
     "did2s",
+    "event_study",
     "lpdid",
     "panelview",
-    "event_study",
 ]
