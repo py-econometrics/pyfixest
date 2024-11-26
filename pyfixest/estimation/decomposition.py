@@ -117,7 +117,6 @@ class GelbachDecomposition:
                 Y=self.Y,
                 X=self.X,
                 agg_first=self.agg_first,
-                is_first_iteration=True,
             )
 
             (
@@ -126,14 +125,22 @@ class GelbachDecomposition:
                 self.beta2,
                 self.beta2_sparse,
                 self.contribution_dict,
-                self.X_dict,
-                self.Y_dict,
             ) = results
+
+            # Prepare cluster bootstrap if relevant
+            self.X_dict = {}
+            self.Y_dict = {}
+
+            if self.unique_clusters is not None:
+                for g in self.unique_clusters:
+                    cluster_idx = np.where(self.cluster_df == g)[0]
+                    self.X_dict[g] = self.X[cluster_idx]
+                    self.Y_dict[g] = self.Y[cluster_idx]
 
             return self.contribution_dict
 
         else:
-            X1 = np.concatenate([np.ones((self.N, 1)), X[:, ~self.mask]], axis=1)
+            X1 = np.concatenate([np.ones((X.shape[0], 1)), X[:, ~self.mask]], axis=1)
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -142,10 +149,9 @@ class GelbachDecomposition:
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
-                is_first_iteration=False,
             )
 
-            _, _, _, _, contribution_dict, _, _ = results
+            _, _, _, _, contribution_dict = results
 
             return contribution_dict
 
@@ -273,15 +279,12 @@ class GelbachDecomposition:
         Y: np.ndarray,
         X: np.ndarray,
         agg_first: Optional[bool],
-        is_first_iteration: bool = False,
     ) -> tuple[
         np.ndarray,
         np.ndarray,
         np.ndarray,
         csc_matrix,
         dict[str, np.ndarray],
-        dict[Any, np.ndarray],
-        dict[Any, np.ndarray],
     ]:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
@@ -311,7 +314,7 @@ class GelbachDecomposition:
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
             # Compute delta
-            delta = np.linalg.lstsq(self.X1[:, 1:], Hg, rcond=None)[0].flatten()
+            delta = np.linalg.lstsq(X1[:, 1:], Hg, rcond=None)[0].flatten()
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                 contribution_dict[name] = np.array([delta[i]])
 
@@ -338,16 +341,6 @@ class GelbachDecomposition:
         contribution_dict["direct_effect"] = direct_effect_array
         contribution_dict["full_effect"] = beta_full[self.param_in_X1_idx].flatten()
 
-        # Prepare bootstrap in first iteration
-        X_dict = {}
-        Y_dict = {}
-
-        if is_first_iteration and self.unique_clusters is not None:
-            for g in self.unique_clusters:
-                cluster_idx = np.where(self.cluster_df == g)[0]
-                X_dict[g] = self.X[cluster_idx]
-                Y_dict[g] = self.Y[cluster_idx]
-
         # Collect all created elements into a tuple
         results = (
             direct_effect_array,
@@ -355,8 +348,6 @@ class GelbachDecomposition:
             beta2,
             beta2_sparse,
             contribution_dict,
-            X_dict,
-            Y_dict,
         )
 
         return results

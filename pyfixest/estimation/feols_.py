@@ -1491,6 +1491,7 @@ class Feols:
         nthreads: Optional[int] = None,
         agg_first: Optional[bool] = None,
         only_coef: bool = False,
+        digits=4,
     ):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
@@ -1528,6 +1529,8 @@ class Feols:
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
             If True, skips the inference step and only returns the decomposition results.
+        digits : int, optional
+            The number of digits to round the results to. Defaults to 4.
 
         Examples
         --------
@@ -1599,7 +1602,7 @@ class Feols:
         if not only_coef:
             med.bootstrap(rng=rng, B=reps)
 
-        med.summary()
+        med.summary(digits=digits)
 
         self.GelbachDecompositionResults = med
 
