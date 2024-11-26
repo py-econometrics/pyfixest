@@ -6,6 +6,6 @@ from pyfixest.utils.utils import (
 
 __all__ = [
     "get_data",
-    "ssc",
     "get_ssc",
+    "ssc",
 ]

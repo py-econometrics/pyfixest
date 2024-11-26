@@ -10,10 +10,10 @@ from pyfixest.report.visualize import (
 )
 
 __all__ = [
-    "summary",
-    "etable",
-    "dtable",
-    "make_table",
-    "iplot",
     "coefplot",
+    "dtable",
+    "etable",
+    "iplot",
+    "make_table",
+    "summary",
 ]
