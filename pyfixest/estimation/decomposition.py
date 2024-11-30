@@ -141,12 +141,9 @@ class GelbachDecomposition:
             return self.contribution_dict
 
         else:
-            X1 = np.concatenate([np.ones((X.shape[0], 1)), X[:, ~self.mask]], axis=1)
-            X2 = X[:, self.mask]
-
             results = self.compute_gelbach(
-                X1=X1,
-                X2=X2,
+                X1=self.X1,
+                X2=self.X2,
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
