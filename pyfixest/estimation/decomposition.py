@@ -103,6 +103,7 @@ class GelbachDecomposition:
         if store:
             self.X = X
             self.N = X.shape[0]
+
             self.X1 = self.X[:, ~self.mask]
             self.X1 = np.concatenate([np.ones((self.N, 1)), self.X1], axis=1)
             self.names_X1 = ["Intercept", self.param]
@@ -202,34 +203,40 @@ class GelbachDecomposition:
         """
         mediators = list(self.combine_covariates_dict.keys())
 
+        # round all values in self.contribution_dict and self.ci to the specified number of digits
+        contribution_dict = self.contribution_dict.copy()
+        ci = self.ci.copy()
+
+        for key in contribution_dict:
+            contribution_dict[key] = np.round(contribution_dict[key], digits)
+            ci[key] = np.round(ci[key], digits)
+
         rows = []
         rows.append(
             [
-                f"{self.contribution_dict['direct_effect'].item():.{digits}f}",
-                f"{self.contribution_dict['full_effect'].item():.{digits}f}",
-                f"{self.contribution_dict['explained_effect'].item():.{digits}f}",
+                f"{contribution_dict['direct_effect'].item():.{digits}f}",
+                f"{contribution_dict['full_effect'].item():.{digits}f}",
+                f"{contribution_dict['explained_effect'].item():.{digits}f}",
             ]
         )
 
         if not self.only_coef:
             rows.append(
                 [
-                    f"[{self.ci['direct_effect'][0]:.{digits}f}, {self.ci['direct_effect'][1]:.{digits}f}]",
-                    f"[{self.ci['full_effect'][0]:.{digits}f}, {self.ci['full_effect'][1]:.{digits}f}]",
-                    f"[{self.ci['explained_effect'][0]:.{digits}f}, {self.ci['explained_effect'][1]:.{digits}f}]",
+                    f"[{ci['direct_effect'][0]:.{digits}f}, {ci['direct_effect'][1]:.{digits}f}]",
+                    f"[{ci['full_effect'][0]:.{digits}f}, {ci['full_effect'][1]:.{digits}f}]",
+                    f"[{ci['explained_effect'][0]:.{digits}f}, {ci['explained_effect'][1]:.{digits}f}]",
                 ]
             )
 
         for mediator in mediators:
-            rows.append(
-                ["", "", f"{self.contribution_dict[mediator].item():.{digits}f}"]
-            )
+            rows.append(["", "", f"{contribution_dict[mediator].item():.{digits}f}"])
             if not self.only_coef:
                 rows.append(
                     [
                         "",
                         "",
-                        f"[{self.ci[mediator][0]:.{digits}f}, {self.ci[mediator][1]:.{digits}f}]",
+                        f"[{ci[mediator][0]:.{digits}f}, {ci[mediator][1]:.{digits}f}]",
                     ]
                 )
 
@@ -314,14 +321,18 @@ class GelbachDecomposition:
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
             # Compute delta
-            delta = np.linalg.lstsq(X1[:, 1:], Hg, rcond=None)[0].flatten()
+            delta = np.linalg.lstsq(X1, Hg, rcond=None)[0][
+                self.param_in_X1_idx, :
+            ].flatten()
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                 contribution_dict[name] = np.array([delta[i]])
 
         else:
             # Compute gamma and delta
 
-            gamma = np.linalg.lstsq(X1[:, 1:], X2, rcond=None)[0].flatten()
+            gamma = np.linalg.lstsq(X1, X2, rcond=None)[0][
+                self.param_in_X1_idx, :
+            ].flatten()
             delta = gamma * beta2.flatten()
 
             if self.combine_covariates is not None:
