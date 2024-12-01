@@ -1537,7 +1537,7 @@ class Feols:
         agg_first: Optional[bool] = None,
         only_coef: bool = False,
         digits=4,
-    ):
+    ) -> pd.DataFrame:
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
@@ -1580,15 +1580,17 @@ class Feols:
         digits : int, optional
             The number of digits to round the results to. Defaults to 4.
 
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the decomposition results.
+
         Examples
         --------
         ```{python}
-        #| echo: true
-        #| results: asis
-        #| include: true
-
-        from pyfixest.utils.dgps import gelbach_data
+        import re
         import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
 
         data = gelbach_data(nobs = 1000)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
@@ -1602,7 +1604,8 @@ class Feols:
         pf.make_table(res)
 
         # group covariates via regex
-        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})        ```
+        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        ```
         """
         _decompose_arg_check(
             type=type,
