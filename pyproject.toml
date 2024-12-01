@@ -22,6 +22,7 @@ dependencies = [
   "great-tables>=0.10.0",
   "numpy>=1.19.0",
   "narwhals>=1.13.3",
+  "joblib>=1.4.2,<2",
 ]
 
 [tool.pixi.feature.dev.dependencies]
@@ -39,7 +40,7 @@ dev = [
   "ipykernel>=6.29.5,<7",
   "duckdb>=1.1.3",
   "polars>=1.0.0",
-  "pyarrow>=14.0"
+  "pyarrow>=14.0",
 ]
 
 docs = [
@@ -191,5 +192,8 @@ module = [
   "formulaic.*",
   "wildboottest.*",
   "tabulate.*",
+  "joblib.*",
+  "narwhals.*",
+  "tqdm.*",
 ]
 ignore_missing_imports = true
