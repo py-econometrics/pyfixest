@@ -1156,13 +1156,13 @@ class Feols:
         fit = pf.feols("Y ~ X1 + X2 | f1", data)
 
         fit.wildboottest(
-            param = "X1"
+            param = "X1",
             reps=1000,
             seed = 822
         )
 
         fit.wildboottest(
-            param = "X1"
+            param = "X1",
             reps=1000,
             seed = 822,
             bootstrap_type = "31"
