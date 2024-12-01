@@ -72,12 +72,6 @@ class GelbachDecomposition:
 
         self._check_combine_covariates()
 
-        self.contribution_dict = {
-            key: np.zeros(1)
-            for key in self.combine_covariates_dict
-            if key != "Intercept"
-        }
-
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
         for _, values in self.combine_covariates_dict.items():
