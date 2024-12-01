@@ -1144,8 +1144,6 @@ class Feols:
         """
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
-        _Y = self._Y.flatten()
-        _X = self._X
         _xnames = self._coefnames
         _data = self._data
         _clustervar = self._clustervar
@@ -1219,8 +1217,13 @@ class Feols:
             fml_dummies = f"{fml_linear} + {fixef_fml}"
 
             # make this sparse once wildboottest allows it
-            _, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
+            _Y, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
+            _Y = _Y.flatten()
             _xnames = _X.model_spec.column_names
+
+        else:
+            _Y = self._Y.flatten()
+            _X = self._X
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1284,6 +1287,7 @@ class Feols:
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
+            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
         }
 
         res_df = pd.Series(res)

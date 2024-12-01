@@ -83,11 +83,8 @@ def _select_order_coefs(
     for pattern in keep:
         _coefs = []  # Store remaining coefs
         for coef in coefs:
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 res.append(coef)
             else:
@@ -97,11 +94,8 @@ def _select_order_coefs(
     for pattern in drop:
         _coefs = []
         for coef in res:  # Remove previously matched coefs that match the drop pattern
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 continue
             else:

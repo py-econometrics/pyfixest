@@ -55,18 +55,18 @@ class FeatureDeprecationError(Exception):  # noqa: D101
 
 
 __all__ = [
-    "FixedEffectInteractionError",
     "CovariateInteractionError",
+    "DepvarIsNotNumericError",
     "DuplicateKeyError",
+    "EmptyDesignMatrixError",
     "EndogVarsAsCovarsError",
+    "FeatureDeprecationError",
+    "FixedEffectInteractionError",
     "InstrumentsAsCovarsError",
+    "MatrixNotFullRankError",
+    "NanInClusterVarError",
+    "NonConvergenceError",
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",
-    "NanInClusterVarError",
-    "DepvarIsNotNumericError",
-    "NonConvergenceError",
-    "MatrixNotFullRankError",
-    "EmptyDesignMatrixError",
-    "FeatureDeprecationError",
 ]

@@ -13,13 +13,16 @@ def data():
 # note - tests currently fail because of ssc adjustments
 @pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
 def test_hc_equivalence(data, fml):
+    ssc = pf.ssc(adj=False, cluster_adj=False)
     # note: cannot turn of ssc for wildboottest HC
-    fixest = pf.feols(fml=fml, data=data)
+    fixest = pf.feols(fml=fml, data=data, ssc=ssc, vcov="hetero")
     tstat = fixest.tstat().xs("X1")
-    boot_tstat = fixest.wildboottest(param="X1", reps=999)["t value"]
+    boot = fixest.wildboottest(param="X1", reps=999)
+    boot_tstat = boot["t value"]
+    ssc = boot["ssc"]
 
     # cannot test for for equality because of ssc adjustments
-    np.testing.assert_allclose(tstat, boot_tstat, rtol=0.02, atol=0.01)
+    np.testing.assert_allclose(tstat / boot_tstat, np.sqrt(ssc))
 
 
 @pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
