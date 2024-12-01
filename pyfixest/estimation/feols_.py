@@ -1149,7 +1149,9 @@ class Feols:
         #| results: asis
         #| include: true
 
+        import re
         import pyfixest as pf
+
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2 | f1", data)
 
