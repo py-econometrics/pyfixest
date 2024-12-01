@@ -65,7 +65,7 @@ class GelbachDecomposition:
 
         if self.combine_covariates is None:
             self.combine_covariates_dict = {
-                x: x for x in self.mediator_names if x != "Intercept"
+                x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
             self.combine_covariates_dict = self.combine_covariates
@@ -81,8 +81,8 @@ class GelbachDecomposition:
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
         for _, values in self.combine_covariates_dict.items():
-            if isinstance(values, str):
-                values = [values]
+            if not isinstance(values, list):
+                raise TypeError("Values in combine_covariates_dict must be lists.")
             for v in values:
                 if v not in self.mediator_names:
                     raise ValueError(f"{v} is not in the mediator names.")
@@ -206,6 +206,7 @@ class GelbachDecomposition:
         mediators = list(self.combine_covariates_dict.keys())
 
         # round all values in self.contribution_dict and self.ci to the specified number of digits
+
         contribution_dict = self.contribution_dict.copy()
         ci = self.ci.copy()
 
@@ -337,12 +338,9 @@ class GelbachDecomposition:
             ].flatten()
             delta = gamma * beta2.flatten()
 
-            if self.combine_covariates is not None:
-                for name, covariates in self.combine_covariates.items():
-                    variable_idx = [
-                        self.mediator_names.index(cov) for cov in covariates
-                    ]
-                    contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
+            for name, covariates in self.combine_covariates_dict.items():
+                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+                contribution_dict[name] = np.array([np.sum(delta[variable_idx])])
 
         # Compute explained and unexplained effects
         contribution_dict["explained_effect"] = np.sum(

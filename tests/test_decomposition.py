@@ -311,3 +311,24 @@ def test_fixef():
         np.testing.assert_allclose(
             value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
         )
+
+
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_combine_covariates_vs_none(agg_first):
+    df = pd.read_stata("tests/data/gelbach.dta")
+    fit1 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+    fit2 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+
+    fit1.decompose(param="x1", seed=3, reps=10, agg_first=agg_first)
+    fit2.decompose(
+        param="x1",
+        combine_covariates={"x21": ["x21"], "x22": ["x22"], "x23": ["x23"]},
+        seed=3,
+        reps=10,
+        agg_first=agg_first,
+    )
+
+    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+        np.testing.assert_allclose(
+            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+        )
