@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.37">
+<meta name="generator" content="quarto-1.6.39">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -69,10 +69,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e2c20b02301cfff04dc8050bf30c7e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e26003cea8cd680ca0c55a263523d882.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-35b661c73272c531296c3b360bfb6fcf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-41ce87c438ccaeb35f64ae41c48547a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -401,24 +401,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>did.visualize.panelview(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    unit</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    time</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    treat</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    subsamp<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    units_to_plot<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="dv">3</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    noticks<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    legend<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    xlim<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    ylim<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    data,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    unit,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    time,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    treat,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    collapse_to_cohort<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    subsamp<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    units_to_plot<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    sort_by_timing<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    xlab<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    ylab<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="dv">3</span>),</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    noticks<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    legend<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    xlim<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    ylim<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate a panel view of the treatment variable over time for each unit.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
@@ -571,7 +571,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="5442ff75" class="cell" data-execution_count="1">
+<div id="f98dc15d" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -601,7 +601,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="TmLPTr"></div>
+            <div id="mrOSWG"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -625,9 +625,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("TmLPTr").appendChild(div);
+                        document.getElementById("mrOSWG").appendChild(div);
                     };
-                    var e = document.getElementById("TmLPTr");
+                    var e = document.getElementById("mrOSWG");
                     e.appendChild(script);
                 })()
             </script>
@@ -635,7 +635,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="5kb6XD"></div>
+            <div id="LNneTl"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -659,9 +659,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("5kb6XD").appendChild(div);
+                        document.getElementById("LNneTl").appendChild(div);
                     };
-                    var e = document.getElementById("5kb6XD");
+                    var e = document.getElementById("LNneTl");
                     e.appendChild(script);
                 })()
             </script>

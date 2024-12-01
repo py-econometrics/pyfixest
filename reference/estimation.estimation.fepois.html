@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.37">
+<meta name="generator" content="quarto-1.6.39">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -69,10 +69,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e2c20b02301cfff04dc8050bf30c7e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e26003cea8cd680ca0c55a263523d882.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-35b661c73272c531296c3b360bfb6fcf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-41ce87c438ccaeb35f64ae41c48547a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -401,24 +401,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.estimation.fepois(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'none'</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-10</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'none'</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-10</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
@@ -577,7 +577,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
 <p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
-<div id="a62ddae3" class="cell" data-execution_count="1">
+<div id="ea518cd2" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data(model <span class="op">=</span> <span class="st">"Fepois"</span>)</span>
@@ -585,7 +585,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="aSy8lh"></div>
+            <div id="I8HiBf"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -609,9 +609,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("aSy8lh").appendChild(div);
+                        document.getElementById("I8HiBf").appendChild(div);
                     };
-                    var e = document.getElementById("aSy8lh");
+                    var e = document.getElementById("I8HiBf");
                     e.appendChild(script);
                 })()
             </script>
@@ -619,7 +619,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="uSLKDt"></div>
+            <div id="kzgGLG"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -643,9 +643,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("uSLKDt").appendChild(div);
+                        document.getElementById("kzgGLG").appendChild(div);
                     };
-                    var e = document.getElementById("uSLKDt");
+                    var e = document.getElementById("kzgGLG");
                     e.appendChild(script);
                 })()
             </script>

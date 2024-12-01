@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.37">
+<meta name="generator" content="quarto-1.6.39">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -69,10 +69,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-29e2c20b02301cfff04dc8050bf30c7e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e26003cea8cd680ca0c55a263523d882.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-35b661c73272c531296c3b360bfb6fcf.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-41ce87c438ccaeb35f64ae41c48547a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -401,22 +401,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>report.iplot(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    models</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.05</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    rotate_xticks<span class="op">=</span><span class="dv">0</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">True</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    keep<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    drop<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    exact_match<span class="op">=</span><span class="va">False</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    plot_backend<span class="op">=</span><span class="st">'lets_plot'</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="va">None</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    models,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.05</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    yintercept<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    rotate_xticks<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    keep<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    drop<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    exact_match<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    plot_backend<span class="op">=</span><span class="st">'lets_plot'</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    joint<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Plot model coefficients for variables interacted via “i()” syntax, with confidence intervals.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
@@ -551,7 +551,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="ba26b26f" class="cell" data-execution_count="1">
+<div id="4712399c" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -565,7 +565,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="0HgYOB"></div>
+            <div id="PvGRrp"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -589,9 +589,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("0HgYOB").appendChild(div);
+                        document.getElementById("PvGRrp").appendChild(div);
                     };
-                    var e = document.getElementById("0HgYOB");
+                    var e = document.getElementById("PvGRrp");
                     e.appendChild(script);
                 })()
             </script>
@@ -599,7 +599,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="9OJgXH"></div>
+            <div id="qH8mwU"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -623,22 +623,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("9OJgXH").appendChild(div);
+                        document.getElementById("qH8mwU").appendChild(div);
                     };
-                    var e = document.getElementById("9OJgXH");
+                    var e = document.getElementById("qH8mwU");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="mEsmtg"></div>
+   <div id="DCO0r3"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("mEsmtg");
+   var containerDiv = document.getElementById("DCO0r3");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -654,8 +654,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]"],
 "Estimate":[2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367,2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367],
-"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.242165827643302,-3.000358022478317,-1.8716884180200366,-3.138109703900149,-0.04029139836366613,-2.3315569137900476,-0.49542349099119487,-1.8364892181357042,-1.2724893465970775,-1.0768954949020888,-0.09745126093598655,-0.7450263001533858,0.3846237078585537,-1.6623086919224166,-0.04196448975154765,0.8748008267262135,-1.7863401625455777,0.27668487004732367,-0.8439773100657875,1.514133404857232,-2.8218056955605237,-2.3970146181509095,-2.0749641052243604,-2.363175361428289,-3.2485786124002765,-0.4000872561906734,-1.914338580735031,0.20846079981194898,-1.2484582353822187],
-"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.846410139832808,-0.26900354505717194,0.9437273348327412,-0.38731473575437914,2.9099086222366255,0.5331118296184103,2.2758068836985212,0.8948652592854407,1.4403472598358409,1.6544589825190565,2.67377911375373,2.119642443255072,3.2239782399406316,1.229175008134662,2.8227042536569096,3.606155304147359,1.1336005964089668,3.027479838193093,2.0206914333426704,4.069081568942458,-0.071010727414754,0.2651804192687963,0.9787830358566879,0.408055013261427,-0.155256423364311,2.5501127644096186,0.9503301626734268,2.8262965054446605,1.6714825235723259],
+"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.2511237111886806,-2.990962914955046,-1.8620041628494164,-3.128647726440305,-0.030143522415002844,-2.3217032418901313,-0.48589122135823726,-1.8270941106124334,-1.2631579354524622,-1.067500387378818,-0.08791899130302916,-0.7351726282534693,0.3943903058399274,-1.6523627839531696,-0.03211081785163117,0.8841959342494843,-1.7762963701272971,0.28614684750716757,-0.834123638165871,1.5229217232232275,-2.81234371810068,-2.3878574000632407,-2.0644600556853834,-2.3536430917953317,-3.2379384355904346,-0.38993938024201014,-1.9044849088351146,0.21746543400937424,-1.238414442963938],
+"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.83745225628743,-0.2783986525804427,0.934043079662121,-0.3967767132142228,2.8997607462879618,0.5232581577184938,2.266274614065564,0.8854701517621699,1.4310158486912257,1.6450638749957858,2.6642468441207727,2.1097887713551557,3.214211641959258,1.219229100165415,2.8128505817569933,3.5967601966240883,1.1235568039906862,3.0180178607332495,2.0108377614427537,4.060293250576462,-0.08047270487459768,0.2560232011811272,0.9682789863177111,0.3985227436284694,-0.16589660017415242,2.539964888460956,0.9404764907735104,2.8172918712472352,1.6614387311540453],
 "Model":["Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs"]
 },
 "mapping":{
