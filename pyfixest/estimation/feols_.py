@@ -1206,24 +1206,7 @@ class Feols:
                 "Wild cluster bootstrap is not supported for Poisson regression."
             )
 
-        if _has_fixef:
-            # update _X, _xnames
-            fml_linear, fixef = self._fml.split("|")
-            fixef_vars = fixef.split("+")
-            # wrap all fixef vars in "C()"
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
-
-            # make this sparse once wildboottest allows it
-            _Y, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
-            _Y = _Y.flatten()
-            _xnames = _X.model_spec.column_names
-
-        else:
-            _Y = self._Y.flatten()
-            _X = self._X
+        _Y, _X, _xnames = self._model_matrix_one_hot()
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1484,6 +1467,36 @@ class Feols:
             n_splits=n_splits,
         )
 
+    def _model_matrix_one_hot(self) -> tuple[np.ndarray, np.ndarray, list[str]]:
+        """
+        Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, list[str]]
+            A tuple with the dependent variable, the model matrix, and the column names.
+        """
+        if self._has_fixef:
+            fml_linear, fixef = self._fml.split("|")
+            fixef_vars = fixef.split("+")
+            fixef_vars_C = [f"C({x})" for x in fixef_vars]
+            fixef_fml = "+".join(fixef_vars_C)
+            fml_dummies = f"{fml_linear} + {fixef_fml}"
+            # output = "pandas" as Y, X need to be np.arrays for parallel processing
+            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
+            # which cannot be pickled by joblib
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+            xnames = X.model_spec.column_names
+            Y = Y.to_numpy().flatten()
+            X = X.to_numpy()
+
+        else:
+            Y = self._Y.flatten()
+            X = self._X
+            xnames = self._coefnames
+
+        return Y, X, xnames
+
     def decompose(
         self,
         param: str,
@@ -1558,7 +1571,6 @@ class Feols:
             has_weights=self._has_weights,
             is_iv=self._is_iv,
             method=self._method,
-            has_fixef=self._has_fixef,
         )
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1578,17 +1590,19 @@ class Feols:
         else:
             cluster_df = None
 
+        Y, X, xnames = self._model_matrix_one_hot()
+
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
                 if isinstance(value, re.Pattern):
-                    matched = [x for x in self._coefnames if value.search(x)]
+                    matched = [x for x in xnames if value.search(x)]
                     if len(matched) == 0:
                         raise ValueError(f"No covariates match the regex {value}.")
                     combine_covariates[key] = matched
 
         med = GelbachDecomposition(
             param=param,
-            coefnames=self._coefnames,
+            coefnames=xnames,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
@@ -1599,8 +1613,8 @@ class Feols:
         )
 
         med.fit(
-            X=self._X,
-            Y=self._Y,
+            X=X,
+            Y=Y,
         )
 
         if not only_coef:

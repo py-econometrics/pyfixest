@@ -141,9 +141,13 @@ class GelbachDecomposition:
             return self.contribution_dict
 
         else:
+            # need to compute X1, X2 in bootstrap sample
+            X1 = np.concatenate([np.ones((X.shape[0], 1)), X[:, ~self.mask]], axis=1)
+            X2 = X[:, self.mask]
+
             results = self.compute_gelbach(
-                X1=self.X1,
-                X2=self.X2,
+                X1=X1,
+                X2=X2,
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
@@ -166,6 +170,7 @@ class GelbachDecomposition:
                 _bootstrapped = Parallel(n_jobs=self.nthreads)(
                     delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
                 )
+
             except ImportError:
                 logging.warning(
                     "Joblib is not installed. Parallel processing will not be available. "
@@ -304,7 +309,7 @@ class GelbachDecomposition:
         beta2 = beta_full[self.mask]
         beta2_sparse = csc_matrix(beta2)
 
-        # Initialize contribution_dict
+        # Initialize contribution_dict: a dictionary to store the contribution of each covariate
         contribution_dict = {}
 
         if agg_first:
@@ -362,8 +367,12 @@ class GelbachDecomposition:
 
 
 def _decompose_arg_check(
-    type: str, has_weights: bool, is_iv: bool, method: str, has_fixef: bool
+    type: str,
+    has_weights: bool,
+    is_iv: bool,
+    method: str,
 ) -> None:
+    "Check arguments for decomposition."
     supported_decomposition_types = ["gelbach"]
 
     if type not in supported_decomposition_types:
@@ -384,11 +393,6 @@ def _decompose_arg_check(
     if method == "fepois":
         raise NotImplementedError(
             "Decomposition is currently not supported for Poisson regression."
-        )
-
-    if has_fixef:
-        raise NotImplementedError(
-            "The Gelbach Decomposition does not support fixed effects."
         )
 
     return None

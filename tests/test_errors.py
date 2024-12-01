@@ -702,12 +702,6 @@ def test_gelbach_errors():
     with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    # error with fixed effects
-    with pytest.raises(NotImplementedError):
-        pf.feols("y ~ x1 | f1", data=data).decompose(
-            param="x1", combine_covariates={"g1": ["x21"]}
-        )
-
     # error with IV
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(

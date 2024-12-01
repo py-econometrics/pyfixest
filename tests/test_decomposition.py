@@ -264,3 +264,50 @@ def test_agg_first():
         np.testing.assert_allclose(
             value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
         )
+
+
+def test_cluster():
+    "Test that clustering is picked up correctly when set in feols, but not in decompose."
+    df = pd.read_stata("tests/data/gelbach.dta")
+
+    fit1 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster"})
+    fit2 = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+
+    # cluster set in feols call
+    fit1.decompose(
+        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+    )
+    # cluster set in decompose
+    fit2.decompose(
+        param="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        digits=6,
+        cluster="cluster",
+    )
+
+    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+        np.testing.assert_allclose(
+            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+        )
+
+
+def test_fixef():
+    "Test that choosing agg_first = True or False does not change the results."
+    df = pd.read_stata("tests/data/gelbach.dta")
+
+    fit1 = pf.feols(
+        "y ~ x1 + x21 + x22 + x23 | cluster", data=df, vcov={"CRV1": "cluster"}
+    )
+    fit2 = pf.feols("y ~ x1 + x21 + x22 + x23 + C(cluster)", data=df)
+
+    fit1.decompose(
+        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+    )
+    fit2.decompose(
+        param="x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]}, digits=6
+    )
+
+    for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
+        np.testing.assert_allclose(
+            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+        )
