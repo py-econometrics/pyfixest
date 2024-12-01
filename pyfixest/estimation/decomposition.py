@@ -1,14 +1,12 @@
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
-
-logging.basicConfig(level=logging.INFO)
 
 
 @dataclass
@@ -99,7 +97,7 @@ class GelbachDecomposition:
             self.N = X.shape[0]
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = np.concatenate([np.ones((self.N, 1)), self.X1], axis=1)
+            self.X1 = np.c_[np.ones((self.N, 1)), self.X1]
             self.names_X1 = ["Intercept", self.param]
             self.param_in_X1_idx = self.names_X1.index(self.param)
 
@@ -136,7 +134,7 @@ class GelbachDecomposition:
 
         else:
             # need to compute X1, X2 in bootstrap sample
-            X1 = np.concatenate([np.ones((X.shape[0], 1)), X[:, ~self.mask]], axis=1)
+            X1 = np.c_[np.ones((X.shape[0], 1)), X[:, ~self.mask]]
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -156,23 +154,9 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        if self.nthreads != 1:
-            try:
-                from joblib import Parallel, delayed
-
-                logging.info("Joblib successfully loaded. Parallel processing enabled.")
-                _bootstrapped = Parallel(n_jobs=self.nthreads)(
-                    delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
-                )
-
-            except ImportError:
-                logging.warning(
-                    "Joblib is not installed. Parallel processing will not be available. "
-                    "Please install the joblib module to enable parallelization."
-                )
-                _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
-        else:
-            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
+        _bootstrapped = Parallel(n_jobs=self.nthreads)(
+            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+        )
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])

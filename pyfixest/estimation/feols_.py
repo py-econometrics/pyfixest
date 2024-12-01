@@ -1141,6 +1141,32 @@ class Feols:
             (HC vs CRV), and whether the null hypothesis was imposed on the
             bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
             returns a tuple of the regular output and the bootstrapped t-stats.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import pyfixest as pf
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+
+        fit.wildboottest(
+            param = "X1"
+            reps=1000,
+            seed = 822
+        )
+
+        fit.wildboottest(
+            param = "X1"
+            reps=1000,
+            seed = 822,
+            bootstrap_type = "31"
+        )
+
+        ```
         """
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
@@ -1513,8 +1539,10 @@ class Feols:
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
-        Compares the short model depvar on {param} with the long model
-        specified in the original feols() call. For details, take a look at
+        Compares a short model `depvar on param` with the long model
+        specified in the original feols() call.
+
+        For details, take a look at
         "When do covariates matter?" by Gelbach (2016, JoLe). You can find
         an ungated version of the paper on SSRN under the following link:
         https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
@@ -1522,7 +1550,8 @@ class Feols:
         Parameters
         ----------
         param : str
-            The name of the parameter to decompose.
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
         type : str, optional
             The type of decomposition method to use. Defaults to "gelbach", which
             currently is the only supported option.
@@ -1552,6 +1581,10 @@ class Feols:
         Examples
         --------
         ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
         from pyfixest.utils.dgps import gelbach_data
         import pyfixest as pf
 
@@ -1561,10 +1594,13 @@ class Feols:
         # simple decomposition
         res = fit.decompose(param = "x1")
         pf.make_table(res)
+
         # group covariates via "combine_covariates" argument
         res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
         pf.make_table(res)
-        ```
+
+        # group covariates via regex
+        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})        ```
         """
         _decompose_arg_check(
             type=type,
@@ -2020,6 +2056,10 @@ class Feols:
         Examples
         --------
         ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
         from pyfixest.utils import get_data
         from pyfixest.estimation import feols
 
@@ -2149,6 +2189,28 @@ class Feols:
         A pd.Series with the regression coefficient of `resampvar` and the p-value
         of the RI test. Additionally, reports the standard error and the confidence
         interval of the p-value.
+
+        Examples
+        --------
+        ```{python}
+
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import pyfixest as pf
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data)
+
+        # Conduct a randomization inference test for the coefficient of X1
+        fit.ritest("X1", reps=1000, seed = 12)
+
+        # use randomization-t instead of randomization-c
+        fit.ritest("X1", reps=1000, type="randomization-t", seed = 12)
+
+        # store statistics for plotting
+        fit.ritest("X1", reps=1000, store_ritest_statistics=True, seed = 12)
+        ```
         """
         _fml = self._fml
         _data = self._data
