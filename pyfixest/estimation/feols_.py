@@ -2208,13 +2208,13 @@ class Feols:
         fit = pf.feols("Y ~ X1 + X2", data=data)
 
         # Conduct a randomization inference test for the coefficient of X1
-        fit.ritest("X1", reps=1000, seed = 12)
+        fit.ritest("X1", reps=1000)
 
         # use randomization-t instead of randomization-c
-        fit.ritest("X1", reps=1000, type="randomization-t", seed = 12)
+        fit.ritest("X1", reps=1000, type="randomization-t")
 
         # store statistics for plotting
-        fit.ritest("X1", reps=1000, store_ritest_statistics=True, seed = 12)
+        fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
         _fml = self._fml
