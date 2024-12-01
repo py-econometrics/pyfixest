@@ -332,8 +332,8 @@ def feols(
     import pyfixest as pf
     from pyfixest.utils.dgps import gelbach_data
 
-    data = gelbach_data(nobs = 1000)
-    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    data_gelbach = gelbach_data(nobs = 1000)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data_gelbach)
 
     # simple decomposition
     res = fit.decompose(param = "x1")
@@ -351,6 +351,7 @@ def feols(
     For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
 
     ```{python}
+    fit = pf.feols("Y ~ X1 + X2", data)
     fit.wildboottest(param = "X1", reps=1000)
     ```
     would run a wild bootstrap test for the coefficient of `X1` with 1000
