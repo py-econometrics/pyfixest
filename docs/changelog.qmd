@@ -8,6 +8,8 @@
   are dropped as a dependencies.
 - Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependend variable in case it was
   applied after a fixed effects regression. My apologies for that!
+- Fixes a bug in the `ritest` method, which would use randomization inference coefficients instead of t-statistics, leading to incorrect results.
+  This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apolgies!
 
 ## PyFixest 0.22.0 - 0.25.4
 
