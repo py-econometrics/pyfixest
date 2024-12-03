@@ -2239,6 +2239,10 @@ class Feols:
         if cluster is not None and cluster not in _data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
+        # update vcov if cluster provided but not in model
+        if cluster is not None and not self._is_clustered:
+            self.vcov({"CRV1": cluster})
+
         sample_coef = np.array(self.coef().xs(resampvar_))
         sample_tstat = np.array(self.tstat().xs(resampvar_))
 
@@ -2258,6 +2262,9 @@ class Feols:
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        # always run slow algorithm for randomization-t
+        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
