@@ -480,7 +480,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="1e111d32" class="cell" data-execution_count="1">
+<div id="0848eae8" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -492,13 +492,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>rwolf_df <span class="op">=</span> pf.rwolf([fit1, fit2], <span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">9999</span>, seed<span class="op">=</span><span class="dv">123</span>)</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># use randomization inference</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>rwolf_df <span class="op">=</span> pf.rwolf([fit1, fit2], <span class="st">"X1"</span>, reps<span class="op">=</span><span class="dv">9999</span>, seed<span class="op">=</span><span class="dv">123</span>, sampling_method <span class="op">=</span> <span class="st">"ri"</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co"># use randomization inference - dontrun as too slow</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co"># rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123, sampling_method = "ri")</span></span>
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>rwolf_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="GUyWFr"></div>
+            <div id="7i1UbF"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -522,9 +522,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("GUyWFr").appendChild(div);
+                        document.getElementById("7i1UbF").appendChild(div);
                     };
-                    var e = document.getElementById("GUyWFr");
+                    var e = document.getElementById("7i1UbF");
                     e.appendChild(script);
                 })()
             </script>
@@ -532,7 +532,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="TfbKO5"></div>
+            <div id="9kHv8N"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -556,9 +556,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("TfbKO5").appendChild(div);
+                        document.getElementById("9kHv8N").appendChild(div);
                     };
-                    var e = document.getElementById("TfbKO5");
+                    var e = document.getElementById("9kHv8N");
                     e.appendChild(script);
                 })()
             </script>
