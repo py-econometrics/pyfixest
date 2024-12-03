@@ -117,8 +117,8 @@ def rwolf(
     fit2 = pf.feols("Y ~ X1 + X2", data=data)
     rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123)
 
-    # use randomization inference
-    rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123, sampling_method = "ri")
+    # use randomization inference - dontrun as too slow
+    # rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123, sampling_method = "ri")
 
     rwolf_df
     ```
