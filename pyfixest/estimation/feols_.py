@@ -2239,14 +2239,7 @@ class Feols:
         if cluster is not None and cluster not in _data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
-        sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-
-        rng = np.random.default_rng() if rng is None else rng
-
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
             raise ValueError(
@@ -2256,8 +2249,24 @@ class Feols:
             """
             )
 
+        # update vcov if cluster provided but not in model
+        if cluster is not None and not self._is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        rng = np.random.default_rng() if rng is None else rng
+
+        sample_coef = np.array(self.coef().xs(resampvar_))
+        sample_tstat = np.array(self.tstat().xs(resampvar_))
+        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        # always run slow algorithm for randomization-t
+        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
