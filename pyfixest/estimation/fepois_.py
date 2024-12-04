@@ -116,6 +116,7 @@ class Fepois(Feols):
         self._support_crv3_inference = True
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
 
         self._Y_hat_response = np.array([])
         self.deviance = None
