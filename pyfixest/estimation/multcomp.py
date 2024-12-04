@@ -219,7 +219,7 @@ def wyoung(
 
     Examples
     --------
-    ```python
+    ```{python}
     from pyfixest.estimation import feols
     from pyfixest.utils import get_data
     from pyfixest.multcomp import wyoung
