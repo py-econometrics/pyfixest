@@ -324,10 +324,34 @@ def feols(
     fit.coefplot()
     ```
 
+    We can conduct a regression decomposition via the `decompose()` method, which implements
+    a regression decomposition following the method developed in Gelbach (2016):
+
+    ```{python}
+    import re
+    import pyfixest as pf
+    from pyfixest.utils.dgps import gelbach_data
+
+    data_gelbach = gelbach_data(nobs = 1000)
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data_gelbach)
+
+    # simple decomposition
+    res = fit.decompose(param = "x1")
+    pf.make_table(res)
+
+    # group covariates via "combine_covariates" argument
+    res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+    pf.make_table(res)
+
+    # group covariates via regex
+    res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+    ```
+
     Objects of type `Feols` support a range of other methods to conduct inference.
     For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
 
     ```{python}
+    fit = pf.feols("Y ~ X1 + X2", data)
     fit.wildboottest(param = "X1", reps=1000)
     ```
     would run a wild bootstrap test for the coefficient of `X1` with 1000

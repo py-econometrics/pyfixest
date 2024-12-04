@@ -2,9 +2,12 @@
 
 ## PyFixest 0.26.0 (In Development)
 
+- Add support for Gelbach's (JoLe 2016) Regression Decomposition method using a `decompose()` method for `Feols`.
 - Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
   As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames. `polars` and `pyarrow`
   are dropped as a dependencies.
+- Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependend variable in case it was
+  applied after a fixed effects regression. My apologies for that!
 
 ## PyFixest 0.22.0 - 0.25.4
 
