@@ -68,7 +68,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
 
 def rwolf(
-    models: list[Union[Feols, Fepois]],
+    models: ModelInputType,
     param: str,
     reps: int,
     seed: int,
@@ -181,7 +181,7 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
 
 
 def wyoung(
-    models: list[Union[Feols, Fepois]],
+    models: ModelInputType,
     param: str,
     reps: int,
     seed: int,
@@ -278,12 +278,15 @@ def _get_wyoung_pval(p_vals, boot_p_vals):
 
 def _multcomp_resample(
     type: str,
-    models: list[Union[Feols, Fepois]],
+    models: ModelInputType,
     param: str,
     reps: int,
     seed: int,
     sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
+    if isinstance(models, FixestMulti):
+        models = models.to_list()
+
     models = _post_processing_input_checks(models)
     if type not in ["rwolf", "wyoung"]:
         raise ValueError("Type should be one of 'rwolf' and 'wyoung'")

@@ -230,3 +230,26 @@ def test_wyoung(seed, reps, sampling_method):
     )
 
     assert isinstance(wyoung_output, pd.DataFrame)
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
+@pytest.mark.parametrize("seed", [199])
+@pytest.mark.parametrize("sampling_method", ["ri", "wild-bootstrap"])
+def test_rwolf_vs_wyoung(fml, seed, sampling_method):
+    data = pf.get_data(N=100)
+    fml1 = fml
+    fml2 = f"{fml1} + f1"
+
+    fit1 = pf.feols(fml1, data=data)
+    fit2 = pf.feols(fml2, data=data)
+
+    rwolf_output = pf.rwolf(
+        [fit1, fit2], "X1", reps=99, seed=seed, sampling_method=sampling_method
+    )
+    wyoung_output = pf.wyoung(
+        [fit1, fit2], "X1", reps=99, seed=seed, sampling_method=sampling_method
+    )
+
+    # test that the two pandas dfs are close
+    assert np.allclose(rwolf_output, wyoung_output, atol=0.01)
