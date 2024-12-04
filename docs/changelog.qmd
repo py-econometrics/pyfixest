@@ -2,7 +2,8 @@
 
 ## PyFixest 0.26.0 (In Development)
 
-- Add support for Gelbach's (JoLe 2016) Regression Decomposition method using a `decompose()` method for `Feols`.
+- Adds support for Gelbach's (JoLe 2016) Regression Decomposition method using a `decompose()` method for `Feols`.
+- Adds support for the multiple hypothesis correction by Westfall & Young via the `pf.wyoung()` function.
 - Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
   As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames. `polars` and `pyarrow`
   are dropped as a dependencies.

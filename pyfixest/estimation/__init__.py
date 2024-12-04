@@ -27,6 +27,7 @@ from pyfixest.estimation.model_matrix_fixest_ import (
 from pyfixest.estimation.multcomp import (
     bonferroni,
     rwolf,
+    wyoung,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "literals",
     "model_matrix_fixest",
     "rwolf",
+    "wyoung",
 ]
