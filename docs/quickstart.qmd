@@ -276,8 +276,8 @@ fit2.ritest(resampvar="X1=0", reps=1000, cluster="group_id")
 
 ## Multiple Testing Corrections: Bonferroni and Romano-Wolf
 
-To correct for multiple testing, p-values can be adjusted via either the [Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction) or the method by Romano and Wolf (2005), see for example [The Romano-Wolf Multiple Hypothesis
-Correction in Stata](https://docs.iza.org/dp12845.pdf).
+To correct for multiple testing, p-values can be adjusted via either the [Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction), the method by Romano and Wolf (2005), see for example [The Romano-Wolf Multiple Hypothesis
+Correction in Stata](https://docs.iza.org/dp12845.pdf), and the method by Westfall & Young (see [here](https://www.jstor.org/stable/2532216)).
 
 ```{python}
 pf.bonferroni([fit, fit2], param="X1").round(3)
@@ -285,6 +285,10 @@ pf.bonferroni([fit, fit2], param="X1").round(3)
 
 ```{python}
 pf.rwolf([fit, fit2], param="X1", reps=9999, seed=1234).round(3)
+```
+
+```{python}
+pf.wyoung([fit, fit2], param="X1", reps=9999, seed=1234).round(3)
 ```
 
 ## Joint Confidence Intervals
