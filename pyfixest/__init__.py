@@ -25,6 +25,7 @@ from pyfixest.utils import (
 
 __all__ = [
     "bonferroni",
+    "coefplot",
     "did",
     "did2s",
     "dtable",
@@ -41,7 +42,6 @@ __all__ = [
     "make_table",
     "panelview",
     "report",
-    "rwolf",
     "rwolf",
     "ssc",
     "summary",
