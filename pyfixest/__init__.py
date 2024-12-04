@@ -25,11 +25,6 @@ from pyfixest.utils import (
 
 __all__ = [
     "bonferroni",
-    "rwolf",
-    "wyoung",
-    "get_data",
-    "ssc",
-    "get_ssc",
     "did",
     "did2s",
     "dtable",
@@ -40,6 +35,8 @@ __all__ = [
     "feols",
     "fepois",
     "get_data",
+    "get_data",
+    "get_ssc",
     "get_ssc",
     "iplot",
     "lpdid",
@@ -47,9 +44,12 @@ __all__ = [
     "panelview",
     "report",
     "rwolf",
+    "rwolf",
+    "ssc",
     "ssc",
     "summary",
     "utils",
+    "wyoung",
 ]
 
 from importlib.metadata import PackageNotFoundError, version
