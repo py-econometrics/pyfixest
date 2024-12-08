@@ -251,7 +251,7 @@ def _plot_panelview_output_plot(
             ax.plot(
                 unit_data.index,
                 unit_data.values,
-                color="#FFFFFF",
+                color="#999999",
                 linewidth=0.5,
                 alpha=0.5,
             )
