@@ -135,6 +135,7 @@ def panelview(
             time=time,
             treat=treat,
             outcome=outcome,
+            collapse_to_cohort=collapse_to_cohort,
             ax=ax,
             xlab=xlab,
             ylab=ylab,
@@ -161,6 +162,7 @@ def panelview(
             ax=ax,
             xlab=xlab,
             ylab=ylab,
+            figsize=figsize,
             legend=legend,
             noticks=noticks,
             title=title,
@@ -249,7 +251,7 @@ def _plot_panelview_output_plot(
             ax.plot(
                 unit_data.index,
                 unit_data.values,
-                color="#999999",
+                color="#FFFFFF",
                 linewidth=0.5,
                 alpha=0.5,
             )
