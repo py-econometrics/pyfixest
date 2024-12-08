@@ -61,7 +61,7 @@ pf.panelview(
     ylab="Cohort",
     xlab="Year",
     title="Treatment Assignment Cohorts",
-    figsize=(5, 5),
+    figsize=(6, 5),
 )
 ```
 
@@ -78,7 +78,7 @@ pf.panelview(
     ylab="Cohort",
     xlab="Year",
     title="Treatment Assignment Cohorts",
-    figsize=(5, 5),
+    figsize=(6, 5),
 )
 ```
 
@@ -98,7 +98,7 @@ pf.panelview(
     ylab="Unit",
     xlab="Year",
     title="Treatment Assignment (all units)",
-    figsize=(5, 5),
+    figsize=(6, 5),
 )
 ```
 
