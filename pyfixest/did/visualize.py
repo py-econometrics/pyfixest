@@ -213,7 +213,7 @@ def _prepare_panelview_df_for_outcome_plot(
         )
 
         data_agg = data_agg.rename(columns={"treatment_start": unit})
-        data_agg[unit] = data_agg[unit].fillna('no_treatment')
+        data_agg[unit] = data_agg[unit].fillna("no_treatment")
         data = data_agg.copy()
         data_pivot = data_agg.pivot(index=unit, columns=time, values=outcome)
 
