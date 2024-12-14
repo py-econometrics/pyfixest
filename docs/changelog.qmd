@@ -11,6 +11,8 @@
   applied after a fixed effects regression. My apologies for that!
 - Fixes a bug in the `ritest` method, which would use randomization inference coefficients instead of t-statistics, leading to incorrect results.
   This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apolgies!
+- Adds a vignette on multiple testing corrections.
+- Adds a vignette on Gelbach's regression decomposition.
 
 ## PyFixest 0.22.0 - 0.25.4
 
