@@ -10326,9 +10326,9 @@ packages:
   requires_python: '>=3.8'
 - kind: pypi
   name: pyfixest
-  version: 0.26.2
+  version: 0.27.0
   path: .
-  sha256: 60c0e14d34e65d71d1759e71fe88d0259783961f0213e7132a8afbc419e0f5e8
+  sha256: b856e525ceea388d991df24bf214a9322de053c3edfc9514e1aae7f0af95654c
   requires_dist:
   - lets-plot>=4.0.0
   - scipy>=1.6
@@ -10337,7 +10337,7 @@ packages:
   - numba>=0.58.0
   - seaborn>=0.13.2
   - tabulate>=0.9.0
-  - tqdm==4.66.4
+  - tqdm>=4.0.0
   - great-tables>=0.10.0
   - numpy>=1.19.0
   - narwhals>=1.13.3
