@@ -188,7 +188,14 @@ class Feols:
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
-
+    _model_name: str
+        The name of the model. Usually just the formula string. If split estimation is used,
+        the model name will include the split variable and value.
+    _model_name_plot: str
+        The name of the model used when plotting and summarizing models. Usually identical to
+        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        and models with identical _model_name attributes are passed. In this case,
+        the _model_name_plot attribute will be modified.
     """
 
     def __init__(
