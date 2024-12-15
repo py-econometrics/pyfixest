@@ -213,6 +213,7 @@ class Feols:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
         self.FixestFormula = FixestFormula

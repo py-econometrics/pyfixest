@@ -1,4 +1,5 @@
 import re
+from collections import Counter
 from collections.abc import ValuesView
 from typing import Optional, Union
 
@@ -600,6 +601,23 @@ def _post_processing_input_checks(
             )
     else:
         raise TypeError("Invalid type for models argument.")
+
+    # create model_name_plot attribute to differentiate between models with the
+    # same model_name / model formula
+
+    all_model_names = [model._model_name for model in models_list]
+    for model in models_list:
+        model._model_name_plot = model._model_name
+
+    counter = Counter(all_model_names)
+    duplicate_model_names = [item for item, count in counter.items() if count > 1]
+
+    for duplicate_model in duplicate_model_names:
+        duplicates = [
+            model for model in models_list if model._model_name == duplicate_model
+        ]
+        for i, model in enumerate(duplicates):
+            model._model_name_plot = f"Model {i}: {model._model_name}"
 
     return models_list
 
