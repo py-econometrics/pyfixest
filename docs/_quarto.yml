@@ -35,6 +35,10 @@ website:
           file: marginaleffects.qmd
         - text: "Difference-in-Differences Estimation"
           file: difference-in-differences.qmd
+        - file: multiple_testing.ipynb
+          text: "Multiple Testing Corrections"
+        - file: regression_decomposition.ipynb
+          text: "Regression Decomposition"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
         - text: "Replicating 'The Effect' with PyFixest"

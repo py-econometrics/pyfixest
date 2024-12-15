@@ -156,7 +156,7 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -302,7 +302,7 @@ def coefplot(
 
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -596,7 +596,7 @@ def _get_model_df(
         A tidy model frame.
     """
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}%"
+    df_model["fml"] = f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}%"
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
@@ -608,7 +608,9 @@ def _get_model_df(
             .drop([lb, ub], axis=1)
             .merge(df_joint, on="Coefficient", how="left")
         )
-        df_joint_full["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}% joint CIs"
+        df_joint_full["fml"] = (
+            f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}% joint CIs"
+        )
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
         else:
