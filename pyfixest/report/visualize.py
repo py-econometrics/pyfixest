@@ -156,7 +156,7 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -302,7 +302,7 @@ def coefplot(
 
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
