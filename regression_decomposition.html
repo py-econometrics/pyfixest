@@ -1916,6 +1916,10 @@ RMSE: 0.436 R2: 0.106 </code></pre>
       \hat{\delta}_{k} = \hat{\Gamma}_{k} \hat{\beta}_{2,k}.
   \]</span></p></li>
 </ul>
+<p>After having obtained <span class="math inline">\(\delta_{k}\)</span> for each auxiliary variable <span class="math inline">\(k\)</span>, we can easily aggregate multiple variables into a single groups of interest. For example, if <span class="math inline">\(X_{2}\)</span> contains a set of dummies from industry fixed effects, we could compute the explained part of “industry” by summing over all the dummies:</p>
+<p><span class="math display">\[
+        \hat{\delta}_{\textit{industry}} = \sum_{k \in \textit{industry dummies}} \hat{\Gamma}_{k} \hat{\beta}_{2,k}
+\]</span></p>
 </section>
 <section id="pyfixest-example" class="level2">
 <h2 class="anchored" data-anchor-id="pyfixest-example"><code>PyFixest</code> Example</h2>
