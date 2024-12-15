@@ -1,4 +1,5 @@
 import re
+import warnings
 from collections import Counter
 from collections.abc import ValuesView
 from typing import Optional, Union
@@ -618,6 +619,9 @@ def _post_processing_input_checks(
         ]
         for i, model in enumerate(duplicates):
             model._model_name_plot = f"Model {i}: {model._model_name}"
+            warnings.warn(
+                f"The _model_name attribute {model._model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+            )
 
     return models_list
 
