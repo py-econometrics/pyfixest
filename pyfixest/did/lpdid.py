@@ -172,7 +172,7 @@ class LPDID(DID):
         lets-plot figure
             A lets-plot figure with coefficient estimates and confidence intervals.
         """
-        df = self._coeftable
+        df = self._coeftable.copy()
         df["fml"] = "lpdid"
 
         return _coefplot(
