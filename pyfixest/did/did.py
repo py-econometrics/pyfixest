@@ -81,12 +81,10 @@ class DID(ABC):
                 """
             )
 
-        # import pdb; pdb.set_trace()
         # check if gname is included in tname values
         self._tname_unique = self._data[self._tname].unique()
         self._gname_unique = self._data[self._gname].unique()
 
-        # import pdb; pdb.set_trace()
         if np.isin(0, self._tname_unique).any():
             raise ValueError(
                 f"""The value 0 was found in the 'tname' variable {self._tname}.
