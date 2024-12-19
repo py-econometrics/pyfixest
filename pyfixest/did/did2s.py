@@ -28,14 +28,12 @@ class DID2S(DID):
     idname : str
         The name of the identifier variable.
     tname : str
-        Variable name for calendar period. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted.
+        Variable name for calendar period. Must be numeric (ints or float).
+        Needs to be of the same data type as the gname variable.
     gname : str
-        unit-specific time of initial treatment. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted. Never treated units
-        must have a value of 0.
+        unit-specific time of initial treatment. Must be numeric (ints or float).
+        Needs to be of the same data type as the tname variable. More concretely,
+        needs to be included in the values of tname. Values of 0 are considered as never treated.
     xfml : str
         The formula for the covariates.
     att : str

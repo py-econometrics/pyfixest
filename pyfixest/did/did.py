@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 
@@ -17,14 +18,12 @@ class DID(ABC):
     idname : str
         The name of the identifier variable.
     tname : str
-        Variable name for calendar period. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted.
+        Variable name for calendar period. Must be a numeric (int or float) and
+        of the same data type as the gname variable.
     gname : str
-        unit-specific time of initial treatment. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted. Never treated units must
-        have a value of 0.
+        unit-specific time of initial treatment. Must be an numeric (int or float)
+        and of the same data type as the tname variable. More concretely, needs to be
+        included in the values of tname. Values of 0 are considered as never treated.
     xfml : str
         The formula for the covariates.
     att : str
@@ -66,9 +65,8 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"""The variable {self._tname} must be of a numeric type, and more
-                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                etc. or 201201, 201202, 201203 etc."""
+                f"""The variable {self._tname} must be of a numeric type,
+                but it is of type {self._data[self._tname].dtype}."""
             )
         if self._data[self._gname].dtype not in [
             "int64",
@@ -78,10 +76,32 @@ class DID(ABC):
             "float32",
         ]:
             raise ValueError(
-                f"""The variable {self._tname} must be of a numeric type, and more
-                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                etc. or 201201, 201202, 201203 etc."""
+                f"""The variable {self._tname} must be of a numeric type, but it is
+                of type {self._data[self._gname].dtype}.
+                """
             )
+
+        # import pdb; pdb.set_trace()
+        # check if gname is included in tname values
+        self._tname_unique = self._data[self._tname].unique()
+        self._gname_unique = self._data[self._gname].unique()
+
+        # import pdb; pdb.set_trace()
+        if np.isin(0, self._tname_unique).any():
+            raise ValueError(
+                f"""The value 0 was found in the 'tname' variable {self._tname}.
+                This value is reserved for never treated groups and cannot be used as a treatment period.
+                """
+            )
+
+        allowed_g_values = [*self._tname_unique.tolist(), 0]
+        for gval in self._gname_unique:
+            if gval not in allowed_g_values:
+                raise ValueError(
+                    f"""The variable {gval} was found in the 'gname' variable {self._gname} but not in 'tname' {self._tname}.
+                    All values of 'gname' must be included in 'tname' or be equal to 0 (for never treated groups).
+                    """
+                )
 
         # create a treatment variable
         self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (

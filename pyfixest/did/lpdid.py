@@ -23,9 +23,12 @@ class LPDID(DID):
     idname : str
         The name of the identifier variable.
     tname : str
-        The name of the time variable.
+        The name of the time variable. Needs to be a numeric (int or float) and
+        of the same data type as the gname variable.
     gname : str
-        The name of the group variable.
+        The name of the group variable. Needs to be a numeric (int or float) and
+        of the same data type as the tname variable. More concretely, needs to be
+        included in the values of tname. Values of 0 are considered as never treated.
     xfml : str
         The transformation to apply to the data.
     att : str
