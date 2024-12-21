@@ -6,9 +6,11 @@ from pyfixest.estimation.detect_singletons_ import (
     detect_singletons,
 )
 from pyfixest.estimation.estimation import (
+    feglm,
     feols,
     fepois,
 )
+from pyfixest.estimation.feglm import Felogit
 from pyfixest.estimation.feiv_ import (
     Feiv,
 )
