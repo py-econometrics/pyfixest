@@ -102,6 +102,7 @@ class Feglm(Fepois, ABC):
             )
 
             # Step 5: update using step halfing (if required)
+            mu_old = mu.copy()
             beta, eta, mu, deviance, crit, step_accepted = self.update_eta_step_halfing(
                 Y=_Y,
                 beta=beta,
@@ -124,9 +125,37 @@ class Feglm(Fepois, ABC):
             if converged:
                 break
 
-        import pdb
+        self._beta_hat = beta.flatten()
+        self._Y_hat_response = mu.flatten()
+        self._Y_hat_link = eta.flatten()
+        # (Y - self._Y_hat)
+        # needed for the calculation of the vcov
 
-        pdb.set_trace()
+        # update for inference
+        self._weights = mu_old
+        self._irls_weights = mu
+        # if only one dim
+        if self._weights.ndim == 1:
+            self._weights = self._weights.reshape((self._N, 1))
+
+        self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        # self._u_hat_working = resid
+        # self._u_hat_response = self._Y - np.exp(eta)
+
+        self._Y = (v_dotdot / np.sqrt(W_tilde)).reshape(-1, 1)
+        self._X = X_dotdot / np.sqrt(W_tilde.reshape(-1, 1))
+        self._Z = self._Z
+        self.deviance = deviance
+
+        self._tZX = np.transpose(self._Z) @ self._X
+        self._tZXinv = np.linalg.inv(self._tZX)
+        self._Xbeta = eta
+
+        self._scores = self._u_hat[:, None] * self._X
+        self._hessian = X_dotdot.T @ X_dotdot
+
+        if _convergence:
+            self._convergence = True
 
     @abstractmethod
     def compute_deviance(self, y, mu):
