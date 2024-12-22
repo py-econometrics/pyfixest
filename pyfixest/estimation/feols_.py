@@ -679,7 +679,7 @@ class Feols:
 
         if _method == "feols":
             sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method in ["fepois", "feglm-logit"]:
+        elif _method in ["fepois", "feglm-logit", "feglm-probit"]:
             sigma2 = 1
 
         _vcov = _bread * sigma2

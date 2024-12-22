@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.fepois_ import Fepois
@@ -367,9 +368,7 @@ class Felogit(Feglm):
         self._method = "feglm-logit"
 
     def compute_deviance(self, y, mu):
-        eps = 1e-15
-        mu_clipped = np.clip(mu, eps, 1 - eps)
-        return -2 * np.sum(y * np.log(mu_clipped) + (1 - y) * np.log(1 - mu_clipped))
+        return -2 * np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
 
     def get_dispersion_phi(self, theta):
         return 1
@@ -390,6 +389,81 @@ class Felogit(Feglm):
 
     def get_theta(self, mu):
         return np.log(mu / (1 - mu))
+
+    def get_V(self, mu):
+        return mu * (1 - mu)
+
+
+class Feprobit(Feglm):
+    def __init__(
+        self,
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
+        collin_tol: float,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        tol: float,
+        maxiter: int,
+        solver: str = "np.linalg.solve",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int]] = None,
+        separation_check: Optional[list[str]] = None,
+    ):
+        super().__init__(
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            tol=tol,
+            maxiter=maxiter,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            separation_check=separation_check,
+        )
+
+        self._method = "feglm-probit"
+
+    def compute_deviance(self, y, mu):
+        return -2 * np.sum(
+            y * np.log(norm.cdf(mu)) + (1 - y) * np.log(1 - norm.cdf(mu))
+        )
+
+    def get_dispersion_phi(self, theta):
+        return 1
+
+    def get_b(self, theta):
+        raise ValueError("The function get_b is not implemented for the probit model.")
+        return None
+
+    def get_mu(self, theta):
+        return norm.cdf(theta)
+
+    def get_link(self, mu):
+        return norm.ppf(mu)
+
+    def update_detadmu(self, mu):
+        return 1 / norm.pdf(norm.ppf(mu))
+
+    def get_theta(self, mu):
+        return norm.ppf(mu)
 
     def get_V(self, mu):
         return mu * (1 - mu)
