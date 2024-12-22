@@ -171,7 +171,7 @@ class Feglm(Fepois, ABC):
         pass
 
     @abstractmethod
-    def _get_dispersion_phi(self, theta: np.ndarray) -> int:
+    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
         "Get the dispersion parameter phi for the GLM family."
         pass
 
@@ -400,8 +400,8 @@ class Felogit(Feglm):
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
         return -2 * np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
 
-    def _get_dispersion_phi(self, theta: np.ndarray) -> int:
-        return 1
+    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
+        return 1.0
 
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         return np.log(1 + np.exp(theta))
@@ -478,8 +478,8 @@ class Feprobit(Feglm):
             y * np.log(norm.cdf(mu)) + (1 - y) * np.log(1 - norm.cdf(mu))
         )
 
-    def _get_dispersion_phi(self, theta: np.ndarray) -> int:
-        return 1
+    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
+        return 1.0
 
     def _get_b(self, theta: np.ndarray) -> np.ndarray:
         raise ValueError("The function _get_b is not implemented for the probit model.")
