@@ -61,7 +61,7 @@ class Feglm(Fepois, ABC):
 
         self._method = "feglm"
 
-    def _get_fit(self):
+    def get_fit(self):
         "Fit the GLM model via iterated weighted least squares."
         _Y = self._Y
         _X = self._X
