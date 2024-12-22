@@ -118,6 +118,14 @@ iv_fmls = [
     "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
 ]
 
+gml_fmls = [
+    "Y ~ X1 + X2",
+    "Y ~ X1*X2",
+    # "Y ~ X1 + C(f2)",
+    # "Y ~ X1 + i(f1, ref = 1)",
+    "Y ~ X1:X2",
+]
+
 
 @pytest.fixture
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
@@ -582,6 +590,39 @@ def test_single_fit_iv(
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("N", [1000])
+@pytest.mark.parametrize("seed", [170])
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("fml", gml_fmls)
+def test_glm_vs_fixest(N, seed, dropna, fml):
+    data = pf.get_data(N=N, seed=seed)
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    if dropna:
+        data = data.dropna()
+
+    fit_logit = pf.feglm(fml=fml, data=data, family="logit")
+    # fit_probit = pf.feglm(fml = fml, data=data, family="probit")
+
+    r_fml = _py_fml_to_r_fml(fml)
+    data_r = get_data_r(fml, data)
+
+    fit_logit_r = fixest.feglm(
+        ro.Formula(r_fml), data=data_r, family=stats.binomial(link="logit")
+    )
+    # fit_probit_r = fixest.feglm(ro.Formula(r_fml), data=data_r, family=stats.binomial(link="probit"))
+
+    py_logit_coefs = fit_logit.coef()
+    # py_probit_coefs = fit_probit.coef()
+    r_logit_coefs = stats.coef(fit_logit_r)
+    # r_probit_coefs = stats.coef(fit_probit_r)
+
+    check_absolute_diff(
+        py_logit_coefs, r_logit_coefs, 1e-08, "py_logit_coefs != r_logit_coefs"
+    )
+    # check_absolute_diff(py_probit_coefs, r_probit_coefs, 1e-08, "py_probit_coefs != r_probit_coefs")
 
 
 @pytest.mark.slow
