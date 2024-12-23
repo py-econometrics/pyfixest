@@ -677,7 +677,7 @@ class Feols:
         _method = self._method
         _bread = self._bread
 
-        if _method == "feols":
+        if _method in ["feols", "feglm-gaussian"]:
             sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         elif _method in ["fepois", "feglm-logit", "feglm-probit"]:
             sigma2 = 1

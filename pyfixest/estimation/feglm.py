@@ -109,27 +109,32 @@ class Feglm(Fepois, ABC):
 
             # Step 5: _update using step halfing (if required)
             mu_old = mu.copy()
-            beta, eta, mu, deviance, crit, step_accepted = (
-                self._update_eta_step_halfing(
-                    Y=_Y,
-                    beta=beta,
-                    eta=eta,
-                    mu=mu,
-                    deviance=deviance_old,
-                    beta_update_diff=beta_update_diff,
-                    W_tilde=W_tilde.flatten(),
-                    v_tilde=v_tilde,
-                    v_dotdot=v_dotdot,
-                    X_dotdot=X_dotdot,
-                    deviance_old=deviance_old,
-                    step_halfing_tolerance=1e-12,
-                )
+            beta, eta, mu, deviance, step_accepted = self._update_eta_step_halfing(
+                Y=_Y,
+                beta=beta,
+                eta=eta,
+                mu=mu,
+                deviance=deviance_old,
+                beta_update_diff=beta_update_diff,
+                W_tilde=W_tilde.flatten(),
+                v_tilde=v_tilde,
+                v_dotdot=v_dotdot,
+                X_dotdot=X_dotdot,
+                deviance_old=deviance_old,
+                step_halfing_tolerance=1e-12,
             )
 
             print("beta:", beta)
 
             deviance_old = deviance.copy()
-            converged = self._stop_iterating(crit=crit, tol=_tol, r=r, maxiter=_maxiter)
+            converged = self._stop_iterating(
+                crit=self._get_diff(deviance, deviance_old),
+                tol=_tol,
+                r=r,
+                maxiter=_maxiter,
+                beta_update_diff=beta_update_diff,
+            )
+
             if converged:
                 break
 
@@ -287,9 +292,15 @@ class Feglm(Fepois, ABC):
             else:
                 return vX_resid[:, 0], vX_resid[:, 1:]
 
-    def _stop_iterating(self, crit: float, tol: float, r: int, maxiter: int) -> bool:
-        _stop_iterating = crit < tol
-        converged = _stop_iterating
+    def _stop_iterating(
+        self,
+        crit: float,
+        tol: float,
+        r: int,
+        maxiter: int,
+        beta_update_diff: np.ndarray,
+    ) -> bool:
+        converged = crit < tol or np.max(beta_update_diff) < crit
         if r == maxiter:
             raise NonConvergenceError(
                 f"""
@@ -314,7 +325,7 @@ class Feglm(Fepois, ABC):
         X_dotdot: np.ndarray,
         deviance_old: np.ndarray,
         step_halfing_tolerance: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, bool]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, bool]:
         "Update parameters, potentially using step halfing."
         alpha = 1.0
         step_accepted = False
@@ -337,7 +348,6 @@ class Feglm(Fepois, ABC):
                 mu = mu_try
                 deviance = deviance_try
                 step_accepted = True
-                crit = self._get_diff(deviance, deviance_old)
                 break
             else:
                 alpha /= 2.0
@@ -345,7 +355,7 @@ class Feglm(Fepois, ABC):
         if not step_accepted:
             raise RuntimeError("Step-halving failed to find improvement.")
 
-        return beta, eta, mu, deviance, crit, step_accepted
+        return beta, eta, mu, deviance, step_accepted
 
 
 class Felogit(Feglm):
@@ -499,3 +509,77 @@ class Feprobit(Feglm):
 
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return mu * (1 - mu)
+
+
+class Fegaussian(Feglm):
+    "Class for the estimation of a fixed-effects GLM with normal errors."
+
+    def __init__(
+        self,
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
+        collin_tol: float,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        tol: float,
+        maxiter: int,
+        solver: str = "np.linalg.solve",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int]] = None,
+        separation_check: Optional[list[str]] = None,
+    ):
+        super().__init__(
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            tol=tol,
+            maxiter=maxiter,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            separation_check=separation_check,
+        )
+
+        self._method = "feglm-gaussian"
+
+    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
+        return np.sum((y - mu) ** 2)
+
+    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
+        return np.var(theta)
+
+    def _get_b(self, theta: np.ndarray) -> np.ndarray:
+        return theta**2 / 2
+
+    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
+        return theta
+
+    def _get_link(self, mu: np.ndarray) -> np.ndarray:
+        return mu
+
+    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+        return np.ones_like(mu)
+
+    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
+        return mu
+
+    def _get_V(self, mu: np.ndarray) -> np.ndarray:
+        return np.ones_like(mu)

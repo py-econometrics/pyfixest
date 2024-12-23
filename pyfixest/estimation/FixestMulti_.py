@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import pandas as pd
 
-from pyfixest.estimation.feglm import Felogit, Feprobit
+from pyfixest.estimation.feglm import Fegaussian, Felogit, Feprobit
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
@@ -364,6 +364,33 @@ class FixestMulti:
 
                     elif _method == "feglm-probit":
                         FIT = Feprobit(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                        )
+
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT.drop_multicol_vars()
+
+                    elif _method == "feglm-gaussian":
+                        FIT = Fegaussian(
                             FixestFormula=FixestFormula,
                             data=_data,
                             ssc_dict=_ssc_dict,

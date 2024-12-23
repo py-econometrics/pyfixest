@@ -604,6 +604,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml):
         data = data.dropna()
 
     fit_logit = pf.feglm(fml=fml, data=data, family="logit")
+    fit_gaussian = pf.feglm(fml=fml, data=data, family="gaussian")
     # fit_probit = pf.feglm(fml = fml, data=data, family="probit")
 
     r_fml = _py_fml_to_r_fml(fml)
@@ -612,17 +613,45 @@ def test_glm_vs_fixest(N, seed, dropna, fml):
     fit_logit_r = fixest.feglm(
         ro.Formula(r_fml), data=data_r, family=stats.binomial(link="logit")
     )
+    fit_gaussian_r = fixest.feglm(
+        ro.Formula(r_fml), data=data_r, family=stats.gaussian()
+    )
     # fit_probit_r = fixest.feglm(ro.Formula(r_fml), data=data_r, family=stats.binomial(link="probit"))
 
     py_logit_coefs = fit_logit.coef()
+    py_gaussian_coefs = fit_gaussian
     # py_probit_coefs = fit_probit.coef()
     r_logit_coefs = stats.coef(fit_logit_r)
+    r_gaussian_coefs = stats.coef(fit_gaussian_r)
+    # r_probit_coefs = stats.coef(fit_probit_r)
+
+    # compare coefs
+
+    py_logit_coefs = fit_logit.coef()
+    py_gaussian_coefs = fit_gaussian
+    # py_probit_coefs = fit_probit.coef()
+    r_logit_coefs = stats.coef(fit_logit_r)
+    r_gaussian_coefs = stats.coef(fit_gaussian_r)
     # r_probit_coefs = stats.coef(fit_probit_r)
 
     check_absolute_diff(
         py_logit_coefs, r_logit_coefs, 1e-08, "py_logit_coefs != r_logit_coefs"
     )
+    check_absolute_diff(
+        py_gaussian_coefs,
+        r_gaussian_coefs,
+        1e-08,
+        "py_gaussian_coefs != r_gaussian_coefs",
+    )
     # check_absolute_diff(py_probit_coefs, r_probit_coefs, 1e-08, "py_probit_coefs != r_probit_coefs")
+
+    # compare SEs
+    py_gaussian_se = fit_gaussian.se()
+    r_gaussian_se = stats.se(fit_gaussian_r)
+
+    check_absolute_diff(
+        py_gaussian_se, r_gaussian_se, 1e-08, "py_gaussian_se != r_gaussian_se"
+    )
 
 
 @pytest.mark.slow

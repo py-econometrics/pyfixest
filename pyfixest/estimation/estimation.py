@@ -692,7 +692,7 @@ def feglm(
         A pandas or polars dataframe containing the variables in the formula.
 
     family : str
-        The family of the GLM model. Options include "logit" and "probit".
+        The family of the GLM model. Options include "gaussian", "logit" and "probit".
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
@@ -788,9 +788,9 @@ def feglm(
     For more examples, please take a look at the documentation of the `feols()`
     function.
     """
-    if family not in ["logit", "probit"]:
+    if family not in ["logit", "probit", "gaussian"]:
         raise ValueError(
-            f"Only the family 'logit' and 'probit'are supported but you asked for {family}."
+            f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
         )
 
     if separation_check is None:
