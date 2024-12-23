@@ -300,7 +300,7 @@ class Feglm(Fepois, ABC):
         maxiter: int,
         beta_update_diff: np.ndarray,
     ) -> bool:
-        converged = crit < tol or np.max(beta_update_diff) < crit
+        converged = crit < tol  # or np.max(beta_update_diff) < crit
         if r == maxiter:
             raise NonConvergenceError(
                 f"""
