@@ -78,9 +78,23 @@ class Feglm(Fepois, ABC):
         beta = np.zeros(_X.shape[1])
         eta = np.zeros(_N)
         mu = self._get_mu(theta=eta)
-        deviance_old = self._get_deviance(_Y.flatten(), mu)
+        deviance = self._get_deviance(_Y.flatten(), mu)
+        deviance_old = deviance.copy() + 1
 
         for r in range(_maxiter):
+            if r == 0:
+                pass
+            else:
+                converged = self._check_convergence(
+                    crit=self._get_diff(deviance=deviance, last=deviance_old),
+                    tol=_tol,
+                    r=r,
+                    maxiter=_maxiter,
+                    model=self._method,
+                )
+                if converged:
+                    break
+
             # Step 1: _get weights w_tilde(r-1) and v(r-1) (eq. 2.5)
             detadmu = self._update_detadmu(mu=mu)
             # v = self._update_v(y=_Y.flatten(), mu=mu, detadmu=detadmu)
@@ -108,7 +122,10 @@ class Feglm(Fepois, ABC):
             )
 
             # Step 5: _update using step halfing (if required)
+
+            deviance_old = deviance.copy()
             mu_old = mu.copy()
+
             beta, eta, mu, deviance, step_accepted = self._update_eta_step_halfing(
                 Y=_Y,
                 beta=beta,
@@ -125,18 +142,6 @@ class Feglm(Fepois, ABC):
             )
 
             print("beta:", beta)
-
-            deviance_old = deviance.copy()
-            converged = self._stop_iterating(
-                crit=self._get_diff(deviance, deviance_old),
-                tol=_tol,
-                r=r,
-                maxiter=_maxiter,
-                beta_update_diff=beta_update_diff,
-            )
-
-            if converged:
-                break
 
         self._beta_hat = beta.flatten()
         self._Y_hat_response = mu.flatten()
@@ -239,7 +244,6 @@ class Feglm(Fepois, ABC):
 
     def _update_X_tilde(self, W_tilde: np.ndarray, X: np.ndarray) -> np.ndarray:
         "Get X_tilde (formula 3.2)."
-        # import pdb; pdb.set_trace()
         return W_tilde.reshape(-1, 1) * X
 
     def _update_beta_diff(
@@ -261,10 +265,7 @@ class Feglm(Fepois, ABC):
         eta: np.ndarray,
     ) -> np.ndarray:
         "Get the eta _update (formula 4.5)."
-        # import pdb; pdb.set_trace()
-        # return  (v_tilde  - X_dotdot @ beta_diff) / W_tilde +
         return eta + X_dotdot @ beta_diff / W_tilde
-        # return  (v_tilde - v_dotdot - X_dotdot @ beta_diff) / W_tilde + eta
 
     def _get_gradient(self, Z: np.ndarray, W: np.ndarray, v: np.ndarray) -> np.ndarray:
         return Z.T @ W @ v
@@ -292,22 +293,25 @@ class Feglm(Fepois, ABC):
             else:
                 return vX_resid[:, 0], vX_resid[:, 1:]
 
-    def _stop_iterating(
+    def _check_convergence(
         self,
         crit: float,
         tol: float,
         r: int,
         maxiter: int,
-        beta_update_diff: np.ndarray,
+        model: str,
     ) -> bool:
-        converged = crit < tol  # or np.max(beta_update_diff) < crit
-        if r == maxiter:
-            raise NonConvergenceError(
-                f"""
-                The IRLS algorithm did not converge with {maxiter}
-                iterations. Try to increase the maximum number of iterations.
-                """
-            )
+        if model == "feglm-gaussian":
+            converged = True
+        else:
+            converged = crit < tol
+            if r == maxiter:
+                raise NonConvergenceError(
+                    f"""
+                    The IRLS algorithm did not converge with {maxiter}
+                    iterations. Try to increase the maximum number of iterations.
+                    """
+                )
 
         return converged
 
