@@ -1810,10 +1810,10 @@ class Feols:
         _validate_literal_argument(type, PredictionType)
 
         if newdata is None:
-            if type == "link" or self._method == "feols":
-                return self._Y_hat_link
-            else:
-                return self._Y_hat_response
+            #if type == "link" or self._method == "feols":
+            return self._Y_hat_link
+            #else:
+            #    return self._Y_hat_response
 
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 

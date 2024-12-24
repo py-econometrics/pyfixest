@@ -391,17 +391,16 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        if newdata is not None and self._has_fixef:
-            raise NotImplementedError(
-                "Prediction with new fixed effects is not supported for Poisson regression."
-            )
 
         y_hat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+
         if type == "response":
             y_hat = np.exp(y_hat)
 
-        return y_hat
+        if self._has_fixef and newdata is not None:
+            y_hat = np.log(y_hat)
 
+        return y_hat
 
 def _check_for_separation(
     fml: str,

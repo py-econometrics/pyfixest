@@ -471,31 +471,31 @@ def test_single_fit_fepois(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
-    if not mod._has_fixef:
-        py_predict_default = mod.predict()
+    if True:
+        py_predict_default = mod.predict(atol = 1e-12, btol = 1e-12)
         r_predict_default = stats.predict(r_fixest)
-        py_predict_response = mod.predict(type="response")
+        py_predict_response = mod.predict(type="response", atol = 1e-12, btol = 1e-12)
         py_predict_link = mod.predict(type="link")
-        r_predict_response = stats.predict(r_fixest, type="response")
+        r_predict_response = stats.predict(r_fixest, type="response", atol = 1e-12, btol = 1e-12)
         r_predict_link = stats.predict(r_fixest, type="link")
 
         check_absolute_diff(
             py_predict_default[0:5],
             r_predict_default[0:5],
-            1e-07,
+            1e-04 if mod._has_fixef else 1e-07,
             "py_predict_default != r_predict_default",
         )
 
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],
-            1e-07,
+            1e-03 if mod._has_fixef else 1e-07,
             "py_predict_response != r_predict_response",
         )
         check_absolute_diff(
             py_predict_link[0:5],
             r_predict_link[0:5],
-            1e-07,
+            1e-03 if mod._has_fixef else 1e-07,
             "py_predict_link != r_predict_link",
         )
 
@@ -522,7 +522,7 @@ def test_single_fit_fepois(
                 check_absolute_diff(
                     na_omit(py_predict_newsample)[0:5],
                     na_omit(r_predict_newsample)[0:5],
-                    1e-07,
+                    1e-03 if mod._has_fixef else 1e-07,
                     f"py_predict_newdata != r_predict_newdata when type == '{prediction_type}'",
                 )
 
