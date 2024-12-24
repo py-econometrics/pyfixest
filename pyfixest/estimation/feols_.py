@@ -1766,7 +1766,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: PredictionType = "link",
+        type: PredictionType = "response",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1809,6 +1809,7 @@ class Feols:
 
         _validate_literal_argument(type, PredictionType)
 
+        # import pdb; pdb.set_trace()
         if newdata is None:
             if type == "link" or self._method == "feols":
                 return self._Y_hat_link

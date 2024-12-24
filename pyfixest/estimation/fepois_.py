@@ -292,9 +292,8 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu.flatten()
-        self._Y_hat_link = eta.flatten()
-        # (Y - self._Y_hat)
+        self._Y_hat_link = mu.flatten()
+        self._Y_hat_response = np.exp(self._Y_hat_link)
         # needed for the calculation of the vcov
 
         # update for inference
@@ -393,11 +392,15 @@ class Fepois(Feols):
             A flat array with the predicted values of the regression model.
         """
         if newdata is not None and self._has_fixef:
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "Prediction with new fixed effects is not supported for Poisson regression."
+            )
 
         y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
-        if newdata is not None and type == "response":
+
+        if type == "response" and self._has_fixef and newdata is not None:
             y_hat = np.exp(y_hat)
+
         return y_hat
 
 

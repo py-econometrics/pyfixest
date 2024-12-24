@@ -2,6 +2,9 @@
 
 ## PyFixest 0.28.0 (In Development, can be installed from github)
 
+- Add support for the `newdata` argument for `Fepois.predict`.
+- Changes `Fepois.predict()` defaults `type` argument to `response`, to match `fixest` defaults.
+- Updates the `Fepois._Y_hat_response` attribute, which would previously return `Fepois._Y_hat_link`.
 - Fix a bug that caused reindexing of `LPDID._coeftable` when calling `LPDID.iplot()`. As a result, a second call of `LPDID.iplot()` would fail.
 
 ## PyFixest 0.27.0
