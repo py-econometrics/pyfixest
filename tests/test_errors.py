@@ -720,3 +720,53 @@ def test_gelbach_errors():
         pf.fepois("Y ~ X1", data=dt).decompose(
             param="X1", combine_covariates={"g1": ["x21"]}
         )
+
+
+def test_did_errors():
+    df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_het["g"][0] = 111111
+
+    # gname not in tname
+    with pytest.raises(ValueError):
+        pf.lpdid(
+            df_het,
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            vcov={"CRV1": "state"},
+            pre_window=-20,
+            post_window=20,
+            att=False,
+        )
+
+    df_het.at[0, "g"] = 2010
+    df_het.at[0, "year"] = 0
+
+    # 0 in tname (reserved for never treated)
+    with pytest.raises(ValueError):
+        pf.lpdid(
+            df_het,
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            vcov={"CRV1": "state"},
+            pre_window=-20,
+            post_window=20,
+            att=False,
+        )
+
+    df_het.at[0, "year"] = 0.0
+    with pytest.raises(ValueError):
+        pf.lpdid(
+            df_het,
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            vcov={"CRV1": "state"},
+            pre_window=-20,
+            post_window=20,
+            att=False,
+        )
