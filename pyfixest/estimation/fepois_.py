@@ -349,7 +349,7 @@ class Fepois(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: PredictionType = "link",
+        type: PredictionType = "response",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.

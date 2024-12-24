@@ -1,11 +1,11 @@
 import re
+from typing import get_args
 
 import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
-from typing import get_args
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -472,10 +472,20 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
+        py_predict_default = mod.predict()
+        r_predict_default = stats.predict(r_fixest)
         py_predict_response = mod.predict(type="response")
         py_predict_link = mod.predict(type="link")
         r_predict_response = stats.predict(r_fixest, type="response")
         r_predict_link = stats.predict(r_fixest, type="link")
+
+        check_absolute_diff(
+            py_predict_default[0:5],
+            r_predict_default[0:5],
+            1e-07,
+            "py_predict_default != r_predict_default",
+        )
+
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],
