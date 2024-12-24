@@ -27,19 +27,21 @@ from pyfixest.estimation.model_matrix_fixest_ import (
 from pyfixest.estimation.multcomp import (
     bonferroni,
     rwolf,
+    wyoung,
 )
 
 __all__ = [
-    "feols",
-    "fepois",
-    "bonferroni",
-    "rwolf",
-    "demean",
-    "detect_singletons",
-    "model_matrix_fixest",
+    "Feiv",
     "Feols",
     "Fepois",
-    "Feiv",
     "FixestMulti",
+    "bonferroni",
+    "demean",
+    "detect_singletons",
+    "feols",
+    "fepois",
     "literals",
+    "model_matrix_fixest",
+    "rwolf",
+    "wyoung",
 ]

@@ -1,19 +1,20 @@
 import functools
 import gc
+import re
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import numba as nb
 import numpy as np
 import pandas as pd
-import polars as pl
 from formulaic import Formula
 from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
@@ -37,10 +38,13 @@ from pyfixest.utils.dev_utils import (
     DataFrameType,
     _drop_cols,
     _extract_variable_level,
-    _polars_to_pandas,
+    _narwhals_to_pandas,
     _select_order_coefs,
 )
 from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+
+decomposition_type = Literal["gelbach"]
+prediction_type = Literal["response", "link"]
 
 
 class Feols:
@@ -184,7 +188,14 @@ class Feols:
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
-
+    _model_name: str
+        The name of the model. Usually just the formula string. If split estimation is used,
+        the model name will include the split variable and value.
+    _model_name_plot: str
+        The name of the model used when plotting and summarizing models. Usually identical to
+        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        and models with identical _model_name attributes are passed. In this case,
+        the _model_name_plot attribute will be modified.
     """
 
     def __init__(
@@ -209,6 +220,7 @@ class Feols:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
         self.FixestFormula = FixestFormula
@@ -242,6 +254,7 @@ class Feols:
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
             self._supports_wildboottest = False
+        self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -517,8 +530,13 @@ class Feols:
         """
         # Assuming `data` is the DataFrame in question
 
-        if isinstance(data, pl.DataFrame):
-            data = _polars_to_pandas(data)
+        _data = data if data is not None else self._data
+        try:
+            _data = _narwhals_to_pandas(_data)
+        except TypeError as e:
+            raise TypeError(
+                f"The data set must be a DataFrame type. Received: {type(data)}"
+            ) from e
 
         _data = self._data
         _has_fixef = self._has_fixef
@@ -980,19 +998,16 @@ class Feols:
 
         Examples
         --------
+        ```{python}
         import numpy as np
         import pandas as pd
+        import pyfixest as pf
 
-        from pyfixest.estimation.estimation import feols
-
-        data = pd.read_csv("pyfixest/did/data/df_het.csv")
-        data = data.iloc[1:3000]
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(adj=False))
 
         R = np.array([[1,-1]] )
         q = np.array([0.0])
-
-        fml = "dep_var ~ treat"
-        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
 
         # Wald test
         fit.wald_test(R=R, q=q, distribution = "chi2")
@@ -1001,10 +1016,7 @@ class Feols:
 
         print(f"Python f_stat: {f_stat}")
         print(f"Python p_stat: {p_stat}")
-
-        # The code above produces the following results :
-        # Python f_stat: 256.55432910297003
-        # Python p_stat: 9.67406627744023e-58
+        ```
         """
         _vcov = self._vcov
         _N = self._N
@@ -1137,11 +1149,37 @@ class Feols:
             (HC vs CRV), and whether the null hypothesis was imposed on the
             bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
             returns a tuple of the regular output and the bootstrapped t-stats.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import re
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+
+        fit.wildboottest(
+            param = "X1",
+            reps=1000,
+            seed = 822
+        )
+
+        fit.wildboottest(
+            param = "X1",
+            reps=1000,
+            seed = 822,
+            bootstrap_type = "31"
+        )
+
+        ```
         """
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
-        _Y = self._Y.flatten()
-        _X = self._X
         _xnames = self._coefnames
         _data = self._data
         _clustervar = self._clustervar
@@ -1204,19 +1242,7 @@ class Feols:
                 "Wild cluster bootstrap is not supported for Poisson regression."
             )
 
-        if _has_fixef:
-            # update _X, _xnames
-            fml_linear, fixef = self._fml.split("|")
-            fixef_vars = fixef.split("+")
-            # wrap all fixef vars in "C()"
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
-
-            # make this sparse once wildboottest allows it
-            _, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
-            _xnames = _X.model_spec.column_names
+        _Y, _X, _xnames = self._model_matrix_one_hot()
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1280,6 +1306,7 @@ class Feols:
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
+            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
         }
 
         res_df = pd.Series(res)
@@ -1328,15 +1355,15 @@ class Feols:
 
         Examples
         --------
-        ```python
-        from pyfixest.estimation import feols
-        from pyfixest.utils import get_data
+        ```{python}
+        import pyfixest as pf
+        import numpy as np
 
-        data = get_data()
-        data["D1"] = np.random.choice([0, 1], size=data.shape[0])
+        data = pf.get_data()
+        data["D"] = np.random.choice([0, 1], size=data.shape[0])
 
-        fit = feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
-        fit.ccv(treatment="D", pk=0.05, gk=0.5, n_splits=8, seed=123).head()
+        fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
         assert (
@@ -1476,6 +1503,178 @@ class Feols:
             n_splits=n_splits,
         )
 
+    def _model_matrix_one_hot(self) -> tuple[np.ndarray, np.ndarray, list[str]]:
+        """
+        Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, list[str]]
+            A tuple with the dependent variable, the model matrix, and the column names.
+        """
+        if self._has_fixef:
+            fml_linear, fixef = self._fml.split("|")
+            fixef_vars = fixef.split("+")
+            fixef_vars_C = [f"C({x})" for x in fixef_vars]
+            fixef_fml = "+".join(fixef_vars_C)
+            fml_dummies = f"{fml_linear} + {fixef_fml}"
+            # output = "pandas" as Y, X need to be np.arrays for parallel processing
+            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
+            # which cannot be pickled by joblib
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+            xnames = X.model_spec.column_names
+            Y = Y.to_numpy().flatten()
+            X = X.to_numpy()
+
+        else:
+            Y = self._Y.flatten()
+            X = self._X
+            xnames = self._coefnames
+
+        return Y, X, xnames
+
+    def decompose(
+        self,
+        param: str,
+        type: decomposition_type = "gelbach",
+        cluster: Optional[str] = None,
+        combine_covariates: Optional[dict[str, list[str]]] = None,
+        reps: int = 1000,
+        seed: Optional[int] = None,
+        nthreads: Optional[int] = None,
+        agg_first: Optional[bool] = None,
+        only_coef: bool = False,
+        digits=4,
+    ) -> pd.DataFrame:
+        """
+        Implement the Gelbach (2016) decomposition method for mediation analysis.
+
+        Compares a short model `depvar on param` with the long model
+        specified in the original feols() call.
+
+        For details, take a look at
+        "When do covariates matter?" by Gelbach (2016, JoLe). You can find
+        an ungated version of the paper on SSRN under the following link:
+        https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
+
+        Parameters
+        ----------
+        param : str
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
+        type : str, optional
+            The type of decomposition method to use. Defaults to "gelbach", which
+            currently is the only supported option.
+        cluster: Optional
+            The name of the cluster variable. If None, uses the cluster variable
+            from the model fit. Defaults to None.
+        combine_covariates: Optional.
+            A dictionary that specifies which covariates to combine into groups.
+            See the example for how to use this argument. Defaults to None.
+        reps : int, optional
+            The number of bootstrap iterations to run. Defaults to 1000.
+        seed : int, optional
+            An integer to set the random seed. Defaults to None.
+        nthreads : int, optional
+            The number of threads to use for the bootstrap. Defaults to None.
+            If None, uses all available threads minus one.
+        agg_first : bool, optional
+            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
+            Recommended in cases with many (potentially high-dimensional) covariates.
+            False by default if the 'combine_covariates' argument is None, True otherwise.
+        only_coef : bool, optional
+            Indicates whether to compute inference for the decomposition. Defaults to False.
+            If True, skips the inference step and only returns the decomposition results.
+        digits : int, optional
+            The number of digits to round the results to. Defaults to 4.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the decomposition results.
+
+        Examples
+        --------
+        ```{python}
+        import re
+        import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
+
+        data = gelbach_data(nobs = 1000)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+        # simple decomposition
+        res = fit.decompose(param = "x1")
+        pf.make_table(res)
+
+        # group covariates via "combine_covariates" argument
+        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+        pf.make_table(res)
+
+        # group covariates via regex
+        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        ```
+        """
+        _decompose_arg_check(
+            type=type,
+            has_weights=self._has_weights,
+            is_iv=self._is_iv,
+            method=self._method,
+        )
+
+        nthreads_int = -1 if nthreads is None else nthreads
+
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+
+        if agg_first is None:
+            agg_first = combine_covariates is not None
+
+        cluster_df: Optional[pd.Series] = None
+        if cluster is not None:
+            cluster_df = self._data[cluster]
+        elif self._is_clustered:
+            cluster_df = self._data[self._clustervar[0]]
+        else:
+            cluster_df = None
+
+        Y, X, xnames = self._model_matrix_one_hot()
+
+        if combine_covariates is not None:
+            for key, value in combine_covariates.items():
+                if isinstance(value, re.Pattern):
+                    matched = [x for x in xnames if value.search(x)]
+                    if len(matched) == 0:
+                        raise ValueError(f"No covariates match the regex {value}.")
+                    combine_covariates[key] = matched
+
+        med = GelbachDecomposition(
+            param=param,
+            coefnames=xnames,
+            cluster_df=cluster_df,
+            nthreads=nthreads_int,
+            combine_covariates=combine_covariates,
+            agg_first=agg_first,
+            only_coef=only_coef,
+            atol=1e-12,
+            btol=1e-12,
+        )
+
+        med.fit(
+            X=X,
+            Y=Y,
+        )
+
+        if not only_coef:
+            med.bootstrap(rng=rng, B=reps)
+
+        med.summary(digits=digits)
+
+        self.GelbachDecompositionResults = med
+
+        return med.summary_table.T
+
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06
     ) -> dict[str, dict[str, float]]:
@@ -1579,7 +1778,7 @@ class Feols:
         Parameters
         ----------
         newdata : Optional[DataFrameType], optional
-            A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
+            A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
             If None (default), the data used for fitting the model is used.
         type : str, optional
             The type of prediction to be computed.
@@ -1616,7 +1815,7 @@ class Feols:
             else:
                 return self._Y_hat_response
 
-        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
@@ -1696,10 +1895,12 @@ class Feols:
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
         if _has_weights:
+            ssy = np.sum(_Y**2) - np.sum(_Y**2) / np.sum(_weights)
             self._rmse = np.nan
             self._r2 = np.nan
             self._adj_r2 = np.nan
         else:
+            ssy = np.sum((_Y - np.mean(_Y)) ** 2)
             self._rmse = np.sqrt(ssu / _N)
             self._r2 = 1 - (ssu / ssy)
             self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
@@ -1867,7 +2068,11 @@ class Feols:
 
         Examples
         --------
-        ```python
+        ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
         from pyfixest.utils import get_data
         from pyfixest.estimation import feols
 
@@ -1997,6 +2202,28 @@ class Feols:
         A pd.Series with the regression coefficient of `resampvar` and the p-value
         of the RI test. Additionally, reports the standard error and the confidence
         interval of the p-value.
+
+        Examples
+        --------
+        ```{python}
+
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import pyfixest as pf
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data)
+
+        # Conduct a randomization inference test for the coefficient of X1
+        fit.ritest("X1", reps=1000)
+
+        # use randomization-t instead of randomization-c
+        fit.ritest("X1", reps=1000, type="randomization-t")
+
+        # store statistics for plotting
+        fit.ritest("X1", reps=1000, store_ritest_statistics=True)
+        ```
         """
         _fml = self._fml
         _data = self._data
@@ -2020,14 +2247,7 @@ class Feols:
         if cluster is not None and cluster not in _data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
-        sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-
-        rng = np.random.default_rng() if rng is None else rng
-
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
             raise ValueError(
@@ -2037,8 +2257,24 @@ class Feols:
             """
             )
 
+        # update vcov if cluster provided but not in model
+        if cluster is not None and not self._is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        rng = np.random.default_rng() if rng is None else rng
+
+        sample_coef = np.array(self.coef().xs(resampvar_))
+        sample_tstat = np.array(self.tstat().xs(resampvar_))
+        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        # always run slow algorithm for randomization-t
+        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 

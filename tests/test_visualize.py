@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import pyfixest as pf
 from pyfixest.did.visualize import (
     _plot_panelview,
     _plot_panelview_output_plot,
@@ -37,6 +38,11 @@ def test_visualize():
     # FixestMulti
     fit6 = feols("Y + Y2 ~ X1 + X2 | f1", data=data)
     fit6.coefplot()
+
+    # identical models
+    fit7 = feols("Y ~ X1 + X2 | f1", data=data)
+    fit8 = feols("Y ~ X1 + X2 | f1", data=data)
+    pf.coefplot([fit7, fit8])
 
 
 def test_panelview():

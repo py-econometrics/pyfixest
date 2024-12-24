@@ -5,6 +5,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
 from pyfixest.utils.set_rpy2_path import update_r_paths
@@ -195,3 +196,60 @@ def test_sampling_scheme(seed, reps):
     assert (
         np.abs(percent_diff) < 1.0
     ), f"Percentage difference is too large: {percent_diff}%"
+
+
+@pytest.mark.extended
+def test_multi_vs_list(seeds, reps):
+    "Test that lists of models and FixestMulti input produce identical results."
+    seed = 1232
+    reps = 100
+    data = pf.get_data(N=100)
+
+    fit_all = pf.feols("Y + Y2 ~ X1 + X2", data=data)
+    fit1 = pf.feols("Y ~ X1 + X2", data=data)
+    fit2 = pf.feols("Y2 ~ X1 + X2", data=data)
+
+    assert bonferroni(fit_all, "X1").equals(bonferroni([fit1, fit2], "X1"))
+    assert rwolf(fit_all, "X1", seed=seed, reps=reps).equals(
+        rwolf([fit1, fit2], "X1", seed=seed, reps=reps)
+    )
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("seed", [1])
+@pytest.mark.parametrize("reps", [999, 9999])
+@pytest.mark.parametrize("sampling_method", ["ri", "wild-bootstrap"])
+def test_wyoung(seed, reps, sampling_method):
+    data = pf.get_data(N=100)
+
+    fit1 = pf.feols("Y ~ X1 + X2", data=data)
+    fit2 = pf.feols("Y2 ~ X1 + X2", data=data)
+
+    wyoung_output = pf.wyoung(
+        [fit1, fit2], "X1", reps=reps, seed=seed, sampling_method=sampling_method
+    )
+
+    assert isinstance(wyoung_output, pd.DataFrame)
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
+@pytest.mark.parametrize("seed", [199])
+@pytest.mark.parametrize("sampling_method", ["ri", "wild-bootstrap"])
+def test_rwolf_vs_wyoung(fml, seed, sampling_method):
+    data = pf.get_data(N=100)
+    fml1 = fml
+    fml2 = f"{fml1} + f1"
+
+    fit1 = pf.feols(fml1, data=data)
+    fit2 = pf.feols(fml2, data=data)
+
+    rwolf_output = pf.rwolf(
+        [fit1, fit2], "X1", reps=99, seed=seed, sampling_method=sampling_method
+    )
+    wyoung_output = pf.wyoung(
+        [fit1, fit2], "X1", reps=99, seed=seed, sampling_method=sampling_method
+    )
+
+    # test that the two pandas dfs are close
+    assert np.allclose(rwolf_output, wyoung_output, atol=0.01)

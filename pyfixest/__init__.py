@@ -14,6 +14,7 @@ from pyfixest.estimation import (
     feols,
     fepois,
     rwolf,
+    wyoung,
 )
 from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
 from pyfixest.utils import (
@@ -23,29 +24,29 @@ from pyfixest.utils import (
 )
 
 __all__ = [
-    "feols",
-    "fepois",
-    "Stargazer",
-    "etable",
-    "dtable",
-    "make_table",
-    "summary",
-    "iplot",
-    "coefplot",
     "bonferroni",
-    "rwolf",
-    "get_data",
-    "ssc",
-    "get_ssc",
+    "coefplot",
     "did",
+    "did2s",
+    "dtable",
     "errors",
     "estimation",
-    "report",
-    "utils",
+    "etable",
     "event_study",
+    "feols",
+    "fepois",
+    "get_data",
+    "get_ssc",
+    "iplot",
     "lpdid",
-    "did2s",
+    "make_table",
     "panelview",
+    "report",
+    "rwolf",
+    "ssc",
+    "summary",
+    "utils",
+    "wyoung",
 ]
 
 from importlib.metadata import PackageNotFoundError, version

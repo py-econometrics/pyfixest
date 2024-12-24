@@ -23,9 +23,15 @@ from lets_plot import (
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
+
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 LetsPlot.setup_html()
 
@@ -60,7 +66,7 @@ def set_figsize(
 
 
 def iplot(
-    models,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: Union[int, str, None] = None,
@@ -83,9 +89,8 @@ def iplot(
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or
-        `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -151,14 +156,14 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
         )
 
-    df_all = []
-    all_icovars = []
+    df_all: list[pd.DataFrame] = []
+    all_icovars: list[str] = []
 
     if keep is None:
         keep = []
@@ -205,7 +210,7 @@ def iplot(
 
 
 def coefplot(
-    models: list,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: float = 0,
@@ -227,8 +232,8 @@ def coefplot(
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -297,7 +302,7 @@ def coefplot(
 
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -591,7 +596,7 @@ def _get_model_df(
         A tidy model frame.
     """
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}%"
+    df_model["fml"] = f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}%"
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
@@ -603,7 +608,9 @@ def _get_model_df(
             .drop([lb, ub], axis=1)
             .merge(df_joint, on="Coefficient", how="left")
         )
-        df_joint_full["fml"] = f"{fxst._model_name}: {(1- alpha) *100:.1f}% joint CIs"
+        df_joint_full["fml"] = (
+            f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}% joint CIs"
+        )
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
         else:

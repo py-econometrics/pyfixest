@@ -1,26 +1,16 @@
 import re
 from typing import Optional, Union
 
+import narwhals.stable.v1 as nw
 import numpy as np
 import pandas as pd
-import polars as pl
+from narwhals.typing import IntoDataFrame
 
-DataFrameType = Union[pd.DataFrame, pl.DataFrame]
+DataFrameType = IntoDataFrame
 
 
-def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
-    if not isinstance(data, pd.DataFrame):
-        try:
-            import polars as pl  # noqa: F401
-
-            data = data.to_pandas()
-        except ImportError:
-            raise ImportError(
-                """Polars is not installed. Please install Polars to use it as
-                an alternative."""
-            )
-
-    return data
+def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
+    return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 
 def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
@@ -93,11 +83,8 @@ def _select_order_coefs(
     for pattern in keep:
         _coefs = []  # Store remaining coefs
         for coef in coefs:
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 res.append(coef)
             else:
@@ -107,11 +94,8 @@ def _select_order_coefs(
     for pattern in drop:
         _coefs = []
         for coef in res:  # Remove previously matched coefs that match the drop pattern
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 continue
             else:

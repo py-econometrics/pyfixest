@@ -1,0 +1,1134 @@
+                                                       ___  ____  ____  ____  ____(R)
+                                                      /__    /   ____/   /   ____/
+                                                     ___/   /   /___/   /   /___/
+                                                       Statistics/Data analysis
+
+
+        ___  ____  ____  ____  ____ ®
+       /__    /   ____/   /   ____/      18.0
+      ___/   /   /___/   /   /___/       MP—Parallel Edition
+
+       Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                         StataCorp
+                                         4905 Lakeway Drive
+                                         College Station, Texas 77845 USA
+                                         800-STATA-PC        https://www.stata.com
+                                         979-696-4600        stata@stata.com
+
+      Stata license: 6-user 4-core network perpetual
+      Serial number: 501806325985
+        Licensed to: Leonard Stimpfle
+                     Universiteit Gent
+
+      Notes:
+            1. Unicode is supported; see help unicode_advice.
+            2. More than 2 billion observations are allowed; see help obs_advice.
+            3. Maximum number of variables is set to 5,000 but can be increased; see help set_maxvar.
+            4. New update available; type -update all-
+
+     1 . do "/var/folders/bf/bk8w5pp90s13q64t_jgc2jmr0000gn/T//SD22039.000000"
+
+     2 . clear all
+
+     3 . // Create data for Gelbach example
+     4 . set seed 0
+
+     5 . set obs 500
+      Number of observations (_N) was 0, now 500.
+
+     6 . gen double x1 = invnorm(uniform())
+
+     7 . gen double x21 = x1*1 + invnorm(uniform())
+
+     8 . gen double x22 = x1*0.25 + x21*0.75 + invnorm(uniform())
+
+     9 . gen double x23 = x1*0.4 + x21*0.6 + x22*0.4 + invnorm(uniform())
+
+    10 . gen double y = x1*1 + x21*2 + x22*0.5 + x23*0.75 + invnorm(uniform())
+
+    11 . gen cluster = floor((_n - 1) / 50) + 1
+
+    12 . save /Users/leonardstimpfle/Desktop/gelbach/data.dta
+      file /Users/leonardstimpfle/Desktop/gelbach/data.dta already exists
+      r(602);
+
+      end of do-file
+
+      r(602);
+
+    13 . do "/var/folders/bf/bk8w5pp90s13q64t_jgc2jmr0000gn/T//SD22039.000000"
+
+    14 . clear all
+
+    15 . // Create data for Gelbach example
+    16 . set seed 0
+
+    17 . set obs 500
+      Number of observations (_N) was 0, now 500.
+
+    18 . gen double x1 = invnorm(uniform())
+
+    19 . gen double x21 = x1*1 + invnorm(uniform())
+
+    20 . gen double x22 = x1*0.25 + x21*0.75 + invnorm(uniform())
+
+    21 . gen double x23 = x1*0.4 + x21*0.6 + x22*0.4 + invnorm(uniform())
+
+    22 . gen double y = x1*1 + x21*2 + x22*0.5 + x23*0.75 + invnorm(uniform())
+
+    23 . gen cluster = floor((_n - 1) / 50) + 1
+
+    24 . save /Users/leonardstimpfle/Desktop/gelbach/data.dta, replace
+      file /Users/leonardstimpfle/Desktop/gelbach/data.dta saved
+
+    25 .
+    26 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    27 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    28 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .1237726    19.65   0.000     2.190102    2.675282
+                g2 |   1.006828   .0746041    13.50   0.000     .8606062    1.153049
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    29 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    30 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    31 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .0941471    25.84   0.000     2.248167    2.617217
+                g2 |   1.006828   .0883146    11.40   0.000     .8337343    1.179921
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    32 .
+    33 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    34 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    35 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .1079025    17.79   0.000       1.7081     2.13107
+                g2 |   1.519934   .0923266    16.46   0.000     1.338977    1.700891
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    36 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    37 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    38 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .0753572    25.47   0.000     1.771888    2.067283
+                g2 |   1.519934   .0835353    18.20   0.000     1.356208     1.68366
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    39 .
+    40 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    41 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    42 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    43 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    44 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    45 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    46 .
+    47 . translate @Results /Users/leonardstimpfle/Desktop/gelbach/gelbach.txt
+      file /Users/leonardstimpfle/Desktop/gelbach/gelbach.txt already exists
+      r(602);
+
+      end of do-file
+
+      r(602);
+
+    48 . do "/var/folders/bf/bk8w5pp90s13q64t_jgc2jmr0000gn/T//SD22039.000000"
+
+    49 . clear all
+
+    50 . // Create data for Gelbach example
+    51 . set seed 0
+
+    52 . set obs 500
+      Number of observations (_N) was 0, now 500.
+
+    53 . gen double x1 = invnorm(uniform())
+
+    54 . gen double x21 = x1*1 + invnorm(uniform())
+
+    55 . gen double x22 = x1*0.25 + x21*0.75 + invnorm(uniform())
+
+    56 . gen double x23 = x1*0.4 + x21*0.6 + x22*0.4 + invnorm(uniform())
+
+    57 . gen double y = x1*1 + x21*2 + x22*0.5 + x23*0.75 + invnorm(uniform())
+
+    58 . gen cluster = floor((_n - 1) / 50) + 1
+
+    59 . save /Users/leonardstimpfle/Desktop/gelbach/data.dta, replace
+      file /Users/leonardstimpfle/Desktop/gelbach/data.dta saved
+
+    60 .
+    61 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    62 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    63 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .1237726    19.65   0.000     2.190102    2.675282
+                g2 |   1.006828   .0746041    13.50   0.000     .8606062    1.153049
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    64 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    65 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    66 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .0941471    25.84   0.000     2.248167    2.617217
+                g2 |   1.006828   .0883146    11.40   0.000     .8337343    1.179921
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    67 .
+    68 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    69 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    70 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .1079025    17.79   0.000       1.7081     2.13107
+                g2 |   1.519934   .0923266    16.46   0.000     1.338977    1.700891
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    71 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    72 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    73 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .0753572    25.47   0.000     1.771888    2.067283
+                g2 |   1.519934   .0835353    18.20   0.000     1.356208     1.68366
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    74 .
+    75 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    76 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    77 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    78 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    79 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    80 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    81 .
+    82 . translate @Results /Users/leonardstimpfle/Desktop/gelbach/gelbach.txt
+      file /Users/leonardstimpfle/Desktop/gelbach/gelbach.txt already exists
+      r(602);
+
+      end of do-file
+
+      r(602);
+
+    83 . do "/var/folders/bf/bk8w5pp90s13q64t_jgc2jmr0000gn/T//SD22039.000000"
+
+    84 . clear all
+
+    85 . // Create data for Gelbach example
+    86 . set seed 0
+
+    87 . set obs 500
+      Number of observations (_N) was 0, now 500.
+
+    88 . gen double x1 = invnorm(uniform())
+
+    89 . gen double x21 = x1*1 + invnorm(uniform())
+
+    90 . gen double x22 = x1*0.25 + x21*0.75 + invnorm(uniform())
+
+    91 . gen double x23 = x1*0.4 + x21*0.6 + x22*0.4 + invnorm(uniform())
+
+    92 . gen double y = x1*1 + x21*2 + x22*0.5 + x23*0.75 + invnorm(uniform())
+
+    93 . gen cluster = floor((_n - 1) / 50) + 1
+
+    94 . save /Users/leonardstimpfle/Desktop/gelbach/data.dta, replace
+      file /Users/leonardstimpfle/Desktop/gelbach/data.dta saved
+
+    95 .
+    96 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+    97 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+    98 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .1237726    19.65   0.000     2.190102    2.675282
+                g2 |   1.006828   .0746041    13.50   0.000     .8606062    1.153049
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+    99 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 x22 : g2=x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+   100 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+   101 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21 x22
+
+      g2 = x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   2.432692   .0941471    25.84   0.000     2.248167    2.617217
+                g2 |   1.006828   .0883146    11.40   0.000     .8337343    1.179921
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+   102 .
+   103 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+   104 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+   105 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .1079025    17.79   0.000       1.7081     2.13107
+                g2 |   1.519934   .0923266    16.46   0.000     1.338977    1.700891
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+   106 . b1x2 y, x1all(x1) x2all(x2*) x2delta(g1 = x21 : g2=x22 x23) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+   107 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+   108 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      g1  = x21
+
+      g2 = x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+                g1 |   1.919585   .0753572    25.47   0.000     1.771888    2.067283
+                g2 |   1.519934   .0835353    18.20   0.000     1.356208     1.68366
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+   109 .
+   110 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) robust
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+   111 . b1x2: reg y x1    , robust
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .1524578    28.80   0.000     4.091651    4.689275
+             _cons |  -.0021631    .149041    -0.01   0.988     -.294278    .2899518
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+   112 . b1x2: reg y x1  x21 x22 x23    , robust
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0710249    13.39   0.000     .8117372     1.09015
+               x21 |   1.956069   .0607509    32.20   0.000     1.836999    2.075139
+               x22 |   .5320202   .0447704    11.88   0.000     .4442719    .6197685
+               x23 |   .7323302   .0433795    16.88   0.000      .647308    .8173525
+             _cons |   .0415917    .045118     0.92   0.357    -.0468379    .1300212
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+              __TC |    3.43952   .1513416    22.73   0.000     3.142896    3.736144
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+   113 . b1x2 y, x1all(x1) x2all(x2*) x1only(x1) cluster(cluster)
+
+                                                            Number of obs = 500
+
+
+      Restricted regression:
+
+   114 . b1x2: reg y x1    ,  cluster(cluster)
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   4.390463   .0982639    44.68   0.000     4.197869    4.583057
+             _cons |  -.0021631   .1998555    -0.01   0.991    -.3938728    .3895466
+      ------------------------------------------------------------------------------
+
+      Unrestricted regression:
+
+   115 . b1x2: reg y x1  x21 x22 x23    ,  cluster(cluster)
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+                x1 |   .9509434   .0628269    15.14   0.000     .8278049    1.074082
+               x21 |   1.956069   .0318644    61.39   0.000     1.893616    2.018522
+               x22 |   .5320202   .0418596    12.71   0.000     .4499769    .6140636
+               x23 |   .7323302   .0526284    13.92   0.000     .6291804    .8354801
+             _cons |   .0415917   .0319527     1.30   0.193    -.0210344    .1042177
+      ------------------------------------------------------------------------------
+
+      Decomposition of changes in coefficients on x1 vars:
+
+             x1
+
+      into parts due to these groups:
+
+      ALL  = x21 x22 x23
+
+      ------------------------------------------------------------------------------
+                 y | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+      -------------+----------------------------------------------------------------
+      x1           |
+               ALL |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+              __TC |    3.43952   .1037513    33.15   0.000     3.236171    3.642868
+      ------------------------------------------------------------------------------
+
+      Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+            The reported covariance between this coef and all others is zero.
+            This is NOT correct!!
+
+      Done with -b1x2-.
+
+
+   116 .
+   117 . translate @Results /Users/leonardstimpfle/Desktop/gelbach/gelbach.txt, replace

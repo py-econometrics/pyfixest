@@ -1,4 +1,7 @@
 import re
+import warnings
+from collections import Counter
+from collections.abc import ValuesView
 from typing import Optional, Union
 
 import numpy as np
@@ -13,9 +16,13 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 def etable(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
+    models: ModelInputType,
     type: str = "gt",
     signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
@@ -40,8 +47,8 @@ def etable(
 
     Parameters
     ----------
-    models : list
-        A list of models of type Feols, Feiv, Fepois.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
@@ -117,6 +124,21 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    fit1 = pf.feols("Y~X1 + X2 | f1", df)
+    fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
+
+    pf.etable([fit1, fit2])
+    ```
     """
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
@@ -131,11 +153,6 @@ def etable(
         assert (
             signif_code[0] < signif_code[1] < signif_code[2]
         ), "signif_code must be in increasing order"
-
-    # Check if models is of type FixestMulti
-    # If so, convert it to a list of models
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
 
     models = _post_processing_input_checks(models)
 
@@ -464,9 +481,7 @@ def etable(
     return None
 
 
-def summary(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti], digits: int = 3
-) -> None:
+def summary(models: ModelInputType, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -476,8 +491,8 @@ def summary(
 
     Parameters
     ----------
-    models : list[Union[Feols, Fepois, Feiv]] or FixestMulti.
-            The models to be summarized.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
 
@@ -550,8 +565,8 @@ def summary(
 
 
 def _post_processing_input_checks(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-) -> list[Union[Feols, Fepois]]:
+    models: ModelInputType, check_duplicate_model_names: bool = False
+) -> list[Union[Feols, Fepois, Feiv]]:
     """
     Perform input checks for post-processing models.
 
@@ -560,6 +575,10 @@ def _post_processing_input_checks(
         models : Union[List[Union[Feols, Fepois, Feiv]], FixestMulti]
                 The models to be checked. This can either be a list of models
                 (Feols, Fepois, Feiv) or a single FixestMulti object.
+        check_duplicate_model_names : bool, optional
+                Whether to check for duplicate model names. Default is False.
+                Mostly used to avoid overlapping models in plots created via
+                pf.coefplot() and pf.iplot().
 
     Returns
     -------
@@ -572,34 +591,43 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    # check if models instance of Feols or Fepois
-    if isinstance(models, (Feols, Fepois)):
-        models = [models]
+    models_list: list[Union[Feols, Fepois, Feiv]] = []
 
-    else:
-        if isinstance(models, (list, type({}.values()))):
-            for model in models:
-                if not isinstance(model, (Feols, Fepois)):
-                    raise TypeError(
-                        f"""
-                        Each element of the passed list needs to be of type Feols
-                        or Fepois, but {type(model)} was passed. If you want to
-                        summarize a FixestMulti object, please use FixestMulti.to_list()
-                        to convert it to a list of Feols or Fepois instances.
-                        """
-                    )
-
+    if isinstance(models, (Feols, Fepois, Feiv)):
+        models_list = [models]
+    elif isinstance(models, FixestMulti):
+        models_list = models.to_list()
+    elif isinstance(models, (list, ValuesView)):
+        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
+            models_list = models
         else:
             raise TypeError(
-                """
-                The models argument must be either a list of Feols or Fepois instances, or
-                simply a single Feols or Fepois instance. The models argument does not accept instances
-                of type FixestMulti - please use models.to_list() to convert the FixestMulti
-                instance to a list of Feols or Fepois instances.
-                """
+                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
             )
+    else:
+        raise TypeError("Invalid type for models argument.")
 
-    return models
+    if check_duplicate_model_names:
+        # create model_name_plot attribute to differentiate between models with the
+        # same model_name / model formula
+        all_model_names = [model._model_name for model in models_list]
+        for model in models_list:
+            model._model_name_plot = model._model_name
+
+        counter = Counter(all_model_names)
+        duplicate_model_names = [item for item, count in counter.items() if count > 1]
+
+        for duplicate_model in duplicate_model_names:
+            duplicates = [
+                model for model in models_list if model._model_name == duplicate_model
+            ]
+            for i, model in enumerate(duplicates):
+                model._model_name_plot = f"Model {i}: {model._model_name}"
+                warnings.warn(
+                    f"The _model_name attribute {model._model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+                )
+
+    return models_list
 
 
 def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
@@ -1202,6 +1230,18 @@ def dtable(
     Returns
     -------
     A table in the specified format.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
+    ```
     """
     if stats is None:
         stats = ["count", "mean", "std"]
