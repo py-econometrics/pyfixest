@@ -1809,7 +1809,6 @@ class Feols:
 
         _validate_literal_argument(type, PredictionType)
 
-        # import pdb; pdb.set_trace()
         if newdata is None:
             if type == "link" or self._method == "feols":
                 return self._Y_hat_link

@@ -292,8 +292,8 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_link = mu.flatten()
-        self._Y_hat_response = np.exp(self._Y_hat_link)
+        self._Y_hat_link = np.log(mu.flatten())
+        self._Y_hat_response = mu.flatten()
         # needed for the calculation of the vcov
 
         # update for inference
@@ -396,9 +396,8 @@ class Fepois(Feols):
                 "Prediction with new fixed effects is not supported for Poisson regression."
             )
 
-        y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
-
-        if type == "response" and self._has_fixef and newdata is not None:
+        y_hat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        if type == "response":
             y_hat = np.exp(y_hat)
 
         return y_hat

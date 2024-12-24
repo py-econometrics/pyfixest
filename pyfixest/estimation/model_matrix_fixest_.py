@@ -209,11 +209,11 @@ def model_matrix_fixest(
     }
 
 
-def _get_na_index(N: int, Y_index: pd.Series) -> np.ndarray:
+def _get_na_index(N: int, Y_index: pd.Series[int]) -> np.ndarray:
     all_indices = np.arange(N)
     max_index = all_indices.max() + 1
     mask = np.ones(max_index, dtype=bool)
-    Y_index_arr = Y_index.to_numpy()
+    Y_index_arr = Y_index.to_numpy(dtype=int)
     mask[Y_index_arr] = False
     na_index = np.nonzero(mask)[0]
     return na_index
