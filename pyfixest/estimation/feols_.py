@@ -3,7 +3,7 @@ import gc
 import re
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
@@ -1844,9 +1844,9 @@ class Feols:
             fixef_dicts = {}
             for f in fvals:
                 fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
-                    fdict.keys()
-                )
+                omitted_cat = {
+                    str(x) for x in self._data[f].unique() if str(x) not in fdict
+                }
                 if omitted_cat:
                     fdict.update({x: 0 for x in omitted_cat})
                 fixef_dicts[f"C({f})"] = fdict
@@ -2514,7 +2514,7 @@ def _get_vcov_type(vcov: str, fval: str):
 
 def _drop_multicollinear_variables(
     X: np.ndarray, names: list[str], collin_tol: float
-) -> tuple[np.ndarray, list[str], list[str], list[int]]:
+) -> Any:
     """
     Check for multicollinearity in the design matrices X and Z.
 
