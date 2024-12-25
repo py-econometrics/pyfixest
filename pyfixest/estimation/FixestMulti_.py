@@ -4,11 +4,13 @@ from typing import Optional, Union
 
 import pandas as pd
 
-from pyfixest.estimation.feglm import Fegaussian, Felogit, Feprobit
+from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.felogit_ import Felogit
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 

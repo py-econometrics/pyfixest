@@ -3,17 +3,20 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 
 from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.fepois_ import _check_for_separation
+
+# from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
-class Feglm(Fepois, ABC):
+class Feglm(Feols, ABC):
     "Abstract base class for the estimation of a fixed-effects GLM model."
 
     def __init__(
@@ -46,8 +49,8 @@ class Feglm(Fepois, ABC):
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
-            tol=tol,
-            maxiter=maxiter,
+            # tol=tol,
+            # maxiter=maxiter,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
             lookup_demeaned_data=lookup_demeaned_data,
@@ -59,7 +62,73 @@ class Feglm(Fepois, ABC):
             sample_split_value=sample_split_value,
         )
 
+        _glm_input_checks(drop_singletons=drop_singletons, tol=tol, maxiter=maxiter)
+
+        self.maxiter = maxiter
+        self.tol = tol
+        self.convergence = False
+        self.separation_check = separation_check
+
+        self._support_crv3_inference = True
+        self._support_iid_inference = True
+        self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
+
+        self._Y_hat_response = np.array([])
+        self.deviance = None
+        self._Xbeta = np.array([])
+
         self._method = "feglm"
+
+    def prepare_model_matrix(self):
+        "Prepare model inputs for estimation."
+        super().prepare_model_matrix()
+
+        # check if Y is a weakly positive integer
+        self._Y = _to_integer(self._Y)
+        # check that self._Y is a weakly positive integer
+        if np.any(self._Y < 0):
+            raise ValueError(
+                "The dependent variable must be a weakly positive integer."
+            )
+
+        # check for separation
+        na_separation: list[int] = []
+        if (
+            self._fe is not None
+            and self.separation_check is not None
+            and self.separation_check  # not an empty list
+        ):
+            na_separation = _check_for_separation(
+                Y=self._Y,
+                X=self._X,
+                fe=self._fe,
+                fml=self._fml,
+                data=self._data,
+                methods=self.separation_check,
+            )
+
+        if na_separation:
+            self._Y.drop(na_separation, axis=0, inplace=True)
+            self._X.drop(na_separation, axis=0, inplace=True)
+            self._fe.drop(na_separation, axis=0, inplace=True)
+            self._data.drop(na_separation, axis=0, inplace=True)
+            self._N = self._Y.shape[0]
+
+            self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
+            self.n_separation_na = len(na_separation)
+
+    def to_array(self):
+        "Turn estimation DataFrames to np arrays."
+        self._Y, self._X, self._Z = (
+            self._Y.to_numpy(),
+            self._X.to_numpy(),
+            self._X.to_numpy(),
+        )
+        if self._fe is not None:
+            self._fe = self._fe.to_numpy()
+            if self._fe.ndim == 1:
+                self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self):
         "Fit the GLM model via iterated weighted least squares."
@@ -141,12 +210,10 @@ class Feglm(Fepois, ABC):
                 step_halfing_tolerance=1e-12,
             )
 
-            print("beta:", beta)
-
         self._beta_hat = beta.flatten()
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
-        # (Y - self._Y_hat)
+
         # needed for the calculation of the vcov
 
         # _update for inference
@@ -361,229 +428,87 @@ class Feglm(Fepois, ABC):
 
         return beta, eta, mu, deviance, step_accepted
 
-
-class Felogit(Feglm):
-    "Class for the estimation of a fixed-effects logit model."
-
-    def __init__(
+    def predict(
         self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
-        collin_tol: float,
-        fixef_tol: float,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: str = "np.linalg.solve",
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
-    ):
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            separation_check=separation_check,
-        )
+        newdata: Optional[DataFrameType] = None,
+        atol: float = 1e-6,
+        btol: float = 1e-6,
+        type: PredictionType = "link",
+    ) -> np.ndarray:
+        """
+        Return predicted values from regression model.
 
-        self._method = "feglm-logit"
+        Return a flat np.array with predicted values of the regression model.
+        If new fixed effect levels are introduced in `newdata`, predicted values
+        for such observations
+        will be set to NaN.
 
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return -2 * np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
+        Parameters
+        ----------
+        newdata : Union[None, pd.DataFrame], optional
+            A pd.DataFrame with the new data, to be used for prediction.
+            If None (default), uses the data used for fitting the model.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/
+                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        type : str, optional
+            The type of prediction to be computed.
+            Can be either "response" (default) or "link".
+            If type="response", the output is at the level of the response variable,
+            i.e., it is the expected predictor E(Y|X).
+            If "link", the output is at the level of the explanatory variables,
+            i.e., the linear predictor X @ beta.
+        atol : Float, default 1e-6
+            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : Float, default 1e-6
+            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return 1.0
+        Returns
+        -------
+        np.ndarray
+            A flat array with the predicted values of the regression model.
+        """
+        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        if type == "response":
+            yhat = self._get_mu(theta=yhat)
 
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return np.log(1 + np.exp(theta))
-
-    # def _get_c(self, y, phi):
-    #    return 0
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return np.exp(theta) / (1 + np.exp(theta))
-
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return np.log(mu / (1 - mu))
-
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        return 1 / (mu * (1 - mu))
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return np.log(mu / (1 - mu))
-
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return mu * (1 - mu)
+        return yhat
 
 
-class Feprobit(Feglm):
-    "Class for the estimation of a fixed-effects probit model."
+def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
+    """
+    Perform input checks for Fepois constructor arguments.
 
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
-        collin_tol: float,
-        fixef_tol: float,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: str = "np.linalg.solve",
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
-    ):
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            separation_check=separation_check,
-        )
+    Parameters
+    ----------
+    drop_singletons : bool
+        Whether to drop singleton fixed effects.
+    tol : float
+        Tolerance level for convergence check.
+    maxiter : int
+        Maximum number of iterations.
 
-        self._method = "feglm-probit"
-
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return -2 * np.sum(
-            y * np.log(norm.cdf(mu)) + (1 - y) * np.log(1 - norm.cdf(mu))
-        )
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return 1.0
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        raise ValueError("The function _get_b is not implemented for the probit model.")
-        return None
-
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return norm.cdf(theta)
-
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return norm.ppf(mu)
-
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        return 1 / norm.pdf(norm.ppf(mu))
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return norm.ppf(mu)
-
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return mu * (1 - mu)
-
-
-class Fegaussian(Feglm):
-    "Class for the estimation of a fixed-effects GLM with normal errors."
-
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
-        collin_tol: float,
-        fixef_tol: float,
-        lookup_demeaned_data: dict[str, pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: str = "np.linalg.solve",
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
-        separation_check: Optional[list[str]] = None,
-    ):
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            separation_check=separation_check,
-        )
-
-        self._method = "feglm-gaussian"
-
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return np.sum((y - mu) ** 2)
-
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        return np.var(theta)
-
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        return theta**2 / 2
-
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        return theta
-
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        return mu
-
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
-
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        return mu
-
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        return np.ones_like(mu)
+    Returns
+    -------
+    None
+    """
+    # drop singletons must be logical
+    if not isinstance(drop_singletons, bool):
+        raise TypeError("drop_singletons must be logical.")
+    # tol must be numeric and between 0 and 1
+    if not isinstance(tol, (int, float)):
+        raise TypeError("tol must be numeric.")
+    if tol <= 0 or tol >= 1:
+        raise AssertionError("tol must be between 0 and 1.")
+    # maxiter must be integer and greater than 0
+    if not isinstance(maxiter, int):
+        raise TypeError("maxiter must be integer.")
+    if maxiter <= 0:
+        raise AssertionError("maxiter must be greater than 0.")

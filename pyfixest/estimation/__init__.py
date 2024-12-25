@@ -10,16 +10,18 @@ from pyfixest.estimation.estimation import (
     feols,
     fepois,
 )
-from pyfixest.estimation.feglm import Felogit
+from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import (
     Feiv,
 )
+from pyfixest.estimation.felogit_ import Felogit
 from pyfixest.estimation.feols_ import (
     Feols,
 )
 from pyfixest.estimation.fepois_ import (
     Fepois,
 )
+from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
@@ -33,13 +35,17 @@ from pyfixest.estimation.multcomp import (
 )
 
 __all__ = [
+    "Fegaussian",
     "Feiv",
+    "Felogit",
     "Feols",
     "Fepois",
+    "Feprobit",
     "FixestMulti",
     "bonferroni",
     "demean",
     "detect_singletons",
+    "feglm",
     "feols",
     "fepois",
     "literals",
