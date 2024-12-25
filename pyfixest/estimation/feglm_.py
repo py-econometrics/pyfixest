@@ -242,6 +242,9 @@ class Feglm(Feols, ABC):
         if _convergence:
             self._convergence = True
 
+    def _vcov_iid(self):
+        return self._bread
+
     @abstractmethod
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
         "Compute the deviance for the GLM family."

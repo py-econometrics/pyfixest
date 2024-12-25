@@ -674,14 +674,8 @@ class Feols:
     def _vcov_iid(self):
         _N = self._N
         _u_hat = self._u_hat
-        _method = self._method
         _bread = self._bread
-
-        if _method in ["feols", "feglm-gaussian"]:
-            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method in ["fepois", "feglm-logit", "feglm-probit"]:
-            sigma2 = 1
-
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         _vcov = _bread * sigma2
 
         return _vcov

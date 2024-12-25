@@ -738,7 +738,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
         )
 
     # compare SEs
-    if False:
+    if True:
         py_probit_se = fit_probit.se().xs("X1")
         py_logit_se = fit_logit.se().xs("X1")
         py_gaussian_se = fit_gaussian.se().xs("X1")
@@ -752,11 +752,22 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
         r_gaussian_se = fixest_df_gaussian["std.error"]
 
         check_absolute_diff(
-            py_probit_se, r_probit_se, 1e-04, "py_probit_se != r_probit_se"
+            py_probit_se,
+            r_probit_se,
+            1e-04,
+            f"py_probit_se != r_probit_se for inference {inference}",
         )
-        check_absolute_diff(py_logit_se, r_logit_se, 1e-04, "py_logit_se != r_logit_se")
         check_absolute_diff(
-            py_gaussian_se, r_gaussian_se, 1e-04, "py_gaussian_se != r_gaussian_se"
+            py_logit_se,
+            r_logit_se,
+            1e-04,
+            f"py_logit_se != r_logit_se for inference {inference}",
+        )
+        check_absolute_diff(
+            py_gaussian_se,
+            r_gaussian_se,
+            1e-04,
+            f"py_gaussian_se != r_gaussian_se for inference {inference}",
         )
 
 
