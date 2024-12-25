@@ -1,4 +1,5 @@
 import re
+from typing import get_args
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.estimation import literals
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.set_rpy2_path import update_r_paths
@@ -32,6 +34,9 @@ atol = 1e-08
 
 iwls_maxiter = 25
 iwls_tol = 1e-08
+
+# currently, bug when using predict with newdata and i() or C() or "^" syntax
+blocked_transforms = ["i(", "^", "poly("]
 
 ols_fmls = [
     ("Y~X1"),
@@ -279,10 +284,7 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
 
-        # currently, bug when using predict with newdata and i() or C() or "^" syntax
-        blocked_transforms = ["i(", "^", "poly("]
         blocked_transform_found = any(bt in fml for bt in blocked_transforms)
-
         if blocked_transform_found:
             with pytest.raises(NotImplementedError):
                 py_predict_newsample = mod.predict(
@@ -382,7 +384,7 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dropna", [False])
+@pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
@@ -470,22 +472,61 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
-        py_predict_response = mod.predict(type="response")
+        py_predict_default = mod.predict(atol=1e-12, btol=1e-12)
+        r_predict_default = stats.predict(r_fixest)
+        py_predict_response = mod.predict(type="response", atol=1e-12, btol=1e-12)
         py_predict_link = mod.predict(type="link")
-        r_predict_response = stats.predict(r_fixest, type="response")
+        r_predict_response = stats.predict(
+            r_fixest, type="response", atol=1e-12, btol=1e-12
+        )
         r_predict_link = stats.predict(r_fixest, type="link")
+
+        check_absolute_diff(
+            py_predict_default[0:5],
+            r_predict_default[0:5],
+            1e-04 if mod._has_fixef else 1e-07,
+            "py_predict_default != r_predict_default",
+        )
+
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],
-            1e-07,
+            1e-03 if mod._has_fixef else 1e-07,
             "py_predict_response != r_predict_response",
         )
         check_absolute_diff(
             py_predict_link[0:5],
             r_predict_link[0:5],
-            1e-07,
+            1e-03 if mod._has_fixef else 1e-07,
             "py_predict_link != r_predict_link",
         )
+
+        # check prediction with newdata
+        blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+        if blocked_transform_found:
+            with pytest.raises(NotImplementedError):
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+                )
+        else:
+            for prediction_type in get_args(literals.PredictionType):
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100],
+                    type=prediction_type,
+                    atol=1e-12,
+                    btol=1e-12,
+                )
+                r_predict_newsample = stats.predict(
+                    r_fixest,
+                    newdata=data_r.iloc[0:100],
+                    type=prediction_type,
+                )
+                check_absolute_diff(
+                    na_omit(py_predict_newsample)[0:5],
+                    na_omit(r_predict_newsample)[0:5],
+                    1e-03 if mod._has_fixef else 1e-07,
+                    f"py_predict_newdata != r_predict_newdata when type == '{prediction_type}'",
+                )
 
 
 @pytest.mark.slow

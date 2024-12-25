@@ -49,10 +49,16 @@ def test_ols_prediction_internally(data, fml, weights):
     Currently only for OLS.
     """
     # predict via feols, without fixed effect
+
+    data = data.dropna()
+
     mod = feols(fml=fml, data=data, vcov="iid", weights=weights)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)
-    np.allclose(original_prediction, updated_prediction)
+
+    assert np.allclose(
+        original_prediction, updated_prediction
+    ), "preditction with newdata should be identical"
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
@@ -62,9 +68,22 @@ def test_ols_prediction_internally(data, fml, weights):
         np.allclose(original_prediction, updated_prediction)
 
 
-@pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1*X2", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
+    data = data.dropna()
+    mod = fepois(fml=fml, data=data, vcov="iid")
+    original_prediction = mod.predict()
+
+    if mod._has_fixef:
+        with pytest.raises(NotImplementedError):
+            updated_prediction = mod.predict(newdata=mod._data)
+    else:
+        updated_prediction = mod.predict(newdata=mod._data)
+        assert np.allclose(
+            original_prediction, updated_prediction
+        ), "preditction with newdata should be identical"
+
     with pytest.raises(TypeError):
         fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)

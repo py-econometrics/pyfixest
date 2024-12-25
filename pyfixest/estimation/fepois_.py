@@ -292,9 +292,8 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
-        # (Y - self._Y_hat)
+        self._Y_hat_response = mu.flatten()
         # needed for the calculation of the vcov
 
         # update for inference
@@ -350,7 +349,7 @@ class Fepois(Feols):
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: PredictionType = "link",
+        type: PredictionType = "response",
     ) -> np.ndarray:
         """
         Return predicted values from regression model.
@@ -392,15 +391,20 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
-        if self._has_fixef:
+        if self._has_fixef and newdata is not None:
             raise NotImplementedError(
-                "Prediction with fixed effects is not yet implemented for Poisson regression."
+                "Predictions with new data and fixed effect are not yet supported."
             )
-        if newdata is not None:
-            raise NotImplementedError(
-                "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
-            )
-        return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
+
+        y_hat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+
+        if type == "response":
+            y_hat = np.exp(y_hat)
+
+        # if self._has_fixef and newdata is not None:
+        #    y_hat = np.log(y_hat)
+
+        return y_hat
 
 
 def _check_for_separation(

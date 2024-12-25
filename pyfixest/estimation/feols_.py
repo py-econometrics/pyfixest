@@ -3,7 +3,7 @@ import gc
 import re
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
@@ -1766,7 +1766,7 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: PredictionType = "link",
+        type: PredictionType = "response",
     ) -> np.ndarray:
         """
         Predict values of the model on new data.
@@ -1774,6 +1774,11 @@ class Feols:
         Return a flat np.array with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
         for such observations will be set to NaN.
+
+        The method always returns predictions for the "link" function; for linear
+        models, this is identical to the "response" function. Transformations to
+        "response" functions for models where this is not the case - GLMs -
+        this happens in the dedicated predict method of the respective GLM class.
 
         Parameters
         ----------
@@ -1810,10 +1815,7 @@ class Feols:
         _validate_literal_argument(type, PredictionType)
 
         if newdata is None:
-            if type == "link" or self._method == "feols":
-                return self._Y_hat_link
-            else:
-                return self._Y_hat_response
+            return self._Y_hat_link
 
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
@@ -1835,16 +1837,14 @@ class Feols:
 
         if self._has_fixef:
             if self._sumFE is None:
-                self.fixef(atol, btol)
+                self.fixef(atol=atol, btol=btol)
             fvals = self._fixef.split("+")
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
             fixef_dicts = {}
             for f in fvals:
                 fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
-                    fdict.keys()
-                )
+                omitted_cat = {str(x) for x in self._data[f].unique() if x not in fdict}
                 if omitted_cat:
                     fdict.update({x: 0 for x in omitted_cat})
                 fixef_dicts[f"C({f})"] = fdict
@@ -2512,7 +2512,7 @@ def _get_vcov_type(vcov: str, fval: str):
 
 def _drop_multicollinear_variables(
     X: np.ndarray, names: list[str], collin_tol: float
-) -> tuple[np.ndarray, list[str], list[str], list[int]]:
+) -> Any:
     """
     Check for multicollinearity in the design matrices X and Z.
 

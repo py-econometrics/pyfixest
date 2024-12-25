@@ -167,7 +167,7 @@ def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
         return _data
 
 
-def _extract_variable_level(fe_string: str):
+def _extract_variable_level(fe_string: str) -> tuple[str, str]:
     """
     Extract the variable and level from a given string.
 
