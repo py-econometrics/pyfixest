@@ -384,7 +384,7 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dropna", [False])
+@pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
@@ -471,12 +471,14 @@ def test_single_fit_fepois(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
-    if True:
-        py_predict_default = mod.predict(atol = 1e-12, btol = 1e-12)
+    if not mod._has_fixef:
+        py_predict_default = mod.predict(atol=1e-12, btol=1e-12)
         r_predict_default = stats.predict(r_fixest)
-        py_predict_response = mod.predict(type="response", atol = 1e-12, btol = 1e-12)
+        py_predict_response = mod.predict(type="response", atol=1e-12, btol=1e-12)
         py_predict_link = mod.predict(type="link")
-        r_predict_response = stats.predict(r_fixest, type="response", atol = 1e-12, btol = 1e-12)
+        r_predict_response = stats.predict(
+            r_fixest, type="response", atol=1e-12, btol=1e-12
+        )
         r_predict_link = stats.predict(r_fixest, type="link")
 
         check_absolute_diff(

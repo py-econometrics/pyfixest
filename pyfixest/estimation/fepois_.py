@@ -292,7 +292,7 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_link = np.log(mu.flatten())
+        self._Y_hat_link = eta.flatten()
         self._Y_hat_response = mu.flatten()
         # needed for the calculation of the vcov
 
@@ -391,16 +391,21 @@ class Fepois(Feols):
         np.ndarray
             A flat array with the predicted values of the regression model.
         """
+        if self._has_fixef and newdata is not None:
+            raise NotImplementedError(
+                "Predictions with new data and fixed effect are not yet supported."
+            )
 
         y_hat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
 
         if type == "response":
             y_hat = np.exp(y_hat)
 
-        if self._has_fixef and newdata is not None:
-            y_hat = np.log(y_hat)
+        # if self._has_fixef and newdata is not None:
+        #    y_hat = np.log(y_hat)
 
         return y_hat
+
 
 def _check_for_separation(
     fml: str,

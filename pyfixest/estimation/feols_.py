@@ -1775,6 +1775,11 @@ class Feols:
         If new fixed effect levels are introduced in `newdata`, predicted values
         for such observations will be set to NaN.
 
+        The method always returns predictions for the "link" function; for linear
+        models, this is identical to the "response" function. Transformations to
+        "response" functions for models where this is not the case - GLMs -
+        this happens in the dedicated predict method of the respective GLM class.
+
         Parameters
         ----------
         newdata : Optional[DataFrameType], optional
@@ -1810,10 +1815,7 @@ class Feols:
         _validate_literal_argument(type, PredictionType)
 
         if newdata is None:
-            #if type == "link" or self._method == "feols":
             return self._Y_hat_link
-            #else:
-            #    return self._Y_hat_response
 
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
@@ -1835,7 +1837,7 @@ class Feols:
 
         if self._has_fixef:
             if self._sumFE is None:
-                self.fixef(atol, btol)
+                self.fixef(atol=atol, btol=btol)
             fvals = self._fixef.split("+")
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
