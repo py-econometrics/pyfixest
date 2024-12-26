@@ -57,6 +57,14 @@ class Feprobit(Feglm):
 
         self._method = "feglm-probit"
 
+    def _check_dependent_variable(self) -> None:
+        "Check if the dependent variable is binary with values 0 and 1."
+        Y_unique = np.unique(self._Y)
+        if len(Y_unique) != 2:
+            raise ValueError("The dependent variable must have two unique values.")
+        if np.any(~np.isin(Y_unique, [0, 1])):
+            raise ValueError("The dependent variable must be binary (0 or 1).")
+
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
         return -2 * np.sum(
             y * np.log(norm.cdf(mu)) + (1 - y) * np.log(1 - norm.cdf(mu))

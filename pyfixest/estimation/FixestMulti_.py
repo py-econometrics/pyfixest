@@ -362,6 +362,7 @@ class FixestMulti:
 
                         FIT.prepare_model_matrix()
                         FIT.to_array()
+                        FIT._check_dependent_variable()
                         FIT.drop_multicol_vars()
 
                     elif _method == "feglm-probit":
@@ -389,6 +390,7 @@ class FixestMulti:
 
                         FIT.prepare_model_matrix()
                         FIT.to_array()
+                        FIT._check_dependent_variable()
                         FIT.drop_multicol_vars()
 
                     elif _method == "feglm-gaussian":
@@ -416,6 +418,7 @@ class FixestMulti:
 
                         FIT.prepare_model_matrix()
                         FIT.to_array()
+                        FIT._check_dependent_variable()
                         FIT.drop_multicol_vars()
 
                     elif _method == "compression":

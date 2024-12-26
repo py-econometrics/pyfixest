@@ -86,12 +86,6 @@ class Feglm(Feols, ABC):
 
         # check if Y is a weakly positive integer
         self._Y = _to_integer(self._Y)
-        # check that self._Y is a weakly positive integer
-        if np.any(self._Y < 0):
-            raise ValueError(
-                "The dependent variable must be a weakly positive integer."
-            )
-
         # check for separation
         na_separation: list[int] = []
         if (
@@ -117,6 +111,10 @@ class Feglm(Feols, ABC):
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
+
+    @abstractmethod
+    def _check_dependent_variable(self):
+        pass
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."

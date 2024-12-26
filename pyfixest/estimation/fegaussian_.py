@@ -56,6 +56,9 @@ class Fegaussian(Feglm):
 
         self._method = "feglm-gaussian"
 
+    def _check_dependent_variable(self) -> None:
+        pass
+
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
         return np.sum((y - mu) ** 2)
 
