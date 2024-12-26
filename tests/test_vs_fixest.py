@@ -597,8 +597,7 @@ def test_single_fit_iv(
 @pytest.mark.parametrize("seed", [170])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("fml", glm_fmls)
-# @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("inference", ["iid"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 def test_glm_vs_fixest(N, seed, dropna, fml, inference):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
