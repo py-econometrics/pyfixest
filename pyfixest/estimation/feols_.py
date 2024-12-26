@@ -3,7 +3,7 @@ import gc
 import re
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union, Any
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
