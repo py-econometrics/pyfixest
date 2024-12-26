@@ -1820,14 +1820,16 @@ class Feols:
         if self._has_fixef:
             fixef = self._fixef.split("+")
 
-            mismatched_fixef_types = [x for x in fixef if newdata[x].dtypes != self._data[x].dtypes]
+            mismatched_fixef_types = [
+                x for x in fixef if newdata[x].dtypes != self._data[x].dtypes
+            ]
             if mismatched_fixef_types:
                 warnings.warn(
-                        f"Data types of fixed effects {mismatched_fixef_types} "
-                        "do not match the model data. This leads to mismatched keys "
-                        "in the fixed effect dictionary, and as a result, to NaN "
-                        "predictions for columns with mismatched keys."
-                        )
+                    f"Data types of fixed effects {mismatched_fixef_types} "
+                    "do not match the model data. This leads to mismatched keys "
+                    "in the fixed effect dictionary, and as a result, to NaN "
+                    "predictions for columns with mismatched keys."
+                )
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]

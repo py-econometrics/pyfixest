@@ -265,6 +265,7 @@ def test_predict_dtype_error():
     with pytest.warns(UserWarning):
         fit.predict(newdata=data.iloc[0:100])
 
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
