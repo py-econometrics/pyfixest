@@ -13,7 +13,7 @@ from pyfixest.estimation.fepois_ import _check_for_separation
 
 # from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.utils.dev_utils import DataFrameType, _to_integer
+from pyfixest.utils.dev_utils import DataFrameType
 
 
 class Feglm(Feols, ABC):
@@ -85,7 +85,7 @@ class Feglm(Feols, ABC):
         super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
-        self._Y = _to_integer(self._Y)
+        # self._Y = _to_integer(self._Y)
         # check for separation
         na_separation: list[int] = []
         if (
@@ -221,22 +221,23 @@ class Feglm(Feols, ABC):
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat = self._Y.flatten() - self._X @ beta
-        # self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        # self._u_hat = self._Y.flatten() - self._X @ beta
+        self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
         # self._u_hat_working = resid
         # self._u_hat_response = self._Y - np.exp(eta)
 
+        # sqrt(W) applied & demeaned
         self._Y = v_dotdot
         self._X = X_dotdot
         self._Z = self._Z
-        self.deviance = deviance
 
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
-
         self._scores = self._u_hat[:, None] * self._X
         self._hessian = X_dotdot.T @ X_dotdot
+
+        self.deviance = deviance
 
         if _convergence:
             self._convergence = True
