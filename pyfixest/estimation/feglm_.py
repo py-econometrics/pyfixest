@@ -191,7 +191,6 @@ class Feglm(Feols, ABC):
             # Step 5: _update using step halfing (if required)
 
             deviance_old = deviance.copy()
-            mu_old = mu.copy()
 
             beta, eta, mu, deviance, step_accepted = self._update_eta_step_halfing(
                 Y=_Y,
@@ -215,18 +214,20 @@ class Feglm(Feols, ABC):
         # needed for the calculation of the vcov
 
         # _update for inference
-        self._weights = mu_old
-        self._irls_weights = mu
+        self._weights = W_tilde
+        self._irls_weights = W_tilde
+
         # if only one dim
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        self._u_hat = self._Y.flatten() - self._X @ beta
+        # self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
         # self._u_hat_working = resid
         # self._u_hat_response = self._Y - np.exp(eta)
 
-        self._Y = (v_dotdot / np.sqrt(W_tilde)).reshape(-1, 1)
-        self._X = X_dotdot / np.sqrt(W_tilde.reshape(-1, 1))
+        self._Y = v_dotdot
+        self._X = X_dotdot
         self._Z = self._Z
         self.deviance = deviance
 
