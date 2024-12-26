@@ -743,6 +743,14 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
         py_logit_se = fit_logit.se().xs("X1")
         py_gaussian_se = fit_gaussian.se().xs("X1")
 
+        py_probit_vcov = fit_probit._vcov[0, 0]
+        py_logit_vcov = fit_logit._vcov[0, 0]
+        py_gaussian_vcov = fit_gaussian._vcov[0, 0]
+
+        py_probit_irls_weights = fit_probit._irls_weights.flatten()
+        py_logit_irls_weights = fit_logit._irls_weights.flatten()
+        py_gaussian_irls_weights = fit_gaussian._irls_weights.flatten()
+
         fixest_df_probit = _get_r_df(fit_probit_r)
         fixest_df_logit = _get_r_df(fit_logit_r)
         fixest_df_gaussian = _get_r_df(fit_gaussian_r)
@@ -751,7 +759,15 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
         r_logit_se = fixest_df_logit["std.error"]
         r_gaussian_se = fixest_df_gaussian["std.error"]
 
-        if False:
+        r_probit_vcov = stats.vcov(fit_probit_r)[0, 0]
+        r_logit_vcov = stats.vcov(fit_logit_r)[0, 0]
+        r_gaussian_vcov = stats.vcov(fit_gaussian_r)[0, 0]
+
+        r_probit_irls_weights = fit_probit_r.rx2("irls_weights")
+        r_logit_irls_weights = fit_logit_r.rx2("irls_weights")
+        r_gaussian_irls_weights = fit_gaussian_r.rx2("irls_weights")
+
+        if True:
             check_absolute_diff(
                 py_probit_se,
                 r_probit_se,
@@ -764,11 +780,54 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
                 1e-04,
                 f"py_logit_se != r_logit_se for inference {inference}",
             )
+
+            check_absolute_diff(
+                py_gaussian_se,
+                r_gaussian_se,
+                1e-08,
+                f"py_gaussian_se != r_gaussian_se for inference {inference}",
+            )
+
         check_absolute_diff(
-            py_gaussian_se,
-            r_gaussian_se,
+            py_gaussian_vcov,
+            r_gaussian_vcov,
+            1e-08,
+            f"py_gaussian_vcov != r_gaussian_vcov for inference {inference}",
+        )
+
+        check_absolute_diff(
+            py_logit_vcov,
+            r_logit_vcov,
+            1e-08,
+            f"py_logit_vcov != r_logit_vcov for inference {inference}",
+        )
+
+        check_absolute_diff(
+            py_probit_vcov,
+            r_probit_vcov,
+            1e-08,
+            f"py_probit_vcov != r_probit_vcov for inference {inference}",
+        )
+
+        check_absolute_diff(
+            py_gaussian_irls_weights[0:5],
+            r_gaussian_irls_weights[0:5],
+            1e-06,
+            f"py_gaussian_irls_weights != r_gaussian_irls_weights for inference {inference}",
+        )
+
+        check_absolute_diff(
+            py_probit_irls_weights[0:5],
+            r_probit_irls_weights[0:5],
             1e-04,
-            f"py_gaussian_se != r_gaussian_se for inference {inference}",
+            f"py_probit_irls_weights != r_probit_irls_weights for inference {inference}",
+        )
+
+        check_absolute_diff(
+            py_logit_irls_weights[0:5],
+            r_logit_irls_weights[0:5],
+            1e-04,
+            f"py_logit_irls_weights != r_gaussian_logit_weights for inference {inference}",
         )
 
 

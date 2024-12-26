@@ -82,3 +82,12 @@ class Fegaussian(Feglm):
 
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return np.ones_like(mu)
+
+    def _vcov_iid(self):
+        _N = self._N
+        _u_hat = self._u_hat
+        _bread = self._bread
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N)
+        _vcov = _bread * sigma2
+
+        return _vcov

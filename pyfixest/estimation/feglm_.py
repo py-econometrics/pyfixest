@@ -214,8 +214,8 @@ class Feglm(Feols, ABC):
         # needed for the calculation of the vcov
 
         # _update for inference
-        self._weights = W_tilde
-        self._irls_weights = W_tilde
+        self._weights = W
+        self._irls_weights = W
 
         # if only one dim
         if self._weights.ndim == 1:
