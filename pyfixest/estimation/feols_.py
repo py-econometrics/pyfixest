@@ -3,7 +3,7 @@ import gc
 import re
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Union, Any
 
 import numba as nb
 import numpy as np
@@ -2526,7 +2526,7 @@ def _get_vcov_type(vcov: str, fval: str):
 
 def _drop_multicollinear_variables(
     X: np.ndarray, names: list[str], collin_tol: float
-) -> tuple[np.ndarray, list[str], list[str], list[int]]:
+) -> Any:
     """
     Check for multicollinearity in the design matrices X and Z.
 
