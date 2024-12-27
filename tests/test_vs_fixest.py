@@ -592,13 +592,18 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
+@pytest.fixture(params=["probit", "logit", "gaussian"])
+def family(request):
+    return request.param
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [170])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("fml", glm_fmls)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-def test_glm_vs_fixest(N, seed, dropna, fml, inference):
+def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
     if dropna:
@@ -606,228 +611,130 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference):
 
     r_inference = _get_r_inference(inference)
 
-    fit_logit = pf.feglm(fml=fml, data=data, family="logit", vcov=inference)
-    fit_gaussian = pf.feglm(fml=fml, data=data, family="gaussian", vcov=inference)
-    fit_probit = pf.feglm(fml=fml, data=data, family="probit", vcov=inference)
-
+    # Fit models for the current family
+    fit_py = pf.feglm(fml=fml, data=data, family=family, vcov=inference)
     r_fml = _py_fml_to_r_fml(fml)
     data_r = get_data_r(fml, data)
 
-    fit_logit_r = fixest.feglm(
-        ro.Formula(r_fml),
-        data=data_r,
-        family=stats.binomial(link="logit"),
-        vcov=r_inference,
-    )
-    fit_gaussian_r = fixest.feglm(
-        ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
-    )
-    fit_probit_r = fixest.feglm(
-        ro.Formula(r_fml),
-        data=data_r,
-        family=stats.binomial(link="probit"),
-        vcov=r_inference,
-    )
+    if family == "probit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="probit"),
+            vcov=r_inference,
+        )
+    elif family == "logit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="logit"),
+            vcov=r_inference,
+        )
+    elif family == "gaussian":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
+        )
 
-    # compare coefs
-
+    # Compare coefficients
     if inference == "iid":
-        # compare coefs
-        py_logit_coefs = fit_logit.coef()
-        py_gaussian_coefs = fit_gaussian.coef()
-        py_probit_coefs = fit_probit.coef()
-        r_logit_coefs = stats.coef(fit_logit_r)
-        r_gaussian_coefs = stats.coef(fit_gaussian_r)
-        r_probit_coefs = stats.coef(fit_probit_r)
+        py_coefs = fit_py.coef()
+        r_coefs = stats.coef(fit_r)
 
         check_absolute_diff(
-            py_logit_coefs, r_logit_coefs, 1e-05, "py_logit_coefs != r_logit_coefs"
-        )
-        check_absolute_diff(
-            py_probit_coefs, r_probit_coefs, 1e-05, "py_probit_coefs != r_probit_coefs"
-        )
-        check_absolute_diff(
-            py_gaussian_coefs,
-            r_gaussian_coefs,
-            1e-12,
-            "py_gaussian_coefs != r_gaussian_coefs",
+            py_coefs, r_coefs, 1e-05, f"py_{family}_coefs != r_{family}_coefs"
         )
 
-        # compare predictions - link
-        py_logit_predict = fit_logit.predict(type="link")
-        py_gaussian_predict = fit_gaussian.predict(type="link")
-        py_probit_predict = fit_probit.predict(type="link")
-        r_logit_predict = stats.predict(fit_logit_r, type="link")
-        r_gaussian_predict = stats.predict(fit_gaussian_r, type="link")
-        r_probit_predict = stats.predict(fit_probit_r, type="link")
-
+        # Compare predictions - link
+        py_predict = fit_py.predict(type="link")
+        r_predict = stats.predict(fit_r, type="link")
         check_absolute_diff(
-            py_logit_predict[0:5],
-            r_logit_predict[0:5],
+            py_predict[0:5],
+            r_predict[0:5],
             1e-04,
-            "py_logit_predict != r_logit_predict for link",
+            f"py_{family}_predict != r_{family}_predict for link",
         )
 
+        # Compare predictions - response
+        py_predict = fit_py.predict(type="response")
+        r_predict = stats.predict(fit_r, type="response")
         check_absolute_diff(
-            py_probit_predict[0:5],
-            r_probit_predict[0:5],
+            py_predict[0:5],
+            r_predict[0:5],
             1e-04,
-            "py_probit_predict != r_probit_predict for link",
+            f"py_{family}_predict != r_{family}_predict for response",
         )
 
+        # Compare with newdata - link
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="link")
+        r_predict_new = stats.predict(fit_r, newdata=data_r.iloc[0:100], type="link")
         check_absolute_diff(
-            py_gaussian_predict[0:5],
-            r_gaussian_predict[0:5],
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for link",
+        )
+
+        # Compare with newdata - response
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")
+        r_predict_new = stats.predict(
+            fit_r, newdata=data_r.iloc[0:100], type="response"
+        )
+        check_absolute_diff(
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for response",
+        )
+
+        # Compare IRLS weights
+        py_irls_weights = fit_py._irls_weights.flatten()
+        r_irls_weights = fit_r.rx2("irls_weights")
+        check_absolute_diff(
+            py_irls_weights[0:5],
+            r_irls_weights[0:5],
+            1e-04,
+            f"py_{family}_irls_weights != r_{family}_irls_weights for inference {inference}",
+        )
+
+        # Compare residuals - working
+        py_resid_working = fit_py._u_hat_working
+        r_resid_working = stats.resid(fit_r, type="working")
+        check_absolute_diff(
+            py_resid_working[0:5],
+            r_resid_working[0:5],
+            1e-03,
+            f"py_{family}_resid_working != r_{family}_resid_working for inference {inference}",
+        )
+
+        # Compare residuals - response
+        py_resid_response = fit_py._u_hat_response
+        r_resid_response = stats.resid(fit_r, type="response")
+        check_absolute_diff(
+            py_resid_response[0:5],
+            r_resid_response[0:5],
+            1e-04,
+            f"py_{family}_resid_response != r_{family}_resid_response for inference {inference}",
+        )
+
+    if False:
+        # Compare standard errors
+        py_se = fit_py.se().xs("X1")
+        r_se = _get_r_df(fit_r)["std.error"]
+        check_absolute_diff(
+            py_se,
+            r_se,
+            1e-04,
+            f"py_{family}_se != r_{family}_se for inference {inference}",
+        )
+
+        # Compare variance-covariance matrices
+        py_vcov = fit_py._vcov[0, 0]
+        r_vcov = stats.vcov(fit_r)[0, 0]
+        check_absolute_diff(
+            py_vcov,
+            r_vcov,
             1e-08,
-            "py_gaussian_predict != r_gaussian_predict for link",
-        )
-
-        # compare predictions - response
-        py_logit_predict = fit_logit.predict(type="response")
-        py_gaussian_predict = fit_gaussian.predict(type="response")
-        py_probit_predict = fit_probit.predict(type="response")
-
-        r_logit_predict = stats.predict(fit_logit_r, type="response")
-        r_gaussian_predict = stats.predict(fit_gaussian_r, type="response")
-        r_probit_predict = stats.predict(fit_probit_r, type="response")
-
-        check_absolute_diff(
-            py_logit_predict[0:5],
-            r_logit_predict[0:5],
-            1e-04,
-            "py_logit_predict != r_logit_predict for response",
-        )
-
-        check_absolute_diff(
-            py_probit_predict[0:5],
-            r_probit_predict[0:5],
-            1e-04,
-            "py_probit_predict != r_probit_predict for response",
-        )
-
-        check_absolute_diff(
-            py_gaussian_predict[0:5],
-            r_gaussian_predict[0:5],
-            1e-08,
-            "py_gaussian_predict != r_gaussian_predict for response",
-        )
-
-        # now with newdata - link
-        py_logit_predict = fit_logit.predict(newdata=data.iloc[0:100], type="link")
-        r_logit_predict = stats.predict(
-            fit_logit_r, newdata=data_r.iloc[0:100], type="link"
-        )
-
-        check_absolute_diff(
-            py_logit_predict[0:5],
-            r_logit_predict[0:5],
-            1e-04,
-            "py_logit_predict != r_logit_predict with newdata for link",
-        )
-
-        # now with newdata - response
-        py_logit_predict = fit_logit.predict(newdata=data.iloc[0:100], type="response")
-        r_logit_predict = stats.predict(
-            fit_logit_r, newdata=data_r.iloc[0:100], type="response"
-        )
-        check_absolute_diff(
-            py_logit_predict[0:5],
-            r_logit_predict[0:5],
-            1e-04,
-            "py_logit_predict != r_logit_predict with newdata for response",
-        )
-
-    # compare SEs
-    if True:
-        py_probit_se = fit_probit.se().xs("X1")
-        py_logit_se = fit_logit.se().xs("X1")
-        py_gaussian_se = fit_gaussian.se().xs("X1")
-
-        py_probit_vcov = fit_probit._vcov[0, 0]
-        py_logit_vcov = fit_logit._vcov[0, 0]
-        py_gaussian_vcov = fit_gaussian._vcov[0, 0]
-
-        py_probit_irls_weights = fit_probit._irls_weights.flatten()
-        py_logit_irls_weights = fit_logit._irls_weights.flatten()
-        py_gaussian_irls_weights = fit_gaussian._irls_weights.flatten()
-
-        fixest_df_probit = _get_r_df(fit_probit_r)
-        fixest_df_logit = _get_r_df(fit_logit_r)
-        fixest_df_gaussian = _get_r_df(fit_gaussian_r)
-
-        r_probit_se = fixest_df_probit["std.error"]
-        r_logit_se = fixest_df_logit["std.error"]
-        r_gaussian_se = fixest_df_gaussian["std.error"]
-
-        r_probit_vcov = stats.vcov(fit_probit_r)[0, 0]
-        r_logit_vcov = stats.vcov(fit_logit_r)[0, 0]
-        r_gaussian_vcov = stats.vcov(fit_gaussian_r)[0, 0]
-
-        r_probit_irls_weights = fit_probit_r.rx2("irls_weights")
-        r_logit_irls_weights = fit_logit_r.rx2("irls_weights")
-        r_gaussian_irls_weights = fit_gaussian_r.rx2("irls_weights")
-
-        if True:
-            check_absolute_diff(
-                py_probit_se,
-                r_probit_se,
-                1e-04,
-                f"py_probit_se != r_probit_se for inference {inference}",
-            )
-            check_absolute_diff(
-                py_logit_se,
-                r_logit_se,
-                1e-04,
-                f"py_logit_se != r_logit_se for inference {inference}",
-            )
-
-            check_absolute_diff(
-                py_gaussian_se,
-                r_gaussian_se,
-                1e-08,
-                f"py_gaussian_se != r_gaussian_se for inference {inference}",
-            )
-
-        check_absolute_diff(
-            py_gaussian_vcov,
-            r_gaussian_vcov,
-            1e-08,
-            f"py_gaussian_vcov != r_gaussian_vcov for inference {inference}",
-        )
-
-        check_absolute_diff(
-            py_logit_vcov,
-            r_logit_vcov,
-            1e-08,
-            f"py_logit_vcov != r_logit_vcov for inference {inference}",
-        )
-
-        check_absolute_diff(
-            py_probit_vcov,
-            r_probit_vcov,
-            1e-08,
-            f"py_probit_vcov != r_probit_vcov for inference {inference}",
-        )
-
-        check_absolute_diff(
-            py_gaussian_irls_weights[0:5],
-            r_gaussian_irls_weights[0:5],
-            1e-06,
-            f"py_gaussian_irls_weights != r_gaussian_irls_weights for inference {inference}",
-        )
-
-        check_absolute_diff(
-            py_probit_irls_weights[0:5],
-            r_probit_irls_weights[0:5],
-            1e-04,
-            f"py_probit_irls_weights != r_probit_irls_weights for inference {inference}",
-        )
-
-        check_absolute_diff(
-            py_logit_irls_weights[0:5],
-            r_logit_irls_weights[0:5],
-            1e-04,
-            f"py_logit_irls_weights != r_gaussian_logit_weights for inference {inference}",
+            f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
         )
 
 

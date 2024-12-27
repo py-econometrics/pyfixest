@@ -222,7 +222,17 @@ class Feglm(Feols, ABC):
             self._weights = self._weights.reshape((self._N, 1))
 
         # self._u_hat = self._Y.flatten() - self._X @ beta
-        self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
+        self._u_hat_working = (v_dotdot / W_tilde).flatten()
+
+        self._scores_response = self._u_hat_response[:, None] * self._X
+        self._scores_working = self._u_hat_working[:, None] * self._X
+
+        self._scores = self._scores_working.copy()
+
+        # self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        # import pdb; pdb.set_trace()
+        self._u_hat = self._u_hat_working
         # self._u_hat_working = resid
         # self._u_hat_response = self._Y - np.exp(eta)
 
@@ -234,7 +244,7 @@ class Feglm(Feols, ABC):
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
-        self._scores = self._u_hat[:, None] * self._X
+        # self._scores = self._u_hat[:, None] * self._X
         self._hessian = X_dotdot.T @ X_dotdot
 
         self.deviance = deviance
