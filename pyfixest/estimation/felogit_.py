@@ -87,3 +87,7 @@ class Felogit(Feglm):
 
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return mu * (1 - mu)
+
+    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
+
+        return (y - mu)[:, None] * X

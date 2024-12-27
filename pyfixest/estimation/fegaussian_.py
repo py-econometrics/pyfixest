@@ -91,3 +91,6 @@ class Fegaussian(Feglm):
         _vcov = _bread * sigma2
 
         return _vcov
+
+    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
+        return (y - mu)[:, None] * X

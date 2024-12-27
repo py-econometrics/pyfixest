@@ -1,3 +1,4 @@
+from tkinter import N
 from typing import Optional, Union
 
 import numpy as np
@@ -91,3 +92,8 @@ class Feprobit(Feglm):
 
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return mu * (1 - mu)
+
+    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
+
+        residual = (y - mu) / (mu * (1 - mu)) * norm.pdf(eta)
+        return residual[:,None] * X

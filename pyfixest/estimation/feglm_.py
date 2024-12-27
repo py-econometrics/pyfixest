@@ -228,24 +228,27 @@ class Feglm(Feols, ABC):
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
 
-        self._scores = self._scores_working.copy()
+        self._scores = self._get_score(y=_Y.flatten(), X=_X, mu=mu, eta=eta)
 
-        # self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
-        # import pdb; pdb.set_trace()
+        #self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
+        #import pdb; pdb.set_trace()
         self._u_hat = self._u_hat_working
         # self._u_hat_working = resid
         # self._u_hat_response = self._Y - np.exp(eta)
 
         # sqrt(W) applied & demeaned
-        self._Y = v_dotdot
-        self._X = X_dotdot
-        self._Z = self._Z
+        #self._Y = v_dotdot
+        #self._X = X_dotdot
+        #self._Z = self._Z
 
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
-        # self._scores = self._u_hat[:, None] * self._X
+        #self._scores = self._u_hat[:, None] * self._X
+
+        #import pdb; pdb.set_trace()
         self._hessian = X_dotdot.T @ X_dotdot
+        #self._hessian = self._X.T @ self._weights * self._X
 
         self.deviance = deviance
 
@@ -254,6 +257,10 @@ class Feglm(Feols, ABC):
 
     def _vcov_iid(self):
         return self._bread
+
+    @abstractmethod
+    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
+        pass
 
     @abstractmethod
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:

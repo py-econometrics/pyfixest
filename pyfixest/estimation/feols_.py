@@ -690,6 +690,8 @@ class Feols:
         _is_iv = self._is_iv
         _bread = self._bread
 
+        _bread = np.linalg.inv(self._hessian)
+
         if _vcov_type_detail in ["hetero", "HC1"]:
             transformed_scores = _scores
         elif _vcov_type_detail in ["HC2", "HC3"]:
