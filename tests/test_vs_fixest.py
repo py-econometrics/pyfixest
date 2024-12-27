@@ -592,17 +592,13 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
-@pytest.fixture(params=["probit", "logit", "gaussian"])
-def family(request):
-    return request.param
-
-
 @pytest.mark.slow
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [170])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("fml", glm_fmls)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
 def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
