@@ -408,6 +408,28 @@ q1 = np.array([2.0, 1.0])
 fit.wald_test(R=R1, q=q1)
 ```
 
+# Other GLMs (without fixed effects)
+
+`PyFixest` supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function.
+
+```{python}
+data_glm = pf.get_data(N=100, seed = 170)
+data["Y"] = np.where(data["Y"] > 0, 1, 0)
+
+fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
+fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
+fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
+
+pf.etable([
+    fit_gaussian,
+    fit_logit,
+    fit_probit
+])
+```
+
+Please take a look at the [marginaleffects vignette](https://py-econometrics.github.io/pyfixest/marginaleffects.html) to learn how to compute multiple
+quantities of interest as average marginal effects or predicted means.
+
 # Multiple Estimation
 
 `PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. The meaning of these options is explained in the [Multiple Estimations](https://lrberge.github.io/fixest/articles/multiple_estimations.html) vignette of the `fixest` package:
