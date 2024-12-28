@@ -598,10 +598,9 @@ def test_single_fit_iv(
 @pytest.mark.parametrize("seed", [170])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("fml", glm_fmls)
-#@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("inference", ["iid",  "hetero"])
+# @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("inference", ["iid", "hetero"])
 @pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
-
 def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
@@ -719,36 +718,31 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         py_scores = fit_py._scores
         r_scores = fit_r.rx2("scores")
         check_absolute_diff(
-            py_scores[0,:],
-            r_scores[0,:],
+            py_scores[0, :],
+            r_scores[0, :],
             1e-04,
             f"py_{family}_scores != r_{family}_scores for inference {inference}",
         )
 
+    # Compare standard errors
+    py_se = fit_py.se().xs("X1")
+    r_se = _get_r_df(fit_r)["std.error"]
+    check_absolute_diff(
+        py_se,
+        r_se,
+        1e-04,
+        f"py_{family}_se != r_{family}_se for inference {inference}",
+    )
 
-
-    if True:
-
-        # Compare standard errors
-        py_se = fit_py.se().xs("X1")
-        r_se = _get_r_df(fit_r)["std.error"]
-        check_absolute_diff(
-            py_se,
-            r_se,
-            1e-04,
-            f"py_{family}_se != r_{family}_se for inference {inference}",
-        )
-
-    if True:
-        # Compare variance-covariance matrices
-        py_vcov = fit_py._vcov[0, 0]
-        r_vcov = stats.vcov(fit_r)[0, 0]
-        check_absolute_diff(
-            py_vcov,
-            r_vcov,
-            1e-04,
-            f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
-        )
+    # Compare variance-covariance matrices
+    py_vcov = fit_py._vcov[0, 0]
+    r_vcov = stats.vcov(fit_r)[0, 0]
+    check_absolute_diff(
+        py_vcov,
+        r_vcov,
+        1e-04,
+        f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
+    )
 
 
 @pytest.mark.slow

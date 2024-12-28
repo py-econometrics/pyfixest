@@ -710,35 +710,27 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        _Z = self._Z
-        _u_hat = self._u_hat
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         _bread = self._bread
 
-        k_instruments = _Z.shape[1]
-        meat = np.zeros((k_instruments, k_instruments))
+        _scores = self._scores
 
-        # deviance uniquely for Poisson
-
-        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
+        k = _scores.shape[1]
+        meat = np.zeros((k, k))
 
         meat = _crv1_meat_loop(
-            _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64),
+            scores=_scores.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )
 
-        if _is_iv is False:
-            _vcov = _bread @ meat @ _bread
-        else:
-            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
-            _vcov = _bread @ meat @ _bread
+        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX if _is_iv else meat
+        vcov = _bread @ meat @ _bread
 
-        return _vcov
+        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         _k = self._k
