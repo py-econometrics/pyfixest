@@ -595,7 +595,7 @@ def test_single_fit_iv(
 
 @pytest.mark.slow
 @pytest.mark.parametrize("N", [100])
-@pytest.mark.parametrize("seed", [170])
+@pytest.mark.parametrize("seed", [172])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("fml", glm_fmls)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])

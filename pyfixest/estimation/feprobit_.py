@@ -1,4 +1,4 @@
-from tkinter import N
+import warnings
 from typing import Optional, Union
 
 import numpy as np
@@ -67,9 +67,17 @@ class Feprobit(Feglm):
             raise ValueError("The dependent variable must be binary (0 or 1).")
 
     def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        return -2 * np.sum(
-            y * np.log(norm.cdf(mu)) + (1 - y) * np.log(1 - norm.cdf(mu))
-        )
+        ll_fitted = np.sum(y * np.log(mu) + (1 - y) * np.log(1 - mu))
+
+        # divide by zero warnings because of the log(0) terms
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ll_saturated = np.sum(
+                np.where(y == 0, 0, y * np.log(y))
+                + np.where(y == 1, 0, (1 - y) * np.log(1 - y))
+            )
+
+        return -2.0 * (ll_fitted - ll_saturated)
 
     def _get_dispersion_phi(self, theta: np.ndarray) -> float:
         return 1.0
@@ -93,7 +101,8 @@ class Feprobit(Feglm):
     def _get_V(self, mu: np.ndarray) -> np.ndarray:
         return mu * (1 - mu)
 
-    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
-
+    def _get_score(
+        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
+    ) -> np.ndarray:
         residual = (y - mu) / (mu * (1 - mu)) * norm.pdf(eta)
-        return residual[:,None] * X
+        return residual[:, None] * X
