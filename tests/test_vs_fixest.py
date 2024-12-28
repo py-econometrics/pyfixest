@@ -726,6 +726,16 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
                 f"py_{family}_scores != r_{family}_scores for inference {inference}",
             )
 
+        # Compare deviance
+        py_deviance = fit_py.deviance
+        r_deviance = fit_r.rx2("deviance")
+        check_absolute_diff(
+            py_deviance,
+            r_deviance,
+            1e-05,
+            f"py_{family}_deviance != r_{family}_deviance for inference {inference}",
+        )
+
     # Compare standard errors
     py_se = fit_py.se().xs("X1")
     r_se = _get_r_df(fit_r)["std.error"]
