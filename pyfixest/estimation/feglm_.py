@@ -84,6 +84,9 @@ class Feglm(Feols, ABC):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
+        if self._fe is not None:
+            raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
+
         # check if Y is a weakly positive integer
         # self._Y = _to_integer(self._Y)
         # check for separation
@@ -111,10 +114,6 @@ class Feglm(Feols, ABC):
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
-
-    @abstractmethod
-    def _check_dependent_variable(self):
-        pass
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -211,8 +210,6 @@ class Feglm(Feols, ABC):
         self._Y_hat_response = mu.flatten()
         self._Y_hat_link = eta.flatten()
 
-        # needed for the calculation of the vcov
-
         # _update for inference
         self._weights = W
         self._irls_weights = W
@@ -230,26 +227,12 @@ class Feglm(Feols, ABC):
 
         self._scores = self._get_score(y=_Y.flatten(), X=_X, mu=mu, eta=eta)
 
-        #self._u_hat = (v_dotdot - X_dotdot @ beta).flatten()
-        #import pdb; pdb.set_trace()
         self._u_hat = self._u_hat_working
-        # self._u_hat_working = resid
-        # self._u_hat_response = self._Y - np.exp(eta)
-
-        # sqrt(W) applied & demeaned
-        #self._Y = v_dotdot
-        #self._X = X_dotdot
-        #self._Z = self._Z
-
         self._tZX = np.transpose(self._Z) @ self._X
         self._tZXinv = np.linalg.inv(self._tZX)
         self._Xbeta = eta
-        #self._scores = self._u_hat[:, None] * self._X
 
-        #import pdb; pdb.set_trace()
         self._hessian = X_dotdot.T @ X_dotdot
-        #self._hessian = self._X.T @ self._weights * self._X
-
         self.deviance = deviance
 
         if _convergence:
@@ -257,56 +240,6 @@ class Feglm(Feols, ABC):
 
     def _vcov_iid(self):
         return self._bread
-
-    @abstractmethod
-    def _get_score(self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray) -> np.ndarray:
-        pass
-
-    @abstractmethod
-    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
-        "Compute the deviance for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
-        "Get the dispersion parameter phi for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_b(self, theta: np.ndarray) -> np.ndarray:
-        "Get the cumulant function b(theta) for the GLM family."
-        pass
-
-    # @abstractmethod
-    # def _get_c(self, y, phi):
-    #
-    #    "Get the function c(y, phi) for the GLM family."
-    #    pass
-
-    @abstractmethod
-    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
-        "Get the mean mu(theta) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_link(self, mu: np.ndarray) -> np.ndarray:
-        "Get the link function theta(mu) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
-        "Get the derivative of mu(theta) with respect to theta for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
-        "Get the mechanical link theta(mu) for the GLM family."
-        pass
-
-    @abstractmethod
-    def _get_V(self, mu: np.ndarray) -> np.ndarray:
-        "Get the variance function V(mu) for the GLM family."
-        pass
 
     def _update_v(
         self, y: np.ndarray, mu: np.ndarray, detadmu: np.ndarray
@@ -500,6 +433,56 @@ class Feglm(Feols, ABC):
             yhat = self._get_mu(theta=yhat)
 
         return yhat
+
+    @abstractmethod
+    def _check_dependent_variable(self):
+        pass
+
+    @abstractmethod
+    def _get_score(
+        self, y: np.ndarray, X: np.ndarray, mu: np.ndarray, eta: np.ndarray
+    ) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def _get_deviance(self, y: np.ndarray, mu: np.ndarray) -> np.ndarray:
+        "Compute the deviance for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_dispersion_phi(self, theta: np.ndarray) -> float:
+        "Get the dispersion parameter phi for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_b(self, theta: np.ndarray) -> np.ndarray:
+        "Get the cumulant function b(theta) for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_mu(self, theta: np.ndarray) -> np.ndarray:
+        "Get the mean mu(theta) for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_link(self, mu: np.ndarray) -> np.ndarray:
+        "Get the link function theta(mu) for the GLM family."
+        pass
+
+    @abstractmethod
+    def _update_detadmu(self, mu: np.ndarray) -> np.ndarray:
+        "Get the derivative of mu(theta) with respect to theta for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_theta(self, mu: np.ndarray) -> np.ndarray:
+        "Get the mechanical link theta(mu) for the GLM family."
+        pass
+
+    @abstractmethod
+    def _get_V(self, mu: np.ndarray) -> np.ndarray:
+        "Get the variance function V(mu) for the GLM family."
+        pass
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):

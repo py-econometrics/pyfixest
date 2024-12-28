@@ -722,7 +722,7 @@ def test_gelbach_errors():
         )
 
 
-def test_glm_depvar_errors():
+def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
     data = pf.get_data()
     with pytest.raises(
@@ -743,3 +743,9 @@ def test_glm_depvar_errors():
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    with pytest.raises(
+        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
+    ):
+        pf.feglm("Y ~ X1 | f1", data=data, family="probit")
