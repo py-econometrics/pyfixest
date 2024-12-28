@@ -191,7 +191,7 @@ class Feglm(Feols, ABC):
 
             deviance_old = deviance.copy()
 
-            beta, eta, mu, deviance, step_accepted = self._update_eta_step_halfing(
+            beta, eta, mu, deviance = self._update_eta_step_halfing(
                 Y=_Y,
                 beta=beta,
                 eta=eta,
@@ -218,9 +218,12 @@ class Feglm(Feols, ABC):
         if self._weights.ndim == 1:
             self._weights = self._weights.reshape((self._N, 1))
 
-        # self._u_hat = self._Y.flatten() - self._X @ beta
         self._u_hat_response = (self._Y.flatten() - self._get_mu(theta=eta)).flatten()
-        self._u_hat_working = (v_dotdot / W_tilde).flatten()
+        self._u_hat_working = (
+            self._u_hat_response
+            if self._method == "feglm-gaussian"
+            else (v_dotdot / W_tilde).flatten()
+        )
 
         self._scores_response = self._u_hat_response[:, None] * self._X
         self._scores_working = self._u_hat_working[:, None] * self._X
@@ -349,7 +352,7 @@ class Feglm(Feols, ABC):
         X_dotdot: np.ndarray,
         deviance_old: np.ndarray,
         step_halfing_tolerance: float,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, bool]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         "Update parameters, potentially using step halfing."
         alpha = 1.0
         step_accepted = False
@@ -379,7 +382,7 @@ class Feglm(Feols, ABC):
         if not step_accepted:
             raise RuntimeError("Step-halving failed to find improvement.")
 
-        return beta, eta, mu, deviance, step_accepted
+        return beta, eta, mu, deviance
 
     def predict(
         self,

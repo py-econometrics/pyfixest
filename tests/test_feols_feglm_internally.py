@@ -47,6 +47,7 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna):
     )
     check_absolute_diff(fit_ols._weights[0:5], fit_gaussian._weights[0:5], tol=1e-10)
     check_absolute_diff(fit_ols._u_hat[0:5], fit_gaussian._u_hat[0:5], tol=1e-10)
+    check_absolute_diff(fit_ols._scores[0, :], fit_gaussian._scores[0, :], tol=1e-10)
 
     if inference != "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
