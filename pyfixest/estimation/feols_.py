@@ -1856,9 +1856,9 @@ class Feols:
             fixef_dicts = {}
             for f in fvals:
                 fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = [
-                    str(x) for x in self._data[f].unique().tolist() if x not in fdict
-                ]
+                omitted_cat = set(map(str, self._data[f].unique())) - set(
+                    map(str, fdict.keys())
+                )
                 if omitted_cat:
                     fdict.update({x: 0 for x in omitted_cat})
                 fixef_dicts[f"C({f})"] = fdict
