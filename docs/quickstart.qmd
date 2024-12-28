@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from lets_plot import LetsPlot
+from marginaleffects import slopes, avg_slopes
 
 import pyfixest as pf
 
@@ -434,8 +435,13 @@ fit_logit.predict(type = "response")[0:5]
 fit_logit.predict(type = "link")[0:5]
 ```
 
-Please take a look at the [marginaleffects vignette](https://py-econometrics.github.io/pyfixest/marginaleffects.html) to learn how to compute multiple
-quantities of interest as average marginal effects or predicted means.
+You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):
+
+```{python}
+avg_slopes(fit_logit, variables = "X1")
+```
+
+Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.
 
 # Multiple Estimation
 
