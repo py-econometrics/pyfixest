@@ -415,7 +415,7 @@ fit.wald_test(R=R1, q=q1)
 
 ```{python}
 data_glm = pf.get_data(N=100, seed = 170)
-data["Y"] = np.where(data["Y"] > 0, 1, 0)
+data_glm["Y"] = np.where(data["Y"] > 0, 1, 0)
 
 fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
 fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
