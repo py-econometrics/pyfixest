@@ -427,6 +427,13 @@ pf.etable([
 ])
 ```
 
+You can make predictions on the `response` and `link` scale via the `predict()` method:
+
+```{python}
+fit_logit.predict(type = "response")[0:5]
+fit_logit.predict(type = "link")[0:5]
+```
+
 Please take a look at the [marginaleffects vignette](https://py-econometrics.github.io/pyfixest/marginaleffects.html) to learn how to compute multiple
 quantities of interest as average marginal effects or predicted means.
 
