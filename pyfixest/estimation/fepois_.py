@@ -345,6 +345,9 @@ class Fepois(Feols):
         else:
             raise ValueError("type must be one of 'response' or 'working'.")
 
+    def _vcov_iid(self):
+        return self._bread
+
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
