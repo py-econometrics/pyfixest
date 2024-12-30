@@ -1,10 +1,16 @@
 import numpy as np
 import pyhdfe
+import pytest
 
-from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.demean_ import demean, demean_jax
 
 
-def test_demean():
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean, demean_jax],
+    ids=["demean_numba", "demean_jax"],
+)
+def test_demean(demean_func):
     rng = np.random.default_rng(929291)
 
     N = 10_000
@@ -18,12 +24,12 @@ def test_demean():
     weights = np.ones(N)
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x)
-    res_pyfixest, success = demean(x, flist, weights, tol=1e-10)
+    res_pyfixest, success = demean_func(x, flist, weights, tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)
 
     # with weights
     weights = rng.uniform(0, 1, N).reshape((N, 1))
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x, weights)
-    res_pyfixest, success = demean(x, flist, weights.flatten(), tol=1e-10)
+    res_pyfixest, success = demean_func(x, flist, weights.flatten(), tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)

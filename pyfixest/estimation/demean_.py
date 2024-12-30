@@ -1,8 +1,12 @@
+from functools import partial
 from typing import Any, Optional
 
+import jax
+import jax.numpy as jnp
 import numba as nb
 import numpy as np
 import pandas as pd
+from jax import config, lax
 
 
 def demean_model(
@@ -298,3 +302,62 @@ def demean(
 
     success = not not_converged
     return (res, success)
+
+
+def demean_jax(
+    x: np.ndarray,
+    flist: np.ndarray,
+    weights: np.ndarray,
+    tol: float = 1e-08,
+    maxiter: int = 100_000,
+) -> tuple[np.ndarray, bool]:
+    """Optimized JAX implementation for demeaning."""
+    # Enable float64 precision
+    config.update("jax_enable_x64", True)
+
+    # Convert inputs to JAX arrays
+    x_jax = jnp.array(x, dtype=jnp.float64)
+    flist_jax = jnp.array(flist, dtype=jnp.int32)
+    weights_jax = jnp.array(weights, dtype=jnp.float64)
+
+    # Get static dimensions
+    n_factors = int(flist.shape[1])
+    n_groups = int(flist.max() + 1)
+
+    @partial(jax.jit, static_argnums=(2,))
+    def _demean_step(x_curr, x_prev, n_factors):
+        """Single demeaning step."""
+
+        def _apply_factor(j, val):
+            factor_ids = flist_jax[:, j]
+            w = weights_jax[:, None]
+            wx = val * w
+
+            # Compute weighted sums and counts
+            sums = jax.vmap(
+                lambda col: jnp.bincount(factor_ids, weights=col, length=n_groups)
+            )(wx.T).T
+            counts = jnp.bincount(factor_ids, weights=weights_jax, length=n_groups)
+
+            # Compute and apply means
+            means = sums / (counts[:, None])
+            return val - means[factor_ids]
+
+        return lax.fori_loop(0, n_factors, _apply_factor, x_curr)
+
+    # Initialize arrays
+    x_curr = x_jax
+    x_prev = x_jax - 1.0
+
+    # Main iteration loop
+    for _ in range(maxiter):
+        x_new = _demean_step(x_curr, x_prev, n_factors)
+
+        # Check convergence
+        if jnp.max(jnp.abs(x_new - x_curr)) < tol:
+            return np.array(x_new), True
+
+        x_prev = x_curr
+        x_curr = x_new
+
+    return np.array(x_curr), False

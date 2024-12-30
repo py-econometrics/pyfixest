@@ -23,6 +23,8 @@ dependencies = [
   "numpy>=1.19.0",
   "narwhals>=1.13.3",
   "joblib>=1.4.2,<2",
+  "jax>=0.4.13",
+  "jaxlib>=0.4.13",
 ]
 
 [tool.pixi.feature.dev.dependencies]
