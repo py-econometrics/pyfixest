@@ -2572,7 +2572,8 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index  # type: ignore[return-value]
+    return X, list(names_array), collin_vars, collin_index
+
 
 
 @nb.njit(parallel=False)
