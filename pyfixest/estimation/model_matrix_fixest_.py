@@ -1,6 +1,6 @@
 import re
 import warnings
-from typing import Optional, Union
+from typing import Optional, Union, Mapping, Any
 
 import numpy as np
 import pandas as pd
@@ -8,6 +8,7 @@ from formulaic import Formula
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.utils.utils import capture_context
 
 
 def model_matrix_fixest(
@@ -16,6 +17,7 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
+    context: Union[int, Mapping[str, Any]] = 0,
 ) -> dict:
     """
     Create model matrices for fixed effects estimation.
@@ -41,6 +43,11 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Returns
     -------
@@ -118,7 +125,10 @@ def model_matrix_fixest(
     }
 
     FML = Formula(**fml_kwargs)
-    mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
+    _context = capture_context(context)
+    mm = FML.get_model_matrix(
+        data, output="pandas", context={"factorize": factorize, **_context}
+    )
     endogvar = Z = weights_df = fe = None
 
     Y = mm["fml_second_stage"]["lhs"]

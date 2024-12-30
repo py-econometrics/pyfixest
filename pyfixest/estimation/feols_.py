@@ -3,7 +3,7 @@ import gc
 import re
 import warnings
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Union, Mapping, Any
 
 import numba as nb
 import numpy as np
@@ -41,7 +41,7 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import get_ssc, simultaneous_crit_val, capture_context
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -77,6 +77,11 @@ class Feols:
     solver : str, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Attributes
     ----------
@@ -214,6 +219,7 @@ class Feols:
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
@@ -246,6 +252,7 @@ class Feols:
         self._copy_data = copy_data
         self._lean = lean
         self._use_mundlak = False
+        self._context = capture_context(context)
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -332,6 +339,7 @@ class Feols:
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            context=self._context,
         )
 
         self._Y = mm_dict.get("Y")

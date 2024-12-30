@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Mapping, Any
 
 import pandas as pd
 
@@ -14,6 +14,7 @@ from pyfixest.estimation.literals import (
 )
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.utils import capture_context
 
 
 def feols(
@@ -34,6 +35,7 @@ def feols(
     solver: SolverOptions = "np.linalg.solve",
     use_compression: bool = False,
     reps: int = 100,
+    context: Union[int, Mapping[str, Any]] = 0,
     seed: Optional[int] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
@@ -133,6 +135,12 @@ def feols(
     reps: int
         Number of bootstrap repetitions. Only relevant for boostrap inference applied to
         compute cluster robust errors when `use_compression = True`.
+
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     seed: Optional[int]
         Seed for the random number generator. Only relevant for boostrap inference applied to
@@ -391,6 +399,7 @@ def feols(
             instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+    context = capture_context(context)
 
     _estimation_input_checks(
         fml=fml,
@@ -424,6 +433,7 @@ def feols(
         seed=seed,
         split=split,
         fsplit=fsplit,
+        context=context,
     )
 
     estimation = "feols" if not use_compression else "compression"
@@ -458,6 +468,7 @@ def fepois(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
+    context: Union[int, Mapping[str, Any]] = 0,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
@@ -544,6 +555,12 @@ def fepois(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
@@ -587,6 +604,7 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+    context = capture_context(context)
 
     # WLS currently not supported for Poisson regression
     weights = None
@@ -625,6 +643,7 @@ def fepois(
         seed=None,
         split=split,
         fsplit=fsplit,
+        context=context,
     )
 
     fixest._prepare_estimation(
