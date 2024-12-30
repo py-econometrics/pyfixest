@@ -49,8 +49,6 @@ class Feglm(Feols, ABC):
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
-            # tol=tol,
-            # maxiter=maxiter,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
             lookup_demeaned_data=lookup_demeaned_data,
@@ -74,9 +72,9 @@ class Feglm(Feols, ABC):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-        self._Y_hat_response = np.array([])
+        self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.array([])
+        self._Xbeta = np.empty(0)
 
         self._method = "feglm"
 
@@ -87,8 +85,6 @@ class Feglm(Feols, ABC):
         if self._fe is not None:
             raise NotImplementedError("Fixed effects are not yet supported for GLMs.")
 
-        # check if Y is a weakly positive integer
-        # self._Y = _to_integer(self._Y)
         # check for separation
         na_separation: list[int] = []
         if (
@@ -128,7 +124,13 @@ class Feglm(Feols, ABC):
                 self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self):
-        "Fit the GLM model via iterated weighted least squares."
+        """
+        Fit the GLM model via iterated weighted least squares.
+
+        All equations in the code refer to Stammann 'Fast and Feasible
+        Estimation of Generalized Linear Models with High-Dimensional
+        k-way fixed effects': https://arxiv.org/pdf/1707.01815
+        """
         _Y = self._Y
         _X = self._X
         _fe = self._fe
@@ -163,7 +165,6 @@ class Feglm(Feols, ABC):
 
             # Step 1: _get weights w_tilde(r-1) and v(r-1) (eq. 2.5)
             detadmu = self._update_detadmu(mu=mu)
-            # v = self._update_v(y=_Y.flatten(), mu=mu, detadmu=detadmu)
             W = self._update_W(mu=mu)
 
             # Step 2: _get v_tilde(r-1) and X_tilde(r-1) (eq. 3.2)

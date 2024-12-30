@@ -424,7 +424,7 @@ fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
 pf.etable([
     fit_gaussian,
     fit_logit,
-    fit_probit
+    fit_probit,
 ])
 ```
 
