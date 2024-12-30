@@ -2575,7 +2575,6 @@ def _drop_multicollinear_variables(
     return X, list(names_array), collin_vars, collin_index
 
 
-
 @nb.njit(parallel=False)
 def _find_collinear_variables(
     X: np.ndarray, tol: float = 1e-10
