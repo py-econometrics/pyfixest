@@ -1846,7 +1846,7 @@ class Feols:
                     fdict.keys()
                 )
                 if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})
+                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
                 fixef_dicts[f"C({f})"] = fdict
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
@@ -2572,7 +2572,7 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index
+    return X, list(names_array), collin_vars, collin_index
 
 
 @nb.njit(parallel=False)
