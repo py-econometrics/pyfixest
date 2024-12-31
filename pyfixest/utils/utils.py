@@ -335,13 +335,18 @@ def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]
     ----------
     context: Union[int, Mapping[str, Any]]
         The context from which variables (and custom transforms/etc)
-        should be inherited. When specified as an integer, it is interpreted
-        as a frame offset from the caller's frame (i.e. 0, the default,
-        means that all variables in the caller's scope should be made
-        accessible when interpreting and evaluating formulae). Otherwise, a
-        mapping from variable name to value is expected. When nesting in a
-        library, and attempting to capture user-context, make sure you
-        account for the extra frames introduced by your wrappers.
+        should be inherited.
+        
+        When specified as an integer, it is interpreted as a frame offset
+        from the caller's frame. Since we use this function in the context 
+        of a library, we need to account for the extra frames, hence
+        we add 2 to the context (one for this and one for the frame the 
+        function is being called in).
+        
+        Otherwise, a mapping from variable name to value is expected.
+        
+        When nesting in a library, and attempting to capture user-context, 
+        make sure you account for the extra frames introduced by your wrappers.
 
     Returns
     -------

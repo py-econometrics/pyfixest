@@ -157,8 +157,9 @@ def _foo():
 
 
 def test_context_capture():
-    # `_foo` is in caller's stack frame (0), `_foo` should be captured
-    context = capture_context(0)
+    # `_foo` is in caller's stack frame, if should be captured
+    # call with -1 to account for adding one more frame inside the function
+    context = capture_context(-1)
     assert "_foo" in context
 
     # `_foo` is in caller's stack frame, but we ask for a deeper stack, `_foo` should not be captured
