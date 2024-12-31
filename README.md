@@ -252,6 +252,7 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/escherpf"><img src="https://avatars.githubusercontent.com/u/3789736?v=4?s=100" width="100px;" alt="escherpf"/><br /><sub><b>escherpf</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aescherpf" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://www.ivanhigueram.com"><img src="https://avatars.githubusercontent.com/u/9004403?v=4?s=100" width="100px;" alt="Iván Higuera Mendieta"/><br /><sub><b>Iván Higuera Mendieta</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=ivanhigueram" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
