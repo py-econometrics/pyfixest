@@ -83,7 +83,7 @@ class FixestMulti:
         self._reps = reps if use_compression else None
         self._seed = seed if use_compression else None
         self._separation_check = separation_check
-        self._context = capture_context(context)
+        self._context = capture_context(context + 1)
 
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)

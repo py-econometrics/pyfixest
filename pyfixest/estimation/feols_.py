@@ -253,7 +253,7 @@ class Feols:
         self._copy_data = copy_data
         self._lean = lean
         self._use_mundlak = False
-        self._context = capture_context(context)
+        self._context = capture_context(context + 1)
 
         self._support_crv3_inference = True
         if self._weights_name is not None:

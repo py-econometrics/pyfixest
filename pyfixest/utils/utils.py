@@ -349,4 +349,4 @@ def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]
         The context that should be later passed to the Formulaic materialization
         procedure like: `.get_model_matrix(..., context=<this object>)`.
     """
-    return _capture_context(context + 2) if isinstance(context, int) else context
+    return _capture_context(context + 1) if isinstance(context, int) else context

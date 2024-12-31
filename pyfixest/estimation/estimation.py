@@ -400,7 +400,7 @@ def feols(
             instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
             """
         )
-    context = capture_context(context)
+    context = capture_context(context + 1)
 
     _estimation_input_checks(
         fml=fml,
@@ -605,7 +605,7 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
-    context = capture_context(context)
+    context = capture_context(context + 1)
 
     # WLS currently not supported for Poisson regression
     weights = None
