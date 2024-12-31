@@ -605,7 +605,7 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
-    context = capture_context(context + 1)
+    context = capture_context(context)
 
     # WLS currently not supported for Poisson regression
     weights = None

@@ -126,7 +126,7 @@ def model_matrix_fixest(
     }
 
     FML = Formula(**fml_kwargs)
-    _context = capture_context(context + 1)
+    _context = capture_context(context)
     mm = FML.get_model_matrix(
         data, output="pandas", context={"factorize": factorize, **_context}
     )
