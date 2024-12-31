@@ -257,6 +257,15 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
+def test_predict_dtype_error():
+    data = get_data()
+    fit = feols("Y ~ X1 | f1", data=data)
+
+    data["f1"] = data["f1"].fillna(0).astype(int)
+    with pytest.warns(UserWarning):
+        fit.predict(newdata=data.iloc[0:100])
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
