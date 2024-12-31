@@ -152,7 +152,7 @@ def test_rename_event_study_coefs():
 
 
 def _foo():
-    "Helper function for testing context capture"
+    "Helper function for testing context capture."
     ...
 
 
