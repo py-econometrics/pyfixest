@@ -4,7 +4,7 @@ import polars as pl
 
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.utils import rename_categoricals, rename_event_study_coefs
-from pyfixest.utils.utils import get_data, ssc
+from pyfixest.utils.utils import get_data, ssc, capture_context
 
 
 def test_multicol_overdetermined_iv():
@@ -149,3 +149,25 @@ def test_rename_event_study_coefs():
         "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
         "Intercept": "Intercept",
     }
+
+
+def _foo():
+    "Helper function for testing context capture"
+    ...
+
+
+def test_context_capture():
+
+    # `_foo` is in caller's stack frame (0), `_foo` should be captured
+    context = capture_context(0)
+    assert "_foo" in context
+
+    # `_foo` is in caller's stack frame, but we ask for a deeper stack, `_foo` should not be captured
+    context = capture_context(1)
+    assert "_foo" not in context
+
+    context = capture_context({})
+    assert {} == context
+
+    context = capture_context({"_foo": _foo})
+    assert {"_foo": _foo} == context
