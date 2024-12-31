@@ -1,5 +1,10 @@
+import copy
+from typing import List
+
 import duckdb
 import numpy as np
+import pandas as pd
+
 
 import pyfixest as pf
 from pyfixest.utils.utils import get_data
@@ -106,3 +111,38 @@ def test_duckdb_input():
     assert type(fit_pandas) is type(fit_duckdb)
     np.testing.assert_allclose(fit_pandas.coef(), fit_duckdb.coef(), rtol=1e-12)
     np.testing.assert_allclose(fit_pandas.se(), fit_duckdb.se(), rtol=1e-12)
+
+
+def _lspline(series: pd.Series, knots: List[float]) -> np.array:
+    """Generate a linear spline design matrix for the input series based on knots."""
+    vector = series.values
+    columns = []
+
+    for i, knot in enumerate(knots):
+        column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
+        columns.append(column)
+        vector = vector - column
+
+    # Add the remainder as the last column
+    columns.append(vector)
+
+    # Combine columns into a design matrix
+    return np.column_stack(columns)
+
+
+def test_context_capture():
+    data = pf.get_data()
+
+    spline_split = _lspline(data["X2"], [0, 1])
+    data["X2_0"] = spline_split[:, 0]
+    data["0_X2_1"] = spline_split[:, 1]
+    data["1_X2"] = spline_split[:, 2]
+
+    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
+
+    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
+
+    np.testing.assert_allclose(
+        context_captured_fit.coef(), explicit_fit.coef(), rtol=1e-12
+    )
+    np.testing.assert_allclose(context_captured_fit.se(), explicit_fit.se(), rtol=1e-12)
