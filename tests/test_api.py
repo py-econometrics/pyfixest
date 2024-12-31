@@ -1,6 +1,3 @@
-import copy
-from typing import List
-
 import duckdb
 import numpy as np
 import pandas as pd
@@ -113,7 +110,7 @@ def test_duckdb_input():
     np.testing.assert_allclose(fit_pandas.se(), fit_duckdb.se(), rtol=1e-12)
 
 
-def _lspline(series: pd.Series, knots: List[float]) -> np.array:
+def _lspline(series: pd.Series, knots: list[float]) -> np.array:
     """Generate a linear spline design matrix for the input series based on knots."""
     vector = series.values
     columns = []
