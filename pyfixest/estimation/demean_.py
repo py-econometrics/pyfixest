@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import numba as nb
 import numpy as np
 import pandas as pd
-from jax import config, lax
+from jax import config
 
 
 def demean_model(
@@ -304,6 +304,92 @@ def demean(
     return (res, success)
 
 
+def _create_jitted_demean(n_groups: int, n_factors: int):
+    """Create a JIT-compiled demeaning function with fixed dimensions."""
+
+    @jax.jit
+    def _demean_step(x_curr, flist_jax, weights_jax):
+        """Single demeaning step for all factors."""
+
+        def _apply_factor(carry, j):
+            """Process a single factor."""
+            x = carry
+            factor_ids = flist_jax[:, j]
+            wx = x * weights_jax[:, None]
+
+            # Compute group weights and weighted sums
+            group_weights = jnp.bincount(
+                factor_ids, weights=weights_jax, length=n_groups
+            )
+            group_sums = jax.vmap(
+                lambda col: jnp.bincount(factor_ids, weights=col, length=n_groups)
+            )(wx.T).T
+
+            # Compute and subtract means
+            means = group_sums / group_weights[:, None]
+            return x - means[factor_ids], None
+
+        # Process all factors using scan
+        result, _ = jax.lax.scan(_apply_factor, x_curr, jnp.arange(n_factors))
+        return result
+
+    return _demean_step
+
+
+@partial(jax.jit, static_argnames=("n_groups", "tol", "maxiter"))
+def _demean_jax_impl(
+    x: jnp.ndarray,
+    flist: jnp.ndarray,
+    weights: jnp.ndarray,
+    n_groups: int,
+    tol: float,
+    maxiter: int,
+) -> tuple[jnp.ndarray, bool]:
+    """JIT-compiled implementation of demeaning."""
+    # Get dimensions from shapes
+    n_factors = flist.shape[1]
+
+    def _demean_step(x_curr):
+        """Single demeaning step for all factors."""
+
+        def _apply_factor(carry, j):
+            """Process a single factor."""
+            x = carry
+            factor_ids = flist[:, j]
+            wx = x * weights[:, None]
+
+            # Compute group weights and weighted sums using static length
+            group_weights = jnp.bincount(factor_ids, weights=weights, length=n_groups)
+            group_sums = jax.vmap(
+                lambda col: jnp.bincount(factor_ids, weights=col, length=n_groups)
+            )(wx.T).T
+
+            # Compute and subtract means
+            means = group_sums / group_weights[:, None]
+            return x - means[factor_ids], None
+
+        # Process all factors using scan
+        result, _ = jax.lax.scan(_apply_factor, x_curr, jnp.arange(n_factors))
+        return result
+
+    def _cond_fun(state):
+        """Condition function for while_loop."""
+        i, x_curr, x_prev = state
+        return jnp.logical_and(i < maxiter, jnp.max(jnp.abs(x_curr - x_prev)) >= tol)
+
+    def _body_fun(state):
+        """Body function for while_loop."""
+        i, x_curr, _ = state
+        x_new = _demean_step(x_curr)
+        return i + 1, x_new, x_curr
+
+    # Run the iteration loop using while_loop
+    init_state = (0, x, x - 1.0)
+    final_i, final_x, _ = jax.lax.while_loop(_cond_fun, _body_fun, init_state)
+
+    return final_x, final_i < maxiter
+
+
 def demean_jax(
     x: np.ndarray,
     flist: np.ndarray,
@@ -311,53 +397,20 @@ def demean_jax(
     tol: float = 1e-08,
     maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]:
-    """Optimized JAX implementation for demeaning."""
+    """Fast and reliable JAX implementation with static shapes."""
     # Enable float64 precision
     config.update("jax_enable_x64", True)
 
+    # Compute n_groups before JIT
+    n_groups = int(np.max(flist) + 1)
+
     # Convert inputs to JAX arrays
-    x_jax = jnp.array(x, dtype=jnp.float64)
-    flist_jax = jnp.array(flist, dtype=jnp.int32)
-    weights_jax = jnp.array(weights, dtype=jnp.float64)
+    x_jax = jnp.asarray(x, dtype=jnp.float64)
+    flist_jax = jnp.asarray(flist, dtype=jnp.int32)
+    weights_jax = jnp.asarray(weights, dtype=jnp.float64)
 
-    # Get static dimensions
-    n_factors = int(flist.shape[1])
-    n_groups = int(flist.max() + 1)
-
-    @partial(jax.jit, static_argnums=(2,))
-    def _demean_step(x_curr, x_prev, n_factors):
-        """Single demeaning step."""
-
-        def _apply_factor(j, val):
-            factor_ids = flist_jax[:, j]
-            w = weights_jax[:, None]
-            wx = val * w
-
-            # Compute weighted sums and counts
-            sums = jax.vmap(
-                lambda col: jnp.bincount(factor_ids, weights=col, length=n_groups)
-            )(wx.T).T
-            counts = jnp.bincount(factor_ids, weights=weights_jax, length=n_groups)
-
-            # Compute and apply means
-            means = sums / (counts[:, None])
-            return val - means[factor_ids]
-
-        return lax.fori_loop(0, n_factors, _apply_factor, x_curr)
-
-    # Initialize arrays
-    x_curr = x_jax
-    x_prev = x_jax - 1.0
-
-    # Main iteration loop
-    for _ in range(maxiter):
-        x_new = _demean_step(x_curr, x_prev, n_factors)
-
-        # Check convergence
-        if jnp.max(jnp.abs(x_new - x_curr)) < tol:
-            return np.array(x_new), True
-
-        x_prev = x_curr
-        x_curr = x_new
-
-    return np.array(x_curr), False
+    # Call the JIT-compiled implementation
+    result_jax, converged = _demean_jax_impl(
+        x_jax, flist_jax, weights_jax, n_groups, tol, maxiter
+    )
+    return np.array(result_jax), converged
