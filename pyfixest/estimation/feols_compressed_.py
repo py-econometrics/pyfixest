@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Optional, Union, Mapping, Any
+from typing import Any, Optional, Union
 
 import narwhals as nw
 import numpy as np

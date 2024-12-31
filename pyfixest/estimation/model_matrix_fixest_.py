@@ -1,6 +1,7 @@
 import re
 import warnings
-from typing import Optional, Union, Mapping, Any
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd

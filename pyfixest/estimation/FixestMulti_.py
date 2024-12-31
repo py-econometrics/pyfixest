@@ -1,6 +1,7 @@
 import functools
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Union, Mapping, Any
+from typing import Any, Optional, Union
 
 import pandas as pd
 

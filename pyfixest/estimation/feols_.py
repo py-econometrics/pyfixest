@@ -2,8 +2,9 @@ import functools
 import gc
 import re
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Literal, Optional, Union, Mapping, Any
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
@@ -41,7 +42,7 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val, capture_context
+from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
