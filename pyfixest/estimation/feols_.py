@@ -1817,20 +1817,6 @@ class Feols:
 
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
-        if self._has_fixef:
-            fixef = self._fixef.split("+")
-
-            mismatched_fixef_types = [
-                x for x in fixef if newdata[x].dtypes != self._data[x].dtypes
-            ]
-            if mismatched_fixef_types:
-                warnings.warn(
-                    f"Data types of fixed effects {mismatched_fixef_types} "
-                    "do not match the model data. This leads to mismatched keys "
-                    "in the fixed effect dictionary, and as a result, to NaN "
-                    "predictions for columns with mismatched keys."
-                )
-
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
             if self._icovars is not None:
@@ -1851,6 +1837,19 @@ class Feols:
             if self._sumFE is None:
                 self.fixef(atol, btol)
             fvals = self._fixef.split("+")
+
+            mismatched_fixef_types = [
+                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
+            ]
+
+            if mismatched_fixef_types:
+                warnings.warn(
+                    f"Data types of fixed effects {mismatched_fixef_types} "
+                    "do not match the model data. This leads to mismatched keys "
+                    "in the fixed effect dictionary, and as a result, to NaN "
+                    "predictions for columns with mismatched keys."
+                )
+
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
             fixef_dicts = {}
