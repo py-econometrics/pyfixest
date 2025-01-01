@@ -2,7 +2,7 @@ import numpy as np
 import pyhdfe
 import pytest
 
-from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.demean_ import _set_demeaner_backend, demean
 from pyfixest.estimation.demean_jax_ import demean_jax
 
 
@@ -34,3 +34,17 @@ def test_demean(demean_func):
     res_pyhdfe = algorithm.residualize(x, weights)
     res_pyfixest, success = demean_func(x, flist, weights.flatten(), tol=1e-10)
     assert np.allclose(res_pyhdfe, res_pyfixest)
+
+
+def test_set_demeaner_backend():
+    # Test numba backend
+    demean_func = _set_demeaner_backend("numba")
+    assert demean_func == demean
+
+    # Test jax backend
+    demean_func = _set_demeaner_backend("jax")
+    assert demean_func == demean_jax
+
+    # Test invalid backend raises ValueError
+    with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
+        _set_demeaner_backend("invalid")
