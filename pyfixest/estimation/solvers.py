@@ -1,8 +1,15 @@
 import numpy as np
 from scipy.sparse.linalg import lsqr
+from typing_extensions import Literal
 
 
-def solve_ols(tZX: np.ndarray, tZY: np.ndarray, solver: str) -> np.ndarray:
+def solve_ols(
+    tZX: np.ndarray,
+    tZY: np.ndarray,
+    solver: Literal[
+        "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+    ],
+) -> np.ndarray:
     """
     Solve the ordinary least squares problem using the specified solver.
 

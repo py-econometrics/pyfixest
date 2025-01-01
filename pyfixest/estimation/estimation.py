@@ -7,6 +7,7 @@ from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
     FixedRmOptions,
     SolverOptions,
     VcovTypeOptions,
@@ -32,6 +33,7 @@ def feols(
     lean: bool = False,
     weights_type: WeightsTypeOptions = "aweights",
     solver: SolverOptions = "np.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     use_compression: bool = False,
     reps: int = 100,
     seed: Optional[int] = None,
@@ -115,6 +117,9 @@ def feols(
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba" or "jax". Defaults to "numba".
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -433,7 +438,12 @@ def feols(
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, collin_tol=collin_tol, solver=solver)
+    fixest._estimate_all_models(
+        vcov,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner_backend=demeaner_backend,
+    )
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -453,6 +463,7 @@ def fepois(
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "np.linalg.solve",
+    demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -511,6 +522,10 @@ def fepois(
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba" or "jax".
+        Defaults to "numba".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -642,6 +657,7 @@ def fepois(
         collin_tol=collin_tol,
         separation_check=separation_check,
         solver=solver,
+        demeaner_backend=demeaner_backend,
     )
 
     if fixest._is_multiple_estimation:
