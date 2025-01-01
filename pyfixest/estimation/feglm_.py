@@ -10,8 +10,6 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
-
-# from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -254,7 +252,6 @@ class Feglm(Feols, ABC):
     def _update_W(self, mu: np.ndarray) -> np.ndarray:
         "Get (running) weights W for the GLM family."
         return 1 / (self._update_detadmu(mu=mu) ** 2 * self._get_V(mu=mu))
-        # return (mu * (1 - mu)).reshape(-1, 1)
 
     def _update_W_tilde(self, W: np.ndarray) -> np.ndarray:
         "Get W_tilde (formula 3.2)."
