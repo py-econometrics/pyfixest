@@ -26,6 +26,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -438,34 +439,6 @@ class Feols:
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
-    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): Z'X.
-        tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        elif solver == "scipy.sparse.linalg.lsqr":
-            return lsqr(tZX, tZY)[0].flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
@@ -489,7 +462,7 @@ class Feols:
             self._tZX = _Z.T @ _X
             self._tZy = _Z.T @ _Y
 
-            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = solve_ols(self._tZX, self._tZy, _solver)
 
             self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
