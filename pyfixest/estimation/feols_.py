@@ -396,7 +396,7 @@ class Feols:
 
         return _weights.reshape((N, 1))
 
-    def demean(self):
+    def demean(self, demean_backend: str):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
             self._Yd, self._Xd = demean_model(
@@ -407,6 +407,7 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                demean_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X

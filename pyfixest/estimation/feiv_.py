@@ -185,7 +185,7 @@ class Feiv(Feols):
         self._Z = self._Zd.to_numpy()
         self._endogvar = self._endogvar.to_numpy()
 
-    def demean(self) -> None:
+    def demean(self, demean_backend: str) -> None:
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
@@ -197,6 +197,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                demean_backend,
             )
         else:
             self._endogvard = self._endogvar

@@ -4,6 +4,14 @@ import numba as nb
 import numpy as np
 import pandas as pd
 
+try:
+    from pyfixest.estimation.demean_jax_ import demean_jax
+except ImportError as e:
+    if "jax" in str(e).lower():
+        print("JAX is not installed. Please install all JAX dependencies.")
+    else:
+        raise
+
 
 def demean_model(
     Y: pd.DataFrame,
@@ -13,6 +21,7 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
+    demean_backend: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -42,6 +51,8 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
+    demean_backend : str
+        The backend to use for demeaning. Options include "numba" and "jax".
 
     Returns
     -------
@@ -93,9 +104,19 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new, success = demean(
-                    x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
-                )
+                if demean_backend == "numba":
+                    YX_demean_new, success = demean(
+                        x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
+                    )
+
+                elif demean_backend == "jax":
+                    YX_demean_new, success = demean_jax(
+                        x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
+                    )
+
+                else:
+                    raise ValueError(f"Unknown backend: {demean_backend}")
+
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
 
@@ -116,9 +137,15 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            YX_demeaned, success = demean(
-                x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
-            )
+
+            if demean_backend == "numba":
+                YX_demeaned, success = demean(
+                    x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
+                )
+            elif demean_backend == "jax":
+                YX_demeaned, success = demean_jax(
+                    x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
+                )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
 

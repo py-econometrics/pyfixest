@@ -37,6 +37,7 @@ def feols(
     seed: Optional[int] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    demean_backend: str = "numba",
 ) -> Union[Feols, FixestMulti]:
     """
     Estimate a linear regression models with fixed effects using fixest formula syntax.
@@ -145,6 +146,11 @@ def feols(
 
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
+
+    demean_backend: str
+        The backend to use for demeaning. Options include 'numba' and 'jax'. None by default, which
+        selects 'numba'. If you have a GPU available, 'jax' might significantly speed up the demeaning
+        process.
 
     Returns
     -------
@@ -410,6 +416,7 @@ def feols(
         seed=seed,
         split=split,
         fsplit=fsplit,
+        demean_backend=demean_backend,
     )
 
     fixest = FixestMulti(
@@ -433,7 +440,9 @@ def feols(
     )
 
     # demean all models: based on fixed effects x split x missing value combinations
-    fixest._estimate_all_models(vcov, collin_tol=collin_tol, solver=solver)
+    fixest._estimate_all_models(
+        vcov, collin_tol=collin_tol, solver=solver, demean_backend=demean_backend
+    )
 
     if fixest._is_multiple_estimation:
         return fixest
@@ -460,6 +469,8 @@ def fepois(
     lean: bool = False,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
+    demean_backend: str = "numba",
+
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -552,6 +563,11 @@ def fepois(
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
 
+    demean_backend: str
+        The backend to use for demeaning. Options include 'numba' and 'jax'. None by default, which
+        selects 'numba'. If you have a GPU available, 'jax' might significantly speed up the demeaning
+        process.
+
     Returns
     -------
     object
@@ -611,6 +627,7 @@ def fepois(
         split=split,
         fsplit=fsplit,
         separation_check=separation_check,
+        demean_backend = demean_backend
     )
 
     fixest = FixestMulti(
@@ -642,6 +659,7 @@ def fepois(
         collin_tol=collin_tol,
         separation_check=separation_check,
         solver=solver,
+        demean_backend=demean_backend
     )
 
     if fixest._is_multiple_estimation:
@@ -668,6 +686,7 @@ def _estimation_input_checks(
     seed: Optional[int],
     split: Optional[str],
     fsplit: Optional[str],
+    demean_backend: Optional[str],
     separation_check: Optional[list[str]] = None,
 ):
     if not isinstance(fml, str):
@@ -774,4 +793,9 @@ def _estimation_input_checks(
         if not all(x in ["fe", "ir"] for x in separation_check):
             raise ValueError(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
+            )
+
+        if demean_backend not in ["numba", "jax"]:
+            raise ValueError(
+                f"The function argument `demean_backend` must be either 'numba' or 'jax' but it is {demean_backend}."
             )

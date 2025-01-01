@@ -191,6 +191,7 @@ class FixestMulti:
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
+        demean_backend: str = "numba",
         separation_check: Optional[list[str]] = None,
     ) -> None:
         """
@@ -279,7 +280,7 @@ class FixestMulti:
                             sample_split_var=_splitvar,
                         )
                         FIT.prepare_model_matrix()
-                        FIT.demean()
+                        FIT.demean(demean_backend=demean_backend)
                         FIT.to_array()
                         FIT.drop_multicol_vars()
                         FIT.wls_transform()
@@ -303,7 +304,7 @@ class FixestMulti:
                             sample_split_var=_splitvar,
                         )
                         FIT.prepare_model_matrix()
-                        FIT.demean()
+                        FIT.demean(demean_backend=demean_backend)
                         FIT.to_array()
                         FIT.drop_multicol_vars()
                         FIT.wls_transform()
