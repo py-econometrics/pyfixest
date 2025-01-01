@@ -41,6 +41,8 @@ dev = [
   "duckdb>=1.1.3",
   "polars>=1.0.0",
   "pyarrow>=14.0",
+  "jax>=0.4.15",
+  "jaxlib>=0.4.15",
 ]
 
 docs = [
@@ -52,6 +54,11 @@ docs = [
   "causaldata>=0.1.4,<0.2",
   "pylatex>=1.4.2,<2",
   "marginaleffects>=0.0.10",
+]
+
+jax = [
+  "jax>=0.4.15",
+  "jaxlib>=0.4.15",
 ]
 
 [tool.pixi.feature.build.dependencies]
@@ -73,6 +80,7 @@ default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
+jax = { features = ["jax"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
