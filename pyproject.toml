@@ -23,8 +23,6 @@ dependencies = [
   "numpy>=1.19.0",
   "narwhals>=1.13.3",
   "joblib>=1.4.2,<2",
-  "jax>=0.4.38,<0.5",
-  "jaxlib>=0.4.38,<0.5",
 ]
 
 [tool.pixi.feature.dev.dependencies]
@@ -56,6 +54,11 @@ docs = [
   "marginaleffects>=0.0.10",
 ]
 
+jax = [
+  "jax>=0.4.15",
+  "jaxlib>=0.4.15",
+]
+
 [tool.pixi.feature.build.dependencies]
 python-build = ">=1.2.2,<2"
 
@@ -75,6 +78,7 @@ default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
+jax = { features = ["jax"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"

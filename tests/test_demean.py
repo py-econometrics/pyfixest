@@ -2,7 +2,8 @@ import numpy as np
 import pyhdfe
 import pytest
 
-from pyfixest.estimation.demean_ import demean, demean_jax
+from pyfixest.estimation.demean_ import demean
+from pyfixest.estimation.demean_jax_ import demean_jax
 
 
 @pytest.mark.parametrize(
