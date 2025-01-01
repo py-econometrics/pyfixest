@@ -186,6 +186,8 @@ class Feols:
         Adjusted R-squared value computed on demeaned dependent variable.
     _solver: str
         The solver used to fit the normal equation.
+    _demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -212,6 +214,7 @@ class Feols:
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -242,6 +245,7 @@ class Feols:
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
         self._solver = solver
+        self._demeaner_backend = demeaner_backend
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data
@@ -408,6 +412,7 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._demeaner_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X

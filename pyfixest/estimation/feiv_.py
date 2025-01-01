@@ -1,6 +1,6 @@
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -41,6 +41,8 @@ class Feiv(Feols):
         Tolerance for collinearity check.
     solver: str, default is 'np.linalg.solve'
         Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -141,6 +143,7 @@ class Feiv(Feols):
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -159,6 +162,7 @@ class Feiv(Feols):
             fixef_tol,
             lookup_demeaned_data,
             solver,
+            demeaner_backend,
             store_data,
             copy_data,
             lean,
@@ -198,6 +202,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._demeaner_backend,
             )
         else:
             self._endogvard = self._endogvar

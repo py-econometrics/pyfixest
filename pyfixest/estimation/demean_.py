@@ -43,6 +43,8 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend to use for demeaning.
 
     Returns
     -------

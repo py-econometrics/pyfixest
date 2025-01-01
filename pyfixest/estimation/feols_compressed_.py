@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -80,6 +80,7 @@ class FeolsCompressed(Feols):
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: str = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -100,6 +101,7 @@ class FeolsCompressed(Feols):
             fixef_tol,
             lookup_demeaned_data,
             solver,
+            demeaner_backend,
             store_data,
             copy_data,
             lean,
