@@ -190,6 +190,7 @@ class FixestMulti:
         solver: Literal[
             "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
         ],
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -208,6 +209,9 @@ class FixestMulti:
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
         solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
             default is 'np.linalg.solve'. Solver to use for the estimation.
+        demeaner_backend: Literal["numba", "jax"], optional
+            The backend to use for demeaning. Can be either "numba" or "jax".
+            Defaults to "numba".
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -271,6 +275,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -295,6 +300,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -319,6 +325,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -346,6 +353,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
