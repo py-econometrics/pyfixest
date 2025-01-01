@@ -8,6 +8,7 @@ import pandas as pd
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 
 
 class Feiv(Feols):
@@ -229,7 +230,7 @@ class Feiv(Feols):
         H = self._tXZ @ self._tZZinv
         A = H @ self._tZX
         B = H @ self._tZy
-        self._beta_hat = self.solve_ols(A, B, _solver)
+        self._beta_hat = solve_ols(A, B, _solver)
 
         # residuals
         self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
