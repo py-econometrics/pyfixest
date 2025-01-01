@@ -32,7 +32,6 @@ jobs:
         with:
           pixi-version: v0.39.4
           cache: true
-          environments: "jax"
 
       - name: set numba parallel flags
         run: |

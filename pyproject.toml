@@ -41,6 +41,8 @@ dev = [
   "duckdb>=1.1.3",
   "polars>=1.0.0",
   "pyarrow>=14.0",
+  "jax>=0.4.15",
+  "jaxlib>=0.4.15",
 ]
 
 docs = [
