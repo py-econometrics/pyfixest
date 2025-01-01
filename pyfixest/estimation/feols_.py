@@ -26,6 +26,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -438,34 +439,6 @@ class Feols:
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
-    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): Z'X.
-        tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        elif solver == "scipy.sparse.linalg.lsqr":
-            return lsqr(tZX, tZY)[0].flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
@@ -489,7 +462,7 @@ class Feols:
             self._tZX = _Z.T @ _X
             self._tZy = _Z.T @ _Y
 
-            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = solve_ols(self._tZX, self._tZy, _solver)
 
             self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
@@ -1823,6 +1796,19 @@ class Feols:
             if self._sumFE is None:
                 self.fixef(atol, btol)
             fvals = self._fixef.split("+")
+
+            mismatched_fixef_types = [
+                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
+            ]
+
+            if mismatched_fixef_types:
+                warnings.warn(
+                    f"Data types of fixed effects {mismatched_fixef_types} "
+                    "do not match the model data. This leads to mismatched keys "
+                    "in the fixed effect dictionary, and as a result, to NaN "
+                    "predictions for columns with mismatched keys."
+                )
+
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
             fixef_dicts = {}
@@ -1832,7 +1818,7 @@ class Feols:
                     fdict.keys()
                 )
                 if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})
+                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
                 fixef_dicts[f"C({f})"] = fdict
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
@@ -2558,7 +2544,7 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index
+    return X, list(names_array), collin_vars, collin_index
 
 
 @nb.njit(parallel=False)
