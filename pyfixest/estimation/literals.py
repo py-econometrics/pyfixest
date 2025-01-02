@@ -4,7 +4,10 @@ PredictionType = Literal["response", "link"]
 VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
-SolverOptions = Literal["np.linalg.solve", "np.linalg.lstsq"]
+SolverOptions = Literal[
+    "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+]
+DemeanerBackendOptions = Literal["numba", "jax"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:

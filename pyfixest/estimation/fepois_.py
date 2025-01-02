@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Optional, Protocol, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -50,12 +51,12 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: str, default is 'np.linalg.solve'
-        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
-    solver: str
-        The solver to use.
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
@@ -84,7 +85,11 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
+
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -105,6 +110,7 @@ class Fepois(Feols):
             fixef_tol,
             lookup_demeaned_data,
             solver,
+            demeaner_backend,
             store_data,
             copy_data,
             lean,
@@ -282,7 +288,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
