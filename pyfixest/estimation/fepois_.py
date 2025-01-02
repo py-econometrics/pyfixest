@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
