@@ -89,7 +89,6 @@ class Fepois(Feols):
             "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
         ] = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
-
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
