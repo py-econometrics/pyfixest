@@ -135,10 +135,14 @@ def test_context_capture():
     data["1_X2"] = spline_split[:, 2]
 
     explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
+    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = 0)
+    context_captured_fit_map = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = {"_lspline":_lspline})
 
-    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
+    for context_fit in [context_captured_fit, context_captured_fit_map]: 
+        np.testing.assert_allclose(
+            context_fit.coef(), explicit_fit.coef(), rtol=1e-12
+        )
+        np.testing.assert_allclose(context_fit.se(), explicit_fit.se(), rtol=1e-12)
 
-    np.testing.assert_allclose(
-        context_captured_fit.coef(), explicit_fit.coef(), rtol=1e-12
-    )
-    np.testing.assert_allclose(context_captured_fit.se(), explicit_fit.se(), rtol=1e-12)
+    with pytest.raises(FactorEvaluationError, match="Unable to evaluate factor `_lspline"):
+        pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
