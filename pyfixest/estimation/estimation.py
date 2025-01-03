@@ -343,9 +343,12 @@ def feols(
     data["1_X2"] = spline_split[:, 2]
 
     explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
-    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
+    # set context = 0 to make _lspline available for feols' internal call to Formulaic.model_matrix
+    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = 0)
+    # or provide it as a dict / mapping
+    context_captured_fit_map = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = {"_lspline":_lspline})
 
-    pf.etable([explicit_fit, context_captured_fit])
+    pf.etable([explicit_fit, context_captured_fit, context_captured_fit_map])
     ```
 
     After fitting a model via `feols()`, you can use the `predict()` method to
