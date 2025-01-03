@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -59,6 +60,11 @@ class FeolsCompressed(Feols):
         Whether to copy the data.
     lean : bool
         Whether to keep memory-heavy objects as attributes or not.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     reps : int
         The number of bootstrap repetitions. Default is 100. Only used for CRV1 inference, where
         a wild cluster bootstrap is used.
@@ -86,6 +92,7 @@ class FeolsCompressed(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         reps=100,
         seed: Optional[int] = None,
         sample_split_var: Optional[str] = None,
@@ -107,6 +114,7 @@ class FeolsCompressed(Feols):
             store_data,
             copy_data,
             lean,
+            context,
             sample_split_var,
             sample_split_value,
         )

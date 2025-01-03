@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -149,6 +150,7 @@ class Feiv(Feols):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
     ) -> None:
@@ -168,6 +170,7 @@ class Feiv(Feols):
             store_data,
             copy_data,
             lean,
+            context,
             sample_split_var,
             sample_split_value,
         )
