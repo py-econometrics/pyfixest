@@ -405,7 +405,10 @@ def feols(
             instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
             """
         )
-    context = capture_context(context)
+    if context is None:
+        context = {}
+    else:
+        context = capture_context(context)
 
     _estimation_input_checks(
         fml=fml,
