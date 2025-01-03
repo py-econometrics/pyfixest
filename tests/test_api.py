@@ -5,7 +5,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.utils.utils import get_data
-
+from formulaic.errors import FactorEvaluationError
 
 def test_api():
     df1 = get_data()
