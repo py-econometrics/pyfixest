@@ -177,7 +177,7 @@ def feols(
     import pyfixest as pf
     import pandas as pd
     import numpy as np
-    
+
     data = pf.get_data()
 
     fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
