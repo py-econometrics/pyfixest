@@ -1,4 +1,5 @@
-from typing import Optional, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import pandas as pd
 
@@ -14,6 +15,7 @@ from pyfixest.estimation.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
 
 
@@ -36,6 +38,7 @@ def feols(
     demeaner_backend: DemeanerBackendOptions = "numba",
     use_compression: bool = False,
     reps: int = 100,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
     seed: Optional[int] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
@@ -139,6 +142,12 @@ def feols(
         Number of bootstrap repetitions. Only relevant for boostrap inference applied to
         compute cluster robust errors when `use_compression = True`.
 
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+
     seed: Optional[int]
         Seed for the random number generator. Only relevant for boostrap inference applied to
         compute cluster robust errors when `use_compression = True`.
@@ -166,6 +175,8 @@ def feols(
 
     ```{python}
     import pyfixest as pf
+    import pandas as pd
+    import numpy as np
 
     data = pf.get_data()
 
@@ -306,6 +317,40 @@ def feols(
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     Documentation on this is tba.
 
+    You can pass custom transforms via the `context` argument. If you set `context = 0`, all
+    functions from the level of the call to `feols()` will be available:
+
+    ```{python}
+    def _lspline(series: pd.Series, knots: list[float]) -> np.array:
+        'Generate a linear spline design matrix for the input series based on knots.'
+        vector = series.values
+        columns = []
+
+        for i, knot in enumerate(knots):
+            column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
+            columns.append(column)
+            vector = vector - column
+
+        # Add the remainder as the last column
+        columns.append(vector)
+
+        # Combine columns into a design matrix
+        return np.column_stack(columns)
+
+    spline_split = _lspline(data["X2"], [0, 1])
+    data["X2_0"] = spline_split[:, 0]
+    data["0_X2_1"] = spline_split[:, 1]
+    data["1_X2"] = spline_split[:, 2]
+
+    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
+    # set context = 0 to make _lspline available for feols' internal call to Formulaic.model_matrix
+    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = 0)
+    # or provide it as a dict / mapping
+    context_captured_fit_map = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = {"_lspline":_lspline})
+
+    pf.etable([explicit_fit, context_captured_fit, context_captured_fit_map])
+    ```
+
     After fitting a model via `feols()`, you can use the `predict()` method to
     get the predicted values:
 
@@ -396,6 +441,7 @@ def feols(
             instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+    context = {} if context is None else capture_context(context)
 
     _estimation_input_checks(
         fml=fml,
@@ -429,6 +475,7 @@ def feols(
         seed=seed,
         split=split,
         fsplit=fsplit,
+        context=context,
     )
 
     estimation = "feols" if not use_compression else "compression"
@@ -469,6 +516,7 @@ def fepois(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
@@ -559,6 +607,12 @@ def fepois(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
@@ -602,6 +656,7 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
+    context = {} if context is None else capture_context(context)
 
     # WLS currently not supported for Poisson regression
     weights = None
@@ -640,6 +695,7 @@ def fepois(
         seed=None,
         split=split,
         fsplit=fsplit,
+        context=context,
     )
 
     fixest._prepare_estimation(
@@ -770,10 +826,12 @@ def _estimation_input_checks(
         raise TypeError("The function argument fsplit needs to be of type str.")
 
     if split is not None and fsplit is not None and split != fsplit:
-        raise ValueError(f"""
+        raise ValueError(
+            f"""
                         Arguments split and fsplit are both specified, but not identical.
                         split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """)
+                        """
+        )
 
     if isinstance(split, str) and split not in data.columns:
         raise KeyError(f"Column '{split}' not found in data.")
