@@ -2,10 +2,11 @@ import duckdb
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.utils.utils import get_data
-from formulaic.errors import FactorEvaluationError
+
 
 def test_api():
     df1 = get_data()
