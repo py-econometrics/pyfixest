@@ -38,7 +38,7 @@ def feols(
     demeaner_backend: DemeanerBackendOptions = "numba",
     use_compression: bool = False,
     reps: int = 100,
-    context: Union[int, Mapping[str, Any]] = 0,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
     seed: Optional[int] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
@@ -480,7 +480,7 @@ def fepois(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
-    context: Union[int, Mapping[str, Any]] = 0,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
@@ -620,7 +620,10 @@ def fepois(
             instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
             """
         )
-    context = capture_context(context)
+    if context is None:
+        context = {}
+    else:
+        context = capture_context(context)
 
     # WLS currently not supported for Poisson regression
     weights = None
@@ -790,10 +793,12 @@ def _estimation_input_checks(
         raise TypeError("The function argument fsplit needs to be of type str.")
 
     if split is not None and fsplit is not None and split != fsplit:
-        raise ValueError(f"""
+        raise ValueError(
+            f"""
                         Arguments split and fsplit are both specified, but not identical.
                         split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """)
+                        """
+        )
 
     if isinstance(split, str) and split not in data.columns:
         raise KeyError(f"Column '{split}' not found in data.")
