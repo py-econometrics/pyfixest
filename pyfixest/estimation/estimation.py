@@ -15,9 +15,7 @@ from pyfixest.estimation.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
-
+from pyfixest.utils.utils import capture_context, ssc as ssc_func
 
 def feols(
     fml: str,
