@@ -315,7 +315,7 @@ def feols(
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     Documentation on this is tba.
 
-    You can pass custom transforms via the `context` argument. If you set `context = 0`, all 
+    You can pass custom transforms via the `context` argument. If you set `context = 0`, all
     functions from the level of the call to `feols()` will be available:
 
     ```{python}
@@ -323,15 +323,15 @@ def feols(
         """Generate a linear spline design matrix for the input series based on knots."""
         vector = series.values
         columns = []
-    
+
         for i, knot in enumerate(knots):
             column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
             columns.append(column)
             vector = vector - column
-    
+
         # Add the remainder as the last column
         columns.append(vector)
-    
+
         # Combine columns into a design matrix
         return np.column_stack(columns)
 
