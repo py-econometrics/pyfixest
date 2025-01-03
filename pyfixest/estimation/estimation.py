@@ -320,7 +320,7 @@ def feols(
 
     ```{python}
     def _lspline(series: pd.Series, knots: list[float]) -> np.array:
-        """Generate a linear spline design matrix for the input series based on knots."""
+        'Generate a linear spline design matrix for the input series based on knots.'
         vector = series.values
         columns = []
 
