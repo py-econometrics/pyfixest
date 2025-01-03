@@ -315,6 +315,37 @@ def feols(
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     Documentation on this is tba.
 
+    You can pass custom transforms via the `context` argument. If you set `context = 0`, all 
+    functions from the level of the call to `feols()` will be available:
+
+    ```{python}
+    def _lspline(series: pd.Series, knots: list[float]) -> np.array:
+        """Generate a linear spline design matrix for the input series based on knots."""
+        vector = series.values
+        columns = []
+    
+        for i, knot in enumerate(knots):
+            column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
+            columns.append(column)
+            vector = vector - column
+    
+        # Add the remainder as the last column
+        columns.append(vector)
+    
+        # Combine columns into a design matrix
+        return np.column_stack(columns)
+
+    spline_split = _lspline(data["X2"], [0, 1])
+    data["X2_0"] = spline_split[:, 0]
+    data["0_X2_1"] = spline_split[:, 1]
+    data["1_X2"] = spline_split[:, 2]
+
+    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
+    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
+
+    pf.etable([explicit_fit, context_captured_fit])
+    ```
+
     After fitting a model via `feols()`, you can use the `predict()` method to
     get the predicted values:
 
