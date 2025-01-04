@@ -323,6 +323,7 @@ class FixestMulti:
                             lean=_lean,
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
+                            context=_context,
                         )
                         FIT.prepare_model_matrix()
                         FIT.demean()
@@ -351,6 +352,7 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                             separation_check=separation_check,
+                            context=_context,
                             # solver=_solver
                         )
                         FIT.prepare_model_matrix()
@@ -378,6 +380,7 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                             separation_check=separation_check,
+                            context=_context,
                         )
 
                         FIT.prepare_model_matrix()
@@ -406,6 +409,7 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                             separation_check=separation_check,
+                            context=_context,
                         )
 
                         FIT.prepare_model_matrix()
@@ -434,6 +438,7 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                             separation_check=separation_check,
+                            context=_context,
                         )
 
                         FIT.prepare_model_matrix()

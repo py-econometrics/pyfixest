@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Literal, Optional, Union
+from collections.abc import Mapping
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,7 @@ class Feglm(Feols, ABC):
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
+        context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -58,6 +60,7 @@ class Feglm(Feols, ABC):
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
+            context=context,
         )
 
         _glm_input_checks(drop_singletons=drop_singletons, tol=tol, maxiter=maxiter)

@@ -1,5 +1,6 @@
 import warnings
-from typing import Literal, Optional, Union
+from collections.abc import Mapping
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -35,6 +36,7 @@ class Feprobit(Feglm):
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
+        context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -56,6 +58,7 @@ class Feprobit(Feglm):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             separation_check=separation_check,
+            context=context,
         )
 
         self._method = "feglm-probit"

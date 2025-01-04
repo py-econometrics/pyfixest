@@ -740,6 +740,7 @@ def feglm(
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
@@ -829,6 +830,12 @@ def feglm(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+
     split: Optional[str]
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
@@ -882,6 +889,8 @@ def feglm(
     weights = None
     weights_type = "aweights"
 
+    context = {} if context is None else capture_context(context)
+
     _estimation_input_checks(
         fml=fml,
         data=data,
@@ -915,6 +924,7 @@ def feglm(
         seed=None,
         split=split,
         fsplit=fsplit,
+        context=context,
     )
 
     # same checks as for Poisson regression

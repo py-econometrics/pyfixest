@@ -171,6 +171,8 @@ class Feiv(Feols):
             lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         self._is_iv = True
