@@ -207,9 +207,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="features" class="level2">
 <h2 class="anchored" data-anchor-id="features">Features</h2>
 <ul>
-<li><strong>OLS</strong>, <strong>WLS</strong> and <strong>IV</strong> Regression</li>
+<li><strong>OLS</strong>, <strong>WLS</strong> and <strong>IV</strong> Regression with Fixed-Effects Demeaning via <a href="https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html">Frisch-Waugh-Lovell</a></li>
 <li><strong>Poisson Regression</strong> following the <a href="https://journals.sagepub.com/doi/full/10.1177/1536867X20909691">pplmhdfe algorithm</a></li>
 <li>Multiple Estimation Syntax</li>
+<li>Probit, Logit and Gaussian Family GLMs (currently without fixed effects demeaning, this is WIP)</li>
 <li>Several <strong>Robust</strong> and <strong>Cluster Robust Variance-Covariance</strong> Estimators</li>
 <li><strong>Wild Cluster Bootstrap</strong> Inference (via <a href="https://github.com/py-econometrics/wildboottest">wildboottest</a>)</li>
 <li><strong>Difference-in-Differences</strong> Estimators:
