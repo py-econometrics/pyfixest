@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>estimation.bonferroni</title>
+<title>estimation.estimation.feglm</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -192,7 +192,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.bonferroni.html">estimation.bonferroni</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feglm.html">estimation.estimation.feglm</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -233,7 +233,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.feglm.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/estimation.estimation.feglm.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">estimation.estimation.feglm</span></a>
   </div>
 </li>
@@ -257,7 +257,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">estimation.bonferroni</span></a>
   </div>
 </li>
@@ -419,9 +419,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.bonferroni.html">estimation.bonferroni</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feols.html">Estimation Functions</a></li><li class="breadcrumb-item"><a href="../reference/estimation.estimation.feglm.html">estimation.estimation.feglm</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">estimation.bonferroni</h1>
+<h1 class="title">estimation.estimation.feglm</h1>
 </div>
 
 
@@ -438,17 +438,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.bonferroni(models, param)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</p>
-<p>For each model, it is assumed that tests to adjust are of the form “param = 0”.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>estimation.estimation.feglm(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    fml,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    family,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    ssc<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    fixef_rm<span class="op">=</span><span class="st">'none'</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    fixef_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    iwls_tol<span class="op">=</span><span class="fl">1e-08</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    iwls_maxiter<span class="op">=</span><span class="dv">25</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    collin_tol<span class="op">=</span><span class="fl">1e-10</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    separation_check<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    drop_intercept<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    i_ref1<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    fsplit<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Estimate GLM regression models (currently without fixed effects, this is work in progress).</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 48%">
-<col style="width: 38%">
-<col style="width: 7%">
+<col style="width: 3%">
+<col style="width: 8%">
+<col style="width: 83%">
+<col style="width: 4%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -460,16 +480,124 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>models</td>
-<td>A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of</td>
-<td>Feols, Fepois &amp; Feiv models.</td>
+<td>fml</td>
+<td>str</td>
+<td>A two-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 | FE1 + FE2”. “|” separates left-hand side and fixed effects. Special syntax includes: - Stepwise regressions (sw, sw0) - Cumulative stepwise regression (csw, csw0) - Multiple dependent variables (Y1 + Y2 ~ X) - Interaction of variables (i(X1,X2)) - Interacted fixed effects (fe1^fe2) Compatible with formula parsing via the formulaic module.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td>param</td>
-<td>str</td>
-<td>The parameter for which the p-values should be adjusted.</td>
+<td>data</td>
+<td>DataFrameType</td>
+<td>A pandas or polars dataframe containing the variables in the formula.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>family</td>
+<td>str</td>
+<td>The family of the GLM model. Options include “gaussian”, “logit” and “probit”.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>vcov</td>
+<td>Union[VcovTypeOptions, dict[str, str]]</td>
+<td>Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, or a dictionary for CRV1/CRV3 inference.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>ssc</td>
+<td>str</td>
+<td>A ssc object specifying the small sample correction for inference.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>fixef_rm</td>
+<td>FixedRmOptions</td>
+<td>Specifies whether to drop singleton fixed effects. Options: “none” (default), “singleton”.</td>
+<td><code>'none'</code></td>
+</tr>
+<tr class="odd">
+<td>fixef_tol</td>
+<td>float</td>
+<td>Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.</td>
+<td><code>1e-08</code></td>
+</tr>
+<tr class="even">
+<td>iwls_tol</td>
+<td>Optional[float]</td>
+<td>Tolerance for IWLS convergence, by default 1e-08.</td>
+<td><code>1e-08</code></td>
+</tr>
+<tr class="odd">
+<td>iwls_maxiter</td>
+<td>Optional[float]</td>
+<td>Maximum number of iterations for IWLS convergence, by default 25.</td>
+<td><code>25</code></td>
+</tr>
+<tr class="even">
+<td>collin_tol</td>
+<td>float</td>
+<td>Tolerance for collinearity check, by default 1e-10.</td>
+<td><code>1e-10</code></td>
+</tr>
+<tr class="odd">
+<td>separation_check</td>
+<td>Optional[list[str]]</td>
+<td>Methods to identify and drop separated observations. Either “fe” or “ir”. Executes “fe” by default (when None).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>solver</td>
+<td>SolverOptions, optional.</td>
+<td>The solver to use for the regression. Can be either “np.linalg.solve” or “np.linalg.lstsq”. Defaults to “np.linalg.solve”.</td>
+<td><code>'np.linalg.solve'</code></td>
+</tr>
+<tr class="odd">
+<td>drop_intercept</td>
+<td>bool</td>
+<td>Whether to drop the intercept from the model, by default False.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>i_ref1</td>
+<td></td>
+<td>Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.&nbsp;fepois(‘Y~ i(f1, ref=1)’, data = data) instead of the former fepois(‘Y~ i(f1)’, data = data, i_ref=1).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>copy_data</td>
+<td>bool</td>
+<td>Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of <code>fepois</code>. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
+<td>store_data</td>
+<td>bool</td>
+<td>Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the <code>data</code> attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g.&nbsp;<code>predict()</code> or <code>vcov()</code>.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="odd">
+<td>lean</td>
+<td>bool</td>
+<td>False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>context</td>
+<td>int or Mapping[str, Any]</td>
+<td>A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>split</td>
+<td>Optional[str]</td>
+<td>A character string, i.e.&nbsp;‘split = var’. If provided, the sample is split according to the variable and one estimation is performed for each value of that variable. If you also want to include the estimation for the full sample, use the argument fsplit instead.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>fsplit</td>
+<td>Optional[str]</td>
+<td>This argument is the same as split but also includes the full sample as the first estimation.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
@@ -478,9 +606,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 12%">
-<col style="width: 80%">
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 87%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -492,26 +620,31 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>pd.DataFrame</td>
-<td>A DataFrame containing estimation statistics, including the Bonferroni adjusted p-values.</td>
+<td>object</td>
+<td>An instance of the <code>Fepois</code> class or an instance of class <code>FixestMulti</code> for multiple models specified via <code>fml</code>.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="a76c7b54" class="cell" data-execution_count="1">
+<p>The <code>fepois()</code> function can be used to estimate a simple Poisson regression model with fixed effects. The following example regresses <code>Y</code> on <code>X1</code> and <code>X2</code> with fixed effects for <code>f1</code> and <code>f2</code>: fixed effects are specified after the <code>|</code> symbol.</p>
+<div id="6d0994a7" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.utils <span class="im">import</span> get_data</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> get_data().dropna()</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>data)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>bonf_df <span class="op">=</span> pf.bonferroni([fit1, fit2], param<span class="op">=</span><span class="st">"X1"</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>bonf_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"Y"</span>] <span class="op">=</span> np.where(data[<span class="st">"Y"</span>] <span class="op">&gt;</span> <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>data[<span class="st">"f1"</span>] <span class="op">=</span> np.where(data[<span class="st">"f1"</span>] <span class="op">&gt;</span> data[<span class="st">"f1"</span>].median(), <span class="st">"group1"</span>, <span class="st">"group2"</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit_probit <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"probit"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fit_logit <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"logit"</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>fit_gaussian <span class="op">=</span> pf.feglm(<span class="st">"Y ~ X1*f1"</span>, data, family <span class="op">=</span> <span class="st">"gaussian"</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>pf.etable([fit_probit, fit_logit, fit_gaussian])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="mMCqJb"></div>
+            <div id="HMRYl9"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -535,9 +668,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("mMCqJb").appendChild(div);
+                        document.getElementById("HMRYl9").appendChild(div);
                     };
-                    var e = document.getElementById("mMCqJb");
+                    var e = document.getElementById("HMRYl9");
                     e.appendChild(script);
                 })()
             </script>
@@ -545,7 +678,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="dTBLb6"></div>
+            <div id="XUQ4zk"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -569,68 +702,306 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("dTBLb6").appendChild(div);
+                        document.getElementById("XUQ4zk").appendChild(div);
                     };
-                    var e = document.getElementById("dTBLb6");
+                    var e = document.getElementById("XUQ4zk");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<div>
+<div id="puvjyuemsb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#puvjyuemsb table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#puvjyuemsb thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#puvjyuemsb p { margin: 0; padding: 0; }
+ #puvjyuemsb .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #puvjyuemsb .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #puvjyuemsb .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #puvjyuemsb .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #puvjyuemsb .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #puvjyuemsb .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #puvjyuemsb .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #puvjyuemsb .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #puvjyuemsb .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #puvjyuemsb .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #puvjyuemsb .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #puvjyuemsb .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #puvjyuemsb .gt_spanner_row { border-bottom-style: hidden; }
+ #puvjyuemsb .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #puvjyuemsb .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #puvjyuemsb .gt_from_md> :first-child { margin-top: 0; }
+ #puvjyuemsb .gt_from_md> :last-child { margin-bottom: 0; }
+ #puvjyuemsb .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #puvjyuemsb .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #puvjyuemsb .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #puvjyuemsb .gt_row_group_first td { border-top-width: 0.5px; }
+ #puvjyuemsb .gt_row_group_first th { border-top-width: 0.5px; }
+ #puvjyuemsb .gt_striped { background-color: rgba(128,128,128,0.05); }
+ #puvjyuemsb .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #puvjyuemsb .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #puvjyuemsb .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #puvjyuemsb .gt_left { text-align: left; }
+ #puvjyuemsb .gt_center { text-align: center; }
+ #puvjyuemsb .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #puvjyuemsb .gt_font_normal { font-weight: normal; }
+ #puvjyuemsb .gt_font_bold { font-weight: bold; }
+ #puvjyuemsb .gt_font_italic { font-style: italic; }
+ #puvjyuemsb .gt_super { font-size: 65%; }
+ #puvjyuemsb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #puvjyuemsb .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+
+<table class="gt_table caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="gt_col_headings gt_spanner_row header">
+<th rowspan="2" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col"></th>
+<th colspan="3" id="Y" class="gt_center gt_columns_top_border gt_column_spanner_outer" data-quarto-table-cell-role="th" scope="colgroup"><span class="gt_column_spanner">Y</span></th>
+</tr>
+<tr class="gt_col_headings even">
+<th id="(1)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(1)</th>
+<th id="(2)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(2)</th>
+<th id="(3)" class="gt_col_heading gt_columns_bottom_border gt_center" data-quarto-table-cell-role="th" scope="col">(3)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+<tr class="gt_group_heading_row odd">
+<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">coef</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1</td>
+<td class="gt_row gt_center">-0.466***<br>
+(0.073)</td>
+<td class="gt_row gt_center">-0.752***<br>
+(0.119)</td>
+<td class="gt_row gt_center">-0.179***<br>
+(0.027)</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">f1[T.group2]</td>
+<td class="gt_row gt_center">-0.118<br>
+(0.133)</td>
+<td class="gt_row gt_center">-0.190<br>
+(0.216)</td>
+<td class="gt_row gt_center">-0.044<br>
+(0.050)</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">X1:f1[T.group2]</td>
+<td class="gt_row gt_center">0.035<br>
+(0.102)</td>
+<td class="gt_row gt_center">0.057<br>
+(0.168)</td>
+<td class="gt_row gt_center">0.014<br>
+(0.038)</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Intercept</td>
+<td class="gt_row gt_center">0.449***<br>
+(0.096)</td>
+<td class="gt_row gt_center">0.724***<br>
+(0.156)</td>
+<td class="gt_row gt_center">0.673***<br>
+(0.035)</td>
+</tr>
+<tr class="gt_group_heading_row even">
+<td colspan="4" class="gt_group_heading" data-quarto-table-cell-role="th">stats</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">Observations</td>
+<td class="gt_row gt_center">999</td>
+<td class="gt_row gt_center">999</td>
+<td class="gt_row gt_center">999</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">S.E. type</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+<td class="gt_row gt_center">iid</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left gt_stub" data-quarto-table-cell-role="th">R<sup>2</sup></td>
+<td class="gt_row gt_center">-</td>
+<td class="gt_row gt_center">-</td>
+<td class="gt_row gt_center">-</td>
+</tr>
+</tbody><tfoot class="gt_sourcenotes">
+<tr class="odd">
+<td colspan="4" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
+</tr>
+</tfoot>
+
+</table>
 
 
+</div>
+        
+</div>
+</div>
+<p><code>PyFixest</code> integrates with the <a href="https://marginaleffects.com/bonus/python.html">marginaleffects</a> package. For example, to compute average marginal effects for the probit model above, you can use the following code:</p>
+<div id="b0d14f1a" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># we load polars as marginaleffects outputs pl.DataFrame's</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> avg_slopes</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>pl.concat([avg_slopes(model, variables  <span class="op">=</span> <span class="st">"X1"</span>) <span class="cf">for</span> model <span class="kw">in</span> [fit_probit, fit_logit, fit_gaussian]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (3, 9)</small>
 <table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
 <thead>
 <tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">est0</th>
-<th data-quarto-table-cell-role="th">est1</th>
+<th data-quarto-table-cell-role="th">term</th>
+<th data-quarto-table-cell-role="th">contrast</th>
+<th data-quarto-table-cell-role="th">estimate</th>
+<th data-quarto-table-cell-role="th">std_error</th>
+<th data-quarto-table-cell-role="th">statistic</th>
+<th data-quarto-table-cell-role="th">p_value</th>
+<th data-quarto-table-cell-role="th">s_value</th>
+<th data-quarto-table-cell-role="th">conf_low</th>
+<th data-quarto-table-cell-role="th">conf_high</th>
+</tr>
+<tr class="even">
+<th>str</th>
+<th>str</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">Estimate</td>
-<td>-1.001930</td>
-<td>-0.995197</td>
+<td>"X1"</td>
+<td>"mean(dY/dX)"</td>
+<td>-0.448614</td>
+<td>0.051086</td>
+<td>-8.781558</td>
+<td>0.0</td>
+<td>inf</td>
+<td>-0.54874</td>
+<td>-0.348487</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">Std. Error</td>
-<td>0.084823</td>
-<td>0.082194</td>
+<td>"X1"</td>
+<td>"mean(dY/dX)"</td>
+<td>-0.722455</td>
+<td>0.083797</td>
+<td>-8.621437</td>
+<td>0.0</td>
+<td>inf</td>
+<td>-0.886695</td>
+<td>-0.558215</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">t value</td>
-<td>-11.811964</td>
-<td>-12.107957</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">Pr(&gt;|t|)</td>
-<td>0.000000</td>
-<td>0.000000</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2.5%</td>
-<td>-1.168383</td>
-<td>-1.156490</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">97.5%</td>
-<td>-0.835476</td>
-<td>-0.833904</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">Bonferroni Pr(&gt;|t|)</td>
-<td>0.000000</td>
-<td>0.000000</td>
+<td>"X1"</td>
+<td>"mean(dY/dX)"</td>
+<td>-0.172566</td>
+<td>0.018802</td>
+<td>-9.178292</td>
+<td>0.0</td>
+<td>inf</td>
+<td>-0.209417</td>
+<td>-0.135716</td>
 </tr>
 </tbody>
 </table>
-
 </div>
 </div>
 </div>
+<p>We can also compute marginal effects by group (group average marginal effects):</p>
+<div id="b32516cd" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>avg_slopes(fit_probit, variables  <span class="op">=</span> <span class="st">"X1"</span>, by <span class="op">=</span> <span class="st">"f1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (2, 10)</small>
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">f1</th>
+<th data-quarto-table-cell-role="th">term</th>
+<th data-quarto-table-cell-role="th">contrast</th>
+<th data-quarto-table-cell-role="th">estimate</th>
+<th data-quarto-table-cell-role="th">std_error</th>
+<th data-quarto-table-cell-role="th">statistic</th>
+<th data-quarto-table-cell-role="th">p_value</th>
+<th data-quarto-table-cell-role="th">s_value</th>
+<th data-quarto-table-cell-role="th">conf_low</th>
+<th data-quarto-table-cell-role="th">conf_high</th>
+</tr>
+<tr class="even">
+<th>str</th>
+<th>str</th>
+<th>str</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+<th>f64</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>"group1"</td>
+<td>"X1"</td>
+<td>"mean(dY/dX)"</td>
+<td>-0.466327</td>
+<td>0.072613</td>
+<td>-6.422116</td>
+<td>1.3439e-10</td>
+<td>32.792824</td>
+<td>-0.608646</td>
+<td>-0.324009</td>
+</tr>
+<tr class="even">
+<td>"group2"</td>
+<td>"X1"</td>
+<td>"mean(dY/dX)"</td>
+<td>-0.431424</td>
+<td>0.071948</td>
+<td>-5.996355</td>
+<td>2.0180e-9</td>
+<td>28.884457</td>
+<td>-0.572439</td>
+<td>-0.290409</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>We find homogeneous effects by “f1” in the probit model.</p>
+<p>For more examples of other function arguments, please take a look at the documentation of the <a href="https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols">feols()</a> function.</p>
 
 
 </section>
