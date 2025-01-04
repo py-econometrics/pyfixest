@@ -5,6 +5,7 @@ website:
     - contents:
       - reference/estimation.estimation.feols.qmd
       - reference/estimation.estimation.fepois.qmd
+      - reference/estimation.estimation.feglm.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
@@ -15,6 +16,10 @@ website:
       - reference/estimation.feols_.Feols.qmd
       - reference/estimation.fepois_.Fepois.qmd
       - reference/estimation.feiv_.Feiv.qmd
+      - reference/estimation.feglm_.Feglm.qmd
+      - reference/estimation.felogit_.Felogit.qmd
+      - reference/estimation.feprobit_.Feprobit.qmd
+      - reference/estimation.fegaussian_.Fegaussian.qmd
       - reference/estimation.feols_compressed_.FeolsCompressed.qmd
       section: Estimation Classes
     - contents:
