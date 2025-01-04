@@ -745,7 +745,7 @@ def feglm(
     fsplit: Optional[str] = None,
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
-    Estimate GLM regression model with fixed effects.
+    Estimate GLM regression models (currently without fixed effects, this is work in progress).
 
     Parameters
     ----------
