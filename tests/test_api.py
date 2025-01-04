@@ -128,27 +128,45 @@ def _lspline(series: pd.Series, knots: list[float]) -> np.array:
     return np.column_stack(columns)
 
 
-def test_context_capture():
+@pytest.fixture
+def spline_data():
+    """Fixture to prepare data with spline splits."""
     data = pf.get_data()
-
+    data["Y"] = np.where(data["Y"] > data["Y"].median(), 1, 0)
     spline_split = _lspline(data["X2"], [0, 1])
-    data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
+    data["X2_0"], data["0_X2_1"], data["1_X2"] = spline_split.T
+    return data
 
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
-    context_captured_fit = pf.feols(
-        "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context=0
+
+@pytest.mark.parametrize(
+    "method,family",
+    [
+        ("feols", None),
+        ("feglm", "logit"),
+        ("feglm", "probit"),
+        ("feglm", "gaussian"),
+    ],
+)
+def test_context_capture(spline_data, method, family):
+    method_kwargs = {"data": spline_data}
+    if family:
+        method_kwargs["family"] = family
+
+    explicit_fit = getattr(pf, method)("Y ~ X2_0 + 0_X2_1 + 1_X2", **method_kwargs)
+    context_captured_fit = getattr(pf, method)(
+        "Y ~ _lspline(X2,[0,1])", context=0, **method_kwargs
     )
-    context_captured_fit_map = pf.feols(
-        "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context={"_lspline": _lspline}
+    context_captured_fit_map = getattr(pf, method)(
+        "Y ~ _lspline(X2,[0,1])", context={"_lspline": _lspline}, **method_kwargs
     )
 
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
         np.testing.assert_allclose(context_fit.se(), explicit_fit.se(), rtol=1e-12)
 
-    with pytest.raises(
-        FactorEvaluationError, match="Unable to evaluate factor `_lspline"
-    ):
-        pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data)
+    # FactorEvaluationError for `feols` when context is not set
+    if method == "feols":
+        with pytest.raises(
+            FactorEvaluationError, match="Unable to evaluate factor `_lspline"
+        ):
+            pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)

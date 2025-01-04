@@ -5,10 +5,13 @@ from typing import Any, Literal, Optional, Union
 
 import pandas as pd
 
+from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.felogit_ import Felogit
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -320,6 +323,7 @@ class FixestMulti:
                             lean=_lean,
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
+                            context=_context,
                         )
                         FIT.prepare_model_matrix()
                         FIT.demean()
@@ -348,10 +352,98 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                             separation_check=separation_check,
+                            context=_context,
                             # solver=_solver
                         )
                         FIT.prepare_model_matrix()
                         FIT.to_array()
+                        FIT.drop_multicol_vars()
+
+                    elif _method == "feglm-logit":
+                        FIT = Felogit(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                        )
+
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
+
+                    elif _method == "feglm-probit":
+                        FIT = Feprobit(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                        )
+
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
+
+                    elif _method == "feglm-gaussian":
+                        FIT = Fegaussian(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                        )
+
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
                         FIT.drop_multicol_vars()
 
                     elif _method == "compression":
