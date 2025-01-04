@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Callable, Literal, Optional
 
 import numba as nb
 import numpy as np
@@ -13,6 +13,7 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
+    demeaner_backend: Literal["numba", "jax"] = "numba",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -42,6 +43,8 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend to use for demeaning.
 
     Returns
     -------
@@ -64,6 +67,8 @@ def demean_model(
 
     if weights is not None and weights.ndim > 1:
         weights = weights.flatten()
+
+    demean_func = _set_demeaner_backend(demeaner_backend)
 
     if fe is not None:
         fe_array = fe.to_numpy()
@@ -93,7 +98,7 @@ def demean_model(
                 if var_diff.ndim == 1:
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
-                YX_demean_new, success = demean(
+                YX_demean_new, success = demean_func(
                     x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
                 )
                 if success is False:
@@ -116,7 +121,7 @@ def demean_model(
                 YX_demeaned = YX_demeaned_old[yx_names]
 
         else:
-            YX_demeaned, success = demean(
+            YX_demeaned, success = demean_func(
                 x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
             )
             if success is False:
@@ -298,3 +303,34 @@ def demean(
 
     success = not not_converged
     return (res, success)
+
+
+def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax"]) -> Callable:
+    """Set the demeaning backend.
+
+    Currently, we allow for a numba backend and a jax backend. The latter is
+    expected to be faster on GPU.
+
+    Parameters
+    ----------
+    demeaner_backend : Literal["numba", "jax"]
+        The demeaning backend to use.
+
+    Returns
+    -------
+    Callable
+        The demeaning function.
+
+    Raises
+    ------
+    ValueError
+        If the demeaning backend is not supported.
+    """
+    if demeaner_backend == "numba":
+        return demean
+    elif demeaner_backend == "jax":
+        from pyfixest.estimation.demean_jax_ import demean_jax
+
+        return demean_jax
+    else:
+        raise ValueError(f"Invalid demeaner backend: {demeaner_backend}")

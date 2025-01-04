@@ -1,8 +1,10 @@
-from typing import Optional, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+from formulaic.utils.context import capture_context as _capture_context
 
 from pyfixest.utils.dev_utils import _create_rng
 
@@ -322,3 +324,34 @@ def simultaneous_crit_val(
     p = C.shape[0]
     tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
+
+
+def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]:
+    """
+    Explicitly capture the context to be used by subsequent formula
+    materialisations.
+
+    Parameters
+    ----------
+    context: Union[int, Mapping[str, Any]]
+        The context from which variables (and custom transforms/etc)
+        should be inherited.
+
+        When specified as an integer, it is interpreted as a frame offset
+        from the caller's frame. Since we use this function in the context
+        of a library, we need to account for the extra frames, hence
+        we add 2 to the context (one for this and one for the frame the
+        function is being called in).
+
+        Otherwise, a mapping from variable name to value is expected.
+
+        When nesting in a library, and attempting to capture user-context,
+        make sure you account for the extra frames introduced by your wrappers.
+
+    Returns
+    -------
+    Mapping[str, Any]
+        The context that should be later passed to the Formulaic materialization
+        procedure like: `.get_model_matrix(..., context=<this object>)`.
+    """
+    return _capture_context(context + 2) if isinstance(context, int) else context

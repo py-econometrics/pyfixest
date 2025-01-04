@@ -1,6 +1,7 @@
 import functools
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import pandas as pd
 
@@ -13,6 +14,7 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import capture_context
 
 
 class FixestMulti:
@@ -32,6 +34,7 @@ class FixestMulti:
         split: Optional[str],
         fsplit: Optional[str],
         separation_check: Optional[list[str]] = None,
+        context: Union[int, Mapping[str, Any]] = 0,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -64,6 +67,11 @@ class FixestMulti:
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
+        context : int or Mapping[str, Any]
+            A dictionary containing additional context variables to be used by
+            formulaic during the creation of the model matrix. This can include
+            custom factorization functions, transformations, or any other
+            variables that need to be available in the formula environment.
 
         Returns
         -------
@@ -78,6 +86,7 @@ class FixestMulti:
         self._reps = reps if use_compression else None
         self._seed = seed if use_compression else None
         self._separation_check = separation_check
+        self._context = capture_context(context)
 
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
@@ -190,7 +199,10 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ],
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -207,8 +219,11 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-        solver: str, default is 'np.linalg.solve'.
-            Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+        solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+            default is 'np.linalg.solve'. Solver to use for the estimation.
+        demeaner_backend: Literal["numba", "jax"], optional
+            The backend to use for demeaning. Can be either "numba" or "jax".
+            Defaults to "numba".
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -240,6 +255,7 @@ class FixestMulti:
         _run_split = self._run_split
         _run_full = self._run_full
         _splitvar = self._splitvar
+        _context = self._context
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -272,12 +288,14 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
                             store_data=_store_data,
                             copy_data=_copy_data,
                             lean=_lean,
+                            context=_context,
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                         )
@@ -296,6 +314,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -320,6 +339,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
@@ -431,6 +451,7 @@ class FixestMulti:
                             weights=_weights,
                             weights_type=_weights_type,
                             solver=solver,
+                            demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
                             fixef_tol=_fixef_tol,
                             lookup_demeaned_data=lookup_demeaned_data,
