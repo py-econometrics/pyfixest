@@ -159,6 +159,7 @@ def test_context_capture(spline_data, method, family):
     context_captured_fit_map = getattr(pf, method)(
         "Y ~ _lspline(X2,[0,1])", context={"_lspline": _lspline}, **method_kwargs
     )
+
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
         np.testing.assert_allclose(context_fit.se(), explicit_fit.se(), rtol=1e-12)
