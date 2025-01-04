@@ -641,8 +641,8 @@ def fepois(
     fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
     fit.summary()
     ```
-    For more examples, please take a look at the documentation of the `feols()`
-    function.
+
+    For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols) function.
     """
     if separation_check is None:
         separation_check = ["fe"]
@@ -859,13 +859,40 @@ def feglm(
 
     ```{python}
     import pyfixest as pf
+    import numpy as np
 
-    data = pf.get_data(model = "Fepois")
-    fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
-    fit.summary()
+    data = pf.get_data()
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    data["f1"] = np.where(data["f1"] > data["f1"].median(), "group1", "group2")
+
+    fit_probit = pf.feglm("Y ~ X1*f1", data, family = "probit")
+    fit_logit = pf.feglm("Y ~ X1*f1", data, family = "logit")
+    fit_gaussian = pf.feglm("Y ~ X1*f1", data, family = "gaussian")
+
+    pf.etable([fit_probit, fit_logit, fit_gaussian])
     ```
-    For more examples, please take a look at the documentation of the `feols()`
+
+    `PyFixest` integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package. For example, to compute average marginal effects
+    for the probit model above, you can use the following code:
+
+    ```{python}
+    # we load polars as marginaleffects outputs pl.DataFrame's
+    import polars as pl
+    from marginaleffects import avg_slopes
+    pl.concat([avg_slopes(model, variables  = "X1") for model in [fit_probit, fit_logit, fit_gaussian]])
+    ```
+
+    We can also compute marginal effects by group (group average marginal effects):
+
+    ```{python}
+    avg_slopes(fit_probit, variables  = "X1", by = "f1")
+    ```
+
+    We find homogeneous effects by "f1" in the probit model.
+
+    For more examples of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols)
     function.
+
     """
     if family not in ["logit", "probit", "gaussian"]:
         raise ValueError(
