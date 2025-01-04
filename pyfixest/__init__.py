@@ -11,6 +11,7 @@ from pyfixest.did import did2s, event_study, lpdid, panelview
 # Import frequently used functions and classes
 from pyfixest.estimation import (
     bonferroni,
+    feglm,
     feols,
     fepois,
     rwolf,
@@ -33,6 +34,7 @@ __all__ = [
     "estimation",
     "etable",
     "event_study",
+    "feglm",
     "feols",
     "fepois",
     "get_data",

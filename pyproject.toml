@@ -13,7 +13,7 @@ license = { text = "MIT" }
 dependencies = [
   "lets-plot>=4.0.0",
   "scipy>=1.6",
-  "formulaic>=1.0.0",
+  "formulaic>=1.0.0,<1.1.0",
   "pandas>=1.1.0",
   "numba>=0.58.0",
   "seaborn>=0.13.2",
@@ -54,6 +54,7 @@ docs = [
   "causaldata>=0.1.4,<0.2",
   "pylatex>=1.4.2,<2",
   "marginaleffects>=0.0.10",
+  "pyarrow>=14.0",
 ]
 
 jax = [

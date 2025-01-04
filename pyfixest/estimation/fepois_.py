@@ -98,24 +98,24 @@ class Fepois(Feols):
         separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
-            FixestFormula,
-            data,
-            ssc_dict,
-            drop_singletons,
-            drop_intercept,
-            weights,
-            weights_type,
-            collin_tol,
-            fixef_tol,
-            lookup_demeaned_data,
-            solver,
-            demeaner_backend,
-            store_data,
-            copy_data,
-            lean,
-            context,
-            sample_split_var,
-            sample_split_value,
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         # input checks
@@ -358,6 +358,9 @@ class Fepois(Feols):
             return self._u_hat_working.flatten()
         else:
             raise ValueError("type must be one of 'response' or 'working'.")
+
+    def _vcov_iid(self):
+        return self._bread
 
     def predict(
         self,

@@ -722,6 +722,235 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
+def feglm(
+    fml: str,
+    data: DataFrameType,  # type: ignore
+    family: str,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    ssc: Optional[dict[str, Union[str, bool]]] = None,
+    fixef_rm: FixedRmOptions = "none",
+    fixef_tol: float = 1e-08,
+    iwls_tol: float = 1e-08,
+    iwls_maxiter: int = 25,
+    collin_tol: float = 1e-10,
+    separation_check: Optional[list[str]] = None,
+    solver: SolverOptions = "np.linalg.solve",
+    drop_intercept: bool = False,
+    i_ref1=None,
+    copy_data: bool = True,
+    store_data: bool = True,
+    lean: bool = False,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
+    split: Optional[str] = None,
+    fsplit: Optional[str] = None,
+) -> Union[Feols, Fepois, FixestMulti]:
+    """
+    Estimate GLM regression model with fixed effects.
+
+    Parameters
+    ----------
+    fml : str
+        A two-sided formula string using fixest formula syntax.
+        Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed
+        effects.
+        Special syntax includes:
+        - Stepwise regressions (sw, sw0)
+        - Cumulative stepwise regression (csw, csw0)
+        - Multiple dependent variables (Y1 + Y2 ~ X)
+        - Interaction of variables (i(X1,X2))
+        - Interacted fixed effects (fe1^fe2)
+        Compatible with formula parsing via the formulaic module.
+
+    data : DataFrameType
+        A pandas or polars dataframe containing the variables in the formula.
+
+    family : str
+        The family of the GLM model. Options include "gaussian", "logit" and "probit".
+
+    vcov : Union[VcovTypeOptions, dict[str, str]]
+        Type of variance-covariance matrix for inference. Options include "iid",
+        "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+
+    ssc : str
+        A ssc object specifying the small sample correction for inference.
+
+    fixef_rm : FixedRmOptions
+        Specifies whether to drop singleton fixed effects.
+        Options: "none" (default), "singleton".
+
+    fixef_tol: float, optional
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
+    iwls_tol : Optional[float], optional
+        Tolerance for IWLS convergence, by default 1e-08.
+
+    iwls_maxiter : Optional[float], optional
+        Maximum number of iterations for IWLS convergence, by default 25.
+
+    collin_tol : float, optional
+        Tolerance for collinearity check, by default 1e-10.
+
+    separation_check: list[str], optional
+        Methods to identify and drop separated observations.
+        Either "fe" or "ir". Executes "fe" by default (when None).
+
+    solver : SolverOptions, optional.
+        The solver to use for the regression. Can be either "np.linalg.solve" or
+        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+
+    drop_intercept : bool, optional
+        Whether to drop the intercept from the model, by default False.
+
+    i_ref1: None
+        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
+        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
+        fepois('Y~ i(f1)', data = data, i_ref=1).
+
+    copy_data : bool, optional
+        Whether to copy the data before estimation, by default True.
+        If set to False, the data is not copied, which can save memory but
+        may lead to unintended changes in the input data outside of `fepois`.
+        For example, the input data set is re-index within the function.
+        As far as I know, the only other relevant case is
+        when using interacted fixed effects, in which case you'll find
+        a column with interacted fixed effects in the data set.
+
+    store_data : bool, optional
+        Whether to store the data in the model object, by default True.
+        If set to False, the data is not stored in the model object, which can
+        improve performance and save memory. However, it will no longer be possible
+        to access the data via the `data` attribute of the model object. This has
+        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
+        or `vcov()`.
+
+    lean: bool, optional
+        False by default. If True, then all large objects are removed from the
+        returned result: this will save memory but will block the possibility
+        to use many methods. It is recommended to use the argument vcov
+        to obtain the appropriate standard-errors at estimation time,
+        since obtaining different SEs won't be possible afterwards.
+
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
+
+    split: Optional[str]
+        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+        variable and one estimation is performed for each value of that variable. If you also want
+        to include the estimation for the full sample, use the argument fsplit instead.
+
+    fsplit: Optional[str]
+        This argument is the same as split but also includes the full sample as the first estimation.
+
+    Returns
+    -------
+    object
+        An instance of the `Fepois` class or an instance of class `FixestMulti`
+        for multiple models specified via `fml`.
+
+    Examples
+    --------
+    The `fepois()` function can be used to estimate a simple Poisson regression
+    model with fixed effects.
+    The following example regresses `Y` on `X1` and `X2` with fixed effects for
+    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data(model = "Fepois")
+    fit = pf.fepois("Y ~ X1 + X2 | f1 + f2", data)
+    fit.summary()
+    ```
+    For more examples, please take a look at the documentation of the `feols()`
+    function.
+    """
+    if family not in ["logit", "probit", "gaussian"]:
+        raise ValueError(
+            f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
+        )
+
+    if separation_check is None:
+        separation_check = ["fe"]
+    if ssc is None:
+        ssc = ssc_func()
+    if i_ref1 is not None:
+        raise FeatureDeprecationError(
+            """
+            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
+            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
+            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
+            """
+        )
+
+    # WLS currently not supported for GLM regression
+    weights = None
+    weights_type = "aweights"
+
+    context = {} if context is None else capture_context(context)
+
+    _estimation_input_checks(
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
+        split=split,
+        fsplit=fsplit,
+        separation_check=separation_check,
+    )
+
+    fixest = FixestMulti(
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
+        split=split,
+        fsplit=fsplit,
+        context=context,
+    )
+
+    # same checks as for Poisson regression
+    fixest._prepare_estimation(
+        f"feglm-{family}", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+    )
+    if fixest._is_iv:
+        raise NotImplementedError(
+            "IV Estimation is not supported for Poisson Regression"
+        )
+
+    fixest._estimate_all_models(
+        vcov=vcov,
+        iwls_tol=iwls_tol,
+        iwls_maxiter=iwls_maxiter,
+        collin_tol=collin_tol,
+        separation_check=separation_check,
+        solver=solver,
+    )
+
+    if fixest._is_multiple_estimation:
+        return fixest
+    else:
+        return fixest.fetch_model(0, print_fml=False)
+
+
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
