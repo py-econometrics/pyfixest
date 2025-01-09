@@ -198,6 +198,7 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True])
 @pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -207,6 +208,7 @@ def test_single_fit_feols(
     fml,
     adj,
     cluster_adj,
+    demeaner_backend,
 ):
     global test_counter_feols
     test_counter_feols += 1
@@ -234,7 +236,14 @@ def test_single_fit_feols(
 
     r_inference = _get_r_inference(inference)
 
-    mod = pf.feols(fml=fml, data=data, vcov=inference, weights=weights, ssc=ssc_)
+    mod = pf.feols(
+        fml=fml,
+        data=data,
+        vcov=inference,
+        weights=weights,
+        ssc=ssc_,
+        demeaner_backend=demeaner_backend,
+    )
     if weights is not None:
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
