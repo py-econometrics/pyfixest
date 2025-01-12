@@ -5,9 +5,11 @@
 ### New features and bug fixes
 - Adds a function argument `context`, that allows to pass information / context to the `formulaic.Formulaic.get_model_matrix()` call that creates the model matrix.
 - Fix a bug that caused reindexing of `LPDID._coeftable` when calling `LPDID.iplot()`. As a result, a second call of `LPDID.iplot()` would fail.
+- Bumps the required `formulaic` version to `1.1.0` and fixes errors that arose when a) the ref argument was used for i() syntax, which led to a silent failure under formulaic >= 1.1.0, and fixef() / predict() with fixed effects, which led to a loud error.
 
 ### New experimental Features
 - Adds a `pf.feglm()` function that supports GLMs with normal and binomial families (gaussian, logit, probit) without fixed effects. Fixed effects support is work in progress.
+- Adds options to run the demean function via JAX. This might speed up the model fit if GPU is available.
 
 
 ## PyFixest 0.27.0
