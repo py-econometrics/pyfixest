@@ -254,7 +254,7 @@ def _get_columns_to_drop_and_check_ivars(
                     if ref and "_" in ref:
                         ref = ref.replace("_", "")
 
-                pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
+                pattern = rf"\[(?:T\.)?{ref}(?:\.0)?\]:{var2}"
                 if ref:
                     for column in X.columns:
                         if var1 in column and re.search(pattern, column):
