@@ -411,7 +411,7 @@ fit.wald_test(R=R1, q=q1)
 
 # Other GLMs (without fixed effects)
 
-`PyFixest` supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function.
+`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.
 
 ```{python}
 data_glm = pf.get_data(N=100, seed = 170)
