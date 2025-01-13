@@ -71,7 +71,9 @@ def test_against_doubleml():
         np.c_[y, X], columns=["y"] + ["X_" + str(x) for x in range(n_vars)]
     )
     m = feols(
-        f"y ~ -1 + {'+'.join(['X_'+str(x) for x in range(n_vars)])}", df, vcov="hetero"
+        f"y ~ -1 + {'+'.join(['X_' + str(x) for x in range(n_vars)])}",
+        df,
+        vcov="hetero",
     )
     pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
 

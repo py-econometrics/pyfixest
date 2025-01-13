@@ -411,7 +411,7 @@ def _coefplot_lets_plot(
             width=0.05,
             position=position_dodge(0.5),
         )
-        + ylab(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        + ylab(rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval")
     )
 
     if flip_coord:
@@ -544,7 +544,9 @@ def _coefplot_matplotlib(
         ax.axvline(x=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axhline(y=xintercept, color="black", linestyle="--")
-        ax.set_xlabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_xlabel(
+            rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval"
+        )
         ax.set_ylabel("Coefficient")
         ax.set_yticks(range(len(unique_coefficients)))
         ax.set_yticklabels(unique_coefficients)
@@ -553,7 +555,9 @@ def _coefplot_matplotlib(
         ax.axhline(y=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axvline(x=xintercept, color="black", linestyle="--")
-        ax.set_ylabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_ylabel(
+            rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval"
+        )
         ax.set_xlabel("Coefficient")
         ax.set_xticks(range(len(unique_coefficients)))
         ax.set_xticklabels(unique_coefficients)
@@ -596,10 +600,10 @@ def _get_model_df(
         A tidy model frame.
     """
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}%"
+    df_model["fml"] = f"{fxst._model_name_plot}: {(1 - alpha) * 100:.1f}%"
 
     if joint in ["both", True]:
-        lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
+        lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
         df_joint = fxst.confint(joint=True, alpha=alpha, seed=seed)
         df_joint.reset_index(inplace=True)
         df_joint = df_joint.rename(columns={"index": "Coefficient"})
@@ -609,7 +613,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
         df_joint_full["fml"] = (
-            f"{fxst._model_name_plot}: {(1- alpha) *100:.1f}% joint CIs"
+            f"{fxst._model_name_plot}: {(1 - alpha) * 100:.1f}% joint CIs"
         )
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
