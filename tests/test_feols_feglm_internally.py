@@ -73,10 +73,10 @@ def test_feols_feglm_internally(fml, family):
         fml=fml2, data=data, family=family, ssc=pf.ssc(adj=False, cluster_adj=False)
     )
 
-    assert fit1.coef().xs("X1") == fit2.coef().xs(
-        "X1"
-    ), f"Test failed for fml = {fml} and family = gaussian"
-    assert fit1.se().xs("X1") == fit2.se().xs(
-        "X1"
-    ), f"Test failed for fml = {fml} and family = gaussian"
+    assert fit1.coef().xs("X1") == fit2.coef().xs("X1"), (
+        f"Test failed for fml = {fml} and family = gaussian"
+    )
+    assert fit1.se().xs("X1") == fit2.se().xs("X1"), (
+        f"Test failed for fml = {fml} and family = gaussian"
+    )
     assert fit1._u_hat[0:5]

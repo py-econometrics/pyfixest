@@ -81,7 +81,9 @@ def test_randomization_t_vs_c(fml, resampvar, cluster):
         np.abs(fit1._ritest_pvalue - fit2._ritest_pvalue) < 0.03
         if cluster is None
         else 0.06
-    ), f"P-values are too different for randomization-c and randomization-t tests for {fml} and {resampvar} and {cluster}."
+    ), (
+        f"P-values are too different for randomization-c and randomization-t tests for {fml} and {resampvar} and {cluster}."
+    )
 
 
 @pytest.fixture

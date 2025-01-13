@@ -51,9 +51,9 @@ def test_bonferroni():
 
     bonferroni_r = stats.p_adjust(pvalues_r, method="bonferroni")
 
-    assert np.all(
-        np.abs(bonferroni_py.iloc[6].values - bonferroni_r) < 0.01
-    ), "bonferroni failed"
+    assert np.all(np.abs(bonferroni_py.iloc[6].values - bonferroni_r) < 0.01), (
+        "bonferroni failed"
+    )
 
 
 @pytest.mark.extended
@@ -193,9 +193,9 @@ def test_sampling_scheme(seed, reps):
     )
 
     # Assert that the percentage difference is within an acceptable range
-    assert (
-        np.abs(percent_diff) < 1.0
-    ), f"Percentage difference is too large: {percent_diff}%"
+    assert np.abs(percent_diff) < 1.0, (
+        f"Percentage difference is too large: {percent_diff}%"
+    )
 
 
 @pytest.mark.extended

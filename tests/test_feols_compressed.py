@@ -162,9 +162,9 @@ def test_different_seed():
     fit4 = pf.feols("Y ~ f1", data=data, use_compression=True, seed=125, reps=1000)
 
     assert np.allclose(fit3.coef().xs("f1"), fit4.coef().xs("f1")), "Error in seed"
-    assert np.all(
-        np.abs(fit3.se().xs("f1") / fit4.se().xs("f1")) < RTOL_BOOT
-    ), "Error in se"
+    assert np.all(np.abs(fit3.se().xs("f1") / fit4.se().xs("f1")) < RTOL_BOOT), (
+        "Error in se"
+    )
     assert np.all(
         np.abs(fit3.pvalue().xs("f1") / fit4.pvalue().xs("f1")) < RTOL_BOOT
     ), "Error in pvalue"
