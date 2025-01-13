@@ -182,18 +182,12 @@ def _extract_variable_level(fe_string: str):
         A tuple containing the extracted variable and level for the fixed
         effect.
     """
-    c_pattern = r"C\((.+?)\)"
-    t_pattern = r"\[T\.(.*\])"
-    c_match = re.search(c_pattern, fe_string)
-    t_match = re.search(t_pattern, fe_string, re.DOTALL)
+    pattern = r"C\(([^)]*)\)\[(?:T\.)?(.*)\]$"
+    match = re.search(pattern, fe_string)
+    if not match:
+        raise ValueError(f"Cannot parse: {fe_string}")
 
-    if not c_match or not t_match:
-        raise ValueError(
-            f"feols() failed after regex encountered the following value as a fixed effect:\n {fe_string}."
-            + "\nThis may due to the presence of line separation and/or escape sequences within the string."
-            + " If so, consider recoding the underlying string. Otherwise, please open a PR in the github repo!"
-        )
+    variable = match.group(1)
+    level = match.group(2)
 
-    variable = c_match.group(1)
-    level = t_match.group(1)
-    return "C(" + variable + ")", level[0 : level.rfind("]")]
+    return f"C({variable})", level
