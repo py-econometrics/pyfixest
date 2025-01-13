@@ -1341,13 +1341,13 @@ class Feols:
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert (
-            self._supports_cluster_causal_variance
-        ), "The model does not support the causal cluster variance estimator."
+        assert self._supports_cluster_causal_variance, (
+            "The model does not support the causal cluster variance estimator."
+        )
         assert isinstance(treatment, str), "treatment must be a string."
-        assert (
-            isinstance(cluster, str) or cluster is None
-        ), "cluster must be a string or None."
+        assert isinstance(cluster, str) or cluster is None, (
+            "cluster must be a string or None."
+        )
         assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
@@ -1398,9 +1398,9 @@ class Feols:
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(
-            np.isin(W, [0, 1])
-        ), "Treatment variable must be binary with values 0 and 1"
+        assert np.all(np.isin(W, [0, 1])), (
+            "Treatment variable must be binary with values 0 and 1"
+        )
         X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1950,8 +1950,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                f"{lb*100:.1f}%": _conf_int[0],
-                f"{ub*100:.1f}%": _conf_int[1],
+                f"{lb * 100:.1f}%": _conf_int[0],
+                f"{ub * 100:.1f}%": _conf_int[1],
             }
         )
 
@@ -2117,8 +2117,8 @@ class Feols:
 
         df = pd.DataFrame(
             {
-                f"{alpha / 2*100:.1f}%": lb,
-                f"{(1-alpha / 2)*100:.1f}%": ub,
+                f"{alpha / 2 * 100:.1f}%": lb,
+                f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
         # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
@@ -2349,8 +2349,8 @@ class Feols:
         )
 
         alpha = 1 - level
-        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
+        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 
@@ -2648,17 +2648,17 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "CRV1",
             "CRV3",
         ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(
-            next(iter(vcov.values())), str
-        ), "vcov dict value must be a string"
+        assert isinstance(next(iter(vcov.values())), str), (
+            "vcov dict value must be a string"
+        )
         deparse_vcov = next(iter(vcov.values())).split("+")
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(
-            v in data.columns for v in vcov
-        ), "vcov list must contain columns in the data"
+        assert all(v in data.columns for v in vcov), (
+            "vcov list must contain columns in the data"
+        )
     if isinstance(vcov, str):
         assert vcov in [
             "iid",

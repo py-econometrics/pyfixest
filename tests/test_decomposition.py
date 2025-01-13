@@ -140,16 +140,16 @@ def test_against_stata(stata_results):
             lower_diff = filtered_df.xs(g)["CI Lower"] - ci[g][0]
             upper_diff = filtered_df.xs(g)["CI Upper"] - ci[g][1]
 
-            assert np.all(
-                np.abs(coef_diff) < 1e-6
-            ), f"Failed for {g} with values {filtered_df.xs(g).Coefficient} and {contribution_dict[g]}"
+            assert np.all(np.abs(coef_diff) < 1e-6), (
+                f"Failed for {g} with values {filtered_df.xs(g).Coefficient} and {contribution_dict[g]}"
+            )
             if False:
-                assert np.all(
-                    np.abs(lower_diff) < 1e-4
-                ), f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci[g][0]}"
-                assert np.all(
-                    np.abs(upper_diff) < 1e-4
-                ), f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci[g][1]}"
+                assert np.all(np.abs(lower_diff) < 1e-4), (
+                    f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci[g][0]}"
+                )
+                assert np.all(np.abs(upper_diff) < 1e-4), (
+                    f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci[g][1]}"
+                )
 
     # Agg 1: Heteroskedastic SE
     decompose_and_compare(
