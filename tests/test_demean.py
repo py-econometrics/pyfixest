@@ -4,7 +4,7 @@ import pyhdfe
 import pytest
 
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
-from pyfixest.estimation.demean_jax_ import demean_jax
+from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 
 @pytest.mark.parametrize(

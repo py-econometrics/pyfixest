@@ -72,6 +72,7 @@ def demean_jax(
     weights: np.ndarray,
     tol: float = 1e-08,
     maxiter: int = 100_000,
+    output: str = "numpy",
 ) -> tuple[np.ndarray, bool]:
     """Fast and reliable JAX implementation with static shapes."""
     # Enable float64 precision
@@ -89,4 +90,10 @@ def demean_jax(
     result_jax, converged = _demean_jax_impl(
         x_jax, flist_jax, weights_jax, n_groups, tol, maxiter
     )
-    return np.array(result_jax), converged
+
+    if output == "numpy":
+        return np.array(result_jax), converged
+    elif output == "jax":
+        return result_jax, converged
+    else:
+        raise ValueError("Invalid output type")
