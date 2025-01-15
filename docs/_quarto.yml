@@ -41,6 +41,8 @@ website:
           text: "Regression Decomposition"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
+        - text: "PyFixest on the GPU"
+          file: pyfixest_gpu.ipynb
         - text: "Replicating 'The Effect' with PyFixest"
           file: replicating-the-effect.qmd
 
