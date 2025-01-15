@@ -9122,8 +9122,8 @@ packages:
   requires_python: '>=3.8'
 - pypi: .
   name: pyfixest
-  version: 0.27.0
-  sha256: e4d97111c850cf3c25c5d939c315d7d28b62144e59e6c0393050f8c7e456d22d
+  version: 0.28.0
+  sha256: 241d05c999dbe321ceda8985267399695e3cd4b18c572727896202dc9e2f1c5b
   requires_dist:
   - lets-plot>=4.0.0
   - scipy>=1.6
