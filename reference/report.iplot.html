@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-41ce87c438ccaeb35f64ae41c48547a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d83fba8907f73068b64e07941be842b2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -167,6 +167,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../replicating-the-effect.html">
@@ -589,7 +593,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="95b86edd" class="cell" data-execution_count="1">
+<div id="a1b58b87" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -603,7 +607,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="6slDKx"></div>
+            <div id="OQTPsJ"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -627,9 +631,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("6slDKx").appendChild(div);
+                        document.getElementById("OQTPsJ").appendChild(div);
                     };
-                    var e = document.getElementById("6slDKx");
+                    var e = document.getElementById("OQTPsJ");
                     e.appendChild(script);
                 })()
             </script>
@@ -637,7 +641,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="tfPm1p"></div>
+            <div id="vWZmFb"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -661,22 +665,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("tfPm1p").appendChild(div);
+                        document.getElementById("vWZmFb").appendChild(div);
                     };
-                    var e = document.getElementById("tfPm1p");
+                    var e = document.getElementById("vWZmFb");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="9d16Mg"></div>
+   <div id="uonvUn"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("9d16Mg");
+   var containerDiv = document.getElementById("uonvUn");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -692,8 +696,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]"],
 "Estimate":[2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367,2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367],
-"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.2456177964396635,-2.9967375670610856,-1.8679565379955156,-3.1344634797917648,-0.036380859568796,-2.32775974811405,-0.49175017941432697,-1.8328687627184732,-1.268893436923319,-1.0732750394848578,-0.09377794935911887,-0.7412291344773881,0.3883873191298457,-1.6584759825790323,-0.03816732407555001,0.8784212821434445,-1.7824697329011867,0.2803310941557078,-0.8401801443897898,1.5175200307960741,-2.81815947145214,-2.39348583471228,-2.070916313013142,-2.359502049851421,-3.24447836281015,-0.3961767173958033,-1.9105414150590334,0.21193078422452793,-1.2445878057378277],
-"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.8429581710364467,-0.27262400047440294,0.9399954548082202,-0.390960959862763,2.905998083441755,0.5293146639424127,2.2721335721216533,0.8912448038682097,1.4367513501620823,1.6508385271018255,2.670105802176862,2.1158452775790746,3.220214628669339,1.2253422987912777,2.818907087980912,3.602534848730128,1.1297301667645758,3.023833614084709,2.0168942676666726,4.065694943003615,-0.0746569515231379,0.26165163583016615,0.9747352436454698,0.4043817016845591,-0.15935667295443756,2.5462022256147487,0.9465329969974292,2.8228265210320815,1.6676120939279349],
+"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.24120602871585,-3.001364668085893,-1.8727260445619365,-3.139123514335564,-0.04137869988998144,-2.332612692610245,-0.49644483293246366,-1.8374958637432803,-1.273489167409979,-1.077902140509665,-0.09847260287725557,-0.746082078973583,0.38357725863649206,-1.663374353443139,-0.043020268571745124,0.8737941811186374,-1.7874163119665636,0.27567105961190896,-0.8450330888859847,1.5131917741138692,-2.8228195059959384,-2.3979957749224248,-2.076089569228256,-2.364196703369558,-3.2497186618593092,-0.40117455771698873,-1.9153943595552283,0.2074959917519863,-1.2495343848032046],
+"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.8473699387602602,-0.2679968994495958,0.9447649613746413,-0.3863009253189642,2.9109959237629406,0.5341676084386076,2.27682822563979,0.8958719048930168,1.4413470806487425,1.6554656281266327,2.6748004556949994,2.1206982220752693,3.225024689162693,1.2302406696553845,2.8237600324771073,3.6071619497549348,1.1346767458299527,3.0284936486285083,2.0217472121628677,4.070023199685821,-0.06999691697933907,0.2661615760403111,0.9799084998605837,0.4090763552026958,-0.15411637390527821,2.551200065935934,0.9513859414936241,2.827261313504623,1.6725586729933117],
 "Model":["Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0%","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs","Y~i(f1): 95.0% joint CIs"]
 },
 "mapping":{

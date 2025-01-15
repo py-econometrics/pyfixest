@@ -72,7 +72,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-41ce87c438ccaeb35f64ae41c48547a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d83fba8907f73068b64e07941be842b2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -167,6 +167,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../replicating-the-effect.html">
@@ -589,7 +593,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="1155c6a3" class="cell" data-execution_count="1">
+<div id="381e0fd6" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.report.utils <span class="im">import</span> rename_categoricals</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -605,7 +609,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="Jwx5Wg"></div>
+            <div id="juW6SA"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -629,9 +633,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Jwx5Wg").appendChild(div);
+                        document.getElementById("juW6SA").appendChild(div);
                     };
-                    var e = document.getElementById("Jwx5Wg");
+                    var e = document.getElementById("juW6SA");
                     e.appendChild(script);
                 })()
             </script>
@@ -639,7 +643,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="FcWtce"></div>
+            <div id="8a4mny"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -663,22 +667,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("FcWtce").appendChild(div);
+                        document.getElementById("8a4mny").appendChild(div);
                     };
-                    var e = document.getElementById("FcWtce");
+                    var e = document.getElementById("8a4mny");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="hJZamt"></div>
+   <div id="PzyWZR"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("hJZamt");
+   var containerDiv = document.getElementById("PzyWZR");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -694,8 +698,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["Intercept","Intercept","X1","X1","Intercept","Intercept","X1","X1"],
 "Estimate":[0.9185177588356426,0.9185177588356426,-1.000085840074156,-1.000085840074156,0.9185177588356426,0.9185177588356426,-1.000085840074156,-1.000085840074156],
-"2.5%":[0.6990856170653885,0.6753085578524956,-1.1663660739416457,-1.184383739606781,0.6990856170653885,0.6753085578524956,-1.1663660739416457,-1.184383739606781],
-"97.5%":[1.1379499006058966,1.1617269598187896,-0.8338056062066661,-0.8157879405415309,1.1379499006058966,1.1617269598187896,-0.8338056062066661,-0.8157879405415309],
+"2.5%":[0.6990856170653885,0.6803781675217739,-1.1663660739416457,-1.1805421151545752,0.6990856170653885,0.6803781675217739,-1.1663660739416457,-1.1805421151545752],
+"97.5%":[1.1379499006058966,1.1566573501495112,-0.8338056062066661,-0.8196295649937366,1.1379499006058966,1.1566573501495112,-0.8338056062066661,-0.8196295649937366],
 "Model":["Y~X1: 95.0%","Y~X1: 95.0% joint CIs","Y~X1: 95.0%","Y~X1: 95.0% joint CIs","Y~X1: 95.0%","Y~X1: 95.0% joint CIs","Y~X1: 95.0%","Y~X1: 95.0% joint CIs"]
 },
 "mapping":{
