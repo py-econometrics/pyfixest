@@ -8,6 +8,7 @@ import pandas as pd
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.felogit_ import Felogit
+from pyfixest.estimation.jax.olsjax_interface import OLSJAX_API
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
@@ -15,7 +16,6 @@ from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
-
 
 class FixestMulti:
     """A class to estimate multiple regression models with fixed effects."""
@@ -279,7 +279,11 @@ class FixestMulti:
                     FIT: Union[Feols, Feiv, Fepois]
 
                     if _method == "feols" and not _is_iv:
-                        FIT = Feols(
+
+                        backend = "jax"
+                        OLSCLASS = Feols if backend != "jax" else OLSJAX_API
+
+                        FIT = OLSCLASS(
                             FixestFormula=FixestFormula,
                             data=_data,
                             ssc_dict=_ssc_dict,
@@ -299,11 +303,14 @@ class FixestMulti:
                             sample_split_value=sample_split_value,
                             sample_split_var=_splitvar,
                         )
+
                         FIT.prepare_model_matrix()
                         FIT.demean()
                         FIT.to_array()
                         FIT.drop_multicol_vars()
                         FIT.wls_transform()
+
+
                     elif _method == "feols" and _is_iv:
                         FIT = Feiv(
                             FixestFormula=FixestFormula,

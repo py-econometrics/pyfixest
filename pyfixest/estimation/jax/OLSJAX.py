@@ -6,22 +6,46 @@ import pandas as pd
 
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
-
 class OLSJAX:
     def __init__(
         self,
         X: jax.Array,
         Y: jax.Array,
         fe: Optional[jax.Array] = None,
-        vcov: str = "iid",
+        weights: Optional[jax.Array] = None,
+        vcov: Optional[str, dict[str,str]] = None,
     ):
+
+        """
+        Class to run OLS regression in JAX.
+
+        Parameters
+        ----------
+        X : jax.Array
+            N x k matrix of independent variables.
+        Y : jax.Array
+            Dependent variable. N x 1 matrix.
+        fe : jax.Array, optional
+            Fixed effects. N x 1 matrix of integers. The default is None.
+        weights: jax.Array, optional
+            Weights. N x 1 matrix. The default is None.
+        vcov : str, optional
+            Type of covariance matrix. The default is None. Options are:
+            - "iid" (default): iid errors
+            - "HC1": heteroskedasticity robust
+            - "HC2": heteroskedasticity robust
+            - "HC3": heteroskedasticity robust
+            - "CRV1": cluster robust. In this case, please provide a dictionary
+                    with the cluster variable as key and the name of the cluster variable as value.
+        """
+
         self.X_orignal = X
         self.Y_orignal = Y
         self.fe = fe
         self.N = X.shape[0]
         self.k = X.shape[1]
-        self.weights = jnp.ones(self.N)
-        self.vcov_type = vcov
+        self.weights = jnp.ones(self.N) if weights is None else weights
+        self.vcov_type = "iid" if vcov is None else vcov
 
     def fit(self):
         self.Y, self.X = self.demean(
@@ -32,22 +56,6 @@ class OLSJAX:
         self.scores
         self.vcov(vcov_type=self.vcov_type)
         self.inference()
-
-    def tidy(self):
-        lb = 0.025
-        ub = 0.975
-
-        return pd.DataFrame(
-            {
-                # "Coefficient": _coefnames,
-                "Estimate": self.beta.flatten(),
-                "Std. Error": self.se.flatten(),
-                "t value": self.tstat.flatten(),
-                "Pr(>|t|)": self.pvalue.flatten(),
-                f"{lb * 100:.1f}%": self.confint[:, 0].flatten(),
-                f"{ub * 100:.1f}%": self.confint[:, 1].flatten(),
-            }
-        )
 
     @property
     def residuals(self):
