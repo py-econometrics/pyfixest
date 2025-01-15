@@ -123,6 +123,7 @@ def feols(
 
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba" or "jax". Defaults to "numba".
+        The "jax" backend is experimental. A full release is planned for pyfixest 0.29.
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -573,7 +574,9 @@ def fepois(
 
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba" or "jax".
-        Defaults to "numba".
+        Defaults to "numba". The "jax" backend is experimental.
+        A full release is planned for pyfixest 0.29.
+
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -746,6 +749,7 @@ def feglm(
 ) -> Union[Feols, Fepois, FixestMulti]:
     """
     Estimate GLM regression models (currently without fixed effects, this is work in progress).
+    This feature is currently experimental, full support will be released with pyfixest 0.29.
 
     Parameters
     ----------

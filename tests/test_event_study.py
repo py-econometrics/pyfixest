@@ -25,15 +25,15 @@ def test_event_study_twfe(data):
 
     twfe_feols = pf.feols("dep_var ~ treat | state + year", data=data)
 
-    assert np.allclose(
-        twfe.coef().values, twfe_feols.coef().values
-    ), "TWFE coefficients are not the same."
-    assert np.allclose(
-        twfe.se().values, twfe_feols.se().values
-    ), "TWFE standard errors are not the same."
-    assert np.allclose(
-        twfe.pvalue().values, twfe_feols.pvalue().values
-    ), "TWFE p-values are not the same."
+    assert np.allclose(twfe.coef().values, twfe_feols.coef().values), (
+        "TWFE coefficients are not the same."
+    )
+    assert np.allclose(twfe.se().values, twfe_feols.se().values), (
+        "TWFE standard errors are not the same."
+    )
+    assert np.allclose(twfe.pvalue().values, twfe_feols.pvalue().values), (
+        "TWFE p-values are not the same."
+    )
 
     # TODO - minor difference, likely due to how z statistic is
     # calculated
@@ -63,15 +63,15 @@ def test_event_study_did2s(data):
         cluster="state",
     )
 
-    assert np.allclose(
-        event_study_did2s.coef().values, fit_did2s.coef().values
-    ), "DID2S coefficients are not the same."
-    assert np.allclose(
-        event_study_did2s.se().values, fit_did2s.se().values
-    ), "DID2S standard errors are not the same."
-    assert np.allclose(
-        event_study_did2s.pvalue().values, fit_did2s.pvalue().values
-    ), "DID2S p-values are not the same."
+    assert np.allclose(event_study_did2s.coef().values, fit_did2s.coef().values), (
+        "DID2S coefficients are not the same."
+    )
+    assert np.allclose(event_study_did2s.se().values, fit_did2s.se().values), (
+        "DID2S standard errors are not the same."
+    )
+    assert np.allclose(event_study_did2s.pvalue().values, fit_did2s.pvalue().values), (
+        "DID2S p-values are not the same."
+    )
     assert np.allclose(
         event_study_did2s.confint().values, fit_did2s.confint().values
     ), "DID2S confidence intervals are not the same."

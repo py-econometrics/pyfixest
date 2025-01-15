@@ -142,17 +142,17 @@ def etable(
     """
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
-    assert (
-        isinstance(signif_code, list) and len(signif_code) == 3
-    ), "signif_code must be a list of length 3"
+    assert isinstance(signif_code, list) and len(signif_code) == 3, (
+        "signif_code must be a list of length 3"
+    )
     if signif_code:
-        assert all(
-            [0 < i < 1 for i in signif_code]
-        ), "All values of signif_code must be between 0 and 1"
+        assert all([0 < i < 1 for i in signif_code]), (
+            "All values of signif_code must be between 0 and 1"
+        )
     if signif_code:
-        assert (
-            signif_code[0] < signif_code[1] < signif_code[2]
-        ), "signif_code must be in increasing order"
+        assert signif_code[0] < signif_code[1] < signif_code[2], (
+            "signif_code must be in increasing order"
+        )
 
     models = _post_processing_input_checks(models)
 
@@ -166,12 +166,12 @@ def etable(
     if custom_stats:
         assert isinstance(custom_stats, dict), "custom_stats must be a dict"
         for key in custom_stats:
-            assert isinstance(
-                custom_stats[key], list
-            ), "custom_stats values must be a list"
-            assert len(custom_stats[key]) == len(
-                models
-            ), f"custom_stats {key} must have the same number as models"
+            assert isinstance(custom_stats[key], list), (
+                "custom_stats values must be a list"
+            )
+            assert len(custom_stats[key]) == len(models), (
+                f"custom_stats {key} must have the same number as models"
+            )
 
     assert type in [
         "df",
@@ -182,9 +182,9 @@ def etable(
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     if model_heads is not None:
-        assert len(model_heads) == len(
-            models
-        ), "model_heads must have the same length as models"
+        assert len(model_heads) == len(models), (
+            "model_heads must have the same length as models"
+        )
 
     # Check if head_order is allowed string & remove h when no model_heads provided
     assert head_order in [
@@ -203,9 +203,9 @@ def etable(
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
             assert isinstance(values, list), "custom_model_stats values must lists"
-            assert len(values) == len(
-                models
-            ), "lists in custom_model_stats values must have the same length as models"
+            assert len(values) == len(models), (
+                "lists in custom_model_stats values must have the same length as models"
+            )
 
     dep_var_list = []
     nobs_list = []
@@ -336,9 +336,11 @@ def etable(
                     _number_formatter, **kwargs
                 )
             elif element in custom_stats:
-                assert (
-                    len(custom_stats[element][i]) == len(model_tidy_df["Estimate"])
-                ), f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
+                assert len(custom_stats[element][i]) == len(
+                    model_tidy_df["Estimate"]
+                ), (
+                    f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
+                )
                 model_tidy_df[coef_fmt_title] += pd.Series(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
@@ -357,7 +359,7 @@ def etable(
             model_tidy_df,
             id_vars=["Coefficient"],
             var_name="Metric",
-            value_name=f"est{i+1}",
+            value_name=f"est{i + 1}",
         )
         model_tidy_df = model_tidy_df.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model_tidy_df)
@@ -833,9 +835,9 @@ def make_table(
     A table in the specified format.
     """
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
-    assert (
-        not isinstance(df.index, pd.MultiIndex) or df.index.nlevels <= 2
-    ), "Row index can have at most two levels."
+    assert not isinstance(df.index, pd.MultiIndex) or df.index.nlevels <= 2, (
+        "Row index can have at most two levels."
+    )
     assert type in ["gt", "tex"], "type must be either 'gt' or 'tex'."
     assert rgroup_sep in [
         "tb",
@@ -1250,16 +1252,16 @@ def dtable(
     if stats_labels is None:
         stats_labels = {}
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
-    assert all(
-        pd.api.types.is_numeric_dtype(df[var]) for var in vars
-    ), "Variables must be numerical."
+    assert all(pd.api.types.is_numeric_dtype(df[var]) for var in vars), (
+        "Variables must be numerical."
+    )
     assert type in ["gt", "tex", "df"], "type must be either 'gt' or 'tex' or 'df'."
-    assert (
-        byrow is None or byrow in df.columns
-    ), "byrow must be a column in the DataFrame."
-    assert bycol is None or all(
-        col in df.columns for col in bycol
-    ), "bycol must be a list of columns in the DataFrame."
+    assert byrow is None or byrow in df.columns, (
+        "byrow must be a column in the DataFrame."
+    )
+    assert bycol is None or all(col in df.columns for col in bycol), (
+        "bycol must be a list of columns in the DataFrame."
+    )
 
     # Default stats labels dictionary
     stats_dict = {

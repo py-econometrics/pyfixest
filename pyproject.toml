@@ -2,7 +2,7 @@
 name = "pyfixest"
 description = "Fast high dimensional fixed effect estimation following syntax of the fixest R package."
 requires-python = ">= 3.9"
-version = "0.27.0"
+version = "0.28.0"
 authors = [
   { name = "Alexander Fischer", email = "alexander-fischer1801@t-online.de" },
   { name = "Styfen Schär" },
@@ -13,7 +13,7 @@ license = { text = "MIT" }
 dependencies = [
   "lets-plot>=4.0.0",
   "scipy>=1.6",
-  "formulaic>=1.0.0,<1.1.0",
+  "formulaic>=1.1.0",
   "pandas>=1.1.0",
   "numba>=0.58.0",
   "seaborn>=0.13.2",
