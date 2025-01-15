@@ -55,6 +55,9 @@ docs = [
   "pylatex>=1.4.2,<2",
   "marginaleffects>=0.0.10",
   "pyarrow>=14.0",
+  "jax>=0.4.15",
+  "jaxlib>=0.4.15",
+
 ]
 
 jax = [
