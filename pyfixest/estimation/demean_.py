@@ -329,7 +329,7 @@ def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax"]) -> Callable
     if demeaner_backend == "numba":
         return demean
     elif demeaner_backend == "jax":
-        from pyfixest.estimation.demean_jax_ import demean_jax
+        from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
         return demean_jax
     else:
