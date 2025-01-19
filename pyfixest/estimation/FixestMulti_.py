@@ -304,11 +304,12 @@ class FixestMulti:
                             sample_split_var=_splitvar,
                         )
 
-                        FIT.prepare_model_matrix()
-                        FIT.demean()
-                        FIT.to_array()
-                        FIT.drop_multicol_vars()
-                        FIT.wls_transform()
+                        if backend != "jax":
+                            FIT.prepare_model_matrix()
+                            FIT.demean()
+                            FIT.to_array()
+                            FIT.drop_multicol_vars()
+                            FIT.wls_transform()
 
 
                     elif _method == "feols" and _is_iv:
@@ -337,6 +338,7 @@ class FixestMulti:
                         FIT.to_array()
                         FIT.drop_multicol_vars()
                         FIT.wls_transform()
+
                     elif _method == "fepois":
                         FIT = Fepois(
                             FixestFormula=FixestFormula,
@@ -482,17 +484,25 @@ class FixestMulti:
 
                     FIT.get_fit()
                     # if X is empty: no inference (empty X only as shorthand for demeaning)
-                    if not FIT._X_is_empty:
-                        # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data)
+                    if backend != "jax":
+                        if not FIT._X_is_empty:
+                            # inference
+                            vcov_type = _get_vcov_type(vcov, fval)
+                            FIT.vcov(vcov=vcov_type, data=FIT._data)
 
+                            FIT.get_inference()
+                            # other regression stats
+                            if _method == "feols" and not FIT._is_iv:
+                                FIT.get_performance()
+                            if isinstance(FIT, Feiv):
+                                FIT.first_stage()
+
+                    else:
+
+                        #import pdb; pdb.set_trace()
+                        FIT.vcov(type = "iid")
+                        FIT.convert_attributes_to_numpy()
                         FIT.get_inference()
-                        # other regression stats
-                        if _method == "feols" and not FIT._is_iv:
-                            FIT.get_performance()
-                        if isinstance(FIT, Feiv):
-                            FIT.first_stage()
 
                     # delete large attributescl
                     FIT._clear_attributes()

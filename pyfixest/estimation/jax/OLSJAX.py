@@ -13,7 +13,7 @@ class OLSJAX:
         Y: jax.Array,
         fe: Optional[jax.Array] = None,
         weights: Optional[jax.Array] = None,
-        vcov: Optional[str, dict[str,str]] = None,
+        vcov: Optional[str] = None,
     ):
 
         """
@@ -52,15 +52,17 @@ class OLSJAX:
             Y=self.Y_orignal, X=self.X_orignal, fe=self.fe, weights=self.weights
         )
         self.beta = jnp.linalg.lstsq(self.X, self.Y)[0]
-        self.residuals
+        self.get_fit()
         self.scores
         self.vcov(vcov_type=self.vcov_type)
         self.inference()
 
+    def get_fit(self):
+        self.beta = jnp.linalg.lstsq(self.X, self.Y)[0]
+
     @property
     def residuals(self):
-        self.uhat = self.Y - self.X @ self.beta
-        return self.uhat
+        return self.Y - self.X @ self.beta
 
     def vcov(self, vcov_type: str):
         bread = self.bread
@@ -100,7 +102,7 @@ class OLSJAX:
 
     @property
     def meat_iid(self):
-        return jnp.sum(self.uhat**2) / (self.N - self.k)
+        return jnp.sum(self.residuals**2) / (self.N - self.k)
 
     @property
     def meat_hc1(self):
@@ -125,13 +127,14 @@ class OLSJAX:
         return X @ self.beta
 
     def demean(self, Y: jax.Array, X: jax.Array, fe: jax.Array, weights: jax.Array):
+
         if fe is not None:
             if not jnp.issubdtype(fe.dtype, jnp.integer):
                 raise ValueError("Fixed effects must be integers")
 
             YX = jnp.concatenate((Y, X), axis=1)
             YXd, success = demean_jax(
-                x=YX, flist=fe, weights=self.weights, output="jax"
+                x=YX, flist=fe, weights=weights, output="jax"
             )
             Yd = YXd[:, 0].reshape(-1, 1)
             Xd = YXd[:, 1:]
@@ -140,16 +143,3 @@ class OLSJAX:
 
         else:
             return Y, X
-
-    def inference(self):
-        self.se = jnp.sqrt(jnp.diag(self.vcov)).reshape(-1, 1)
-        self.tstat = self.beta / self.se
-        self.pvalue = 2 * (1 - jax.scipy.stats.norm.cdf(jnp.abs(self.tstat)))
-        self.confint = jnp.column_stack(
-            [
-                self.beta - jax.scipy.stats.norm.ppf(1 - 0.05 / 2) * self.se,
-                self.beta + jax.scipy.stats.norm.ppf(1 - 0.05 / 2) * self.se,
-            ]
-        )
-
-        return self.se, self.tstat, self.pvalue, self.confint

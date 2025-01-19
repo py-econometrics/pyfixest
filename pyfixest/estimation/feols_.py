@@ -816,6 +816,7 @@ class Feols:
         -------
         None
         """
+
         _vcov = self._vcov
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
