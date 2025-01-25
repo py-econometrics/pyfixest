@@ -67,7 +67,7 @@ def _rename_categorical(
         return col_name
 
 
-def rename_categoricals(coef_names_list: list, template="{variable}::{level}") -> dict:
+def rename_categoricals(coef_names_list: list, template="{variable}::{value}") -> dict:
     """
     Rename the categorical variables in the coef_names_list.
 
