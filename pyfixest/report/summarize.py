@@ -225,7 +225,7 @@ def etable(
     if type in ["gt", "html"]:
         interactionSymbol = " &#215; "
         R2code = "R<sup>2</sup>"
-        lbcode= "<br>"
+        lbcode = "<br>"
     elif type == "tex":
         interactionSymbol = " $\\times$ "
         R2code = "$R^2$"
@@ -396,7 +396,7 @@ def etable(
         res = pd.concat([res, pd.DataFrame([intercept_row])])
 
     # Relabel variables
-    if (labels !={}) or (cat_template != ""):
+    if (labels != {}) or (cat_template != ""):
         # Relabel dependent variables
         dep_var_list = [labels.get(k, k) for k in dep_var_list]
 

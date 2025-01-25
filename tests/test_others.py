@@ -136,7 +136,7 @@ def test_rename_categoricals():
     }
 
     # with categoricals:
-    coefnames = ["Intercept","variable1[T.value1]", "variable1[T.value2]"]
+    coefnames = ["Intercept", "variable1[T.value1]", "variable1[T.value2]"]
     renamed = rename_categoricals(coefnames)
     assert renamed == {
         "Intercept": "Intercept",

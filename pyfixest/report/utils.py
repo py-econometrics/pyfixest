@@ -2,7 +2,9 @@ import re
 from typing import Optional
 
 
-def _relabel_expvar(varname: str, labels: dict, interaction_symbol: str, cat_template=""):
+def _relabel_expvar(
+    varname: str, labels: dict, interaction_symbol: str, cat_template=""
+):
     """
     Relabel a variable name using the labels dictionary
     Also automatically relabel interaction terms using the labels of the individual variables
@@ -31,15 +33,18 @@ def _relabel_expvar(varname: str, labels: dict, interaction_symbol: str, cat_tem
     for i in range(len(vars)):
         # Check whether template for categorical variables is provided &
         # whether the variable is a categorical variable
-        v= vars[i]
+        v = vars[i]
         if cat_template != "" and ("C(" in v or "[T." in v):
             vars[i] = _rename_categorical(v, template=cat_template, labels=labels)
         else:
-            vars[i]= labels.get(v, v)
+            vars[i] = labels.get(v, v)
     # Finally join the variables using the interaction symbol
     return interaction_symbol.join(vars)
 
-def _rename_categorical(col_name, template="{variable}::{value}", labels: Optional[dict] = None):
+
+def _rename_categorical(
+    col_name, template="{variable}::{value}", labels: Optional[dict] = None
+):
     # Here two patterns are used to extract the variable and level
     # Note the second pattern matches the notation when the variable is categorical at the outset
     if col_name.startswith("C("):
@@ -85,6 +90,7 @@ def rename_categoricals(coef_names_list: list, template="{variable}::{level}") -
     {'C(var)[T.1]': 'var::1', 'C(var)[T.2]': 'var::2', 'C(var2)[T.1]': 'var2::1', 'C(var2)[T.2]': 'var2::2'}
     """
     return {col: _rename_categorical(col, template=template) for col in coef_names_list}
+
 
 def _rename_event_study_coefs(col_name: str):
     pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[T\.(-?\d+(?:\.\d+)?)\]"
