@@ -257,6 +257,15 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
+def test_predict_dtype_error():
+    data = get_data()
+    fit = feols("Y ~ X1 | f1", data=data)
+
+    data["f1"] = data["f1"].fillna(0).astype(int)
+    with pytest.warns(UserWarning):
+        fit.predict(newdata=data.iloc[0:100])
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
@@ -720,3 +729,32 @@ def test_gelbach_errors():
         pf.fepois("Y ~ X1", data=dt).decompose(
             param="X1", combine_covariates={"g1": ["x21"]}
         )
+
+
+def test_glm_errors():
+    "Test that dependent variable must be binary for probit and logit models."
+    data = pf.get_data()
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 2, 0)
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    with pytest.raises(
+        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
+    ):
+        pf.feglm("Y ~ X1 | f1", data=data, family="probit")

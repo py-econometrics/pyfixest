@@ -30,7 +30,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.29.0
+          pixi-version: v0.39.4
           cache: true
 
       - name: set numba parallel flags
@@ -93,7 +93,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.29.0
+          pixi-version: v0.39.4
           cache: true
 
 
@@ -138,7 +138,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.29.0
+          pixi-version: v0.39.4
           cache: true
 
       - name: Set up Quarto

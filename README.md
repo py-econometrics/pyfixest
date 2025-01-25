@@ -25,9 +25,10 @@ For questions on `PyFixest`, head on over to our [PyFixest Discourse forum](http
 
 ## Features
 
--   **OLS**, **WLS** and **IV** Regression
+-   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
+-   Probit, Logit and Gaussian Family GLMs (currently without fixed effects demeaning, this is WIP)
 -   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
@@ -252,6 +253,8 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/escherpf"><img src="https://avatars.githubusercontent.com/u/3789736?v=4?s=100" width="100px;" alt="escherpf"/><br /><sub><b>escherpf</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aescherpf" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://www.ivanhigueram.com"><img src="https://avatars.githubusercontent.com/u/9004403?v=4?s=100" width="100px;" alt="Iván Higuera Mendieta"/><br /><sub><b>Iván Higuera Mendieta</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=ivanhigueram" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/adamvig96"><img src="https://avatars.githubusercontent.com/u/52835042?v=4?s=100" width="100px;" alt="Ádám Vig"/><br /><sub><b>Ádám Vig</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=adamvig96" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

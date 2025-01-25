@@ -115,42 +115,23 @@ def test_i_vs_fixest():
     )
 
 
-def test_i_interacted_fixest():
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "dep_var ~ i(state)",
+        "dep_var ~ i(state, ref = 1)",
+        "dep_var ~ i(state, year)",
+        "dep_var ~ i(state, year, ref = 1)",
+        "dep_var ~ i(state, year) | state",
+        "dep_var ~ i(state, year, ref = 1) | state",
+    ],
+)
+def test_i_interacted_fixest(fml):
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(df_het.shape[0])
 
-    # ------------------------------------------------------------------------ #
-    # no fixed effects
-
-    # no references
-    fit_py = feols("dep_var~i(state, year)", df_het)
-    fit_r = fixest.feols(ro.Formula("dep_var~i(state, year)"), df_het)
+    fit_py = feols(fml, df_het)
+    fit_r = fixest.feols(ro.Formula(fml), df_het)
     np.testing.assert_allclose(
         fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
     )
-
-    if True:
-        # no reference one fixed effect
-        fit_py = feols("dep_var~i(state, year) | state ", df_het)
-        fit_r = fixest.feols(ro.Formula("dep_var~i(state, year) | state"), df_het)
-        np.testing.assert_allclose(
-            fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-        )
-
-    if True:
-        # one reference
-        fit_py = feols("dep_var~i(state, year,ref=1)  ", df_het)
-        fit_r = fixest.feols(ro.Formula("dep_var~i(state, year, ref = 1)"), df_het)
-        np.testing.assert_allclose(
-            fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-        )
-
-    if True:
-        # one reference and fixed effect
-        fit_py = feols("dep_var~i(state, year,ref=1) | state ", df_het)
-        fit_r = fixest.feols(
-            ro.Formula("dep_var~i(state, year, ref = 1) | state"), df_het
-        )
-        np.testing.assert_allclose(
-            fit_py.coef().values, np.array(fit_r.rx2("coefficients"))
-        )

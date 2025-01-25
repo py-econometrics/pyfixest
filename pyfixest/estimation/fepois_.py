@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Protocol, Union
+from typing import Any, Literal, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -49,11 +51,17 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: str, default is 'np.linalg.solve'
-        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
-    solver:
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -77,7 +85,11 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
+        context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -86,22 +98,24 @@ class Fepois(Feols):
         separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
-            FixestFormula,
-            data,
-            ssc_dict,
-            drop_singletons,
-            drop_intercept,
-            weights,
-            weights_type,
-            collin_tol,
-            fixef_tol,
-            lookup_demeaned_data,
-            solver,
-            store_data,
-            copy_data,
-            lean,
-            sample_split_var,
-            sample_split_value,
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         # input checks
@@ -273,7 +287,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
@@ -344,6 +358,9 @@ class Fepois(Feols):
             return self._u_hat_working.flatten()
         else:
             raise ValueError("type must be one of 'response' or 'working'.")
+
+    def _vcov_iid(self):
+        return self._bread
 
     def predict(
         self,

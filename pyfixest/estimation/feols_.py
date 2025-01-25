@@ -2,8 +2,9 @@ import functools
 import gc
 import re
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
@@ -26,6 +27,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -41,7 +43,7 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -77,6 +79,11 @@ class Feols:
     solver : str, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Attributes
     ----------
@@ -183,8 +190,10 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-    _solver: str
-        The solver used to fit the normal equation.
+    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    _demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -210,10 +219,14 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
@@ -241,11 +254,13 @@ class Feols:
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
         self._solver = solver
+        self._demeaner_backend = demeaner_backend
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
         self._use_mundlak = False
+        self._context = capture_context(context)
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -332,6 +347,7 @@ class Feols:
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            context=self._context,
         )
 
         self._Y = mm_dict.get("Y")
@@ -407,6 +423,7 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._demeaner_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
@@ -438,34 +455,6 @@ class Feols:
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
-    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): Z'X.
-        tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        elif solver == "scipy.sparse.linalg.lsqr":
-            return lsqr(tZX, tZY)[0].flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
@@ -489,7 +478,7 @@ class Feols:
             self._tZX = _Z.T @ _X
             self._tZy = _Z.T @ _Y
 
-            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = solve_ols(self._tZX, self._tZy, _solver)
 
             self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
@@ -674,14 +663,8 @@ class Feols:
     def _vcov_iid(self):
         _N = self._N
         _u_hat = self._u_hat
-        _method = self._method
         _bread = self._bread
-
-        if _method == "feols":
-            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method == "fepois":
-            sigma2 = 1
-
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         _vcov = _bread * sigma2
 
         return _vcov
@@ -714,35 +697,27 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        _Z = self._Z
-        _u_hat = self._u_hat
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         _bread = self._bread
 
-        k_instruments = _Z.shape[1]
-        meat = np.zeros((k_instruments, k_instruments))
+        _scores = self._scores
 
-        # deviance uniquely for Poisson
-
-        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
+        k = _scores.shape[1]
+        meat = np.zeros((k, k))
 
         meat = _crv1_meat_loop(
-            _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64),
+            scores=_scores.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )
 
-        if _is_iv is False:
-            _vcov = _bread @ meat @ _bread
-        else:
-            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
-            _vcov = _bread @ meat @ _bread
+        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX if _is_iv else meat
+        vcov = _bread @ meat @ _bread
 
-        return _vcov
+        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         _k = self._k
@@ -857,7 +832,7 @@ class Feols:
         df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
-        if _method == "fepois":
+        if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
         else:
@@ -1366,13 +1341,13 @@ class Feols:
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert (
-            self._supports_cluster_causal_variance
-        ), "The model does not support the causal cluster variance estimator."
+        assert self._supports_cluster_causal_variance, (
+            "The model does not support the causal cluster variance estimator."
+        )
         assert isinstance(treatment, str), "treatment must be a string."
-        assert (
-            isinstance(cluster, str) or cluster is None
-        ), "cluster must be a string or None."
+        assert isinstance(cluster, str) or cluster is None, (
+            "cluster must be a string or None."
+        )
         assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
@@ -1423,9 +1398,9 @@ class Feols:
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(
-            np.isin(W, [0, 1])
-        ), "Treatment variable must be binary with values 0 and 1"
+        assert np.all(np.isin(W, [0, 1])), (
+            "Treatment variable must be binary with values 0 and 1"
+        )
         X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1837,6 +1812,19 @@ class Feols:
             if self._sumFE is None:
                 self.fixef(atol, btol)
             fvals = self._fixef.split("+")
+
+            mismatched_fixef_types = [
+                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
+            ]
+
+            if mismatched_fixef_types:
+                warnings.warn(
+                    f"Data types of fixed effects {mismatched_fixef_types} "
+                    "do not match the model data. This leads to mismatched keys "
+                    "in the fixed effect dictionary, and as a result, to NaN "
+                    "predictions for columns with mismatched keys."
+                )
+
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
             fixef_dicts = {}
@@ -1846,7 +1834,7 @@ class Feols:
                     fdict.keys()
                 )
                 if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})
+                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
                 fixef_dicts[f"C({f})"] = fdict
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
@@ -1962,8 +1950,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                f"{lb*100:.1f}%": _conf_int[0],
-                f"{ub*100:.1f}%": _conf_int[1],
+                f"{lb * 100:.1f}%": _conf_int[0],
+                f"{ub * 100:.1f}%": _conf_int[1],
             }
         )
 
@@ -2129,8 +2117,8 @@ class Feols:
 
         df = pd.DataFrame(
             {
-                f"{alpha / 2*100:.1f}%": lb,
-                f"{(1-alpha / 2)*100:.1f}%": ub,
+                f"{alpha / 2 * 100:.1f}%": lb,
+                f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
         # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
@@ -2361,8 +2349,8 @@ class Feols:
         )
 
         alpha = 1 - level
-        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
+        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 
@@ -2572,7 +2560,7 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index
+    return X, list(names_array), collin_vars, collin_index
 
 
 @nb.njit(parallel=False)
@@ -2660,17 +2648,17 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "CRV1",
             "CRV3",
         ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(
-            next(iter(vcov.values())), str
-        ), "vcov dict value must be a string"
+        assert isinstance(next(iter(vcov.values())), str), (
+            "vcov dict value must be a string"
+        )
         deparse_vcov = next(iter(vcov.values())).split("+")
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(
-            v in data.columns for v in vcov
-        ), "vcov list must contain columns in the data"
+        assert all(v in data.columns for v in vcov), (
+            "vcov list must contain columns in the data"
+        )
     if isinstance(vcov, str):
         assert vcov in [
             "iid",

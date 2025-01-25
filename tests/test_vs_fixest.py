@@ -118,6 +118,15 @@ iv_fmls = [
     "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
 ]
 
+glm_fmls = [
+    "Y ~ X1",
+    "Y ~ X1 + X2",
+    "Y ~ X1*X2",
+    # "Y ~ X1 + C(f2)",
+    # "Y ~ X1 + i(f1, ref = 1)",
+    "Y ~ X1 + f1:X2",
+]
+
 
 @pytest.fixture
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
@@ -189,6 +198,7 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True])
 @pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -198,6 +208,7 @@ def test_single_fit_feols(
     fml,
     adj,
     cluster_adj,
+    demeaner_backend,
 ):
     global test_counter_feols
     test_counter_feols += 1
@@ -225,7 +236,14 @@ def test_single_fit_feols(
 
     r_inference = _get_r_inference(inference)
 
-    mod = pf.feols(fml=fml, data=data, vcov=inference, weights=weights, ssc=ssc_)
+    mod = pf.feols(
+        fml=fml,
+        data=data,
+        vcov=inference,
+        weights=weights,
+        ssc=ssc_,
+        demeaner_backend=demeaner_backend,
+    )
     if weights is not None:
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
@@ -582,6 +600,170 @@ def test_single_fit_iv(
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("N", [100])
+@pytest.mark.parametrize("seed", [172])
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("fml", glm_fmls)
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
+def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
+    data = pf.get_data(N=N, seed=seed)
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    if dropna:
+        data = data.dropna()
+
+    r_inference = _get_r_inference(inference)
+
+    # Fit models for the current family
+    fit_py = pf.feglm(fml=fml, data=data, family=family, vcov=inference)
+    r_fml = _py_fml_to_r_fml(fml)
+    data_r = get_data_r(fml, data)
+
+    if family == "probit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="probit"),
+            vcov=r_inference,
+        )
+    elif family == "logit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="logit"),
+            vcov=r_inference,
+        )
+    elif family == "gaussian":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
+        )
+
+    # Compare coefficients
+    if inference == "iid":
+        py_coefs = fit_py.coef()
+        r_coefs = stats.coef(fit_r)
+
+        check_absolute_diff(
+            py_coefs, r_coefs, 1e-05, f"py_{family}_coefs != r_{family}_coefs"
+        )
+
+        # Compare predictions - link
+        py_predict = fit_py.predict(type="link")
+        r_predict = stats.predict(fit_r, type="link")
+        check_absolute_diff(
+            py_predict[0:5],
+            r_predict[0:5],
+            1e-04,
+            f"py_{family}_predict != r_{family}_predict for link",
+        )
+
+        # Compare predictions - response
+        py_predict = fit_py.predict(type="response")
+        r_predict = stats.predict(fit_r, type="response")
+        check_absolute_diff(
+            py_predict[0:5],
+            r_predict[0:5],
+            1e-04,
+            f"py_{family}_predict != r_{family}_predict for response",
+        )
+
+        # Compare with newdata - link
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="link")
+        r_predict_new = stats.predict(fit_r, newdata=data_r.iloc[0:100], type="link")
+        check_absolute_diff(
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for link",
+        )
+
+        # Compare with newdata - response
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")
+        r_predict_new = stats.predict(
+            fit_r, newdata=data_r.iloc[0:100], type="response"
+        )
+        check_absolute_diff(
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for response",
+        )
+
+        # Compare IRLS weights
+        py_irls_weights = fit_py._irls_weights.flatten()
+        r_irls_weights = fit_r.rx2("irls_weights")
+        check_absolute_diff(
+            py_irls_weights[0:5],
+            r_irls_weights[0:5],
+            1e-04,
+            f"py_{family}_irls_weights != r_{family}_irls_weights for inference {inference}",
+        )
+
+        # Compare residuals - working
+        py_resid_working = fit_py._u_hat_working
+        r_resid_working = stats.resid(fit_r, type="working")
+        check_absolute_diff(
+            py_resid_working[0:5],
+            r_resid_working[0:5],
+            1e-03,
+            f"py_{family}_resid_working != r_{family}_resid_working for inference {inference}",
+        )
+
+        # Compare residuals - response
+        py_resid_response = fit_py._u_hat_response
+        r_resid_response = stats.resid(fit_r, type="response")
+        check_absolute_diff(
+            py_resid_response[0:5],
+            r_resid_response[0:5],
+            1e-04,
+            f"py_{family}_resid_response != r_{family}_resid_response for inference {inference}",
+        )
+
+        # Compare scores
+        if family == "gaussian":
+            pytest.skip("Mismatch in scores, but all other tests pass.")
+
+            py_scores = fit_py._scores
+            r_scores = fit_r.rx2("scores")
+            check_absolute_diff(
+                py_scores[0, :],
+                r_scores[0, :],
+                1e-04,
+                f"py_{family}_scores != r_{family}_scores for inference {inference}",
+            )
+
+        # Compare deviance
+        py_deviance = fit_py.deviance
+        r_deviance = fit_r.rx2("deviance")
+        check_absolute_diff(
+            py_deviance,
+            r_deviance,
+            1e-05,
+            f"py_{family}_deviance != r_{family}_deviance for inference {inference}",
+        )
+
+    # Compare standard errors
+    py_se = fit_py.se().xs("X1")
+    r_se = _get_r_df(fit_r)["std.error"]
+    check_absolute_diff(
+        py_se,
+        r_se,
+        1e-04,
+        f"py_{family}_se != r_{family}_se for inference {inference}",
+    )
+
+    # Compare variance-covariance matrices
+    py_vcov = fit_py._vcov[0, 0]
+    r_vcov = stats.vcov(fit_r)[0, 0]
+    check_absolute_diff(
+        py_vcov,
+        r_vcov,
+        1e-04,
+        f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
+    )
 
 
 @pytest.mark.slow

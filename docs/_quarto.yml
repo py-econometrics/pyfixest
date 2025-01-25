@@ -41,6 +41,8 @@ website:
           text: "Regression Decomposition"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
+        - text: "PyFixest on the GPU"
+          file: pyfixest_gpu.ipynb
         - text: "Replicating 'The Effect' with PyFixest"
           file: replicating-the-effect.qmd
 
@@ -59,6 +61,7 @@ quartodoc:
       contents:
         - estimation.estimation.feols
         - estimation.estimation.fepois
+        - estimation.estimation.feglm
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.estimation.event_study
@@ -71,6 +74,10 @@ quartodoc:
         - estimation.feols_.Feols
         - estimation.fepois_.Fepois
         - estimation.feiv_.Feiv
+        - estimation.feglm_.Feglm
+        - estimation.felogit_.Felogit
+        - estimation.feprobit_.Feprobit
+        - estimation.fegaussian_.Fegaussian
         - estimation.feols_compressed_.FeolsCompressed
         #- did.did.DID
         #- did.did2s.DID2s

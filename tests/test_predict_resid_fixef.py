@@ -305,3 +305,5 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f3)", "1.0")
     var = "C(f4)[T.1]"
     assert _extract_variable_level(var) == ("C(f4)", "1")
+    var = "C(f5)[1.0]"
+    assert _extract_variable_level(var) == ("C(f5)", "1.0")

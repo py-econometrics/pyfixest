@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from lets_plot import LetsPlot
+from marginaleffects import slopes, avg_slopes
 
 import pyfixest as pf
 
@@ -407,6 +408,40 @@ R1 = np.array([[1, 2], [0, 1]])
 q1 = np.array([2.0, 1.0])
 fit.wald_test(R=R1, q=q1)
 ```
+
+# Other GLMs (without fixed effects)
+
+`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.
+
+```{python}
+data_glm = pf.get_data(N=100, seed = 170)
+data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
+
+fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
+fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
+fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
+
+pf.etable([
+    fit_gaussian,
+    fit_logit,
+    fit_probit,
+])
+```
+
+You can make predictions on the `response` and `link` scale via the `predict()` method:
+
+```{python}
+fit_logit.predict(type = "response")[0:5]
+fit_logit.predict(type = "link")[0:5]
+```
+
+You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):
+
+```{python}
+avg_slopes(fit_logit, variables = "X1")
+```
+
+Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.
 
 # Multiple Estimation
 
