@@ -135,6 +135,15 @@ def test_rename_categoricals():
         "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
     }
 
+    # with categoricals:
+    coefnames = ["Intercept","variable1[T.value1]", "variable1[T.value2]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "variable1[T.value1]": "variable1::value1",
+        "variable1[T.value2]": "variable1::value2",
+    }
+
 
 def test_rename_event_study_coefs():
     coefnames = [
