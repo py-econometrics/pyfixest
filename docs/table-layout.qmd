@@ -15,7 +15,7 @@ To begin, we load some libraries and fit a set of regression models.
 ```{python}
 import numpy as np
 import pandas as pd
-#import pylatex as pl  # for the latex table; note: not a dependency of pyfixest - needs manual installation
+import pylatex as pl  # for the latex table; note: not a dependency of pyfixest - needs manual installation
 from great_tables import loc, style
 from IPython.display import FileLink, display
 
