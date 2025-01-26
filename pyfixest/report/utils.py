@@ -1,5 +1,6 @@
 import re
 from typing import Optional
+
 import pandas as pd
 
 
@@ -92,6 +93,7 @@ def rename_categoricals(coef_names_list: list, template="{variable}::{value}") -
     """
     return {col: _rename_categorical(col, template=template) for col in coef_names_list}
 
+
 def set_first_cat(df, var_value_dict):
     """
     Set the first category of the categorical variables in a DataFrame.
@@ -110,11 +112,26 @@ def set_first_cat(df, var_value_dict):
     pd.DataFrame
         The DataFrame with the first category set for the categorical variables.
     """
-    assert all(column in df.columns for column in var_value_dict), "All keys in var_value_dict must be columns in df."
-    assert all(df[column].dtype.name == "category" for column in var_value_dict), "All variables in var_value_dict must be categorical."
-    assert all(value in df[column].cat.categories for column, value in var_value_dict.items()), "All values in var_value_dict must be in the categories of the corresponding column."
+    assert all(column in df.columns for column in var_value_dict), (
+        "All keys in var_value_dict must be columns in df."
+    )
+    assert all(df[column].dtype.name == "category" for column in var_value_dict), (
+        "All variables in var_value_dict must be categorical."
+    )
+    assert all(
+        value in df[column].cat.categories for column, value in var_value_dict.items()
+    ), (
+        "All values in var_value_dict must be in the categories of the corresponding column."
+    )
     for column, value in var_value_dict.items():
-        df[column] = pd.Categorical(df[column], categories=[value, *list(x for x in df[column].cat.categories if x != value)], ordered=True)
+        df[column] = pd.Categorical(
+            df[column],
+            categories=[
+                value,
+                *list(x for x in df[column].cat.categories if x != value),
+            ],
+            ordered=True,
+        )
     return df
 
 
