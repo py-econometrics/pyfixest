@@ -69,7 +69,9 @@ def _rename_categorical(
         return col_name
 
 
-def rename_categoricals(coef_names_list: list, template="{variable}::{value}") -> dict:
+def rename_categoricals(
+    coef_names_list: list, template="{variable}::{value}", labels: Optional[dict] = None
+) -> dict:
     """
     Rename the categorical variables in the coef_names_list.
 
@@ -80,6 +82,8 @@ def rename_categoricals(coef_names_list: list, template="{variable}::{value}") -
     template: str
         The template to use for renaming the categorical variables.
         It can contain the placeholders {variable} and {level}.
+    labels: dict
+        A dictionary with the variable names as keys and the new names as values.
 
     Returns
     -------
@@ -91,7 +95,10 @@ def rename_categoricals(coef_names_list: list, template="{variable}::{value}") -
     rename_categorical(["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"])
     {'C(var)[T.1]': 'var::1', 'C(var)[T.2]': 'var::2', 'C(var2)[T.1]': 'var2::1', 'C(var2)[T.2]': 'var2::2'}
     """
-    return {col: _rename_categorical(col, template=template) for col in coef_names_list}
+    return {
+        col: _rename_categorical(col, template=template, labels=labels)
+        for col in coef_names_list
+    }
 
 
 def set_first_cat(df, var_value_dict):
