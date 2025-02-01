@@ -3,7 +3,11 @@ import pandas as pd
 import polars as pl
 
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.report.utils import rename_categoricals, rename_event_study_coefs
+from pyfixest.report.utils import (
+    rename_categoricals,
+    rename_event_study_coefs,
+    set_first_cat,
+)
 from pyfixest.utils.utils import capture_context, get_data, ssc
 
 
@@ -135,6 +139,33 @@ def test_rename_categoricals():
         "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
     }
 
+    # with categoricals:
+    coefnames = ["Intercept", "variable1[T.value1]", "variable1[T.value2]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "variable1[T.value1]": "variable1::value1",
+        "variable1[T.value2]": "variable1::value2",
+    }
+
+    # Test with labels
+    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
+    labels = {"variable1": "var1", "variable2": "var2"}
+    renamed = rename_categoricals(coefnames, labels=labels)
+    assert renamed == {
+        "C(variable1)[T.value1]": "var1::value1",
+        "variable2[T.value2]": "var2::value2",
+    }
+
+    # Test with custom template
+    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
+    template = "{variable}--{value}"
+    renamed = rename_categoricals(coefnames, template=template)
+    assert renamed == {
+        "C(variable1)[T.value1]": "variable1--value1",
+        "variable2[T.value2]": "variable2--value2",
+    }
+
 
 def test_rename_event_study_coefs():
     coefnames = [
@@ -149,6 +180,28 @@ def test_rename_event_study_coefs():
         "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
         "Intercept": "Intercept",
     }
+
+
+def test_set_first_cat():
+    # Create a sample DataFrame
+    df = pd.DataFrame(
+        {
+            "job": pd.Categorical(
+                ["Admin", "Blue collar", "White collar", "Admin", "Blue collar"]
+            ),
+            "gender": pd.Categorical(["Male", "Female", "Female", "Male", "Female"]),
+        }
+    )
+
+    # Define the variable-value dictionary
+    var_value_dict = {"job": "Admin", "gender": "Female"}
+
+    # Call the function
+    result_df = set_first_cat(df, var_value_dict)
+
+    # Check the results
+    assert result_df["job"].cat.categories[0] == "Admin"
+    assert result_df["gender"].cat.categories[0] == "Female"
 
 
 def _foo():

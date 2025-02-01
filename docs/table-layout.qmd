@@ -121,7 +121,7 @@ pf.etable(
 )
 ```
 
-To obtain latex output use `format = "tex"`. If you want to save the table as a tex file, you can use the `filename=` argument to specify the respective path where it should be saved. If you want the latex code to be displayed in the notebook, you can use the `print_tex=True` argument.
+To obtain latex output use `format = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. If you want the latex code to be displayed in the notebook, you can use the `print_tex=True` argument.
 Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
 
 ```{python}
@@ -193,6 +193,33 @@ pf.etable(
     felabels={"f1": "Industry Fixed Effects", "f2": "Year Fixed Effects"},
 )
 ```
+
+## Rename categorical variables
+
+Categorical variables are automatically be relabeled from the formulaic "C(variable)[T.value]" notation where the default is *{variable}={value}*. This works when either the variable is categorial in the DataFrame, or the C() or i() operators are used in the regresson formula. If you instead want to keep the standard formulaic notation, specify *cat_template=""*.
+´
+```{python}
+
+# Add a categorical variable
+data['job'] = np.random.choice(["Managerial", "Admin", "Blue collar"], size=len(data), p=[1/3, 1/3, 1/3])
+# Add a label for this variable to the dictionary
+labels['job']="Job Family"
+
+fit7 = pf.feols("Y ~ X1 + X2 + job", data = data)
+
+pf.etable([fit7], labels=labels)
+```
+
+But you can also remove the variable name and only keep the levels (categories) by specifying *cat_template="{value}"*. Note that the labeling of categories also works in interaction terms:
+
+```{python}
+
+fit7 = pf.feols("Y ~ X1 + X2 + job", data = data)
+fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
+
+pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
+```
+
 
 ## Custom model headlines
 You can also add custom headers for each model by passing a list of strings to the `model_headers` argument.
