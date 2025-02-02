@@ -8,11 +8,11 @@
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![File an Issue](https://img.shields.io/github/issues/py-econometrics/pyfixest)](https://github.com/py-econometrics/pyfixest/issues)
 [![Known Bugs](https://img.shields.io/github/issues/py-econometrics/pyfixest/bug?color=red&label=Bugs)](https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pixi Badge][pixi-badge]][pixi-url]
-[![All Contributors](https://img.shields.io/badge/all_contributors-18-green.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-27-green.svg?style=flat-square)](#contributors-)
 [![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
 [![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Pixi Badge][pixi-badge]][pixi-url]
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
