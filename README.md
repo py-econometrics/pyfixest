@@ -6,6 +6,9 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
 [![PyPI -Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
+![File an Issue](https://img.shields.io/github/issues/py-econometrics/pyfixest)
+![Known Bugs](https://img.shields.io/github/issues/py-econometrics/pyfixest/bug)
+![Stack Overflow](https://img.shields.io/stackexchange/stackoverflow/t/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
 [![All Contributors](https://img.shields.io/badge/all_contributors-18-green.svg?style=flat-square)](#contributors-)
@@ -21,7 +24,7 @@ The package aims to mimic `fixest` syntax and functionality as closely as Python
 
 Nevertheless, for a quick introduction, you can take a look at the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-For questions on `PyFixest`, head on over to our [PyFixest Discourse forum](https://pyfixest.discourse.group/).
+For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions).
 
 ## Features
 
