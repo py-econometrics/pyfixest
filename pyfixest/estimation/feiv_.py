@@ -275,7 +275,7 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
-       # Do first stage regression
+        # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
