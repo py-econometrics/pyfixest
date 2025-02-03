@@ -275,14 +275,12 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
-        weight_detail = "weights" if self._has_weights else None
-
         # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
             vcov=vcov_detail,
-            weights=weight_detail,
+            weights=self._weights_name,
             weights_type=self._weights_type,
             collin_tol=self._collin_tol,
         )
