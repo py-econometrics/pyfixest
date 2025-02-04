@@ -229,6 +229,7 @@ class Feols:
         context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
+        offset: Optional[str] = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
@@ -250,6 +251,7 @@ class Feols:
         self._drop_intercept = drop_intercept
         self._weights_name = weights
         self._weights_type = weights_type
+        self._offset_name = offset
         self._has_weights = weights is not None
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
@@ -347,6 +349,7 @@ class Feols:
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            offset=self._offset_name,
             context=self._context,
         )
 
@@ -357,6 +360,7 @@ class Feols:
         self._endogvar = mm_dict.get("endogvar")
         self._Z = mm_dict.get("Z")
         self._weights_df = mm_dict.get("weights_df")
+        self._offset_df = mm_dict.get("offset_df")
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
         self._icovars = mm_dict.get("icovars")
@@ -372,7 +376,9 @@ class Feols:
         self._data = _drop_cols(self._data, self._na_index)
 
         self._weights = self._set_weights()
+        self._offset = self._set_offset()
         self._N, self._N_rows = self._set_nobs()
+
 
     def _set_nobs(self) -> tuple[int, int]:
         """
@@ -411,6 +417,27 @@ class Feols:
             _weights = np.ones(N)
 
         return _weights.reshape((N, 1))
+    
+    def _set_offset(self) -> np.ndarray:
+        """
+        Return the offset used in the regression model.
+
+        Returns
+        -------
+        np.ndarray
+            The offset used in the regression model.
+            If no offset is used, returns an array of zeros
+            with the same length as the dependent variable array.
+        """
+
+        N = len(self._Y)
+
+        if self._offset_df is not None:
+            _offset = self._offset_df.to_numpy()
+        else:
+            _offset = np.zeros(N)
+
+        return _offset.reshape((N, 1))
 
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."

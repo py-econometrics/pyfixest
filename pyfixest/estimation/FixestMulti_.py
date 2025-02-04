@@ -135,6 +135,7 @@ class FixestMulti:
         ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
         drop_intercept: bool = False,
+        offset: Optional[Union[None, str]] = None,
     ) -> None:
         """
         Prepare model for estimation.
@@ -153,9 +154,13 @@ class FixestMulti:
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
             See `feols()` or `fepois()`.
-        weights : Union[None, np.ndarray], optional
-            An array of weights.
-            Either None or a 1D array of length N. Default is None.
+        weights : Union[None, str], optional
+            Default is None. Weights for WLS estimation. If None, all observations
+            are weighted equally. If a string, the name of the column in `data` that
+            contains the weights.
+        offset : Union[None, str], optional
+            Default is None. Offset variable for Poisson regression. If None, no offset.
+            If a string, the name of the column in `data` that contains the offset.
         ssc : dict[str, str], optional
             A dictionary specifying the type of standard errors to use for inference.
             See `feols()` or `fepois()`.
@@ -179,6 +184,7 @@ class FixestMulti:
         self._is_multiple_estimation = False
         self._drop_intercept = False
         self._weights = weights
+        self._offset = offset
         self._has_weights = False
         if weights is not None:
             self._has_weights = True
@@ -247,6 +253,7 @@ class FixestMulti:
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
         _weights = self._weights
+        _offset = self._offset
         _fixef_tol = self._fixef_tol
         _weights_type = self._weights_type
         _lean = self._lean
@@ -339,6 +346,7 @@ class FixestMulti:
                             drop_intercept=_drop_intercept,
                             weights=_weights,
                             weights_type=_weights_type,
+                            offset=_offset,
                             solver=solver,
                             demeaner_backend=demeaner_backend,
                             collin_tol=collin_tol,
