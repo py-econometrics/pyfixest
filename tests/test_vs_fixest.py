@@ -520,8 +520,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights
+    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
     global test_counter_fepois
     test_counter_fepois += 1
@@ -530,6 +531,13 @@ def test_single_fit_fepois(
     _skip_dropna(test_counter_fepois, dropna)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
+
+    data = data_fepois
+    if offset:
+        data["offset_var"] = np.ones(data.shape[0]) * 5
+        offset_var = "offset_var"
+    else:
+        offset_var = None
 
     data_fepois = data_fepois.copy()
     if dropna:
@@ -552,27 +560,22 @@ def test_single_fit_fepois(
         iwls_tol=1e-10,
         iwls_maxiter=100,
         weights=weights,
+        offset=offset_var if offset else None,
     )
 
+    r_kwargs = {
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_maxiter": 100,
+    }
     if weights is not None:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-            weights=ro.Formula("~" + weights),
-        )
-    else:
-        r_fixest = fixest.fepois(
-            ro.Formula(r_fml),
-            vcov=r_inference,
-            data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
-            glm_tol=1e-10,
-            glm_maxiter=100,
-        )
+        r_kwargs["weights"] = ro.Formula("~" + weights)
+    if offset:
+        r_kwargs["offset"] = ro.Formula("~" + offset_var)
+
+    r_fixest = fixest.fepois(ro.Formula(r_fml), **r_kwargs)
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
