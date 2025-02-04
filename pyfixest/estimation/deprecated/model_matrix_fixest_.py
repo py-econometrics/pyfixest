@@ -17,6 +17,7 @@ def model_matrix_fixest(
     data: pd.DataFrame,
     drop_singletons: bool = False,
     weights: str | None = None,
+    offset: str | None = None,
     drop_intercept=False,
     context: int | Mapping[str, Any] = 0,
 ) -> dict:
@@ -143,6 +144,7 @@ def model_matrix_fixest(
         **({"fml_first_stage": fml_first_stage} if _is_iv else {}),
         **({"fe": wrap_factorize(fval)} if fval is not None else {}),
         **({"weights": weights} if weights is not None else {}),
+        **({"offset": offset} if offset is not None else {}),
     }
 
     FML = Formula(**fml_kwargs)
@@ -150,7 +152,7 @@ def model_matrix_fixest(
     mm = FML.get_model_matrix(
         data, output="pandas", context={"factorize": factorize, **_context}
     )
-    endogvar = Z = weights_df = fe = None
+    endogvar = Z = weights_df = offset_df = fe = None
 
     model_spec = mm.model_spec
 
@@ -164,6 +166,8 @@ def model_matrix_fixest(
         fe = mm["fe"]
     if weights is not None:
         weights_df = mm["weights"]
+    if offset is not None:
+        offset_df = mm["offset"]
 
     # drop infinite values
     inf_idx_list = []
@@ -192,7 +196,7 @@ def model_matrix_fixest(
             weights_df=weights_df,
         )
 
-    for df in [Y, X, Z, endogvar, weights_df]:
+    for df in [Y, X, Z, endogvar, weights_df, offset_df]:
         if df is not None:
             cols_to_convert = df.select_dtypes(exclude=["int64", "float64"]).columns
             if cols_to_convert.size > 0:
@@ -245,6 +249,8 @@ def model_matrix_fixest(
                 endogvar=endogvar,
                 weights_df=weights_df,
             )
+            if offset is not None:
+                offset_df = offset_df[keep_idx]
 
     na_index = _get_na_index(data.shape[0], Y.index)
     na_index_str = ",".join(str(x) for x in na_index)
@@ -262,6 +268,7 @@ def model_matrix_fixest(
         "endogvar": endogvar,
         "Z": Z,
         "weights_df": weights_df,
+        "offset_df": offset_df,
         "na_index": na_index,
         "na_index_str": na_index_str,
         "icovars": _icovars,
