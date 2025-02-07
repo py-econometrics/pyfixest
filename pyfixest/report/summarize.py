@@ -31,6 +31,7 @@ def etable(
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     labels: Optional[dict] = None,
+    cat_template: Optional[str] = None,
     show_fe: Optional[bool] = True,
     show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
@@ -83,6 +84,11 @@ def etable(
         names and the values the new names. Note that interaction terms will also be
         relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
+    cat_template: str, optional
+        Template to relabel categorical variables. None by default, which applies no relabeling.
+        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
+        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
+        are also possible.
     show_fe: bool, optional
         Whether to show the rows with fixed effects markers. Default is True.
     show_se_type: bool, optional
@@ -154,8 +160,12 @@ def etable(
             "signif_code must be in increasing order"
         )
 
+    cat_template = "" if cat_template is None else cat_template
+
     models = _post_processing_input_checks(models)
 
+    if labels is None:
+        labels = {}
     if custom_stats is None:
         custom_stats = dict()
     if keep is None:
@@ -215,16 +225,19 @@ def etable(
     r2_list = []
     r2_within_list: list[float] = []  # noqa: F841
 
-    # Define code for R2 & interaction symbol depending on output type
+    # Define code for R2, interaction & line break depending on output type
     if type in ["gt", "html"]:
         interactionSymbol = " &#215; "
         R2code = "R<sup>2</sup>"
+        lbcode = "<br>"
     elif type == "tex":
         interactionSymbol = " $\\times$ "
         R2code = "$R^2$"
+        lbcode = r"\\"
     else:
         interactionSymbol = " x "
         R2code = "R2"
+        lbcode = "\n"
 
     for model in models:
         dep_var_list.append(model._depvar)
@@ -345,12 +358,7 @@ def etable(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
             elif element == "\n":  # Replace output specific code for newline
-                if type in ["html", "gt"]:
-                    model_tidy_df[coef_fmt_title] += "<br>"
-                elif type == "tex":
-                    model_tidy_df[coef_fmt_title] += r"\\"
-                elif type in ["md", "df"]:
-                    model_tidy_df[coef_fmt_title] += "\n"
+                model_tidy_df[coef_fmt_title] += lbcode
             else:
                 model_tidy_df[coef_fmt_title] += element
         model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
@@ -392,14 +400,14 @@ def etable(
         res = pd.concat([res, pd.DataFrame([intercept_row])])
 
     # Relabel variables
-    if labels is not None:
+    if (labels != {}) or (cat_template != ""):
         # Relabel dependent variables
         dep_var_list = [labels.get(k, k) for k in dep_var_list]
 
         # Relabel explanatory variables
         res_index = res.index.to_series()
         res_index = res_index.apply(
-            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol)
+            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol, cat_template)
         )
         res.set_index(res_index, inplace=True)
 
@@ -991,8 +999,6 @@ def make_table(
             with open(file_name, "w") as f:
                 f.write(latex_res)  # Write the latex code to a file
 
-        # Only when type is 'tex' return the latex code as
-        # otherwise a GT object will be returned
         if type == "tex":
             return latex_res
 
