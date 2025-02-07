@@ -3,7 +3,10 @@ import pandas as pd
 import polars as pl
 
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.report.utils import rename_categoricals, rename_event_study_coefs
+from pyfixest.report.utils import (
+    rename_categoricals,
+    rename_event_study_coefs,
+)
 from pyfixest.utils.utils import capture_context, get_data, ssc
 
 
@@ -133,6 +136,33 @@ def test_rename_categoricals():
         "Intercept": "Intercept",
         "C(f4, contr.treatment(base='A'))[T.B]": "f4::B",
         "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
+    }
+
+    # with categoricals:
+    coefnames = ["Intercept", "variable1[T.value1]", "variable1[T.value2]"]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "Intercept": "Intercept",
+        "variable1[T.value1]": "variable1::value1",
+        "variable1[T.value2]": "variable1::value2",
+    }
+
+    # Test with labels
+    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
+    labels = {"variable1": "var1", "variable2": "var2"}
+    renamed = rename_categoricals(coefnames, labels=labels)
+    assert renamed == {
+        "C(variable1)[T.value1]": "var1::value1",
+        "variable2[T.value2]": "var2::value2",
+    }
+
+    # Test with custom template
+    coefnames = ["C(variable1)[T.value1]", "variable2[T.value2]"]
+    template = "{variable}--{value}"
+    renamed = rename_categoricals(coefnames, template=template)
+    assert renamed == {
+        "C(variable1)[T.value1]": "variable1--value1",
+        "variable2[T.value2]": "variable2--value2",
     }
 
 
