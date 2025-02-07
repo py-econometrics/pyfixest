@@ -6,7 +6,6 @@ from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.report.utils import (
     rename_categoricals,
     rename_event_study_coefs,
-    set_first_cat,
 )
 from pyfixest.utils.utils import capture_context, get_data, ssc
 
@@ -180,28 +179,6 @@ def test_rename_event_study_coefs():
         "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
         "Intercept": "Intercept",
     }
-
-
-def test_set_first_cat():
-    # Create a sample DataFrame
-    df = pd.DataFrame(
-        {
-            "job": pd.Categorical(
-                ["Admin", "Blue collar", "White collar", "Admin", "Blue collar"]
-            ),
-            "gender": pd.Categorical(["Male", "Female", "Female", "Male", "Female"]),
-        }
-    )
-
-    # Define the variable-value dictionary
-    var_value_dict = {"job": "Admin", "gender": "Female"}
-
-    # Call the function
-    result_df = set_first_cat(df, var_value_dict)
-
-    # Check the results
-    assert result_df["job"].cat.categories[0] == "Admin"
-    assert result_df["gender"].cat.categories[0] == "Female"
 
 
 def _foo():

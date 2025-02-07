@@ -1,8 +1,6 @@
 import re
 from typing import Optional
 
-import pandas as pd
-
 
 def _relabel_expvar(
     varname: str, labels: dict, interaction_symbol: str, cat_template=""
@@ -99,47 +97,6 @@ def rename_categoricals(
         col: _rename_categorical(col, template=template, labels=labels)
         for col in coef_names_list
     }
-
-
-def set_first_cat(df, var_value_dict):
-    """
-    Set the first category of the categorical variables in a DataFrame.
-    This function is useful to change the reference categories of categorical variables.
-    Regressions of the form "y ~ c" will use the first category of c as reference.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        The DataFrame containing the categorical variables.
-    var_value_dict: dict
-        A dictionary with the variable names as keys and the value to set as first category as values.
-
-    Returns
-    -------
-    pd.DataFrame
-        The DataFrame with the first category set for the categorical variables.
-    """
-    assert all(column in df.columns for column in var_value_dict), (
-        "All keys in var_value_dict must be columns in df."
-    )
-    assert all(df[column].dtype.name == "category" for column in var_value_dict), (
-        "All variables in var_value_dict must be categorical."
-    )
-    assert all(
-        value in df[column].cat.categories for column, value in var_value_dict.items()
-    ), (
-        "All values in var_value_dict must be in the categories of the corresponding column."
-    )
-    for column, value in var_value_dict.items():
-        df[column] = pd.Categorical(
-            df[column],
-            categories=[
-                value,
-                *list(x for x in df[column].cat.categories if x != value),
-            ],
-            ordered=True,
-        )
-    return df
 
 
 def _rename_event_study_coefs(col_name: str):
