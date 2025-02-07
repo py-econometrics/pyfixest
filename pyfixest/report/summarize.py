@@ -31,7 +31,7 @@ def etable(
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     labels: Optional[dict] = None,
-    cat_template: Optional[str] = "{variable}={value}",
+    cat_template: Optional[str] = None,
     show_fe: Optional[bool] = True,
     show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
@@ -85,8 +85,10 @@ def etable(
         relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
     cat_template: str, optional
-        Template to relabel categorical variables. When empty, the function will not
-        relabel categorical variables. Default is "{variable}={value}".
+        Template to relabel categorical variables. None by default, which applies no relabeling.
+        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
+        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
+        are also possible.
     show_fe: bool, optional
         Whether to show the rows with fixed effects markers. Default is True.
     show_se_type: bool, optional
@@ -157,6 +159,8 @@ def etable(
         assert signif_code[0] < signif_code[1] < signif_code[2], (
             "signif_code must be in increasing order"
         )
+
+    cat_template = "" if cat_template is None else cat_template
 
     models = _post_processing_input_checks(models)
 
