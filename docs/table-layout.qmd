@@ -196,7 +196,8 @@ pf.etable(
 
 ## Rename categorical variables
 
-Categorical variables are automatically be relabeled from the formulaic "C(variable)[T.value]" notation where the default is *{variable}={value}*. This works when either the variable is categorial in the DataFrame, or the C() or i() operators are used in the regresson formula. If you instead want to keep the standard formulaic notation, specify *cat_template=""*.
+By default, categorical variables are returned using the formulaic "C(variable)[T.value]" notation. Via the `cat_template` argument,
+you can rename categorical variables via a specified template *{variable}={value}*. This works when either the variable is categorial in the DataFrame, or the C() or i() operators are used in the regresson formula.
 ´
 ```{python}
 
@@ -207,7 +208,7 @@ labels['job']="Job Family"
 
 fit7 = pf.feols("Y ~ X1 + X2 + job", data = data)
 
-pf.etable([fit7], labels=labels)
+pf.etable([fit7], labels=labels, cat_template = "{variable}::{value}")
 ```
 
 But you can also remove the variable name and only keep the levels (categories) by specifying *cat_template="{value}"*. Note that the labeling of categories also works in interaction terms:
