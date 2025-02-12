@@ -20,6 +20,8 @@ def _relabel_expvar(
         The symbol to use for displaying the interaction term.
     cat_template: str
         Template to relabel categorical variables. When empty, the function will not relabel categorical variables.
+        You can use {variable}, {value}, or {value_int} placeholders.
+        e.g. "{variable}::{value_int}" if you want to force integer format when possible.
 
     Returns
     -------
@@ -45,6 +47,24 @@ def _relabel_expvar(
 def _rename_categorical(
     col_name, template="{variable}::{value}", labels: Optional[dict] = None
 ):
+    """
+    Rename categorical variables, optionally converting floats to ints in the category label.
+
+    Parameters
+    ----------
+    col_name : str
+        A single coefficient string (e.g. "C(var)[T.1]").
+    template: str, optional
+        String template for formatting. You can use {variable}, {value}, or {value_int} placeholders.
+        e.g. "{variable}::{value_int}" if you want to force integer format when possible.
+    labels: dict, optional
+        Dictionary that replaces variable names with user-specified labels.
+
+    Returns
+    -------
+    str
+        The renamed categorical variable.
+    """
     # Here two patterns are used to extract the variable and level
     # Note the second pattern matches the notation when the variable is categorical at the outset
     if col_name.startswith("C("):
@@ -58,13 +78,29 @@ def _rename_categorical(
     match = re.search(pattern, col_name)
     if match:
         variable = match.group(1)
-        # Relabel the variable if it is in the labels dictionary
-        variable = labels.get(variable, variable)
-        value = match.group(2)
-        result = template.format(variable=variable, value=value)
-        return result
+        variable = labels.get(variable, variable)  # apply label if any
+        value_raw = match.group(2)
+
+        # Try parsing as float so that e.g. "2.0" can become "2"
+        value_int = value_raw
+        try:
+            numeric_val = float(value_raw)
+            if numeric_val.is_integer():
+                value_int = int(numeric_val)
+            else:
+                value_int = numeric_val
+        except ValueError:
+            # If not numeric at all, we'll leave it as-is
+            pass
+
+        return template.format(
+            variable=variable,
+            value=value_raw,
+            value_int=value_int
+        )
     else:
         return col_name
+
 
 
 def rename_categoricals(
@@ -78,8 +114,10 @@ def rename_categoricals(
     coef_names_list: list
         The list of coefficient names.
     template: str
-        The template to use for renaming the categorical variables.
-        It can contain the placeholders {variable} and {level}.
+        The template to use for renaming the categorical variables. 
+        You can use {variable}, {value}, or {value_int} placeholders.
+        e.g. "{variable}::{value_int}" if you want to force integer format when possible.
+        or "{value_int}" if you only want to display integers
     labels: dict
         A dictionary with the variable names as keys and the new names as values.
 
