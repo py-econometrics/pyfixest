@@ -119,6 +119,9 @@ def etable(
         (provided the user has specified them). With "hd" it is the other way around.
         When head_order is "d", only the dependent variable and model numbers are displayed
         and with "" only the model numbers. Default is "dh".
+    custom_model_stats: dict, optional
+        A dictionary of custom model statistics. The keys are the names of the statistics
+        and the values are lists of the same length as the number of models. Default is None.
     filename: str, optional
         The filename to save the LaTeX table to. If None, the LaTeX code is returned
         as a string. Default is None.
