@@ -273,7 +273,7 @@ window.Quarto = {
 <p>See also <a href="https://www.nber.org/conferences/si-2023-methods-lectures-linear-panel-event-studies">NBER SI methods lectures on Linear Panel Event Studies</a>.</p>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
-<div id="28097331" class="cell" data-execution_count="1">
+<div id="0e9b62a9" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib <span class="im">import</span> resources</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -288,7 +288,7 @@ window.Quarto = {
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="NO5t1s"></div>
+            <div id="juEhEK"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -312,9 +312,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("NO5t1s").appendChild(div);
+                        document.getElementById("juEhEK").appendChild(div);
                     };
-                    var e = document.getElementById("NO5t1s");
+                    var e = document.getElementById("juEhEK");
                     e.appendChild(script);
                 })()
             </script>
@@ -322,7 +322,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="Od8QJp"></div>
+            <div id="GrqJoq"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -346,9 +346,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("Od8QJp").appendChild(div);
+                        document.getElementById("GrqJoq").appendChild(div);
                     };
-                    var e = document.getElementById("Od8QJp");
+                    var e = document.getElementById("GrqJoq");
                     e.appendChild(script);
                 })()
             </script>
@@ -360,73 +360,71 @@ pyfixest: 0.28.0
 </code></pre>
 </div>
 </div>
-<div id="cd0cf0b6" class="cell" data-execution_count="2">
+<div id="ba896b14" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># one-shot adoption data - parallel trends is true</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df_one_cohort <span class="op">=</span> get_sharkfin()</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df_one_cohort.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div>
 
-
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">unit</th>
-<th data-quarto-table-cell-role="th">year</th>
-<th data-quarto-table-cell-role="th">treat</th>
-<th data-quarto-table-cell-role="th">Y</th>
-<th data-quarto-table-cell-role="th">ever_treated</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">0</td>
-<td>0</td>
-<td>0</td>
-<td>0</td>
-<td>1.629307</td>
-<td>0</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">1</td>
-<td>0</td>
-<td>1</td>
-<td>0</td>
-<td>0.825902</td>
-<td>0</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2</td>
-<td>0</td>
-<td>2</td>
-<td>0</td>
-<td>0.208988</td>
-<td>0</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">3</td>
-<td>0</td>
-<td>3</td>
-<td>0</td>
-<td>-0.244739</td>
-<td>0</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">4</td>
-<td>0</td>
-<td>4</td>
-<td>0</td>
-<td>0.804665</td>
-<td>0</td>
-</tr>
-</tbody>
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>unit</th>
+      <th>year</th>
+      <th>treat</th>
+      <th>Y</th>
+      <th>ever_treated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1.629307</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.825902</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0.208988</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>3</td>
+      <td>0</td>
+      <td>-0.244739</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0.804665</td>
+      <td>0</td>
+    </tr>
+  </tbody>
 </table>
-
 </div>
 </div>
 </div>
-<div id="9eb97d57" class="cell" data-execution_count="3">
+<div id="ae960c8d" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># multi-cohort adoption data</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df_multi_cohort <span class="op">=</span> pd.read_csv(</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    resources.files(<span class="st">"pyfixest.did.data"</span>).joinpath(<span class="st">"df_het.csv"</span>)</span>
@@ -435,116 +433,114 @@ pyfixest: 0.28.0
 <div class="cell-output cell-output-display" data-execution_count="3">
 <div>
 
-
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">unit</th>
-<th data-quarto-table-cell-role="th">state</th>
-<th data-quarto-table-cell-role="th">group</th>
-<th data-quarto-table-cell-role="th">unit_fe</th>
-<th data-quarto-table-cell-role="th">g</th>
-<th data-quarto-table-cell-role="th">year</th>
-<th data-quarto-table-cell-role="th">year_fe</th>
-<th data-quarto-table-cell-role="th">treat</th>
-<th data-quarto-table-cell-role="th">rel_year</th>
-<th data-quarto-table-cell-role="th">rel_year_binned</th>
-<th data-quarto-table-cell-role="th">error</th>
-<th data-quarto-table-cell-role="th">te</th>
-<th data-quarto-table-cell-role="th">te_dynamic</th>
-<th data-quarto-table-cell-role="th">dep_var</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">0</td>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1990</td>
-<td>0.066159</td>
-<td>False</td>
-<td>-20.0</td>
-<td>-6</td>
-<td>-0.086466</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.022709</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">1</td>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1991</td>
-<td>-0.030980</td>
-<td>False</td>
-<td>-19.0</td>
-<td>-6</td>
-<td>0.766593</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.778628</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2</td>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1992</td>
-<td>-0.119607</td>
-<td>False</td>
-<td>-18.0</td>
-<td>-6</td>
-<td>1.512968</td>
-<td>0</td>
-<td>0.0</td>
-<td>8.436377</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">3</td>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1993</td>
-<td>0.126321</td>
-<td>False</td>
-<td>-17.0</td>
-<td>-6</td>
-<td>0.021870</td>
-<td>0</td>
-<td>0.0</td>
-<td>7.191207</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">4</td>
-<td>1</td>
-<td>33</td>
-<td>Group 2</td>
-<td>7.043016</td>
-<td>2010</td>
-<td>1994</td>
-<td>-0.106921</td>
-<td>False</td>
-<td>-16.0</td>
-<td>-6</td>
-<td>-0.017603</td>
-<td>0</td>
-<td>0.0</td>
-<td>6.918492</td>
-</tr>
-</tbody>
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>unit</th>
+      <th>state</th>
+      <th>group</th>
+      <th>unit_fe</th>
+      <th>g</th>
+      <th>year</th>
+      <th>year_fe</th>
+      <th>treat</th>
+      <th>rel_year</th>
+      <th>rel_year_binned</th>
+      <th>error</th>
+      <th>te</th>
+      <th>te_dynamic</th>
+      <th>dep_var</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1990</td>
+      <td>0.066159</td>
+      <td>False</td>
+      <td>-20.0</td>
+      <td>-6</td>
+      <td>-0.086466</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.022709</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1991</td>
+      <td>-0.030980</td>
+      <td>False</td>
+      <td>-19.0</td>
+      <td>-6</td>
+      <td>0.766593</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.778628</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1992</td>
+      <td>-0.119607</td>
+      <td>False</td>
+      <td>-18.0</td>
+      <td>-6</td>
+      <td>1.512968</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>8.436377</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1993</td>
+      <td>0.126321</td>
+      <td>False</td>
+      <td>-17.0</td>
+      <td>-6</td>
+      <td>0.021870</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>7.191207</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>33</td>
+      <td>Group 2</td>
+      <td>7.043016</td>
+      <td>2010</td>
+      <td>1994</td>
+      <td>-0.106921</td>
+      <td>False</td>
+      <td>-16.0</td>
+      <td>-6</td>
+      <td>-0.017603</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>6.918492</td>
+    </tr>
+  </tbody>
 </table>
-
 </div>
 </div>
 </div>
@@ -552,7 +548,7 @@ pyfixest: 0.28.0
 <section id="examining-treatment-timing" class="level2">
 <h2 class="anchored" data-anchor-id="examining-treatment-timing">Examining Treatment Timing</h2>
 <p>Before any DiD estimation, we need to examine the treatment timing, since it is crucial to our choice of estimator.</p>
-<div id="e963ea6d" class="cell" data-execution_count="4">
+<div id="7e9f5ea8" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -573,7 +569,7 @@ pyfixest: 0.28.0
 </div>
 </div>
 </div>
-<div id="98576535" class="cell" data-execution_count="5">
+<div id="482cf950" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -596,7 +592,7 @@ pyfixest: 0.28.0
 </div>
 <p>We immediately see that we have staggered adoption of treatment in the second case, which implies that a naive application of 2WFE might yield biased estimates under substantial effect heterogeneity.</p>
 <p>We can also plot treatment assignment in a disaggregated fashion, which gives us a sense of cohort sizes.</p>
-<div id="b4a82f71" class="cell" data-execution_count="6">
+<div id="3fb7eefc" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -620,7 +616,7 @@ pyfixest: 0.28.0
 <section id="inspecting-the-outcome-variable" class="level2">
 <h2 class="anchored" data-anchor-id="inspecting-the-outcome-variable">Inspecting the Outcome Variable</h2>
 <p><code>pf.panelview()</code> further allows us to inspect the “outcome” variable over time:</p>
-<div id="96e84bc9" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
+<div id="68db6fa0" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -642,7 +638,7 @@ pyfixest: 0.28.0
 </div>
 <p>We immediately see that the first cohort is switched into treatment in 2000, while the second cohort is switched into treatment by 2010. Before each cohort is switched into treatment, the trends are parallel.</p>
 <p>We can additionally inspect individual units by dropping the collapse_to_cohort argument. Because we have a large sample, we might want to inspect only a subset of units.</p>
-<div id="48b6157e" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
+<div id="59f5e293" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -666,7 +662,7 @@ pyfixest: 0.28.0
 <section id="one-shot-adoption-static-and-dynamic-specifications" class="level2">
 <h2 class="anchored" data-anchor-id="one-shot-adoption-static-and-dynamic-specifications">One-shot adoption: Static and Dynamic Specifications</h2>
 <p>After taking a first look at the data, let’s turn to estimation. We return to the <code>df_one_cohort</code> data set (without staggered treatment rollout).</p>
-<div id="3c9eba98" class="cell" data-execution_count="9">
+<div id="20f49efc" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_static_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ treat | unit + year"</span>,</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
@@ -689,14 +685,14 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 </div>
 </div>
 <p>Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:</p>
-<div id="6721b43b" class="cell" data-execution_count="10">
+<div id="391aae86" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ i(year, ever_treated,  ref = 14) | unit + year"</span>,</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="089ca5f4" class="cell" data-execution_count="11">
+<div id="6eeed764" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
@@ -706,13 +702,13 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
-   <div id="F0uITW"></div>
+   <div id="WoswHL"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("F0uITW");
+   var containerDiv = document.getElementById("WoswHL");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -886,7 +882,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 \]</span></p>
 <p>These bands can be constructed by using a carefully chosen critical value <span class="math inline">\(c\)</span> that <a href="https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&amp;id=id&amp;accname=guest&amp;checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14">accounts for the covariance between coefficients using the multiplier bootstrap</a>. In pointwise inference, the critical value is <span class="math inline">\(c = z_{1 - \alpha/2} = 1.96\)</span> for <span class="math inline">\(\alpha = 0.05\)</span>; the corresponding critical value for simultaneous inference is typically larger. These are also known as <code>sup-t</code> bands in the literature (see lec 3 of the NBER SI methods lectures linked above).</p>
 <p>This is implemented in the <code>confint(joint=True)</code> method in the <code>feols</code> class. If we pass the <code>joint='both'</code> argument to <code>iplot</code>, we get the simultaneous confidence bands (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for <a href="https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3">all pre-treatment coefficients and all post-treatment coefficients separately</a>.</p>
-<div id="1551a3bb" class="cell" data-execution_count="12">
+<div id="95dd9da0" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
@@ -897,13 +893,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-   <div id="mR0pNz"></div>
+   <div id="h71xgI"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("mR0pNz");
+   var containerDiv = document.getElementById("h71xgI");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -1073,7 +1069,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="two-way-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="two-way-fixed-effects">Two-Way Fixed Effects</h3>
 <p>As a baseline model, we can estimate a simple two-way fixed effects DiD regression via <code>feols()</code>:</p>
-<div id="0963ef08" class="cell" data-execution_count="13">
+<div id="aa4d5728" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year, ref=-1.0) | state + year"</span>,</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
@@ -1084,7 +1080,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="gardners-2-step-estimator" class="level3">
 <h3 class="anchored" data-anchor-id="gardners-2-step-estimator">Gardner’s 2-Step Estimator</h3>
 <p>To do the same via Gardners 2-stage estimator, we employ the the <code>pf.did2s()</code> function:</p>
-<div id="d413472f" class="cell" data-execution_count="14">
+<div id="e6ec697c" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -1098,7 +1094,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="local-projections-dube-et-al" class="level3">
 <h3 class="anchored" data-anchor-id="local-projections-dube-et-al">Local Projections (Dube et al)</h3>
 <p>Last, we can estimate the ATT for each time period via local projections by using the <code>lpdid()</code> function:</p>
-<div id="1eae6b0a" class="cell" data-execution_count="15">
+<div id="b0778d3b" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -1112,10 +1108,10 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s look at some results:</p>
-<div id="2dbc0de7" class="cell" data-execution_count="16">
+<div id="181f064e" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>figsize <span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="e2f32643" class="cell" data-execution_count="17">
+<div id="43e3ba64" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_twfe.iplot(</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"TWFE-Estimator"</span>,</span>
@@ -1125,13 +1121,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_twfe._coefnames),  <span class="co"># rename coefficients</span></span>
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="tYILun"></div>
+   <div id="ARr8dm"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("tYILun");
+   var containerDiv = document.getElementById("ARr8dm");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -1293,7 +1289,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
    </script>
 </div>
 </div>
-<div id="e7b331de" class="cell" data-execution_count="18">
+<div id="2d15b0fd" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Local-Projections-Estimator"</span>,</span>
@@ -1302,13 +1298,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
 <span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="DxJ4lI"></div>
+   <div id="ybCRRu"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("DxJ4lI");
+   var containerDiv = document.getElementById("ybCRRu");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -1468,7 +1464,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 </div>
 </div>
 <p>What if we are not interested in the ATT per treatment period, but in a pooled effects?</p>
-<div id="dbb69dbb" class="cell" data-execution_count="19">
+<div id="97e411ed" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(treat) | unit + year"</span>,</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
@@ -1506,54 +1502,52 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <div class="cell-output cell-output-display" data-execution_count="19">
 <div>
 
-
-<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">Estimate</th>
-<th data-quarto-table-cell-role="th">Std. Error</th>
-<th data-quarto-table-cell-role="th">t value</th>
-<th data-quarto-table-cell-role="th">Pr(&gt;|t|)</th>
-<th data-quarto-table-cell-role="th">2.5%</th>
-<th data-quarto-table-cell-role="th">97.5%</th>
-<th data-quarto-table-cell-role="th">estimator</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">C(treat)[T.True]</td>
-<td>1.982540</td>
-<td>0.019331</td>
-<td>102.556180</td>
-<td>0.0</td>
-<td>1.943439</td>
-<td>2.021642</td>
-<td>TWFE</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">C(treat)[T.True]</td>
-<td>2.230482</td>
-<td>0.024709</td>
-<td>90.271444</td>
-<td>0.0</td>
-<td>2.180504</td>
-<td>2.280459</td>
-<td>DID2s</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">treat_diff</td>
-<td>2.506746</td>
-<td>0.071357</td>
-<td>35.129648</td>
-<td>0.0</td>
-<td>2.362413</td>
-<td>2.651080</td>
-<td>LPDID</td>
-</tr>
-</tbody>
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5%</th>
+      <th>97.5%</th>
+      <th>estimator</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>C(treat)[T.True]</th>
+      <td>1.982540</td>
+      <td>0.019331</td>
+      <td>102.556180</td>
+      <td>0.0</td>
+      <td>1.943439</td>
+      <td>2.021642</td>
+      <td>TWFE</td>
+    </tr>
+    <tr>
+      <th>C(treat)[T.True]</th>
+      <td>2.230482</td>
+      <td>0.024709</td>
+      <td>90.271444</td>
+      <td>0.0</td>
+      <td>2.180504</td>
+      <td>2.280459</td>
+      <td>DID2s</td>
+    </tr>
+    <tr>
+      <th>treat_diff</th>
+      <td>2.506746</td>
+      <td>0.071357</td>
+      <td>35.129648</td>
+      <td>0.0</td>
+      <td>2.362413</td>
+      <td>2.651080</td>
+      <td>LPDID</td>
+    </tr>
+  </tbody>
 </table>
-
 </div>
 </div>
 </div>
