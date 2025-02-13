@@ -27,6 +27,7 @@ def etable(
     signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
+    custom_model_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
@@ -38,18 +39,19 @@ def etable(
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
-    custom_model_stats: Optional[dict] = None,
     filename: Optional[str] = None,
     print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
-    Create an esttab-like table from a list of models.
+    Generate a table summarizing the results of multiple regression models.
+    It supports various output formats including html (via great tables),  markdown, and LaTeX.
 
     Parameters
     ----------
     models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
             Feols, Fepois & Feiv models.
+        The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
@@ -61,7 +63,15 @@ def etable(
         p-value (p). Default is `"b \n (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
     custom_stats: dict, optional
-        A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
+        A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
+        in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
+        statistics, and the values are lists of lists, where each inner list contains the custom
+        statistic values for all coefficients each model.
+        Note that "b", "se", "t", or "p" are reserved and cannot be used as keys.
+    custom_model_stats: dict, optional
+        A dictionary of custom model statistics or model information displayed in a new line in the
+        bottom panel of the table. The keys are the names of the statistics (i.e. entry in the first column)
+        and the values are a lists of the same length as the number of models. Default is None.
     keep: str or list of str, optional
         The pattern for retaining coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Default is keeping all coefficients.
