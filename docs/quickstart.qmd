@@ -1,6 +1,8 @@
 ---
 title: "Getting Started with PyFixest"
-format: html
+format:
+  html:
+    html-table-processing: none
 toc: true
 toc-title: "On this page"
 toc-location: left
@@ -537,10 +539,13 @@ fit_twfe = pf.feols(
     vcov={"CRV1": "state"},
 )
 
+from pyfixest.report.utils import rename_categoricals
 pf.iplot(
-    [fit_did2s, fit_twfe], coord_flip=False, figsize=(900, 400), title="TWFE vs DID2S"
+    [fit_did2s, fit_twfe], coord_flip=False, figsize=(900, 400), title="TWFE vs DID2S", rotate_xticks=90,
+    labels= rename_categoricals(fit_did2s._coefnames, template="{value_int}")
 )
 ```
+
 
 The `event_study()` function provides a common API for several event study estimators.
 
