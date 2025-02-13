@@ -85,22 +85,14 @@ def _rename_categorical(
         value_int = value_raw
         try:
             numeric_val = float(value_raw)
-            if numeric_val.is_integer():
-                value_int = int(numeric_val)
-            else:
-                value_int = numeric_val
+            value_int = int(numeric_val) if numeric_val.is_integer() else numeric_val
         except ValueError:
             # If not numeric at all, we'll leave it as-is
             pass
 
-        return template.format(
-            variable=variable,
-            value=value_raw,
-            value_int=value_int
-        )
+        return template.format(variable=variable, value=value_raw, value_int=value_int)
     else:
         return col_name
-
 
 
 def rename_categoricals(
@@ -114,7 +106,7 @@ def rename_categoricals(
     coef_names_list: list
         The list of coefficient names.
     template: str
-        The template to use for renaming the categorical variables. 
+        The template to use for renaming the categorical variables.
         You can use {variable}, {value}, or {value_int} placeholders.
         e.g. "{variable}::{value_int}" if you want to force integer format when possible.
         or "{value_int}" if you only want to display integers
