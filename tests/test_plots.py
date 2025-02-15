@@ -268,3 +268,10 @@ def test_rename_models():
 
     fit_multi = pf.feols("Y ~ sw(f1, f2)", data=df)
     fit_multi.coefplot(rename_models={"Y~f1": "Model 1", "Y~f2": "Model 2"})
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint=True)
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint="both")
+
+    with pytest.raises(ValueError):
+        pf.coefplot(models=[fit1], rename_models={"Y~a": "Model 1"}, joint="bad")
