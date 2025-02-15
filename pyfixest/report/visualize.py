@@ -162,9 +162,9 @@ def iplot(
     pf.iplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            "Y~i(f1): 95.0%": "Model 1",
-            "Y~i(f1)+X2: 95.0%": "Model 2",
-            "Y~i(f1)+X2|f2: 95.0%": "Model 3"
+            "Y~i(f1)": "Model 1",
+            "Y~i(f1)+X2": "Model 2",
+            "Y~i(f1)+X2|f2": "Model 3"
         },
     )
     pf.iplot([fit1], joint = "both")
@@ -319,9 +319,9 @@ def coefplot(
     pf.coefplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            "Y~i(f1): 95.0%": "Model 1",
-            "Y~i(f1)+X2: 95.0%": "Model 2",
-            "Y~i(f1)+X2|f2: 95.0%": "Model 3"
+            "Y~i(f1)": "Model 1",
+            "Y~i(f1)+X2": "Model 2",
+            "Y~i(f1)+X2|f2": "Model 3"
         },
     )
     pf.coefplot([fit1], joint = "both")
