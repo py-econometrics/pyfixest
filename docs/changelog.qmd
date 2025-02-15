@@ -1,6 +1,10 @@
 # Changelog
 
-## PyFixest 0.28.0 (In Development, can be installed from github)
+## PyFixest (In Development, can be installed from github)
+
+- Add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods.
+
+## PyFixest 0.28.0
 
 ### New features and bug fixes
 - Adds a function argument `context`, that allows to pass information / context to the `formulaic.Formulaic.get_model_matrix()` call that creates the model matrix.
