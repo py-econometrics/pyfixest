@@ -79,6 +79,7 @@ def iplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    rename_models: Optional[dict[str, str]] = None,
     ax: Optional[plt.Axes] = None,
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
@@ -124,6 +125,8 @@ def iplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
@@ -152,7 +155,18 @@ def iplot(
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
     pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
-
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        labels = rename_categoricals(fit1._coefnames)
+    )
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            "Y~i(f1): 95.0%": "Model 1",
+            "Y~i(f1)+X2: 95.0%": "Model 2",
+            "Y~i(f1)+X2|f2: 95.0%": "Model 3"
+        },
+    )
     pf.iplot([fit1], joint = "both")
     ```
     """
@@ -179,7 +193,9 @@ def iplot(
             )
         all_icovars += fxst._icovars
 
-        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
+        df_model = _get_model_df(
+            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+        )
         df_all.append(df_model)
 
     # drop duplicates
@@ -226,6 +242,7 @@ def coefplot(
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
     ax: Optional[plt.Axes] = None,
+    rename_models: Optional[dict[str, str]] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
@@ -267,6 +284,8 @@ def coefplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
@@ -297,7 +316,14 @@ def coefplot(
 
     pf.coefplot([fit1, fit2, fit3])
     pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
-
+    pf.coefplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            "Y~i(f1): 95.0%": "Model 1",
+            "Y~i(f1)+X2: 95.0%": "Model 2",
+            "Y~i(f1)+X2|f2: 95.0%": "Model 3"
+        },
+    )
     pf.coefplot([fit1], joint = "both")
 
     ```
@@ -316,7 +342,9 @@ def coefplot(
 
     df_all = []
     for fxst in models:
-        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
+        df_model = _get_model_df(
+            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+        )
         df_all.append(df_model)
 
     df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
@@ -387,6 +415,8 @@ def _coefplot_lets_plot(
         Whether to flip the coordinates of the plot. Default is True.
     labels : dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
+    ax : None, optional
+        Not used. Only for compatibility with the matplotlib backend.
 
     Returns
     -------
@@ -576,6 +606,7 @@ def _get_model_df(
     alpha: float,
     joint: Optional[Union[str, bool]],
     seed: Optional[int] = None,
+    rename_models: Optional[dict[str, str]] = None,
 ) -> pd.DataFrame:
     """
     Get a tidy model frame as input to the _coefplot function.
@@ -593,6 +624,8 @@ def _get_model_df(
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed : int, optional
         The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
 
     Returns
     -------
@@ -600,7 +633,20 @@ def _get_model_df(
         A tidy model frame.
     """
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._model_name_plot}: {(1 - alpha) * 100:.1f}%"
+
+    df_model["fml"] = fxst._model_name_plot
+    if rename_models is not None:
+        # check that all keys of rename_models are in df_model["fml"]
+        for key in df_model["fml"].unique():
+            if key not in rename_models:
+                raise ValueError(
+                    f"""
+                    The model name {key} is not in the rename_models dictionary.
+                    To inspect all model names, please run [model._model_name_plot for model in models].
+                    """
+                )
+
+        df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
@@ -612,9 +658,9 @@ def _get_model_df(
             .drop([lb, ub], axis=1)
             .merge(df_joint, on="Coefficient", how="left")
         )
-        df_joint_full["fml"] = (
-            f"{fxst._model_name_plot}: {(1 - alpha) * 100:.1f}% joint CIs"
-        )
+
+        df_model["fml"] += " (joint CIs)"
+
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
         else:
