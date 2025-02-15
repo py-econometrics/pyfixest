@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.report.visualize import coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
@@ -248,3 +249,22 @@ def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, 
     coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (600, 400)
+
+
+def test_rename_models():
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ i(f1)", data=df)
+    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+
+    pf.iplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    pf.coefplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    fit_multi = pf.feols("Y ~ sw(f1, f2)", data=df)
+    fit_multi.coefplot(rename_models={"Y~f1": "Model 1", "Y~f2": "Model 2"})
