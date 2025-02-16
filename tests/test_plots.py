@@ -273,5 +273,8 @@ def test_rename_models():
 
     pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint="both")
 
-    with pytest.raises(ValueError):
-        pf.coefplot(models=[fit1], rename_models={"Y~a": "Model 1"}, joint="bad")
+    with pytest.warns(
+        UserWarning,
+        match="The following model names specified in rename_models are not found in the models",
+    ):
+        coefplot(models=[fit1], rename_models={"Y~a": "Model 1"}, joint="bad")

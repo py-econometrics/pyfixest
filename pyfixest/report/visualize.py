@@ -178,7 +178,9 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -192,6 +194,9 @@ def iplot(
 
     if drop is None:
         drop = []
+
+    if rename_models is None:
+        rename_models = {}
 
     for x, fxst in enumerate(list(models)):
         if fxst._icovars is None:
@@ -341,7 +346,9 @@ def coefplot(
 
     ```
     """
-    models = _post_processing_input_checks(models, check_duplicate_model_names=True)
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -352,6 +359,9 @@ def coefplot(
 
     if drop is None:
         drop = []
+
+    if rename_models is None:
+        rename_models = {}
 
     df_all = []
     for fxst in models:
@@ -645,21 +655,13 @@ def _get_model_df(
     pd.DataFrame
         A tidy model frame.
     """
+    if rename_models is None:
+        rename_models = {}
+
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
 
     df_model["fml"] = fxst._model_name_plot
-    if rename_models is not None:
-        # check that all keys of rename_models are in df_model["fml"]
-        for key in df_model["fml"].unique():
-            if key not in rename_models:
-                raise ValueError(
-                    f"""
-                    The model name {key} is not in the rename_models dictionary.
-                    Internal model names are set via the _model_name_plot attribute of the model object.
-                    """
-                )
-
-        df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
+    df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"

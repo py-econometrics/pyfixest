@@ -489,13 +489,6 @@ class FixestMulti:
 
                     # delete large attributescl
                     FIT._clear_attributes()
-                    FIT._sample_split_value = sample_split_value
-
-                    # store fitted model
-                    if sample_split_value != "all":
-                        FIT._model_name = f"{FixestFormula.fml} (sample: {FIT._sample_split_var} = {FIT._sample_split_value})"
-                    else:
-                        FIT._model_name = FixestFormula.fml
 
                     self.all_fitted_models[FIT._model_name] = FIT
 
