@@ -232,7 +232,11 @@ class Feols:
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
-        self._model_name = f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self._model_name = (
+            FixestFormula.fml
+            if self._sample_split_var is None
+            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        )
         self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
