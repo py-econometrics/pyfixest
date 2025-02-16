@@ -646,13 +646,11 @@ def _post_processing_input_checks(
 
         if rename_models is not None:
             model_name_diff = set(rename_models.keys()) - set(all_model_names)
-            # to list
-            model_name_diff_list = list(model_name_diff)
-            if model_name_diff_list:
+            if model_name_diff:
                 warnings.warn(
                     f"""
                     The following model names specified in rename_models are not found in the models:
-                    {model_name_diff_list}
+                    {model_name_diff}
                     """
                 )
 
