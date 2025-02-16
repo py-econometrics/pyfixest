@@ -162,6 +162,14 @@ def iplot(
     pf.iplot(
         models = [fit1, fit2, fit3],
         rename_models = {
+            fit1._model_name_plot: "Model 1",
+            fit2._model_name_plot: "Model 2",
+            fit3._model_name_plot: "Model 3"
+        },
+    )
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
             "Y~i(f1)": "Model 1",
             "Y~i(f1)+X2": "Model 2",
             "Y~i(f1)+X2|f2": "Model 3"
@@ -305,26 +313,32 @@ def coefplot(
     Examples
     --------
     ```{python}
-     import pyfixest as pf
-    from pyfixest.report.utils import rename_categoricals
+    import pyfixest as pf
 
     df = pf.get_data()
-    fit1 = pf.feols("Y ~ X1", data = df)
-    fit2 = pf.feols("Y ~ X1 + X2", data = df)
-    fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
-    fit4 = pf.feols("Y ~ C(X1)", data = df)
+    fit1 = pf.feols("Y ~ i(f1)", data = df)
+    fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
+    fit3 = pf.feols("Y ~ i(f1) + X2 | f1", data = df)
 
-    pf.coefplot([fit1, fit2, fit3])
-    pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
-    pf.coefplot(
+    pf.iplot([fit1, fit2, fit3])
+    pf.iplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            "Y~X1": "Model 1",
-            "Y~X1+X2": "Model 2",
-            "Y~X1+X2|f1": "Model 3"
+            fit1._model_name_plot: "Model 1",
+            fit2._model_name_plot: "Model 2",
+            fit3._model_name_plot: "Model 3"
         },
     )
-    pf.coefplot([fit1], joint = "both")
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            "Y~i(f1)": "Model 1",
+            "Y~i(f1)+X2": "Model 2",
+            "Y~i(f1)+X2|f1": "Model 3"
+        },
+    )
+    pf.iplot([fit1], joint = "both")
+
     ```
     """
     models = _post_processing_input_checks(models, check_duplicate_model_names=True)

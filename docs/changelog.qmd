@@ -1,8 +1,29 @@
 # Changelog
 
+```{python}
+import pyfixest as pf
+from pyfixest.report.utils import rename_categoricals
+
+df = pf.get_data()
+
+fit1 = pf.feols("Y ~ X1", data = df)
+fit2 = pf.feols("Y ~ X1 + X2", data = df)
+fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
+```
+
 ## PyFixest (In Development, can be installed from github)
 
-- Add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods.
+- We add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods:
+  ```{python}
+  pf.coefplot(
+      models = [fit1, fit2, fit3],
+      rename_models = {
+          fit1._model_name_plot: "Model 1",
+          fit2._model_name_plot: "Model 2",
+          fit3._model_name_plot: "Model 3"
+      },
+  )
+  ```
 
 ## PyFixest 0.28.0
 
