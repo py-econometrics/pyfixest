@@ -305,7 +305,7 @@ def coefplot(
     Examples
     --------
     ```{python}
-    import pyfixest as pf
+     import pyfixest as pf
     from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
@@ -319,13 +319,12 @@ def coefplot(
     pf.coefplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            "Y~i(f1)": "Model 1",
-            "Y~i(f1)+X2": "Model 2",
-            "Y~i(f1)+X2|f2": "Model 3"
+            "Y~X1": "Model 1",
+            "Y~X1+X2": "Model 2",
+            "Y~X1+X2|f1": "Model 3"
         },
     )
     pf.coefplot([fit1], joint = "both")
-
     ```
     """
     models = _post_processing_input_checks(models, check_duplicate_model_names=True)
@@ -642,7 +641,7 @@ def _get_model_df(
                 raise ValueError(
                     f"""
                     The model name {key} is not in the rename_models dictionary.
-                    To inspect all model names, please run [model._model_name_plot for model in models].
+                    Internal model names are set via the _model_name_plot attribute of the model object.
                     """
                 )
 
