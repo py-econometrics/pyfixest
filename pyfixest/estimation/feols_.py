@@ -1883,10 +1883,10 @@ class Feols:
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
         if _has_weights:
-            ssy = np.sum(_Y**2) - np.sum(_Y**2) / np.sum(_weights)
-            self._rmse = np.nan
-            self._r2 = np.nan
-            self._adj_r2 = np.nan
+            ssy = np.sum(_weights * (_Y - np.average(_Y, weights=_weights)) ** 2)
+            self._rmse = np.sqrt(ssu / _N)
+            self._r2 = 1 - (ssu / ssy)
+            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
         else:
             ssy = np.sum((_Y - np.mean(_Y)) ** 2)
             self._rmse = np.sqrt(ssu / _N)
@@ -1898,8 +1898,11 @@ class Feols:
             self._r2_within = 1 - (ssu / ssy_within)
             self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
         else:
-            self._r2_within = np.nan
-            self._adj_r2_within = np.nan
+            ssy_within = np.sum(
+                _weights * (_Y_within - np.average(_Y_within, weights=_weights)) ** 2
+            )
+            self._r2_within = 1 - (ssu / ssy_within)
+            self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
 
         # overwrite self._adj_r2 and self._adj_r2_within
         # reason: currently I cannot match fixest dof correction, so
