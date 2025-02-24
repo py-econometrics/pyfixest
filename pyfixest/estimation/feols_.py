@@ -1893,14 +1893,16 @@ class Feols:
             self._r2 = 1 - (ssu / ssy)
             self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
+        import pdb
+
+        pdb.set_trace()
+
         if _has_fixef and not _has_weights:
             ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
             self._r2_within = 1 - (ssu / ssy_within)
             self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
         else:
-            ssy_within = np.sum(
-                _weights * (_Y_within - np.average(_Y_within, weights=_weights)) ** 2
-            )
+            ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
             self._r2_within = 1 - (ssu / ssy_within)
             self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
 
