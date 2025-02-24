@@ -1879,29 +1879,12 @@ class Feols:
             _adj_factor = (_N) / (_N - 1)
 
         ssu = np.sum(_u_hat**2)
+        ssy = np.sum(_weights * (_Y - np.average(_Y, weights=_weights)) ** 2)
+        self._rmse = np.sqrt(ssu / _N)
+        self._r2 = 1 - (ssu / ssy)
+        self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
-        ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-
-        if _has_weights:
-            ssy = np.sum(_weights * (_Y - np.average(_Y, weights=_weights)) ** 2)
-            self._rmse = np.sqrt(ssu / _N)
-            self._r2 = 1 - (ssu / ssy)
-            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
-        else:
-            ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-            self._rmse = np.sqrt(ssu / _N)
-            self._r2 = 1 - (ssu / ssy)
-            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
-
-        import pdb
-
-        pdb.set_trace()
-
-        if _has_fixef and not _has_weights:
-            ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
-            self._r2_within = 1 - (ssu / ssy_within)
-            self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
-        else:
+        if _has_fixef:
             ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
             self._r2_within = 1 - (ssu / ssy_within)
             self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
