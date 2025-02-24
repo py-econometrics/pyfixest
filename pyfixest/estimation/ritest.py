@@ -6,6 +6,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from joblib import Parallel, delayed
 from lets_plot import (
     LetsPlot,
     aes,
@@ -23,7 +24,6 @@ from tqdm import tqdm
 from pyfixest.estimation.demean_ import demean
 
 LetsPlot.setup_html()
-
 
 def _get_ritest_stats_slow(
     data: pd.DataFrame,
@@ -77,27 +77,35 @@ def _get_ritest_stats_slow(
     fit_ = getattr(fixest_module, model)
 
     resampvar_arr = data_resampled[resampvar].to_numpy()
-
     ri_stats = np.zeros(reps)
 
-    for i in tqdm(range(reps)):
-        D_treat = _resample(
-            resampvar_arr=resampvar_arr,
-            clustervar_arr=clustervar_arr,
-            rng=rng,
-            iterations=1,
-        ).flatten()
+    results = Parallel(n_jobs=-1)(
+        delayed(lambda: (
+            # Create resampled treatment values
+            D_treat := _resample(
+                resampvar_arr=resampvar_arr,
+                clustervar_arr=clustervar_arr,
+                rng=rng,
+                iterations=1,
+            ).flatten(),
 
-        data_resampled[f"{resampvar}_resampled"] = D_treat
+            # Add values to data
+            data_resampled.__setitem__(f"{resampvar}_resampled", D_treat),
+            fixest_fit := fit_(fml_update, data=data_resampled, vcov=vcov),
 
-        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
-        if type == "randomization-c":
-            ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
-        else:
-            ri_stats[i] = fixest_fit.tstat().xs(f"{resampvar}_resampled")
+            # Return appropriate statistic
+            fixest_fit.coef().xs(f"{resampvar}_resampled")
+            if type == "randomization-c"
+            else fixest_fit.tstat().xs(f"{resampvar}_resampled")
+        )[3])()
+        for _ in tqdm(range(reps))  # We use _ since we don't actually need the index
+    )
+
+    # Fill out the results array
+    for i, result in enumerate(results):
+        ri_stats[i] = result
 
     return ri_stats
-
 
 def _get_ritest_stats_fast(
     Y: np.ndarray,
