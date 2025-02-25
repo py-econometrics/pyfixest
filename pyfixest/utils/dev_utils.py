@@ -1,26 +1,16 @@
 import re
 from typing import Optional, Union
 
+import narwhals.stable.v1 as nw
 import numpy as np
 import pandas as pd
-import polars as pl
+from narwhals.typing import IntoDataFrame
 
-DataFrameType = Union[pd.DataFrame, pl.DataFrame]
+DataFrameType = IntoDataFrame
 
 
-def _polars_to_pandas(data: DataFrameType) -> pd.DataFrame:  # type: ignore
-    if not isinstance(data, pd.DataFrame):
-        try:
-            import polars as pl  # noqa: F401
-
-            data = data.to_pandas()
-        except ImportError:
-            raise ImportError(
-                """Polars is not installed. Please install Polars to use it as
-                an alternative."""
-            )
-
-    return data
+def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
+    return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 
 def _create_rng(seed: Optional[int] = None) -> np.random.Generator:
@@ -93,11 +83,8 @@ def _select_order_coefs(
     for pattern in keep:
         _coefs = []  # Store remaining coefs
         for coef in coefs:
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 res.append(coef)
             else:
@@ -107,11 +94,8 @@ def _select_order_coefs(
     for pattern in drop:
         _coefs = []
         for coef in res:  # Remove previously matched coefs that match the drop pattern
-            if (
-                exact_match
-                and pattern == coef
-                or exact_match is False
-                and re.findall(pattern, coef)
+            if (exact_match and pattern == coef) or (
+                exact_match is False and re.findall(pattern, coef)
             ):
                 continue
             else:
@@ -131,12 +115,15 @@ def docstring_from(func, custom_doc=""):
     return decorator
 
 
-def _to_integer(x):
-    if x.dtype == int:
+def _to_integer(x: Union[pd.Series, pd.DataFrame]):
+    if not isinstance(x, (pd.Series, pd.DataFrame)):
+        raise TypeError("Input must be a pandas Series or DataFrame")
+
+    if pd.api.types.is_integer_dtype(x):
         return x
+
     try:
-        x = x.astype(np.int64)
-        return x  # noqa: TRY300
+        x = x.astype("int64")
     except ValueError as e:
         raise ValueError(
             """
@@ -144,6 +131,8 @@ def _to_integer(x):
             Please do so manually.
             """
         ) from e
+    else:
+        return x
 
 
 def _to_list(x):
@@ -193,18 +182,12 @@ def _extract_variable_level(fe_string: str):
         A tuple containing the extracted variable and level for the fixed
         effect.
     """
-    c_pattern = r"C\((.+?)\)"
-    t_pattern = r"\[T\.(.*\])"
-    c_match = re.search(c_pattern, fe_string)
-    t_match = re.search(t_pattern, fe_string, re.DOTALL)
+    pattern = r"C\(([^)]*)\)\[(?:T\.)?(.*)\]$"
+    match = re.search(pattern, fe_string)
+    if not match:
+        raise ValueError(f"Cannot parse: {fe_string}")
 
-    if not c_match or not t_match:
-        raise ValueError(
-            f"feols() failed after regex encountered the following value as a fixed effect:\n {fe_string}."
-            + "\nThis may due to the presence of line separation and/or escape sequences within the string."
-            + " If so, consider recoding the underlying string. Otherwise, please open a PR in the github repo!"
-        )
+    variable = match.group(1)
+    level = match.group(2)
 
-    variable = c_match.group(1)
-    level = t_match.group(1)
-    return "C(" + variable + ")", level[0 : level.rfind("]")]
+    return f"C({variable})", level

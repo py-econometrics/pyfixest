@@ -4,7 +4,6 @@ import pandas as pd
 
 from pyfixest.did.did2s import DID2S
 from pyfixest.did.twfe import TWFE
-from pyfixest.errors import NotImplementedError
 
 
 def event_study(

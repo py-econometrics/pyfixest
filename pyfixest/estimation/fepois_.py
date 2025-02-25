@@ -1,15 +1,18 @@
 import warnings
-from typing import Optional, Union
+from collections.abc import Mapping
+from importlib import import_module
+from typing import Any, Literal, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.errors import (
     NonConvergenceError,
-    NotImplementedError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -30,11 +33,11 @@ class Fepois(Feols):
 
     Attributes
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional numpy array.
-    X : np.ndarray
-        Independent variables, a two-dimensional numpy array.
-    fe : np.ndarray
+    _Y : np.ndarray
+        The demeaned dependent variable, a two-dimensional numpy array.
+    _X : np.ndarray
+        The demeaned independent variables, a two-dimensional numpy array.
+    _fe : np.ndarray
         Fixed effects, a two-dimensional numpy array or None.
     weights : np.ndarray
         Weights, a one-dimensional numpy array or None.
@@ -48,59 +51,94 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: str, default is 'np.linalg.solve'
-        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
-    solver:
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
         Type of weights variable.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
     """
 
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        fe: Union[np.ndarray, None],
-        weights: np.ndarray,
-        coefnames: list[str],
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
+        weights_type: Optional[str],
         collin_tol: float,
-        maxiter: int = 25,
-        tol: float = 1e-08,
-        fixef_tol: float = 1e-08,
-        solver: str = "np.linalg.solve",
-        weights_name: Optional[str] = None,
-        weights_type: Optional[str] = None,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        tol: float,
+        maxiter: int,
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
+        context: Union[int, Mapping[str, Any]] = 0,
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int]] = None,
+        separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
-            Y=Y,
-            X=X,
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
             weights=weights,
-            coefnames=coefnames,
-            collin_tol=collin_tol,
-            weights_name=weights_name,
             weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         # input checks
-        _fepois_input_checks(fe, drop_singletons, tol, maxiter)
+        _fepois_input_checks(drop_singletons, tol, maxiter)
 
-        self.fe = fe
         self.maxiter = maxiter
         self.tol = tol
-        self.fixef_tol = fixef_tol
-        self._drop_singletons = drop_singletons
         self._method = "fepois"
         self.convergence = False
+        self.separation_check = separation_check
 
-        if self.fe is not None:
-            self._has_fixef = True
-        else:
-            self._has_fixef = False
+        self._support_crv3_inference = True
+        self._support_iid_inference = True
+        self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
+
+        self._Y_hat_response = np.array([])
+        self.deviance = None
+        self._Xbeta = np.array([])
+
+    def prepare_model_matrix(self):
+        "Prepare model inputs for estimation."
+        super().prepare_model_matrix()
 
         # check if Y is a weakly positive integer
         self._Y = _to_integer(self._Y)
@@ -110,13 +148,43 @@ class Fepois(Feols):
                 "The dependent variable must be a weakly positive integer."
             )
 
-        self._support_crv3_inference = True
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
+        # check for separation
+        na_separation: list[int] = []
+        if (
+            self._fe is not None
+            and self.separation_check is not None
+            and self.separation_check  # not an empty list
+        ):
+            na_separation = _check_for_separation(
+                Y=self._Y,
+                X=self._X,
+                fe=self._fe,
+                fml=self._fml,
+                data=self._data,
+                methods=self.separation_check,
+            )
 
-        self._Y_hat_response = np.array([])
-        self.deviance = None
-        self._Xbeta = np.array([])
+        if na_separation:
+            self._Y.drop(na_separation, axis=0, inplace=True)
+            self._X.drop(na_separation, axis=0, inplace=True)
+            self._fe.drop(na_separation, axis=0, inplace=True)
+            self._data.drop(na_separation, axis=0, inplace=True)
+            self._N = self._Y.shape[0]
+
+            self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
+            self.n_separation_na = len(na_separation)
+
+    def to_array(self):
+        "Turn estimation DataFrames to np arrays."
+        self._Y, self._X, self._Z = (
+            self._Y.to_numpy(),
+            self._X.to_numpy(),
+            self._X.to_numpy(),
+        )
+        if self._fe is not None:
+            self._fe = self._fe.to_numpy()
+            if self._fe.ndim == 1:
+                self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self) -> None:
         """
@@ -148,14 +216,12 @@ class Fepois(Feols):
         """
         _Y = self._Y
         _X = self._X
-        _fe = self.fe
+        _fe = self._fe
         _N = self._N
-        _drop_singletons = self._drop_singletons
         _convergence = self.convergence  # False
         _maxiter = self.maxiter
-        _iwls_maxiter = 25
         _tol = self.tol
-        _fixef_tol = self.fixef_tol
+        _fixef_tol = self._fixef_tol
         _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
@@ -176,7 +242,7 @@ class Fepois(Feols):
             if i == _maxiter:
                 raise NonConvergenceError(
                     f"""
-                    The IRLS algorithm did not converge with {_iwls_maxiter}
+                    The IRLS algorithm did not converge with {_maxiter}
                     iterations. Try to increase the maximum number of iterations.
                     """
                 )
@@ -221,7 +287,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
@@ -240,12 +306,12 @@ class Fepois(Feols):
             stop_iterating = crit < _tol
 
         self._beta_hat = delta_new.flatten()
-        self._Y_hat_response = mu
-        self._Y_hat_link = eta
+        self._Y_hat_response = mu.flatten()
+        self._Y_hat_link = eta.flatten()
         # (Y - self._Y_hat)
         # needed for the calculation of the vcov
 
-        # updat for inference
+        # update for inference
         self._weights = mu_old
         self._irls_weights = mu
         # if only one dim
@@ -293,14 +359,16 @@ class Fepois(Feols):
         else:
             raise ValueError("type must be one of 'response' or 'working'.")
 
+    def _vcov_iid(self):
+        return self._bread
+
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: str = "link",
-        compute_stdp: bool = False
-    ) -> pd.DataFrame:
+        type: PredictionType = "link",
+    ) -> np.ndarray:
         """
         Return predicted values from regression model.
 
@@ -335,18 +403,13 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        compute_stdp: boolean
-            Ignored, included to conform with method signature of feols.predict()
 
         Returns
         -------
         pred_results : pd.DataFrame
             Dataframe with columns "y_hat" with predicted values from regression model
         """
-        _Xbeta = self._Xbeta.flatten()
-        _has_fixef = self._has_fixef
-
-        if _has_fixef:
+        if self._has_fixef:
             raise NotImplementedError(
                 "Prediction with fixed effects is not yet implemented for Poisson regression."
             )
@@ -354,40 +417,130 @@ class Fepois(Feols):
             raise NotImplementedError(
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
-
-        # y_hat = super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
-        prediction_df = pd.DataFrame()
-        if type == "link":
-            prediction_df["yhat"] = np.exp(_Xbeta)
-            return prediction_df
-        elif type == "response":
-            prediction_df["yhat"] = _Xbeta
-            return prediction_df
-        else:
-            raise ValueError("type must be one of 'response' or 'link'.")
+        return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 
-def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
+def _check_for_separation(
+    fml: str,
+    data: pd.DataFrame,
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    methods: Optional[list[str]] = None,
+) -> list[int]:
     """
     Check for separation.
 
     Check for separation of Poisson Regression. For details, see the ppmlhdfe
-    documentation on separation checks. Currently, only the "fe" check is implemented.
+    documentation on separation checks.
 
     Parameters
     ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    methods: list[str], optional
+        Methods used to check for separation. One of fixed effects ("fe") or
+        iterative rectifier ("ir"). Executes all methods by default.
 
     Returns
     -------
     list
         List of indices of observations that are removed due to separation.
     """
+    valid_methods: dict[str, _SeparationMethod] = {
+        "fe": _check_for_separation_fe,
+        "ir": _check_for_separation_ir,
+    }
+    if methods is None:
+        methods = list(valid_methods)
+
+    invalid_methods = [method for method in methods if method not in valid_methods]
+    if invalid_methods:
+        raise ValueError(
+            f"Invalid separation method. Expecting {list(valid_methods)}. Received {invalid_methods}"
+        )
+
     separation_na: set[int] = set()
-    if not (Y > 0).all(axis=0).all():
+    for method in methods:
+        separation_na = separation_na.union(
+            valid_methods[method](fml=fml, data=data, Y=Y, X=X, fe=fe)
+        )
+
+    if separation_na:
+        warnings.warn(
+            f"{len(separation_na)!s} observations removed because of separation."
+        )
+
+    return list(separation_na)
+
+
+class _SeparationMethod(Protocol):
+    def __call__(
+        self,
+        fml: str,
+        data: pd.DataFrame,
+        Y: pd.DataFrame,
+        X: pd.DataFrame,
+        fe: pd.DataFrame,
+    ) -> set[int]:
+        """
+        Check for separation.
+
+        Parameters
+        ----------
+        fml : str
+            The formula used for estimation.
+        data : pd.DataFrame
+            The data used for estimation.
+        Y : pd.DataFrame
+            Dependent variable.
+        X : pd.DataFrame
+            Independent variables.
+        fe : pd.DataFrame
+            Fixed effects.
+
+        Returns
+        -------
+        set
+            Set of indices of separated observations.
+        """
+        ...
+
+
+def _check_for_separation_fe(
+    fml: str, data: pd.DataFrame, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+) -> set[int]:
+    """
+    Check for separation using the "fe" check.
+
+    Parameters
+    ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
+    Y : pd.DataFrame
+        Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
+    fe : pd.DataFrame
+        Fixed effects.
+
+    Returns
+    -------
+    set
+        Set of indices of separated observations.
+    """
+    separation_na: set[int] = set()
+    if fe is not None and not (Y > 0).all(axis=0).all():
         Y_help = (Y > 0).astype(int).squeeze()
 
         # loop over all elements of fe
@@ -408,19 +561,116 @@ def _check_for_separation(Y: pd.DataFrame, fe: pd.DataFrame) -> list[int]:
                 dropset = set(fe[x][fe_in_droplist].index)
                 separation_na = separation_na.union(dropset)
 
-    return list(separation_na)
+    return separation_na
 
 
-def _fepois_input_checks(
-    fe: Union[np.ndarray, None], drop_singletons: bool, tol: float, maxiter: int
-):
+def _check_for_separation_ir(
+    fml: str,
+    data: pd.DataFrame,
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    tol: float = 1e-4,
+    maxiter: int = 100,
+) -> set[int]:
+    """
+    Check for separation using the "iterative rectifier" algorithm
+    proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
+
+    Parameters
+    ----------
+    fml : str
+        The formula used for estimation.
+    data : pd.DataFrame
+        The data used for estimation.
+    Y : pd.DataFrame
+        Dependent variable.
+    X : pd.DataFrame
+        Independent variables.
+    fe : pd.DataFrame
+        Fixed effects.
+    tol : float
+        Tolerance to detect separated observation. Defaults to 1e-4.
+    maxiter : int
+        Maximum number of iterations. Defaults to 100.
+
+    Returns
+    -------
+    set
+        Set of indices of separated observations.
+    """
+    # lazy load to avoid circular import
+    fixest_module = import_module("pyfixest.estimation")
+    feols = fixest_module.feols
+    # initialize
+    separation_na: set[int] = set()
+    tmp_suffix = "_separationTmp"
+    # build formula
+    name_dependent, rest = fml.split("~")
+    name_dependent_separation = "U"
+    if name_dependent_separation in data.columns:
+        name_dependent_separation += tmp_suffix
+
+    fml_separation = f"{name_dependent_separation} ~ {rest}"
+
+    dependent: pd.Series = data[name_dependent]
+    is_interior = dependent > 0
+    if is_interior.all():
+        # no boundary sample, can exit
+        return separation_na
+
+    # initialize variables
+    tmp: pd.DataFrame = pd.DataFrame(index=data.index)
+    tmp["U"] = (dependent == 0).astype(float).rename("U")
+    # weights
+    N0 = (dependent > 0).sum()
+    K = N0 / tol**2
+    tmp["omega"] = pd.Series(
+        np.where(dependent > 0, K, 1), name="omega", index=data.index
+    )
+    # combine data
+    # TODO: avoid create new object?
+    tmp = data.join(tmp, how="left", validate="one_to_one", rsuffix=tmp_suffix)
+    # TODO: need to ensure that join doesn't create duplicated columns
+    # assert not tmp.columns.duplicated().any()
+
+    iteration = 0
+    has_converged = False
+    while iteration < maxiter:
+        iteration += 1
+        # regress U on X
+        # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
+        fitted = feols(fml_separation, data=tmp, weights="omega")
+        tmp["Uhat"] = pd.Series(fitted.predict(), index=fitted._data.index, name="Uhat")
+        Uhat = tmp["Uhat"]
+        # update when within tolerance of zero
+        # need to be more strict below zero to avoid false positives
+        within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
+        Uhat.where(~(is_interior | within_zero.fillna(True)), 0, inplace=True)
+        if (Uhat >= 0).all():
+            # all separated observations have been identified
+            has_converged = True
+            break
+        tmp.loc[~is_interior, "U"] = np.fmax(
+            Uhat[~is_interior], 0
+        )  # rectified linear unit (ReLU)
+
+    if has_converged:
+        separation_na = set(dependent[Uhat > 0].index)
+    else:
+        warnings.warn(
+            "iterative rectivier separation check: maximum number of iterations reached before convergence"
+        )
+
+    return separation_na
+
+
+def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
     """
     Perform input checks for Fepois constructor arguments.
 
     Parameters
     ----------
-    fe : Union[np.ndarray, None]
-        Fixed effects. None if no fixed effects are used.
     drop_singletons : bool
         Whether to drop singleton fixed effects.
     tol : float
@@ -432,12 +682,6 @@ def _fepois_input_checks(
     -------
     None
     """
-    # fe must be np.array of dimension 2 or None
-    if fe is not None:
-        if not isinstance(fe, np.ndarray):
-            raise AssertionError("fe must be a numpy array.")
-        if fe.ndim != 2:
-            raise AssertionError("fe must be a numpy array of dimension 2.")
     # drop singletons must be logical
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")

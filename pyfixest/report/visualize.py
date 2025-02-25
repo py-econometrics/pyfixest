@@ -23,9 +23,15 @@ from lets_plot import (
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
+
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 LetsPlot.setup_html()
 
@@ -60,7 +66,7 @@ def set_figsize(
 
 
 def iplot(
-    models,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: Union[int, str, None] = None,
@@ -73,6 +79,7 @@ def iplot(
     exact_match: bool = False,
     plot_backend: str = "lets_plot",
     labels: Optional[dict] = None,
+    rename_models: Optional[dict[str, str]] = None,
     ax: Optional[plt.Axes] = None,
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
@@ -83,9 +90,8 @@ def iplot(
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or
-        `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -119,6 +125,8 @@ def iplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
@@ -147,24 +155,48 @@ def iplot(
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
     pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
-
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        labels = rename_categoricals(fit1._coefnames)
+    )
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            fit1._model_name_plot: "Model 1",
+            fit2._model_name_plot: "Model 2",
+            fit3._model_name_plot: "Model 3"
+        },
+    )
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            "Y~i(f1)": "Model 1",
+            "Y~i(f1)+X2": "Model 2",
+            "Y~i(f1)+X2|f2": "Model 3"
+        },
+    )
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
         )
 
-    df_all = []
-    all_icovars = []
+    df_all: list[pd.DataFrame] = []
+    all_icovars: list[str] = []
 
     if keep is None:
         keep = []
 
     if drop is None:
         drop = []
+
+    if rename_models is None:
+        rename_models = {}
 
     for x, fxst in enumerate(list(models)):
         if fxst._icovars is None:
@@ -174,7 +206,9 @@ def iplot(
             )
         all_icovars += fxst._icovars
 
-        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
+        df_model = _get_model_df(
+            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+        )
         df_all.append(df_model)
 
     # drop duplicates
@@ -205,7 +239,7 @@ def iplot(
 
 
 def coefplot(
-    models: list,
+    models: ModelInputType,
     alpha: float = 0.05,
     figsize: Optional[tuple[int, int]] = None,
     yintercept: float = 0,
@@ -221,14 +255,15 @@ def coefplot(
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
     ax: Optional[plt.Axes] = None,
+    rename_models: Optional[dict[str, str]] = None,
 ):
     r"""
     Plot model coefficients with confidence intervals.
 
     Parameters
     ----------
-    models : list or object
-        A list of fitted models of type `Feols` or `Fepois`, or just a single model.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -262,6 +297,8 @@ def coefplot(
         instead of using regular expressions.
     plot_backend: str, optional
         The plotting backend to use between "lets_plot" (default) and "matplotlib".
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
@@ -282,22 +319,36 @@ def coefplot(
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
-    fit1 = pf.feols("Y ~ X1", data = df)
-    fit2 = pf.feols("Y ~ X1 + X2", data = df)
-    fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
-    fit4 = pf.feols("Y ~ C(X1)", data = df)
+    fit1 = pf.feols("Y ~ i(f1)", data = df)
+    fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
+    fit3 = pf.feols("Y ~ i(f1) + X2 | f1", data = df)
 
-    pf.coefplot([fit1, fit2, fit3])
-    pf.coefplot([fit4], labels = rename_categoricals(fit1._coefnames))
-
-    pf.coefplot([fit1], joint = "both")
+    pf.iplot([fit1, fit2, fit3])
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            fit1._model_name_plot: "Model 1",
+            fit2._model_name_plot: "Model 2",
+            fit3._model_name_plot: "Model 3"
+        },
+    )
+    pf.iplot(
+        models = [fit1, fit2, fit3],
+        rename_models = {
+            "Y~i(f1)": "Model 1",
+            "Y~i(f1)+X2": "Model 2",
+            "Y~i(f1)+X2|f1": "Model 3"
+        },
+    )
+    pf.iplot([fit1], joint = "both")
 
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -309,9 +360,14 @@ def coefplot(
     if drop is None:
         drop = []
 
+    if rename_models is None:
+        rename_models = {}
+
     df_all = []
     for fxst in models:
-        df_model = _get_model_df(fxst=fxst, alpha=alpha, joint=joint, seed=seed)
+        df_model = _get_model_df(
+            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+        )
         df_all.append(df_model)
 
     df = pd.concat(df_all, axis=0).reset_index().set_index("Coefficient")
@@ -382,6 +438,8 @@ def _coefplot_lets_plot(
         Whether to flip the coordinates of the plot. Default is True.
     labels : dict, optional
         A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
+    ax : None, optional
+        Not used. Only for compatibility with the matplotlib backend.
 
     Returns
     -------
@@ -406,7 +464,7 @@ def _coefplot_lets_plot(
             width=0.05,
             position=position_dodge(0.5),
         )
-        + ylab(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        + ylab(rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval")
     )
 
     if flip_coord:
@@ -539,7 +597,9 @@ def _coefplot_matplotlib(
         ax.axvline(x=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axhline(y=xintercept, color="black", linestyle="--")
-        ax.set_xlabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_xlabel(
+            rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval"
+        )
         ax.set_ylabel("Coefficient")
         ax.set_yticks(range(len(unique_coefficients)))
         ax.set_yticklabels(unique_coefficients)
@@ -548,7 +608,9 @@ def _coefplot_matplotlib(
         ax.axhline(y=yintercept, color="black", linestyle="--")
         if xintercept is not None:
             ax.axvline(x=xintercept, color="black", linestyle="--")
-        ax.set_ylabel(rf"Estimate and {round((1-alpha)*100, 1)}% Confidence Interval")
+        ax.set_ylabel(
+            rf"Estimate and {round((1 - alpha) * 100, 1)}% Confidence Interval"
+        )
         ax.set_xlabel("Coefficient")
         ax.set_xticks(range(len(unique_coefficients)))
         ax.set_xticklabels(unique_coefficients)
@@ -567,6 +629,7 @@ def _get_model_df(
     alpha: float,
     joint: Optional[Union[str, bool]],
     seed: Optional[int] = None,
+    rename_models: Optional[dict[str, str]] = None,
 ) -> pd.DataFrame:
     """
     Get a tidy model frame as input to the _coefplot function.
@@ -584,17 +647,24 @@ def _get_model_df(
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed : int, optional
         The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
 
     Returns
     -------
     pd.DataFrame
         A tidy model frame.
     """
+    if rename_models is None:
+        rename_models = {}
+
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
-    df_model["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}%"
+
+    df_model["fml"] = fxst._model_name_plot
+    df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
 
     if joint in ["both", True]:
-        lb, ub = f"{alpha / 2*100:.1f}%", f"{(1 - alpha / 2)*100:.1f}%"
+        lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
         df_joint = fxst.confint(joint=True, alpha=alpha, seed=seed)
         df_joint.reset_index(inplace=True)
         df_joint = df_joint.rename(columns={"index": "Coefficient"})
@@ -603,7 +673,9 @@ def _get_model_df(
             .drop([lb, ub], axis=1)
             .merge(df_joint, on="Coefficient", how="left")
         )
-        df_joint_full["fml"] = f"{fxst._fml}: {(1- alpha) *100:.1f}% joint CIs"
+
+        df_joint_full["fml"] += " (joint CIs)"
+
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)
         else:

@@ -6,15 +6,18 @@ from pyfixest import (
     report,
     utils,
 )
+from pyfixest.did import did2s, event_study, lpdid, panelview
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (
     bonferroni,
+    feglm,
     feols,
     fepois,
     rwolf,
+    wyoung,
 )
-from pyfixest.report import coefplot, etable, iplot, summary
+from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
 from pyfixest.utils import (
     get_data,
     get_ssc,
@@ -22,23 +25,30 @@ from pyfixest.utils import (
 )
 
 __all__ = [
-    "feols",
-    "fepois",
-    "Stargazer",
-    "etable",
-    "summary",
-    "iplot",
-    "coefplot",
     "bonferroni",
-    "rwolf",
-    "get_data",
-    "ssc",
-    "get_ssc",
+    "coefplot",
     "did",
+    "did2s",
+    "dtable",
     "errors",
     "estimation",
+    "etable",
+    "event_study",
+    "feglm",
+    "feols",
+    "fepois",
+    "get_data",
+    "get_ssc",
+    "iplot",
+    "lpdid",
+    "make_table",
+    "panelview",
     "report",
+    "rwolf",
+    "ssc",
+    "summary",
     "utils",
+    "wyoung",
 ]
 
 from importlib.metadata import PackageNotFoundError, version

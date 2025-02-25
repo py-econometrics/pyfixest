@@ -1,12 +1,19 @@
-from pyfixest.report.summarize import etable, summary
+from pyfixest.report.summarize import (
+    dtable,
+    etable,
+    make_table,
+    summary,
+)
 from pyfixest.report.visualize import (
     coefplot,
     iplot,
 )
 
 __all__ = [
-    "summary",
+    "coefplot",
+    "dtable",
     "etable",
     "iplot",
-    "coefplot",
+    "make_table",
+    "summary",
 ]

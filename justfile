@@ -31,6 +31,9 @@ update-tests-data:
 tests:
 	poetry run pytest -n 4 --cov-report=term tests
 
+tests-plots:
+	poetry run pytest -m "plots" -n 4 --cov-report=term tests
+
 rerun-tests:
 	poetry run pytest --lf -n 4
 

@@ -9,16 +9,15 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FeatureDeprecationError,
     InstrumentsAsCovarsError,
-    MultiEstNotSupportedError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
+from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -120,11 +119,11 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # multi estimation error
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y + Y2 ~ 1 | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | sw(f2, f3) | Z1 ~ X1 ", data=data)
-    with pytest.raises(MultiEstNotSupportedError):
+    with pytest.raises(NotImplementedError):
         feols(fml="Y  ~ 1 | csw(f2, f3) | Z1 ~ X1 ", data=data)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
@@ -140,6 +139,56 @@ def test_poisson_devpar_count():
     # under determined
     with pytest.raises(AssertionError):
         fepois(fml="Y ~ X1 | X4", data=data)
+
+
+def test_feols_errors():
+    data = pf.get_data()
+
+    with pytest.raises(TypeError):
+        pf.feols(fml=1, data=data)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, vcov=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm=1)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_rm="f1")
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=2)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol="2")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, collin_tol=-1.0)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, lean=1)
+
+    with pytest.raises(TypeError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
+
+    with pytest.raises(ValueError):
+        pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
+
+
+def test_poisson_errors():
+    data = pf.get_data(model="Fepois")
+    # iv not supported
+    with pytest.raises(NotImplementedError):
+        pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
 
 
 def test_all_variables_multicollinear():
@@ -208,6 +257,15 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
+def test_predict_dtype_error():
+    data = get_data()
+    fit = feols("Y ~ X1 | f1", data=data)
+
+    data["f1"] = data["f1"].fillna(0).astype(int)
+    with pytest.warns(UserWarning):
+        fit.predict(newdata=data.iloc[0:100])
+
+
 def test_wildboottest_errors():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
@@ -216,16 +274,13 @@ def test_wildboottest_errors():
 
 
 def test_summary_errors():
+    "Test for appropriate errors when providing objects of type FixestMulti."
     data = get_data()
     fit1 = feols("Y + Y2 ~ X1 | f1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
     with pytest.raises(TypeError):
-        etable(fit1)
-    with pytest.raises(TypeError):
         etable([fit1, fit2])
-    with pytest.raises(TypeError):
-        summary(fit1)
     with pytest.raises(TypeError):
         summary([fit1, fit2])
 
@@ -452,32 +507,9 @@ def test_wald_test_R_q_column_consistency():
 
 def setup_feiv_instance():
     # Setup necessary data for Feiv
-    n = 100
-    Y = np.random.rand(n, 1)
-    X = np.random.rand(n, 1)
-    endogvar = np.random.rand(n, 1)
-    Z = np.random.rand(n, 2)
-    weights = np.random.rand(n, 1)
-    coefnames_x = ["x1", "x2"]
-    coefnames_z = ["z1", "z2"]
-    collin_tol = 1e-10
-    weights_name = "weights"
-    weights_type = "aweights"
-    solver = "np.linalg.solve"
 
-    return Feiv(
-        Y=Y,
-        X=X,
-        endogvar=endogvar,
-        Z=Z,
-        weights=weights,
-        coefnames_x=coefnames_x,
-        coefnames_z=coefnames_z,
-        collin_tol=collin_tol,
-        weights_name=weights_name,
-        weights_type=weights_type,
-        solver=solver,
-    )
+    data = pf.get_data()
+    return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
 def test_IV_first_stage_invalid_model_type():
@@ -499,3 +531,230 @@ def test_IV_Diag_unsupported_statistics():
 
     with pytest.raises(ValueError):
         feiv_instance.IV_Diag(statistics=unsupported_statistics)
+
+
+def test_errors_compressed():
+    data = pf.get_data()
+
+    # no more than two fixed effects
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+
+    # cluster variables not in model
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
+
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
+
+    # only CVR supported for Mundlak
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
+
+    # crv3 inference:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
+
+    # prediction:
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+
+    # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
+
+    with pytest.raises(ValueError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
+
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
+
+    # no support for IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
+
+    # no support for WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
+
+
+def test_errors_panelview():
+    """Test all ValueError conditions in panelview."""
+    sample_df = pd.DataFrame(
+        {
+            "unit": [1, 2, 3, 4],
+            "year": [2001, 2002, 2003, 2004],
+            "treat": [0, 1, 1, 0],
+            "dep_var": [10, 20, 30, 40],
+        }
+    )
+
+    # 1. Test for missing 'unit' column
+    with pytest.raises(ValueError, match="Column 'unit' not found in data."):
+        pf.panelview(sample_df.drop(columns=["unit"]), "unit", "year", "treat")
+
+    # 2. Test for missing 'year' column (time)
+    with pytest.raises(ValueError, match="Column 'year' not found in data."):
+        pf.panelview(sample_df.drop(columns=["year"]), "unit", "year", "treat")
+
+    # 3. Test for missing 'treat' column
+    with pytest.raises(ValueError, match="Column 'treat' not found in data."):
+        pf.panelview(sample_df.drop(columns=["treat"]), "unit", "year", "treat")
+
+    # 4. Test for missing outcome column
+    with pytest.raises(
+        ValueError, match="Outcome column 'nonexistent_col' not found in data."
+    ):
+        pf.panelview(sample_df, "unit", "year", "treat", outcome="nonexistent_col")
+
+    # 5. Test for 'collapse_to_cohort' and 'subsamp' used together
+    with pytest.raises(
+        ValueError,
+        match="Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'.",
+    ):
+        pf.panelview(
+            sample_df, "unit", "year", "treat", collapse_to_cohort=True, subsamp=10
+        )
+
+    # 6. Test for 'collapse_to_cohort' and 'units_to_plot' used together
+    with pytest.raises(
+        ValueError,
+        match="Cannot use 'collapse_to_cohort' together with 'subsamp' or 'units_to_plot'.",
+    ):
+        pf.panelview(
+            sample_df,
+            "unit",
+            "year",
+            "treat",
+            collapse_to_cohort=True,
+            units_to_plot=[1, 2],
+        )
+
+
+@pytest.mark.parametrize(
+    "split, fsplit, expected_exception, error_message",
+    [
+        # Test TypeError for non-string 'split'
+        (123, None, TypeError, "The function argument split needs to be of type str."),
+        # Test TypeError for non-string 'fsplit'
+        (None, 456, TypeError, "The function argument fsplit needs to be of type str."),
+        # Test ValueError for split and fsplit not being identical
+        (
+            "split_column",
+            "different_column",
+            ValueError,
+            r"Arguments split and fsplit are both specified, but not identical",
+        ),
+        # Test KeyError for invalid 'split' column
+        (
+            "invalid_column",
+            None,
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+        # Test KeyError for invalid 'fsplit' column
+        (
+            None,
+            "invalid_column",
+            KeyError,
+            "Column 'invalid_column' not found in data.",
+        ),
+    ],
+)
+def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
+    with pytest.raises(expected_exception, match=error_message):
+        pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
+
+
+def test_separation_check_validations():
+    data = pd.DataFrame(
+        {
+            "Y": [1, 2, 3],
+            "X1": [4, 5, 6],
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check=["a"])
+
+    with pytest.raises(
+        TypeError,
+        match="The function argument `separation_check` must be of type list.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check="fe")
+
+    with pytest.raises(
+        ValueError,
+        match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
+    ):
+        pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
+
+
+def test_gelbach_errors():
+    rng = np.random.default_rng(123)
+
+    data = gelbach_data(nobs=100)
+    data["f1"] = rng.choice(range(5), len(data), True)
+    data["weights"] = rng.uniform(0.5, 1.5, len(data))
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+
+    with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
+
+    # error with IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ x1", data=data, weights="weights").decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with Poisson
+    with pytest.raises(NotImplementedError):
+        dt = pf.get_data(model="Fepois")
+        pf.fepois("Y ~ X1", data=dt).decompose(
+            param="X1", combine_covariates={"g1": ["x21"]}
+        )
+
+
+def test_glm_errors():
+    "Test that dependent variable must be binary for probit and logit models."
+    data = pf.get_data()
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 2, 0)
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    with pytest.raises(
+        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
+    ):
+        pf.feglm("Y ~ X1 | f1", data=data, family="probit")

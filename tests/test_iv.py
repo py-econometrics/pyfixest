@@ -6,7 +6,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 # Activate pandas2ri to enable conversion between pandas DataFrames and R DataFrames
 pandas2ri.activate()
@@ -77,24 +80,42 @@ def r_results():
     controls_r = ro.StrVector(controls)
     cl_r = ro.StrVector([cl])
 
-    # Call the ivDiag function from the ivDiag package
-    result_with_weights = ivDiag.ivDiag(
-        Y=Y_r,
-        D=D_r,
-        Z=Z_r,
-        controls=controls_r,
-        data=data_r,
-        weights="weights",
-        cl=cl_r,
-    )
+    # set to True to run ivDiag R package
+    run_r = False
+    if run_r:
+        # Call the ivDiag function from the ivDiag package
+        F_stat_weights = ivDiag.ivDiag(
+            Y=Y_r,
+            D=D_r,
+            Z=Z_r,
+            controls=controls_r,
+            data=data_r,
+            weights="weights",
+            cl=cl_r,
+            run_AR=False,
+            parallel=False,
+            bootstrap=False,
+        ).rx2("F_stat")
 
-    result_without_weights = ivDiag.ivDiag(
-        Y=Y_r, D=D_r, Z=Z_r, controls=controls_r, data=data_r, cl=cl_r
-    )
+        F_stat_no_weights = ivDiag.ivDiag(
+            Y=Y_r,
+            D=D_r,
+            Z=Z_r,
+            controls=controls_r,
+            data=data_r,
+            cl=cl_r,
+            run_AR=False,
+            parallel=False,
+            bootstrap=False,
+        ).rx2("F_stat")
+
+    else:
+        F_stat_weights = np.array([20.1279, 18.9532, 17.3067, 17.3067])
+        F_stat_no_weights = np.array([19.7981, 19.9658, 17.0545, 17.0545])
 
     return {
-        "with_weights": result_with_weights.rx2("F_stat"),
-        "without_weights": result_without_weights.rx2("F_stat"),
+        "with_weights": F_stat_weights,
+        "without_weights": F_stat_no_weights,
         "data": data,
     }
 
@@ -141,7 +162,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     _N = fit_iv._N
     if adj_vcov == {"CRV1": "cluster"}:
         F_stat_R = F_cl
-        F_eff_R = result[4]
+        F_eff_R = result[3]
     elif adj_vcov == "iid":
         F_stat_R = F_naive
         F_eff_R = result[1]  # * _N / (_N - 1)
@@ -205,7 +226,7 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     _F_pval_iv = fit_iv._p_value_1st_stage
 
     _pi_hat_ols = fit_ols._beta_hat
-    _X_hat_ols = fit_ols._Y_hat_link
+    _X_hat_ols = fit_ols._X @ fit_ols._beta_hat
     _v_hat_ols = fit_ols._u_hat
     _F_stat_ols = fit_ols._f_statistic
     _F_pval_ols = fit_ols._p_value

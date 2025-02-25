@@ -157,8 +157,8 @@ def get_sharkfin(
 def get_panel_dgp_stagg(
     num_units=1_000,
     num_periods=30,
-    num_treated=[250, 500, 150],
-    treatment_start_cohorts=[10, 15, 20],
+    num_treated=None,
+    treatment_start_cohorts=None,
     sigma_unit=1,
     sigma_time=0.5,
     sigma_epsilon=0.2,
@@ -168,6 +168,10 @@ def get_panel_dgp_stagg(
     ar_coef=0.8,
 ):
     """Panel DGP with staggered treatment effects and effect heterogeneity."""
+    if num_treated is None:
+        num_treated = [250, 500, 150]
+    if treatment_start_cohorts is None:
+        treatment_start_cohorts = [10, 15, 20]
     if base_treatment_effects is None:
         # Cohort 1: mean reversal: big bump that decays to zero within 10 days, then zero
         # Cohort 2: shark-fin - logarithmic for the first week, then 0
@@ -279,3 +283,28 @@ def get_panel_dgp_stagg(
         )
         result["dataframe"] = df
     return result
+
+
+def gelbach_data(nobs):
+    "Create data for testing of Gelbach Decomposition."
+    rng = np.random.default_rng(49392)
+    df = pd.DataFrame(index=range(nobs))
+    df["x1"] = rng.normal(size=nobs)
+
+    df["x21"] = df["x1"] * 1 + rng.normal(loc=0, scale=0.1, size=nobs)
+    df["x22"] = df["x1"] * 0.25 + df["x21"] * 0.75 + rng.normal(size=nobs)
+    df["x23"] = (
+        df["x1"] * 0.4
+        + df["x21"] * 0.6
+        + df["x22"] * 0.4
+        + rng.normal(loc=0, scale=0.1, size=nobs)
+    )
+    df["y"] = (
+        df["x1"] * 1
+        + df["x21"] * 2
+        + df["x22"] * 0.5
+        + df["x23"] * 0.75
+        + rng.normal(loc=0, scale=0.1, size=nobs)
+    )
+
+    return df

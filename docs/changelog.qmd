@@ -1,4 +1,60 @@
-# News
+# Changelog
+
+```{python}
+import pyfixest as pf
+from pyfixest.report.utils import rename_categoricals
+
+df = pf.get_data()
+
+fit1 = pf.feols("Y ~ X1", data = df)
+fit2 = pf.feols("Y ~ X1 + X2", data = df)
+fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
+```
+
+## PyFixest (In Development, can be installed from github)
+
+- We add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods:
+  ```{python}
+  pf.coefplot(
+      models = [fit1, fit2, fit3],
+      rename_models = {
+          fit1._model_name_plot: "Model 1",
+          fit2._model_name_plot: "Model 2",
+          fit3._model_name_plot: "Model 3"
+      },
+  )
+  ```
+
+## PyFixest 0.28.0
+
+### New features and bug fixes
+- Adds a function argument `context`, that allows to pass information / context to the `formulaic.Formulaic.get_model_matrix()` call that creates the model matrix.
+- Fix a bug that caused reindexing of `LPDID._coeftable` when calling `LPDID.iplot()`. As a result, a second call of `LPDID.iplot()` would fail.
+- Bumps the required `formulaic` version to `1.1.0` and fixes errors that arose when a) the ref argument was used for i() syntax, which led to a silent failure under formulaic >= 1.1.0, and fixef() / predict() with fixed effects, which led to a loud error.
+
+### New experimental Features
+- Adds a `pf.feglm()` function that supports GLMs with normal and binomial families (gaussian, logit, probit) without fixed effects. Fixed effects support is work in progress.
+- Adds options to run the demean function via JAX. This might speed up the model fit if GPU is available.
+
+
+## PyFixest 0.27.0
+
+- Adds support for Gelbach's (JoLe 2016) Regression Decomposition method using a `decompose()` method for `Feols`.
+- Adds support for the multiple hypothesis correction by Westfall & Young via the `pf.wyoung()` function.
+- Input data frames to `pf.feols()` and `pf.fepois()` are now converted to `pandas` via [narwhals](https://github.com/narwhals-dev/narwhals).
+  As a result, users can not provide `duckdb` or `ibis` tables as inputs, as well as `pandas` and `polars` data frames. `polars` and `pyarrow`
+  are dropped as a dependencies.
+- Fixes a bug in the `wildboottest` method, which incorrectly used to run a regression on the demeaned dependend variable in case it was
+  applied after a fixed effects regression. My apologies for that!
+- Fixes a bug in the `ritest` method, which would use randomization inference coefficients instead of t-statistics, leading to incorrect results.
+  This has consequences for the rwolf() function, which, in case of running ri-inference, would default to run the randomization-t. My apolgies!
+- Adds a vignette on multiple testing corrections.
+- Adds a vignette on Gelbach's regression decomposition.
+
+## PyFixest 0.22.0 - 0.25.4
+
+See the github changelog for details: [link](https://github.com/py-econometrics/pyfixest/releases).
+
 
 ## PyFixest 0.22.0
 

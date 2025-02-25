@@ -5,7 +5,7 @@ import pandas as pd
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.twfe import TWFE
-from pyfixest.errors import NotImplementedError
+from pyfixest.estimation.literals import VcovTypeOptions
 
 
 def event_study(
@@ -47,6 +47,8 @@ def event_study(
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
         lags. Default is True.
+    cluster: Optional[str]
+        The name of the cluster variable.
 
     Returns
     -------
@@ -57,12 +59,12 @@ def event_study(
     --------
     ```{python}
     import pandas as pd
-    from pyfixest.did.estimation import event_study
+    import pyfixest as pf
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
-    fit_twfe = event_study(
+    fit_twfe = pf.event_study(
         df_het,
         yname="dep_var",
         idname="unit",
@@ -143,6 +145,7 @@ def did2s(
     second_stage: str,
     treatment: str,
     cluster: str,
+    weights: Optional[str] = None,
 ):
     """
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
@@ -172,7 +175,7 @@ def did2s(
     ```{python}
     import pandas as pd
     import numpy as np
-    from pyfixest.did.estimation import did2s
+    import pyfixest as pf
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
@@ -183,7 +186,7 @@ def did2s(
 
     ```{python}
     # estimate the model
-    fit = did2s(
+    fit = pf.did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -204,7 +207,7 @@ def did2s(
     To estimate a pooled effect, we need to slightly update the second stage formula:
 
     ```{python}
-    fit = did2s(
+    fit = pf.did2s(
         df_het,
         yname="dep_var",
         first_stage="~ 0 | unit + year",
@@ -238,6 +241,7 @@ def did2s(
         _first_stage=first_stage,
         _second_stage=second_stage,
         treatment=treatment,
+        weights=weights,
     )
 
     vcov, _G = _did2s_vcov(
@@ -249,6 +253,7 @@ def did2s(
         first_u=first_u,
         second_u=second_u,
         cluster=cluster,
+        weights=weights,
     )
 
     fit._vcov = vcov
@@ -269,7 +274,7 @@ def lpdid(
     idname: str,
     tname: str,
     gname: str,
-    vcov: Optional[Union[str, dict[str, str]]] = None,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     pre_window: Optional[int] = None,
     post_window: Optional[int] = None,
     never_treated: int = 0,
@@ -320,12 +325,12 @@ def lpdid(
     --------
     ```{python}
     import pandas as pd
-    from pyfixest.did.estimation import lpdid
+    import pyfixest as pf
 
     url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
     df_het = pd.read_csv(url)
 
-    fit = lpdid(
+    fit = pf.lpdid(
         df_het,
         yname="dep_var",
         idname="unit",
@@ -344,7 +349,7 @@ def lpdid(
     To get the ATT, set `att=True`:
 
     ```{python}
-    fit = lpdid(
+    fit = pf.lpdid(
         df_het,
         yname="dep_var",
         idname="unit",

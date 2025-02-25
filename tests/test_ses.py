@@ -110,6 +110,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
         raise ValueError("HC1 and CRV1 vcov are not the same.")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
 @pytest.mark.parametrize("N", [100, 400])
 @pytest.mark.parametrize("beta_type", ["1", "2", "3"])
@@ -201,9 +202,10 @@ def test_CRV3_fixef(N, seed, beta_type, error_type):
         raise ValueError("HC3 and CRV3 t values with fweights are not the same.")
 
 
+@pytest.mark.slow
 def run_crv3_poisson():
     data = get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Fepois")
-    fit = fepois(  # noqa: F841
+    fit = fepois(
         fml="Y~X1 + C(f2)",
         data=data,
         vcov={"CRV3": "f1"},

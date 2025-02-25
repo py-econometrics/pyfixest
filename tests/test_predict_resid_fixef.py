@@ -7,10 +7,12 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.errors import NotImplementedError
 from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.utils.dev_utils import _extract_variable_level
+from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import get_data
+
+update_r_paths()
 
 pandas2ri.activate()
 
@@ -26,7 +28,19 @@ def data():
     return data
 
 
-def test_internally(data):
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y~X1 |f1",
+        "Y ~ X1 | f1 + f2",
+        "Y ~ 1 | f1",
+        "Y ~ X1*X2",
+        "Y ~ X1*X2 | f1",
+    ],
+)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_ols_prediction_internally(data, fml, weights):
     """
     Test predict() method internally.
 
@@ -35,20 +49,9 @@ def test_internally(data):
     Currently only for OLS.
     """
     # predict via feols, without fixed effect
-    fit = feols(fml="Y~csw(X1, X2)", data=data, vcov="iid")
-    mod = fit.fetch_model(0)
-    original_prediction = mod.predict().yhat
-    updated_prediction = mod.predict(newdata=mod._data).yhat
-    np.allclose(original_prediction, updated_prediction)
-    assert mod._data.shape[0] == original_prediction.shape[0]
-    assert mod._data.shape[0] == updated_prediction.shape[0]
-
-    # predict via feols, with fixef effect
-    fit = feols(fml="Y~csw(X1, X2) | f1", data=data, vcov="iid")
-    mod = fit.fetch_model(0)
-    mod.fixef()
-    original_prediction = mod.predict().yhat
-    updated_prediction = mod.predict(newdata=mod._data).yhat
+    mod = feols(fml=fml, data=data, vcov="iid", weights=weights)
+    original_prediction = mod.predict()
+    updated_prediction = mod.predict(newdata=mod._data)
     np.allclose(original_prediction, updated_prediction)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
@@ -58,14 +61,15 @@ def test_internally(data):
         updated_prediction = mod.predict(newdata=data.iloc[0:100, :]).yhat
         np.allclose(original_prediction, updated_prediction)
 
-    # fepois NotImplementedError(s)
-    fit = fepois(fml="Y~X1*X2", data=data, vcov="hetero")
-    with pytest.raises(NotImplementedError):
-        fit.predict(newdata=fit._data)
 
-    # fepois with fixed effect
-    fit = fepois(fml="Y~X1*X2 | f1", data=data, vcov="hetero")
-    with pytest.raises(NotImplementedError):
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
+@pytest.mark.parametrize("weights", ["weights"])
+def test_poisson_prediction_internally(data, weights, fml):
+    with pytest.raises(TypeError):
+        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+        fit.predict(newdata=fit._data)
+    with pytest.raises(TypeError):
+        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict()
 
 
@@ -134,7 +138,8 @@ def test_vs_fixest(data, fml):
 
     # test on new data - OLS.
     if not np.allclose(
-        feols_mod.predict(newdata=data2).yhat, stats.predict(r_fixest_ols, newdata=data2)
+        feols_mod.predict(newdata=data2).yhat,
+        stats.predict(r_fixest_ols, newdata=data2),
     ):
         raise ValueError("Predictions for OLS are not equal")
 
@@ -145,7 +150,7 @@ def test_vs_fixest(data, fml):
         raise ValueError("Predictions for OLS are not of the same length.")
 
     # test predict for Poisson
-    # if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):  # noqa: W505
+    # if not np.allclose(fepois_mod.predict(data = data2), stats.predict(r_fixest_pois, newdata = data2)):
     #    raise ValueError("Predictions for Poisson are not equal")
 
     # test resid for OLS
@@ -199,7 +204,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
     # test 3
-    fml = "Y ~ X1 + X2 + f1| f1 "
+    fml = "Y ~ X1 + X2 | f1 "
     fit = feols(fml, data=data)
     res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
@@ -301,3 +306,5 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f3)", "1.0")
     var = "C(f4)[T.1]"
     assert _extract_variable_level(var) == ("C(f4)", "1")
+    var = "C(f5)[1.0]"
+    assert _extract_variable_level(var) == ("C(f5)", "1.0")

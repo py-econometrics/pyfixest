@@ -30,19 +30,11 @@ class VcovTypeNotSupportedError(Exception):  # noqa: D101
     pass
 
 
-class MultiEstNotSupportedError(Exception):  # noqa: D101
-    pass
-
-
 class NanInClusterVarError(Exception):  # noqa: D101
     pass
 
 
 class DepvarIsNotNumericError(Exception):  # noqa: D101
-    pass
-
-
-class NotImplementedError(Exception):  # noqa: D101
     pass
 
 
@@ -63,20 +55,18 @@ class FeatureDeprecationError(Exception):  # noqa: D101
 
 
 __all__ = [
-    "FixedEffectInteractionError",
     "CovariateInteractionError",
+    "DepvarIsNotNumericError",
     "DuplicateKeyError",
+    "EmptyDesignMatrixError",
     "EndogVarsAsCovarsError",
+    "FeatureDeprecationError",
+    "FixedEffectInteractionError",
     "InstrumentsAsCovarsError",
+    "MatrixNotFullRankError",
+    "NanInClusterVarError",
+    "NonConvergenceError",
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",
-    "MultiEstNotSupportedError",
-    "NanInClusterVarError",
-    "DepvarIsNotNumericError",
-    "NotImplementedError",
-    "NonConvergenceError",
-    "MatrixNotFullRankError",
-    "EmptyDesignMatrixError",
-    "FeatureDeprecationError",
 ]

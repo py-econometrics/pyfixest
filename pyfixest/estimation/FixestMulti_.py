@@ -1,19 +1,20 @@
 import functools
-import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
-import numpy as np
 import pandas as pd
 
-from pyfixest.errors import MultiEstNotSupportedError
-from pyfixest.estimation.demean_ import demean_model
+from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
+from pyfixest.estimation.felogit_ import Felogit
 from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_input
-from pyfixest.estimation.fepois_ import Fepois, _check_for_separation
+from pyfixest.estimation.feols_compressed_ import FeolsCompressed
+from pyfixest.estimation.fepois_ import Fepois
+from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
-from pyfixest.utils.dev_utils import DataFrameType, _drop_cols, _polars_to_pandas
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import capture_context
 
 
 class FixestMulti:
@@ -27,6 +28,13 @@ class FixestMulti:
         lean: bool,
         fixef_tol: float,
         weights_type: str,
+        use_compression: bool,
+        reps: Optional[int],
+        seed: Optional[int],
+        split: Optional[str],
+        fsplit: Optional[str],
+        separation_check: Optional[list[str]] = None,
+        context: Union[int, Mapping[str, Any]] = 0,
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -47,6 +55,23 @@ class FixestMulti:
             The type of weights employed in the estimation. Either analytical /
             precision weights are employed (`aweights`) or
             frequency weights (`fweights`).
+        use_compression: bool
+            Whether to use sufficient statistics to losslessly fit the regression model
+            on compressed data. False by default.
+        reps : int
+            The number of bootstrap iterations to run. Only relevant for wild cluster
+            bootstrap for use_compression=True.
+        seed : Optional[int]
+            Option to provide a random seed. Default is None.
+            Only relevant for wild cluster bootstrap for use_compression=True.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
+        context : int or Mapping[str, Any]
+            A dictionary containing additional context variables to be used by
+            formulaic during the creation of the model matrix. This can include
+            custom factorization functions, transformations, or any other
+            variables that need to be available in the formula environment.
 
         Returns
         -------
@@ -57,8 +82,25 @@ class FixestMulti:
         self._lean = lean
         self._fixef_tol = fixef_tol
         self._weights_type = weights_type
+        self._use_compression = use_compression
+        self._reps = reps if use_compression else None
+        self._seed = seed if use_compression else None
+        self._separation_check = separation_check
+        self._context = capture_context(context)
 
-        data = _polars_to_pandas(data)
+        self._run_split = split is not None or fsplit is not None
+        self._run_full = not (split and not fsplit)
+
+        self._splitvar: Optional[str] = None
+        if self._run_split:
+            if split:
+                self._splitvar = split
+            else:
+                self._splitvar = fsplit
+        else:
+            self._splitvar = None
+
+        data = _narwhals_to_pandas(data)
 
         if self._copy_data:
             self._data = data.copy()
@@ -71,16 +113,16 @@ class FixestMulti:
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
-        _tmp = getattr(_module, "coefplot")
+        _tmp = _module.coefplot
         self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "iplot")
+        _tmp = _module.iplot
         self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.iplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "summary")
+        _tmp = _module.summary
         self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.summary.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "etable")
+        _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
 
@@ -90,7 +132,7 @@ class FixestMulti:
         fml: str,
         vcov: Union[None, str, dict[str, str]] = None,
         weights: Union[None, str] = None,
-        ssc: dict[str, Union[str, bool]] = {},
+        ssc: Optional[dict[str, Union[str, bool]]] = None,
         fixef_rm: str = "none",
         drop_intercept: bool = False,
     ) -> None:
@@ -129,13 +171,13 @@ class FixestMulti:
             None
         """
         self._method = None
-        self._is_iv = None
+        self._is_iv = False
         self._fml_dict = None
         self._fml_dict_iv = None
         self._ssc_dict: dict[str, Union[str, bool]] = {}
         self._drop_singletons = False
-        self._is_multiple_estimation = None
-        self._drop_intercept = None
+        self._is_multiple_estimation = False
+        self._drop_intercept = False
         self._weights = weights
         self._has_weights = False
         if weights is not None:
@@ -144,20 +186,27 @@ class FixestMulti:
         self._drop_intercept = drop_intercept
 
         FML = FixestFormulaParser(fml)
+        FML.set_fixest_multi_flag()
+        self._is_multiple_estimation = FML._is_multiple_estimation or self._run_split
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
         # self._fml_dict = fxst_fml.condensed_fml_dict
         # self._fml_dict_iv = fxst_fml.condensed_fml_dict_iv
-        self._ssc_dict = ssc
+        self._ssc_dict = ssc if ssc is not None else {}
         self._drop_singletons = _drop_singletons(fixef_rm)
 
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ],
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
+        separation_check: Optional[list[str]] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -170,6 +219,11 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+        solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+            default is 'np.linalg.solve'. Solver to use for the estimation.
+        demeaner_backend: Literal["numba", "jax"], optional
+            The backend to use for demeaning. Can be either "numba" or "jax".
+            Defaults to "numba".
         collin_tol : float, optional
             The tolerance level for the multicollinearity check. Default is 1e-6.
         iwls_maxiter : int, optional
@@ -178,6 +232,9 @@ class FixestMulti:
         iwls_tol : float, optional
             The tolerance level for the IWLS algorithm. Default is 1e-8.
             Only relevant for non-linear estimation strategies.
+        separation_check: list[str], optional
+            Only used in "fepois". Methods to identify and drop separated observations.
+            Either "fe" or "ir". Executes both by default.
 
         Returns
         -------
@@ -190,270 +247,252 @@ class FixestMulti:
         _ssc_dict = self._ssc_dict
         _drop_intercept = self._drop_intercept
         _weights = self._weights
-        _has_fixef = False
         _fixef_tol = self._fixef_tol
         _weights_type = self._weights_type
         _lean = self._lean
+        _store_data = self._store_data
+        _copy_data = self._copy_data
+        _run_split = self._run_split
+        _run_full = self._run_full
+        _splitvar = self._splitvar
+        _context = self._context
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
 
-        for _, fval in enumerate(_fixef_keys):
-            fixef_key_models = FixestFormulaDict.get(fval)
+        all_splits = (["all"] if _run_full else []) + (
+            _data[_splitvar].dropna().unique().tolist() if _run_split else []
+        )
 
-            # dictionary to cache demeaned data with index: na_index_str,
-            # only relevant for `.feols()`
-            lookup_demeaned_data: dict[str, pd.DataFrame] = {}
+        for sample_split_value in all_splits:
+            for _, fval in enumerate(_fixef_keys):
+                fixef_key_models = FixestFormulaDict.get(fval)
 
-            for FixestFormula in fixef_key_models:  # type: ignore
-                # loop over both dictfe and dictfe_iv (if the latter is not None)
-                # get Y, X, Z, fe, NA indices for model
+                # dictionary to cache demeaned data with index: na_index_str,
+                # only relevant for `.feols()`
+                lookup_demeaned_data: dict[str, pd.DataFrame] = {}
 
-                mm_dict = model_matrix_fixest(
-                    # fml=fml,
-                    FixestFormula=FixestFormula,
-                    data=_data,
-                    drop_singletons=_drop_singletons,
-                    drop_intercept=_drop_intercept,
-                    weights=_weights,
-                )
+                for FixestFormula in fixef_key_models:  # type: ignore
+                    # loop over both dictfe and dictfe_iv (if the latter is not None)
+                    # get Y, X, Z, fe, NA indices for model
 
-                mm_dict_keys = [
-                    "Y",
-                    "X",
-                    "fe",
-                    "endogvar",
-                    "Z",
-                    "weights_df",
-                    "na_index",
-                    "na_index_str",
-                    "_icovars",
-                    "X_is_empty",
-                ]
-                (
-                    Y,
-                    X,
-                    fe,
-                    endogvar,
-                    Z,
-                    weights_df,
-                    na_index,
-                    na_index_str,
-                    _icovars,
-                    X_is_empty,
-                ) = (mm_dict[key] for key in mm_dict_keys)
+                    FIT: Union[Feols, Feiv, Fepois]
 
-                if _weights is not None:
-                    weights = weights_df.to_numpy()
-                else:
-                    weights = np.ones(Y.shape[0])
-
-                weights = weights.reshape((weights.shape[0], 1))
-
-                self._X_is_empty = False
-                if X_is_empty:
-                    self._X_is_empty = True
-
-                coefnames = X.columns.tolist()
-
-                _k_fe = fe.nunique(axis=0) if fe is not None else None
-
-                FIT: Union[Feols, Feiv, Fepois]
-
-                if _method == "feols":
-                    # demean Y, X, Z, if not already done in previous estimation
-
-                    if fe is not None:
-                        _has_fixef = True
-
-                    Yd, Xd = demean_model(
-                        Y,
-                        X,
-                        fe,
-                        weights,
-                        lookup_demeaned_data,
-                        na_index_str,
-                        _fixef_tol,
-                    )
-
-                    if _is_iv:
-                        endogvard, Zd = demean_model(
-                            endogvar,
-                            Z,
-                            fe,
-                            weights,
-                            lookup_demeaned_data,
-                            na_index_str,
-                            _fixef_tol,
-                        )
-                    else:
-                        endogvard, Zd = None, None
-
-                    if not _is_iv:
-                        Zd = Xd
-
-                    Yd_array, Xd_array, Zd_array, endogvard_array = (
-                        x.to_numpy() if x is not None else np.array([])
-                        for x in [Yd, Xd, Zd, endogvard]
-                    )
-
-                    if _is_iv:
-                        coefnames_z = Z.columns.tolist()
-                        FIT = Feiv(
-                            Y=Yd_array,
-                            X=Xd_array,
-                            endogvar=endogvard_array,
-                            Z=Zd_array,
-                            weights=weights,
-                            coefnames_x=coefnames,
-                            coefnames_z=coefnames_z,
-                            collin_tol=collin_tol,
-                            weights_name=_weights,
-                            weights_type=_weights_type,
-                        )
-                    else:
-                        # initiate OLS class
-
+                    if _method == "feols" and not _is_iv:
                         FIT = Feols(
-                            Y=Yd_array,
-                            X=Xd_array,
-                            weights=weights,
-                            coefnames=coefnames,
-                            collin_tol=collin_tol,
-                            weights_name=_weights,
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
                             weights_type=_weights_type,
+                            solver=solver,
+                            demeaner_backend=demeaner_backend,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            context=_context,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                        )
+                        FIT.prepare_model_matrix()
+                        FIT.demean()
+                        FIT.to_array()
+                        FIT.drop_multicol_vars()
+                        FIT.wls_transform()
+                    elif _method == "feols" and _is_iv:
+                        FIT = Feiv(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            demeaner_backend=demeaner_backend,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            context=_context,
+                        )
+                        FIT.prepare_model_matrix()
+                        FIT.demean()
+                        FIT.to_array()
+                        FIT.drop_multicol_vars()
+                        FIT.wls_transform()
+                    elif _method == "fepois":
+                        FIT = Fepois(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            demeaner_backend=demeaner_backend,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                            # solver=_solver
+                        )
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT.drop_multicol_vars()
+
+                    elif _method == "feglm-logit":
+                        FIT = Felogit(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
                         )
 
-                    FIT.na_index = na_index
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
 
-                    # special case: sometimes it is useful to fit models as
-                    # "Y ~ 0 | f1 + f2" to demean Y and to use the predict() method
-                    if FIT._X_is_empty:
-                        FIT._u_hat = Yd_array
-                    else:
-                        FIT.get_fit()
+                    elif _method == "feglm-probit":
+                        FIT = Feprobit(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                        )
 
-                elif _method == "fepois":
-                    # check for separation and drop separated variables
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
 
-                    na_separation: list[int] = []
-                    if fe is not None:
-                        na_separation = _check_for_separation(Y=Y, fe=fe)
-                        if na_separation:
-                            warnings.warn(
-                                f"{str(len(na_separation))} observations removed because of separation."
-                            )
+                    elif _method == "feglm-gaussian":
+                        FIT = Fegaussian(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            tol=iwls_tol,
+                            maxiter=iwls_maxiter,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                            separation_check=separation_check,
+                            context=_context,
+                        )
 
-                            Y.drop(na_separation, axis=0, inplace=True)
-                            X.drop(na_separation, axis=0, inplace=True)
-                            fe.drop(na_separation, axis=0, inplace=True)
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
 
-                    Y_array, X_array = (x.to_numpy() for x in [Y, X])
-                    N = X_array.shape[0]
-
-                    fe_array = None
-                    if fe is not None:
-                        _has_fixef = True
-                        fe_array = fe.to_numpy()
-                        if fe_array.ndim == 1:
-                            fe_array = fe_array.reshape((N, 1))
-
-                    # initiate OLS class
-                    FIT = Fepois(
-                        Y=Y_array,
-                        X=X_array,
-                        fe=fe_array,
-                        weights=weights,
-                        coefnames=coefnames,
-                        drop_singletons=_drop_singletons,
-                        maxiter=iwls_maxiter,
-                        tol=iwls_tol,
-                        collin_tol=collin_tol,
-                        weights_name=None,
-                        fixef_tol=_fixef_tol,
-                        weights_type=_weights_type,
-                    )
+                    elif _method == "compression":
+                        FIT = FeolsCompressed(
+                            FixestFormula=FixestFormula,
+                            data=_data,
+                            ssc_dict=_ssc_dict,
+                            drop_singletons=_drop_singletons,
+                            drop_intercept=_drop_intercept,
+                            weights=_weights,
+                            weights_type=_weights_type,
+                            solver=solver,
+                            demeaner_backend=demeaner_backend,
+                            collin_tol=collin_tol,
+                            fixef_tol=_fixef_tol,
+                            lookup_demeaned_data=lookup_demeaned_data,
+                            store_data=_store_data,
+                            copy_data=_copy_data,
+                            lean=_lean,
+                            reps=self._reps,
+                            seed=self._seed,
+                            sample_split_value=sample_split_value,
+                            sample_split_var=_splitvar,
+                        )
+                        FIT.prepare_model_matrix()
+                        FIT.to_array()
+                        FIT.drop_multicol_vars()
+                        FIT.wls_transform()
 
                     FIT.get_fit()
+                    # if X is empty: no inference (empty X only as shorthand for demeaning)
+                    if not FIT._X_is_empty:
+                        # inference
+                        vcov_type = _get_vcov_type(vcov, fval)
+                        FIT.vcov(vcov=vcov_type, data=FIT._data)
 
-                    FIT.na_index = na_index
-                    if na_separation:
-                        FIT.na_index = np.concatenate(
-                            [FIT.na_index, np.array(na_separation)]
-                        )
-                        FIT.n_separation_na = len(na_separation)
+                        FIT.get_inference()
+                        # other regression stats
+                        if _method == "feols" and not FIT._is_iv:
+                            FIT.get_performance()
+                        if isinstance(FIT, Feiv):
+                            FIT.first_stage()
 
-                else:
-                    raise ValueError(
-                        "Estimation method not supported. Please use 'feols' or 'fepois'."
-                    )
-
-                    # enrich FIT with model info obtained outside of the model class
-
-                _data_clean = _drop_cols(_data, FIT.na_index)
-
-                FIT.add_fixest_multi_context(
-                    FixestFormula=FixestFormula,
-                    depvar=FixestFormula._depvar,
-                    Y=Y,
-                    _data=_data_clean,
-                    _ssc_dict=_ssc_dict,
-                    _k_fe=_k_fe,
-                    fval=fval,
-                    store_data=self._store_data,
-                )
-
-                # if X is empty: no inference (empty X only as shorthand for demeaning)  # noqa: W505
-                if not FIT._X_is_empty:
-                    # inference
-                    vcov_type = _get_vcov_type(vcov, fval)
-                    FIT.vcov(vcov=vcov_type, data=_data_clean)
-                    FIT.get_inference()
-
-                    # compute first stage for IV
-                    if isinstance(FIT, Feiv):
-                        FIT.first_stage()
-                    # other regression stats
-                    if _method == "feols" and not FIT._is_iv:
-                        FIT.get_performance()
-                    if _icovars is not None:
-                        FIT._icovars = _icovars
-                    else:
-                        FIT._icovars = None
-
-                if _lean:
+                    # delete large attributescl
                     FIT._clear_attributes()
 
-                    # store fitted model
-                self.all_fitted_models[FixestFormula.fml] = FIT
+                    self.all_fitted_models[FIT._model_name] = FIT
 
-        self.set_fixest_multi_flag()
-
-    def set_fixest_multi_flag(self):
-        """
-        Set a flag to indicate whether multiple estimations are being performed or not.
-
-        Simple check if `all_fitted_models` has length greater than 1.
-        Throws an error if multiple estimations are being performed with IV estimation.
-        Args:
-            None
-        Returns:
-            None
-        """
-        if len(self.all_fitted_models) > 1:
-            self._is_multiple_estimation = True
-            if self._is_iv:
-                raise MultiEstNotSupportedError(
-                    """
-                    Multiple Estimations is currently not supported with IV.
-                    This is mostly due to insufficient testing and will be possible
-                    with a future release of PyFixest.
-                    """
-                )
-        else:
-            self._is_multiple_estimation = False
-
-    def to_list(self):
+    def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
         """
         Return a list of all fitted models.
 

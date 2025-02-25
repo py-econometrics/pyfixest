@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.report.visualize import coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
@@ -40,6 +41,7 @@ def fit_multi(data):
     return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize(
     argnames="figsize",
     argvalues=[(10, 6), None],
@@ -61,11 +63,13 @@ def test_set_figsize(figsize, plot_backend):
         assert figsize_not_none == figsize
 
 
+@pytest.mark.extended
 def test_set_figsize_not_none_bad_backend():
     figsize_not_none = set_figsize((10, 6), "bad_backend")
     assert figsize_not_none == (10, 6)
 
 
+@pytest.mark.extended
 def test_set_figsize_none_bad_backend():
     with pytest.raises(
         ValueError, match="plot_backend must be either 'lets_plot' or 'matplotlib'."
@@ -101,6 +105,7 @@ def test_set_figsize_none_bad_backend():
     argvalues=[None, {"f2": "F2", "X1": "1x"}],
     ids=["no_labels", "labels"],
 )
+@pytest.mark.extended
 def test_iplot(
     fit1,
     fit2,
@@ -137,6 +142,7 @@ def test_iplot(
     iplot([fit1, fit2], **plot_kwargs)
 
 
+@pytest.mark.extended
 def test_iplot_error(data):
     with pytest.raises(ValueError):
         fit4 = feols(fml="Y ~ X1", data=data, vcov="iid")
@@ -175,6 +181,7 @@ def test_iplot_error(data):
     argvalues=[None, {"f2": "F2", "X1": "1x"}],
     ids=["no_labels", "labels"],
 )
+@pytest.mark.extended
 def test_coefplot(
     fit1,
     fit2,
@@ -212,6 +219,7 @@ def test_coefplot(
     fit_multi.coefplot(**plot_kwargs)
 
 
+@pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_matplotlib")
 def test_coefplot_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
     coefplot(fit1, plot_backend="matplotlib")
@@ -219,6 +227,7 @@ def test_coefplot_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, da
     assert kwargs.get("figsize") == (10, 6)
 
 
+@pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_matplotlib")
 def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1, data):
     coefplot(fit1, figsize=(12, 7), plot_backend="matplotlib")
@@ -226,6 +235,7 @@ def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1
     assert kwargs.get("figsize") == (12, 7)
 
 
+@pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_lets_plot")
 def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
     coefplot(fit1, plot_backend="lets_plot")
@@ -233,8 +243,38 @@ def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data
     assert kwargs.get("figsize") == (500, 300)
 
 
+@pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_lets_plot")
 def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
     coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (600, 400)
+
+
+def test_rename_models():
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ i(f1)", data=df)
+    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+
+    pf.iplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    pf.coefplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    fit_multi = pf.feols("Y ~ sw(f1, f2)", data=df)
+    fit_multi.coefplot(rename_models={"Y~f1": "Model 1", "Y~f2": "Model 2"})
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint=True)
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint="both")
+
+    with pytest.warns(
+        UserWarning,
+        match="The following model names specified in rename_models are not found in the models",
+    ):
+        coefplot(models=[fit1], rename_models={"Y~a": "Model 1"}, joint="bad")

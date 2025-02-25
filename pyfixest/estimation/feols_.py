@@ -1,19 +1,25 @@
 import functools
 import gc
+import re
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
 import pandas as pd
-import polars as pl
 from formulaic import Formula
+from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
 from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
+from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
+from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -21,6 +27,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -31,16 +38,20 @@ from pyfixest.estimation.vcov_utils import (
 )
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _drop_cols,
     _extract_variable_level,
-    _polars_to_pandas,
+    _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
+
+decomposition_type = Literal["gelbach"]
+prediction_type = Literal["response", "link"]
 
 
 class Feols:
     """
-    Non user-facing class to estimate a liner regression via OLS.
+    Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
     but rather use the [feols()](/reference/estimation.feols.qmd) function. Note that
@@ -68,6 +79,11 @@ class Feols:
     solver : str, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Attributes
     ----------
@@ -77,9 +93,9 @@ class Feols:
         Indicates whether instrumental variables are used, initialized as False.
 
     _Y : np.ndarray
-        The dependent variable array.
+        The demeaned dependent variable, a two-dimensional numpy array.
     _X : np.ndarray
-        The independent variables array.
+        The demeaned independent variables, a two-dimensional numpy array.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -125,9 +141,9 @@ class Feols:
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
-        Predicted values of the dependent variable.
+        Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.
     _Y_hat_response : np.ndarray
-        Response predictions of the model.
+        Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
     _scores : np.ndarray
@@ -174,58 +190,81 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-    _solver: str
-        The solver used to fit the normal equation.
+    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    _demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
+    _data: pd.DataFrame
+        The data frame used in the estimation. None if arguments `lean = True` or
+        `store_data = False`.
+    _model_name: str
+        The name of the model. Usually just the formula string. If split estimation is used,
+        the model name will include the split variable and value.
+    _model_name_plot: str
+        The name of the model used when plotting and summarizing models. Usually identical to
+        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        and models with identical _model_name attributes are passed. In this case,
+        the _model_name_plot attribute will be modified.
     """
 
     def __init__(
         self,
-        Y: np.ndarray,
-        X: np.ndarray,
-        weights: np.ndarray,
-        collin_tol: float,
-        coefnames: list[str],
-        weights_name: Optional[str],
+        FixestFormula: FixestFormula,
+        data: pd.DataFrame,
+        ssc_dict: dict[str, Union[str, bool]],
+        drop_singletons: bool,
+        drop_intercept: bool,
+        weights: Optional[str],
         weights_type: Optional[str],
-        solver: str = "np.linalg.solve",
+        collin_tol: float,
+        fixef_tol: float,
+        lookup_demeaned_data: dict[str, pd.DataFrame],
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
+        store_data: bool = True,
+        copy_data: bool = True,
+        lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
+        sample_split_var: Optional[str] = None,
+        sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
+        self._sample_split_value = sample_split_value
+        self._sample_split_var = sample_split_var
+        self._model_name = (
+            FixestFormula.fml
+            if self._sample_split_var is None
+            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        )
+        self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
+        self.FixestFormula = FixestFormula
 
-        self._weights = weights
-        self._weights_name = weights_name
+        if sample_split_value == "all":
+            data_split = data.copy()
+        else:
+            data_split = data[data[sample_split_var] == sample_split_value].copy()
+        data_split.reset_index(drop=True, inplace=True)  # set index to 0:N
+
+        self._data = data_split.copy() if copy_data else data_split
+        self._ssc_dict = ssc_dict
+        self._drop_singletons = drop_singletons
+        self._drop_intercept = drop_intercept
+        self._weights_name = weights
         self._weights_type = weights_type
-        self._has_weights = False
-        if weights_name is not None:
-            self._has_weights = True
-
-        if self._has_weights:
-            w = np.sqrt(weights)
-            self._Y = Y * w
-            self._X = X * w
-        else:
-            self._Y = Y
-            self._X = X
-
-        self.get_nobs()
+        self._has_weights = weights is not None
+        self._collin_tol = collin_tol
+        self._fixef_tol = fixef_tol
         self._solver = solver
-        _feols_input_checks(Y, X, weights)
-
-        if self._X.shape[1] == 0:
-            self._X_is_empty = True
-        else:
-            self._X_is_empty = False
-            self._collin_tol = collin_tol
-            (
-                self._X,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = _drop_multicollinear_variables(self._X, coefnames, self._collin_tol)
-
-        self._Z = self._X
-
-        _, self._k = self._X.shape
+        self._demeaner_backend = demeaner_backend
+        self._lookup_demeaned_data = lookup_demeaned_data
+        self._store_data = store_data
+        self._copy_data = copy_data
+        self._lean = lean
+        self._use_mundlak = False
+        self._context = capture_context(context)
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -234,16 +273,15 @@ class Feols:
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
             self._supports_wildboottest = False
+        self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
-        self._data = pd.DataFrame()
-        self._fml = ""
+        self._fml = FixestFormula.fml
         self._has_fixef = False
-        self._fixef = ""
+        self._fixef = FixestFormula._fval
         # self._coefnames = None
         self._icovars = None
-        self._ssc_dict: dict[str, Union[str, bool]] = {}
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -295,43 +333,135 @@ class Feols:
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
-        _tmp = getattr(_module, "coefplot")
+        _tmp = _module.coefplot
         self.coefplot = functools.partial(_tmp, models=[self])
         self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "iplot")
+        _tmp = _module.iplot
         self.iplot = functools.partial(_tmp, models=[self])
         self.iplot.__doc__ = _tmp.__doc__
-        _tmp = getattr(_module, "summary")
+        _tmp = _module.summary
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
-    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
-        """
-        Solve the ordinary least squares problem using the specified solver.
+    def prepare_model_matrix(self):
+        "Prepare model matrices for estimation."
+        mm_dict = model_matrix_fixest(
+            FixestFormula=self.FixestFormula,
+            data=self._data,
+            drop_singletons=self._drop_singletons,
+            drop_intercept=self._drop_intercept,
+            weights=self._weights_name,
+            context=self._context,
+        )
 
-        Parameters
-        ----------
-        tZX (array-like): Z'X.
-        tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
+        self._Y = mm_dict.get("Y")
+        self._Y_untransformed = mm_dict.get("Y").copy()
+        self._X = mm_dict.get("X")
+        self._fe = mm_dict.get("fe")
+        self._endogvar = mm_dict.get("endogvar")
+        self._Z = mm_dict.get("Z")
+        self._weights_df = mm_dict.get("weights_df")
+        self._na_index = mm_dict.get("na_index")
+        self._na_index_str = mm_dict.get("na_index_str")
+        self._icovars = mm_dict.get("icovars")
+
+        self._coefnames = self._X.columns.tolist()
+        self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
+        self._depvar = self._Y.columns[0]
+        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+        self._has_fixef = self._fe is not None
+        self._fixef = self.FixestFormula._fval
+
+        # update data:
+        self._data = _drop_cols(self._data, self._na_index)
+
+        self._weights = self._set_weights()
+        self._N, self._N_rows = self._set_nobs()
+
+    def _set_nobs(self) -> tuple[int, int]:
+        """
+        Fetch the number of observations used in fitting the regression model.
 
         Returns
         -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
+        tuple[int, int]
+            A tuple containing the total number of observations and the number of rows
+            in the dependent variable array.
         """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        elif solver == "scipy.sparse.linalg.lsqr":
-            return lsqr(tZX, tZY)[0].flatten()
+        _N_rows = len(self._Y)
+        if self._weights_type == "aweights":
+            _N = _N_rows
+        elif self._weights_type == "fweights":
+            _N = np.sum(self._weights)
+
+        return _N, _N_rows
+
+    def _set_weights(self) -> np.ndarray:
+        """
+        Return the weights used in the regression model.
+
+        Returns
+        -------
+        np.ndarray
+            The weights used in the regression model.
+            If no weights are used, returns an array of ones
+            with the same length as the dependent variable array.
+        """
+        N = len(self._Y)
+
+        if self._weights_df is not None:
+            _weights = self._weights_df.to_numpy()
         else:
-            raise ValueError(f"Solver {solver} not supported.")
+            _weights = np.ones(N)
+
+        return _weights.reshape((N, 1))
+
+    def demean(self):
+        "Demean the dependent variable and covariates by the fixed effect(s)."
+        if self._has_fixef:
+            self._Yd, self._Xd = demean_model(
+                self._Y,
+                self._X,
+                self._fe,
+                self._weights.flatten(),
+                self._lookup_demeaned_data,
+                self._na_index_str,
+                self._fixef_tol,
+                self._demeaner_backend,
+            )
+        else:
+            self._Yd, self._Xd = self._Y, self._X
+
+    def to_array(self):
+        "Convert estimation data frames to np arrays."
+        self._Y, self._X = (
+            self._Yd.to_numpy(),
+            self._Xd.to_numpy(),
+        )
+
+    def wls_transform(self):
+        "Transform model matrices for WLS Estimation."
+        self._X_untransformed = self._X.copy()
+        if self._has_weights:
+            w = np.sqrt(self._weights)
+            self._Y = self._Y * w
+            self._X = self._X * w
+
+    def drop_multicol_vars(self):
+        "Detect and drop multicollinear variables."
+        (
+            self._X,
+            self._coefnames,
+            self._collin_vars,
+            self._collin_index,
+        ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
+
+        self._X_is_empty = self._X.shape[1] == 0
+        self._k = self._X.shape[1] if not self._X_is_empty else 0
+
+    def _get_predictors(self) -> None:
+        self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
+        self._Y_hat_response = self._Y_hat_link
 
     def get_fit(self) -> None:
         """
@@ -341,24 +471,29 @@ class Feols:
         -------
         None
         """
-        _X = self._X
-        _Y = self._Y
-        _Z = self._Z
-        _solver = self._solver
-        self._tZX = _Z.T @ _X
-        self._tZy = _Z.T @ _Y
+        if self._X_is_empty:
+            self._u_hat = self._Y
+        else:
+            _X = self._X
+            _Y = self._Y
+            self._Z = self._X
+            _Z = self._Z
+            _solver = self._solver
+            self._tZX = _Z.T @ _X
+            self._tZy = _Z.T @ _Y
 
-        self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = solve_ols(self._tZX, self._tZy, _solver)
 
-        self._Y_hat_link = self._X @ self._beta_hat
-        self._u_hat = self._Y.flatten() - self._Y_hat_link.flatten()
+            self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
-        self._scores = _X * self._u_hat[:, None]
-        self._hessian = self._tZX.copy()
+            self._scores = _X * self._u_hat[:, None]
+            self._hessian = self._tZX.copy()
 
-        # IV attributes, set to None for OLS, Poisson
-        self._tXZ = np.array([])
-        self._tZZinv = np.array([])
+            # IV attributes, set to None for OLS, Poisson
+            self._tXZ = np.array([])
+            self._tZZinv = np.array([])
+
+        self._get_predictors()
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
@@ -387,8 +522,14 @@ class Feols:
             An instance of class [Feols(/reference/Feols.qmd) with updated inference.
         """
         # Assuming `data` is the DataFrame in question
-        if isinstance(data, pl.DataFrame):
-            data = _polars_to_pandas(data)
+
+        _data = data if data is not None else self._data
+        try:
+            _data = _narwhals_to_pandas(_data)
+        except TypeError as e:
+            raise TypeError(
+                f"The data set must be a DataFrame type. Received: {type(data)}"
+            ) from e
 
         _data = self._data
         _has_fixef = self._has_fixef
@@ -471,6 +612,7 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+
             self._vcov = np.zeros((self._k, self._k))
 
             for x, col in enumerate(self._cluster_df.columns):
@@ -525,18 +667,8 @@ class Feols:
     def _vcov_iid(self):
         _N = self._N
         _u_hat = self._u_hat
-        _method = self._method
         _bread = self._bread
-
-        if _method == "feols":
-            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method == "fepois":
-            sigma2 = 1
-        else:
-            raise NotImplementedError(
-                f"'iid' inference is not supported for {_method} regressions."
-            )
-
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         _vcov = _bread * sigma2
 
         return _vcov
@@ -568,38 +700,28 @@ class Feols:
 
         return _vcov
 
-    def _vcov_crv1(self, clustid, cluster_col):
-        _Z = self._Z
-        _weights = self._weights
-        _u_hat = self._u_hat
-        _method = self._method
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         _bread = self._bread
 
-        k_instruments = _Z.shape[1]
-        meat = np.zeros((k_instruments, k_instruments))
+        _scores = self._scores
 
-        # deviance uniquely for Poisson
-
-        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
+        k = _scores.shape[1]
+        meat = np.zeros((k, k))
 
         meat = _crv1_meat_loop(
-            _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64),
+            scores=_scores.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )
 
-        if _is_iv is False:
-            _vcov = _bread @ meat @ _bread
-        else:
-            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
-            _vcov = _bread @ meat @ _bread
+        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX if _is_iv else meat
+        vcov = _bread @ meat @ _bread
 
-        return _vcov
+        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         _k = self._k
@@ -613,7 +735,7 @@ class Feols:
         tXX = np.transpose(_X) @ _X
         tXy = np.transpose(_X) @ _Y
 
-        # compute leave-one-out regression coefficients (aka clusterjacks')  # noqa: W505
+        # compute leave-one-out regression coefficients (aka clusterjacks')
         for ixg, g in enumerate(clustid):
             Xg = _X[np.equal(g, cluster_col)]
             Yg = _Y[np.equal(g, cluster_col)]
@@ -632,7 +754,7 @@ class Feols:
         beta_center = _beta_hat
 
         vcov_mat = np.zeros((_k, _k))
-        for ixg, g in enumerate(clustid):
+        for ixg, _ in enumerate(clustid):
             beta_centered = beta_jack[ixg, :] - beta_center
             vcov_mat += np.outer(beta_centered, beta_centered)
 
@@ -653,10 +775,7 @@ class Feols:
 
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        if _method == "feols":
-            fit_ = getattr(fixest_module, "feols")
-        else:
-            fit_ = getattr(fixest_module, "fepois")
+        fit_ = fixest_module.feols if _method == "feols" else fixest_module.fepois
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -679,7 +798,7 @@ class Feols:
         beta_center = _beta_hat
 
         vcov_mat = np.zeros((_k, _k))
-        for ixg, g in enumerate(clustid):
+        for ixg, _ in enumerate(clustid):
             beta_centered = beta_jack[ixg, :] - beta_center
             vcov_mat += np.outer(beta_centered, beta_centered)
 
@@ -717,19 +836,18 @@ class Feols:
         df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
-        if _method == "feols":
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
-        else:
+        if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
+        else:
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
+            z = np.abs(t.ppf(alpha / 2, df))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
 
     def add_fixest_multi_context(
         self,
-        FixestFormula: FixestFormula,
         depvar: str,
         Y: pd.Series,
         _data: pd.DataFrame,
@@ -768,8 +886,7 @@ class Feols:
         None
         """
         # some bookkeeping
-        self._fml = FixestFormula.fml
-        self._FixestFormula = FixestFormula
+        self._fml = self.FixestFormula.fml
         self._depvar = depvar
         self._Y_untransformed = Y
         self._data = pd.DataFrame()
@@ -786,23 +903,32 @@ class Feols:
             self._has_fixef = False
 
     def _clear_attributes(self):
-        attributes = [
-            "_X",
-            "_Y",
-            "_Z",
-            "_data",
-            "_cluster_df",
-            "_tXZ",
-            "_tZy",
-            "_tZX",
-            "_weights",
-            "_scores",
-            "_tZZinv",
-            "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
-            "_Y_untransformed",
-        ]
+        attributes = []
+
+        if not self._store_data:
+            attributes += ["_data"]
+
+        if self._lean:
+            attributes += [
+                "_data",
+                "_X",
+                "_Y",
+                "_Z",
+                "_Xd",
+                "_Yd",
+                "_Zd",
+                "_cluster_df",
+                "_tXZ",
+                "_tZy",
+                "_tZX",
+                "_weights",
+                "_scores",
+                "_tZZinv",
+                "_u_hat",
+                "_Y_hat_link",
+                "_Y_hat_response",
+                "_Y_untransformed",
+            ]
 
         for attr in attributes:
             if hasattr(self, attr):
@@ -851,19 +977,16 @@ class Feols:
 
         Examples
         --------
+        ```{python}
         import numpy as np
         import pandas as pd
+        import pyfixest as pf
 
-        from pyfixest.estimation.estimation import feols
-
-        data = pd.read_csv("pyfixest/did/data/df_het.csv")
-        data = data.iloc[1:3000]
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2| f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(adj=False))
 
         R = np.array([[1,-1]] )
         q = np.array([0.0])
-
-        fml = "dep_var ~ treat"
-        fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(adj=False))
 
         # Wald test
         fit.wald_test(R=R, q=q, distribution = "chi2")
@@ -872,10 +995,7 @@ class Feols:
 
         print(f"Python f_stat: {f_stat}")
         print(f"Python p_stat: {p_stat}")
-
-        # The code above produces the following results :
-        # Python f_stat: 256.55432910297003
-        # Python p_stat: 9.67406627744023e-58
+        ```
         """
         _vcov = self._vcov
         _N = self._N
@@ -1008,11 +1128,37 @@ class Feols:
             (HC vs CRV), and whether the null hypothesis was imposed on the
             bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
             returns a tuple of the regular output and the bootstrapped t-stats.
+
+        Examples
+        --------
+        ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import re
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+
+        fit.wildboottest(
+            param = "X1",
+            reps=1000,
+            seed = 822
+        )
+
+        fit.wildboottest(
+            param = "X1",
+            reps=1000,
+            seed = 822,
+            bootstrap_type = "31"
+        )
+
+        ```
         """
         _is_iv = self._is_iv
         _has_fixef = self._has_fixef
-        _Y = self._Y.flatten()
-        _X = self._X
         _xnames = self._coefnames
         _data = self._data
         _clustervar = self._clustervar
@@ -1075,19 +1221,7 @@ class Feols:
                 "Wild cluster bootstrap is not supported for Poisson regression."
             )
 
-        if _has_fixef:
-            # update _X, _xnames
-            fml_linear, fixef = self._fml.split("|")
-            fixef_vars = fixef.split("+")
-            # wrap all fixef vars in "C()"
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
-
-            # make this sparse once wildboottest allows it
-            _, _X = Formula(fml_dummies).get_model_matrix(_data, output="numpy")
-            _xnames = _X.model_spec.column_names
+        _Y, _X, _xnames = self._model_matrix_one_hot()
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1151,6 +1285,7 @@ class Feols:
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
+            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
         }
 
         res_df = pd.Series(res)
@@ -1199,24 +1334,24 @@ class Feols:
 
         Examples
         --------
-        ```python
-        from pyfixest.estimation import feols
-        from pyfixest.utils import get_data
+        ```{python}
+        import pyfixest as pf
+        import numpy as np
 
-        data = get_data()
-        data["D1"] = np.random.choice([0, 1], size=data.shape[0])
+        data = pf.get_data()
+        data["D"] = np.random.choice([0, 1], size=data.shape[0])
 
-        fit = feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
-        fit.ccv(treatment="D", pk=0.05, gk=0.5, n_splits=8, seed=123).head()
+        fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert (
-            self._supports_cluster_causal_variance
-        ), "The model does not support the causal cluster variance estimator."
+        assert self._supports_cluster_causal_variance, (
+            "The model does not support the causal cluster variance estimator."
+        )
         assert isinstance(treatment, str), "treatment must be a string."
-        assert (
-            isinstance(cluster, str) or cluster is None
-        ), "cluster must be a string or None."
+        assert isinstance(cluster, str) or cluster is None, (
+            "cluster must be a string or None."
+        )
         assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
@@ -1267,9 +1402,9 @@ class Feols:
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(
-            np.isin(W, [0, 1])
-        ), "Treatment variable must be binary with values 0 and 1"
+        assert np.all(np.isin(W, [0, 1])), (
+            "Treatment variable must be binary with values 0 and 1"
+        )
         X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1280,7 +1415,7 @@ class Feols:
         G = len(unique_clusters)
 
         ccv_module = import_module("pyfixest.estimation.ccv")
-        _compute_CCV = getattr(ccv_module, "_compute_CCV")
+        _compute_CCV = ccv_module._compute_CCV
 
         vcov_splits = 0.0
         for _ in range(n_splits):
@@ -1333,7 +1468,7 @@ class Feols:
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
         ccv_module = import_module("pyfixest.estimation.ccv")
-        _ccv = getattr(ccv_module, "_ccv")
+        _ccv = ccv_module._ccv
 
         return _ccv(
             data=data,
@@ -1346,6 +1481,178 @@ class Feols:
             qk=qk,
             n_splits=n_splits,
         )
+
+    def _model_matrix_one_hot(self) -> tuple[np.ndarray, np.ndarray, list[str]]:
+        """
+        Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, list[str]]
+            A tuple with the dependent variable, the model matrix, and the column names.
+        """
+        if self._has_fixef:
+            fml_linear, fixef = self._fml.split("|")
+            fixef_vars = fixef.split("+")
+            fixef_vars_C = [f"C({x})" for x in fixef_vars]
+            fixef_fml = "+".join(fixef_vars_C)
+            fml_dummies = f"{fml_linear} + {fixef_fml}"
+            # output = "pandas" as Y, X need to be np.arrays for parallel processing
+            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
+            # which cannot be pickled by joblib
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+            xnames = X.model_spec.column_names
+            Y = Y.to_numpy().flatten()
+            X = X.to_numpy()
+
+        else:
+            Y = self._Y.flatten()
+            X = self._X
+            xnames = self._coefnames
+
+        return Y, X, xnames
+
+    def decompose(
+        self,
+        param: str,
+        type: decomposition_type = "gelbach",
+        cluster: Optional[str] = None,
+        combine_covariates: Optional[dict[str, list[str]]] = None,
+        reps: int = 1000,
+        seed: Optional[int] = None,
+        nthreads: Optional[int] = None,
+        agg_first: Optional[bool] = None,
+        only_coef: bool = False,
+        digits=4,
+    ) -> pd.DataFrame:
+        """
+        Implement the Gelbach (2016) decomposition method for mediation analysis.
+
+        Compares a short model `depvar on param` with the long model
+        specified in the original feols() call.
+
+        For details, take a look at
+        "When do covariates matter?" by Gelbach (2016, JoLe). You can find
+        an ungated version of the paper on SSRN under the following link:
+        https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
+
+        Parameters
+        ----------
+        param : str
+            The name of the focal covariate whose effect is to be decomposed into direct
+            and indirect components with respect to the rest of the right-hand side.
+        type : str, optional
+            The type of decomposition method to use. Defaults to "gelbach", which
+            currently is the only supported option.
+        cluster: Optional
+            The name of the cluster variable. If None, uses the cluster variable
+            from the model fit. Defaults to None.
+        combine_covariates: Optional.
+            A dictionary that specifies which covariates to combine into groups.
+            See the example for how to use this argument. Defaults to None.
+        reps : int, optional
+            The number of bootstrap iterations to run. Defaults to 1000.
+        seed : int, optional
+            An integer to set the random seed. Defaults to None.
+        nthreads : int, optional
+            The number of threads to use for the bootstrap. Defaults to None.
+            If None, uses all available threads minus one.
+        agg_first : bool, optional
+            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
+            Recommended in cases with many (potentially high-dimensional) covariates.
+            False by default if the 'combine_covariates' argument is None, True otherwise.
+        only_coef : bool, optional
+            Indicates whether to compute inference for the decomposition. Defaults to False.
+            If True, skips the inference step and only returns the decomposition results.
+        digits : int, optional
+            The number of digits to round the results to. Defaults to 4.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the decomposition results.
+
+        Examples
+        --------
+        ```{python}
+        import re
+        import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
+
+        data = gelbach_data(nobs = 1000)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+        # simple decomposition
+        res = fit.decompose(param = "x1")
+        pf.make_table(res)
+
+        # group covariates via "combine_covariates" argument
+        res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
+        pf.make_table(res)
+
+        # group covariates via regex
+        res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+        ```
+        """
+        _decompose_arg_check(
+            type=type,
+            has_weights=self._has_weights,
+            is_iv=self._is_iv,
+            method=self._method,
+        )
+
+        nthreads_int = -1 if nthreads is None else nthreads
+
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+
+        if agg_first is None:
+            agg_first = combine_covariates is not None
+
+        cluster_df: Optional[pd.Series] = None
+        if cluster is not None:
+            cluster_df = self._data[cluster]
+        elif self._is_clustered:
+            cluster_df = self._data[self._clustervar[0]]
+        else:
+            cluster_df = None
+
+        Y, X, xnames = self._model_matrix_one_hot()
+
+        if combine_covariates is not None:
+            for key, value in combine_covariates.items():
+                if isinstance(value, re.Pattern):
+                    matched = [x for x in xnames if value.search(x)]
+                    if len(matched) == 0:
+                        raise ValueError(f"No covariates match the regex {value}.")
+                    combine_covariates[key] = matched
+
+        med = GelbachDecomposition(
+            param=param,
+            coefnames=xnames,
+            cluster_df=cluster_df,
+            nthreads=nthreads_int,
+            combine_covariates=combine_covariates,
+            agg_first=agg_first,
+            only_coef=only_coef,
+            atol=1e-12,
+            btol=1e-12,
+        )
+
+        med.fit(
+            X=X,
+            Y=Y,
+        )
+
+        if not only_coef:
+            med.bootstrap(rng=rng, B=reps)
+
+        med.summary(digits=digits)
+
+        self.GelbachDecompositionResults = med
+
+        return med.summary_table.T
 
     def fixef(
         self, atol: float = 1e-06, btol: float = 1e-06
@@ -1367,6 +1674,14 @@ class Feols:
         _method = self._method
         _fml = self._fml
         _data = self._data
+        _weights_sqrt = np.sqrt(self._weights).flatten()
+
+        blocked_transforms = ["i(", "^", "poly("]
+        for bt in blocked_transforms:
+            if bt in _fml:
+                raise NotImplementedError(
+                    f"The fixef() method is currently not supported for models with '{bt}' transformations."
+                )
 
         if not _has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
@@ -1389,7 +1704,7 @@ class Feols:
         Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
         if self._X_is_empty:
             Y = Y.to_numpy()
-            uhat = Y
+            uhat = Y.flatten()
 
         else:
             X = X[self._coefnames]  # drop intercept, potentially multicollinear vars
@@ -1399,6 +1714,11 @@ class Feols:
 
         D2 = Formula("-1+" + fixef_fml).get_model_matrix(_data, output="sparse")
         cols = D2.model_spec.column_names
+
+        if self._has_weights:
+            uhat *= _weights_sqrt
+            weights_diag = diags(_weights_sqrt, 0)
+            D2 = weights_diag.dot(D2)
 
         alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
 
@@ -1425,9 +1745,8 @@ class Feols:
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
-        type: str = "link",
-        compute_stdp: bool = False
-    ) -> pd.DataFrame:
+        type: PredictionType = "link",
+    ) -> np.ndarray:
         """
         Predict values of the model on new data.
 
@@ -1438,7 +1757,7 @@ class Feols:
         Parameters
         ----------
         newdata : Optional[DataFrameType], optional
-            A pd.DataFrame or pl.DataFrame with the data to be used for prediction.
+            A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
             If None (default), the data used for fitting the model is used.
         type : str, optional
             The type of prediction to be computed.
@@ -1469,17 +1788,19 @@ class Feols:
                 "The predict() method is currently not supported for IV models."
             )
 
-        prediction_df = pd.DataFrame()
-        if newdata is None:
-            prediction_df["yhat"] = self._Y_untransformed.to_numpy().flatten() - self._u_hat.flatten()
-            if compute_stdp:
-                prediction_df["stdp"] = self.get_newdata_stdp(self._X)
-            return prediction_df
+        _validate_literal_argument(type, PredictionType)
 
-        newdata = _polars_to_pandas(newdata).reset_index(drop=False)
+        if newdata is None:
+            return self._Y_untransformed.to_numpy().flatten() - self.resid()
+
+        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
         if not self._X_is_empty:
             xfml = self._fml.split("|")[0].split("~")[1]
+            if self._icovars is not None:
+                raise NotImplementedError(
+                    "predict() with argument newdata is not supported with i() syntax to interact variables."
+                )
             X = Formula(xfml).get_model_matrix(newdata)
             X_index = X.index
             coef_idx = np.isin(self._coefnames, X.columns)
@@ -1494,6 +1815,19 @@ class Feols:
             if self._sumFE is None:
                 self.fixef(atol, btol)
             fvals = self._fixef.split("+")
+
+            mismatched_fixef_types = [
+                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
+            ]
+
+            if mismatched_fixef_types:
+                warnings.warn(
+                    f"Data types of fixed effects {mismatched_fixef_types} "
+                    "do not match the model data. This leads to mismatched keys "
+                    "in the fixed effect dictionary, and as a result, to NaN "
+                    "predictions for columns with mismatched keys."
+                )
+
             df_fe = newdata[fvals].astype(str)
             # populate fixed effect dicts with omitted categories handling
             fixef_dicts = {}
@@ -1503,19 +1837,18 @@ class Feols:
                     fdict.keys()
                 )
                 if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})
+                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
                 fixef_dicts[f"C({f})"] = fdict
             _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
             y_hat += np.sum(_fixef_mat, axis=1)
 
-        prediction_df["yhat"] = y_hat.flatten()
-        if compute_stdp:
-            stdp_df = np.full(newdata.shape[0], np.nan)
-            stdp_df[X_index] = self.get_newdata_stdp(X)
-            prediction_df["stdp"] = stdp_df
+        # prediction_df["yhat"] = y_hat.flatten()
+        # if compute_stdp:
+        #    stdp_df = np.full(newdata.shape[0], np.nan)
+        #    stdp_df[X_index] = self.get_newdata_stdp(X)
+        #    prediction_df["stdp"] = stdp_df
 
-        return prediction_df
-
+        return y_hat
 
     def get_newdata_stdp(self, X):
         """
@@ -1567,20 +1900,6 @@ class Feols:
         """
         return np.linalg.multi_dot([row, self._vcov, np.transpose(row)])
 
-    def get_nobs(self):
-        """
-        Fetch the number of observations used in fitting the regression model.
-
-        Returns
-        -------
-        None
-        """
-        self._N_rows = len(self._Y)
-        if self._weights_type == "aweights":
-            self._N = self._N_rows
-        elif self._weights_type == "fweights":
-            self._N = np.sum(self._weights)
-
     def get_performance(self) -> None:
         """
         Get Goodness-of-Fit measures.
@@ -1623,10 +1942,12 @@ class Feols:
         ssy = np.sum((_Y - np.mean(_Y)) ** 2)
 
         if _has_weights:
+            ssy = np.sum(_Y**2) - np.sum(_Y**2) / np.sum(_weights)
             self._rmse = np.nan
             self._r2 = np.nan
             self._adj_r2 = np.nan
         else:
+            ssy = np.sum((_Y - np.mean(_Y)) ** 2)
             self._rmse = np.sqrt(ssu / _N)
             self._r2 = 1 - (ssu / ssy)
             self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
@@ -1688,8 +2009,8 @@ class Feols:
                 "Std. Error": _se,
                 "t value": _tstat,
                 "Pr(>|t|)": _pvalue,
-                f"{lb*100:.1f}%": _conf_int[0],
-                f"{ub*100:.1f}%": _conf_int[1],
+                f"{lb * 100:.1f}%": _conf_int[0],
+                f"{ub * 100:.1f}%": _conf_int[1],
             }
         )
 
@@ -1794,7 +2115,11 @@ class Feols:
 
         Examples
         --------
-        ```python
+        ```{python}
+        #| echo: true
+        #| results: asis
+        #| include: true
+
         from pyfixest.utils import get_data
         from pyfixest.estimation import feols
 
@@ -1851,8 +2176,8 @@ class Feols:
 
         df = pd.DataFrame(
             {
-                f"{alpha / 2*100:.1f}%": lb,
-                f"{(1-alpha / 2)*100:.1f}%": ub,
+                f"{alpha / 2 * 100:.1f}%": lb,
+                f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
         # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
@@ -1869,10 +2194,7 @@ class Feols:
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
         """
-        if self._X_is_empty:
-            return self._u_hat.flatten()
-        else:
-            return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
 
     def ritest(
         self,
@@ -1927,6 +2249,28 @@ class Feols:
         A pd.Series with the regression coefficient of `resampvar` and the p-value
         of the RI test. Additionally, reports the standard error and the confidence
         interval of the p-value.
+
+        Examples
+        --------
+        ```{python}
+
+        #| echo: true
+        #| results: asis
+        #| include: true
+
+        import pyfixest as pf
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data)
+
+        # Conduct a randomization inference test for the coefficient of X1
+        fit.ritest("X1", reps=1000)
+
+        # use randomization-t instead of randomization-c
+        fit.ritest("X1", reps=1000, type="randomization-t")
+
+        # store statistics for plotting
+        fit.ritest("X1", reps=1000, store_ritest_statistics=True)
+        ```
         """
         _fml = self._fml
         _data = self._data
@@ -1950,14 +2294,7 @@ class Feols:
         if cluster is not None and cluster not in _data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
-        sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-
         clustervar_arr = _data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-
-        rng = np.random.default_rng() if rng is None else rng
-
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
             raise ValueError(
@@ -1967,8 +2304,24 @@ class Feols:
             """
             )
 
+        # update vcov if cluster provided but not in model
+        if cluster is not None and not self._is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        rng = np.random.default_rng() if rng is None else rng
+
+        sample_coef = np.array(self.coef().xs(resampvar_))
+        sample_tstat = np.array(self.tstat().xs(resampvar_))
+        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        # always run slow algorithm for randomization-t
+        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
@@ -2055,8 +2408,8 @@ class Feols:
         )
 
         alpha = 1 - level
-        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
+        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 
@@ -2266,7 +2619,7 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index
+    return X, list(names_array), collin_vars, collin_index
 
 
 @nb.njit(parallel=False)
@@ -2350,21 +2703,21 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
     """
     assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
     if isinstance(vcov, dict):
-        assert list(vcov.keys())[0] in [
+        assert next(iter(vcov.keys())) in [
             "CRV1",
             "CRV3",
         ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(
-            list(vcov.values())[0], str
-        ), "vcov dict value must be a string"
-        deparse_vcov = list(vcov.values())[0].split("+")
+        assert isinstance(next(iter(vcov.values())), str), (
+            "vcov dict value must be a string"
+        )
+        deparse_vcov = next(iter(vcov.values())).split("+")
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(
-            v in data.columns for v in vcov
-        ), "vcov list must contain columns in the data"
+        assert all(v in data.columns for v in vcov), (
+            "vcov list must contain columns in the data"
+        )
     if isinstance(vcov, str):
         assert vcov in [
             "iid",
@@ -2401,15 +2754,15 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         The name of the cluster variable.
     """
     if isinstance(vcov, dict):
-        vcov_type_detail = list(vcov.keys())[0]
-        deparse_vcov = list(vcov.values())[0].split("+")
+        vcov_type_detail = next(iter(vcov.keys()))
+        deparse_vcov = next(iter(vcov.values())).split("+")
         if isinstance(deparse_vcov, str):
             deparse_vcov = [deparse_vcov]
         deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
     elif isinstance(vcov, (list, str)):
         vcov_type_detail = vcov
     else:
-        assert False, "arg vcov needs to be a dict, string or list"
+        raise TypeError("arg vcov needs to be a dict, string or list")
 
     if vcov_type_detail == "iid":
         vcov_type = "iid"
@@ -2447,7 +2800,7 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
 
 def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    for i, (fixef, subdict) in enumerate(fixef_dicts.items()):
+    for i, (_, subdict) in enumerate(fixef_dicts.items()):
         unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
         mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
         fixef_mat[:, i] = mapping[inverse]

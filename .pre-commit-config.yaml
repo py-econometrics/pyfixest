@@ -3,7 +3,7 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: debug-statements
       - id: trailing-whitespace
@@ -12,29 +12,29 @@ repos:
         args: [--allow-multiple-documents]
       - id: check-toml
       - id: check-added-large-files
-
+        exclude: pixi.lock
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.29.2
+    rev: 0.31.2
     hooks:
       - id: check-github-workflows
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.4
+    rev: v0.9.7
     hooks:
       - id: ruff
         args: ["--fix", "--output-format=full"]
       - id: ruff-format
 
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.8.7
+    rev: 1.9.1
     hooks:
       - id: nbqa-ruff
         args: ["--fix", "--output-format=full"]
         files: ^docs/.*\.ipynb$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.15.0
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]

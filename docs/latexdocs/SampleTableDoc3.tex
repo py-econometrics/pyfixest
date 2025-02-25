@@ -1,0 +1,52 @@
+\documentclass{article}%
+\usepackage[T1]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{lmodern}%
+\usepackage{textcomp}%
+\usepackage{lastpage}%
+\usepackage{booktabs}%
+\usepackage{threeparttable}%
+\usepackage{makecell}%
+%
+%
+%
+\begin{document}%
+\normalsize%
+\section{A PyFixest LateX Table}%
+\label{sec:APyFixestLateXTable}%
+
+
+\begin{table}[htbp]%
+\renewcommand\cellalign{t}
+\begin{threeparttable}
+\begin{tabular}{lccccccc}
+\toprule
+ & \multicolumn{3}{c}{EU} & \multicolumn{3}{c}{US} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+ & N & Mean & Std. Dev. & N & Mean & Std. Dev. \\
+\midrule
+\addlinespace
+\emph{Blue collar} \\
+\addlinespace
+Wage & 242 & -0.09 & 2.40 & 241 & -0.18 & 2.36 \\
+Wealth & 242 & -0.38 & 5.64 & 241 & 0.10 & 5.08 \\
+Age & 242 & 1.07 & 0.81 & 241 & 1.04 & 0.82 \\
+Years of Schooling & 242 & 0.08 & 3.01 & 241 & -0.02 & 3.03 \\
+\addlinespace
+\midrule
+\addlinespace
+\emph{White collar} \\
+\addlinespace
+Wage & 275 & -0.08 & 2.17 & 239 & -0.16 & 2.32 \\
+Wealth & 275 & -0.26 & 5.64 & 239 & -0.75 & 5.96 \\
+Age & 275 & 1.05 & 0.81 & 239 & 1.01 & 0.78 \\
+Years of Schooling & 275 & -0.36 & 3.12 & 239 & -0.19 & 3.02 \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\footnotesize
+\end{threeparttable}%
+\end{table}
+
+%
+\end{document}

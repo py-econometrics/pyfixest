@@ -23,4 +23,9 @@ readme.ipynb
 #docs/site_libs
 #site_libs
 tests/.coverage
-.venv/
+.venv/# pixi environments
+.pixi
+*.egg-info
+# pixi environments
+.pixi
+*.egg-info

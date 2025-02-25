@@ -199,10 +199,38 @@ class FixestFormulaParser:
             ):
                 self.add_to_FixestFormulaDict(depvar, covar, fval)
 
+    def set_fixest_multi_flag(self):
+        """
+        Set a flag to indicate whether multiple estimations are being performed or not.
+
+        Simple check if `all_fitted_models` has length greater than 1.
+        Throws an error if multiple estimations are being performed with IV estimation.
+        Args:
+            None
+        Returns:
+            None
+        """
+        if (
+            len(self.FixestFormulaDict) == 1
+            and isinstance(next(iter(self.FixestFormulaDict.values())), list)
+            and len(next(iter(self.FixestFormulaDict.values()))) == 1
+        ):
+            self._is_multiple_estimation = False
+        else:
+            self._is_multiple_estimation = True
+            if self.is_iv:
+                raise NotImplementedError(
+                    """
+                    Multiple Estimations is currently not supported with IV.
+                    This is mostly due to insufficient testing and will be possible
+                    with a future release of PyFixest.
+                    """
+                )
+
 
 class FixestFormula:
     """
-    A class with information confainted in model formulas.
+    A class with information contained in model formulas.
 
     Attributes
     ----------
@@ -212,7 +240,7 @@ class FixestFormula:
         The covariates in the model, separated by '+'.
     _fval : str
         An optional fixed effect variable included in the model.
-        Separated by "+". "0" if no fixed effect in th emodel.
+        Separated by "+". "0" if no fixed effect in the model.
     _endogvars : str, optional
         Endogenous variables in the model, separated by '+'.
     _instruments : str, optional
@@ -270,7 +298,7 @@ class FixestFormula:
         Construct and stores a Wilkinson formula..
 
         This method combines dependent variable, covariates, endogenous variables,
-        instrumentalvariables, and an optional fixed value to construct a statistical
+        instrumental variables, and an optional fixed value to construct a statistical
         model formula. This formula is then stored in the instance's `fml` attribute.
         The general structure of the formula is
         `depvar ~ covar | fval | endogvars ~ instruments`.
@@ -718,7 +746,7 @@ def _dict_to_list_of_formulas(unpacked: dict[str, list[str]]) -> list[str]:
         else:
             variable_fml = [res["variable"][i] for i in range(len(res["variable"]))]
         if variable_type in ["sw0", "csw0"]:
-            variable_fml = ["0"] + variable_fml
+            variable_fml = ["0", *variable_fml]
 
     fml_list = []
     if variable_fml:
@@ -818,5 +846,3 @@ def _check_duplicate_key(my_dict: dict, key: str):
                 only be used once on the rhs of the two-sided formula.
                 """
             )
-        else:
-            None
