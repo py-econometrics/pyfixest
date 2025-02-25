@@ -1746,7 +1746,9 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        prediction_uncertainty: Optional[str] = "PredictionError",
+        alpha: float = 0.05,
+    ) -> pd.DataFrame:
         """
         Predict values of the model on new data.
 
@@ -1775,14 +1777,22 @@ class Feols:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
-        compute_stdp: boolean
-            Whether to compute standard error of the predictions
+        prediction_uncertainty: Optional[str], optional
+            The type of prediction uncertainty to be computed. Can be only
+            'PredictionError' for now. Defaults to None. If None, no prediction
+            uncertainty is computed. Else, computes the prediction error.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if prediction_uncertainty is not None.
 
         Returns
         -------
         pred_results : pd.DataFrame
-            Dataframe with columns "y_hat" and optionally "stdp" (if compute_stdp is True)
+            Dataframe with columns "y_hat", "se" and CIs. The se and CI columns are
+            only populated if prediction_uncertainty is set to 'PredictionError', else
+            they are np.nan.
         """
+
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
@@ -1790,65 +1800,77 @@ class Feols:
 
         _validate_literal_argument(type, PredictionType)
 
+        N = self._N if newdata is None else newdata.shape[0]
+        columns = ["yhat", "se", "0.05%", "0.95%"]
+        prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
+
         if newdata is None:
-            return self._Y_untransformed.to_numpy().flatten() - self.resid()
-
-        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
-
-        if not self._X_is_empty:
+            y_hat =  self._Y_untransformed.to_numpy().flatten() - self.resid()
             xfml = self._fml.split("|")[0].split("~")[1]
-            if self._icovars is not None:
-                raise NotImplementedError(
-                    "predict() with argument newdata is not supported with i() syntax to interact variables."
-                )
-            X = Formula(xfml).get_model_matrix(newdata)
+            X = Formula(xfml).get_model_matrix(self._data)
             X_index = X.index
             coef_idx = np.isin(self._coefnames, X.columns)
             X = X[np.array(self._coefnames)[coef_idx]]
             X = X.to_numpy()
-            y_hat = np.full(newdata.shape[0], np.nan)
-            y_hat[X_index] = X @ self._beta_hat[coef_idx]
         else:
-            y_hat = np.zeros(newdata.shape[0])
+            newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
-        if self._has_fixef:
-            if self._sumFE is None:
-                self.fixef(atol, btol)
-            fvals = self._fixef.split("+")
+            if not self._X_is_empty:
+                xfml = self._fml.split("|")[0].split("~")[1]
+                if self._icovars is not None:
+                    raise NotImplementedError(
+                        "predict() with argument newdata is not supported with i() syntax to interact variables."
+                    )
+                X = Formula(xfml).get_model_matrix(newdata)
+                X_index = X.index
+                coef_idx = np.isin(self._coefnames, X.columns)
+                X = X[np.array(self._coefnames)[coef_idx]]
+                X = X.to_numpy()
+                y_hat = np.full(newdata.shape[0], np.nan)
+                y_hat[X_index] = X @ self._beta_hat[coef_idx]
+            else:
+                y_hat = np.zeros(newdata.shape[0])
 
-            mismatched_fixef_types = [
-                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
-            ]
+            if self._has_fixef:
+                if self._sumFE is None:
+                    self.fixef(atol, btol)
+                fvals = self._fixef.split("+")
 
-            if mismatched_fixef_types:
-                warnings.warn(
-                    f"Data types of fixed effects {mismatched_fixef_types} "
-                    "do not match the model data. This leads to mismatched keys "
-                    "in the fixed effect dictionary, and as a result, to NaN "
-                    "predictions for columns with mismatched keys."
-                )
+                mismatched_fixef_types = [
+                    x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
+                ]
 
-            df_fe = newdata[fvals].astype(str)
-            # populate fixed effect dicts with omitted categories handling
-            fixef_dicts = {}
-            for f in fvals:
-                fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
-                    fdict.keys()
-                )
-                if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
-                fixef_dicts[f"C({f})"] = fdict
-            _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
-            y_hat += np.sum(_fixef_mat, axis=1)
+                if mismatched_fixef_types:
+                    warnings.warn(
+                        f"Data types of fixed effects {mismatched_fixef_types} "
+                        "do not match the model data. This leads to mismatched keys "
+                        "in the fixed effect dictionary, and as a result, to NaN "
+                        "predictions for columns with mismatched keys."
+                    )
 
-        # prediction_df["yhat"] = y_hat.flatten()
-        # if compute_stdp:
-        #    stdp_df = np.full(newdata.shape[0], np.nan)
-        #    stdp_df[X_index] = self.get_newdata_stdp(X)
-        #    prediction_df["stdp"] = stdp_df
+                df_fe = newdata[fvals].astype(str)
+                # populate fixed effect dicts with omitted categories handling
+                fixef_dicts = {}
+                for f in fvals:
+                    fdict = self._fixef_dict[f"C({f})"]
+                    omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
+                        fdict.keys()
+                    )
+                    if omitted_cat:
+                        fdict.update({x: 0 for x in omitted_cat})  # type: ignore
+                    fixef_dicts[f"C({f})"] = fdict
+                _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
+                y_hat += np.sum(_fixef_mat, axis=1)
 
-        return y_hat
+
+        prediction_df["yhat"] = y_hat.flatten()
+        if prediction_uncertainty == "PredictionError":
+           self.get_newdata_stdp(X)
+           prediction_df["se"] = self.get_newdata_stdp(X)
+           prediction_df["0.05%"] = prediction_df["yhat"] - norm.ppf(alpha) * prediction_df["se"]
+           prediction_df["0.95%"] = prediction_df["yhat"] + norm.ppf(alpha) * prediction_df["se"]
+
+        return prediction_df
 
     def get_newdata_stdp(self, X):
         """
