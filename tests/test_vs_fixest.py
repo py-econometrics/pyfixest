@@ -341,7 +341,12 @@ def test_single_fit_feols(
         check_absolute_diff(
             py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
         )
-        check_absolute_diff(py_adj_r2_within, r_adj_r2_within, 1e-08, "py_adj_r2_within != r_adj_r2_within")
+        check_absolute_diff(
+            py_adj_r2_within,
+            r_adj_r2_within,
+            1e-08,
+            "py_adj_r2_within != r_adj_r2_within",
+        )
 
 
 @pytest.mark.slow
