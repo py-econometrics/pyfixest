@@ -331,13 +331,17 @@ def test_single_fit_feols(
     py_adj_r2_within = mod._adj_r2_within
     r_r = fixest.r2(r_fixest)
     r_r2 = r_r[1]
+    r_adj_r2 = r_r[2]
     r_r2_within = r_r[5]
+    r_adj_r2_within = r_r[6]
 
     check_absolute_diff(py_r2, r_r2, 1e-08, "py_r2 != r_r2")
+    check_absolute_diff(py_adj_r2, r_adj_r2, 1e-08, "py_adj_r2 != r_adj_r2")
     if not np.isnan(py_r2_within):
         check_absolute_diff(
             py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
         )
+        check_absolute_diff(py_adj_r2_within, r_adj_r2_within, 1e-08, "py_adj_r2_within != r_adj_r2_within")
 
 
 @pytest.mark.slow
