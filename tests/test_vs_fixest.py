@@ -327,8 +327,8 @@ def test_single_fit_feols(
 
     py_r2 = mod._r2
     py_r2_within = mod._r2_within
-    # py_adj_r2 = mod._adj_r2
-    # py_adj_r2_within = mod._adj_r2_within
+    py_adj_r2 = mod._adj_r2
+    py_adj_r2_within = mod._adj_r2_within
     r_r = fixest.r2(r_fixest)
     r_r2 = r_r[1]
     r_r2_within = r_r[5]
