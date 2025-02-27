@@ -1868,15 +1868,15 @@ class Feols:
         _u_hat = self._u_hat
         _N = self._N
         _k = self._k
+        _has_intercept = not self._drop_intercept
         _has_fixef = self._has_fixef
         _weights = self._weights
-        _has_weights = self._has_weights
 
         if _has_fixef:
             _k_fe = np.sum(self._k_fe - 1) + 1
             _adj_factor = (_N - _k_fe) / (_N - _k - _k_fe)
         else:
-            _adj_factor = (_N) / (_N - 1)
+            _adj_factor = (_N - _has_intercept) / (_N - _k)
 
         ssu = np.sum(_u_hat**2)
         ssy = np.sum(_weights * (_Y - np.average(_Y, weights=_weights)) ** 2)
@@ -1885,15 +1885,10 @@ class Feols:
         self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
         if _has_fixef:
-            ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
+            ssy_within = np.sum(_Y_within ** 2)
             self._r2_within = 1 - (ssu / ssy_within)
             self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
 
-        # overwrite self._adj_r2 and self._adj_r2_within
-        # reason: currently I cannot match fixest dof correction, so
-        # better not to report it
-        self._adj_r2 = np.nan
-        self._adj_r2_within = np.nan
 
     def tidy(
         self,
