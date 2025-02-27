@@ -11,7 +11,6 @@ readme = "README.md"
 license = { text = "MIT" }
 
 dependencies = [
-  "lets-plot>=4.0.0",
   "scipy>=1.6",
   "formulaic>=1.1.0",
   "pandas>=1.1.0",
@@ -45,6 +44,10 @@ dev = [
   "jaxlib>=0.4.15",
 ]
 
+plots = [
+  "lets-plot>=4.0.0",
+]
+
 docs = [
   "quartodoc>=0.7.2",
   "jupyterlab>=4.0.12",
@@ -57,7 +60,7 @@ docs = [
   "pyarrow>=14.0",
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
-
+  "lets-plot>=4.0.0",
 ]
 
 jax = [
@@ -85,6 +88,7 @@ dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
+plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"

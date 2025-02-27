@@ -6,23 +6,32 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from lets_plot import (
-    LetsPlot,
-    aes,
-    geom_density,
-    geom_vline,
-    ggplot,
-    ggtitle,
-    theme_bw,
-    xlab,
-    ylab,
-)
+
+# Make lets-plot an optional dependency
+try:
+    from lets_plot import (
+        LetsPlot,
+        aes,
+        geom_density,
+        geom_vline,
+        ggplot,
+        ggtitle,
+        theme_bw,
+        xlab,
+        ylab,
+    )
+    _HAS_LETS_PLOT = True
+except ImportError:
+    _HAS_LETS_PLOT = False
+
 from scipy.stats import norm
 from tqdm import tqdm
 
 from pyfixest.estimation.demean_ import demean
 
-LetsPlot.setup_html()
+# Only setup lets-plot if it's available
+if _HAS_LETS_PLOT:
+    LetsPlot.setup_html()
 
 
 def _get_ritest_stats_slow(
@@ -373,15 +382,19 @@ def _plot_ritest_pvalue(
     y_lab = "Density"
 
     if plot_backend == "lets_plot":
-        plot = (
-            ggplot(df, aes(x="ri_stats"))
-            + geom_density(fill="blue", alpha=0.5)
-            + theme_bw()
-            + geom_vline(xintercept=sample_stat, color="red")
-            + ggtitle(title)
-            + xlab(x_lab)
-            + ylab(y_lab)
-        )
+        if not _HAS_LETS_PLOT:
+            print("lets-plot is not installed. Falling back to matplotlib.")
+            plot_backend = "matplotlib"
+        else:
+            plot = (
+                ggplot(df, aes(x="ri_stats"))
+                + geom_density(fill="blue", alpha=0.5)
+                + theme_bw()
+                + geom_vline(xintercept=sample_stat, color="red")
+                + ggtitle(title)
+                + xlab(x_lab)
+                + ylab(y_lab)
+            )
 
         return plot.show()
 
