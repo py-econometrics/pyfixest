@@ -11,7 +11,7 @@ from pyfixest.did.visualize import (
     panelview,
 )
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.report.visualize import coefplot, iplot, _HAS_LETS_PLOT
+from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot
 from pyfixest.utils.utils import get_data
 
 
@@ -19,7 +19,7 @@ from pyfixest.utils.utils import get_data
 def test_visualize(plot_backend):
     if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     data = get_data()
     fit1 = feols("Y ~ X1 + X2 | f1", data=data)
     coefplot(fit1)

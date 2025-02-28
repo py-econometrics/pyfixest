@@ -5,7 +5,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import coefplot, iplot, set_figsize, _HAS_LETS_PLOT
+from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
 
@@ -54,7 +54,7 @@ def fit_multi(data):
 def test_set_figsize(figsize, plot_backend):
     if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     figsize_not_none = set_figsize(figsize, plot_backend)
 
     if figsize is None:
@@ -126,7 +126,7 @@ def test_iplot(
 ):
     if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -206,7 +206,7 @@ def test_coefplot(
 ):
     if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -249,7 +249,7 @@ def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1
 def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
     if not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     coefplot(fit1, plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (500, 300)
@@ -260,7 +260,7 @@ def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data
 def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
     if not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (600, 400)
@@ -271,7 +271,7 @@ def test_rename_models():
     # This is because the default backend is lets-plot if available
     if not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
-        
+
     df = pf.get_data()
     fit1 = pf.feols("Y ~ i(f1)", data=df)
     fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
@@ -325,15 +325,15 @@ def test_rename_models_matplotlib():
     )
 
     pf.coefplot(
-        models=[fit1], 
-        rename_models={"Y~i(f1)": "Model 1"}, 
+        models=[fit1],
+        rename_models={"Y~i(f1)": "Model 1"},
         joint=True,
         plot_backend="matplotlib",
     )
 
     pf.coefplot(
-        models=[fit1], 
-        rename_models={"Y~i(f1)": "Model 1"}, 
+        models=[fit1],
+        rename_models={"Y~i(f1)": "Model 1"},
         joint="both",
         plot_backend="matplotlib",
     )
