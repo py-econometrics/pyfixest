@@ -51,17 +51,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bc/b3/9458adb9472e61a998c8c4d95cfdfec91c73c53a375b30b1428310f923e4/kiwisolver-1.4.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/8c/0c/71942f05a2d65939f1572168e77d61240eddf7050c961d8e2c7214f48002/lets_plot-4.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a7/b2/d872fc3d753516870d520595ddd8ce4dd44fa797a240999f125f58521ad7/matplotlib-3.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/74/6a9f0e6c76c088f8a6aa702eab31734068061dca5cc0f34e8bc1eb447de1/numba-0.61.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9e/3e/3757f304c704f2f0294a6b8340fcf2be244038be07da4cccf390fa678a9f/numpy-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/38/f8/d8fddee9ed0d0c0f4a2132c1dfcf0e3e53265055da8df952a53e7eaf178c/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/0d/84200ed6a871ce386ddc82904bfadc0c6b28b0c0ec78176871a4679e40b3/pillow-11.1.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/3c/0de11ca154e24a57b579fb648151d901326d3102115bc4f9a7a86526ce54/scipy-1.15.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -108,17 +105,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c5/0b/8db6d2e2452d60d5ebc4ce4b204feeb16176a851fd42462f66ade6808084/kiwisolver-1.4.8-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6e/791176429594d6443c99abeaf1688f9f5164bec7fefe78de307b78b97800/lets_plot-4.5.2-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/c7/6b2d8cb7cc251d53c976799cacd3200add56351c175ba89ab9cbd7c1e68a/matplotlib-3.10.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/63/c9/c61881e7f2e253e745209f078bbd428ce23b6cf901f7d93afe166720ff95/numba-0.61.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8a/f0/385eb9970309643cbca4fc6eebc8bb16e560de129c91258dfaa18498da8b/numpy-2.1.3-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/17/a3/fb2734118db0af37ea7433f57f722c0a56687e14b14690edff0cdb4b7e58/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/95/20/9ce6ed62c91c073fcaa23d216e68289e19d95fb8188b9fb7a63d36771db8/pillow-11.1.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d8/6e/a9c42d0d39e09ed7fd203d0ac17adfea759cba61ab457671fe66e523dbec/scipy-1.15.1-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -165,17 +159,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/26/d6a0db6785dd35d3ba5bf2b2df0aedc5af089962c6eb2cbf67a15b81369e/kiwisolver-1.4.8-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/f6/57/3f64c62eb4ec0631d23c5130129350c00257345b11a0729fef99fa844c8f/lets_plot-4.5.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/d6/53/373b6b8be67b9221d12b24125fd0ec56b1078b660eeae266ec388a6ac9a0/llvmlite-0.44.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/42/2a/6d66d0fba41e13e9ca6512a0a51170f43e7e7ed3a8dfa036324100775612/matplotlib-3.10.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/28/ddec0147a4933f86ceaca580aa9bb767d5632ecdb1ece6cfb3eab4ac78e5/numba-0.61.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/54/4a/765b4607f0fecbb239638d610d04ec0a0ded9b4951c56dc68cef79026abf/numpy-2.1.3-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/0c/ad295fd74bfac85358fd579e271cded3ac969de81f62dd0142c426b9da91/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b9/d8/f6004d98579a2596c098d1e30d10b248798cceff82d2b77aa914875bfea1/pillow-11.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/ee/e3e535c81828618878a7433992fecc92fa4df79393f31a8fea1d05615091/scipy-1.15.1-cp312-cp312-macosx_12_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -225,17 +216,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/72/dfff0cc97f2a0776e1c9eb5bef1ddfd45f46246c6533b0191887a427bca5/kiwisolver-1.4.8-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/72/56/7cfb3926cd6f17f9453c2e2dc6b649a27ba240ff59b99fadc42abe06b806/lets_plot-4.5.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/9f/6e/264673e64001b99d747aff5a288eca82826c024437a3694e19aed1decf46/matplotlib-3.10.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/94/4f/8357a99a14f331b865a42cb4756ae37da85599b9c95e01277ea10361e91a/numba-0.61.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/84/fa11dad3404b7634aaab50733581ce11e5350383311ea7a7010f464c0170/numpy-2.1.3-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/08/5c/2104299949b9d504baf3f4d35f73dbd14ef31bbd1ddc2c1b66a5b7dfda44/pillow-11.1.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ff/ba/31c7a8131152822b3a2cdeba76398ffb404d81d640de98287d236da90c49/scipy-1.15.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -292,17 +280,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bc/b3/9458adb9472e61a998c8c4d95cfdfec91c73c53a375b30b1428310f923e4/kiwisolver-1.4.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/8c/0c/71942f05a2d65939f1572168e77d61240eddf7050c961d8e2c7214f48002/lets_plot-4.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a7/b2/d872fc3d753516870d520595ddd8ce4dd44fa797a240999f125f58521ad7/matplotlib-3.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/74/6a9f0e6c76c088f8a6aa702eab31734068061dca5cc0f34e8bc1eb447de1/numba-0.61.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9e/3e/3757f304c704f2f0294a6b8340fcf2be244038be07da4cccf390fa678a9f/numpy-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/38/f8/d8fddee9ed0d0c0f4a2132c1dfcf0e3e53265055da8df952a53e7eaf178c/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/0d/84200ed6a871ce386ddc82904bfadc0c6b28b0c0ec78176871a4679e40b3/pillow-11.1.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/3c/0de11ca154e24a57b579fb648151d901326d3102115bc4f9a7a86526ce54/scipy-1.15.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -345,17 +330,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c5/0b/8db6d2e2452d60d5ebc4ce4b204feeb16176a851fd42462f66ade6808084/kiwisolver-1.4.8-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6e/791176429594d6443c99abeaf1688f9f5164bec7fefe78de307b78b97800/lets_plot-4.5.2-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/c7/6b2d8cb7cc251d53c976799cacd3200add56351c175ba89ab9cbd7c1e68a/matplotlib-3.10.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/63/c9/c61881e7f2e253e745209f078bbd428ce23b6cf901f7d93afe166720ff95/numba-0.61.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8a/f0/385eb9970309643cbca4fc6eebc8bb16e560de129c91258dfaa18498da8b/numpy-2.1.3-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/17/a3/fb2734118db0af37ea7433f57f722c0a56687e14b14690edff0cdb4b7e58/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/95/20/9ce6ed62c91c073fcaa23d216e68289e19d95fb8188b9fb7a63d36771db8/pillow-11.1.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d8/6e/a9c42d0d39e09ed7fd203d0ac17adfea759cba61ab457671fe66e523dbec/scipy-1.15.1-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -398,17 +380,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/26/d6a0db6785dd35d3ba5bf2b2df0aedc5af089962c6eb2cbf67a15b81369e/kiwisolver-1.4.8-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/f6/57/3f64c62eb4ec0631d23c5130129350c00257345b11a0729fef99fa844c8f/lets_plot-4.5.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/d6/53/373b6b8be67b9221d12b24125fd0ec56b1078b660eeae266ec388a6ac9a0/llvmlite-0.44.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/42/2a/6d66d0fba41e13e9ca6512a0a51170f43e7e7ed3a8dfa036324100775612/matplotlib-3.10.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/28/ddec0147a4933f86ceaca580aa9bb767d5632ecdb1ece6cfb3eab4ac78e5/numba-0.61.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/54/4a/765b4607f0fecbb239638d610d04ec0a0ded9b4951c56dc68cef79026abf/numpy-2.1.3-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/0c/ad295fd74bfac85358fd579e271cded3ac969de81f62dd0142c426b9da91/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b9/d8/f6004d98579a2596c098d1e30d10b248798cceff82d2b77aa914875bfea1/pillow-11.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/ee/e3e535c81828618878a7433992fecc92fa4df79393f31a8fea1d05615091/scipy-1.15.1-cp312-cp312-macosx_12_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -455,17 +434,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/72/dfff0cc97f2a0776e1c9eb5bef1ddfd45f46246c6533b0191887a427bca5/kiwisolver-1.4.8-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/72/56/7cfb3926cd6f17f9453c2e2dc6b649a27ba240ff59b99fadc42abe06b806/lets_plot-4.5.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/9f/6e/264673e64001b99d747aff5a288eca82826c024437a3694e19aed1decf46/matplotlib-3.10.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/94/4f/8357a99a14f331b865a42cb4756ae37da85599b9c95e01277ea10361e91a/numba-0.61.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/84/fa11dad3404b7634aaab50733581ce11e5350383311ea7a7010f464c0170/numpy-2.1.3-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/08/5c/2104299949b9d504baf3f4d35f73dbd14ef31bbd1ddc2c1b66a5b7dfda44/pillow-11.1.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ff/ba/31c7a8131152822b3a2cdeba76398ffb404d81d640de98287d236da90c49/scipy-1.15.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
@@ -620,7 +596,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/85/b0394e0b6fcccd2c1eeefc230978a6f8cb0c5df1e4cd3e7625735a0d7d1e/jupyter_client-8.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c9/fb/108ecd1fe961941959ad0ee4e12ee7b8b1477247f30b1fdfd83ceaf017f0/jupyter_core-5.7.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bc/b3/9458adb9472e61a998c8c4d95cfdfec91c73c53a375b30b1428310f923e4/kiwisolver-1.4.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/8c/0c/71942f05a2d65939f1572168e77d61240eddf7050c961d8e2c7214f48002/lets_plot-4.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a7/b2/d872fc3d753516870d520595ddd8ce4dd44fa797a240999f125f58521ad7/matplotlib-3.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl
@@ -631,7 +606,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/18/74/6a9f0e6c76c088f8a6aa702eab31734068061dca5cc0f34e8bc1eb447de1/numba-0.61.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9e/3e/3757f304c704f2f0294a6b8340fcf2be244038be07da4cccf390fa678a9f/numpy-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/38/f8/d8fddee9ed0d0c0f4a2132c1dfcf0e3e53265055da8df952a53e7eaf178c/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c6/ac/dac4a63f978e4dcb3c6d3a78c4d8e0192a113d288502a1216950c41b1027/parso-0.8.4-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/87/2b/b50d3d08ea0fc419c183a84210571eba005328efa62b6b98bc28e9ead32a/patsy-1.0.1-py2.py3-none-any.whl
@@ -650,7 +624,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/36/3b/48e79f2cd6a61dbbd4807b4ed46cb564b4fd50a76166b1c4ea5c1d9e2371/pytest_cov-6.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6d/82/1d96bf03ee4c0fdc3c0cbe61470070e659ca78dc0086fb88b66c185e2449/pytest_xdist-3.6.1-py3-none-any.whl
@@ -815,7 +788,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/85/b0394e0b6fcccd2c1eeefc230978a6f8cb0c5df1e4cd3e7625735a0d7d1e/jupyter_client-8.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c9/fb/108ecd1fe961941959ad0ee4e12ee7b8b1477247f30b1fdfd83ceaf017f0/jupyter_core-5.7.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c5/0b/8db6d2e2452d60d5ebc4ce4b204feeb16176a851fd42462f66ade6808084/kiwisolver-1.4.8-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6e/791176429594d6443c99abeaf1688f9f5164bec7fefe78de307b78b97800/lets_plot-4.5.2-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/c7/6b2d8cb7cc251d53c976799cacd3200add56351c175ba89ab9cbd7c1e68a/matplotlib-3.10.0-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl
@@ -826,7 +798,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/63/c9/c61881e7f2e253e745209f078bbd428ce23b6cf901f7d93afe166720ff95/numba-0.61.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8a/f0/385eb9970309643cbca4fc6eebc8bb16e560de129c91258dfaa18498da8b/numpy-2.1.3-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/17/a3/fb2734118db0af37ea7433f57f722c0a56687e14b14690edff0cdb4b7e58/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/c6/ac/dac4a63f978e4dcb3c6d3a78c4d8e0192a113d288502a1216950c41b1027/parso-0.8.4-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/87/2b/b50d3d08ea0fc419c183a84210571eba005328efa62b6b98bc28e9ead32a/patsy-1.0.1-py2.py3-none-any.whl
@@ -845,7 +816,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/36/3b/48e79f2cd6a61dbbd4807b4ed46cb564b4fd50a76166b1c4ea5c1d9e2371/pytest_cov-6.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6d/82/1d96bf03ee4c0fdc3c0cbe61470070e659ca78dc0086fb88b66c185e2449/pytest_xdist-3.6.1-py3-none-any.whl
@@ -1010,7 +980,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/85/b0394e0b6fcccd2c1eeefc230978a6f8cb0c5df1e4cd3e7625735a0d7d1e/jupyter_client-8.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c9/fb/108ecd1fe961941959ad0ee4e12ee7b8b1477247f30b1fdfd83ceaf017f0/jupyter_core-5.7.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/26/d6a0db6785dd35d3ba5bf2b2df0aedc5af089962c6eb2cbf67a15b81369e/kiwisolver-1.4.8-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/f6/57/3f64c62eb4ec0631d23c5130129350c00257345b11a0729fef99fa844c8f/lets_plot-4.5.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/d6/53/373b6b8be67b9221d12b24125fd0ec56b1078b660eeae266ec388a6ac9a0/llvmlite-0.44.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/42/2a/6d66d0fba41e13e9ca6512a0a51170f43e7e7ed3a8dfa036324100775612/matplotlib-3.10.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl
@@ -1021,7 +990,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/e1/28/ddec0147a4933f86ceaca580aa9bb767d5632ecdb1ece6cfb3eab4ac78e5/numba-0.61.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/54/4a/765b4607f0fecbb239638d610d04ec0a0ded9b4951c56dc68cef79026abf/numpy-2.1.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/0c/ad295fd74bfac85358fd579e271cded3ac969de81f62dd0142c426b9da91/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/c6/ac/dac4a63f978e4dcb3c6d3a78c4d8e0192a113d288502a1216950c41b1027/parso-0.8.4-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/87/2b/b50d3d08ea0fc419c183a84210571eba005328efa62b6b98bc28e9ead32a/patsy-1.0.1-py2.py3-none-any.whl
@@ -1040,7 +1008,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/36/3b/48e79f2cd6a61dbbd4807b4ed46cb564b4fd50a76166b1c4ea5c1d9e2371/pytest_cov-6.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6d/82/1d96bf03ee4c0fdc3c0cbe61470070e659ca78dc0086fb88b66c185e2449/pytest_xdist-3.6.1-py3-none-any.whl
@@ -1173,7 +1140,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/11/85/b0394e0b6fcccd2c1eeefc230978a6f8cb0c5df1e4cd3e7625735a0d7d1e/jupyter_client-8.6.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c9/fb/108ecd1fe961941959ad0ee4e12ee7b8b1477247f30b1fdfd83ceaf017f0/jupyter_core-5.7.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/72/dfff0cc97f2a0776e1c9eb5bef1ddfd45f46246c6533b0191887a427bca5/kiwisolver-1.4.8-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/72/56/7cfb3926cd6f17f9453c2e2dc6b649a27ba240ff59b99fadc42abe06b806/lets_plot-4.5.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/9f/6e/264673e64001b99d747aff5a288eca82826c024437a3694e19aed1decf46/matplotlib-3.10.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl
@@ -1184,7 +1150,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/94/4f/8357a99a14f331b865a42cb4756ae37da85599b9c95e01277ea10361e91a/numba-0.61.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/84/fa11dad3404b7634aaab50733581ce11e5350383311ea7a7010f464c0170/numpy-2.1.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c6/ac/dac4a63f978e4dcb3c6d3a78c4d8e0192a113d288502a1216950c41b1027/parso-0.8.4-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/87/2b/b50d3d08ea0fc419c183a84210571eba005328efa62b6b98bc28e9ead32a/patsy-1.0.1-py2.py3-none-any.whl
@@ -1201,7 +1166,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2f/51/cb006fbc08c32f161035fb19ca718250eb5f6d0692ea6dcc1e62c3e556a2/pyhdfe-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/36/3b/48e79f2cd6a61dbbd4807b4ed46cb564b4fd50a76166b1c4ea5c1d9e2371/pytest_cov-6.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6d/82/1d96bf03ee4c0fdc3c0cbe61470070e659ca78dc0086fb88b66c185e2449/pytest_xdist-3.6.1-py3-none-any.whl
@@ -2461,7 +2425,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/66/e9/211ba3e46ec22c722c4d61a739cfccf79b0618006d6f5fa53eb4eb93ed6d/jaxlib-0.5.0-cp312-cp312-manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bc/b3/9458adb9472e61a998c8c4d95cfdfec91c73c53a375b30b1428310f923e4/kiwisolver-1.4.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/8c/0c/71942f05a2d65939f1572168e77d61240eddf7050c961d8e2c7214f48002/lets_plot-4.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a7/b2/d872fc3d753516870d520595ddd8ce4dd44fa797a240999f125f58521ad7/matplotlib-3.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/08/57/5d58fad4124192b1be42f68bd0c0ddaa26e44a730ff8c9337adade2f5632/ml_dtypes-0.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -2469,6 +2432,237 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/18/74/6a9f0e6c76c088f8a6aa702eab31734068061dca5cc0f34e8bc1eb447de1/numba-0.61.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9e/3e/3757f304c704f2f0294a6b8340fcf2be244038be07da4cccf390fa678a9f/numpy-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/38/f8/d8fddee9ed0d0c0f4a2132c1dfcf0e3e53265055da8df952a53e7eaf178c/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/38/0d/84200ed6a871ce386ddc82904bfadc0c6b28b0c0ec78176871a4679e40b3/pillow-11.1.0-cp312-cp312-manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b0/3c/0de11ca154e24a57b579fb648151d901326d3102115bc4f9a7a86526ce54/scipy-1.15.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0f/dd/84f10e23edd882c6f968c21c2434fe67bd4a528967067515feca9e611e5e/tzdata-2025.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/2a/5a/04cde32b07a7431d4ed0553a76fdb7a61270e78c5fd5a603e190ac389f14/wrapt-1.17.2-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: .
+      osx-64:
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/bzip2-1.0.8-hfdf4475_7.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/ca-certificates-2024.12.14-h8857fd0_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.6.1-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libexpat-2.6.4-h240833e_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libffi-3.4.2-h0d85af4_5.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/liblzma-5.6.3-hd471939_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libsqlite-3.48.0-hdb6dae5_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libzlib-1.3.1-hd23fc13_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/ncurses-6.5-h0622a9a_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/openssl-3.4.0-hc426f3f_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.2-pyhd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/python-3.12.8-h9ccd52b_1_cpython.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/readline-8.2-h9e318b2_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-h1abcd95_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025a-h78e105d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.21.0-pyhd8ed1ab_1.conda
+      - pypi: https://files.pythonhosted.org/packages/ed/20/bc79bc575ba2e2a7f70e8a1155618bb1301eaa5132a8271373a6903f73f8/babel-2.16.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/37/6b/175f60227d3e7f5f1549fcb374592be311293132207e451c3d7c654c25fb/contourpy-1.3.1-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/9c/49/39397ea390c7c53dff88b4fd5929a032414d3baf14f7a96aadffc24e7617/css_inline-0.14.6-cp37-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/65/3c/1db1b0f878319bb227f35a0fca7cad64e1f528b518bcab1a708da305c86d/faicons-0.2.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/5f/bf/8228556457e8a3f2f8c67ad7e648001ef2d7e9e364e9350757ae106c5c82/fonttools-4.55.5-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/d2/c2/a34097e53efe70a538ae97574ff9e9866e60fc1c792c19da5fd6b56ce7b5/formulaic-1.1.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4a/55/2700f5f5a3032d04c0517bb27d52705be2059ca73df2e24e6a9959a5164e/great_tables-0.15.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/22/49/b4418a7a892c0dd64442bbbeef54e1cdfe722dfc5a7bf0d611d3f5f90e99/jax-0.4.38-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/49/df/08b94c593c0867c7eaa334592807ba74495de4be90580f360db8b96221dc/jaxlib-0.4.38-cp312-cp312-macosx_10_14_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/c5/0b/8db6d2e2452d60d5ebc4ce4b204feeb16176a851fd42462f66ade6808084/kiwisolver-1.4.8-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/44/c7/6b2d8cb7cc251d53c976799cacd3200add56351c175ba89ab9cbd7c1e68a/matplotlib-3.10.0-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/47/56/1bb21218e1e692506c220ffabd456af9733fba7aa1b14f73899979f4cc20/ml_dtypes-0.5.1-cp312-cp312-macosx_10_9_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/63/c9/c61881e7f2e253e745209f078bbd428ce23b6cf901f7d93afe166720ff95/numba-0.61.0-cp312-cp312-macosx_10_14_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/8a/f0/385eb9970309643cbca4fc6eebc8bb16e560de129c91258dfaa18498da8b/numpy-2.1.3-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/17/a3/fb2734118db0af37ea7433f57f722c0a56687e14b14690edff0cdb4b7e58/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/95/20/9ce6ed62c91c073fcaa23d216e68289e19d95fb8188b9fb7a63d36771db8/pillow-11.1.0-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d8/6e/a9c42d0d39e09ed7fd203d0ac17adfea759cba61ab457671fe66e523dbec/scipy-1.15.1-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0f/dd/84f10e23edd882c6f968c21c2434fe67bd4a528967067515feca9e611e5e/tzdata-2025.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/53/18/75ddc64c3f63988f5a1d7e10fb204ffe5762bc663f8023f18ecaf31a332e/wrapt-1.17.2-cp312-cp312-macosx_10_13_x86_64.whl
+      - pypi: .
+      osx-arm64:
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h99b78c6_7.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ca-certificates-2024.12.14-hf0a4a13_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.6.1-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libexpat-2.6.4-h286801f_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libffi-3.4.2-h3422bc3_5.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/liblzma-5.6.3-h39f12f2_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.48.0-h3f77e49_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libzlib-1.3.1-h8359307_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/openssl-3.4.0-h81ee809_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.2-pyhd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-3.12.8-hc22306f_1_cpython.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.2-h92ec313_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025a-h78e105d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.21.0-pyhd8ed1ab_1.conda
+      - pypi: https://files.pythonhosted.org/packages/ed/20/bc79bc575ba2e2a7f70e8a1155618bb1301eaa5132a8271373a6903f73f8/babel-2.16.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/6b/6a/7833cfae2c1e63d1d8875a50fd23371394f540ce809d7383550681a1fa64/contourpy-1.3.1-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/9c/49/39397ea390c7c53dff88b4fd5929a032414d3baf14f7a96aadffc24e7617/css_inline-0.14.6-cp37-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/65/3c/1db1b0f878319bb227f35a0fca7cad64e1f528b518bcab1a708da305c86d/faicons-0.2.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ca/d7/27b1a46e6322aa7d47baa988748e32791edf8a68f077eb39324beb6674a3/fonttools-4.55.5-cp312-cp312-macosx_10_13_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/d2/c2/a34097e53efe70a538ae97574ff9e9866e60fc1c792c19da5fd6b56ce7b5/formulaic-1.1.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4a/55/2700f5f5a3032d04c0517bb27d52705be2059ca73df2e24e6a9959a5164e/great_tables-0.15.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/f4/58/cc0721a1030fcbab0984beea0bf3c4610ec103f738423cdfa9c4ceb40598/jax-0.5.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/57/d6/d971b40cb156e0637aa3c1522a1e803b641142e9a8f3ade6a574711bb073/jaxlib-0.5.0-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/60/26/d6a0db6785dd35d3ba5bf2b2df0aedc5af089962c6eb2cbf67a15b81369e/kiwisolver-1.4.8-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/d6/53/373b6b8be67b9221d12b24125fd0ec56b1078b660eeae266ec388a6ac9a0/llvmlite-0.44.0-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/42/2a/6d66d0fba41e13e9ca6512a0a51170f43e7e7ed3a8dfa036324100775612/matplotlib-3.10.0-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/47/56/1bb21218e1e692506c220ffabd456af9733fba7aa1b14f73899979f4cc20/ml_dtypes-0.5.1-cp312-cp312-macosx_10_9_universal2.whl
+      - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/e1/28/ddec0147a4933f86ceaca580aa9bb767d5632ecdb1ece6cfb3eab4ac78e5/numba-0.61.0-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/54/4a/765b4607f0fecbb239638d610d04ec0a0ded9b4951c56dc68cef79026abf/numpy-2.1.3-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/e1/0c/ad295fd74bfac85358fd579e271cded3ac969de81f62dd0142c426b9da91/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/b9/d8/f6004d98579a2596c098d1e30d10b248798cceff82d2b77aa914875bfea1/pillow-11.1.0-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/04/ee/e3e535c81828618878a7433992fecc92fa4df79393f31a8fea1d05615091/scipy-1.15.1-cp312-cp312-macosx_12_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0f/dd/84f10e23edd882c6f968c21c2434fe67bd4a528967067515feca9e611e5e/tzdata-2025.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/48/2a/97928387d6ed1c1ebbfd4efc4133a0633546bec8481a2dd5ec961313a1c7/wrapt-1.17.2-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: .
+      win-64:
+      - conda: https://conda.anaconda.org/conda-forge/win-64/bzip2-1.0.8-h2466b09_7.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/ca-certificates-2024.12.14-h56e8100_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.6.1-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/libexpat-2.6.4-he0c23c2_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/libffi-3.4.2-h8ffe710_5.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/win-64/liblzma-5.6.3-h2466b09_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/libsqlite-3.48.0-h67fdade_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.1-h2466b09_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.4.0-ha4e3fda_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.2-pyhd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/python-3.12.8-h3f84c4b_1_cpython.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/python-tzdata-2025.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/tk-8.6.13-h5226925_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025a-h78e105d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.22621.0-h57928b3_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/vc-14.3-h5fd82a7_24.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.42.34433-h6356254_24.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/vs2015_runtime-14.42.34433-hfef2bbc_24.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.21.0-pyhd8ed1ab_1.conda
+      - pypi: https://files.pythonhosted.org/packages/ed/20/bc79bc575ba2e2a7f70e8a1155618bb1301eaa5132a8271373a6903f73f8/babel-2.16.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a1/35/c2de8823211d07e8a79ab018ef03960716c5dff6f4d5bff5af87fd682992/contourpy-1.3.1-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/86/de/044c637f505dd0f6c5eda4e296bf4fdcf1c042b2ec095e11339e2aaaf155/css_inline-0.14.6-cp37-abi3-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/65/3c/1db1b0f878319bb227f35a0fca7cad64e1f528b518bcab1a708da305c86d/faicons-0.2.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/cc/46/8491a74940fa1cfa62b66308ac5268fbdc1003fa93503a87ba671e93c3c2/fonttools-4.55.5-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/d2/c2/a34097e53efe70a538ae97574ff9e9866e60fc1c792c19da5fd6b56ce7b5/formulaic-1.1.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4a/55/2700f5f5a3032d04c0517bb27d52705be2059ca73df2e24e6a9959a5164e/great_tables-0.15.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/f4/58/cc0721a1030fcbab0984beea0bf3c4610ec103f738423cdfa9c4ceb40598/jax-0.5.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/2d/cb/11bb92324afb6ba678f388e10b78d6b02196bc8887eb5aa0d85ce398edf9/jaxlib-0.5.0-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/bd/72/dfff0cc97f2a0776e1c9eb5bef1ddfd45f46246c6533b0191887a427bca5/kiwisolver-1.4.8-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/9f/6e/264673e64001b99d747aff5a288eca82826c024437a3694e19aed1decf46/matplotlib-3.10.0-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/38/bc/c4260e4a6c6bf684d0313308de1c860467275221d5e7daf69b3fcddfdd0b/ml_dtypes-0.5.1-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/94/4f/8357a99a14f331b865a42cb4756ae37da85599b9c95e01277ea10361e91a/numba-0.61.0-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a6/84/fa11dad3404b7634aaab50733581ce11e5350383311ea7a7010f464c0170/numpy-2.1.3-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/08/5c/2104299949b9d504baf3f4d35f73dbd14ef31bbd1ddc2c1b66a5b7dfda44/pillow-11.1.0-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ff/ba/31c7a8131152822b3a2cdeba76398ffb404d81d640de98287d236da90c49/scipy-1.15.1-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/15/06/1dbf478ea45c03e78a6a8c4be4fdc3c3bddea5c8de8a93bc971415e47f0f/wrapt-1.17.2-cp312-cp312-win_amd64.whl
+      - pypi: .
+  plots:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    indexes:
+    - https://pypi.org/simple
+    packages:
+      linux-64:
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-2_gnu.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-h4bc722e_7.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ca-certificates-2024.12.14-hbcca054_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.6.1-pyha770c72_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ld_impl_linux-64-2.43-h712a8e2_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libexpat-2.6.4-h5888daf_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libffi-3.4.2-h7f98852_5.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgcc-14.2.0-h77fa898_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-14.2.0-h69a702a_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libgomp-14.2.0-h77fa898_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/liblzma-5.6.3-hb9d3cd8_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libnsl-2.0.1-hd590300_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.48.0-hee588c1_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.38.1-h0b41bf4_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libxcrypt-4.4.36-hd590300_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.1-hb9d3cd8_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.5-h2d0b736_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.4.0-h7b32b05_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-24.2-pyhd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/python-3.12.8-h9e4cc4f_1_cpython.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2024.2-pyhd8ed1ab_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.2-h8228510_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025a-h78e105d_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.21.0-pyhd8ed1ab_1.conda
+      - pypi: https://files.pythonhosted.org/packages/ed/20/bc79bc575ba2e2a7f70e8a1155618bb1301eaa5132a8271373a6903f73f8/babel-2.16.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ba/99/6794142b90b853a9155316c8f470d2e4821fe6f086b03e372aca848227dd/contourpy-1.3.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/bf/92/392fa9709a3382168e852252ce480bb3c2df38f6439e73ee117987009042/css_inline-0.14.6-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/65/3c/1db1b0f878319bb227f35a0fca7cad64e1f528b518bcab1a708da305c86d/faicons-0.2.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/50/8a/e3c99a9aa1f9153fddf98c020449acc98140cd492d6264f8800fbd189c40/fonttools-4.55.5-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/d2/c2/a34097e53efe70a538ae97574ff9e9866e60fc1c792c19da5fd6b56ce7b5/formulaic-1.1.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4a/55/2700f5f5a3032d04c0517bb27d52705be2059ca73df2e24e6a9959a5164e/great_tables-0.15.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/bc/b3/9458adb9472e61a998c8c4d95cfdfec91c73c53a375b30b1428310f923e4/kiwisolver-1.4.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/8c/0c/71942f05a2d65939f1572168e77d61240eddf7050c961d8e2c7214f48002/lets_plot-4.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/cb/da/8341fd3056419441286c8e26bf436923021005ece0bff5f41906476ae514/llvmlite-0.44.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/a7/b2/d872fc3d753516870d520595ddd8ce4dd44fa797a240999f125f58521ad7/matplotlib-3.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/18/74/6a9f0e6c76c088f8a6aa702eab31734068061dca5cc0f34e8bc1eb447de1/numba-0.61.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/9e/3e/3757f304c704f2f0294a6b8340fcf2be244038be07da4cccf390fa678a9f/numpy-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/38/f8/d8fddee9ed0d0c0f4a2132c1dfcf0e3e53265055da8df952a53e7eaf178c/pandas-2.2.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/38/0d/84200ed6a871ce386ddc82904bfadc0c6b28b0c0ec78176871a4679e40b3/pillow-11.1.0-cp312-cp312-manylinux_2_28_x86_64.whl
@@ -2514,18 +2708,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/22/49/b4418a7a892c0dd64442bbbeef54e1cdfe722dfc5a7bf0d611d3f5f90e99/jax-0.4.38-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/49/df/08b94c593c0867c7eaa334592807ba74495de4be90580f360db8b96221dc/jaxlib-0.4.38-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c5/0b/8db6d2e2452d60d5ebc4ce4b204feeb16176a851fd42462f66ade6808084/kiwisolver-1.4.8-cp312-cp312-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6e/791176429594d6443c99abeaf1688f9f5164bec7fefe78de307b78b97800/lets_plot-4.5.2-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/15/86/e3c3195b92e6e492458f16d233e58a1a812aa2bfbef9bdd0fbafcec85c60/llvmlite-0.44.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/c7/6b2d8cb7cc251d53c976799cacd3200add56351c175ba89ab9cbd7c1e68a/matplotlib-3.10.0-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/47/56/1bb21218e1e692506c220ffabd456af9733fba7aa1b14f73899979f4cc20/ml_dtypes-0.5.1-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/63/c9/c61881e7f2e253e745209f078bbd428ce23b6cf901f7d93afe166720ff95/numba-0.61.0-cp312-cp312-macosx_10_14_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8a/f0/385eb9970309643cbca4fc6eebc8bb16e560de129c91258dfaa18498da8b/numpy-2.1.3-cp312-cp312-macosx_10_13_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/17/a3/fb2734118db0af37ea7433f57f722c0a56687e14b14690edff0cdb4b7e58/pandas-2.2.3-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/95/20/9ce6ed62c91c073fcaa23d216e68289e19d95fb8188b9fb7a63d36771db8/pillow-11.1.0-cp312-cp312-macosx_10_13_x86_64.whl
@@ -2571,18 +2761,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/f4/58/cc0721a1030fcbab0984beea0bf3c4610ec103f738423cdfa9c4ceb40598/jax-0.5.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/57/d6/d971b40cb156e0637aa3c1522a1e803b641142e9a8f3ade6a574711bb073/jaxlib-0.5.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/60/26/d6a0db6785dd35d3ba5bf2b2df0aedc5af089962c6eb2cbf67a15b81369e/kiwisolver-1.4.8-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/f6/57/3f64c62eb4ec0631d23c5130129350c00257345b11a0729fef99fa844c8f/lets_plot-4.5.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/d6/53/373b6b8be67b9221d12b24125fd0ec56b1078b660eeae266ec388a6ac9a0/llvmlite-0.44.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/42/2a/6d66d0fba41e13e9ca6512a0a51170f43e7e7ed3a8dfa036324100775612/matplotlib-3.10.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/47/56/1bb21218e1e692506c220ffabd456af9733fba7aa1b14f73899979f4cc20/ml_dtypes-0.5.1-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/28/ddec0147a4933f86ceaca580aa9bb767d5632ecdb1ece6cfb3eab4ac78e5/numba-0.61.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/54/4a/765b4607f0fecbb239638d610d04ec0a0ded9b4951c56dc68cef79026abf/numpy-2.1.3-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e1/0c/ad295fd74bfac85358fd579e271cded3ac969de81f62dd0142c426b9da91/pandas-2.2.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/b9/d8/f6004d98579a2596c098d1e30d10b248798cceff82d2b77aa914875bfea1/pillow-11.1.0-cp312-cp312-macosx_11_0_arm64.whl
@@ -2632,18 +2818,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/0a/ba/aa99706246f1938ca905eb6eeb7db832ac2e157aa4b805acb5cd4cd1791a/htmltools-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/02/3f/a6ec28c88e2d8e54d32598a1e0b5208a4baa72a8e7f6e241beab5731eb9d/interface_meta-1.3.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/f4/58/cc0721a1030fcbab0984beea0bf3c4610ec103f738423cdfa9c4ceb40598/jax-0.5.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/2d/cb/11bb92324afb6ba678f388e10b78d6b02196bc8887eb5aa0d85ce398edf9/jaxlib-0.5.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/91/29/df4b9b42f2be0b623cbd5e2140cafcaa2bef0759a00b7b70104dcfe2fb51/joblib-1.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/72/dfff0cc97f2a0776e1c9eb5bef1ddfd45f46246c6533b0191887a427bca5/kiwisolver-1.4.8-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/72/56/7cfb3926cd6f17f9453c2e2dc6b649a27ba240ff59b99fadc42abe06b806/lets_plot-4.5.2-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/e2/3b/a9a17366af80127bd09decbe2a54d8974b6d8b274b39bf47fbaedeec6307/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/9f/6e/264673e64001b99d747aff5a288eca82826c024437a3694e19aed1decf46/matplotlib-3.10.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/38/bc/c4260e4a6c6bf684d0313308de1c860467275221d5e7daf69b3fcddfdd0b/ml_dtypes-0.5.1-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/38/13/23b73a1f300521613f967763ef4ada4737474f9d5b620b7e5ba9e4857ee7/narwhals-1.23.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/94/4f/8357a99a14f331b865a42cb4756ae37da85599b9c95e01277ea10361e91a/numba-0.61.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a6/84/fa11dad3404b7634aaab50733581ce11e5350383311ea7a7010f464c0170/numpy-2.1.3-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cf/f7/3367feadd4ab56783b0971c9b7edfbdd68e0c70ce877949a5dd2117ed4a0/palettable-3.3.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/08/5c/2104299949b9d504baf3f4d35f73dbd14ef31bbd1ddc2c1b66a5b7dfda44/pillow-11.1.0-cp312-cp312-win_amd64.whl
@@ -2662,8 +2844,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
   md5: d7c89558ba9fa0495403155b64376d81
-  arch: x86_64
-  platform: linux
   license: None
   purls: []
   size: 2562
@@ -2677,8 +2857,6 @@ packages:
   - libgomp >=7.5.0
   constrains:
   - openmp_impl 9999
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -2948,8 +3126,6 @@ packages:
   depends:
   - ld_impl_linux-64 2.43 h712a8e2_2
   - sysroot_linux-64
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL
   purls: []
@@ -3040,8 +3216,6 @@ packages:
   md5: bfe52ddc809cff2e046781928d195400
   depends:
   - tk
-  arch: x86_64
-  platform: linux
   license: TCL
   purls: []
   size: 128999
@@ -3051,8 +3225,6 @@ packages:
   md5: d708a59e033cba53362d324e54edcfd7
   depends:
   - tk
-  arch: x86_64
-  platform: osx
   license: TCL
   purls: []
   size: 129783
@@ -3062,8 +3234,6 @@ packages:
   md5: 30d320d62d26ed91ca8b06166e4609df
   depends:
   - tk
-  arch: arm64
-  platform: osx
   license: TCL
   purls: []
   size: 129779
@@ -3074,8 +3244,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: bzip2-1.0.6
   license_family: BSD
   purls: []
@@ -3086,8 +3254,6 @@ packages:
   md5: 7ed4301d437b59045be7e051a0308211
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: bzip2-1.0.6
   license_family: BSD
   purls: []
@@ -3098,8 +3264,6 @@ packages:
   md5: fc6948412dbbbe9a4c9ddbbcfe0a79ab
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: bzip2-1.0.6
   license_family: BSD
   purls: []
@@ -3112,8 +3276,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: bzip2-1.0.6
   license_family: BSD
   purls: []
@@ -3125,8 +3287,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -3137,8 +3297,6 @@ packages:
   md5: 133255af67aaf1e0c0468cc753fd800b
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -3149,8 +3307,6 @@ packages:
   md5: c1c999a38a4303b29d75c636eaa13cf9
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -3159,8 +3315,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/ca-certificates-2024.12.14-hbcca054_0.conda
   sha256: 1afd7274cbc9a334d6d0bc62fa760acc7afdaceb0b91a8df370ec01fd75dc7dd
   md5: 720523eb0d6a9b0f6120c16b2aa4e7de
-  arch: x86_64
-  platform: linux
   license: ISC
   purls: []
   size: 157088
@@ -3168,8 +3322,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-64/ca-certificates-2024.12.14-h8857fd0_0.conda
   sha256: ddaafdcd1b8ace6ffeea22b6824ca9db8a64cf0a2652a11d7554ece54935fa06
   md5: b7b887091c99ed2e74845e75e9128410
-  arch: x86_64
-  platform: osx
   license: ISC
   purls: []
   size: 156925
@@ -3177,8 +3329,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ca-certificates-2024.12.14-hf0a4a13_0.conda
   sha256: 256be633fd0882ccc1a7a32bc278547e1703f85082c0789a87a603ee3ab8fb82
   md5: 7cb381a6783d91902638e4ed1ebd478e
-  arch: arm64
-  platform: osx
   license: ISC
   purls: []
   size: 157091
@@ -3186,8 +3336,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/ca-certificates-2024.12.14-h56e8100_0.conda
   sha256: 424d82db36cd26234bc4772426170efd60e888c2aed0099a257a95e131683a5e
   md5: cb2eaeb88549ddb27af533eccf9a45c1
-  arch: x86_64
-  platform: win
   license: ISC
   purls: []
   size: 157422
@@ -3214,8 +3362,6 @@ packages:
   - xorg-libx11 >=1.8.10,<2.0a0
   - xorg-libxext >=1.3.6,<2.0a0
   - xorg-libxrender >=0.9.11,<0.10.0a0
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-only or MPL-1.1
   purls: []
   size: 978868
@@ -3235,8 +3381,6 @@ packages:
   - libpng >=1.6.44,<1.7.0a0
   - libzlib >=1.3.1,<2.0a0
   - pixman >=0.44.2,<1.0a0
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-only or MPL-1.1
   purls: []
   size: 891731
@@ -3256,8 +3400,6 @@ packages:
   - libpng >=1.6.44,<1.7.0a0
   - libzlib >=1.3.1,<2.0a0
   - pixman >=0.44.2,<1.0a0
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-only or MPL-1.1
   purls: []
   size: 894517
@@ -3284,8 +3426,6 @@ packages:
   - cctools 1010.6.*
   - clang 19.1.*
   - ld64 951.9.*
-  arch: x86_64
-  platform: osx
   license: APSL-2.0
   license_family: Other
   purls: []
@@ -3306,8 +3446,6 @@ packages:
   - cctools 1010.6.*
   - ld64 951.9.*
   - clang 19.1.*
-  arch: arm64
-  platform: osx
   license: APSL-2.0
   license_family: Other
   purls: []
@@ -3328,8 +3466,6 @@ packages:
   - pycparser
   - python >=3.12,<3.13.0a0
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls:
@@ -3345,8 +3481,6 @@ packages:
   - pycparser
   - python >=3.12,<3.13.0a0
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls:
@@ -3363,8 +3497,6 @@ packages:
   - python >=3.12,<3.13.0a0
   - python >=3.12,<3.13.0a0 *_cpython
   - python_abi 3.12.* *_cp312
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls:
@@ -3381,8 +3513,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls:
@@ -3414,8 +3544,6 @@ packages:
   md5: b23bcdf2bf4e1e6fc403c6e785a587f2
   depends:
   - clang-19 19.1.7 default_h3571c67_0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3426,8 +3554,6 @@ packages:
   md5: d21b69a51e0a6f2eb53724b41a0dbfec
   depends:
   - clang-19 19.1.7 default_hf90f093_0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3441,8 +3567,6 @@ packages:
   - libclang-cpp19.1 19.1.7 default_h3571c67_0
   - libcxx >=19.1.7
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3456,8 +3580,6 @@ packages:
   - libclang-cpp19.1 19.1.7 default_hf90f093_0
   - libcxx >=19.1.7
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3472,8 +3594,6 @@ packages:
   - compiler-rt 19.1.7.*
   - ld64_osx-64
   - llvm-tools 19.1.7.*
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3488,8 +3608,6 @@ packages:
   - compiler-rt 19.1.7.*
   - ld64_osx-arm64
   - llvm-tools 19.1.7.*
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3500,8 +3618,6 @@ packages:
   md5: b4e44834fd0bfe32aa47dcbaf71daf03
   depends:
   - clang_impl_osx-64 19.1.7 hc73cdc9_23
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3512,8 +3628,6 @@ packages:
   md5: 6a00ffb488af81f4c602da44a155afdb
   depends:
   - clang_impl_osx-arm64 19.1.7 h76e6a08_23
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3525,8 +3639,6 @@ packages:
   depends:
   - clang 19.1.7 default_h576c50e_0
   - libcxx-devel 19.1.*
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3538,8 +3650,6 @@ packages:
   depends:
   - clang 19.1.7 default_h474c9e2_0
   - libcxx-devel 19.1.*
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -3553,8 +3663,6 @@ packages:
   - clangxx 19.1.7.*
   - libcxx >=19
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3568,8 +3676,6 @@ packages:
   - clangxx 19.1.7.*
   - libcxx >=19
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3581,8 +3687,6 @@ packages:
   depends:
   - clang_osx-64 19.1.7 h7e5c614_23
   - clangxx_impl_osx-64 19.1.7 hb295874_23
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3594,8 +3698,6 @@ packages:
   depends:
   - clang_osx-arm64 19.1.7 h07b0088_23
   - clangxx_impl_osx-arm64 19.1.7 h276745f_23
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -3643,8 +3745,6 @@ packages:
   - __osx >=10.13
   - clang 19.1.7.*
   - compiler-rt_osx-64 19.1.7.*
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: APACHE
   purls: []
@@ -3657,8 +3757,6 @@ packages:
   - __osx >=11.0
   - clang 19.1.7.*
   - compiler-rt_osx-arm64 19.1.7.*
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: APACHE
   purls: []
@@ -3841,8 +3939,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: linux
   license: curl
   license_family: MIT
   purls: []
@@ -3859,8 +3955,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: osx
   license: curl
   license_family: MIT
   purls: []
@@ -3877,8 +3971,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: arm64
-  platform: osx
   license: curl
   license_family: MIT
   purls: []
@@ -4068,8 +4160,6 @@ packages:
   - libgcc >=13
   - libuuid >=2.38.1,<3.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -4083,8 +4173,6 @@ packages:
   - freetype >=2.12.1,<3.0a0
   - libexpat >=2.6.3,<3.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4098,8 +4186,6 @@ packages:
   - freetype >=2.12.1,<3.0a0
   - libexpat >=2.6.3,<3.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4304,8 +4390,6 @@ packages:
   - libgcc-ng >=12
   - libpng >=1.6.39,<1.7.0a0
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-only OR FTL
   purls: []
   size: 634972
@@ -4316,8 +4400,6 @@ packages:
   depends:
   - libpng >=1.6.39,<1.7.0a0
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-only OR FTL
   purls: []
   size: 599300
@@ -4328,8 +4410,6 @@ packages:
   depends:
   - libpng >=1.6.39,<1.7.0a0
   - libzlib >=1.2.13,<2.0.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-only OR FTL
   purls: []
   size: 596430
@@ -4339,8 +4419,6 @@ packages:
   md5: ac7bc6a654f8f41b352b38f4051135f8
   depends:
   - libgcc-ng >=7.5.0
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1
   purls: []
   size: 114383
@@ -4348,8 +4426,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-64/fribidi-1.0.10-hbcb3906_0.tar.bz2
   sha256: 4f6db86ecc4984cd4ac88ca52030726c3cfd11a64dfb15c8602025ee3001a2b5
   md5: f1c6b41e0f56998ecd9a3e210faa1dc0
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1
   purls: []
   size: 65388
@@ -4357,8 +4433,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/fribidi-1.0.10-h27ca646_0.tar.bz2
   sha256: 4b37ea851a2cf85edf0a63d2a63266847ec3dcbba4a31156d430cdd6aa811303
   md5: c64443234ff91d70cb9c7dc926c58834
-  arch: arm64
-  platform: osx
   license: LGPL-2.1
   purls: []
   size: 60255
@@ -4374,8 +4448,6 @@ packages:
   - libsanitizer 14.2.0 h2a3dede_1
   - libstdcxx >=14.2.0
   - sysroot_linux-64
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4390,8 +4462,6 @@ packages:
   - libgfortran5 >=14.2.0
   - libstdcxx >=14.2.0
   - sysroot_linux-64
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4411,8 +4481,6 @@ packages:
   - mpc >=1.3.1,<2.0a0
   - mpfr >=4.2.1,<5.0a0
   - zlib
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4432,8 +4500,6 @@ packages:
   - mpc >=1.3.1,<2.0a0
   - mpfr >=4.2.1,<5.0a0
   - zlib
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4451,8 +4517,6 @@ packages:
   - libgfortran 5.*
   - libgfortran-devel_osx-64 13.2.0
   - libgfortran5 >=13.2.0
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-or-later WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4470,8 +4534,6 @@ packages:
   - libgfortran 5.*
   - libgfortran-devel_osx-arm64 13.2.0
   - libgfortran5 >=13.2.0
-  arch: arm64
-  platform: osx
   license: GPL-3.0-or-later WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4483,8 +4545,6 @@ packages:
   depends:
   - __osx >=10.13
   - libcxx >=16
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later OR LGPL-3.0-or-later
   purls: []
   size: 428919
@@ -4495,8 +4555,6 @@ packages:
   depends:
   - __osx >=11.0
   - libcxx >=16
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later OR LGPL-3.0-or-later
   purls: []
   size: 365188
@@ -4507,8 +4565,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
-  arch: x86_64
-  platform: linux
   license: LGPL-2.0-or-later
   license_family: LGPL
   purls: []
@@ -4519,8 +4575,6 @@ packages:
   md5: fc7124f86e1d359fc5d878accd9e814c
   depends:
   - libcxx >=16
-  arch: x86_64
-  platform: osx
   license: LGPL-2.0-or-later
   license_family: LGPL
   purls: []
@@ -4531,8 +4585,6 @@ packages:
   md5: 339991336eeddb70076d8ca826dac625
   depends:
   - libcxx >=16
-  arch: arm64
-  platform: osx
   license: LGPL-2.0-or-later
   license_family: LGPL
   purls: []
@@ -4586,8 +4638,6 @@ packages:
   - libblas >=3.8.0,<4.0a0
   - libcblas >=3.8.0,<4.0a0
   - libgcc-ng >=9.3.0
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -4599,8 +4649,6 @@ packages:
   depends:
   - libblas >=3.8.0,<4.0a0
   - libcblas >=3.8.0,<4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -4612,8 +4660,6 @@ packages:
   depends:
   - libblas >=3.9.0,<4.0a0
   - libcblas >=3.9.0,<4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -4627,8 +4673,6 @@ packages:
   - libstdcxx-devel_linux-64 14.2.0 h41c2201_101
   - sysroot_linux-64
   - tzdata
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -4655,8 +4699,6 @@ packages:
   - libglib >=2.82.2,<3.0a0
   - libstdcxx >=13
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -4675,8 +4717,6 @@ packages:
   - libexpat >=2.6.4,<3.0a0
   - libglib >=2.82.2,<3.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4695,8 +4735,6 @@ packages:
   - libexpat >=2.6.4,<3.0a0
   - libglib >=2.82.2,<3.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4757,8 +4795,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc-ng >=12
   - libstdcxx-ng >=12
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -4769,8 +4805,6 @@ packages:
   md5: d68d48a3060eb5abdc1cdc8e2a3a5966
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4781,8 +4815,6 @@ packages:
   md5: 5eb22c1d7b3fc4abb50d92d621583137
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -4846,8 +4878,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/intel-openmp-2024.2.1-h57928b3_1083.conda
   sha256: 0fd2b0b84c854029041b0ede8f4c2369242ee92acc0092f8407b1fe9238a8209
   md5: 2d89243bfb53652c182a7c73182cce4f
-  arch: x86_64
-  platform: win
   license: LicenseRef-IntelSimplifiedSoftwareOct2022
   license_family: Proprietary
   purls: []
@@ -4955,8 +4985,6 @@ packages:
   md5: d06222822a9144918333346f145b68c6
   depends:
   - libcxx >=14.0.6
-  arch: x86_64
-  platform: osx
   track_features:
   - isl_imath-32
   license: MIT
@@ -4969,8 +4997,6 @@ packages:
   md5: e80e44a3f4862b1da870dc0557f8cf3b
   depends:
   - libcxx >=14.0.6
-  arch: arm64
-  platform: osx
   track_features:
   - isl_imath-32
   license: MIT
@@ -5502,8 +5528,6 @@ packages:
   md5: 30186d27e2c9fa62b45fb1476b7200e3
   depends:
   - libgcc-ng >=10.3.0
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-or-later
   purls: []
   size: 117831
@@ -5538,8 +5562,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - openssl >=3.3.1,<4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -5554,8 +5576,6 @@ packages:
   - libedit >=3.1.20191231,<3.2.0a0
   - libedit >=3.1.20191231,<4.0a0
   - openssl >=3.3.1,<4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -5570,8 +5590,6 @@ packages:
   - libedit >=3.1.20191231,<3.2.0a0
   - libedit >=3.1.20191231,<4.0a0
   - openssl >=3.3.1,<4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -5591,8 +5609,6 @@ packages:
   - ld 951.9.*
   - clang >=19.1.4,<20.0a0
   - cctools_osx-64 1010.6.*
-  arch: x86_64
-  platform: osx
   license: APSL-2.0
   license_family: Other
   purls: []
@@ -5612,8 +5628,6 @@ packages:
   - cctools 1010.6.*
   - clang >=19.1.4,<20.0a0
   - cctools_osx-arm64 1010.6.*
-  arch: arm64
-  platform: osx
   license: APSL-2.0
   license_family: Other
   purls: []
@@ -5626,8 +5640,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   constrains:
   - binutils_impl_linux-64 2.43
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL
   purls: []
@@ -5639,8 +5651,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
-  arch: x86_64
-  platform: linux
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -5651,8 +5661,6 @@ packages:
   md5: f9d6a4c82889d5ecedec1d90eb673c55
   depends:
   - libcxx >=13.0.1
-  arch: x86_64
-  platform: osx
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -5663,8 +5671,6 @@ packages:
   md5: de462d5aacda3b30721b512c5da4e742
   depends:
   - libcxx >=13.0.1
-  arch: arm64
-  platform: osx
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -5704,8 +5710,6 @@ packages:
   depends:
   - __osx >=10.13
   - libcxx >=16
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 40442
@@ -5716,8 +5720,6 @@ packages:
   depends:
   - __osx >=11.0
   - libcxx >=16
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 40657
@@ -5734,8 +5736,6 @@ packages:
   - liblapack 3.9.0 26_linux64_openblas
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5753,8 +5753,6 @@ packages:
   - liblapack 3.9.0 26_osx64_openblas
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5772,8 +5770,6 @@ packages:
   - liblapacke 3.9.0 26_osxarm64_openblas
   - libcblas 3.9.0 26_osxarm64_openblas
   - blas * openblas
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5790,8 +5786,6 @@ packages:
   - liblapack 3.9.0 26_win64_mkl
   - blas * mkl
   - libcblas 3.9.0 26_win64_mkl
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5807,8 +5801,6 @@ packages:
   - liblapack 3.9.0 26_linux64_openblas
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5824,8 +5816,6 @@ packages:
   - liblapack 3.9.0 26_osx64_openblas
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5841,8 +5831,6 @@ packages:
   - liblapack 3.9.0 26_osxarm64_openblas
   - liblapacke 3.9.0 26_osxarm64_openblas
   - blas * openblas
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -5855,8 +5843,6 @@ packages:
   - __osx >=10.13
   - libcxx >=19.1.7
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5869,8 +5855,6 @@ packages:
   - __osx >=11.0
   - libcxx >=19.1.7
   - libllvm19 >=19.1.7,<19.2.0a0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5888,8 +5872,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: linux
   license: curl
   license_family: MIT
   purls: []
@@ -5906,8 +5888,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: osx
   license: curl
   license_family: MIT
   purls: []
@@ -5924,8 +5904,6 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: arm64
-  platform: osx
   license: curl
   license_family: MIT
   purls: []
@@ -5936,8 +5914,6 @@ packages:
   md5: 4b8f8dc448d814169dbc58fc7286057d
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5948,8 +5924,6 @@ packages:
   md5: 5b3e1610ff8bd5443476b91d618f5b77
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5960,8 +5934,6 @@ packages:
   md5: fd7a23f42c970d3cabb26a1b7ee5387e
   depends:
   - libcxx >=19.1.7
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5972,8 +5944,6 @@ packages:
   md5: 9a0c5be4364a68a216a8092b4bd1d75d
   depends:
   - libcxx >=19.1.7
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -5985,8 +5955,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -5997,8 +5965,6 @@ packages:
   md5: 120f8f7ba6a8defb59f4253447db4bb4
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6009,8 +5975,6 @@ packages:
   md5: 1d8b9588be14e71df38c525767a1ac30
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6024,8 +5988,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - ncurses >=6.5,<7.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6038,8 +6000,6 @@ packages:
   - ncurses
   - __osx >=10.13
   - ncurses >=6.5,<7.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6052,8 +6012,6 @@ packages:
   - ncurses
   - __osx >=11.0
   - ncurses >=6.5,<7.0a0
-  arch: arm64
-  platform: osx
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6064,8 +6022,6 @@ packages:
   md5: 172bf1cd1ff8629f2b1179945ed45055
   depends:
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6074,8 +6030,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-64/libev-4.33-h10d778d_2.conda
   sha256: 0d238488564a7992942aa165ff994eca540f687753b4f0998b29b4e4d030ff43
   md5: 899db79329439820b7e8f8de41bca902
-  arch: x86_64
-  platform: osx
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6084,8 +6038,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libev-4.33-h93a5062_2.conda
   sha256: 95cecb3902fbe0399c3a7e67a5bed1db813e5ab0e22f4023a5e0f722f2cc214f
   md5: 36d33e440c31857372a72137f78bacf5
-  arch: arm64
-  platform: osx
   license: BSD-2-Clause
   license_family: BSD
   purls: []
@@ -6099,8 +6051,6 @@ packages:
   - libgcc >=13
   constrains:
   - expat 2.6.4.*
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -6113,8 +6063,6 @@ packages:
   - __osx >=10.13
   constrains:
   - expat 2.6.4.*
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6127,8 +6075,6 @@ packages:
   - __osx >=11.0
   constrains:
   - expat 2.6.4.*
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6143,8 +6089,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - expat 2.6.4.*
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -6155,8 +6099,6 @@ packages:
   md5: d645c6d2ac96843a2bfaccd2d62b3ac3
   depends:
   - libgcc-ng >=9.4.0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -6165,8 +6107,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-64/libffi-3.4.2-h0d85af4_5.tar.bz2
   sha256: 7a2d27a936ceee6942ea4d397f9c7d136f12549d86f7617e8b6bad51e01a941f
   md5: ccb34fb14960ad8b125962d3d79b31a9
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6175,8 +6115,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libffi-3.4.2-h3422bc3_5.tar.bz2
   sha256: 41b3d13efb775e340e4dba549ab5c029611ea6918703096b2eaa9c015c0750ca
   md5: 086914b672be056eb70fd4285b6783b6
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6188,8 +6126,6 @@ packages:
   depends:
   - vc >=14.1,<15.0a0
   - vs2015_runtime >=14.16.27012
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -6204,8 +6140,6 @@ packages:
   constrains:
   - libgomp 14.2.0 h77fa898_1
   - libgcc-ng ==14.2.0=*_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6226,8 +6160,6 @@ packages:
   md5: e39480b9ca41323497b05492a63bc35b
   depends:
   - libgcc 14.2.0 h77fa898_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6240,8 +6172,6 @@ packages:
   - __osx >=10.13
   - libiconv >=1.17,<2.0a0
   - libintl 0.22.5 hdfe23c8_3
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -6254,8 +6184,6 @@ packages:
   - __osx >=11.0
   - libiconv >=1.17,<2.0a0
   - libintl 0.22.5 h8414b35_3
-  arch: arm64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -6268,8 +6196,6 @@ packages:
   - libgfortran5 14.2.0 hd5240d6_1
   constrains:
   - libgfortran-ng ==14.2.0=*_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6280,8 +6206,6 @@ packages:
   md5: 0b6e23a012ee7a9a5f6b244f5a92c1d5
   depends:
   - libgfortran5 13.2.0 h2873a65_3
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6292,8 +6216,6 @@ packages:
   md5: 4a55d9e169114b2b90d3ec4604cd7bbf
   depends:
   - libgfortran5 13.2.0 hf226fd6_3
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6320,8 +6242,6 @@ packages:
   md5: 0a7f4cd238267c88e5d69f7826a407eb
   depends:
   - libgfortran 14.2.0 h69a702a_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6334,8 +6254,6 @@ packages:
   - libgcc >=14.2.0
   constrains:
   - libgfortran 14.2.0
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6348,8 +6266,6 @@ packages:
   - llvm-openmp >=8.0.0
   constrains:
   - libgfortran 5.0.0 13_2_0_*_3
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6362,8 +6278,6 @@ packages:
   - llvm-openmp >=8.0.0
   constrains:
   - libgfortran 5.0.0 13_2_0_*_3
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6381,8 +6295,6 @@ packages:
   - pcre2 >=10.44,<10.45.0a0
   constrains:
   - glib 2.82.2 *_1
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-or-later
   purls: []
   size: 3923974
@@ -6399,8 +6311,6 @@ packages:
   - pcre2 >=10.44,<10.45.0a0
   constrains:
   - glib 2.82.2 *_1
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 3716906
@@ -6417,8 +6327,6 @@ packages:
   - pcre2 >=10.44,<10.45.0a0
   constrains:
   - glib 2.82.2 *_1
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 3643364
@@ -6428,8 +6336,6 @@ packages:
   md5: cc3573974587f12dda90d96e3e55a702
   depends:
   - _libgcc_mutex 0.1 conda_forge
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6444,8 +6350,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6456,8 +6360,6 @@ packages:
   md5: d66573916ffcf376178462f1b61c941e
   depends:
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-only
   purls: []
   size: 705775
@@ -6465,8 +6367,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-64/libiconv-1.17-hd75f5a5_2.conda
   sha256: 23d4923baeca359423a7347c2ed7aaf48c68603df0cf8b87cc94a10b0d4e9a23
   md5: 6c3628d047e151efba7cf08c5e54d1ca
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-only
   purls: []
   size: 666538
@@ -6474,8 +6374,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libiconv-1.17-h0d3ecfb_2.conda
   sha256: bc7de5097b97bcafcf7deaaed505f7ce02f648aac8eccc0d5a47cc599a1d0304
   md5: 69bda57310071cf6d2b86caf11573d2d
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-only
   purls: []
   size: 676469
@@ -6487,8 +6385,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: LGPL-2.1-only
   purls: []
   size: 636146
@@ -6499,8 +6395,6 @@ packages:
   depends:
   - __osx >=10.13
   - libiconv >=1.17,<2.0a0
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 88086
@@ -6511,8 +6405,6 @@ packages:
   depends:
   - __osx >=11.0
   - libiconv >=1.17,<2.0a0
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 81171
@@ -6524,8 +6416,6 @@ packages:
   - libgcc-ng >=12
   constrains:
   - jpeg <0.0.0a
-  arch: x86_64
-  platform: linux
   license: IJG AND BSD-3-Clause AND Zlib
   purls: []
   size: 618575
@@ -6535,8 +6425,6 @@ packages:
   md5: 72507f8e3961bc968af17435060b6dd6
   constrains:
   - jpeg <0.0.0a
-  arch: x86_64
-  platform: osx
   license: IJG AND BSD-3-Clause AND Zlib
   purls: []
   size: 579748
@@ -6546,8 +6434,6 @@ packages:
   md5: 3ff1e053dc3a2b8e36b9bfa4256a58d1
   constrains:
   - jpeg <0.0.0a
-  arch: arm64
-  platform: osx
   license: IJG AND BSD-3-Clause AND Zlib
   purls: []
   size: 547541
@@ -6562,8 +6448,6 @@ packages:
   - libcblas 3.9.0 26_linux64_openblas
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6579,8 +6463,6 @@ packages:
   - libcblas 3.9.0 26_osx64_openblas
   - blas * openblas
   - liblapacke 3.9.0 26_osx64_openblas
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6596,8 +6478,6 @@ packages:
   - liblapacke 3.9.0 26_osxarm64_openblas
   - libcblas 3.9.0 26_osxarm64_openblas
   - blas * openblas
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6613,8 +6493,6 @@ packages:
   - liblapacke 3.9.0 26_win64_mkl
   - blas * mkl
   - libcblas 3.9.0 26_win64_mkl
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6629,8 +6507,6 @@ packages:
   - libxml2 >=2.13.5,<3.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -6645,8 +6521,6 @@ packages:
   - libxml2 >=2.13.5,<3.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -6660,8 +6534,6 @@ packages:
   - libgcc >=13
   constrains:
   - xz ==5.6.3=*_1
-  arch: x86_64
-  platform: linux
   license: 0BSD
   purls: []
   size: 111132
@@ -6673,8 +6545,6 @@ packages:
   - __osx >=10.13
   constrains:
   - xz ==5.6.3=*_1
-  arch: x86_64
-  platform: osx
   license: 0BSD
   purls: []
   size: 103745
@@ -6686,8 +6556,6 @@ packages:
   - __osx >=11.0
   constrains:
   - xz ==5.6.3=*_1
-  arch: arm64
-  platform: osx
   license: 0BSD
   purls: []
   size: 99129
@@ -6701,8 +6569,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - xz ==5.6.3=*_1
-  arch: x86_64
-  platform: win
   license: 0BSD
   purls: []
   size: 104332
@@ -6719,8 +6585,6 @@ packages:
   - libstdcxx >=13
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.3.2,<4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -6737,8 +6601,6 @@ packages:
   - libev >=4.33,<5.0a0
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.3.2,<4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6755,8 +6617,6 @@ packages:
   - libev >=4.33,<5.0a0
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.3.2,<4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -6767,8 +6627,6 @@ packages:
   md5: 30fd6e37fe21f86f4bd26d6ee73eeec7
   depends:
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-only
   license_family: GPL
   purls: []
@@ -6784,8 +6642,6 @@ packages:
   - libgfortran5 >=14.2.0
   constrains:
   - openblas >=0.3.28,<0.3.29.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6801,8 +6657,6 @@ packages:
   - llvm-openmp >=18.1.8
   constrains:
   - openblas >=0.3.28,<0.3.29.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6818,8 +6672,6 @@ packages:
   - llvm-openmp >=18.1.8
   constrains:
   - openblas >=0.3.28,<0.3.29.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6832,8 +6684,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: zlib-acknowledgement
   purls: []
   size: 289426
@@ -6844,8 +6694,6 @@ packages:
   depends:
   - __osx >=10.13
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: zlib-acknowledgement
   purls: []
   size: 269992
@@ -6856,8 +6704,6 @@ packages:
   depends:
   - __osx >=11.0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: zlib-acknowledgement
   purls: []
   size: 263151
@@ -6868,8 +6714,6 @@ packages:
   depends:
   - libgcc >=14.2.0
   - libstdcxx >=14.2.0
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6882,8 +6726,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: Unlicense
   purls: []
   size: 878223
@@ -6894,8 +6736,6 @@ packages:
   depends:
   - __osx >=10.13
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: Unlicense
   purls: []
   size: 926014
@@ -6906,8 +6746,6 @@ packages:
   depends:
   - __osx >=11.0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: Unlicense
   purls: []
   size: 852831
@@ -6919,8 +6757,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Unlicense
   purls: []
   size: 897026
@@ -6933,8 +6769,6 @@ packages:
   - libgcc >=13
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6947,8 +6781,6 @@ packages:
   - __osx >=10.13
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6960,8 +6792,6 @@ packages:
   depends:
   - libzlib >=1.3.1,<2.0a0
   - openssl >=3.4.0,<4.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -6972,8 +6802,6 @@ packages:
   md5: 234a5554c53625688d51062645337328
   depends:
   - libgcc 14.2.0 h77fa898_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -6994,8 +6822,6 @@ packages:
   md5: 8371ac6457591af2cf6159439c1fd051
   depends:
   - libstdcxx 14.2.0 hc0a3c3a_1
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only WITH GCC-exception-3.1
   license_family: GPL
   purls: []
@@ -7015,8 +6841,6 @@ packages:
   - libwebp-base >=1.4.0,<2.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: linux
   license: HPND
   purls: []
   size: 428173
@@ -7034,8 +6858,6 @@ packages:
   - libwebp-base >=1.4.0,<2.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: osx
   license: HPND
   purls: []
   size: 400099
@@ -7053,8 +6875,6 @@ packages:
   - libwebp-base >=1.4.0,<2.0a0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: arm64
-  platform: osx
   license: HPND
   purls: []
   size: 370600
@@ -7064,8 +6884,6 @@ packages:
   md5: 40b61aab5c7ba9ff276c41cfffe6b80b
   depends:
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -7079,8 +6897,6 @@ packages:
   - libgcc >=13
   constrains:
   - libwebp 1.5.0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -7093,8 +6909,6 @@ packages:
   - __osx >=10.13
   constrains:
   - libwebp 1.5.0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -7107,8 +6921,6 @@ packages:
   - __osx >=11.0
   constrains:
   - libwebp 1.5.0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -7123,8 +6935,6 @@ packages:
   - pthread-stubs
   - xorg-libxau >=1.0.11,<2.0a0
   - xorg-libxdmcp
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -7135,8 +6945,6 @@ packages:
   md5: 5aa797f8787fe7a17d1b0821485b5adc
   depends:
   - libgcc-ng >=12
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-or-later
   purls: []
   size: 100393
@@ -7150,8 +6958,6 @@ packages:
   - libiconv >=1.17,<2.0a0
   - liblzma >=5.6.3,<6.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -7166,8 +6972,6 @@ packages:
   - libiconv >=1.17,<2.0a0
   - liblzma >=5.6.3,<6.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -7182,8 +6986,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -7197,8 +6999,6 @@ packages:
   - libgcc >=13
   constrains:
   - zlib 1.3.1 *_2
-  arch: x86_64
-  platform: linux
   license: Zlib
   license_family: Other
   purls: []
@@ -7211,8 +7011,6 @@ packages:
   - __osx >=10.13
   constrains:
   - zlib 1.3.1 *_2
-  arch: x86_64
-  platform: osx
   license: Zlib
   license_family: Other
   purls: []
@@ -7225,8 +7023,6 @@ packages:
   - __osx >=11.0
   constrains:
   - zlib 1.3.1 *_2
-  arch: arm64
-  platform: osx
   license: Zlib
   license_family: Other
   purls: []
@@ -7241,8 +7037,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - zlib 1.3.1 *_2
-  arch: x86_64
-  platform: win
   license: Zlib
   license_family: Other
   purls: []
@@ -7255,8 +7049,6 @@ packages:
   - __osx >=10.13
   constrains:
   - openmp 19.1.7|19.1.7.*
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: APACHE
   purls: []
@@ -7269,8 +7061,6 @@ packages:
   - __osx >=11.0
   constrains:
   - openmp 19.1.7|19.1.7.*
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: APACHE
   purls: []
@@ -7288,8 +7078,6 @@ packages:
   - clang-tools 19.1.7
   - llvm        19.1.7
   - clang       19.1.7
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -7307,8 +7095,6 @@ packages:
   - llvmdev     19.1.7
   - clang-tools 19.1.7
   - clang       19.1.7
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -7323,8 +7109,6 @@ packages:
   - libllvm19 19.1.7 hc29ff6c_0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -7339,8 +7123,6 @@ packages:
   - libllvm19 19.1.7 hc4b4ae8_0
   - libzlib >=1.3.1,<2.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: arm64
-  platform: osx
   license: Apache-2.0 WITH LLVM-exception
   license_family: Apache
   purls: []
@@ -7372,8 +7154,6 @@ packages:
   depends:
   - m2w64-tk
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: BSD
   purls: []
   size: 158253
@@ -7384,8 +7164,6 @@ packages:
   depends:
   - m2w64-gcc-libs
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 103945
@@ -7395,8 +7173,6 @@ packages:
   md5: db44fde4e735d626b65cef1c6864d9ee
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -7408,8 +7184,6 @@ packages:
   depends:
   - m2w64-gcc-libs
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL
   purls: []
   size: 5684786
@@ -7421,8 +7195,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-libogg
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom:Xiph, LGPL, GPL, FDL
   purls: []
   size: 975426
@@ -7433,8 +7205,6 @@ packages:
   depends:
   - m2w64-gcc-libs-core
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL, LGPL, FDL, custom
   purls: []
   size: 350687
@@ -7448,8 +7218,6 @@ packages:
   - m2w64-gmp
   - m2w64-libwinpthread-git
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL3+, partial:GCCRLE, partial:LGPL2+
   purls: []
   size: 532390
@@ -7461,8 +7229,6 @@ packages:
   - m2w64-gmp
   - m2w64-libwinpthread-git
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL3+, partial:GCCRLE, partial:LGPL2+
   purls: []
   size: 219240
@@ -7475,8 +7241,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-libiconv
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL3, partial:LGPL2.1
   purls: []
   size: 4183235
@@ -7486,8 +7250,6 @@ packages:
   md5: 53a1c73e1e3d185516d7e3af177596d9
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: LGPL3
   purls: []
   size: 743501
@@ -7497,8 +7259,6 @@ packages:
   md5: 10d74053a6ef71d5b241dcb888f26094
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: GPL
   purls: []
   size: 2561280
@@ -7509,8 +7269,6 @@ packages:
   depends:
   - m2w64-gcc-libs
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -7521,8 +7279,6 @@ packages:
   md5: e701397b4fc0cf3fae3d93ab16223206
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: LGPL2, documentation:GPL3
   purls: []
   size: 1540742
@@ -7533,8 +7289,6 @@ packages:
   depends:
   - m2w64-gcc-libs
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom:BSD-like
   purls: []
   size: 666369
@@ -7544,8 +7298,6 @@ packages:
   md5: 6625dc2927c059b2d3c534b95dab5f03
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: BSD
   purls: []
   size: 211843
@@ -7557,8 +7309,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-zlib
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 441535
@@ -7571,8 +7321,6 @@ packages:
   - m2w64-libvorbis
   - m2w64-speex
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: LGPL
   purls: []
   size: 568615
@@ -7586,8 +7334,6 @@ packages:
   - m2w64-xz
   - m2w64-zlib
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -7600,8 +7346,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-libogg
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 549995
@@ -7611,8 +7355,6 @@ packages:
   md5: 774130a326dee16f1ceb05cc687ee4f0
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: MIT, BSD
   purls: []
   size: 31928
@@ -7626,8 +7368,6 @@ packages:
   - m2w64-xz
   - m2w64-zlib
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -7639,8 +7379,6 @@ packages:
   depends:
   - m2w64-gmp
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: LGPL
   purls: []
   size: 301114
@@ -7653,8 +7391,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-wineditline
   - m2w64-zlib
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -7667,8 +7403,6 @@ packages:
   - m2w64-libogg
   - m2w64-speexdsp
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: BSD
   purls: []
   size: 624976
@@ -7679,8 +7413,6 @@ packages:
   depends:
   - m2w64-gcc-libs
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: BSD
   purls: []
   size: 528135
@@ -7692,8 +7424,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-zlib
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 3910918
@@ -7704,8 +7434,6 @@ packages:
   depends:
   - m2w64-tcl
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 2315694
@@ -7716,8 +7444,6 @@ packages:
   depends:
   - m2w64-tk
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: custom
   purls: []
   size: 115750
@@ -7727,8 +7453,6 @@ packages:
   md5: dbf3928aea2832422342ed7cb43c9cdb
   depends:
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: BSD
   purls: []
   size: 48657
@@ -7740,8 +7464,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gettext
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: partial:PublicDomain, partial:LGPL2.1+, partial:GPL2+
   purls: []
   size: 388335
@@ -7752,8 +7474,6 @@ packages:
   depends:
   - m2w64-bzip2
   - msys2-conda-epoch ==20160418
-  arch: x86_64
-  platform: win
   license: ZLIB
   purls: []
   size: 203678
@@ -7764,8 +7484,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -7776,8 +7494,6 @@ packages:
   md5: 59b4ad97bbb36ef5315500d5bde4bcfc
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -7788,8 +7504,6 @@ packages:
   md5: 9f44ef1fea0a25d6a3491c58f3af8460
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: GPL-3.0-or-later
   license_family: GPL
   purls: []
@@ -7855,8 +7569,6 @@ packages:
   - python_abi 3.12.* *_cp312
   constrains:
   - jinja2 >=3.0.0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -7872,8 +7584,6 @@ packages:
   - python_abi 3.12.* *_cp312
   constrains:
   - jinja2 >=3.0.0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -7890,8 +7600,6 @@ packages:
   - python_abi 3.12.* *_cp312
   constrains:
   - jinja2 >=3.0.0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -7909,8 +7617,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - jinja2 >=3.0.0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -8060,8 +7766,6 @@ packages:
   depends:
   - intel-openmp 2024.*
   - tbb 2021.*
-  arch: x86_64
-  platform: win
   license: LicenseRef-IntelSimplifiedSoftwareOct2022
   license_family: Proprietary
   purls: []
@@ -8122,8 +7826,6 @@ packages:
   - __osx >=10.13
   - gmp >=6.3.0,<7.0a0
   - mpfr >=4.2.1,<5.0a0
-  arch: x86_64
-  platform: osx
   license: LGPL-3.0-or-later
   license_family: LGPL
   purls: []
@@ -8136,8 +7838,6 @@ packages:
   - __osx >=11.0
   - gmp >=6.3.0,<7.0a0
   - mpfr >=4.2.1,<5.0a0
-  arch: arm64
-  platform: osx
   license: LGPL-3.0-or-later
   license_family: LGPL
   purls: []
@@ -8149,8 +7849,6 @@ packages:
   depends:
   - __osx >=10.13
   - gmp >=6.3.0,<7.0a0
-  arch: x86_64
-  platform: osx
   license: LGPL-3.0-only
   license_family: LGPL
   purls: []
@@ -8162,8 +7860,6 @@ packages:
   depends:
   - __osx >=11.0
   - gmp >=6.3.0,<7.0a0
-  arch: arm64
-  platform: osx
   license: LGPL-3.0-only
   license_family: LGPL
   purls: []
@@ -8172,8 +7868,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/msys2-conda-epoch-20160418-1.tar.bz2
   sha256: 99358d58d778abee4dca82ad29fb58058571f19b0f86138363c260049d4ac7f1
   md5: b0309b72560df66f71a9d5e34a5efdfa
-  arch: x86_64
-  platform: win
   purls: []
   size: 3227
   timestamp: 1608166968312
@@ -8337,8 +8031,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: X11 AND BSD-3-Clause
   purls: []
   size: 894452
@@ -8348,8 +8040,6 @@ packages:
   md5: 7eb0c4be5e4287a3d6bfef015669a545
   depends:
   - __osx >=10.13
-  arch: x86_64
-  platform: osx
   license: X11 AND BSD-3-Clause
   purls: []
   size: 822835
@@ -8359,8 +8049,6 @@ packages:
   md5: f6f7c5b7d0983be186c46c4f6f8f9af8
   depends:
   - __osx >=11.0
-  arch: arm64
-  platform: osx
   license: X11 AND BSD-3-Clause
   purls: []
   size: 796754
@@ -8445,8 +8133,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - ca-certificates
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -8458,8 +8144,6 @@ packages:
   depends:
   - __osx >=10.13
   - ca-certificates
-  arch: x86_64
-  platform: osx
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -8471,8 +8155,6 @@ packages:
   depends:
   - __osx >=11.0
   - ca-certificates
-  arch: arm64
-  platform: osx
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -8486,8 +8168,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -8915,8 +8595,6 @@ packages:
   - libglib >=2.82.2,<3.0a0
   - libpng >=1.6.45,<1.7.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: LGPL-2.1-or-later
   purls: []
   size: 451406
@@ -8936,8 +8614,6 @@ packages:
   - libglib >=2.82.2,<3.0a0
   - libpng >=1.6.45,<1.7.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 429570
@@ -8957,8 +8633,6 @@ packages:
   - libglib >=2.82.2,<3.0a0
   - libpng >=1.6.45,<1.7.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: LGPL-2.1-or-later
   purls: []
   size: 423919
@@ -8997,8 +8671,6 @@ packages:
   - bzip2 >=1.0.8,<2.0a0
   - libgcc-ng >=12
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -9011,8 +8683,6 @@ packages:
   - __osx >=10.13
   - bzip2 >=1.0.8,<2.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -9025,8 +8695,6 @@ packages:
   - __osx >=11.0
   - bzip2 >=1.0.8,<2.0a0
   - libzlib >=1.3.1,<2.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -9153,8 +8821,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - libstdcxx >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -9166,8 +8832,6 @@ packages:
   depends:
   - __osx >=10.13
   - libcxx >=18
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -9179,8 +8843,6 @@ packages:
   depends:
   - __osx >=11.0
   - libcxx >=18
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -9566,8 +9228,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -9580,8 +9240,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: LGPL-2.1-or-later
   purls: []
   size: 265827
@@ -9693,9 +9351,8 @@ packages:
 - pypi: .
   name: pyfixest
   version: 0.28.0
-  sha256: 241d05c999dbe321ceda8985267399695e3cd4b18c572727896202dc9e2f1c5b
+  sha256: 5851d07de02ae02ce2f59a3d38eb3fd2aaca1874f6068615b8e0dcbcc86e096b
   requires_dist:
-  - lets-plot>=4.0.0
   - scipy>=1.6
   - formulaic>=1.1.0
   - pandas>=1.1.0
@@ -9720,6 +9377,7 @@ packages:
   - pyarrow>=14.0 ; extra == 'dev'
   - jax>=0.4.15 ; extra == 'dev'
   - jaxlib>=0.4.15 ; extra == 'dev'
+  - lets-plot>=4.0.0 ; extra == 'plots'
   - quartodoc>=0.7.2 ; extra == 'docs'
   - jupyterlab>=4.0.12 ; extra == 'docs'
   - jupytext==1.16.1 ; extra == 'docs'
@@ -9731,6 +9389,7 @@ packages:
   - pyarrow>=14.0 ; extra == 'docs'
   - jax>=0.4.15 ; extra == 'docs'
   - jaxlib>=0.4.15 ; extra == 'docs'
+  - lets-plot>=4.0.0 ; extra == 'docs'
   - jax>=0.4.15 ; extra == 'jax'
   - jaxlib>=0.4.15 ; extra == 'jax'
   requires_python: '>=3.9'
@@ -9765,19 +9424,19 @@ packages:
   sha256: bb7b21bec57ecdba3f6f44c856ebebdf6549fd6e80661bd44fd5094236729242
   requires_dist:
   - ordered-set
-  - twine ; extra == 'all'
   - markupsafe==2.0.1 ; extra == 'all'
-  - coverage ; extra == 'all'
-  - sphinx ; extra == 'all'
-  - quantities ; extra == 'all'
-  - isort ; extra == 'all'
-  - jinja2<3.0 ; extra == 'all'
-  - alabaster<0.7.12 ; extra == 'all'
-  - numpy ; extra == 'all'
   - matplotlib ; extra == 'all'
-  - pytest>=4.6 ; extra == 'all'
+  - sphinx ; extra == 'all'
+  - coverage ; extra == 'all'
   - pytest-cov ; extra == 'all'
   - black ; extra == 'all'
+  - quantities ; extra == 'all'
+  - alabaster<0.7.12 ; extra == 'all'
+  - isort ; extra == 'all'
+  - twine ; extra == 'all'
+  - pytest>=4.6 ; extra == 'all'
+  - jinja2<3.0 ; extra == 'all'
+  - numpy ; extra == 'all'
   - sphinx ; extra == 'docs'
   - jinja2<3.0 ; extra == 'docs'
   - markupsafe==2.0.1 ; extra == 'docs'
@@ -9884,8 +9543,6 @@ packages:
   - tzdata
   constrains:
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: linux
   license: Python-2.0
   purls: []
   size: 31565686
@@ -9909,8 +9566,6 @@ packages:
   - tzdata
   constrains:
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: osx
   license: Python-2.0
   purls: []
   size: 13683139
@@ -9934,8 +9589,6 @@ packages:
   - tzdata
   constrains:
   - python_abi 3.12.* *_cp312
-  arch: arm64
-  platform: osx
   license: Python-2.0
   purls: []
   size: 12998673
@@ -9959,8 +9612,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: win
   license: Python-2.0
   purls: []
   size: 15812363
@@ -10034,8 +9685,6 @@ packages:
   md5: 0424ae29b104430108f5218a66db7260
   constrains:
   - python 3.12.* *_cpython
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10047,8 +9696,6 @@ packages:
   md5: c34dd4920e0addf7cfcc725809f25d8e
   constrains:
   - python 3.12.* *_cpython
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10060,8 +9707,6 @@ packages:
   md5: b76f9b1c862128e56ac7aa8cd2333de9
   constrains:
   - python 3.12.* *_cpython
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10073,8 +9718,6 @@ packages:
   md5: e8681f534453af7afab4cd2bc1423eec
   constrains:
   - python 3.12.* *_cpython
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10173,8 +9816,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -10186,8 +9827,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -10199,8 +9838,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -10213,8 +9850,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -10264,8 +9899,6 @@ packages:
   - tktable
   - tzdata >=2024a
   - xorg-libxt
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL
   purls: []
@@ -10313,8 +9946,6 @@ packages:
   - tk >=8.6.13,<8.7.0a0
   - tktable
   - tzdata >=2024a
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL
   purls: []
@@ -10362,8 +9993,6 @@ packages:
   - tk >=8.6.13,<8.7.0a0
   - tktable
   - tzdata >=2024a
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL
   purls: []
@@ -10395,8 +10024,6 @@ packages:
   - m2w64-tktable
   - m2w64-xz
   - m2w64-zlib
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL
   purls: []
@@ -10452,8 +10079,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -10466,8 +10091,6 @@ packages:
   - __osx >=10.13
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10480,8 +10103,6 @@ packages:
   - __osx >=11.0
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10494,8 +10115,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -10508,8 +10127,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10521,8 +10138,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10534,8 +10149,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10548,8 +10161,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -10594,8 +10205,6 @@ packages:
   - r-tibble >=2.1.3
   - r-tidyselect >=1.1.0
   - r-vctrs >=0.3.5
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -10619,8 +10228,6 @@ packages:
   - r-tibble >=2.1.3
   - r-tidyselect >=1.1.0
   - r-vctrs >=0.3.5
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10644,8 +10251,6 @@ packages:
   - r-tibble >=2.1.3
   - r-tidyselect >=1.1.0
   - r-vctrs >=0.3.5
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10669,8 +10274,6 @@ packages:
   - r-tibble >=2.1.3
   - r-tidyselect >=1.1.0
   - r-vctrs >=0.3.5
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -10707,8 +10310,6 @@ packages:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
   - r-rlang >=0.3.0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -10721,8 +10322,6 @@ packages:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
   - r-rlang >=0.3.0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10735,8 +10334,6 @@ packages:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
   - r-rlang >=0.3.0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10750,8 +10347,6 @@ packages:
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
   - r-rlang >=0.3.0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -10763,8 +10358,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -10776,8 +10369,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -10789,8 +10380,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -10803,8 +10392,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -10817,8 +10404,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -10831,8 +10416,6 @@ packages:
   - __osx >=10.13
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10845,8 +10428,6 @@ packages:
   - __osx >=11.0
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -10859,8 +10440,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -10881,8 +10460,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -10902,8 +10479,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -10923,8 +10498,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -10943,8 +10516,6 @@ packages:
   - r-rcpp >=1.0.5
   - r-sandwich
   - r-stringmagic
-  arch: x86_64
-  platform: win
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -11041,8 +10612,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -11054,8 +10623,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11067,8 +10634,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11081,8 +10646,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -11123,8 +10686,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -11137,8 +10698,6 @@ packages:
   - __osx >=10.13
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11151,8 +10710,6 @@ packages:
   - __osx >=11.0
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11165,8 +10722,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -11198,8 +10753,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11211,8 +10764,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11224,8 +10775,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11238,8 +10787,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11277,8 +10824,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -11290,8 +10835,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11303,8 +10846,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11317,8 +10858,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -11330,8 +10869,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11343,8 +10880,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11356,8 +10891,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11370,8 +10903,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11386,8 +10917,6 @@ packages:
   - liblapack >=3.9.0,<4.0a0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11402,8 +10931,6 @@ packages:
   - liblapack >=3.9.0,<4.0a0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11418,8 +10945,6 @@ packages:
   - liblapack >=3.9.0,<4.0a0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11435,8 +10960,6 @@ packages:
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
   - r-lattice
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11454,8 +10977,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - r-matrix
   - r-nlme >=3.1_64
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11472,8 +10993,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - r-matrix
   - r-nlme >=3.1_64
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11490,8 +11009,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - r-matrix
   - r-nlme >=3.1_64
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11508,8 +11025,6 @@ packages:
   - r-base >=4.1,<4.2.0a0
   - r-matrix
   - r-nlme >=3.1_64
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11546,8 +11061,6 @@ packages:
   - libgfortran5 >=12.3.0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11563,8 +11076,6 @@ packages:
   - libgfortran5 >=13.2.0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11580,8 +11091,6 @@ packages:
   - libgfortran5 >=13.2.0
   - r-base >=4.3,<4.4.0a0
   - r-lattice
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11595,8 +11104,6 @@ packages:
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
   - r-lattice
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -11690,8 +11197,6 @@ packages:
   - r-magrittr >=1.5
   - r-rlang >=0.4.10
   - r-vctrs >=0.5
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -11708,8 +11213,6 @@ packages:
   - r-magrittr >=1.5
   - r-rlang >=0.4.10
   - r-vctrs >=0.5
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11726,8 +11229,6 @@ packages:
   - r-magrittr >=1.5
   - r-rlang >=0.4.10
   - r-vctrs >=0.5
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -11745,8 +11246,6 @@ packages:
   - r-magrittr >=1.5
   - r-rlang >=0.4.10
   - r-vctrs >=0.5
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -11800,8 +11299,6 @@ packages:
   - libgcc >=13
   - libstdcxx >=13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11814,8 +11311,6 @@ packages:
   - __osx >=10.13
   - libcxx >=18
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11828,8 +11323,6 @@ packages:
   - __osx >=11.0
   - libcxx >=18
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11842,8 +11335,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -11857,8 +11348,6 @@ packages:
   - libgcc >=13
   - libstdcxx >=13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -11871,8 +11360,6 @@ packages:
   - __osx >=10.13
   - libcxx >=18
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -11885,8 +11372,6 @@ packages:
   - __osx >=11.0
   - libcxx >=18
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -11899,8 +11384,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: GPL-3.0-only
   license_family: GPL3
   purls: []
@@ -11971,8 +11454,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: FOSS
   license_family: OTHER
   purls: []
@@ -11986,8 +11467,6 @@ packages:
   - icu >=75.1,<76.0a0
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: FOSS
   license_family: OTHER
   purls: []
@@ -12001,8 +11480,6 @@ packages:
   - icu >=75.1,<76.0a0
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: FOSS
   license_family: OTHER
   purls: []
@@ -12019,8 +11496,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.38.33130
-  arch: x86_64
-  platform: win
   license: FOSS
   license_family: OTHER
   purls: []
@@ -12035,8 +11510,6 @@ packages:
   - libstdcxx-ng >=12
   - r-base >=4.3,<4.4.0a0
   - r-rcpp >=1.0.5
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -12050,8 +11523,6 @@ packages:
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
   - r-rcpp >=1.0.5
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -12065,8 +11536,6 @@ packages:
   - libcxx >=16
   - r-base >=4.3,<4.4.0a0
   - r-rcpp >=1.0.5
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -12083,8 +11552,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.38.33130
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL2
   purls: []
@@ -12138,8 +11605,6 @@ packages:
   - r-pkgconfig
   - r-rlang >=1.0.2
   - r-vctrs >=0.4.2
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -12158,8 +11623,6 @@ packages:
   - r-pkgconfig
   - r-rlang >=1.0.2
   - r-vctrs >=0.4.2
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12178,8 +11641,6 @@ packages:
   - r-pkgconfig
   - r-rlang >=1.0.2
   - r-vctrs >=0.4.2
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12199,8 +11660,6 @@ packages:
   - r-pkgconfig
   - r-rlang >=1.0.2
   - r-vctrs >=0.4.2
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -12225,8 +11684,6 @@ packages:
   - r-tibble >=2.1.1
   - r-tidyselect >=1.2.0
   - r-vctrs >=0.5.2
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -12250,8 +11707,6 @@ packages:
   - r-tibble >=2.1.1
   - r-tidyselect >=1.2.0
   - r-vctrs >=0.5.2
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12275,8 +11730,6 @@ packages:
   - r-tibble >=2.1.1
   - r-tidyselect >=1.2.0
   - r-vctrs >=0.5.2
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12300,8 +11753,6 @@ packages:
   - r-tibble >=2.1.1
   - r-tidyselect >=1.2.0
   - r-vctrs >=0.5.2
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -12334,8 +11785,6 @@ packages:
   - r-rlang >=1.0.4
   - r-vctrs >=0.4.1
   - r-withr
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -12347,8 +11796,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: linux
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -12360,8 +11807,6 @@ packages:
   depends:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
-  arch: x86_64
-  platform: osx
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -12373,8 +11818,6 @@ packages:
   depends:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
-  arch: arm64
-  platform: osx
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -12387,8 +11830,6 @@ packages:
   - m2w64-gcc-libs
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -12406,8 +11847,6 @@ packages:
   - r-glue
   - r-lifecycle >=1.0.3
   - r-rlang >=1.0.6
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -12424,8 +11863,6 @@ packages:
   - r-glue
   - r-lifecycle >=1.0.3
   - r-rlang >=1.0.6
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12442,8 +11879,6 @@ packages:
   - r-glue
   - r-lifecycle >=1.0.3
   - r-rlang >=1.0.6
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -12460,8 +11895,6 @@ packages:
   - r-glue
   - r-lifecycle >=1.0.3
   - r-rlang >=1.0.6
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -12514,8 +11947,6 @@ packages:
   - libgcc-ng >=12
   - r-base >=4.3,<4.4.0a0
   - r-lattice >=0.20_27
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -12528,8 +11959,6 @@ packages:
   - __osx >=10.13
   - r-base >=4.3,<4.4.0a0
   - r-lattice >=0.20_27
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -12542,8 +11971,6 @@ packages:
   - __osx >=11.0
   - r-base >=4.3,<4.4.0a0
   - r-lattice >=0.20_27
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -12557,8 +11984,6 @@ packages:
   - m2w64-gcc-libs-core
   - r-base >=4.1,<4.2.0a0
   - r-lattice >=0.20_27
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL3
   purls: []
@@ -12570,8 +11995,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - ncurses >=6.3,<7.0a0
-  arch: x86_64
-  platform: linux
   license: GPL-3.0-only
   license_family: GPL
   purls: []
@@ -12582,8 +12005,6 @@ packages:
   md5: f17f77f2acf4d344734bda76829ce14e
   depends:
   - ncurses >=6.3,<7.0a0
-  arch: x86_64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL
   purls: []
@@ -12594,8 +12015,6 @@ packages:
   md5: 8cbb776a2f641b943d413b3e19df71f4
   depends:
   - ncurses >=6.3,<7.0a0
-  arch: arm64
-  platform: osx
   license: GPL-3.0-only
   license_family: GPL
   purls: []
@@ -12677,8 +12096,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - simplegeneric
   - tzlocal
-  arch: x86_64
-  platform: linux
   license: GPL-2.0-or-later
   license_family: GPL
   purls:
@@ -12697,8 +12114,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - simplegeneric
   - tzlocal
-  arch: x86_64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL
   purls:
@@ -12718,8 +12133,6 @@ packages:
   - r-base >=4.3,<4.4.0a0
   - simplegeneric
   - tzlocal
-  arch: arm64
-  platform: osx
   license: GPL-2.0-or-later
   license_family: GPL
   purls:
@@ -12741,8 +12154,6 @@ packages:
   - r-base >=4.1,<4.2.0a0
   - simplegeneric
   - tzlocal
-  arch: x86_64
-  platform: win
   license: GPL-2.0-or-later
   license_family: GPL
   purls:
@@ -13202,8 +12613,6 @@ packages:
   md5: 7362f0042e95681f5d371c46c83ebd08
   depends:
   - libgcc-ng >=7.5.0
-  arch: x86_64
-  platform: linux
   license: GPL-3
   purls: []
   size: 270762
@@ -13282,8 +12691,6 @@ packages:
   md5: fbfb84b9de9a6939cb165c02c69b1865
   depends:
   - openssl >=3.0.0,<4.0a0
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -13294,8 +12701,6 @@ packages:
   md5: 4a2cac04f86a4540b8c9b8d8f597848f
   depends:
   - openssl >=3.0.0,<4.0a0
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls: []
@@ -13505,8 +12910,6 @@ packages:
   - __osx >=10.13
   - libcxx >=17.0.0.a0
   - ncurses >=6.5,<7.0a0
-  arch: x86_64
-  platform: osx
   license: NCSA
   license_family: MIT
   purls: []
@@ -13519,8 +12922,6 @@ packages:
   - __osx >=11.0
   - libcxx >=17.0.0.a0
   - ncurses >=6.5,<7.0a0
-  arch: arm64
-  platform: osx
   license: NCSA
   license_family: MIT
   purls: []
@@ -13534,8 +12935,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -13591,8 +12990,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: linux
   license: TCL
   license_family: BSD
   purls: []
@@ -13603,8 +13000,6 @@ packages:
   md5: bf830ba5afc507c6232d4ef0fb1a882d
   depends:
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: osx
   license: TCL
   license_family: BSD
   purls: []
@@ -13615,8 +13010,6 @@ packages:
   md5: b50a57ba89c32b62428b71a875291c9b
   depends:
   - libzlib >=1.2.13,<2.0.0a0
-  arch: arm64
-  platform: osx
   license: TCL
   license_family: BSD
   purls: []
@@ -13629,8 +13022,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: TCL
   license_family: BSD
   purls: []
@@ -13642,8 +13033,6 @@ packages:
   depends:
   - libgcc-ng >=12
   - tk >=8.6.13,<8.7.0a0
-  arch: x86_64
-  platform: linux
   license: TCL
   purls: []
   size: 91641
@@ -13654,8 +13043,6 @@ packages:
   depends:
   - __osx >=10.13
   - tk >=8.6.13,<8.7.0a0
-  arch: x86_64
-  platform: osx
   license: TCL
   purls: []
   size: 81347
@@ -13666,8 +13053,6 @@ packages:
   depends:
   - __osx >=11.0
   - tk >=8.6.13,<8.7.0a0
-  arch: arm64
-  platform: osx
   license: TCL
   purls: []
   size: 79824
@@ -13767,8 +13152,6 @@ packages:
   depends:
   - python >=3.12,<3.13.0a0
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls:
@@ -13781,8 +13164,6 @@ packages:
   depends:
   - python >=3.12,<3.13.0a0
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: osx
   license: MIT
   license_family: MIT
   purls:
@@ -13796,8 +13177,6 @@ packages:
   - python >=3.12,<3.13.0a0
   - python >=3.12,<3.13.0a0 *_cpython
   - python_abi 3.12.* *_cp312
-  arch: arm64
-  platform: osx
   license: MIT
   license_family: MIT
   purls:
@@ -13811,8 +13190,6 @@ packages:
   - python >=3.12,<3.13.0a0
   - python-tzdata
   - python_abi 3.12.* *_cp312
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls:
@@ -13824,8 +13201,6 @@ packages:
   md5: 6797b005cd0f439c4c5c9ac565783700
   constrains:
   - vs2015_runtime >=14.29.30037
-  arch: x86_64
-  platform: win
   license: LicenseRef-MicrosoftWindowsSDK10
   purls: []
   size: 559710
@@ -13872,8 +13247,6 @@ packages:
   md5: 00cf3a61562bd53bd5ea99e6888793d0
   depends:
   - vc14_runtime >=14.40.33810
-  arch: x86_64
-  platform: win
   track_features:
   - vc14
   license: BSD-3-Clause
@@ -13888,8 +13261,6 @@ packages:
   - ucrt >=10.0.20348.0
   constrains:
   - vs2015_runtime 14.42.34433.* *_24
-  arch: x86_64
-  platform: win
   license: LicenseRef-MicrosoftVisualCpp2015-2022Runtime
   license_family: Proprietary
   purls: []
@@ -13929,8 +13300,6 @@ packages:
   md5: 117fcc5b86c48f3b322b0722258c7259
   depends:
   - vc14_runtime >=14.42.34433
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -14038,8 +13407,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14053,8 +13420,6 @@ packages:
   - libgcc >=13
   - libuuid >=2.38.1,<3.0a0
   - xorg-libice >=1.1.2,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14067,8 +13432,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - libxcb >=1.17.0,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14080,8 +13443,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14093,8 +13454,6 @@ packages:
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14107,8 +13466,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - xorg-libx11 >=1.8.10,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14121,8 +13478,6 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   - xorg-libx11 >=1.8.10,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14137,8 +13492,6 @@ packages:
   - xorg-libice >=1.1.1,<2.0a0
   - xorg-libsm >=1.2.4,<2.0a0
   - xorg-libx11 >=1.8.10,<2.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   purls: []
@@ -14161,8 +13514,6 @@ packages:
   depends:
   - __osx >=10.13
   - libzlib 1.3.1 hd23fc13_2
-  arch: x86_64
-  platform: osx
   license: Zlib
   license_family: Other
   purls: []
@@ -14174,8 +13525,6 @@ packages:
   depends:
   - __osx >=11.0
   - libzlib 1.3.1 h8359307_2
-  arch: arm64
-  platform: osx
   license: Zlib
   license_family: Other
   purls: []
@@ -14188,8 +13537,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -14201,8 +13548,6 @@ packages:
   depends:
   - __osx >=10.9
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -14214,8 +13559,6 @@ packages:
   depends:
   - __osx >=11.0
   - libzlib >=1.2.13,<2.0.0a0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls: []
