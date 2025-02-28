@@ -28,9 +28,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
 
-      - uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          pixi-version: v0.39.4
+          pixi-version: v0.41.4
           cache: true
 
       - name: set numba parallel flags
@@ -91,11 +91,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
 
-      - uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          pixi-version: v0.39.4
+          pixi-version: v0.41.4
           cache: true
-
 
       - name: set numba parallel flags
         run: |
@@ -136,9 +135,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          pixi-version: v0.39.4
+          pixi-version: v0.41.4
           cache: true
 
       - name: Set up Quarto

@@ -11,7 +11,6 @@ readme = "README.md"
 license = { text = "MIT" }
 
 dependencies = [
-  "lets-plot>=4.0.0",
   "scipy>=1.6",
   "formulaic>=1.1.0",
   "pandas>=1.1.0",
@@ -45,6 +44,10 @@ dev = [
   "jaxlib>=0.4.15",
 ]
 
+plots = [
+  "lets-plot>=4.0.0",
+]
+
 docs = [
   "quartodoc>=0.7.2",
   "jupyterlab>=4.0.12",
@@ -57,7 +60,7 @@ docs = [
   "pyarrow>=14.0",
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
-
+  "lets-plot>=4.0.0",
 ]
 
 jax = [
@@ -85,12 +88,15 @@ dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
+plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
 tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
 tests-slow = "pytest tests -n 4 -m slow --cov=./ --cov-report=xml"
+tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
+tests-plots = "pixi run --environment plots pytest tests/test_plots.py -n 4"
 tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"

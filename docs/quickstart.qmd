@@ -31,16 +31,21 @@ In this "quick start" guide, we will show you how to estimate a fixed effect mod
 In a first step, we load the module and some synthetic example data:
 
 ```{python}
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from lets_plot import LetsPlot
+try:
+    from lets_plot import LetsPlot
+    _HAS_LETS_PLOT = True
+except ImportError:
+    _HAS_LETS_PLOT = False
+
 from marginaleffects import slopes, avg_slopes
 
 import pyfixest as pf
 
-LetsPlot.setup_html()
+if _HAS_LETS_PLOT:
+    LetsPlot.setup_html()
 
 plt.style.use("seaborn-v0_8")
 
@@ -225,7 +230,7 @@ The standard errors of the coefficients are crucial for inference. They tell us 
 - `iid`: assumes that the error variance is spherical, i.e. errors are homoskedastic and not correlated (independent and identically distributed errors have a spherical error variance).
 - `HC1-3`: heteroskedasticity-robust standard errors according to White (1980) and MacKinnon and White (1985). See [Econometric Computing with HC and HAC
 Covariance Matrix Estimators](https://cran.r-project.org/web/packages/sandwich/vignettes/sandwich.pdf) from the [`sandwich`](https://cran.r-project.org/web/packages/sandwich/) package for more details.
-- `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner’s Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{"CRV1": "clustervar"}`.
+- `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner's Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{"CRV1": "clustervar"}`.
 
 Inference can be adjusted "on-the-fly" via the `.vcov()` method:
 
