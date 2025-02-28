@@ -20,6 +20,7 @@ try:
         xlab,
         ylab,
     )
+
     _HAS_LETS_PLOT = True
 except ImportError:
     _HAS_LETS_PLOT = False
