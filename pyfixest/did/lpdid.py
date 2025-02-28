@@ -7,7 +7,7 @@ from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.literals import VcovTypeOptions
-from pyfixest.report.visualize import _coefplot
+from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
 
 
 class LPDID(DID):
@@ -141,7 +141,7 @@ class LPDID(DID):
         rotate_xticks: int = 0,
         title: str = "LPDID Event Study Estimate",
         coord_flip: bool = False,
-        plot_backend: str = "lets_plot",
+        plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     ):
         """
         Create coefficient plots.
@@ -170,9 +170,9 @@ class LPDID(DID):
         Returns
         -------
         lets-plot figure
-            A lets-plot figure with coefficient estimates and confidence intervals.
+            A lets-plot or matplotlib figure with coefficient estimates and confidence intervals.
         """
-        df = self._coeftable.copy()
+        df = self._coeftable.copy().reset_index()
         df["fml"] = "lpdid"
 
         return _coefplot(

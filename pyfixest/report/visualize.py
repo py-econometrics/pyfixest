@@ -3,22 +3,29 @@ from typing import Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from lets_plot import (
-    LetsPlot,
-    aes,
-    coord_flip,
-    element_text,
-    geom_errorbar,
-    geom_hline,
-    geom_point,
-    geom_vline,
-    ggplot,
-    ggsize,
-    ggtitle,
-    position_dodge,
-    theme,
-    ylab,
-)
+
+# Make lets-plot an optional dependency
+try:
+    from lets_plot import (
+        LetsPlot,
+        aes,
+        coord_flip,
+        element_text,
+        geom_errorbar,
+        geom_hline,
+        geom_point,
+        geom_vline,
+        ggplot,
+        ggsize,
+        ggtitle,
+        position_dodge,
+        theme,
+        ylab,
+    )
+
+    _HAS_LETS_PLOT = True
+except ImportError:
+    _HAS_LETS_PLOT = False
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
@@ -32,8 +39,9 @@ ModelInputType = Union[
     FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
 ]
 
-
-LetsPlot.setup_html()
+# Only setup lets-plot if it's available
+if _HAS_LETS_PLOT:
+    LetsPlot.setup_html()
 
 
 def set_figsize(
@@ -60,6 +68,11 @@ def set_figsize(
     if plot_backend == "matplotlib":
         return (10, 6)
     elif plot_backend == "lets_plot":
+        if not _HAS_LETS_PLOT:
+            raise ImportError(
+                "The 'lets_plot' package is required for the 'lets_plot' backend. "
+                "Please install it with 'pip install lets-plot' or use the 'matplotlib' backend."
+            )
         return (500, 300)
     else:
         raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
@@ -77,7 +90,7 @@ def iplot(
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
-    plot_backend: str = "lets_plot",
+    plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     labels: Optional[dict] = None,
     rename_models: Optional[dict[str, str]] = None,
     ax: Optional[plt.Axes] = None,
@@ -124,7 +137,9 @@ def iplot(
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use between "lets_plot" (default) and "matplotlib".
+        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
+        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
+        to install it or use "matplotlib" instead.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
@@ -141,7 +156,7 @@ def iplot(
     Returns
     -------
     object
-        A lets-plot figure.
+        A plot figure from the specified backend.
 
     Examples
     --------
@@ -250,7 +265,7 @@ def coefplot(
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: bool = False,
-    plot_backend: str = "lets_plot",
+    plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     labels: Optional[dict] = None,
     joint: Optional[Union[str, bool]] = None,
     seed: Optional[int] = None,
@@ -296,7 +311,9 @@ def coefplot(
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use between "lets_plot" (default) and "matplotlib".
+        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
+        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
+        to install it or use "matplotlib" instead.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
@@ -313,7 +330,7 @@ def coefplot(
     Returns
     -------
     object
-        A lets-plot figure.
+        A plot figure from the specified backend.
 
     Examples
     --------
@@ -396,6 +413,11 @@ def _coefplot(plot_backend, *, figsize, **plot_kwargs):
     """Coefplot function that dispatches to the correct plotting backend."""
     figsize = set_figsize(figsize, plot_backend)
     if plot_backend == "lets_plot":
+        if not _HAS_LETS_PLOT:
+            raise ImportError(
+                "The 'lets_plot' package is required for the 'lets_plot' backend. "
+                "Please install it with 'pip install lets-plot' or use the 'matplotlib' backend."
+            )
         return _coefplot_lets_plot(figsize=figsize, **plot_kwargs)
     elif plot_backend == "matplotlib":
         return _coefplot_matplotlib(figsize=figsize, **plot_kwargs)

@@ -63,6 +63,14 @@ or the development version from github by running
 python -m pip install git+https://github.com/py-econometrics/pyfixest
 ```
 
+For visualization features using the lets-plot backend, install the optional dependency:
+
+```py
+python -m pip install pyfixest[plots]
+```
+
+Note that matplotlib is included by default, so you can always use the matplotlib backend for plotting even without installing the optional lets-plot dependency.
+
 ## Benchmarks
 
 All benchmarks follow the [fixest
