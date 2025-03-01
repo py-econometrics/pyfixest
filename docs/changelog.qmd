@@ -25,6 +25,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   )
   ```
 
+- We add support for standard error of predictions for OLS models without fixed effects. As a default, the predict model now returns a `pd.DataFrame`
+  instead of a `np.ndarray`. If the argument `se_fit` is set to `True`, the returned data frame will contain the prediction standard errors and CIs as
+  additional columns.
+
 ## PyFixest 0.28.0
 
 ### New features and bug fixes

@@ -2,15 +2,15 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+import statsmodels.formula.api as smf
 from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation.estimation import feols, fepois
+import pyfixest as pf
 from pyfixest.utils.dev_utils import _extract_variable_level
 from pyfixest.utils.set_rpy2_path import update_r_paths
-from pyfixest.utils.utils import get_data
 
 update_r_paths()
 
@@ -22,7 +22,7 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = get_data(seed=65714, model="Fepois")
+    data = pf.get_data(seed=65714, model="Fepois")
     data = data.dropna()
 
     return data
@@ -48,8 +48,8 @@ def test_ols_prediction_internally(data, fml, weights):
     -----
     Currently only for OLS.
     """
-    # predict via feols, without fixed effect
-    mod = feols(fml=fml, data=data, vcov="iid", weights=weights)
+    # predict via pf.feols, without fixed effect
+    mod = pf.feols(fml=fml, data=data, vcov="iid", weights=weights)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)
     np.allclose(original_prediction, updated_prediction)
@@ -57,19 +57,18 @@ def test_ols_prediction_internally(data, fml, weights):
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
     # now expect error with updated predicted being a subset of data
-    with pytest.raises(ValueError):
-        updated_prediction = mod.predict(newdata=data.iloc[0:100, :]).yhat
-        np.allclose(original_prediction, updated_prediction)
+    updated_prediction2 = mod.predict(newdata=data.iloc[0:100, :])
+    assert not updated_prediction2.equals(updated_prediction)
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
     with pytest.raises(TypeError):
-        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)
     with pytest.raises(TypeError):
-        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict()
 
 
@@ -83,8 +82,8 @@ def test_poisson_prediction_internally(data, weights, fml):
 )
 def test_vs_fixest(data, fml):
     """Test predict and resid methods against fixest."""
-    feols_mod = feols(fml=fml, data=data, vcov="HC1")
-    fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
+    feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
+    fepois_mod = pf.fepois(fml=fml, data=data, vcov="HC1")
 
     data2 = data.copy()[1:500]
 
@@ -171,11 +170,11 @@ def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
     # NaNs in depvar, covar and fixed effects
-    data = get_data()
+    data = pf.get_data()
 
     # test 1
     fml = "Y ~ X1 + X2 | f1"
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
@@ -188,7 +187,7 @@ def test_predict_nas():
     newdata.loc[199, "f1"] = np.nan
 
     fml = "Y ~ X1 + X2 | f1"
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=newdata).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=newdata)
@@ -205,7 +204,7 @@ def test_predict_nas():
 
     # test 3
     fml = "Y ~ X1 + X2 | f1 "
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=data).yhat
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
@@ -225,7 +224,7 @@ def test_predict_nas():
 def test_new_fixef_level(data, fml):
     data2 = data.copy()[1:500]
 
-    feols_mod = feols(fml=fml, data=data, vcov="HC1")
+    feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
     # fixest estimation
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
@@ -253,7 +252,7 @@ def test_categorical_covariate_predict():
 
     df_sub = df.query("x == 1 or x == 2 or x == 3").copy()
 
-    py_fit = feols("y ~ C(x, contr.treatment(base=1))", df)
+    py_fit = pf.feols("y ~ C(x, contr.treatment(base=1))", df)
     py_predict = py_fit.predict(df_sub).yhat
 
     r_predict = np.array(
@@ -308,3 +307,32 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f4)", "1")
     var = "C(f5)[1.0]"
     assert _extract_variable_level(var) == ("C(f5)", "1.0")
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1*X2",
+        "Y ~ X1 + X2 + C(f1)",
+        # with fixed effects
+        "Y ~ X1 + X2 | f1",
+        "Y ~ X1 + X2 | f1 + f2",
+    ],
+)
+def test_prediction_se(fml):
+    """Compare the standard error of the prediction to statsmodels.get_prediction()."""
+    data = pf.get_data().dropna()
+
+    fit = pf.feols(fml, data=data)
+    if fit._has_fixef:
+        with pytest.raises(NotImplementedError):
+            prediction_se = fit.predict(se_fit=True)["se"]
+    else:
+        prediction_se = fit.predict(se_fit=True)["se"]
+
+        model = smf.ols(fml, data=data).fit()
+        predictions = model.get_prediction()
+        prediction_se_sm = predictions.var_pred_mean
+
+        np.testing.assert_allclose(prediction_se, np.sqrt(prediction_se_sm))

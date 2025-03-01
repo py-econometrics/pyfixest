@@ -393,7 +393,9 @@ class Feglm(Feols, ABC):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        alpha: float = 0.05,
+    ) -> pd.DataFrame:
         """
         Return predicted values from regression model.
 
@@ -428,17 +430,24 @@ class Feglm(Feols, ABC):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if prediction_uncertainty is not None.
 
         Returns
         -------
-        np.ndarray
-            A flat array with the predicted values of the regression model.
+         pd.DataFrame
+            Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
+            only set if se_fit is set to True.
         """
-        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        df_predict = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
-            yhat = self._get_mu(theta=yhat)
+            df_predict["yhat"] = self._get_mu(theta=df_predict["yhat"].to_numpy())
 
-        return yhat
+        return df_predict
 
     @abstractmethod
     def _check_dependent_variable(self):

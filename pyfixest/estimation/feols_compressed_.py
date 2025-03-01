@@ -359,7 +359,9 @@ class FeolsCompressed(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        alpha: float = 0.05,
+    ) -> pd.DataFrame:
         """
         Compute predicted values.
 
@@ -373,11 +375,19 @@ class FeolsCompressed(Feols):
             The relative tolerance.
         type : str
             The type of prediction.
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if prediction_uncertainty is not None.
+
 
         Returns
         -------
-        np.ndarray
-            The predicted values. If newdata is None, the predicted values are based on the uncompressed data set.
+        pd.DataFrame
+                Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
+                only set if se_fit is set to True.
         """
         raise NotImplementedError(
             "Predictions are not supported for compressed regression."
