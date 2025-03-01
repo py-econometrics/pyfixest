@@ -90,6 +90,7 @@ jax = { features = ["jax"], solve-group = "default" }
 tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
 tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-fixest = "pytest tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
 tests-slow = "pytest tests -n 4 -m slow --cov=./ --cov-report=xml"
 tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"

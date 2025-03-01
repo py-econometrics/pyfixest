@@ -443,6 +443,11 @@ class Feglm(Feols, ABC):
             Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
             only set if se_fit is set to True.
         """
+        if se_fit:
+            raise NotImplementedError(
+                "Prediction with standard errors is not implemented for Poisson regression."
+            )
+
         df_predict = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
             df_predict["yhat"] = self._get_mu(theta=df_predict["yhat"].to_numpy())

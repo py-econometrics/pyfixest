@@ -25,10 +25,14 @@ def get_design_matrix_and_yhat(
         The fitted Feols model (self inside Feols).
     newdata : Optional DataFrame
         The new data on which predictions are made, or None for original data.
-    atol : float
-        ...
-    btol : float
-        ...
+    atol : Float, default 1e-6
+        Stopping tolerance for scipy.sparse.linalg.lsqr().
+        See https://docs.scipy.org/doc/
+            scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+    btol : Float, default 1e-6
+        Another stopping tolerance for scipy.sparse.linalg.lsqr().
+        See https://docs.scipy.org/doc/
+
 
     Returns
     -------

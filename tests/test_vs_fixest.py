@@ -284,7 +284,7 @@ def test_single_fit_feols(
         py_resid = mod.resid()
         r_resid = stats.residuals(r_fixest)
 
-        py_predict = mod.predict()
+        py_predict = mod.predict()["yhat"]
         r_predict = stats.predict(r_fixest)
 
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
@@ -309,7 +309,7 @@ def test_single_fit_feols(
         else:
             py_predict_newsample = mod.predict(
                 newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
-            )
+            )["yhat"]
             r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
 
             check_absolute_diff(
@@ -384,7 +384,7 @@ def test_single_fit_feols_empty(
 
     py_nobs = mod._N
     py_resid = mod.resid()
-    py_predict = mod.predict()
+    py_predict = mod.predict()["yhat"]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
     r_resid = stats.residuals(r_fixest)
@@ -488,8 +488,8 @@ def test_single_fit_fepois(
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
-        py_predict_response = mod.predict(type="response")
-        py_predict_link = mod.predict(type="link")
+        py_predict_response = mod.predict(type="response")["yhat"]
+        py_predict_link = mod.predict(type="link")["yhat"]
         r_predict_response = stats.predict(r_fixest, type="response")
         r_predict_link = stats.predict(r_fixest, type="link")
         check_absolute_diff(
@@ -651,7 +651,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare predictions - link
-        py_predict = fit_py.predict(type="link")
+        py_predict = fit_py.predict(type="link")["yhat"]
         r_predict = stats.predict(fit_r, type="link")
         check_absolute_diff(
             py_predict[0:5],
@@ -661,7 +661,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare predictions - response
-        py_predict = fit_py.predict(type="response")
+        py_predict = fit_py.predict(type="response")["yhat"]
         r_predict = stats.predict(fit_r, type="response")
         check_absolute_diff(
             py_predict[0:5],
@@ -671,7 +671,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare with newdata - link
-        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="link")
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="link")["yhat"]
         r_predict_new = stats.predict(fit_r, newdata=data_r.iloc[0:100], type="link")
         check_absolute_diff(
             py_predict_new[0:5],
@@ -681,7 +681,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare with newdata - response
-        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")[
+            "yhat"
+        ]
         r_predict_new = stats.predict(
             fit_r, newdata=data_r.iloc[0:100], type="response"
         )

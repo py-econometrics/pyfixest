@@ -427,6 +427,12 @@ class Fepois(Feols):
             raise NotImplementedError(
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
+
+        if se_fit:
+            raise NotImplementedError(
+                "Prediction with standard errors is not implemented for Poisson regression."
+            )
+
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 

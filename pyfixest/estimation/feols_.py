@@ -1806,19 +1806,32 @@ class Feols:
         columns = ["yhat", "se", "0.05%", "0.95%"] if se_fit else ["yhat"]
         prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
 
-        y_hat, X, X_index = get_design_matrix_and_yhat(
-            model=self,
-            newdata=newdata if newdata is not None else None,
-            atol=atol,
-            btol=btol,
-        )
+        if newdata is None:
+            if type == "link" or self._method == "feols":
+                prediction_df["yhat"] = self._Y_hat_link
+            else:
+                prediction_df["yhat"] = self._Y_hat_response
 
-        if newdata is not None:
-            y_hat += _get_fixed_effects_prediction_component(
-                model=self, newdata=newdata, atol=atol, btol=btol
+            # note: no need to worry about fixed effects, as not supported with
+            # prediction errors; will throw error later
+            X = self._X
+            X_index = np.arange(X.shape[0])
+
+        else:
+            y_hat, X, X_index = get_design_matrix_and_yhat(
+                model=self,
+                newdata=newdata if newdata is not None else None,
+                atol=atol,
+                btol=btol,
             )
 
-        prediction_df["yhat"] = y_hat.flatten()
+            if newdata is not None:
+                y_hat += _get_fixed_effects_prediction_component(
+                    model=self, newdata=newdata, atol=atol, btol=btol
+                )
+
+            prediction_df["yhat"] = y_hat.flatten()
+
         if se_fit:
             if self._has_fixef:
                 raise NotImplementedError(
