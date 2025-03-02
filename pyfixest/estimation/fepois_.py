@@ -10,7 +10,7 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
@@ -369,8 +369,9 @@ class Fepois(Feols):
         btol: float = 1e-6,
         type: PredictionType = "link",
         se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
         alpha: float = 0.05,
-    ) -> pd.DataFrame:
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Return predicted values from regression model.
 
@@ -408,16 +409,18 @@ class Fepois(Feols):
         se_fit: Optional[bool], optional
             If True, the standard error of the prediction is computed. Only feasible
             for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if prediction_uncertainty is not None.
-
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        pd.DataFrame
-                Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
-                only set if se_fit is set to True.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         if self._has_fixef:
             raise NotImplementedError(
@@ -658,7 +661,7 @@ def _check_for_separation_ir(
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         fitted = feols(fml_separation, data=tmp, weights="omega")
         tmp["Uhat"] = pd.Series(
-            data=fitted.predict()["yhat"].values, index=fitted._data.index, name="Uhat"
+            data=fitted.predict().values, index=fitted._data.index, name="Uhat"
         )
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero

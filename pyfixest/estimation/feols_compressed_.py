@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -360,8 +360,9 @@ class FeolsCompressed(Feols):
         btol: float = 1e-6,
         type: PredictionType = "link",
         se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
         alpha: float = 0.05,
-    ) -> pd.DataFrame:
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Compute predicted values.
 
@@ -378,16 +379,18 @@ class FeolsCompressed(Feols):
         se_fit: Optional[bool], optional
             If True, the standard error of the prediction is computed. Only feasible
             for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if prediction_uncertainty is not None.
-
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        pd.DataFrame
-                Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
-                only set if se_fit is set to True.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         raise NotImplementedError(
             "Predictions are not supported for compressed regression."

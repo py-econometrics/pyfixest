@@ -9,7 +9,7 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.fepois_ import _check_for_separation
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
@@ -394,8 +394,9 @@ class Feglm(Feols, ABC):
         btol: float = 1e-6,
         type: PredictionType = "link",
         se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
         alpha: float = 0.05,
-    ) -> pd.DataFrame:
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Return predicted values from regression model.
 
@@ -433,26 +434,31 @@ class Feglm(Feols, ABC):
         se_fit: Optional[bool], optional
             If True, the standard error of the prediction is computed. Only feasible
             for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if prediction_uncertainty is not None.
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-         pd.DataFrame
-            Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
-            only set if se_fit is set to True.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         if se_fit:
             raise NotImplementedError(
                 "Prediction with standard errors is not implemented for GLMs."
             )
 
-        df_predict = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
         if type == "response":
-            df_predict["yhat"] = self._get_mu(theta=df_predict["yhat"].to_numpy())
-
-        return df_predict
+            return self._get_mu(
+                theta=yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
+            )
+        else:
+            return yhat
 
     @abstractmethod
     def _check_dependent_variable(self):

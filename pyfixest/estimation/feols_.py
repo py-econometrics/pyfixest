@@ -18,7 +18,11 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
+from pyfixest.estimation.literals import (
+    PredictionErrorOptions,
+    PredictionType,
+    _validate_literal_argument,
+)
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.prediction import (
     _get_fixed_effects_prediction_component,
@@ -1752,8 +1756,9 @@ class Feols:
         btol: float = 1e-6,
         type: PredictionType = "link",
         se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
         alpha: float = 0.05,
-    ) -> pd.DataFrame:
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Predict values of the model on new data.
 
@@ -1785,15 +1790,18 @@ class Feols:
         se_fit: Optional[bool], optional
             If True, the standard error of the prediction is computed. Only feasible
             for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if prediction_uncertainty is not None.
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        pd.DataFrame
-            Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
-            only set if se_fit is set to True.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         if self._is_iv:
             raise NotImplementedError(
@@ -1801,9 +1809,11 @@ class Feols:
             )
 
         _validate_literal_argument(type, PredictionType)
+        _validate_literal_argument(interval, PredictionErrorOptions)
 
         N = self._N if newdata is None else newdata.shape[0]
-        columns = ["yhat", "se", "0.05%", "0.95%"] if se_fit else ["yhat"]
+
+        columns = ["yhat", "se", "0.05%", "0.95%"]
         prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
 
         if newdata is None:
@@ -1832,7 +1842,7 @@ class Feols:
 
             prediction_df["yhat"] = y_hat.flatten()
 
-        if se_fit:
+        if interval == "prediction":
             if self._has_fixef:
                 raise NotImplementedError(
                     "Prediction error is currently not supported for models with fixed effects."
@@ -1845,7 +1855,16 @@ class Feols:
                 prediction_df["yhat"] + norm.ppf(alpha) * prediction_df["se"]
             )
 
-        return prediction_df
+        else:
+            if se_fit:
+                prediction_df["se"] = _get_prediction_se(model=self, X=X).to_numpy()
+
+        if interval == "prediction":
+            return prediction_df
+        elif se_fit:
+            return prediction_df["se"].to_numpy()
+        else:
+            return prediction_df["yhat"].to_numpy()
 
     def get_performance(self) -> None:
         """

@@ -228,7 +228,7 @@ def _did2s_estimate(
     fit1.fixef()
 
     # demean data
-    Y_hat = fit1.predict(newdata=data).yhat
+    Y_hat = fit1.predict(newdata=data)
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 
