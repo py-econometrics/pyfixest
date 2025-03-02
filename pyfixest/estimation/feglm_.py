@@ -445,7 +445,7 @@ class Feglm(Feols, ABC):
         """
         if se_fit:
             raise NotImplementedError(
-                "Prediction with standard errors is not implemented for Poisson regression."
+                "Prediction with standard errors is not implemented for GLMs."
             )
 
         df_predict = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
