@@ -368,7 +368,9 @@ class Fepois(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        alpha: float = 0.05,
+    ) -> pd.DataFrame:
         """
         Return predicted values from regression model.
 
@@ -403,11 +405,19 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if prediction_uncertainty is not None.
+
 
         Returns
         -------
-        np.ndarray
-            A flat array with the predicted values of the regression model.
+        pd.DataFrame
+                Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
+                only set if se_fit is set to True.
         """
         if self._has_fixef:
             raise NotImplementedError(
@@ -417,6 +427,12 @@ class Fepois(Feols):
             raise NotImplementedError(
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
+
+        if se_fit:
+            raise NotImplementedError(
+                "Prediction with standard errors is not implemented for Poisson regression."
+            )
+
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 
@@ -641,7 +657,9 @@ def _check_for_separation_ir(
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         fitted = feols(fml_separation, data=tmp, weights="omega")
-        tmp["Uhat"] = pd.Series(fitted.predict(), index=fitted._data.index, name="Uhat")
+        tmp["Uhat"] = pd.Series(
+            data=fitted.predict()["yhat"].values, index=fitted._data.index, name="Uhat"
+        )
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives

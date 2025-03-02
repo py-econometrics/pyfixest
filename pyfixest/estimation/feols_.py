@@ -20,6 +20,11 @@ from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.prediction import (
+    _get_fixed_effects_prediction_component,
+    _get_prediction_se,
+    get_design_matrix_and_yhat,
+)
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -1746,7 +1751,9 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        alpha: float = 0.05,
+    ) -> pd.DataFrame:
         """
         Predict values of the model on new data.
 
@@ -1771,15 +1778,22 @@ class Feols:
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        link:
+        type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if prediction_uncertainty is not None.
 
         Returns
         -------
-        y_hat : np.ndarray
-            A flat np.array with predicted values of the regression model.
+        pd.DataFrame
+            Dataframe with columns "yhat", "se" and CIs. The se and CI columns are
+            only set if se_fit is set to True.
         """
         if self._is_iv:
             raise NotImplementedError(
@@ -1788,62 +1802,50 @@ class Feols:
 
         _validate_literal_argument(type, PredictionType)
 
+        N = self._N if newdata is None else newdata.shape[0]
+        columns = ["yhat", "se", "0.05%", "0.95%"] if se_fit else ["yhat"]
+        prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
+
         if newdata is None:
             if type == "link" or self._method == "feols":
-                return self._Y_hat_link
+                prediction_df["yhat"] = self._Y_hat_link
             else:
-                return self._Y_hat_response
+                prediction_df["yhat"] = self._Y_hat_response
 
-        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
+            # note: no need to worry about fixed effects, as not supported with
+            # prediction errors; will throw error later
+            X = self._X
+            X_index = np.arange(X.shape[0])
 
-        if not self._X_is_empty:
-            xfml = self._fml.split("|")[0].split("~")[1]
-            if self._icovars is not None:
-                raise NotImplementedError(
-                    "predict() with argument newdata is not supported with i() syntax to interact variables."
-                )
-            X = Formula(xfml).get_model_matrix(newdata)
-            X_index = X.index
-            coef_idx = np.isin(self._coefnames, X.columns)
-            X = X[np.array(self._coefnames)[coef_idx]]
-            X = X.to_numpy()
-            y_hat = np.full(newdata.shape[0], np.nan)
-            y_hat[X_index] = X @ self._beta_hat[coef_idx]
         else:
-            y_hat = np.zeros(newdata.shape[0])
+            y_hat, X, X_index = get_design_matrix_and_yhat(
+                model=self,
+                newdata=newdata if newdata is not None else None,
+                atol=atol,
+                btol=btol,
+            )
 
-        if self._has_fixef:
-            if self._sumFE is None:
-                self.fixef(atol, btol)
-            fvals = self._fixef.split("+")
-
-            mismatched_fixef_types = [
-                x for x in fvals if newdata[x].dtypes != self._data[x].dtypes
-            ]
-
-            if mismatched_fixef_types:
-                warnings.warn(
-                    f"Data types of fixed effects {mismatched_fixef_types} "
-                    "do not match the model data. This leads to mismatched keys "
-                    "in the fixed effect dictionary, and as a result, to NaN "
-                    "predictions for columns with mismatched keys."
+            if newdata is not None:
+                y_hat += _get_fixed_effects_prediction_component(
+                    model=self, newdata=newdata, atol=atol, btol=btol
                 )
 
-            df_fe = newdata[fvals].astype(str)
-            # populate fixed effect dicts with omitted categories handling
-            fixef_dicts = {}
-            for f in fvals:
-                fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
-                    fdict.keys()
-                )
-                if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})  # type: ignore
-                fixef_dicts[f"C({f})"] = fdict
-            _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
-            y_hat += np.sum(_fixef_mat, axis=1)
+            prediction_df["yhat"] = y_hat.flatten()
 
-        return y_hat.flatten()
+        if se_fit:
+            if self._has_fixef:
+                raise NotImplementedError(
+                    "Prediction error is currently not supported for models with fixed effects."
+                )
+            prediction_df.loc[X_index, "se"] = _get_prediction_se(model=self, X=X)
+            prediction_df.loc[X_index, "0.05%"] = (
+                prediction_df["yhat"] - norm.ppf(alpha) * prediction_df["se"]
+            )
+            prediction_df.loc[X_index, "0.95%"] = (
+                prediction_df["yhat"] + norm.ppf(alpha) * prediction_df["se"]
+            )
+
+        return prediction_df
 
     def get_performance(self) -> None:
         """
@@ -2724,13 +2726,3 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
-
-
-def _apply_fixef_numpy(df_fe_values, fixef_dicts):
-    fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    for i, (_, subdict) in enumerate(fixef_dicts.items()):
-        unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
-        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
-        fixef_mat[:, i] = mapping[inverse]
-
-    return fixef_mat
