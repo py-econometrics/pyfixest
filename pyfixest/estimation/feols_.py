@@ -1799,7 +1799,7 @@ class Feols:
         Returns
         -------
         Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
         """
@@ -1808,19 +1808,26 @@ class Feols:
                 "The predict() method is currently not supported for IV models."
             )
 
+        if interval == "prediction" or se_fit:
+            if self._has_fixef:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with fixed effects."
+                )
+
         _validate_literal_argument(type, PredictionType)
-        _validate_literal_argument(interval, PredictionErrorOptions)
+        if interval is not None:
+            _validate_literal_argument(interval, PredictionErrorOptions)
 
         N = self._N if newdata is None else newdata.shape[0]
 
-        columns = ["yhat", "se", "0.05%", "0.95%"]
+        columns = ["fit", "se_fit", "ci_low", "ci_high"]
         prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
 
         if newdata is None:
             if type == "link" or self._method == "feols":
-                prediction_df["yhat"] = self._Y_hat_link
+                prediction_df["fit"] = self._Y_hat_link
             else:
-                prediction_df["yhat"] = self._Y_hat_response
+                prediction_df["fit"] = self._Y_hat_response
 
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later
@@ -1840,31 +1847,28 @@ class Feols:
                     model=self, newdata=newdata, atol=atol, btol=btol
                 )
 
-            prediction_df["yhat"] = y_hat.flatten()
+            prediction_df["fit"] = y_hat.flatten()
 
         if interval == "prediction":
-            if self._has_fixef:
-                raise NotImplementedError(
-                    "Prediction error is currently not supported for models with fixed effects."
-                )
-            prediction_df.loc[X_index, "se"] = _get_prediction_se(model=self, X=X)
-            prediction_df.loc[X_index, "0.05%"] = (
-                prediction_df["yhat"] - norm.ppf(alpha) * prediction_df["se"]
+
+            prediction_df.loc[X_index, "se_fit"] = _get_prediction_se(model=self, X=X)
+            prediction_df.loc[X_index, "ci_low"] = (
+                prediction_df["fit"] + norm.ppf(alpha / 2) * prediction_df["se_fit"]
             )
-            prediction_df.loc[X_index, "0.95%"] = (
-                prediction_df["yhat"] + norm.ppf(alpha) * prediction_df["se"]
+            prediction_df.loc[X_index, "ci_high"] = (
+                prediction_df["fit"] - norm.ppf(alpha / 2) * prediction_df["se_fit"]
             )
 
         else:
-            if se_fit:
-                prediction_df["se"] = _get_prediction_se(model=self, X=X).to_numpy()
+            if se_fit and prediction_df["se_fit"].isnull().all():
+                prediction_df["se_fit"] = _get_prediction_se(model=self, X=X)
 
         if interval == "prediction":
             return prediction_df
         elif se_fit:
-            return prediction_df["se"].to_numpy()
+            return prediction_df["se_fit"].to_numpy()
         else:
-            return prediction_df["yhat"].to_numpy()
+            return prediction_df["fit"].to_numpy()
 
     def get_performance(self) -> None:
         """

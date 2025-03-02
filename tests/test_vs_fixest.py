@@ -297,6 +297,25 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
 
+        if not mod._has_fixef:
+
+            py_predict_se = mod.predict(interval = "prediction")["se_fit"].to_numpy()
+            r_predict_se = pd.DataFrame(stats.predict(r_fixest,  interval = "prediction")).T.iloc[:,1].to_numpy()
+
+
+            check_absolute_diff(
+                py_predict_se[0:5], r_predict_se[0:5], 1e-07, "py_predict_se != r_predict_se"
+            )
+
+        else:
+
+            with pytest.raises(NotImplementedError):
+                py_predict_se = mod.predict(se_fit = True)
+
+            with pytest.raises(NotImplementedError):
+                py_predict_se = mod.predict(interval = "prediction")
+
+
         # currently, bug when using predict with newdata and i() or C() or "^" syntax
         blocked_transforms = ["i(", "^", "poly("]
         blocked_transform_found = any(bt in fml for bt in blocked_transforms)
@@ -309,7 +328,7 @@ def test_single_fit_feols(
         else:
             py_predict_newsample = mod.predict(
                 newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
-            )["yhat"]
+            )
             r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
 
             check_absolute_diff(
@@ -690,9 +709,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare with newdata - response
-        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")[
-            "yhat"
-        ]
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")
         r_predict_new = stats.predict(
             fit_r, newdata=data_r.iloc[0:100], type="response"
         )

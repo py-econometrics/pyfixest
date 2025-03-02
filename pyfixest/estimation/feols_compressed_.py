@@ -388,7 +388,7 @@ class FeolsCompressed(Feols):
         Returns
         -------
         Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "yhat", "se" and CIs if argument "interval=prediction".
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
             Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
             standard errors if argument "se_fit=True".
         """

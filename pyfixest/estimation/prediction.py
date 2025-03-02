@@ -151,7 +151,7 @@ def _apply_fixef_numpy(df_fe_values, fixef_dicts):
     return fixef_mat
 
 
-def _get_prediction_se(model, X: np.ndarray):
+def _get_prediction_se(model, X: np.ndarray) -> np.ndarray:
     """
     Compute prediction standard error for each row in X.
 
@@ -172,56 +172,4 @@ def _get_prediction_se(model, X: np.ndarray):
         N = X.shape[0] if X is not None else 0
         return (np.full(N, np.nan),)
 
-    return np.array(_get_newdata_stdp(model, X))
-
-
-def _get_newdata_stdp(model, X):
-    """
-    Get standard error of predictions for new data.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Covariates for new data points.
-
-    Returns
-    -------
-    list
-        Standard errors for each prediction
-    """
-    # for now only compute prediction error if model has no fixed effects
-    # TODO: implement for fixed effects
-    if not model._has_fixef:
-        if not model._X_is_empty:
-            return [_get_single_row_stdp(model=model, row=row) for row in X]
-        else:
-            warnings.warn(
-                """
-                Standard error of the prediction cannot be computed if X is empty.
-                Prediction dataframe stdp column will be None.
-                 """
-            )
-    else:
-        warnings.warn(
-            """
-            Standard error of the prediction is not implemented for fixed effects models.
-            Prediction dataframe stdp column will be None.
-            """
-        )
-
-
-def _get_single_row_stdp(model, row):
-    """
-    Get standard error of predictions for a single row.
-
-    Parameters
-    ----------
-    row : np.ndarray
-        Single row of new covariate data
-
-    Returns
-    -------
-    np.ndarray
-        Standard error of prediction for single row
-    """
-    return np.sqrt(np.linalg.multi_dot([row, model._vcov, np.transpose(row)]))
+    return  np.sqrt(np.einsum('ij,jk,ik->i', X, model._vcov, X))

@@ -327,9 +327,9 @@ def test_prediction_se(fml):
     fit = pf.feols(fml, data=data)
     if fit._has_fixef:
         with pytest.raises(NotImplementedError):
-            prediction_se = fit.predict(se_fit=True)["se"]
+            prediction_se = fit.predict(se_fit=True)["se_fit"]
     else:
-        prediction_se = fit.predict(se_fit=True)["se"]
+        prediction_se = fit.predict(se_fit=True)["se_fit"]
 
         model = smf.ols(fml, data=data).fit()
         predictions = model.get_prediction()
