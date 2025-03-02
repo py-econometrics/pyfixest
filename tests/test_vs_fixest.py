@@ -297,23 +297,27 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
 
-        if not mod._has_fixef:
+        if dropna:
+            if not mod._has_fixef:
 
-            py_predict_se = mod.predict(interval = "prediction")["se_fit"].to_numpy()
-            r_predict_se = pd.DataFrame(stats.predict(r_fixest,  interval = "prediction")).T.iloc[:,1].to_numpy()
+                py_predict_all = mod.predict(interval = "prediction")
+                r_predict_all = pd.DataFrame(stats.predict(r_fixest,  interval = "prediction")).T
+                r_predict_all.columns = ["fit", "se_fit", "ci_low", "ci_high"]
 
+                check_absolute_diff(
+                    py_predict_all.to_numpy()[0:5,:],
+                    r_predict_all.to_numpy()[0:5,:],
+                    1e-07,
+                    "py_predict_all != r_predict_all",
+                )
 
-            check_absolute_diff(
-                py_predict_se[0:5], r_predict_se[0:5], 1e-07, "py_predict_se != r_predict_se"
-            )
+            else:
 
-        else:
+                with pytest.raises(NotImplementedError):
+                    mod.predict(se_fit = True)
 
-            with pytest.raises(NotImplementedError):
-                py_predict_se = mod.predict(se_fit = True)
-
-            with pytest.raises(NotImplementedError):
-                py_predict_se = mod.predict(interval = "prediction")
+                with pytest.raises(NotImplementedError):
+                    mod.predict(interval = "prediction")
 
 
         # currently, bug when using predict with newdata and i() or C() or "^" syntax
