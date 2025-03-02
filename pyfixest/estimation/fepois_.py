@@ -657,7 +657,9 @@ def _check_for_separation_ir(
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         fitted = feols(fml_separation, data=tmp, weights="omega")
-        tmp["Uhat"] = pd.Series(fitted.predict(), index=fitted._data.index, name="Uhat")
+        tmp["Uhat"] = pd.Series(
+            data=fitted.predict()["yhat"].values, index=fitted._data.index, name="Uhat"
+        )
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
