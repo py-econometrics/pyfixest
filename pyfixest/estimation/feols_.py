@@ -1814,6 +1814,11 @@ class Feols:
                     "Prediction errors are currently not supported for models with fixed effects."
                 )
 
+            if self._has_weights:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with weights."
+                )
+
         _validate_literal_argument(type, PredictionType)
         if interval is not None:
             _validate_literal_argument(interval, PredictionErrorOptions)
@@ -1830,7 +1835,8 @@ class Feols:
                 prediction_df["fit"] = self._Y_hat_response
 
             # note: no need to worry about fixed effects, as not supported with
-            # prediction errors; will throw error later
+            # prediction errors; will throw error later;
+            # divide by sqrt(weights) as self._X is "weighted"
             X = self._X
             X_index = np.arange(X.shape[0])
 
@@ -1850,12 +1856,15 @@ class Feols:
             prediction_df["fit"] = y_hat.flatten()
 
         if interval == "prediction":
-
             prediction_df.loc[X_index, "se_fit"] = _get_prediction_se(model=self, X=X)
-            z_crit = t.ppf(1-alpha / 2, self._N - self._k)
+            z_crit = t.ppf(1 - alpha / 2, self._N - self._k)
             sigma2 = np.sum(self._u_hat**2) / (self._N - self._k)
-            prediction_df.loc[X_index, "ci_low"] = prediction_df["fit"] - z_crit * np.sqrt(prediction_df["se_fit"]**2 + sigma2)
-            prediction_df.loc[X_index, "ci_high"] = prediction_df["fit"] + z_crit * np.sqrt(prediction_df["se_fit"]**2 + sigma2)
+            prediction_df.loc[X_index, "ci_low"] = prediction_df[
+                "fit"
+            ] - z_crit * np.sqrt(prediction_df["se_fit"] ** 2 + sigma2)
+            prediction_df.loc[X_index, "ci_high"] = prediction_df[
+                "fit"
+            ] + z_crit * np.sqrt(prediction_df["se_fit"] ** 2 + sigma2)
 
         else:
             if se_fit and prediction_df["se_fit"].isnull().all():

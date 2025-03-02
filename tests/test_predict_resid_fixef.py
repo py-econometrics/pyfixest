@@ -320,19 +320,3 @@ def test_extract_variable_level():
         "Y ~ X1 + X2 | f1 + f2",
     ],
 )
-def test_prediction_se(fml):
-    """Compare the standard error of the prediction to statsmodels.get_prediction()."""
-    data = pf.get_data().dropna()
-
-    fit = pf.feols(fml, data=data)
-    if fit._has_fixef:
-        with pytest.raises(NotImplementedError):
-            prediction_se = fit.predict(se_fit=True)["se_fit"]
-    else:
-        prediction_se = fit.predict(se_fit=True)["se_fit"]
-
-        model = smf.ols(fml, data=data).fit()
-        predictions = model.get_prediction()
-        prediction_se_sm = predictions.var_pred_mean
-
-        np.testing.assert_allclose(prediction_se, np.sqrt(prediction_se_sm))

@@ -298,27 +298,28 @@ def test_single_fit_feols(
         )
 
         if dropna:
-            if not mod._has_fixef:
+            if not mod._has_fixef and not mod._has_weights:
+                py_predict_all = mod.predict(interval="prediction")
+                r_predict_all = pd.DataFrame(
+                    stats.predict(r_fixest, interval="prediction")
+                ).T
 
-                py_predict_all = mod.predict(interval = "prediction")
-                r_predict_all = pd.DataFrame(stats.predict(r_fixest,  interval = "prediction")).T
-                r_predict_all.columns = ["fit", "se_fit", "ci_low", "ci_high"]
+                colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+                r_predict_all.columns = colnames
 
                 check_absolute_diff(
-                    py_predict_all.to_numpy()[0:5,:],
-                    r_predict_all.to_numpy()[0:5,:],
+                    py_predict_all.to_numpy()[0:5, :],
+                    r_predict_all.to_numpy()[0:5, :],
                     1e-07,
                     "py_predict_all != r_predict_all",
                 )
 
             else:
+                with pytest.raises(NotImplementedError):
+                    mod.predict(se_fit=True)
 
                 with pytest.raises(NotImplementedError):
-                    mod.predict(se_fit = True)
-
-                with pytest.raises(NotImplementedError):
-                    mod.predict(interval = "prediction")
-
+                    mod.predict(interval="prediction")
 
         # currently, bug when using predict with newdata and i() or C() or "^" syntax
         blocked_transforms = ["i(", "^", "poly("]
@@ -341,6 +342,32 @@ def test_single_fit_feols(
                 1e-07,
                 "py_predict_newdata != r_predict_newdata",
             )
+
+            if not mod._has_fixef and not mod._has_weights:
+                if dropna:
+                    py_predict_all_newdata = mod.predict(
+                        newdata=data.iloc[0:100], interval="prediction"
+                    )
+                    r_predict_all_newdata = pd.DataFrame(
+                        stats.predict(
+                            r_fixest, newdata=data_r.iloc[0:100], interval="prediction"
+                        )
+                    ).T
+                    colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+                    r_predict_all_newdata.columns = colnames
+                    check_absolute_diff(
+                        py_predict_all_newdata.to_numpy()[0:5, :],
+                        r_predict_all_newdata.to_numpy()[0:5, :],
+                        1e-07,
+                        "py_predict_all_newdata != r_predict_all_newdata",
+                    )
+
+            else:
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=data.iloc[0:100], se_fit=True)
+
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=data.iloc[0:100], interval="prediction")
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
