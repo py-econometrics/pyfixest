@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-import statsmodels.formula.api as smf
 from rpy2.robjects import pandas2ri
 
 # rpy2 imports
@@ -307,16 +306,3 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f4)", "1")
     var = "C(f5)[1.0]"
     assert _extract_variable_level(var) == ("C(f5)", "1.0")
-
-
-@pytest.mark.parametrize(
-    "fml",
-    [
-        "Y ~ X1",
-        "Y ~ X1*X2",
-        "Y ~ X1 + X2 + C(f1)",
-        # with fixed effects
-        "Y ~ X1 + X2 | f1",
-        "Y ~ X1 + X2 | f1 + f2",
-    ],
-)
