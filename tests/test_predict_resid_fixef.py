@@ -57,7 +57,9 @@ def test_ols_prediction_internally(data, fml, weights):
 
     # now expect error with updated predicted being a subset of data
     updated_prediction2 = mod.predict(newdata=data.iloc[0:100, :])
-    assert not updated_prediction2.equals(updated_prediction)
+    assert len(updated_prediction2) != len(updated_prediction), (
+        "Arrays have the same length"
+    )
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
