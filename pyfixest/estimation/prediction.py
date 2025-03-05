@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+from scipy.stats import t
 
 from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
@@ -13,8 +14,6 @@ from pyfixest.utils.dev_utils import (
 def get_design_matrix_and_yhat(
     model,
     newdata: Optional[pd.DataFrame] = None,
-    atol: float = 1e-6,
-    btol: float = 1e-6,
 ):
     """
     Build the design matrix X and initializes y_hat for predictions.
@@ -25,14 +24,6 @@ def get_design_matrix_and_yhat(
         The fitted Feols model (self inside Feols).
     newdata : Optional DataFrame
         The new data on which predictions are made, or None for original data.
-    atol : Float, default 1e-6
-        Stopping tolerance for scipy.sparse.linalg.lsqr().
-        See https://docs.scipy.org/doc/
-            scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-    btol : Float, default 1e-6
-        Another stopping tolerance for scipy.sparse.linalg.lsqr().
-        See https://docs.scipy.org/doc/
-
 
     Returns
     -------
@@ -167,9 +158,48 @@ def _get_prediction_se(model, X: np.ndarray) -> np.ndarray:
     se : np.ndarray
         The prediction standard error for each observation.
     """
-    if X is None or X.shape[0] == 0:
-        # If there's no X, or an empty design matrix, just return None arrays
-        N = X.shape[0] if X is not None else 0
-        return (np.full(N, np.nan),)
+    return np.sqrt(np.einsum("ij,jk,ik->i", X, model._vcov, X))
 
-    return  np.sqrt(np.einsum('ij,jk,ik->i', X, model._vcov, X))
+
+def _compute_prediction_error(
+    model, nobs: int, yhat: np.ndarray, X: np.ndarray, X_index: np.ndarray, alpha: float
+) -> pd.DataFrame:
+    """
+    Fill a DataFrame with predictions and confidence intervals.
+
+    Parameters
+    ----------
+    model : Feols
+        The fitted Feols model.
+    nobs : int
+        The number of rows in the prediction DataFrame.
+    yhat : np.ndarray
+        The predicted values.
+    X : np.ndarray
+        The design matrix.
+    X_index : np.ndarray
+        The index of rows used in X.
+    alpha : float
+        The confidence level.
+
+    Returns
+    -------
+    prediction_df : pd.DataFrame
+        The DataFrame with predictions, prediction SEs and confidence intervals.
+    """
+    columns = ["fit", "se_fit", "ci_low", "ci_high"]
+
+    prediction_df = pd.DataFrame(np.nan, index=range(nobs), columns=columns)
+
+    prediction_df["fit"] = yhat
+    prediction_df.loc[X_index, "se_fit"] = _get_prediction_se(model=model, X=X)
+    z_crit = t.ppf(1 - alpha / 2, model._N - model._k)
+    sigma2 = np.sum(model._u_hat**2) / (model._N - model._k)
+    prediction_df.loc[X_index, "ci_low"] = prediction_df["fit"] - z_crit * np.sqrt(
+        prediction_df["se_fit"] ** 2 + sigma2
+    )
+    prediction_df.loc[X_index, "ci_high"] = prediction_df["fit"] + z_crit * np.sqrt(
+        prediction_df["se_fit"] ** 2 + sigma2
+    )
+
+    return prediction_df

@@ -25,8 +25,8 @@ from pyfixest.estimation.literals import (
 )
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.prediction import (
+    _compute_prediction_error,
     _get_fixed_effects_prediction_component,
-    _get_prediction_se,
     get_design_matrix_and_yhat,
 )
 from pyfixest.estimation.ritest import (
@@ -1823,59 +1823,62 @@ class Feols:
         if interval is not None:
             _validate_literal_argument(interval, PredictionErrorOptions)
 
-        N = self._N if newdata is None else newdata.shape[0]
-
-        columns = ["fit", "se_fit", "ci_low", "ci_high"]
-        prediction_df = pd.DataFrame(np.nan, index=range(N), columns=columns)
-
         if newdata is None:
-            if type == "link" or self._method == "feols":
-                prediction_df["fit"] = self._Y_hat_link
-            else:
-                prediction_df["fit"] = self._Y_hat_response
-
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             # divide by sqrt(weights) as self._X is "weighted"
+
             X = self._X
-            X_index = np.arange(X.shape[0])
+            X_index = np.arange(self._N)
+
+            yhat = (
+                self._Y_hat_link
+                if type == "link" or self._method == "feols"
+                else self._Y_hat_response
+            )
+            if not se_fit and interval != "prediction":
+                return yhat
+            else:
+                prediction_df = _compute_prediction_error(
+                    model=self,
+                    nobs=self._N,
+                    yhat=yhat,
+                    X=X,
+                    X_index=X_index,
+                    alpha=alpha,
+                )
+
+                if interval == "prediction":
+                    return prediction_df
+                else:
+                    return prediction_df["se_fit"].to_numpy()
 
         else:
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
                 newdata=newdata if newdata is not None else None,
-                atol=atol,
-                btol=btol,
             )
 
-            if newdata is not None:
-                y_hat += _get_fixed_effects_prediction_component(
-                    model=self, newdata=newdata, atol=atol, btol=btol
+            y_hat += _get_fixed_effects_prediction_component(
+                model=self, newdata=newdata, atol=atol, btol=btol
+            )
+
+            if not se_fit and interval != "prediction":
+                return y_hat
+            else:
+                prediction_df = _compute_prediction_error(
+                    model=self,
+                    nobs=newdata.shape[0],
+                    yhat=y_hat,
+                    X=X,
+                    X_index=X_index,
+                    alpha=alpha,
                 )
 
-            prediction_df["fit"] = y_hat.flatten()
-
-        if interval == "prediction":
-            prediction_df.loc[X_index, "se_fit"] = _get_prediction_se(model=self, X=X)
-            z_crit = t.ppf(1 - alpha / 2, self._N - self._k)
-            sigma2 = np.sum(self._u_hat**2) / (self._N - self._k)
-            prediction_df.loc[X_index, "ci_low"] = prediction_df[
-                "fit"
-            ] - z_crit * np.sqrt(prediction_df["se_fit"] ** 2 + sigma2)
-            prediction_df.loc[X_index, "ci_high"] = prediction_df[
-                "fit"
-            ] + z_crit * np.sqrt(prediction_df["se_fit"] ** 2 + sigma2)
-
-        else:
-            if se_fit and prediction_df["se_fit"].isnull().all():
-                prediction_df["se_fit"] = _get_prediction_se(model=self, X=X)
-
-        if interval == "prediction":
-            return prediction_df
-        elif se_fit:
-            return prediction_df["se_fit"].to_numpy()
-        else:
-            return prediction_df["fit"].to_numpy()
+                if interval == "prediction":
+                    return prediction_df
+                else:
+                    return prediction_df["se_fit"].to_numpy()
 
     def get_performance(self) -> None:
         """
