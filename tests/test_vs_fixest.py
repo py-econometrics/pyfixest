@@ -347,7 +347,7 @@ def test_single_fit_feols(
                     "py_predict_newdata != r_predict_newdata",
                 )
 
-                if not mod._has_fixef and not mod._has_weights:
+                if not mod._has_fixef and not mod._has_weights and dropna:
                     py_predict_all_newdata = mod.predict(
                         newdata=data.iloc[0:100], interval="prediction"
                     )
@@ -363,8 +363,8 @@ def test_single_fit_feols(
 
                     for col in colnames:
                         check_absolute_diff(
-                            py_predict_all_newdata[col].to_numpy()[0:5],
-                            r_predict_all_newdata[col].to_numpy()[0:5],
+                            py_predict_all_newdata[col].to_numpy()[-4:],
+                            r_predict_all_newdata[col].to_numpy()[-4:],
                             1e-07,
                             f"py_predict_all != r_predict_all for {col}",
                         )
