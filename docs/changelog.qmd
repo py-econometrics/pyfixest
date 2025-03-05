@@ -26,10 +26,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ```
 - Made `lets-plot` an optional dependency. The package will now fall back to `matplotlib` for plotting if `lets-plot` is not installed. Users can install `lets-plot` with `pip install pyfixest[plots]`.
 - PyFixest now supports R2, adjusted R2, and within-R2 values for WLS (it previously only did for OLS, if at all).
-
-- We add support for standard error of predictions for OLS models without fixed effects. As a default, the predict model now returns a `pd.DataFrame`
-  instead of a `np.ndarray`. If the argument `se_fit` is set to `True`, the returned data frame will contain the prediction standard errors and CIs as
-  additional columns.
+- We add support for standard error of predictions for OLS models without fixed effects. As a default, the predict model still returns a `np.ndarray`. If the argument `se_fit` is set to 
+  `True`, we report the prediction standard errors. If argument `interval = "prediction"`, we return a `pd.DataFrame` with predictions, their standard errors, and confidence intervals.
 
 ## PyFixest 0.28.0
 
