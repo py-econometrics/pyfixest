@@ -53,7 +53,7 @@ class EmptyDesignMatrixError(Exception):  # noqa: D101
 class FeatureDeprecationError(Exception):  # noqa: D101
     pass
 
-class EmptyVcovError(Exception):
+class EmptyVcovError(Exception):  # noqa: D101
     pass
 
 
