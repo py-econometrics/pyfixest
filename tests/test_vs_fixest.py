@@ -297,27 +297,88 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
 
-        # currently, bug when using predict with newdata and i() or C() or "^" syntax
-        blocked_transforms = ["i(", "^", "poly("]
-        blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+        if not mod._has_fixef and not mod._has_weights:
+            py_predict_all = mod.predict(interval="prediction")
+            r_predict_all = pd.DataFrame(
+                stats.predict(r_fixest, interval="prediction")
+            ).T
 
-        if blocked_transform_found:
-            with pytest.raises(NotImplementedError):
-                py_predict_newsample = mod.predict(
-                    newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+            colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+            r_predict_all.columns = colnames
+
+            # needed at the moment because r-fixest returns
+            # prediction intervals not on estimation sample,
+            # see https://github.com/lrberge/fixest/issues/549
+            # as a result, py_predict_all and r_predict_all
+
+            mask_r = np.zeros(r_predict_all.shape[0], dtype=bool)
+            mask_r[0 : r_predict_all.shape[0]] = True
+            mask_r[mod._na_index] = False
+
+            for col in colnames:
+                check_absolute_diff(
+                    py_predict_all[col].values[-4:],
+                    r_predict_all[col].iloc[mask_r].values[-4:],
+                    1e-07,
+                    f"py_predict_all != r_predict_all for {col}",
                 )
-        else:
-            py_predict_newsample = mod.predict(
-                newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
-            )
-            r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
 
-            check_absolute_diff(
-                na_omit(py_predict_newsample)[0:5],
-                na_omit(r_predict_newsample)[0:5],
-                1e-07,
-                "py_predict_newdata != r_predict_newdata",
-            )
+            # currently, bug when using predict with newdata and i() or C() or "^" syntax
+            blocked_transforms = ["i(", "^", "poly("]
+            blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+
+            if blocked_transform_found:
+                with pytest.raises(NotImplementedError):
+                    py_predict_newsample = mod.predict(
+                        newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+                    )
+            else:
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
+                )
+                r_predict_newsample = stats.predict(
+                    r_fixest, newdata=data_r.iloc[0:100]
+                )
+
+                check_absolute_diff(
+                    na_omit(py_predict_newsample)[0:5],
+                    na_omit(r_predict_newsample)[0:5],
+                    1e-07,
+                    "py_predict_newdata != r_predict_newdata",
+                )
+
+                if not mod._has_fixef and not mod._has_weights and dropna:
+                    py_predict_all_newdata = mod.predict(
+                        newdata=data.iloc[0:100], interval="prediction"
+                    )
+                    r_predict_all_newdata = pd.DataFrame(
+                        stats.predict(
+                            r_fixest,
+                            newdata=data_r.iloc[0:100],
+                            interval="prediction",
+                        )
+                    ).T
+                    colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+                    r_predict_all_newdata.columns = colnames
+
+                    for col in colnames:
+                        check_absolute_diff(
+                            py_predict_all_newdata[col].to_numpy()[-4:],
+                            r_predict_all_newdata[col].to_numpy()[-4:],
+                            1e-07,
+                            f"py_predict_all != r_predict_all for {col}",
+                        )
+
+        else:
+            # prediction intervals not supported with
+            # fixed effects or weights
+
+            for new_df in [data, data.iloc[0:100]]:
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=new_df, se_fit=True)
+
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=new_df, interval="prediction")
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")

@@ -8,6 +8,7 @@ SolverOptions = Literal[
     "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
 ]
 DemeanerBackendOptions = Literal["numba", "jax"]
+PredictionErrorOptions = Literal["prediction"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:
