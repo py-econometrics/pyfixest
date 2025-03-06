@@ -829,7 +829,7 @@ class Feols:
         -------
         None
         """
-        if self._vcov == 0:
+        if self._vcov.size == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
