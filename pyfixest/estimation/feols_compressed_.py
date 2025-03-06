@@ -1,14 +1,25 @@
+import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
+import narwhals as nw
 import numpy as np
 import pandas as pd
-import polars as pl
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
+
+logging.basicConfig(level=logging.INFO)
+
+try:
+    import polars as pl
+
+    polars_installed = True
+except ImportError:
+    polars_installed = False
 
 
 class FeolsCompressed(Feols):
@@ -49,6 +60,11 @@ class FeolsCompressed(Feols):
         Whether to copy the data.
     lean : bool
         Whether to keep memory-heavy objects as attributes or not.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     reps : int
         The number of bootstrap repetitions. Default is 100. Only used for CRV1 inference, where
         a wild cluster bootstrap is used.
@@ -69,10 +85,14 @@ class FeolsCompressed(Feols):
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ],
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         reps=100,
         seed: Optional[int] = None,
         sample_split_var: Optional[str] = None,
@@ -90,9 +110,11 @@ class FeolsCompressed(Feols):
             fixef_tol,
             lookup_demeaned_data,
             solver,
+            demeaner_backend,
             store_data,
             copy_data,
             lean,
+            context,
             sample_split_var,
             sample_split_value,
         )
@@ -106,6 +128,8 @@ class FeolsCompressed(Feols):
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
+
         if weights is not None:
             raise ValueError(
                 "weights argument needs to be None. WLS not supported for compressed regression."
@@ -129,19 +153,28 @@ class FeolsCompressed(Feols):
         depvars = self._Y.columns.tolist()
         covars = self._X.columns.tolist()
 
-        Y_polars = pl.DataFrame(pd.DataFrame(self._Y))
-        X_polars = pl.DataFrame(pd.DataFrame(self._X))
+        if polars_installed:
+            Y_nw = nw.from_native(pl.from_pandas(self._Y))
+            X_nw = nw.from_native(pl.from_pandas(self._X))
+        else:
+            logging.info(
+                "Polars is not installed. Falling back to pandas. You can likely speed up the compression drastically by installing polars."
+            )
+            Y_nw = nw.from_native(self._Y)
+            X_nw = nw.from_native(self._X)
 
         fevars = []
-        data_long_mundlak = pl.DataFrame()
-
         if self._has_fixef:
             self._use_mundlak = True
             self._has_fixef = False
 
             fevars = self._fe.columns.tolist()
-            fe_polars = pl.DataFrame(pd.DataFrame(self._fe))
-            data_long = pl.concat([Y_polars, X_polars, fe_polars], how="horizontal")
+            if polars_installed:
+                fe_nw = nw.from_native(pl.from_pandas(self._fe))
+            else:
+                fe_nw = nw.from_native(self._fe)
+
+            data_long = nw.concat([Y_nw, X_nw, fe_nw], how="horizontal")
 
             if self._use_mundlak:
                 if len(fevars) > 2:
@@ -157,7 +190,7 @@ class FeolsCompressed(Feols):
 
                 # add intercept
                 data_long_mundlak = data_long_mundlak.with_columns(
-                    pl.lit(1).alias("Intercept")
+                    nw.lit(1).alias("Intercept")
                 )
                 data_long_mundlak = data_long_mundlak.select(
                     ["Intercept"]
@@ -168,7 +201,7 @@ class FeolsCompressed(Feols):
                 self._fe = None
 
         else:
-            data_long = pl.concat([Y_polars, X_polars], how="horizontal")
+            data_long = nw.concat([Y_nw, X_nw], how="horizontal")
 
         compressed_dict = _regression_compression(
             depvars=depvars,
@@ -257,26 +290,20 @@ class FeolsCompressed(Feols):
         return _bread @ _meat @ _bread
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        _data_long_pl = self._data_long
+        _data_long_nw = self._data_long
 
-        # if "Intercept" in self._coefnames and "Intercept" not in _data_long_pl.columns:
-        #    _data_long_pl = _data_long_pl.with_columns([pl.lit(1).alias("Intercept")])
-        #    _data_long_pl = _data_long_pl.select(
-        #        ["Intercept"] + _data_long_pl.columns[:-1]
-        #    )
-
-        X_long = _data_long_pl.select(self._coefnames).to_numpy()
-        Y_long = _data_long_pl.select(self._depvar).to_numpy()
+        X_long = _data_long_nw.select(self._coefnames).to_numpy()
+        Y_long = _data_long_nw.select(self._depvar).to_numpy()
 
         yhat = X_long @ self._beta_hat
         uhat = Y_long.flatten() - yhat
 
-        _data_long_pl = _data_long_pl.with_columns(
+        _data_long_nw = _data_long_nw.with_columns(
             [
-                pl.lit(yhat).alias("yhat"),
-                pl.lit(uhat).alias("uhat"),
-                pl.lit(yhat + uhat).alias("yhat_g_boot_pos"),  # rademacher weights = 1
-                pl.lit(yhat - uhat).alias("yhat_g_boot_neg"),  # rademacher weights = -1
+                nw.lit(yhat.tolist()).alias("yhat"),
+                nw.lit(uhat.tolist()).alias("uhat"),
+                nw.lit(yhat + uhat).alias("yhat_g_boot_pos"),  # rademacher weights = 1
+                nw.lit(yhat - uhat).alias("yhat_g_boot_neg"),  # rademacher weights = -1
             ]
         )
 
@@ -285,24 +312,24 @@ class FeolsCompressed(Feols):
         beta_boot = np.zeros((boot_iter, self._k))
 
         clustervar = self._clustervar
-        cluster = _data_long_pl[clustervar]
+        cluster = _data_long_nw[clustervar]
         cluster_ids = np.sort(np.unique(cluster).astype(np.int32))
-        _data_long_pl = _data_long_pl.with_columns(pl.col(clustervar[0]).cast(pl.Int32))
+        _data_long_nw = _data_long_nw.with_columns(nw.col(clustervar[0]).cast(nw.Int32))
 
         for b in tqdm(range(boot_iter)):
-            boot_df = pl.DataFrame(
+            boot_df = nw.from_native(
                 {
                     "coin_flip": rng.integers(0, 2, size=len(cluster_ids)),
                     f"{clustervar[0]}": cluster_ids,
                 }
             )
 
-            df_boot = _data_long_pl.join(boot_df, on=f"{clustervar[0]}", how="left")
+            df_boot = _data_long_nw.join(boot_df, on=f"{clustervar[0]}", how="left")
             df_boot = df_boot.with_columns(
                 [
-                    pl.when(pl.col("coin_flip") == 1)
-                    .then(pl.col("yhat_g_boot_pos"))
-                    .otherwise(pl.col("yhat_g_boot_neg"))
+                    nw.when(nw.col("coin_flip") == 1)
+                    .then(nw.col("yhat_g_boot_pos"))
+                    .otherwise(nw.col("yhat_g_boot_neg"))
                     .alias("yhat_boot")
                 ]
             )
@@ -332,7 +359,10 @@ class FeolsCompressed(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
+        alpha: float = 0.05,
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Compute predicted values.
 
@@ -346,11 +376,21 @@ class FeolsCompressed(Feols):
             The relative tolerance.
         type : str
             The type of prediction.
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        np.ndarray
-            The predicted values. If newdata is None, the predicted values are based on the uncompressed data set.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         raise NotImplementedError(
             "Predictions are not supported for compressed regression."
@@ -359,20 +399,20 @@ class FeolsCompressed(Feols):
 
 @dataclass
 class _RegressionCompressionData:
-    Y: pl.DataFrame
-    X: pl.DataFrame
-    fe: Optional[pl.DataFrame]
-    compression_count: pl.DataFrame
-    Yprime: Optional[pl.DataFrame]
-    Yprimeprime: Optional[pl.DataFrame]
-    df_compressed: pl.DataFrame
+    Y: nw.DataFrame
+    X: nw.DataFrame
+    fe: Optional[nw.DataFrame]
+    compression_count: nw.DataFrame
+    Yprime: Optional[nw.DataFrame]
+    Yprimeprime: Optional[nw.DataFrame]
+    df_compressed: nw.DataFrame
 
 
 def _regression_compression(
     depvars: list[str],
     covars: list[str],
     fevars: Optional[list[str]],
-    data_long: pl.DataFrame,
+    data_long: nw.DataFrame,
     short: bool = False,
 ) -> _RegressionCompressionData:
     "Compress data for regression based on sufficient statistics."
@@ -384,19 +424,19 @@ def _regression_compression(
 
     data_long = data_long.lazy()
 
-    agg_expressions.append(pl.count(depvars[0]).alias("count"))
+    agg_expressions.append(nw.col(depvars[0]).count().alias("count"))
 
     if not short:
         for var in depvars:
-            agg_expressions.append(pl.sum(var).alias(f"sum_{var}"))
-            agg_expressions.append(pl.col(var).pow(2).sum().alias(f"sum_{var}_sq"))
+            agg_expressions.append(nw.sum(var).alias(f"sum_{var}"))
+            agg_expressions.append((nw.col(var) ** 2).sum().alias(f"sum_{var}_sq"))
 
     df_compressed = data_long.group_by(covars_updated).agg(agg_expressions)
 
     mean_expressions = []
     for var in depvars:
         mean_expressions.append(
-            (pl.col(f"sum_{var}") / pl.col("count")).alias(f"mean_{var}")
+            (nw.col(f"sum_{var}") / nw.col("count")).alias(f"mean_{var}")
         )
     df_compressed = df_compressed.with_columns(mean_expressions)
 
@@ -414,8 +454,8 @@ def _regression_compression(
 
 
 def _mundlak_transform(
-    covars: list[str], fevars: list[str], data_long: pl.DataFrame
-) -> Union[pl.DataFrame, list[str]]:
+    covars: list[str], fevars: list[str], data_long: nw.DataFrame
+) -> Union[nw.DataFrame, list[str]]:
     "Compute the Mundlak transformation of the data."
     covars_updated = covars.copy()
     # Factorize and prepare group-wise mean calculations in one go
@@ -425,7 +465,7 @@ def _mundlak_transform(
             covars_updated.append(mean_var_name)
             # Add mean calculation for this var by factorized fevar
             data_long = data_long.with_columns(
-                pl.col(var).mean().over(fevar).alias(mean_var_name)
+                nw.col(var).mean().over(fevar).alias(mean_var_name)
             )
 
     return data_long, covars_updated

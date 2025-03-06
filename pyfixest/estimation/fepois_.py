@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Protocol, Union
+from typing import Any, Literal, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -9,8 +10,9 @@ from pyfixest.errors import (
     NonConvergenceError,
 )
 from pyfixest.estimation.demean_ import demean
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
 
@@ -49,11 +51,17 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: str, default is 'np.linalg.solve'
-        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
-    solver:
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -77,7 +85,11 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
+        context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -86,22 +98,24 @@ class Fepois(Feols):
         separation_check: Optional[list[str]] = None,
     ):
         super().__init__(
-            FixestFormula,
-            data,
-            ssc_dict,
-            drop_singletons,
-            drop_intercept,
-            weights,
-            weights_type,
-            collin_tol,
-            fixef_tol,
-            lookup_demeaned_data,
-            solver,
-            store_data,
-            copy_data,
-            lean,
-            sample_split_var,
-            sample_split_value,
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         # input checks
@@ -116,6 +130,7 @@ class Fepois(Feols):
         self._support_crv3_inference = True
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
 
         self._Y_hat_response = np.array([])
         self.deviance = None
@@ -272,7 +287,7 @@ class Fepois(Feols):
             XWX = WX.transpose() @ WX
             XWZ = WX.transpose() @ WZ
 
-            delta_new = self.solve_ols(XWX, XWZ, _solver).reshape(
+            delta_new = solve_ols(XWX, XWZ, _solver).reshape(
                 (-1, 1)
             )  # eq (10), delta_new -> reg_z
             resid = Z_resid - X_resid @ delta_new
@@ -344,13 +359,19 @@ class Fepois(Feols):
         else:
             raise ValueError("type must be one of 'response' or 'working'.")
 
+    def _vcov_iid(self):
+        return self._bread
+
     def predict(
         self,
         newdata: Optional[DataFrameType] = None,
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
+        alpha: float = 0.05,
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Return predicted values from regression model.
 
@@ -385,11 +406,21 @@ class Fepois(Feols):
         btol : Float, default 1e-6
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        np.ndarray
-            A flat array with the predicted values of the regression model.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         if self._has_fixef:
             raise NotImplementedError(
@@ -399,6 +430,12 @@ class Fepois(Feols):
             raise NotImplementedError(
                 "Prediction with function argument `newdata` is not yet implemented for Poisson regression."
             )
+
+        if se_fit:
+            raise NotImplementedError(
+                "Prediction with standard errors is not implemented for Poisson regression."
+            )
+
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)
 
 
@@ -623,7 +660,9 @@ def _check_for_separation_ir(
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         fitted = feols(fml_separation, data=tmp, weights="omega")
-        tmp["Uhat"] = pd.Series(fitted.predict(), index=fitted._data.index, name="Uhat")
+        tmp["Uhat"] = pd.Series(
+            data=fitted.predict(), index=fitted._data.index, name="Uhat"
+        )
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives

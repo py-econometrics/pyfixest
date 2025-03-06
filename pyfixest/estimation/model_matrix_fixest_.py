@@ -1,6 +1,7 @@
 import re
 import warnings
-from typing import Optional, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ from formulaic import Formula
 
 from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.utils.utils import capture_context
 
 
 def model_matrix_fixest(
@@ -16,6 +18,7 @@ def model_matrix_fixest(
     drop_singletons: bool = False,
     weights: Optional[str] = None,
     drop_intercept=False,
+    context: Union[int, Mapping[str, Any]] = 0,
 ) -> dict:
     """
     Create model matrices for fixed effects estimation.
@@ -41,6 +44,11 @@ def model_matrix_fixest(
         Whether to drop the intercept from the model matrix. Default is False.
         If True, the intercept is dropped ex post from the model matrix created
         by formulaic.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Returns
     -------
@@ -68,6 +76,20 @@ def model_matrix_fixest(
             List of variables interacted with i() syntax, None if not applicable.
         - 'X_is_empty' : bool
             Flag indicating whether X is empty.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + f1 + f2", data=data)
+    FixestFormula = fit.FixestFormula
+
+    mm = model_matrix_fixest(FixestFormula, data)
+    mm
+    ```
     """
     FixestFormula.check_syntax()
 
@@ -104,7 +126,10 @@ def model_matrix_fixest(
     }
 
     FML = Formula(**fml_kwargs)
-    mm = FML.get_model_matrix(data, output="pandas", context={"factorize": factorize})
+    _context = capture_context(context)
+    mm = FML.get_model_matrix(
+        data, output="pandas", context={"factorize": factorize, **_context}
+    )
     endogvar = Z = weights_df = fe = None
 
     Y = mm["fml_second_stage"]["lhs"]
@@ -195,13 +220,13 @@ def model_matrix_fixest(
     }
 
 
-def _get_na_index(N: int, Y_index: pd.Series) -> np.ndarray:
+def _get_na_index(N: int, Y_index: pd.Index) -> np.ndarray:
     all_indices = np.arange(N)
     max_index = all_indices.max() + 1
     mask = np.ones(max_index, dtype=bool)
     Y_index_arr = Y_index.to_numpy()
     mask[Y_index_arr] = False
-    na_index = np.nonzero(mask)[0]
+    na_index = np.where(mask)[0]
     return na_index
 
 
@@ -229,7 +254,7 @@ def _get_columns_to_drop_and_check_ivars(
                     if ref and "_" in ref:
                         ref = ref.replace("_", "")
 
-                pattern = rf"\[T\.{ref}(?:\.0)?\]:{var2}"
+                pattern = rf"\[(?:T\.)?{ref}(?:\.0)?\]:{var2}"
                 if ref:
                     for column in X.columns:
                         if var1 in column and re.search(pattern, column):

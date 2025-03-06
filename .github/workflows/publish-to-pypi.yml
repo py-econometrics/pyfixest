@@ -11,9 +11,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
-          pixi-version: v0.29.0
+          pixi-version: v0.41.4
           cache: true
       - name: Install R packages
         run: |

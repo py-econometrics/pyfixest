@@ -1,4 +1,7 @@
 import re
+import warnings
+from collections import Counter
+from collections.abc import ValuesView
 from typing import Optional, Union
 
 import numpy as np
@@ -13,35 +16,42 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
 
+ModelInputType = Union[
+    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
+]
+
 
 def etable(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
+    models: ModelInputType,
     type: str = "gt",
     signif_code: Optional[list] = None,
     coef_fmt: str = "b \n (se)",
     custom_stats: Optional[dict] = None,
+    custom_model_stats: Optional[dict] = None,
     keep: Optional[Union[list, str]] = None,
     drop: Optional[Union[list, str]] = None,
     exact_match: Optional[bool] = False,
     labels: Optional[dict] = None,
+    cat_template: Optional[str] = None,
     show_fe: Optional[bool] = True,
     show_se_type: Optional[bool] = True,
     felabels: Optional[dict] = None,
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
-    custom_model_stats: Optional[dict] = None,
     filename: Optional[str] = None,
     print_tex: Optional[bool] = False,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
-    Create an esttab-like table from a list of models.
+    Generate a table summarizing the results of multiple regression models.
+    It supports various output formats including html (via great tables),  markdown, and LaTeX.
 
     Parameters
     ----------
-    models : list
-        A list of models of type Feols, Feiv, Fepois.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
+        The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
         "gt" for great_tables, or "tex" for LaTeX table. Default is "gt".
@@ -53,7 +63,15 @@ def etable(
         p-value (p). Default is `"b \n (se)"`.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
     custom_stats: dict, optional
-        A dictionary of custom statistics. "b", "se", "t", or "p" are reserved.
+        A dictionary of custom statistics that can be used in the coef_fmt string to be displayed
+        in the coefficuent cells analogously to "b", "se" etc. The keys are the names of the custom
+        statistics, and the values are lists of lists, where each inner list contains the custom
+        statistic values for all coefficients each model.
+        Note that "b", "se", "t", or "p" are reserved and cannot be used as keys.
+    custom_model_stats: dict, optional
+        A dictionary of custom model statistics or model information displayed in a new line in the
+        bottom panel of the table. The keys are the names of the statistics (i.e. entry in the first column)
+        and the values are a lists of the same length as the number of models. Default is None.
     keep: str or list of str, optional
         The pattern for retaining coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Default is keeping all coefficients.
@@ -76,6 +94,11 @@ def etable(
         names and the values the new names. Note that interaction terms will also be
         relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
+    cat_template: str, optional
+        Template to relabel categorical variables. None by default, which applies no relabeling.
+        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
+        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
+        are also possible.
     show_fe: bool, optional
         Whether to show the rows with fixed effects markers. Default is True.
     show_se_type: bool, optional
@@ -117,28 +140,42 @@ def etable(
     pandas.DataFrame
         A styled DataFrame with the coefficients and standard errors of the models.
         When output is "tex", the LaTeX code is returned as a string.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    fit1 = pf.feols("Y~X1 + X2 | f1", df)
+    fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
+
+    pf.etable([fit1, fit2])
+    ```
     """
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
-    assert (
-        isinstance(signif_code, list) and len(signif_code) == 3
-    ), "signif_code must be a list of length 3"
+    assert isinstance(signif_code, list) and len(signif_code) == 3, (
+        "signif_code must be a list of length 3"
+    )
     if signif_code:
-        assert all(
-            [0 < i < 1 for i in signif_code]
-        ), "All values of signif_code must be between 0 and 1"
+        assert all([0 < i < 1 for i in signif_code]), (
+            "All values of signif_code must be between 0 and 1"
+        )
     if signif_code:
-        assert (
-            signif_code[0] < signif_code[1] < signif_code[2]
-        ), "signif_code must be in increasing order"
+        assert signif_code[0] < signif_code[1] < signif_code[2], (
+            "signif_code must be in increasing order"
+        )
 
-    # Check if models is of type FixestMulti
-    # If so, convert it to a list of models
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
+    cat_template = "" if cat_template is None else cat_template
 
     models = _post_processing_input_checks(models)
 
+    if labels is None:
+        labels = {}
     if custom_stats is None:
         custom_stats = dict()
     if keep is None:
@@ -149,12 +186,12 @@ def etable(
     if custom_stats:
         assert isinstance(custom_stats, dict), "custom_stats must be a dict"
         for key in custom_stats:
-            assert isinstance(
-                custom_stats[key], list
-            ), "custom_stats values must be a list"
-            assert len(custom_stats[key]) == len(
-                models
-            ), f"custom_stats {key} must have the same number as models"
+            assert isinstance(custom_stats[key], list), (
+                "custom_stats values must be a list"
+            )
+            assert len(custom_stats[key]) == len(models), (
+                f"custom_stats {key} must have the same number as models"
+            )
 
     assert type in [
         "df",
@@ -165,9 +202,9 @@ def etable(
     ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
 
     if model_heads is not None:
-        assert len(model_heads) == len(
-            models
-        ), "model_heads must have the same length as models"
+        assert len(model_heads) == len(models), (
+            "model_heads must have the same length as models"
+        )
 
     # Check if head_order is allowed string & remove h when no model_heads provided
     assert head_order in [
@@ -186,9 +223,9 @@ def etable(
         for stat, values in custom_model_stats.items():
             assert isinstance(stat, str), "custom_model_stats keys must be strings"
             assert isinstance(values, list), "custom_model_stats values must lists"
-            assert len(values) == len(
-                models
-            ), "lists in custom_model_stats values must have the same length as models"
+            assert len(values) == len(models), (
+                "lists in custom_model_stats values must have the same length as models"
+            )
 
     dep_var_list = []
     nobs_list = []
@@ -198,16 +235,19 @@ def etable(
     r2_list = []
     r2_within_list: list[float] = []  # noqa: F841
 
-    # Define code for R2 & interaction symbol depending on output type
+    # Define code for R2, interaction & line break depending on output type
     if type in ["gt", "html"]:
         interactionSymbol = " &#215; "
         R2code = "R<sup>2</sup>"
+        lbcode = "<br>"
     elif type == "tex":
         interactionSymbol = " $\\times$ "
         R2code = "$R^2$"
+        lbcode = r"\\"
     else:
         interactionSymbol = " x "
         R2code = "R2"
+        lbcode = "\n"
 
     for model in models:
         dep_var_list.append(model._depvar)
@@ -319,19 +359,16 @@ def etable(
                     _number_formatter, **kwargs
                 )
             elif element in custom_stats:
-                assert (
-                    len(custom_stats[element][i]) == len(model_tidy_df["Estimate"])
-                ), f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
+                assert len(custom_stats[element][i]) == len(
+                    model_tidy_df["Estimate"]
+                ), (
+                    f"custom_stats {element} has unequal length to the number of coefficients in model_tidy_df {i}"
+                )
                 model_tidy_df[coef_fmt_title] += pd.Series(
                     custom_stats[element][i]
                 ).apply(_number_formatter, **kwargs)
             elif element == "\n":  # Replace output specific code for newline
-                if type in ["html", "gt"]:
-                    model_tidy_df[coef_fmt_title] += "<br>"
-                elif type == "tex":
-                    model_tidy_df[coef_fmt_title] += r"\\"
-                elif type in ["md", "df"]:
-                    model_tidy_df[coef_fmt_title] += "\n"
+                model_tidy_df[coef_fmt_title] += lbcode
             else:
                 model_tidy_df[coef_fmt_title] += element
         model_tidy_df[coef_fmt_title] = pd.Categorical(model_tidy_df[coef_fmt_title])
@@ -340,7 +377,7 @@ def etable(
             model_tidy_df,
             id_vars=["Coefficient"],
             var_name="Metric",
-            value_name=f"est{i+1}",
+            value_name=f"est{i + 1}",
         )
         model_tidy_df = model_tidy_df.drop("Metric", axis=1).set_index("Coefficient")
         etable_list.append(model_tidy_df)
@@ -373,14 +410,14 @@ def etable(
         res = pd.concat([res, pd.DataFrame([intercept_row])])
 
     # Relabel variables
-    if labels is not None:
+    if (labels != {}) or (cat_template != ""):
         # Relabel dependent variables
         dep_var_list = [labels.get(k, k) for k in dep_var_list]
 
         # Relabel explanatory variables
         res_index = res.index.to_series()
         res_index = res_index.apply(
-            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol)
+            lambda x: _relabel_expvar(x, labels or {}, interactionSymbol, cat_template)
         )
         res.set_index(res_index, inplace=True)
 
@@ -464,9 +501,7 @@ def etable(
     return None
 
 
-def summary(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti], digits: int = 3
-) -> None:
+def summary(models: ModelInputType, digits: int = 3) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -476,8 +511,8 @@ def summary(
 
     Parameters
     ----------
-    models : list[Union[Feols, Fepois, Feiv]] or FixestMulti.
-            The models to be summarized.
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
 
@@ -550,8 +585,10 @@ def summary(
 
 
 def _post_processing_input_checks(
-    models: Union[list[Union[Feols, Fepois, Feiv]], FixestMulti],
-) -> list[Union[Feols, Fepois]]:
+    models: ModelInputType,
+    check_duplicate_model_names: bool = False,
+    rename_models: Optional[dict[str, str]] = None,
+) -> list[Union[Feols, Fepois, Feiv]]:
     """
     Perform input checks for post-processing models.
 
@@ -560,6 +597,13 @@ def _post_processing_input_checks(
         models : Union[List[Union[Feols, Fepois, Feiv]], FixestMulti]
                 The models to be checked. This can either be a list of models
                 (Feols, Fepois, Feiv) or a single FixestMulti object.
+        check_duplicate_model_names : bool, optional
+                Whether to check for duplicate model names. Default is False.
+                Mostly used to avoid overlapping models in plots created via
+                pf.coefplot() and pf.iplot().
+        rename_models : dict, optional
+                A dictionary to rename the models. The keys are the original model names
+                and the values are the new model names.
 
     Returns
     -------
@@ -572,34 +616,55 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    # check if models instance of Feols or Fepois
-    if isinstance(models, (Feols, Fepois)):
-        models = [models]
+    models_list: list[Union[Feols, Fepois, Feiv]] = []
 
-    else:
-        if isinstance(models, (list, type({}.values()))):
-            for model in models:
-                if not isinstance(model, (Feols, Fepois)):
-                    raise TypeError(
-                        f"""
-                        Each element of the passed list needs to be of type Feols
-                        or Fepois, but {type(model)} was passed. If you want to
-                        summarize a FixestMulti object, please use FixestMulti.to_list()
-                        to convert it to a list of Feols or Fepois instances.
-                        """
-                    )
-
+    if isinstance(models, (Feols, Fepois, Feiv)):
+        models_list = [models]
+    elif isinstance(models, FixestMulti):
+        models_list = models.to_list()
+    elif isinstance(models, (list, ValuesView)):
+        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
+            models_list = models
         else:
             raise TypeError(
-                """
-                The models argument must be either a list of Feols or Fepois instances, or
-                simply a single Feols or Fepois instance. The models argument does not accept instances
-                of type FixestMulti - please use models.to_list() to convert the FixestMulti
-                instance to a list of Feols or Fepois instances.
-                """
+                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
             )
+    else:
+        raise TypeError("Invalid type for models argument.")
 
-    return models
+    if check_duplicate_model_names or rename_models is not None:
+        all_model_names = [model._model_name for model in models_list]
+
+    if check_duplicate_model_names:
+        # create model_name_plot attribute to differentiate between models with the
+        # same model_name / model formula
+        for model in models_list:
+            model._model_name_plot = model._model_name
+
+        counter = Counter(all_model_names)
+        duplicate_model_names = [item for item, count in counter.items() if count > 1]
+
+        for duplicate_model in duplicate_model_names:
+            duplicates = [
+                model for model in models_list if model._model_name == duplicate_model
+            ]
+            for i, model in enumerate(duplicates):
+                model._model_name_plot = f"Model {i}: {model._model_name}"
+                warnings.warn(
+                    f"The _model_name attribute {model._model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+                )
+
+        if rename_models is not None:
+            model_name_diff = set(rename_models.keys()) - set(all_model_names)
+            if model_name_diff:
+                warnings.warn(
+                    f"""
+                    The following model names specified in rename_models are not found in the models:
+                    {model_name_diff}
+                    """
+                )
+
+    return models_list
 
 
 def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
@@ -805,9 +870,9 @@ def make_table(
     A table in the specified format.
     """
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
-    assert (
-        not isinstance(df.index, pd.MultiIndex) or df.index.nlevels <= 2
-    ), "Row index can have at most two levels."
+    assert not isinstance(df.index, pd.MultiIndex) or df.index.nlevels <= 2, (
+        "Row index can have at most two levels."
+    )
     assert type in ["gt", "tex"], "type must be either 'gt' or 'tex'."
     assert rgroup_sep in [
         "tb",
@@ -961,8 +1026,6 @@ def make_table(
             with open(file_name, "w") as f:
                 f.write(latex_res)  # Write the latex code to a file
 
-        # Only when type is 'tex' return the latex code as
-        # otherwise a GT object will be returned
         if type == "tex":
             return latex_res
 
@@ -1202,6 +1265,18 @@ def dtable(
     Returns
     -------
     A table in the specified format.
+
+    Examples
+    --------
+    For more examples, take a look at the [regression tables and summary statistics vignette](https://py-econometrics.github.io/pyfixest/table-layout.html).
+
+    ```{python}
+    import pyfixest as pf
+
+    # load data
+    df = pf.get_data()
+    pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
+    ```
     """
     if stats is None:
         stats = ["count", "mean", "std"]
@@ -1210,16 +1285,16 @@ def dtable(
     if stats_labels is None:
         stats_labels = {}
     assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame."
-    assert all(
-        pd.api.types.is_numeric_dtype(df[var]) for var in vars
-    ), "Variables must be numerical."
+    assert all(pd.api.types.is_numeric_dtype(df[var]) for var in vars), (
+        "Variables must be numerical."
+    )
     assert type in ["gt", "tex", "df"], "type must be either 'gt' or 'tex' or 'df'."
-    assert (
-        byrow is None or byrow in df.columns
-    ), "byrow must be a column in the DataFrame."
-    assert bycol is None or all(
-        col in df.columns for col in bycol
-    ), "bycol must be a list of columns in the DataFrame."
+    assert byrow is None or byrow in df.columns, (
+        "byrow must be a column in the DataFrame."
+    )
+    assert bycol is None or all(col in df.columns for col in bycol), (
+        "bycol must be a list of columns in the DataFrame."
+    )
 
     # Default stats labels dictionary
     stats_dict = {

@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import pytest
 
+import pyfixest as pf
 from pyfixest.did.visualize import (
     _plot_panelview,
     _plot_panelview_output_plot,
@@ -9,11 +11,15 @@ from pyfixest.did.visualize import (
     panelview,
 )
 from pyfixest.estimation.estimation import feols, fepois
-from pyfixest.report.visualize import coefplot, iplot
+from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot
 from pyfixest.utils.utils import get_data
 
 
-def test_visualize():
+@pytest.mark.parametrize("plot_backend", ["lets_plot", "matplotlib"])
+def test_visualize(plot_backend):
+    if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     data = get_data()
     fit1 = feols("Y ~ X1 + X2 | f1", data=data)
     coefplot(fit1)
@@ -37,6 +43,11 @@ def test_visualize():
     # FixestMulti
     fit6 = feols("Y + Y2 ~ X1 + X2 | f1", data=data)
     fit6.coefplot()
+
+    # identical models
+    fit7 = feols("Y ~ X1 + X2 | f1", data=data)
+    fit8 = feols("Y ~ X1 + X2 | f1", data=data)
+    pf.coefplot([fit7, fit8], plot_backend=plot_backend)
 
 
 def test_panelview():

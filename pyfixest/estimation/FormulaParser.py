@@ -230,7 +230,7 @@ class FixestFormulaParser:
 
 class FixestFormula:
     """
-    A class with information confainted in model formulas.
+    A class with information contained in model formulas.
 
     Attributes
     ----------
@@ -240,7 +240,7 @@ class FixestFormula:
         The covariates in the model, separated by '+'.
     _fval : str
         An optional fixed effect variable included in the model.
-        Separated by "+". "0" if no fixed effect in th emodel.
+        Separated by "+". "0" if no fixed effect in the model.
     _endogvars : str, optional
         Endogenous variables in the model, separated by '+'.
     _instruments : str, optional
@@ -298,7 +298,7 @@ class FixestFormula:
         Construct and stores a Wilkinson formula..
 
         This method combines dependent variable, covariates, endogenous variables,
-        instrumentalvariables, and an optional fixed value to construct a statistical
+        instrumental variables, and an optional fixed value to construct a statistical
         model formula. This formula is then stored in the instance's `fml` attribute.
         The general structure of the formula is
         `depvar ~ covar | fval | endogvars ~ instruments`.

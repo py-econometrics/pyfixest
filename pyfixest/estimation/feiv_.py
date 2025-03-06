@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import pandas as pd
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.solvers import solve_ols
 
 
 class Feiv(Feols):
@@ -38,8 +40,10 @@ class Feiv(Feols):
         Names of the coefficients of Z.
     collin_tol : float
         Tolerance for collinearity check.
-    solver: str, default is 'np.linalg.solve'
-        Solver to use for the estimation. Alternative is 'np.linalg.lstsq'.
+    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -139,36 +143,43 @@ class Feiv(Feols):
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
     ) -> None:
         super().__init__(
-            FixestFormula,
-            data,
-            ssc_dict,
-            drop_singletons,
-            drop_intercept,
-            weights,
-            weights_type,
-            collin_tol,
-            fixef_tol,
-            lookup_demeaned_data,
-            solver,
-            store_data,
-            copy_data,
-            lean,
-            sample_split_var,
-            sample_split_value,
+            FixestFormula=FixestFormula,
+            data=data,
+            ssc_dict=ssc_dict,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=weights_type,
+            collin_tol=collin_tol,
+            fixef_tol=fixef_tol,
+            lookup_demeaned_data=lookup_demeaned_data,
+            solver=solver,
+            store_data=store_data,
+            copy_data=copy_data,
+            lean=lean,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            context=context,
+            demeaner_backend=demeaner_backend,
         )
 
         self._is_iv = True
         self._support_crv3_inference = False
         self._support_iid_inference = True
         self._supports_cluster_causal_variance = False
+        self._support_decomposition = False
 
     def wls_transform(self) -> None:
         "Transform variables for WLS estimation."
@@ -196,6 +207,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._demeaner_backend,
             )
         else:
             self._endogvard = self._endogvar
@@ -228,7 +240,7 @@ class Feiv(Feols):
         H = self._tXZ @ self._tZZinv
         A = H @ self._tZX
         B = H @ self._tZy
-        self._beta_hat = self.solve_ols(A, B, _solver)
+        self._beta_hat = solve_ols(A, B, _solver)
 
         # residuals
         self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
@@ -263,14 +275,12 @@ class Feiv(Feols):
         else:
             vcov_detail = self._vcov_type_detail
 
-        weight_detail = "weights" if self._has_weights else None
-
         # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
             vcov=vcov_detail,
-            weights=weight_detail,
+            weights=self._weights_name,
             weights_type=self._weights_type,
             collin_tol=self._collin_tol,
         )
@@ -374,9 +384,7 @@ class Feiv(Feols):
             print("(Unadjusted) F stat :", F_stat_pf)
             print("Effective F stat :", F_stat_eff_pf)
 
-            # The example above generates the following results
-            # (Unadjusted) F stat : 52.81535560457482
-            # Effective F stat : 48.661542741328205
+            ```
         """
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]

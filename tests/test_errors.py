@@ -17,6 +17,7 @@ from pyfixest.estimation.estimation import feols, fepois
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
+from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -254,6 +255,15 @@ def test_rwolf_error():
     # test for full enumeration warning
     with pytest.warns(UserWarning):
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
+
+
+def test_predict_dtype_error():
+    data = get_data()
+    fit = feols("Y ~ X1 | f1", data=data)
+
+    data["f1"] = data["f1"].fillna(0).astype(int)
+    with pytest.warns(UserWarning):
+        fit.predict(newdata=data.iloc[0:100])
 
 
 def test_wildboottest_errors():
@@ -684,3 +694,84 @@ def test_separation_check_validations():
         match="The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'.",
     ):
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
+
+
+def test_gelbach_errors():
+    rng = np.random.default_rng(123)
+
+    data = gelbach_data(nobs=100)
+    data["f1"] = rng.choice(range(5), len(data), True)
+    data["weights"] = rng.uniform(0.5, 1.5, len(data))
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+
+    with pytest.raises(ValueError, match=r"x32 is not in the mediator names."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+
+    with pytest.raises(ValueError, match=r"{'x21'} is in both g1 and g2."):
+        fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
+
+    # error with IV
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with WLS
+    with pytest.raises(NotImplementedError):
+        pf.feols("y ~ x1", data=data, weights="weights").decompose(
+            param="x1", combine_covariates={"g1": ["x21"]}
+        )
+
+    # error with Poisson
+    with pytest.raises(NotImplementedError):
+        dt = pf.get_data(model="Fepois")
+        pf.fepois("Y ~ X1", data=dt).decompose(
+            param="X1", combine_covariates={"g1": ["x21"]}
+        )
+
+
+def test_glm_errors():
+    "Test that dependent variable must be binary for probit and logit models."
+    data = pf.get_data()
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match="The dependent variable must have two unique values."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 2, 0)
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="probit")
+    with pytest.raises(
+        ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
+    ):
+        pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    with pytest.raises(
+        NotImplementedError, match=r"Fixed effects are not yet supported for GLMs."
+    ):
+        pf.feglm("Y ~ X1 | f1", data=data, family="probit")
+
+
+def test_prediction_errors_glm():
+    "Test that the prediction errors not supported for GLM models."
+    data = pf.get_data()
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+
+    fit_gaussian = pf.feglm("Y ~ X1", data=data, family="gaussian")
+    fit_probit = pf.feglm("Y ~ X1", data=data, family="probit")
+    fit_logit = pf.feglm("Y ~ X1", data=data, family="logit")
+    fit_pois = pf.fepois("Y ~ X1", data=data)
+
+    for model in [fit_gaussian, fit_probit, fit_logit, fit_pois]:
+        with pytest.raises(
+            NotImplementedError, match="Prediction with standard errors"
+        ):
+            model.predict(se_fit=True)

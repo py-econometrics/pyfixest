@@ -1,6 +1,8 @@
 ---
 title: "Getting Started with PyFixest"
-format: html
+format:
+  html:
+    html-table-processing: none
 toc: true
 toc-title: "On this page"
 toc-location: left
@@ -29,15 +31,21 @@ In this "quick start" guide, we will show you how to estimate a fixed effect mod
 In a first step, we load the module and some synthetic example data:
 
 ```{python}
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from lets_plot import LetsPlot
+try:
+    from lets_plot import LetsPlot
+    _HAS_LETS_PLOT = True
+except ImportError:
+    _HAS_LETS_PLOT = False
+
+from marginaleffects import slopes, avg_slopes
 
 import pyfixest as pf
 
-LetsPlot.setup_html()
+if _HAS_LETS_PLOT:
+    LetsPlot.setup_html()
 
 plt.style.use("seaborn-v0_8")
 
@@ -222,7 +230,7 @@ The standard errors of the coefficients are crucial for inference. They tell us 
 - `iid`: assumes that the error variance is spherical, i.e. errors are homoskedastic and not correlated (independent and identically distributed errors have a spherical error variance).
 - `HC1-3`: heteroskedasticity-robust standard errors according to White (1980) and MacKinnon and White (1985). See [Econometric Computing with HC and HAC
 Covariance Matrix Estimators](https://cran.r-project.org/web/packages/sandwich/vignettes/sandwich.pdf) from the [`sandwich`](https://cran.r-project.org/web/packages/sandwich/) package for more details.
-- `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner’s Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{"CRV1": "clustervar"}`.
+- `CRV1` and `CRV3`: cluster robust standard errors according to Cameron, Gelbach, and Miller (2011). See [A Practitioner's Guide to Cluster-Robust Inference](https://cameron.econ.ucdavis.edu/research/Cameron_Miller_JHR_2015_February.pdf).  For   `CRV1` and `CRV3` one should pass a dictionaty of the form `{"CRV1": "clustervar"}`.
 
 Inference can be adjusted "on-the-fly" via the `.vcov()` method:
 
@@ -276,8 +284,8 @@ fit2.ritest(resampvar="X1=0", reps=1000, cluster="group_id")
 
 ## Multiple Testing Corrections: Bonferroni and Romano-Wolf
 
-To correct for multiple testing, p-values can be adjusted via either the [Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction) or the method by Romano and Wolf (2005), see for example [The Romano-Wolf Multiple Hypothesis
-Correction in Stata](https://docs.iza.org/dp12845.pdf).
+To correct for multiple testing, p-values can be adjusted via either the [Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction), the method by Romano and Wolf (2005), see for example [The Romano-Wolf Multiple Hypothesis
+Correction in Stata](https://docs.iza.org/dp12845.pdf), and the method by Westfall & Young (see [here](https://www.jstor.org/stable/2532216)).
 
 ```{python}
 pf.bonferroni([fit, fit2], param="X1").round(3)
@@ -285,6 +293,10 @@ pf.bonferroni([fit, fit2], param="X1").round(3)
 
 ```{python}
 pf.rwolf([fit, fit2], param="X1", reps=9999, seed=1234).round(3)
+```
+
+```{python}
+pf.wyoung([fit, fit2], param="X1", reps=9999, seed=1234).round(3)
 ```
 
 ## Joint Confidence Intervals
@@ -404,6 +416,40 @@ q1 = np.array([2.0, 1.0])
 fit.wald_test(R=R1, q=q1)
 ```
 
+# Other GLMs (without fixed effects)
+
+`PyFixest` experimentally supports a range of other GLMs without fixed effects (adding fixed effect support is WIP) via the `pf.feglm()` function. Full support with all bells and whistles (in particular, fixed effects demeaning) is planned for PyFixest 0.29.
+
+```{python}
+data_glm = pf.get_data(N=100, seed = 170)
+data_glm["Y"] = np.where(data_glm["Y"] > 0, 1, 0)
+
+fit_gaussian = pf.feglm(fml = "Y~X1", data = data_glm, family = "gaussian")
+fit_logit = pf.feglm(fml = "Y~X1", data = data_glm, family = "logit")
+fit_probit = pf.feglm(fml = "Y~X1", data = data_glm, family = "probit")
+
+pf.etable([
+    fit_gaussian,
+    fit_logit,
+    fit_probit,
+])
+```
+
+You can make predictions on the `response` and `link` scale via the `predict()` method:
+
+```{python}
+fit_logit.predict(type = "response")[0:5]
+fit_logit.predict(type = "link")[0:5]
+```
+
+You can compute the **average marginal effect** via the [marginaleffects package](https://github.com/vincentarelbundock/pymarginaleffects):
+
+```{python}
+avg_slopes(fit_logit, variables = "X1")
+```
+
+Please take a look at the [marginaleffects book](https://marginaleffects.com/) to learn about other transformations that the `marginaleffects` package supports.
+
 # Multiple Estimation
 
 `PyFixest` supports a range of multiple estimation functionality: `sw`, `sw0`, `csw`, `csw0`, and multiple dependent variables. The meaning of these options is explained in the [Multiple Estimations](https://lrberge.github.io/fixest/articles/multiple_estimations.html) vignette of the `fixest` package:
@@ -498,10 +544,13 @@ fit_twfe = pf.feols(
     vcov={"CRV1": "state"},
 )
 
+from pyfixest.report.utils import rename_categoricals
 pf.iplot(
-    [fit_did2s, fit_twfe], coord_flip=False, figsize=(900, 400), title="TWFE vs DID2S"
+    [fit_did2s, fit_twfe], coord_flip=False, figsize=(900, 400), title="TWFE vs DID2S", rotate_xticks=90,
+    labels= rename_categoricals(fit_did2s._coefnames, template="{value_int}")
 )
 ```
+
 
 The `event_study()` function provides a common API for several event study estimators.
 

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _polars_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 
 
 def _compute_bread(
@@ -20,7 +20,7 @@ def _compute_bread(
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
-        data_pandas = _polars_to_pandas(data)
+        data_pandas = _narwhals_to_pandas(data)
         cluster_df = data_pandas[clustervar].copy()
     else:
         raise AttributeError(
@@ -124,13 +124,12 @@ def bucket_argsort(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 # CODE from Styfen Schaer (@styfenschaer)
 @nb.njit(parallel=False)
 def _crv1_meat_loop(
-    _Z: np.ndarray,
-    weighted_uhat: np.ndarray,
+    scores: np.ndarray,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-    k = _Z.shape[1]
-    dtype = _Z.dtype
+    k = scores.shape[1]
+    dtype = scores.dtype
     meat = np.zeros((k, k), dtype=dtype)
 
     g_indices, g_locs = bucket_argsort(cluster_col)
@@ -143,11 +142,7 @@ def _crv1_meat_loop(
         start = g_locs[g]
         end = g_locs[g + 1]
         g_index = g_indices[start:end]
-
-        Zg = _Z[g_index]
-        ug = weighted_uhat[g_index]
-
-        np.dot(Zg.T, ug, out=score_g)
+        score_g = scores[g_index, :].sum(axis=0)
         np.outer(score_g, score_g, out=meat_i)
         meat += meat_i
 
