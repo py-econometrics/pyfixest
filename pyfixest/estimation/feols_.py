@@ -14,7 +14,7 @@ from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
-from pyfixest.errors import VcovTypeNotSupportedError, EmptyVcovError
+from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -1969,8 +1969,8 @@ class Feols:
                 "t value": self._tstat,
                 "Pr(>|t|)": self._pvalue,
                 # use slice because self._conf_int might be empty
-                f"{lb*100:.1f}%": self._conf_int[:1],
-                f"{ub*100:.1f}%": self._conf_int[1:2],
+                f"{lb * 100:.1f}%": self._conf_int[:1],
+                f"{ub * 100:.1f}%": self._conf_int[1:2],
             }
         )
 

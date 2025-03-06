@@ -53,6 +53,7 @@ class EmptyDesignMatrixError(Exception):  # noqa: D101
 class FeatureDeprecationError(Exception):  # noqa: D101
     pass
 
+
 class EmptyVcovError(Exception):  # noqa: D101
     pass
 
@@ -62,6 +63,7 @@ __all__ = [
     "DepvarIsNotNumericError",
     "DuplicateKeyError",
     "EmptyDesignMatrixError",
+    "EmptyVcovError",
     "EndogVarsAsCovarsError",
     "FeatureDeprecationError",
     "FixedEffectInteractionError",
@@ -72,5 +74,4 @@ __all__ = [
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",
-    "EmptyVcovError",
 ]

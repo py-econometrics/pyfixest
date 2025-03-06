@@ -775,3 +775,11 @@ def test_prediction_errors_glm():
             NotImplementedError, match="Prediction with standard errors"
         ):
             model.predict(se_fit=True)
+
+
+def test_empty_vcov_error():
+    data = pf.get_data()
+    fit = pf.feols("Y ~ 1 | f1", data=data)
+
+    with pytest.warns(UserWarning):
+        fit.tidy()
