@@ -829,7 +829,7 @@ class Feols:
         -------
         None
         """
-        if self._vcov.size == 0:
+        if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
@@ -1969,8 +1969,8 @@ class Feols:
                 "t value": self._tstat,
                 "Pr(>|t|)": self._pvalue,
                 # use slice because self._conf_int might be empty
-                f"{lb * 100:.1f}%": self._conf_int[:1],
-                f"{ub * 100:.1f}%": self._conf_int[1:2],
+                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
             }
         )
 
