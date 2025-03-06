@@ -669,7 +669,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    atol<span class="op">=</span><span class="fl">1e-06</span>,</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    btol<span class="op">=</span><span class="fl">1e-06</span>,</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">type</span><span class="op">=</span><span class="st">'link'</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    se_fit<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    interval<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.05</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Return predicted values from regression model.</p>
 <p>Return a flat np.array with predicted values of the regression model. If new fixed effect levels are introduced in <code>newdata</code>, predicted values for such observations will be set to NaN.</p>
 <section id="parameters" class="level4 doc-section doc-section-parameters">
@@ -677,8 +680,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 2%">
-<col style="width: 8%">
-<col style="width: 86%">
+<col style="width: 9%">
+<col style="width: 84%">
 <col style="width: 3%">
 </colgroup>
 <thead>
@@ -726,6 +729,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html</td>
 <td><code>1e-6</code></td>
 </tr>
+<tr class="odd">
+<td>se_fit</td>
+<td>Optional[bool]</td>
+<td>If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>interval</td>
+<td>Optional[PredictionErrorOptions]</td>
+<td>The type of interval to compute. Can be either ‘prediction’ or None.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>alpha</td>
+<td>float</td>
+<td>The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = “prediction” is not None.</td>
+<td><code>0.05</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -733,9 +754,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 14%">
-<col style="width: 76%">
+<col style="width: 2%">
+<col style="width: 12%">
+<col style="width: 84%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -747,8 +768,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>np.ndarray</td>
-<td>A flat array with the predicted values of the regression model.</td>
+<td>Union[np.ndarray, pd.DataFrame]</td>
+<td>Returns a pd.Dataframe with columns “fit”, “se_fit” and CIs if argument “interval=prediction”. Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument “se_fit=True”.</td>
 </tr>
 </tbody>
 </table>
