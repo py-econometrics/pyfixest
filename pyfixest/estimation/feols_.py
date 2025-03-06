@@ -14,7 +14,7 @@ from scipy.sparse import diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -829,7 +829,8 @@ class Feols:
         -------
         None
         """
-        _vcov = self._vcov
+        if len(self._vcov) == 0:
+            raise EmptyVcovError()
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
         _N = self._N
@@ -839,7 +840,7 @@ class Feols:
         )  # fixest default
         _method = self._method
 
-        self._se = np.sqrt(np.diagonal(_vcov))
+        self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
 
         df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
@@ -1931,7 +1932,7 @@ class Feols:
 
     def tidy(
         self,
-        alpha: Optional[float] = None,
+        alpha: float = 0.05,
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
@@ -1951,29 +1952,25 @@ class Feols:
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
-        if alpha is None:
-            ub, lb = 0.975, 0.025
-            self.get_inference()
-        else:
-            ub, lb = 1 - alpha / 2, alpha / 2
+        ub, lb = 1 - alpha / 2, alpha / 2
+        try:
             self.get_inference(alpha=alpha)
-
-        _coefnames = self._coefnames
-        _se = self._se
-        _tstat = self._tstat
-        _pvalue = self._pvalue
-        _beta_hat = self._beta_hat
-        _conf_int = self._conf_int
+        except EmptyVcovError:
+            warnings.warn(
+                "Empty variance-covariance matrix detected",
+                UserWarning,
+            )
 
         tidy_df = pd.DataFrame(
             {
-                "Coefficient": _coefnames,
-                "Estimate": _beta_hat,
-                "Std. Error": _se,
-                "t value": _tstat,
-                "Pr(>|t|)": _pvalue,
-                f"{lb * 100:.1f}%": _conf_int[0],
-                f"{ub * 100:.1f}%": _conf_int[1],
+                "Coefficient": self._coefnames,
+                "Estimate": self._beta_hat,
+                "Std. Error": self._se,
+                "t value": self._tstat,
+                "Pr(>|t|)": self._pvalue,
+                # use slice because self._conf_int might be empty
+                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
             }
         )
 

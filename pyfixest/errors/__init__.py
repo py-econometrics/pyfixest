@@ -54,11 +54,16 @@ class FeatureDeprecationError(Exception):  # noqa: D101
     pass
 
 
+class EmptyVcovError(Exception):  # noqa: D101
+    pass
+
+
 __all__ = [
     "CovariateInteractionError",
     "DepvarIsNotNumericError",
     "DuplicateKeyError",
     "EmptyDesignMatrixError",
+    "EmptyVcovError",
     "EndogVarsAsCovarsError",
     "FeatureDeprecationError",
     "FixedEffectInteractionError",
