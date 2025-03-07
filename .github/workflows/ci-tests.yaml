@@ -45,10 +45,9 @@ jobs:
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p "$R_LIB_PATH"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest','broom','did2s','wildrwolf','ivDiag','car'), lib='$R_LIB_PATH')"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='$R_LIB_PATH', repos=c('https://grantmcdermott.r-universe.dev'))"
-
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
       - name: Run 'regular' tests
         run: |
           pixi run tests-regular
@@ -93,10 +92,9 @@ jobs:
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
-          mkdir -p "$R_LIB_PATH"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest','broom','did2s','wildrwolf','ivDiag','car'), lib='$R_LIB_PATH')"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='$R_LIB_PATH', repos=c('https://grantmcdermott.r-universe.dev'))"
-
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
       - name: Run 'slow' tests
         run: |
           pixi run tests-slow
