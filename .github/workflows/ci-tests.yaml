@@ -22,6 +22,7 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -33,37 +34,34 @@ jobs:
           pixi-version: v0.41.4
           cache: true
 
-      - name: set numba parallel flags
+      - name: Set Numba threads
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      # -------------------------------------------------------
+      # Only set NUMBA_DISABLE_JIT=1 if this is a push to master
+      # (which typically happens when a PR is merged into master).
+      # -------------------------------------------------------
+      - name: Disable JIT if merging to master or if pull_request
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'pull_request')
+        run: |
+          echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
 
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: Print R version
-        run: |
-          Rscript -e 'R.version'
+        run: Rscript -e 'R.version'
 
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
           mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom', 'did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom', 'did2s', 'wildrwolf', 'ivDiag', 'car'), lib='$R_LIB_PATH')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='$R_LIB_PATH', repos=c('https://grantmcdermott.r-universe.dev'))"
 
-      - name: Run 'regular 'tests
-        run: |
-          pixi run tests-regular
-
-      # Run tests for PRs with the label "tests-extended"
-      #- name: Run tests for plots (only on PRs with the 'tests-extended' label)
-      #  if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
-      #  run: pixi run tests-extended
-
-      # Run tests for push to master
-      #- name: Run tests for push to master
-      #  if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      #  run: pixi run tests-extended
+      - name: Run 'regular' tests
+        run: pixi run tests-regular
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
@@ -85,6 +83,7 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -100,6 +99,14 @@ jobs:
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
+      # -------------------------------------------------------
+      # Same logic to disable JIT if push to master
+      # -------------------------------------------------------
+      - name: Disable JIT if merging to master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
+
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
@@ -107,21 +114,18 @@ jobs:
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
           mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'), lib='$R_LIB_PATH')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='$R_LIB_PATH', repos = c('https://grantmcdermott.r-universe.dev'))"
 
-      - name: Run 'slow 'tests
-        run: |
-          pixi run tests-slow
+      - name: Run 'slow' tests
+        run: pixi run tests-slow
 
-      #- name: Upload to Codecov
-      #  uses: codecov/codecov-action@v4
-      #  with:
-      #    token: ${{ secrets.CODECOV_TOKEN }}
-      #    partial: true
-      #    flags: tests-vs-fixest
-
-
+      # - name: Upload to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     partial: true
+      #     flags: tests-vs-fixest
 
   build-docs:
     name: "Build Docs"
@@ -150,15 +154,16 @@ jobs:
       - name: Compile docstrings with quartodoc
         run: |
           pixi run docs-build
+
       - name: Render docs
         run: |
           pixi run docs-render
+
       - name: Save docs artifact
         uses: actions/upload-artifact@v4
         with:
           name: docs-html
           path: docs/_site
-
 
   publish-docs:
     name: "Publish Docs"
