@@ -58,6 +58,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
           flags: core-tests
+          files: coverage.xml
 
   test_slow:
     name: "Tests vs fixest"
@@ -105,6 +106,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
           flags: vs-fixest
+          files: coverage.xml
 
   merge_coverage:
     name: "Merge Coverage"
