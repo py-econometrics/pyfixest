@@ -37,12 +37,6 @@ jobs:
         run: |
           echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
-      - name: Disable JIT for Coverage
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'pull_request')
-        run: |
-          echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
-          echo "JAX_DISABLE_JIT=1"   >> $GITHUB_ENV
-
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
