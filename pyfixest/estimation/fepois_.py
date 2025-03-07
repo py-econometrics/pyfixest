@@ -80,6 +80,7 @@ class Fepois(Feols):
         drop_intercept: bool,
         weights: Optional[str],
         weights_type: Optional[str],
+        offset: Optional[float],
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
@@ -105,6 +106,7 @@ class Fepois(Feols):
             drop_intercept=drop_intercept,
             weights=weights,
             weights_type=weights_type,
+            offset=offset,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
             lookup_demeaned_data=lookup_demeaned_data,
@@ -147,7 +149,7 @@ class Fepois(Feols):
             raise ValueError(
                 "The dependent variable must be a weakly positive integer."
             )
-
+        
         # check for separation
         na_separation: list[int] = []
         if (
@@ -168,6 +170,7 @@ class Fepois(Feols):
             self._Y.drop(na_separation, axis=0, inplace=True)
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
+            self._offset = np.delete(self._offset,na_separation,axis=0) # _offset is a numpy array so we use delete instead of drop
             self._data.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
 
@@ -217,6 +220,7 @@ class Fepois(Feols):
         _Y = self._Y
         _X = self._X
         _fe = self._fe
+        _offset = self._offset
         _N = self._N
         _convergence = self.convergence  # False
         _maxiter = self.maxiter
@@ -251,13 +255,13 @@ class Fepois(Feols):
                 _mean = np.mean(_Y)
                 mu = (_Y + _mean) / 2
                 eta = np.log(mu)
-                Z = eta + _Y / mu - 1
+                Z = eta - _offset + _Y / mu - 1
                 reg_Z = Z.copy()
                 last = compute_deviance(_Y, mu)
 
             else:
                 # update w and Z
-                Z = eta + _Y / mu - 1  # eq (8)
+                Z = eta - _offset + _Y / mu - 1  # eq (8)
                 reg_Z = Z.copy()  # eq (9)
 
             # tighten HDFE tolerance - currently not possible with PyHDFE
@@ -294,7 +298,7 @@ class Fepois(Feols):
 
             mu_old = mu.copy()
             # more updating
-            eta = Z - resid
+            eta = Z - resid + _offset
             mu = np.exp(eta)
 
             # same criterion as fixest
@@ -716,3 +720,4 @@ def _fepois_input_checks(drop_singletons: bool, tol: float, maxiter: int):
         raise TypeError("maxiter must be integer.")
     if maxiter <= 0:
         raise AssertionError("maxiter must be greater than 0.")
+        

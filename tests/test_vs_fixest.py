@@ -476,8 +476,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("adj", [True])
 @pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj
+    data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj, offset
 ):
     global test_counter_fepois
     test_counter_fepois += 1
@@ -488,6 +489,11 @@ def test_single_fit_fepois(
     ssc_ = ssc(adj=adj, cluster_adj=cluster_adj)
 
     data = data_fepois
+    if offset:
+        data["offset_var"] = np.ones(data.shape[0]) * 5
+        offset_var = "offset_var"
+    else:
+        offset_var = None
 
     if dropna:
         data = data.dropna()
@@ -503,14 +509,28 @@ def test_single_fit_fepois(
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
-    mod = pf.fepois(fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol=1e-10)
-    r_fixest = fixest.fepois(
-        ro.Formula(r_fml),
-        vcov=r_inference,
-        data=data_r,
-        ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
-        glm_tol=1e-10,
-    )
+    py_arg_dict = {
+        "fml": fml,
+        "data": data,
+        "vcov": inference,
+        "ssc": ssc_,
+        "iwls_tol": iwls_tol,
+    }
+
+    r_arg_dict = {
+        "fml": ro.Formula(r_fml),
+        "vcov": r_inference,
+        "data": data_r,
+        "ssc": fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+        "glm_tol": iwls_tol,
+    }
+
+    if offset:
+        py_arg_dict["offset"] = offset_var
+        r_arg_dict["offset"] = ro.Formula("~" + offset_var)
+
+    mod = pf.fepois(**py_arg_dict)
+    r_fixest = fixest.fepois(**r_arg_dict)
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
