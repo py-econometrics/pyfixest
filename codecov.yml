@@ -17,3 +17,6 @@ coverage:
         ignore:
           - "pyfixest/utils/dgps.py"
           - "pyfixest/utils/_exceptions.py"
+
+comment:
+  show_diff_only: false
