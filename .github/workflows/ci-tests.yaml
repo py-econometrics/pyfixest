@@ -96,16 +96,16 @@ jobs:
           mkdir -p $R_LIB_PATH
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
-      - name: Run 'slow' tests
+      - name: Run tests against r
         run: |
-          pixi run tests-slow
+          pixi run tests-against-r
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
-          flags: vs-fixest
+          flags: tests-vs-r
           files: coverage.xml
 
   merge_coverage:

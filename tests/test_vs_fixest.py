@@ -190,7 +190,7 @@ test_counter_feiv = 0
 # - cluster_adj: True
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -411,7 +411,7 @@ def test_single_fit_feols(
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
@@ -469,7 +469,7 @@ def test_single_fit_feols_empty(
     assert mod._beta_hat.size == 0
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
@@ -576,7 +576,7 @@ def test_single_fit_fepois(
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -672,7 +672,7 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [172])
 @pytest.mark.parametrize("dropna", [True, False])
@@ -836,7 +836,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -943,7 +943,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [31])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -1019,7 +1019,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_twoway_clustering():
     data = get_data(N=500, seed=17021, beta_type="1", error_type="1").dropna()
 
@@ -1076,7 +1076,7 @@ def test_twoway_clustering():
             )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
@@ -1194,7 +1194,7 @@ def get_data_r(fml, data):
     return data_r
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize(
     "fml",
     [
@@ -1225,7 +1225,7 @@ def test_wald_test(fml, data):
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_singleton_dropping():
     data = get_data()
     # create a singleton fixed effect

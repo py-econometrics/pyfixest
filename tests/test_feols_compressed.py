@@ -40,7 +40,7 @@ fmls = [
 ]
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("fml", fmls)
 @pytest.mark.parametrize("vcov", ["iid", "hetero"])
 @pytest.mark.parametrize(
@@ -140,7 +140,7 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
             ), "Error in pvalue"
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_identical_seed():
     data = pf.get_data()
 
@@ -153,7 +153,7 @@ def test_identical_seed():
     assert np.allclose(fit1.pvalue().xs("f1"), fit2.pvalue().xs("f1")), "Error in seed"
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_different_seed():
     data = pf.get_data()
 

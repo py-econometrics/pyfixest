@@ -8,7 +8,7 @@ import pyfixest as pf
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
@@ -46,7 +46,7 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1"])
 @pytest.mark.parametrize("resampvar", ["X1"])
 @pytest.mark.parametrize("cluster", [None, "group_id"])
