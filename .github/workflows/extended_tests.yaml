@@ -1,13 +1,20 @@
 name: Extended Tests (Optional)
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '35 12 * * 6'  # Runs every Saturday at 12:35 UTC (13:35 CET, 14:35 CEST in summer)
-jobs:
-  extended_tests:
-    runs-on: ubuntu-latest
+  push:
+    branches:
+      - master
 
+jobs:
+  test:
+    name: Tests Core
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
 
     steps:
       - name: Checkout source
@@ -24,7 +31,7 @@ jobs:
           pixi-version: v0.41.4
           cache: true
 
-      - name: set numba parallel flags
+      - name: Set numba parallel flags
         run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
       - name: Setup r2u
@@ -39,16 +46,13 @@ jobs:
           mkdir -p $R_LIB_PATH
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
-
-
       - name: Run long tests with coverage
-        run: |
-            pixi r tests-extended
+        run: pixi r tests-extended
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
-          flags: extended
+          flags: tests-extended
           partial: true
