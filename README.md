@@ -57,7 +57,14 @@ You can install the release version from `PyPI` by running
 python -m pip install pyfixest
 ```
 
-or the development version from github by running
+The above will install a bare-bone version of pyfixest that will allow you to fit models but lacks post-processing functionality and
+estimation extensions. We recommend to install all dependencies by running
+
+```py
+python -m pip install pyfixest[full]
+```
+
+You can install the development version from github by running
 
 ```py
 python -m pip install git+https://github.com/py-econometrics/pyfixest

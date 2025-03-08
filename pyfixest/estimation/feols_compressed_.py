@@ -6,7 +6,15 @@ from typing import Any, Literal, Optional, Union
 import narwhals as nw
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+
+    def tqdm(iterable, *args, **kwargs):
+        "Define a dummy tqdm function."
+        return iterable
+
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula

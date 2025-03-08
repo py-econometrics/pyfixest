@@ -3,10 +3,24 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import lsqr
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+
+    def tqdm(iterable, *args, **kwargs):
+        "Define a dummy tqdm function."
+        return iterable
+
+
+try:
+    from joblib import Parallel, delayed
+
+    joblib_available = True
+except ImportError:
+    joblib_available = False
 
 
 @dataclass
@@ -154,9 +168,12 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
-        )
+        if joblib_available:
+            _bootstrapped = Parallel(n_jobs=self.nthreads)(
+                delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            )
+        else:
+            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])

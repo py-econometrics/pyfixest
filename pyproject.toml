@@ -15,19 +15,23 @@ dependencies = [
   "formulaic>=1.1.0",
   "pandas>=1.1.0",
   "numba>=0.58.0",
-  "seaborn>=0.13.2",
-  "tabulate>=0.9.0",
-  "tqdm>=4.0.0",
-  "great-tables>=0.10.0",
   "numpy>=1.19.0",
   "narwhals>=1.13.3",
-  "joblib>=1.4.2,<2",
+  "seaborn>=0.13.2",
 ]
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
 
 [project.optional-dependencies]
+
+full = [
+  "joblib>=1.4.2,<2",
+  "tabulate>=0.9.0",
+  "tqdm>=4.0.0",
+  "great-tables>=0.10.0",
+]
+
 dev = [
   "pytest>=7.2.0",
   "pytest-cov>=4.1.0",
@@ -84,11 +88,12 @@ pyfixest = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
-build = { features = ["build"], solve-group = "default" }
-jax = { features = ["jax"], solve-group = "default" }
-plots = { features = ["plots"], solve-group = "default" }
+full = {features = ["full"], solve-group = "default"}
+dev = { features = ["dev"], solve-group = "full" }
+docs = { features = ["docs"], solve-group = "full" }
+build = { features = ["build"], solve-group = "full" }
+jax = { features = ["jax"], solve-group = "full" }
+plots = { features = ["plots"], solve-group = "full" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
