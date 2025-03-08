@@ -1,0 +1,54 @@
+name: Extended Tests (Optional)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '35 12 * * 6'  # Runs every Saturday at 12:35 UTC (13:35 CET, 14:35 CEST in summer)
+jobs:
+  extended_tests:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: set numba parallel flags
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: Print R version
+        run: Rscript -e 'R.version'
+
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
+
+
+      - name: Run long tests with coverage
+        run: |
+            pixi r tests-extended
+
+      - name: Upload coverage to Codecov (partial)
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          flags: extended
+          partial: true
