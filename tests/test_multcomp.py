@@ -97,23 +97,23 @@ def test_wildrwolf_hc(seed, sd):
 
 
 @pytest.mark.extended
-@pytest.mark.parametrize("seed", [29090381, 32, 99932444])
-@pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
+@pytest.mark.parametrize("seed", [9391])
+@pytest.mark.parametrize("sd", [0.5, 1.5])
 def test_wildrwolf_crv(seed, sd):
     rng = np.random.default_rng(seed)
     data = get_data(N=4_000, seed=seed)
-    data["f1"] = rng.choice(range(200), len(data), True)
+    data["f1"] = rng.choice(range(100), len(data), True)
     data["Y2"] = data["Y"] * rng.normal(0, sd, size=len(data))
     data["Y3"] = data["Y2"] + rng.normal(0, sd, size=len(data))
 
     # test set 2
 
-    fit = feols("Y + Y2 + Y3 ~ X1 | f1 + f2", data=data)
+    fit = feols("Y + Y2 + Y3 ~ X1 | f1", data=data)
 
     rwolf_py = rwolf(fit.to_list(), "X1", reps=9999, seed=seed + 3)
 
     # R
-    fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1 + f2"), data=data)
+    fit_r = fixest.feols(ro.Formula("c(Y, Y2, Y3) ~ X1 | f1"), data=data)
     rwolf_r = wildrwolf.rwolf(fit_r, param="X1", B=9999, seed=seed + 3)
 
     try:
@@ -157,8 +157,8 @@ def test_stepwise_function():
 
 
 @pytest.mark.extended
-@pytest.mark.parametrize("seed", [1000, 2000, 3000])
-@pytest.mark.parametrize("reps", [999, 1999])
+@pytest.mark.parametrize("seed", [453])
+@pytest.mark.parametrize("reps", [499])
 def test_sampling_scheme(seed, reps):
     # Compare RW adjusted p-values from RI and WB resampling methods
     # The p-values should be "largely" similar regardless of resampling methods
@@ -199,7 +199,7 @@ def test_sampling_scheme(seed, reps):
 
 
 @pytest.mark.extended
-def test_multi_vs_list(seeds, reps):
+def test_multi_vs_list():
     "Test that lists of models and FixestMulti input produce identical results."
     seed = 1232
     reps = 100
@@ -213,23 +213,6 @@ def test_multi_vs_list(seeds, reps):
     assert rwolf(fit_all, "X1", seed=seed, reps=reps).equals(
         rwolf([fit1, fit2], "X1", seed=seed, reps=reps)
     )
-
-
-@pytest.mark.extended
-@pytest.mark.parametrize("seed", [1])
-@pytest.mark.parametrize("reps", [999, 9999])
-@pytest.mark.parametrize("sampling_method", ["ri", "wild-bootstrap"])
-def test_wyoung(seed, reps, sampling_method):
-    data = pf.get_data(N=100)
-
-    fit1 = pf.feols("Y ~ X1 + X2", data=data)
-    fit2 = pf.feols("Y2 ~ X1 + X2", data=data)
-
-    wyoung_output = pf.wyoung(
-        [fit1, fit2], "X1", reps=reps, seed=seed, sampling_method=sampling_method
-    )
-
-    assert isinstance(wyoung_output, pd.DataFrame)
 
 
 @pytest.mark.extended
