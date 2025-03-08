@@ -93,7 +93,7 @@ plots = { features = ["plots"], solve-group = "default" }
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
 tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
-tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-extended = "pytest tests -n 4 -m \"extended\" --cov=pyfixest --cov-report=xml"
 tests-fixest = "pytest tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
 tests-slow = "pytest tests -n 4 -m slow --cov=pyfixest --cov-report=xml"
 tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
