@@ -3,7 +3,7 @@ name: Extended Tests (Optional)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 12 * * 6'  # Runs every Saturday at 12:30 UTC (13:30 CET, 14:30 CEST in summer)
+    - cron: '35 12 * * 6'  # Runs every Saturday at 12:35 UTC (13:35 CET, 14:35 CEST in summer)
 jobs:
   extended_tests:
     runs-on: ubuntu-latest
