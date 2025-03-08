@@ -18,10 +18,10 @@ jobs:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -34,43 +34,31 @@ jobs:
           cache: true
 
       - name: set numba parallel flags
-        run: |
-          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
 
       - name: Print R version
-        run: |
-          Rscript -e 'R.version'
+        run: Rscript -e 'R.version'
 
       - name: Install R packages
         run: |
           R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
           mkdir -p $R_LIB_PATH
-          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom', 'did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
-
-      - name: Run 'regular 'tests
+      - name: Run 'regular' tests
         run: |
           pixi run tests-regular
 
-      # Run tests for PRs with the label "tests-extended"
-      #- name: Run tests for plots (only on PRs with the 'tests-extended' label)
-      #  if: github.event_name == 'pull_request' && contains(github.event.label.name, 'tests-extended')
-      #  run: pixi run tests-extended
-
-      # Run tests for push to master
-      #- name: Run tests for push to master
-      #  if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      #  run: pixi run tests-extended
-
-      - name: Upload to Codecov
+      - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           partial: true
           flags: core-tests
+          files: coverage.xml
 
   test_slow:
     name: "Tests vs fixest"
@@ -81,10 +69,10 @@ jobs:
         os: ["ubuntu-latest"]
         python-version: ["3.9", "3.12"]
         pytest_opts: ["--workers 4 --tests-per-worker 1"]
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -97,8 +85,7 @@ jobs:
           cache: true
 
       - name: set numba parallel flags
-        run: |
-          echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
 
       - name: Setup r2u
         uses: eddelbuettel/github-actions/r2u-setup@master
@@ -109,19 +96,29 @@ jobs:
           mkdir -p $R_LIB_PATH
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
           Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
-
-      - name: Run 'slow 'tests
+      - name: Run tests against r
         run: |
-          pixi run tests-slow
+          pixi run tests-against-r
 
-      #- name: Upload to Codecov
-      #  uses: codecov/codecov-action@v4
-      #  with:
-      #    token: ${{ secrets.CODECOV_TOKEN }}
-      #    partial: true
-      #    flags: tests-vs-fixest
+      - name: Upload coverage to Codecov (partial)
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          partial: true
+          flags: tests-vs-r
+          files: coverage.xml
 
-
+  merge_coverage:
+    name: "Merge Coverage"
+    runs-on: ubuntu-latest
+    needs: [test, test_slow]
+    steps:
+      - name: Final coverage merge
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          partial: false
+          flags: final
 
   build-docs:
     name: "Build Docs"
@@ -130,6 +127,7 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -150,15 +148,16 @@ jobs:
       - name: Compile docstrings with quartodoc
         run: |
           pixi run docs-build
+
       - name: Render docs
         run: |
           pixi run docs-render
+
       - name: Save docs artifact
         uses: actions/upload-artifact@v4
         with:
           name: docs-html
           path: docs/_site
-
 
   publish-docs:
     name: "Publish Docs"
@@ -175,6 +174,7 @@ jobs:
         with:
           name: docs-html
           path: docs/_site
+
       - name: Publish docs to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

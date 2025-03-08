@@ -92,10 +92,10 @@ plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
-tests-regular = "pytest tests -n 4 -m \"not (extended or slow or plots)\" --cov=pyfixest --cov-report=xml"
-tests-extended = "pytest tests -n 4 -m \"tests-extended\" --cov=pyfixest --cov-report=xml"
+tests-against-r = "pytest tests -n 4 -m \"against_r\" --cov=pyfixest --cov-report=xml"
+tests-regular = "pytest tests -n 4 -m \"not (extended or test_vs_r or plots)\" --cov=pyfixest --cov-report=xml"
+tests-extended = "pytest tests -n 4 -m \"extended\" --cov=pyfixest --cov-report=xml"
 tests-fixest = "pytest tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
-tests-slow = "pytest tests -n 4 -m slow --cov=./ --cov-report=xml"
 tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
 tests-plots = "pixi run --environment plots pytest tests/test_plots.py -n 4"
 tests-rerun = "pytest --lf -n 4"
@@ -129,7 +129,7 @@ addopts = [
 ]
 
 markers = [
-  "slow: mark test to be part of the slow test suite",
+  "against_r: mark test to be part of the test suite that depends on R",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
 ]
