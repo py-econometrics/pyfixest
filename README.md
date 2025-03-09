@@ -56,8 +56,13 @@ You can install the release version from `PyPI` by running
 # inside an active virtual environment
 python -m pip install pyfixest
 ```
+To install a version with only core functionality and a reduced dependency set, you can run
 
-or the development version from github by running
+```py
+python -m pip install pyfixest[minimal]
+```
+
+You can install the development version from github by running
 
 ```py
 python -m pip install git+https://github.com/py-econometrics/pyfixest

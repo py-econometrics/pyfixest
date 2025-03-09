@@ -6,8 +6,6 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from great_tables import GT
-from tabulate import tabulate
 
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
@@ -156,6 +154,8 @@ def etable(
     pf.etable([fit1, fit2])
     ```
     """
+    # check if etable installed else error
+
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
     assert isinstance(signif_code, list) and len(signif_code) == 3, (
@@ -683,6 +683,11 @@ def _tabulate_etable_md(df, n_coef, n_fixef, n_models, n_model_stats):
     -------
     - formatted_table (str): The formatted table as a string.
     """
+    try:
+        from tabulate import tabulate
+    except ImportError:
+        raise ImportError("The tabulate package is required but it is not installed.")
+
     # Format the DataFrame for tabulate
     table = tabulate(
         df,
@@ -1063,6 +1068,13 @@ def make_table(
         else:
             rowname_col = dfs.columns[0]
             groupname_col = None
+
+        try:
+            from great_tables import GT
+        except ImportError:
+            raise ImportError(
+                "The great_tables package is for running pf.etable() in 'gt' mode."
+            )
 
         # Generate the table with GT
         gt = GT(dfs, auto_align=False)

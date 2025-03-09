@@ -8,7 +8,14 @@ from pathlib import Path
 
 import papermill
 from joblib import Parallel, delayed
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
+
 
 KERNEL_NAME: str = "python3"
 DOCS = Path("docs")

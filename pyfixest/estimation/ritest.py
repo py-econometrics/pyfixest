@@ -26,7 +26,15 @@ except ImportError:
     _HAS_LETS_PLOT = False
 
 from scipy.stats import norm
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+
+    def tqdm(iterable, *args, **kwargs):
+        """Define a dummy tqdm function."""
+        return iterable
+
 
 from pyfixest.estimation.demean_ import demean
 
