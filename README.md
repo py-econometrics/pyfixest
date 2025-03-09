@@ -56,12 +56,10 @@ You can install the release version from `PyPI` by running
 # inside an active virtual environment
 python -m pip install pyfixest
 ```
-
-The above will install a bare-bone version of pyfixest that will allow you to fit models but lacks post-processing functionality and
-estimation extensions. We recommend to install all dependencies by running
+To install a version with only core functionality and a reduced dependency set, you can run
 
 ```py
-python -m pip install pyfixest[full]
+python -m pip install pyfixest[minimal]
 ```
 
 You can install the development version from github by running
