@@ -88,7 +88,7 @@ pyfixest = { path = ".", editable = true }
 
 [tool.pixi.environments]
 minimal = { solve-group = "default" }
-default = {features = ["core"], solve-group = "minimal"}
+default = {features = ["core"], solve-group = "default"}
 dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
