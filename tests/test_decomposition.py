@@ -332,3 +332,9 @@ def test_combine_covariates_vs_none(agg_first):
         np.testing.assert_allclose(
             value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
         )
+
+
+def smoke_test_only_coef():
+    data = pf.get_data()
+    fit = pf.feols("Y~X1 + X2 | f1", data=data)
+    fit.decompose(param="X1", only_coef=True)
