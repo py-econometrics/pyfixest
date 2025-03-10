@@ -186,11 +186,9 @@ class GelbachDecomposition:
         # round all values in self.contribution_dict and self.ci to the specified number of digits
 
         contribution_dict = self.contribution_dict.copy()
-        ci = self.ci.copy()
 
         for key in contribution_dict:
             contribution_dict[key] = np.round(contribution_dict[key], digits)
-            ci[key] = np.round(ci[key], digits)
 
         rows = []
         rows.append(
@@ -202,6 +200,10 @@ class GelbachDecomposition:
         )
 
         if not self.only_coef:
+            ci = self.ci.copy()
+            for key in contribution_dict:
+                ci[key] = np.round(ci[key], digits)
+
             rows.append(
                 [
                     f"[{ci['direct_effect'][0]:.{digits}f}, {ci['direct_effect'][1]:.{digits}f}]",
