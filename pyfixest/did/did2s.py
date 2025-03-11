@@ -10,6 +10,8 @@ from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.utils.utils import rename_did_coefficients
+
 
 
 class DID2S(DID):
@@ -146,10 +148,28 @@ class DID2S(DID):
         )
 
     def tidy(self):  # noqa: D102
-        return self.tidy()
+        # Get the coefficient table
+        result = self._coeftable.copy()
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+        return result
 
     def summary(self):  # noqa: D102
-        return self.summary()
+        """
+        Return a summary of the estimation results.
+    
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the estimation results and renamed coefficients.
+        """
+        # Get the coefficient table
+        result = self._coeftable.copy()
+    
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+    
+        return result
 
 
 def _did2s_estimate(
