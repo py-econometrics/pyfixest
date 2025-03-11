@@ -1510,10 +1510,10 @@ class Feols:
             # output = "pandas" as Y, X need to be np.arrays for parallel processing
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="sparse")
             xnames = X.model_spec.column_names
-            Y = Y.to_numpy().flatten()
-            X = X.to_numpy()
+            Y = Y.toarray().flatten()
+            X = X.toarray()
 
         else:
             Y = self._Y.flatten()
