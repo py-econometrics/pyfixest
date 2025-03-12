@@ -50,12 +50,18 @@ def get_design_matrix_and_yhat(
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
         if not model._X_is_empty:
-            xfml = model._fml.split("|")[0].split("~")[1]
             if model._icovars is not None:
                 raise NotImplementedError(
                     "predict() with argument newdata is not supported with i() syntax."
                 )
-            X = Formula(xfml).get_model_matrix(newdata)
+
+            if hasattr(model, "_model_spec") and model._model_spec is not None:
+                rhs_spec = model._model_spec.fml_second_stage.rhs
+                X = rhs_spec.get_model_matrix(newdata)
+            else:
+                xfml = model._fml.split("|")[0].split("~")[1]
+                X = Formula(xfml).get_model_matrix(newdata)
+
             X_index = X.index
 
             coef_idx = np.isin(model._coefnames, X.columns)

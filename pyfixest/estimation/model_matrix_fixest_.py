@@ -76,6 +76,8 @@ def model_matrix_fixest(
             List of variables interacted with i() syntax, None if not applicable.
         - 'X_is_empty' : bool
             Flag indicating whether X is empty.
+        - 'model_spec' : formulaic ModelSpec
+            The model specification used to create the model matrices.
 
     Examples
     --------
@@ -131,6 +133,8 @@ def model_matrix_fixest(
         data, output="pandas", context={"factorize": factorize, **_context}
     )
     endogvar = Z = weights_df = fe = None
+
+    model_spec = mm.model_spec
 
     Y = mm["fml_second_stage"]["lhs"]
     X = mm["fml_second_stage"]["rhs"]
@@ -217,6 +221,7 @@ def model_matrix_fixest(
         "na_index_str": na_index_str,
         "icovars": _icovars,
         "X_is_empty": X_is_empty,
+        "model_spec": model_spec,
     }
 
 
