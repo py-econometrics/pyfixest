@@ -534,14 +534,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td>dict</td>
-<td>A dictionary with the following keys and value types: - ‘Y’ : pd.DataFrame The dependent variable. - ‘X’ : pd.DataFrame The Design Matrix. - ‘fe’ : Optional[pd.DataFrame] The model’s fixed effects. None if not applicable. - ‘endogvar’ : Optional[pd.DataFrame] The model’s endogenous variable(s), None if not applicable. - ‘Z’ : np.ndarray The model’s set of instruments (exogenous covariates plus instruments). None if not applicable. - ‘weights_df’ : Optional[pd.DataFrame] DataFrame containing weights, None if weights are not used. - ‘na_index’ : np.ndarray Array indicating rows droppled beause of NA values or singleton fixed effects. - ‘na_index_str’ : str String representation of ‘na_index’. - ’_icovars’ : Optional[list[str]] List of variables interacted with i() syntax, None if not applicable. - ‘X_is_empty’ : bool Flag indicating whether X is empty.</td>
+<td>A dictionary with the following keys and value types: - ‘Y’ : pd.DataFrame The dependent variable. - ‘X’ : pd.DataFrame The Design Matrix. - ‘fe’ : Optional[pd.DataFrame] The model’s fixed effects. None if not applicable. - ‘endogvar’ : Optional[pd.DataFrame] The model’s endogenous variable(s), None if not applicable. - ‘Z’ : np.ndarray The model’s set of instruments (exogenous covariates plus instruments). None if not applicable. - ‘weights_df’ : Optional[pd.DataFrame] DataFrame containing weights, None if weights are not used. - ‘na_index’ : np.ndarray Array indicating rows droppled beause of NA values or singleton fixed effects. - ‘na_index_str’ : str String representation of ‘na_index’. - ’_icovars’ : Optional[list[str]] List of variables interacted with i() syntax, None if not applicable. - ‘X_is_empty’ : bool Flag indicating whether X is empty. - ‘model_spec’ : formulaic ModelSpec The model specification used to create the model matrices.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="8cc15eb5" class="cell" data-execution_count="1">
+<div id="93ce1121" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.model_matrix_fixest_ <span class="im">import</span> model_matrix_fixest</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -553,7 +553,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>mm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="x4yw7b"></div>
+            <div id="KlqBmZ"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -577,9 +577,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("x4yw7b").appendChild(div);
+                        document.getElementById("KlqBmZ").appendChild(div);
                     };
-                    var e = document.getElementById("x4yw7b");
+                    var e = document.getElementById("KlqBmZ");
                     e.appendChild(script);
                 })()
             </script>
@@ -587,7 +587,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="2bRAiu"></div>
+            <div id="PiZcre"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -611,9 +611,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("2bRAiu").appendChild(div);
+                        document.getElementById("PiZcre").appendChild(div);
                     };
-                    var e = document.getElementById("2bRAiu");
+                    var e = document.getElementById("PiZcre");
                     e.appendChild(script);
                 })()
             </script>
@@ -655,7 +655,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  'na_index': array([0, 1, 2]),
  'na_index_str': '0,1,2',
  'icovars': None,
- 'X_is_empty': False}</code></pre>
+ 'X_is_empty': False,
+ 'model_spec': .fml_second_stage:
+     .lhs:
+         ModelSpec(formula=Y, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=Y, scoped_terms=[Y], columns=['Y'])], transform_state={}, encoder_state={'Y': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})
+     .rhs:
+         ModelSpec(formula=1 + X1 + f1 + f2, materializer='pandas', materializer_params={}, ensure_full_rank=True, na_action=&lt;NAAction.DROP: 'drop'&gt;, output='pandas', cluster_by=&lt;ClusterBy.NONE: 'none'&gt;, structure=[EncodedTermStructure(term=1, scoped_terms=[1], columns=['Intercept']), EncodedTermStructure(term=X1, scoped_terms=[X1], columns=['X1']), EncodedTermStructure(term=f1, scoped_terms=[f1], columns=['f1']), EncodedTermStructure(term=f2, scoped_terms=[f2], columns=['f2'])], transform_state={}, encoder_state={'X1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f1': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {}), 'f2': (&lt;Kind.NUMERICAL: 'numerical'&gt;, {})})}</code></pre>
 </div>
 </div>
 
