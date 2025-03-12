@@ -5,6 +5,7 @@ import pandas as pd
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
+from pyfixest.utils.utils import rename_did_coefficients
 
 
 class TWFE(DID):
@@ -113,7 +114,35 @@ class TWFE(DID):
         )
 
     def tidy(self):  # noqa: D102
-        return self.tidy()
+        """
+        Return a tidy DataFrame with the estimation results.
+        
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the estimation results and renamed coefficients.
+        """
+        # Get the coefficient table
+        result = self._coeftable.copy()
+        
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+        
+        return result
 
     def summary(self):  # noqa: D102
-        return self.summary()
+        """
+        Return a summary of the estimation results.
+        
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the estimation results and renamed coefficients.
+        """
+        # Get the coefficient table
+        result = self._coeftable.copy()
+        
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+        
+        return result

@@ -8,6 +8,7 @@ from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.literals import VcovTypeOptions
 from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
+from pyfixest.utils.utils import rename_did_coefficients
 
 
 class LPDID(DID):
@@ -188,10 +189,38 @@ class LPDID(DID):
         )
 
     def tidy(self):  # noqa: D102
-        return self._coeftable
+        """
+        Return a tidy DataFrame with the estimation results.
+    
+        Returns
+        -------
+        pd.DataFrame
+        A DataFrame with the estimation results and renamed coefficients.
+        """
+        # Get the coefficient table
+        result = self._coeftable.copy()
+    
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+    
+        return result
 
     def summary(self):  # noqa: D102
-        return self._coeftable
+        """
+        Return a summary of the estimation results.
+    
+        Returns
+        -------
+        pd.DataFrame
+        A DataFrame with the estimation results and renamed coefficients.
+        """
+        # Get the coefficient table
+        result = self._coeftable.copy()
+    
+        # Rename the index
+        result.index = rename_did_coefficients(result.index)
+    
+        return result
 
 
 def _lpdid_estimate(
