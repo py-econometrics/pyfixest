@@ -134,7 +134,6 @@ def model_matrix_fixest(
     )
     endogvar = Z = weights_df = fe = None
 
-    # Store the model specs for later reuse in prediction
     model_spec = mm.model_spec
 
     Y = mm["fml_second_stage"]["lhs"]
