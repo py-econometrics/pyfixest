@@ -300,7 +300,9 @@ def test_categorical_covariate_predict():
 
 def test_specific_categorical_prediction():
     """Test prediction with a specific categorical case."""
-    test_df = pd.DataFrame({"y": [2, 3, 4, 5], "x": [1, 1, 2, 3], "f": ["a", "b", "a", "a"]})
+    test_df = pd.DataFrame(
+        {"y": [2, 3, 4, 5], "x": [1, 1, 2, 3], "f": ["a", "b", "a", "a"]}
+    )
     test_model = pf.feols("y ~ x + C(f)", data=test_df)
     prediction = test_model.predict(newdata=pd.DataFrame({"x": [1], "f": ["b"]}))
     expected_prediction = 3

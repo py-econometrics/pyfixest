@@ -56,7 +56,7 @@ def get_design_matrix_and_yhat(
                 )
 
             # Use the stored model_spec instead of creating a new Formula
-            if hasattr(model, '_model_spec') and model._model_spec is not None:
+            if hasattr(model, "_model_spec") and model._model_spec is not None:
                 # Get the right-hand side model spec from the nested structure
                 # ModelSpecs contains fml_second_stage which contains rhs
                 rhs_spec = model._model_spec.fml_second_stage.rhs
