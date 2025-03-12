@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from formulaic import Formula
+from formulaic import Formula, ModelSpec
 from scipy.stats import t
 
 from pyfixest.utils.dev_utils import (
@@ -50,12 +50,27 @@ def get_design_matrix_and_yhat(
         newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
 
         if not model._X_is_empty:
-            xfml = model._fml.split("|")[0].split("~")[1]
             if model._icovars is not None:
                 raise NotImplementedError(
                     "predict() with argument newdata is not supported with i() syntax."
                 )
-            X = Formula(xfml).get_model_matrix(newdata)
+            
+            # Use the stored model_spec instead of creating a new Formula
+            if hasattr(model, '_model_spec') and model._model_spec is not None:
+                # Get the right-hand side model spec from the nested structure
+                # ModelSpecs contains fml_second_stage which contains rhs
+                rhs_spec = model._model_spec.fml_second_stage.rhs
+
+                # Extract the formula from the model spec
+                formula_rhs = str(rhs_spec.formula)
+                
+                # Use the right model spec directly with get_model_matrix
+                X = rhs_spec.get_model_matrix(newdata)
+            else:
+                # Fallback to old behavior if model_spec is not available
+                xfml = model._fml.split("|")[0].split("~")[1]
+                X = Formula(xfml).get_model_matrix(newdata)
+            
             X_index = X.index
 
             coef_idx = np.isin(model._coefnames, X.columns)

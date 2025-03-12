@@ -373,6 +373,10 @@ class Feols:
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
         self._icovars = mm_dict.get("icovars")
+        self._X_is_empty = mm_dict.get("X_is_empty")
+
+        # Store model_spec for consistent predictions
+        self._model_spec = mm_dict.get("model_spec")
 
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
