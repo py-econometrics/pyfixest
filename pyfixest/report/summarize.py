@@ -233,7 +233,7 @@ def etable(
     n_coefs = []
     se_type_list = []
     r2_list = []
-    r2_within_list: list[float] = []
+    r2_within_list = []
 
     # Define code for R2, interaction & line break depending on output type
     if type in ["gt", "html"]:
