@@ -300,7 +300,12 @@ class GelbachDecomposition:
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
             # Compute delta
-            delta = lsqr(X1, Hg)[0][self.param_in_X1_idx].flatten()
+            delta = np.array(
+                [
+                    lsqr(X1, Hg[:, j])[0][self.param_in_X1_idx]
+                    for j in range(Hg.shape[1])
+                ]
+            )
 
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                 contribution_dict[name] = np.array([delta[i]])
