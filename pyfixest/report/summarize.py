@@ -233,20 +233,27 @@ def etable(
     n_coefs = []
     se_type_list = []
     r2_list = []
-    r2_within_list: list[float] = []  # noqa: F841
+    adj_r2_list = []
+    r2_within_list = []
 
     # Define code for R2, interaction & line break depending on output type
     if type in ["gt", "html"]:
         interactionSymbol = " &#215; "
         R2code = "R<sup>2</sup>"
+        adj_R2_code = "Adj. R<sup>2</sup>"
+        R2_within_code = "R<sup>2</sup> Within"
         lbcode = "<br>"
     elif type == "tex":
         interactionSymbol = " $\\times$ "
         R2code = "$R^2$"
+        adj_R2_code = "Adj. $R^2$"
+        R2_within_code = "$R^2$ Within"
         lbcode = r"\\"
     else:
         interactionSymbol = " x "
         R2code = "R2"
+        adj_R2_code = "Adj. R2"
+        R2_within_code = "R2 Within"
         lbcode = "\n"
 
     for model in models:
@@ -262,6 +269,16 @@ def etable(
             r2_list.append(_number_formatter(model._r2, **kwargs))
         else:
             r2_list.append("-")
+
+        if not np.isnan(model._adj_r2):
+            adj_r2_list.append(_number_formatter(model._adj_r2, **kwargs))
+        else:
+            adj_r2_list.append("-")
+
+        if not np.isnan(model._r2_within):
+            r2_within_list.append(_number_formatter(model._r2_within, **kwargs))
+        else:
+            r2_within_list.append("-")
 
         if model._vcov_type == "CRV":
             se_type_list.append("by: " + "+".join(model._clustervar))
@@ -292,6 +309,10 @@ def etable(
         model_stats_df["S.E. type"] = se_type_list
     model_stats_df[R2code] = r2_list
     n_model_stats = model_stats_df.shape[1]
+    if any(x != "-" for x in r2_within_list):
+        model_stats_df[R2_within_code] = r2_within_list
+    else:
+        model_stats_df[adj_R2_code] = adj_r2_list
     # Transpose
     model_stats_df = model_stats_df.T
 

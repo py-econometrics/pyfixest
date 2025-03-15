@@ -13,6 +13,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest (In Development, can be installed from github)
 
+- We add R2-within values to the default `etable()` output.
+- We fix a small bug in the Gelbach `decompose()` method, which would fail if a user selected `only_coef = True`.
+- We fix a small bug in the `predict()` method with `newdata`, see [here](https://github.com/py-econometrics/pyfixest/issues/840) for details.
 - We add a function argument `rename_models` to help rename model names in the `coefplot()` and `iplot()` functions and methods:
   ```{python}
   pf.coefplot(
