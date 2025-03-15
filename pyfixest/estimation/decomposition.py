@@ -4,7 +4,8 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from scipy.sparse import hstack, spmatrix
+from numpy.typing import NDArray
+from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -90,16 +91,14 @@ class GelbachDecomposition:
                     overlap = values1 & values2
                     raise ValueError(f"{overlap} is in both {key1} and {key2}.")
 
-    def fit(self, X: np.ndarray, Y: np.ndarray, store: bool = True):
+    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
         "Fit Linear Mediation Model."
         if store:
             self.X = X
             self.N = X.shape[0]
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack(
-                [np.ones((self.N, 1)), self.X1]
-            )  # Efficient sparse concatenation
+            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
             self.names_X1 = ["Intercept", self.param]
             self.param_in_X1_idx = self.names_X1.index(self.param)
 
@@ -135,7 +134,8 @@ class GelbachDecomposition:
 
         else:
             # need to compute X1, X2 in bootstrap sample
-            X1 = np.c_[np.ones((X.shape[0], 1)), X[:, ~self.mask]]
+
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -154,6 +154,10 @@ class GelbachDecomposition:
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
         self.alpha = alpha
         self.B = B
+
+        # convert to csr for easier vstacking
+        if self.unique_clusters is not None:
+            self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
             delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
@@ -242,24 +246,17 @@ class GelbachDecomposition:
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
         if self.unique_clusters is not None:
-            idx = rng.choice(
+            idx_clusters = rng.choice(
                 self.unique_clusters, len(self.unique_clusters), replace=True
-            )
+            ).tolist()
 
-            X_list = []
-            Y_list = []
-
-            for g in idx:
-                X_list.append(self.X_dict[g])
-                Y_list.append(self.Y_dict[g])
-
-            X = np.concatenate(X_list)
-            Y = np.concatenate(Y_list)
+            X = vstack([self.X_dict[g].tocsr() for g in idx_clusters])
+            Y = np.concatenate([self.Y_dict[g] for g in idx_clusters])
 
         else:
-            idx = rng.choice(self.N, self.N)
-            X = self.X[idx]
-            Y = self.Y[idx]
+            idx_rows: NDArray[np.int_] = rng.choice(self.N, self.N)
+            X = self.X.tocsr()[idx_rows, :]
+            Y = self.Y[idx_rows]
 
         return self.fit(X=X, Y=Y, store=False)
 
