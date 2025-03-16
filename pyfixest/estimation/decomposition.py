@@ -307,17 +307,14 @@ class GelbachDecomposition:
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                 contribution_dict[name] = np.array([delta[i]])
         else:
-            # Compute gamma and delta
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[
-                        0
-                    ]  # Convert sparse col to 1D array
+                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.param_in_X1_idx]
                     for j in range(X2.shape[1])
                 ]
             )
 
-            delta = gamma * beta2.reshape(-1, 1)
+            delta = gamma * beta2
 
             for name, covariates in self.combine_covariates_dict.items():
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]

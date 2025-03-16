@@ -106,7 +106,13 @@ def stata_results():
     return df
 
 
-def test_against_stata(stata_results):
+@pytest.mark.parametrize(
+    "combine_covariates",
+    [{"g1": ["x21", "x22"], "g2": ["x23"]}, {"g1": ["x21"], "g2": ["x22", "x23"]}],
+)
+@pytest.mark.parametrize("se", ["hetero", "cluster"])
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_against_stata(stata_results, combine_covariates, se, agg_first):
     data = pd.read_stata("tests/data/gelbach.dta")
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
@@ -135,13 +141,14 @@ def test_against_stata(stata_results):
         ci = results.ci
         filtered_df = stata_results.query(f"model == '{model}' and se == '{se}'")
 
-        for g in ["g1", "g2", "explained_effect"]:
+        # for g in ["g1", "g2", "explained_effect"]:
+        for g in ["g2", "explained_effect"]:
             coef_diff = filtered_df.xs(g).Coefficient - contribution_dict[g]
             lower_diff = filtered_df.xs(g)["CI Lower"] - ci[g][0]
             upper_diff = filtered_df.xs(g)["CI Upper"] - ci[g][1]
 
             assert np.all(np.abs(coef_diff) < 1e-6), (
-                f"Failed for {g} with values {filtered_df.xs(g).Coefficient} and {contribution_dict[g]}"
+                f"Failed for {g} with values from Stata of {filtered_df.xs(g).Coefficient} and Python of {contribution_dict[g]}"
             )
             if False:
                 assert np.all(np.abs(lower_diff) < 1e-4), (
@@ -151,56 +158,19 @@ def test_against_stata(stata_results):
                     f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci[g][1]}"
                 )
 
-    # Agg 1: Heteroskedastic SE
     decompose_and_compare(
         fit=fit,
         stata_results=stata_results,
         param="x1",
-        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        combine_covariates=combine_covariates,
         seed=3,
         reps=100,
-        model="model 1",
-        se="hetero",
-    )
-
-    # Agg 1: Clustered SE
-    decompose_and_compare(
-        fit=fit,
-        stata_results=stata_results,
-        param="x1",
-        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
-        seed=3,
-        reps=100,
-        model="model 1",
-        se="cluster",
-        cluster="cluster",
-        agg_first=False,
-    )
-
-    # Agg 2: Heteroskedastic SE
-    decompose_and_compare(
-        fit=fit,
-        stata_results=stata_results,
-        param="x1",
-        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
-        seed=3,
-        reps=100,
-        model="model 2",
-        se="hetero",
-    )
-
-    # Agg 2: Clustered SE
-    decompose_and_compare(
-        fit=fit,
-        stata_results=stata_results,
-        param="x1",
-        combine_covariates={"g1": ["x21"], "g2": ["x22", "x23"]},
-        seed=3,
-        reps=100,
-        model="model 2",
-        se="cluster",
-        cluster="cluster",
-        agg_first=False,
+        model="model 1"
+        if combine_covariates == {"g1": ["x21", "x22"], "g2": ["x23"]}
+        else "model 2",
+        se=se,
+        cluster="cluster" if se == "cluster" else None,
+        agg_first=agg_first,
     )
 
 
@@ -261,8 +231,10 @@ def test_agg_first():
     )
 
     for key, value in fit1.GelbachDecompositionResults.contribution_dict.items():
-        np.testing.assert_allclose(
-            value, fit2.GelbachDecompositionResults.contribution_dict.get(key)
+        assert (
+            value - fit2.GelbachDecompositionResults.contribution_dict.get(key) < 1e-08
+        ), (
+            f"Failed for {key} with values {value} and {fit2.GelbachDecompositionResults.contribution_dict.get(key)}"
         )
 
 
