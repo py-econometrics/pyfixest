@@ -10,7 +10,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
-from scipy.sparse import diags
+from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
@@ -1515,11 +1515,11 @@ class Feols:
             Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="sparse")
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten()
-            X = X.toarray()
+            X = csc_matrix(X)
 
         else:
             Y = self._Y.flatten()
-            X = self._X
+            X = csc_matrix(self._X)
             xnames = self._coefnames
 
         return Y, X, xnames
