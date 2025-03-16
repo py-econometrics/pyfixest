@@ -141,8 +141,7 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
         ci = results.ci
         filtered_df = stata_results.query(f"model == '{model}' and se == '{se}'")
 
-        # for g in ["g1", "g2", "explained_effect"]:
-        for g in ["g2", "explained_effect"]:
+        for g in ["g1", "g2", "explained_effect"]:
             coef_diff = filtered_df.xs(g).Coefficient - contribution_dict[g]
             lower_diff = filtered_df.xs(g)["CI Lower"] - ci[g][0]
             upper_diff = filtered_df.xs(g)["CI Upper"] - ci[g][1]
