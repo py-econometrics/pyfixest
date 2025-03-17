@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numba as nb
 import numpy as np
 import pandas as pd
-import seaborn as sns
+from scipy.stats import gaussian_kde
 
 # Make lets-plot an optional dependency
 try:
@@ -27,16 +27,16 @@ except ImportError:
 
 from scipy.stats import norm
 
+from pyfixest.estimation.demean_ import demean
+
 try:
     from tqdm import tqdm
 except ImportError:
 
     def tqdm(iterable, *args, **kwargs):
-        """Define a dummy tqdm function."""
+        "Define a dummy tqdm function."
         return iterable
 
-
-from pyfixest.estimation.demean_ import demean
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -390,10 +390,23 @@ def _plot_ritest_pvalue(
     x_lab = "Test statistic"
     y_lab = "Density"
 
+    def _plot_matplotlib(values: np.ndarray, sample_stat: np.ndarray) -> None:
+        kde = gaussian_kde(values)
+        x_range = np.linspace(min(values), max(values), 1000)
+        y_range = kde(x_range)
+
+        plt.figure(figsize=(10, 6))
+        plt.fill_between(x_range, y_range, color="blue", alpha=0.5)
+        plt.axvline(x=sample_stat, color="red", linestyle="--")
+        plt.title(title)
+        plt.xlabel(x_lab)
+        plt.ylabel(y_lab)
+        plt.show()
+
     if plot_backend == "lets_plot":
         if not _HAS_LETS_PLOT:
             print("lets-plot is not installed. Falling back to matplotlib.")
-            plot_backend = "matplotlib"
+            return _plot_matplotlib(df["ri_stats"].to_numpy(), sample_stat)
         else:
             plot = (
                 ggplot(df, aes(x="ri_stats"))
@@ -405,16 +418,10 @@ def _plot_ritest_pvalue(
                 + ylab(y_lab)
             )
 
-        return plot.show()
+            return plot.show()
 
     elif plot_backend == "matplotlib":
-        plt.figure(figsize=(10, 6))
-        sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
-        plt.axvline(x=sample_stat, color="red", linestyle="--")
-        plt.title(title)
-        plt.xlabel(x_lab)
-        plt.ylabel(y_lab)
-        plt.show()
+        return _plot_matplotlib(df["ri_stats"].to_numpy(), sample_stat)
 
     else:
         raise ValueError(f"Unsupported plot backend: {plot_backend}")
