@@ -23,6 +23,10 @@ dependencies = [
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
 
+[tool.pixi.feature.minimaldev.dependencies]
+rpy2 = ">=3.5.11,<4"
+
+
 [project.optional-dependencies]
 
 core = [
@@ -47,6 +51,12 @@ dev = [
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
   "seaborn>=0.13.2",
+]
+
+minimaldev = [
+  "pytest>=7.2.0",
+  "pytest-cov>=4.1.0",
+  "pytest-xdist>=3.5.0",
 ]
 
 plots = [
@@ -91,6 +101,7 @@ pyfixest = { path = ".", editable = true }
 minimal = { solve-group = "default" }
 default = {features = ["core"], solve-group = "default"}
 dev = { features = ["dev"], solve-group = "default" }
+minimaldev = { features = ["minimaldev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
@@ -111,6 +122,10 @@ update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
 
+[tool.pixi.feature.minimaldev.tasks]
+tests-fixest-minimal = "pytest tests/test_vs_fixest.py::test_single_fit_feols -k 'not jax' --cov=pyfixest --cov-report=xml"
+
+
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
 
@@ -119,10 +134,6 @@ docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
 docs-render = "quarto render docs"
 docs-preview = "quarto preview docs"
 
-[tool.pixi.feature.docs.dependencies]
-rpy2 = ">=3.5.11,<4"
-r-fixest = ">=0.12.1,<0.13"
-r-broom = ">=1.0.5,<2"
 
 [tool.pytest.ini_options]
 addopts = [
