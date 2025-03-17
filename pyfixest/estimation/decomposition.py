@@ -3,7 +3,12 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix
+from 
+
+
+import Parallel, delayed
+from numpy.typing import NDArray
+from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 
 try:
@@ -65,7 +70,7 @@ class GelbachDecomposition:
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
 
         # Handle clustering setup if cluster_df is provided
-        if self.cluster_df is not None:
+        if self.cluster_df is not None and not self.only_coef:
             self.unique_clusters = self.cluster_df.unique()
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
@@ -104,14 +109,14 @@ class GelbachDecomposition:
                     overlap = values1 & values2
                     raise ValueError(f"{overlap} is in both {key1} and {key2}.")
 
-    def fit(self, X: np.ndarray, Y: np.ndarray, store: bool = True):
+    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
         "Fit Linear Mediation Model."
         if store:
             self.X = X
             self.N = X.shape[0]
 
             self.X1 = self.X[:, ~self.mask]
-            self.X1 = np.c_[np.ones((self.N, 1)), self.X1]
+            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
             self.names_X1 = ["Intercept", self.param]
             self.param_in_X1_idx = self.names_X1.index(self.param)
 
@@ -130,7 +135,6 @@ class GelbachDecomposition:
                 self.direct_effect,
                 self.beta_full,
                 self.beta2,
-                self.beta2_sparse,
                 self.contribution_dict,
             ) = results
 
@@ -138,7 +142,7 @@ class GelbachDecomposition:
             self.X_dict = {}
             self.Y_dict = {}
 
-            if self.unique_clusters is not None:
+            if self.unique_clusters is not None and not self.only_coef:
                 for g in self.unique_clusters:
                     cluster_idx = np.where(self.cluster_df == g)[0]
                     self.X_dict[g] = self.X[cluster_idx]
@@ -148,7 +152,8 @@ class GelbachDecomposition:
 
         else:
             # need to compute X1, X2 in bootstrap sample
-            X1 = np.c_[np.ones((X.shape[0], 1)), X[:, ~self.mask]]
+
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -159,7 +164,7 @@ class GelbachDecomposition:
                 agg_first=self.agg_first,
             )
 
-            _, _, _, _, contribution_dict = results
+            _, _, _, contribution_dict = results
 
             return contribution_dict
 
@@ -168,12 +173,16 @@ class GelbachDecomposition:
         self.alpha = alpha
         self.B = B
 
-        if joblib_available:
-            _bootstrapped = Parallel(n_jobs=self.nthreads)(
-                delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+        # convert to csr for easier vstacking
+        if self.unique_clusters is not None:
+            self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
+        
+        if joblib_available: 
+          _bootstrapped = Parallel(n_jobs=self.nthreads)(
+              delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
             )
-        else:
-            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
+        else: 
+          _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])
@@ -203,11 +212,9 @@ class GelbachDecomposition:
         # round all values in self.contribution_dict and self.ci to the specified number of digits
 
         contribution_dict = self.contribution_dict.copy()
-        ci = self.ci.copy()
 
         for key in contribution_dict:
             contribution_dict[key] = np.round(contribution_dict[key], digits)
-            ci[key] = np.round(ci[key], digits)
 
         rows = []
         rows.append(
@@ -219,6 +226,10 @@ class GelbachDecomposition:
         )
 
         if not self.only_coef:
+            ci = self.ci.copy()
+            for key in contribution_dict:
+                ci[key] = np.round(ci[key], digits)
+
             rows.append(
                 [
                     f"[{ci['direct_effect'][0]:.{digits}f}, {ci['direct_effect'][1]:.{digits}f}]",
@@ -256,82 +267,75 @@ class GelbachDecomposition:
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
         if self.unique_clusters is not None:
-            idx = rng.choice(
+            idx_clusters = rng.choice(
                 self.unique_clusters, len(self.unique_clusters), replace=True
-            )
+            ).tolist()
 
-            X_list = []
-            Y_list = []
-
-            for g in idx:
-                X_list.append(self.X_dict[g])
-                Y_list.append(self.Y_dict[g])
-
-            X = np.concatenate(X_list)
-            Y = np.concatenate(Y_list)
+            X = vstack([self.X_dict[g].tocsr() for g in idx_clusters])
+            Y = np.concatenate([self.Y_dict[g] for g in idx_clusters])
 
         else:
-            idx = rng.choice(self.N, self.N)
-            X = self.X[idx]
-            Y = self.Y[idx]
+            idx_rows: NDArray[np.int_] = rng.choice(self.N, self.N)
+            X = self.X.tocsr()[idx_rows, :]
+            Y = self.Y[idx_rows]
 
         return self.fit(X=X, Y=Y, store=False)
 
     def compute_gelbach(
         self,
-        X1: np.ndarray,
-        X2: np.ndarray,
+        X1: spmatrix,
+        X2: spmatrix,
         Y: np.ndarray,
-        X: np.ndarray,
+        X: spmatrix,
         agg_first: Optional[bool],
     ) -> tuple[
         np.ndarray,
         np.ndarray,
         np.ndarray,
-        csc_matrix,
         dict[str, np.ndarray],
     ]:
         "Run the Gelbach decomposition."
         N = X1.shape[0]
-        X_sparse = csc_matrix(X)
-        X1_sparse = csc_matrix(X1)
 
         # Compute direct effect
-        direct_effect = lsqr(X1_sparse, Y, atol=self.atol, btol=self.btol)[0]
+        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
         direct_effect_array = np.array([direct_effect[self.param_in_X1_idx]])
 
         # Compute beta_full and beta2
-        beta_full = lsqr(X_sparse, Y, atol=self.atol, btol=self.btol)[0]
+        beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
-        beta2_sparse = csc_matrix(beta2)
 
         # Initialize contribution_dict: a dictionary to store the contribution of each covariate
         contribution_dict = {}
 
         if agg_first:
-            X2_sparse = csc_matrix(X2)
-
             # Compute H and Hg
-            H = X2_sparse.multiply(beta2_sparse)
+            H = X2.multiply(beta2).tocsc()  # csc better for slicing columns than csr
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
+
             for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
             # Compute delta
-            delta = np.linalg.lstsq(X1, Hg, rcond=None)[0][
-                self.param_in_X1_idx, :
-            ].flatten()
+            delta = np.array(
+                [
+                    lsqr(X1, Hg[:, j])[0][self.param_in_X1_idx]
+                    for j in range(Hg.shape[1])
+                ]
+            )
+
             for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
                 contribution_dict[name] = np.array([delta[i]])
-
         else:
-            # Compute gamma and delta
+            gamma = np.array(
+                [
+                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.param_in_X1_idx]
+                    for j in range(X2.shape[1])
+                ]
+            )
 
-            gamma = np.linalg.lstsq(X1, X2, rcond=None)[0][
-                self.param_in_X1_idx, :
-            ].flatten()
-            delta = gamma * beta2.flatten()
+            delta = gamma * beta2
 
             for name, covariates in self.combine_covariates_dict.items():
                 variable_idx = [self.mediator_names.index(cov) for cov in covariates]
@@ -352,7 +356,6 @@ class GelbachDecomposition:
             direct_effect_array,
             beta_full,
             beta2,
-            beta2_sparse,
             contribution_dict,
         )
 

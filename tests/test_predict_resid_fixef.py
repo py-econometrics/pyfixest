@@ -298,6 +298,17 @@ def test_categorical_covariate_predict():
     np.testing.assert_allclose(py_predict, r_predict, rtol=1e-08, atol=1e-08)
 
 
+def test_specific_categorical_prediction():
+    """Test prediction with a specific categorical case."""
+    test_df = pd.DataFrame(
+        {"y": [2, 3, 4, 5], "x": [1, 1, 2, 3], "f": ["a", "b", "a", "a"]}
+    )
+    test_model = pf.feols("y ~ x + C(f)", data=test_df)
+    prediction = test_model.predict(newdata=pd.DataFrame({"x": [1], "f": ["b"]}))
+    expected_prediction = 3
+    np.testing.assert_almost_equal(prediction[0], expected_prediction, decimal=3)
+
+
 def test_extract_variable_level():
     """Verify the correct extracation of lists, floats, and integers."""
     var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"

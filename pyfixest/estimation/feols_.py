@@ -10,7 +10,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
-from scipy.sparse import diags
+from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
@@ -373,6 +373,8 @@ class Feols:
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
         self._icovars = mm_dict.get("icovars")
+        self._X_is_empty = mm_dict.get("X_is_empty")
+        self._model_spec = mm_dict.get("model_spec")
 
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
@@ -1492,9 +1494,18 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def _model_matrix_one_hot(self) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    def _model_matrix_one_hot(
+        self, output="numpy"
+    ) -> tuple[np.ndarray, Union[np.ndarray, spmatrix], list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+        Parameters
+        ----------
+        output : str, optional
+            The type of output. Defaults to "numpy", in which case the returned matrices
+            Y and X are numpy arrays. If set to "sparse", the returned design matrix X will
+            be sparse.
 
         Returns
         -------
@@ -1510,15 +1521,18 @@ class Feols:
             # output = "pandas" as Y, X need to be np.arrays for parallel processing
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
             xnames = X.model_spec.column_names
-            Y = Y.to_numpy().flatten()
-            X = X.to_numpy()
+            Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
+            X = csc_matrix(X) if output == "sparse" else X
 
         else:
             Y = self._Y.flatten()
             X = self._X
             xnames = self._coefnames
+
+        X = csc_matrix(X) if output == "sparse" else X
 
         return Y, X, xnames
 
@@ -1628,7 +1642,7 @@ class Feols:
         else:
             cluster_df = None
 
-        Y, X, xnames = self._model_matrix_one_hot()
+        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
