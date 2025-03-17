@@ -3,10 +3,6 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from 
-
-
-import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
@@ -176,13 +172,13 @@ class GelbachDecomposition:
         # convert to csr for easier vstacking
         if self.unique_clusters is not None:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
-        
-        if joblib_available: 
-          _bootstrapped = Parallel(n_jobs=self.nthreads)(
-              delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+
+        if joblib_available:
+            _bootstrapped = Parallel(n_jobs=self.nthreads)(
+                delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
             )
-        else: 
-          _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
+        else:
+            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])
