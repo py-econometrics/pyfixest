@@ -1,4 +1,5 @@
 import logging
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
@@ -10,6 +11,9 @@ import pandas as pd
 try:
     from tqdm import tqdm
 except ImportError:
+    warnings.warn(
+        "The tqdm package is not installed. Progress bars are disabled. Note that tqdm is included in the pyfixest default environment."
+    )
 
     def tqdm(iterable, *args, **kwargs):
         "Define a dummy tqdm function."

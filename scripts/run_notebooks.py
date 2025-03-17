@@ -4,6 +4,7 @@ Taken from: https://github.com/pymc-labs/pymc-marketing/blob/main/scripts/_run_n
 """
 
 import logging
+import warnings
 from pathlib import Path
 
 import papermill
@@ -12,8 +13,12 @@ from joblib import Parallel, delayed
 try:
     from tqdm import tqdm
 except ImportError:
+    warnings.warn(
+        "The tqdm package is not installed. Progress bars are disabled. Note that tqdm is included in the pyfixest default environment."
+    )
 
     def tqdm(iterable, *args, **kwargs):
+        "Define a dummy tqdm function."
         return iterable
 
 

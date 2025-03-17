@@ -25,6 +25,8 @@ try:
 except ImportError:
     _HAS_LETS_PLOT = False
 
+import warnings
+
 from scipy.stats import norm
 
 from pyfixest.estimation.demean_ import demean
@@ -32,6 +34,9 @@ from pyfixest.estimation.demean_ import demean
 try:
     from tqdm import tqdm
 except ImportError:
+    warnings.warn(
+        "The tqdm package is not installed. Progress bars are disabled. Note that tqdm is included in the pyfixest default environment."
+    )
 
     def tqdm(iterable, *args, **kwargs):
         "Define a dummy tqdm function."
