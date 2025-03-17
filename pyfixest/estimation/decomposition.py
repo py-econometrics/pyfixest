@@ -1,13 +1,34 @@
+import warnings
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    warnings.warn(
+        "The tqdm package is not installed. Progress bars are disabled. Note that tqdm is included in the pyfixest default environment."
+    )
+
+    def tqdm(iterable, *args, **kwargs):
+        "Define a dummy tqdm function."
+        return iterable
+
+
+try:
+    from joblib import Parallel, delayed
+
+    joblib_available = True
+except ImportError:
+    joblib_available = False
+    warnings.warn(
+        "The joblib package is not installed. Parallel processing is disabled. Note that joblib is included in the pyfixest default environment."
+    )
 
 
 @dataclass
@@ -159,9 +180,12 @@ class GelbachDecomposition:
         if self.unique_clusters is not None:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
-        _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
-        )
+        if joblib_available:
+            _bootstrapped = Parallel(n_jobs=self.nthreads)(
+                delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            )
+        else:
+            _bootstrapped = [self._bootstrap(rng=rng) for _ in tqdm(range(B))]
 
         self._bootstrapped = {
             key: np.concatenate([d[key] for d in _bootstrapped])
