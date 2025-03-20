@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Sequence
 
 import pandas as pd
 
@@ -503,6 +503,7 @@ def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    offset:  Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
@@ -544,6 +545,10 @@ def fepois(
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Options include "iid",
         "hetero", "HC1", "HC2", "HC3", or a dictionary for CRV1/CRV3 inference.
+
+    offset : Union[None, str], optional
+        Default is None. Offset variable for Poisson regression. If None, no offset.
+        If a string, the name of the column in `data` that contains the offset.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -670,6 +675,7 @@ def fepois(
         data=data,
         vcov=vcov,
         weights=weights,
+        offset=offset,
         ssc=ssc,
         fixef_rm=fixef_rm,
         collin_tol=collin_tol,
@@ -702,7 +708,7 @@ def fepois(
     )
 
     fixest._prepare_estimation(
-        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        "fepois", fml, vcov, weights, ssc, fixef_rm, drop_intercept, offset=offset
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -1001,6 +1007,7 @@ def _estimation_input_checks(
     split: Optional[str],
     fsplit: Optional[str],
     separation_check: Optional[list[str]] = None,
+    offset: Optional[Union[None, str]] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -1026,6 +1033,9 @@ def _estimation_input_checks(
         )
     if weights is not None:
         assert weights in data.columns, "weights must be a column in data"
+
+    if offset is not None:
+        assert offset in data.columns, "offset must be a column in data"
 
     bool_args = [copy_data, store_data, lean]
     for arg in bool_args:
