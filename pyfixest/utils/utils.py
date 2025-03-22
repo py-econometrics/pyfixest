@@ -7,6 +7,7 @@ from formulaic import Formula
 from formulaic.utils.context import capture_context as _capture_context
 
 from pyfixest.utils.dev_utils import _create_rng
+import numba as nb
 
 
 def ssc(
@@ -106,6 +107,8 @@ def get_ssc(
     ssc_dict: dict[str, Union[str, bool]],
     N: int,
     k: int,
+    k_fe: int,
+    k_fe_nested: int,
     G: int,
     vcov_sign: int,
     vcov_type: "str",
@@ -122,6 +125,10 @@ def get_ssc(
         The number of observations.
     k : int
         The number of estimated parameters.
+    k_fe : int
+        The number of estimated fixed effects.
+    k_fe_nested : int
+        The number of estimated fixed effects nested within clusters.
     G : int
         The number of clusters.
     vcov_sign : array-like
@@ -143,6 +150,8 @@ def get_ssc(
         If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
         "conventional" nor "min".
     """
+
+    import pdb; pdb.set_trace()
     adj = ssc_dict["adj"]
     fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
     cluster_adj = ssc_dict["cluster_adj"]
@@ -164,6 +173,39 @@ def get_ssc(
             raise ValueError("cluster_df is neither conventional nor min.")
 
     return np.array([adj_value * cluster_adj_value * vcov_sign])
+
+@nb.njit(parallel=True)
+def _count_fixef_not_fully_nested(clusters: np.ndarray, f: np.ndarray) -> int:
+
+    """
+    Count the number of fixed effects that are not fully nested within clusters.
+
+    Parameters
+    ----------
+    clusters : np.ndarray
+        A vector of cluster assignments.
+    f : np.ndarray
+        A matrix of fixed effects.
+
+    Returns
+    -------
+    int
+        The of fixed effects that are not fully nested within clusters.
+    """
+
+    _, k = f.shape
+    counts = np.zeros(k, dtype=np.int64)
+    for j in nb.prange(k):
+        unique_vals = np.unique(f[:, j])
+        c = 0
+        for val in unique_vals:
+            mask = (f[:, j] == val)
+            distinct_clusters = np.unique(clusters[mask])
+            if len(distinct_clusters) > 1:
+                c += 1
+        counts[j] = c
+    return np.sum(counts)
+
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
