@@ -11,6 +11,7 @@ from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
 
+call_count = 0
 
 class Feiv(Feols):
     """

@@ -52,7 +52,12 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import (
+    _count_fixef_fully_nested,
+    capture_context,
+    get_ssc,
+    simultaneous_crit_val,
+)
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -379,9 +384,12 @@ class Feols:
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
         self._depvar = self._Y.columns[0]
-        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+
         self._has_fixef = self._fe is not None
         self._fixef = self.FixestFormula._fval
+
+        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+        self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
@@ -460,6 +468,7 @@ class Feols:
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
+
         (
             self._X,
             self._coefnames,
@@ -557,6 +566,10 @@ class Feols:
         _ssc_dict = self._ssc_dict
         _N = self._N
         _k = self._k
+        _k_fe = self._k_fe.sum() if self._has_fixef else 0
+        # k_fe_nested only updated in case of clustered errors
+
+        # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
         _check_vcov_input(vcov, _data)
@@ -570,11 +583,15 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # compute vcov
+
         if self._vcov_type == "iid":
-            self._ssc = get_ssc(
+            self._ssc, self._dof_k = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
-                k=_k,
+                k=self._k,
+                k_fe= _k_fe,
+                k_fe_nested=0,
+                n_fe = self._n_fe,
                 G=1,
                 vcov_sign=1,
                 vcov_type="iid",
@@ -586,15 +603,17 @@ class Feols:
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
             # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
 
-            self._ssc = get_ssc(
+            self._ssc, self._dof_k = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
-                k=_k,
+                k=self._k,
+                k_fe= _k_fe,
+                k_fe_nested=0, # nested fe not relevant for ssc as no cluster
+                n_fe = self._n_fe,
                 G=_N,  # all clusters are singletons
                 vcov_sign=1,
                 vcov_type="hetero",
             )
-
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -621,6 +640,10 @@ class Feols:
                 cluster_df=self._cluster_df, ssc_dict=_ssc_dict
             )
 
+            k_fe_nested = _count_fixef_fully_nested(
+                clusters=self._cluster_df.to_numpy().flatten(), f=self._fe.to_numpy() if type(self._fe) == pd.DataFrame else self._fe # self._fe is a array for IV, Fepois
+            ) if self._has_fixef else 0
+
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
 
@@ -631,16 +654,21 @@ class Feols:
                 cluster_col, _ = pd.factorize(cluster_col_pd)
                 clustid = np.unique(cluster_col)
 
-                ssc = get_ssc(
+                ssc, k_eff_ssc = get_ssc(
                     ssc_dict=_ssc_dict,
                     N=_N,
-                    k=_k,
+                    k=self._k,
+                    k_fe= _k_fe,
+                    k_fe_nested=k_fe_nested,
+                    n_fe = self._n_fe,
                     G=self._G[x],
                     vcov_sign=vcov_sign_list[x],
                     vcov_type="CRV",
                 )
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
+                self._dof_k = np.array([k_eff_ssc]) if x == 0 else np.append(self._dof_k, k_eff_ssc)
+
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
@@ -830,13 +858,19 @@ class Feols:
         Returns
         -------
         None
+
+        Details
+        -------
+        relevant fixest functions:
+        - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
+        -
         """
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
         _vcov_type = self._vcov_type
         _N = self._N
-        _k = self._k
+        _dof_k = self._dof_k
         _G = (
             np.min(np.array(self._G)) if self._vcov_type == "CRV" else np.array(self._G)
         )  # fixest default
@@ -845,7 +879,7 @@ class Feols:
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
 
-        df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
+        df = _N - _dof_k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
         if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
