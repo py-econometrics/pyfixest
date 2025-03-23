@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Optional, Union, Mapping, Any
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ from pyfixest.utils.dev_utils import (
 def get_design_matrix_and_yhat(
     model,
     newdata: Optional[pd.DataFrame] = None,
+    context: Union[int, Mapping[str, Any]] = None,
 ):
     """
     Build the design matrix X and initializes y_hat for predictions.
@@ -57,10 +58,10 @@ def get_design_matrix_and_yhat(
 
             if hasattr(model, "_model_spec") and model._model_spec is not None:
                 rhs_spec = model._model_spec.fml_second_stage.rhs
-                X = rhs_spec.get_model_matrix(newdata)
+                X = rhs_spec.get_model_matrix(newdata, context=context)
             else:
                 xfml = model._fml.split("|")[0].split("~")[1]
-                X = Formula(xfml).get_model_matrix(newdata)
+                X = Formula(xfml).get_model_matrix(newdata, context=context)
 
             X_index = X.index
 

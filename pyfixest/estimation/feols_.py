@@ -1872,6 +1872,7 @@ class Feols:
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
                 newdata=newdata if newdata is not None else None,
+                context=self._context,
             )
 
             y_hat += _get_fixed_effects_prediction_component(
