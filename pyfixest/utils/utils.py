@@ -9,6 +9,7 @@ from formulaic.utils.context import capture_context as _capture_context
 
 from pyfixest.utils.dev_utils import _create_rng
 
+
 def ssc(
     adj: bool = True,
     fixef_k: str = "nested",
@@ -87,7 +88,7 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    #if fixef_k not in ["none"]:
+    # if fixef_k not in ["none"]:
     #    raise ValueError("fixef_k must be 'none'.")
     if cluster_adj not in [True, False]:
         raise ValueError("cluster_adj must be True or False.")
@@ -112,7 +113,7 @@ def get_ssc(
     G: int,
     vcov_sign: int,
     vcov_type: "str",
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int, int]:
     """
     Compute small sample adjustment factors.
 
@@ -160,7 +161,7 @@ def get_ssc(
     # https://github.com/lrberge/fixest/issues/554
 
     # subtract one for each fixed effect, except for the first
-    k_fe_adj = k_fe -  (n_fe - 1) if n_fe > 1 else k_fe
+    k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
     if fixef_k == "none":
         dof_k = k
