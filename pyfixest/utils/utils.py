@@ -183,6 +183,7 @@ def get_ssc(
     if adj:
         adj_value = (N - 1) / (N - dof_k)
 
+    # cluster_adj applied with G = N for hetero but not for iid
     if vcov_type in ["hetero", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
             cluster_adj_value = G / (G - 1)
