@@ -585,7 +585,7 @@ class Feols:
         # compute vcov
 
         if self._vcov_type == "iid":
-            self._ssc, self._dof_k = get_ssc(
+            self._ssc, self._dof_k, self._df_t = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=self._k,
@@ -603,7 +603,7 @@ class Feols:
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
             # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
 
-            self._ssc, self._dof_k = get_ssc(
+            self._ssc, self._dof_k, self._df_t = get_ssc(
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=self._k,
@@ -640,10 +640,6 @@ class Feols:
                 cluster_df=self._cluster_df, ssc_dict=_ssc_dict
             )
 
-            k_fe_nested = _count_fixef_fully_nested(
-                clusters=self._cluster_df.to_numpy().flatten(), f=self._fe.to_numpy() if type(self._fe) == pd.DataFrame else self._fe # self._fe is a array for IV, Fepois
-            ) if self._has_fixef else 0
-
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
 
@@ -654,7 +650,18 @@ class Feols:
                 cluster_col, _ = pd.factorize(cluster_col_pd)
                 clustid = np.unique(cluster_col)
 
-                ssc, k_eff_ssc = get_ssc(
+                if self._has_fixef:
+                    #import pdb; pdb.set_trace()
+                    if col in self._fixef.split("+"):
+                        k_fe_nested = len(clustid)
+                    else:
+                        k_fe_nested = _count_fixef_fully_nested(
+                            clusters=cluster_col.flatten(), f=self._fe.to_numpy() if type(self._fe) == pd.DataFrame else self._fe # self._fe is a array for IV, Fepois
+                        )
+                else:
+                    k_fe_nested = 0
+
+                ssc, dof_k, df_t = get_ssc(
                     ssc_dict=_ssc_dict,
                     N=_N,
                     k=self._k,
@@ -667,8 +674,8 @@ class Feols:
                 )
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._dof_k = np.array([k_eff_ssc]) if x == 0 else np.append(self._dof_k, k_eff_ssc)
-
+                self._dof_k = np.array([dof_k]) if x == 0 else np.append(self._dof_k, dof_k)
+                self._df_t = np.array([df_t]) if x == 0 else np.append(self._df_t, df_t)
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
@@ -868,26 +875,19 @@ class Feols:
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
-        _vcov_type = self._vcov_type
-        _N = self._N
-        _dof_k = self._dof_k
-        _G = (
-            np.min(np.array(self._G)) if self._vcov_type == "CRV" else np.array(self._G)
-        )  # fixest default
+
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
-
-        df = _N - _dof_k if _vcov_type in ["iid", "hetero"] else _G - 1
 
         # use t-dist for linear models, but normal for non-linear models
         if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
         else:
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), self._df_t))
+            z = np.abs(t.ppf(alpha / 2, self._df_t))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])

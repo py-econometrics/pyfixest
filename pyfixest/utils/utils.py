@@ -123,13 +123,13 @@ def get_ssc(
     N : int
         The number of observations.
     k : int
-        The number of estimated parameters.
+        The number of estimated parameters (as in the first part of the model formula)
     k_fe : int
-        The number of estimated fixed effects.
+        The number of estimated fixed effects (as specified in the second part of the model formula).
     k_fe_nested : int
         The number of estimated fixed effects nested within clusters.
     n_fe : int
-        The number of fixed effects in the model.
+        The number of fixed effects in the model. I.e. 'Y ~ X1  | f1 + f2' has 2 fixed effects.
     G : int
         The number of clusters.
     vcov_sign : array-like
@@ -163,21 +163,25 @@ def get_ssc(
     k_fe_adj = k_fe -  (n_fe - 1) if n_fe > 1 else k_fe
 
     if fixef_k == "none":
-        k_eff_ssc = k
+        dof_k = k
     elif fixef_k == "nested":
         if n_fe == 0:
-            k_eff_ssc = k
+            dof_k = k
         elif k_fe_nested == 0:
-            k_eff_ssc = k + k_fe_adj
+            # no nested fe, so just add all fixed effects
+            dof_k = k + k_fe_adj
         else:
-            k_eff_ssc = k + k_fe_adj - (k_fe_nested - 1)
+            # subtract nested fixed effects and add one previously
+            # subtracted fixed effect back
+            dof_k = k + k_fe_adj - k_fe_nested + 1
     elif fixef_k == "full":
-        k_eff_ssc = k + k_fe_adj if n_fe > 0 else k
+        # add all fixed effects
+        dof_k = k + k_fe_adj if n_fe > 0 else k
     else:
         raise ValueError("fixef_k is neither none, nested, nor full.")
 
     if adj:
-        adj_value = (N - 1) / (N - k_eff_ssc)
+        adj_value = (N - 1) / (N - dof_k)
 
     if vcov_type in ["hetero", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
@@ -188,7 +192,9 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    return np.array([adj_value * cluster_adj_value * vcov_sign]), k_eff_ssc
+    df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
+
+    return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
 
 
 @nb.njit(parallel=True)
