@@ -15,7 +15,7 @@ from pyfixest.utils.dev_utils import (
 def get_design_matrix_and_yhat(
     model,
     newdata: Optional[pd.DataFrame] = None,
-    context: Union[int, Mapping[str, Any]] = None,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
 ):
     """
     Build the design matrix X and initializes y_hat for predictions.
