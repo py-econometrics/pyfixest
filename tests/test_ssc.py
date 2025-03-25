@@ -1,6 +1,6 @@
 import pytest
 
-from pyfixest.utils.utils import get_ssc, _count_fixef_fully_nested
+from pyfixest.utils.utils import _count_fixef_fully_nested, get_ssc
 
 
 @pytest.fixture
@@ -81,15 +81,13 @@ def test_CRV(params):
     assert res == G / (G - 1)
 
 
-
 def test_count_fixef_fully_nested():
-
     clusters = np.array([1, 1, 2, 2, 2, 1, 1, 2, 2, 2])
     id = np.array([1, 2, 3, 4, 5, 1, 2, 3, 4, 5])
-    time = np.array([1 ,1, 1, 1, 1, 2, 2, 2, 2, 2])
+    time = np.array([1, 1, 1, 1, 1, 2, 2, 2, 2, 2])
 
     # test 1
-    f = np.concatenate([id.reshape(-1, 1), time.reshape(-1, 1)], axis = 1)
+    f = np.concatenate([id.reshape(-1, 1), time.reshape(-1, 1)], axis=1)
     res = _count_fixef_fully_nested(clusters, f)
     assert res == 5, "Did not find 5 fully nested fixed effects."
 

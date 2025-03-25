@@ -129,14 +129,14 @@ glm_fmls = [
 
 
 @pytest.fixture(scope="module")
-def data_feols(N=10000, seed=76540251, beta_type="2", error_type="2"):
+def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
     )
 
 
 @pytest.fixture
-def data_fepois(N=10000, seed=7651, beta_type="1", error_type="3"):
+def data_fepois(N=1000, seed=7651, beta_type="1", error_type="3"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
     )
@@ -390,9 +390,9 @@ def test_single_fit_feols(
                     mod.predict(newdata=new_df, interval="prediction")
 
     # degree of freedom correction for t-dist identical
-    # assert py_df_t == r_df_t, f"_df_t != r_df_t for {inference}"
+    assert py_df_t == r_df_t, f"_df_t != r_df_t for {inference}"
     # number of "effective" covariates k identical
-    # assert py_dof_k == r_dof_k, "py_dof_k != r_dof_k"
+    assert py_dof_k == r_dof_k, "py_dof_k != r_dof_k"
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
@@ -568,7 +568,7 @@ def test_single_fit_fepois(
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
-    # check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
@@ -683,7 +683,7 @@ def test_single_fit_iv(
     check_absolute_diff(py_se, r_se, 1e-07, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
-    # check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
 @pytest.mark.against_r
@@ -1290,27 +1290,22 @@ def test_singleton_dropping():
 
 
 ssc_fmls = [
-    #"Y ~ X1 + X2 + f1",
+    # "Y ~ X1 + X2 + f1",
     "Y ~ X1 + X2 | f1",
-    #"Y ~ X1 + X2 | f1 + f2",
-    #"Y ~ X1 + X2 | f1 + f2 + f3",
-    #"Y ~ X1 + X2 | f1^f2",
+    # "Y ~ X1 + X2 | f1 + f2",
+    # "Y ~ X1 + X2 | f1 + f2 + f3",
+    # "Y ~ X1 + X2 | f1^f2",
 ]
 
 
 @pytest.mark.against_r
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("fml", ssc_fmls)
-@pytest.mark.parametrize("vcov", [
-    "iid",
-    "hetero",
-    "f1", "f2"
-])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2"])
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
 @pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
 def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
-
     r_kwargs = {
         "fml": ro.Formula(fml),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
@@ -1326,7 +1321,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
         "data": data_feols,
         "ssc": pf.ssc(adj, fixef_k=fixef_k, cluster_adj=cluster_adj, cluster_df="min"),
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
-        "weights": weights
+        "weights": weights,
     }
 
     r_fit = fixest.feols(**r_kwargs)
@@ -1341,7 +1336,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
         data=data_feols,
         ssc=pf.ssc(adj, fixef_k=fixef_k, cluster_adj=cluster_adj, cluster_df="min"),
         vcov=vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
-        weights = weights
+        weights=weights,
     )
 
     py_df_t = py_fit._df_t
@@ -1363,7 +1358,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
         err_msg=f"df_t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
 
-        # dof.K identical:
+    # dof.K identical:
     np.testing.assert_allclose(
         r_dof_k,
         py_fit._dof_k,
@@ -1402,7 +1397,13 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
     )
 
     # confint identical:
-    np.testing.assert_allclose(py_fit.confint().values, pd.DataFrame(stats.confint(r_fit)).T.values, rtol=1e-08, atol=1e-08, err_msg = f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}")
+    np.testing.assert_allclose(
+        py_fit.confint().values,
+        pd.DataFrame(stats.confint(r_fit)).T.values,
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
     ## vcov identical:
     np.testing.assert_allclose(
         py_fit._vcov,
@@ -1411,7 +1412,6 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, data_feols, weights):
         atol=1e-08,
         err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
-
 
 
 def _convert_f3(data, f3_type):

@@ -468,7 +468,6 @@ class Feols:
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-
         (
             self._X,
             self._coefnames,
@@ -589,9 +588,9 @@ class Feols:
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=self._k,
-                k_fe= _k_fe,
+                k_fe=_k_fe,
                 k_fe_nested=0,
-                n_fe = self._n_fe,
+                n_fe=self._n_fe,
                 G=1,
                 vcov_sign=1,
                 vcov_type="iid",
@@ -607,9 +606,9 @@ class Feols:
                 ssc_dict=_ssc_dict,
                 N=_N,
                 k=self._k,
-                k_fe= _k_fe,
-                k_fe_nested=0, # nested fe not relevant for ssc as no cluster
-                n_fe = self._n_fe,
+                k_fe=_k_fe,
+                k_fe_nested=0,  # nested fe not relevant for ssc as no cluster
+                n_fe=self._n_fe,
                 G=_N,  # all clusters are singletons
                 vcov_sign=1,
                 vcov_type="hetero",
@@ -651,12 +650,15 @@ class Feols:
                 clustid = np.unique(cluster_col)
 
                 if self._has_fixef:
-                    #import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()
                     if col in self._fixef.split("+"):
                         k_fe_nested = len(clustid)
                     else:
                         k_fe_nested = _count_fixef_fully_nested(
-                            clusters=cluster_col.flatten(), f=self._fe.to_numpy() if type(self._fe) == pd.DataFrame else self._fe # self._fe is a array for IV, Fepois
+                            clusters=cluster_col.flatten(),
+                            f=self._fe.to_numpy()
+                            if type(self._fe) == pd.DataFrame
+                            else self._fe,  # self._fe is a array for IV, Fepois
                         )
                 else:
                     k_fe_nested = 0
@@ -665,16 +667,18 @@ class Feols:
                     ssc_dict=_ssc_dict,
                     N=_N,
                     k=self._k,
-                    k_fe= _k_fe,
+                    k_fe=_k_fe,
                     k_fe_nested=k_fe_nested,
-                    n_fe = self._n_fe,
+                    n_fe=self._n_fe,
                     G=self._G[x],
                     vcov_sign=vcov_sign_list[x],
                     vcov_type="CRV",
                 )
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._dof_k = np.array([dof_k]) if x == 0 else np.append(self._dof_k, dof_k)
+                self._dof_k = (
+                    np.array([dof_k]) if x == 0 else np.append(self._dof_k, dof_k)
+                )
                 self._df_t = np.array([df_t]) if x == 0 else np.append(self._df_t, df_t)
 
                 if self._vcov_type_detail == "CRV1":
