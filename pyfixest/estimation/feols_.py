@@ -2158,15 +2158,8 @@ class Feols:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
         if not joint:
-            if self._vcov_type in ["iid", "hetero"]:
-                df = self._N - self._k
-            else:
-                _G = np.min(np.array(self._G))  # fixest default
-                df = _G - 1
-
-            # use t-dist for linear models, but normal for non-linear models
             if self._method == "feols":
-                crit_val = np.abs(t.ppf(alpha / 2, df))
+                crit_val = np.abs(t.ppf(alpha / 2, self._df_t))
             else:
                 crit_val = np.abs(norm.ppf(alpha / 2))
         else:
