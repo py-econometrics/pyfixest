@@ -319,3 +319,48 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f4)", "1")
     var = "C(f5)[1.0]"
     assert _extract_variable_level(var) == ("C(f5)", "1.0")
+
+
+def _lspline(series: pd.Series, knots: list[float]) -> np.array:
+    """Generate a linear spline design matrix for the input series based on knots."""
+    vector = series.values
+    columns = []
+
+    for i, knot in enumerate(knots):
+        column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
+        columns.append(column)
+        vector = vector - column
+
+    # Add the remainder as the last column
+    columns.append(vector)
+
+    # Combine columns into a design matrix
+    return np.column_stack(columns)
+
+
+def test_context_capture_with_out_of_sample_predict():
+    data = pf.get_data(N=2000)
+
+    spline_split = _lspline(data["X2"], [0, 1])
+    data["X2_0"] = spline_split[:, 0]
+    data["0_X2_1"] = spline_split[:, 1]
+    data["1_X2"] = spline_split[:, 2]
+
+    # Split data to training and testing
+    data_train = data.iloc[:1000]
+    data_test = data.iloc[1000:]
+
+    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data_train)
+    context_captured_fit = pf.feols(
+        "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
+    )
+    context_captured_fit_map = pf.feols(
+        "Y ~ _lspline(X2,[0,1]) | f1 + f2",
+        data=data_train,
+        context={"_lspline": _lspline},
+    )
+
+    for context_fit in [context_captured_fit, context_captured_fit_map]:
+        np.testing.assert_almost_equal(
+            context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
+        )
