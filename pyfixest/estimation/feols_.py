@@ -52,7 +52,7 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val, rename_did_coefficients
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -1977,6 +1977,10 @@ class Feols:
                 "Empty variance-covariance matrix detected",
                 UserWarning,
             )
+
+        ## Check if DiD model and rename coefficients as needed
+        if hasattr(self, '_is_did_model') and self._is_did_model:
+            coef_names = rename_did_coefficients(self._coefnames)
 
         tidy_df = pd.DataFrame(
             {
