@@ -195,8 +195,7 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize(
-    "f3_type", ["str", "object", "int", "categorical", "float"])
+@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
@@ -474,7 +473,7 @@ def test_single_fit_feols_empty(
     py_resid = mod.resid()
     py_predict = mod.predict()
 
-    r_nobs = (stats.nobs(r_fixest)[0])
+    r_nobs = stats.nobs(r_fixest)[0]
     r_resid = stats.residuals(r_fixest)
     r_predict = stats.predict(r_fixest)
 
@@ -489,12 +488,7 @@ def test_single_fit_feols_empty(
 
 @pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [True])
-@pytest.mark.parametrize("inference", [
-    "iid",
-    "hetero",
-    {"CRV1": "group_id"}
-    ]
-)
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("adj", [False, True])
@@ -526,15 +520,17 @@ def test_single_fit_fepois(
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
-    mod = pf.fepois(fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol = 1e-10, iwls_maxiter = 100)
+    mod = pf.fepois(
+        fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol=1e-10, iwls_maxiter=100
+    )
 
     r_fixest = fixest.fepois(
         ro.Formula(r_fml),
         vcov=r_inference,
         data=data_r,
         ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
-        glm_tol = 1e-10,
-        glm_maxiter = 100,
+        glm_tol=1e-10,
+        glm_maxiter=100,
     )
 
     py_coef = mod.coef().xs("X1")
@@ -591,9 +587,9 @@ def test_single_fit_fepois(
     check_absolute_diff(py_df_t, r_df_t, 1e-12, "py_df_t != r_df_t")
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
-    check_absolute_diff(py_pval, r_pval, 1e-04, "py_pval != r_pval")
-    check_absolute_diff(py_tstat, r_tstat, 1e-04, "py_tstat != r_tstat")
-    check_absolute_diff(py_confint, r_confint, 1e-04, "py_confint != r_confint")
+    check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
+    check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
+    check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
     check_absolute_diff(py_deviance, r_deviance, 1e-08, "py_deviance != r_deviance")
 
     if not mod._has_fixef:
@@ -1315,7 +1311,7 @@ def test_singleton_dropping():
 
 
 ssc_fmls = [
-     "Y ~ X1 + X2 + f1",
+    "Y ~ X1 + X2 + f1",
     "Y ~ X1 + X2 | f1",
     "Y ~ X1 + X2 | f2",
     "Y ~ X1 + X2 | f1 + f2",
@@ -1331,23 +1327,24 @@ ssc_fmls = [
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
 @pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
-@pytest.mark.parametrize("model", [
-    "feols",
-    "fepois"
-    ]
-)
+@pytest.mark.parametrize("model", ["feols", "fepois"])
 def test_ssc(fml, dropna, vcov, adj, cluster_adj, fixef_k, model):
-
-    df = pf.get_data(model = "Feols") if model == "feols" else pf.get_data(model = "Fepois", N = 1000)
+    df = (
+        pf.get_data(model="Feols")
+        if model == "feols"
+        else pf.get_data(model="Fepois", N=1000)
+    )
     df = df.dropna() if dropna else df
 
     if not dropna and vcov in ["f1", "f2"] and vcov not in fml:
-        pytest.skip("vcov = f2 requires dropping NAs internally, which is not supported.")
+        pytest.skip(
+            "vcov = f2 requires dropping NAs internally, which is not supported."
+        )
 
     r_kwargs = {
         "fml": ro.Formula(fml),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
-        "data": df ,
+        "data": df,
         "ssc": fixest.ssc(adj, fixef_k, cluster_adj, "min", "min", False),
     }
 
@@ -1511,5 +1508,3 @@ def _skip_f3_checks(fml, f3_type):
 def _skip_dropna(test_counter, dropna):
     if test_counter % 4 != 0 and dropna:
         pytest.skip(f"Skipping dropna=True for test number {test_counter}")
-
-
