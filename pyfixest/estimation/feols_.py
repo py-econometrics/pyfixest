@@ -650,12 +650,13 @@ class Feols:
                     if col in self._fixef.split("+"):
                         k_fe_nested = len(clustid)
                     else:
-                        k_fe_nested = _count_fixef_fully_nested(
-                            clusters=cluster_col.flatten(),
-                            f=self._fe.to_numpy()
-                            if isinstance(self._fe, pd.DataFrame)
-                            else self._fe,  # self._fe is a array for IV, Fepois
-                        )
+                        k_fe_nested_flag = _count_fixef_fully_nested(
+                                clusters=cluster_col.flatten(),
+                                f=self._fe.to_numpy()
+                                if isinstance(self._fe, pd.DataFrame)
+                                else self._fe,  # self._fe is a array for IV, Fepois
+                            )
+                        k_fe_nested = int(self._k_fe[k_fe_nested_flag].sum())
                 else:
                     k_fe_nested = 0
 

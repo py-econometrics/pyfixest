@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from formulaic import Formula
 from formulaic.utils.context import capture_context as _capture_context
+from polars import n_unique
 
 from pyfixest.utils.dev_utils import _create_rng
 
@@ -200,7 +201,7 @@ def get_ssc(
 
 
 @nb.njit(parallel=True)
-def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> int:
+def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> np.array(np.bool_):
     """
     Count the number of fixed effects that are fully nested within clusters.
 
@@ -213,21 +214,24 @@ def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> int:
 
     Returns
     -------
-    int
-        The number of fixed effects that fully nested within clusters.
+    np.array(np.bool_)
+        An array of booleans indicating whether each fixed effect is fully nested within clusters.
+        True if the fixed effect is fully nested within clusters, False otherwise.
     """
     _, k = f.shape
-    counts = np.zeros(k, dtype=np.int64)
+
+    is_fe_nested = np.zeros(k, dtype=np.bool_)
     for j in nb.prange(k):
         unique_vals = np.unique(f[:, j])
-        c = 0
+        n_unique_vals = len(unique_vals)
+        counts = 0
         for val in unique_vals:
             mask = f[:, j] == val
             distinct_clusters = np.unique(clusters[mask])
             if len(distinct_clusters) == 1:
-                c += 1
-        counts[j] = c
-    return np.sum(counts)
+                counts += 1
+        is_fe_nested[j] = (counts == n_unique_vals)
+    return is_fe_nested
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
