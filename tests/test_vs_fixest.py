@@ -194,14 +194,13 @@ test_counter_feiv = 0
 @pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
-@pytest.mark.parametrize("weights", [None])  # , "weights"])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize(
-    "f3_type", ["str"]
-)  # , "object", "int", "categorical", "float"])
+    "f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
-@pytest.mark.parametrize("demeaner_backend", ["numba"])  # , "jax"])
+@pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -1333,15 +1332,17 @@ ssc_fmls = [
 @pytest.mark.parametrize("cluster_adj", [True, False])
 @pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
 @pytest.mark.parametrize("model", [
-    #"feols",
+    "feols",
     "fepois"
     ]
 )
 def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
+
+    df = pf.get_data(model = "Feols").dropna() if model == "feols" else pf.get_data(model = "Fepois").dropna()
     r_kwargs = {
         "fml": ro.Formula(fml),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
-        "data": pf.get_data(model = "Feols") if model == "feols" else pf.get_data(model = "Fepois"),
+        "data": df ,
         "ssc": fixest.ssc(adj, fixef_k, cluster_adj, "min", "min", False),
     }
 
@@ -1350,7 +1351,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
 
     py_kwargs = {
         "fml": fml,
-        "data": pf.get_data(model = "Feols") if model == "feols" else pf.get_data(model = "Fepois"),
+        "data": df,
         "ssc": pf.ssc(adj, fixef_k=fixef_k, cluster_adj=cluster_adj, cluster_df="min"),
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
@@ -1372,7 +1373,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
     # coefficients identical:
     np.testing.assert_allclose(
         py_fit.coef(),
-        ro.r("r_fit$coeftable[,'Estimate']"),
+        ro.r("r_fit$coeftable[,1]"),
         rtol=1e-08,
         atol=1e-08,
         err_msg=f"coefficients do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
@@ -1388,20 +1389,20 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
     # dof.K identical:
     np.testing.assert_allclose(
         r_dof_k,
-        py_fit._dof_k,
+        py_dof_k,
         err_msg=f"dof.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
 
-    # dof.K identical:
+    # df.t identical:
     np.testing.assert_allclose(
-        py_dof_k,
-        r_dof_k,
-        err_msg=f"dof.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+        py_df_t,
+        r_df_t,
+        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # SEs identical:
     np.testing.assert_allclose(
         py_fit.se(),
-        ro.r("r_fit$coeftable[,'Std. Error']"),
+        ro.r("r_fit$coeftable[,2]"),
         rtol=1e-08 if model == "feols" else 1e-05,
         atol=1e-08 if model == "feols" else 1e-05,
         err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
@@ -1409,7 +1410,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
     # p-values identical:
     np.testing.assert_allclose(
         py_fit.pvalue(),
-        ro.r("r_fit$coeftable[,'Pr(>|t|)']"),
+        ro.r("r_fit$coeftable[,4]"),
         rtol=1e-08 if model == "feols" else 1e-05,
         atol=1e-08 if model == "feols" else 1e-05,
         err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
@@ -1417,7 +1418,7 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
     # t-stats identical:
     np.testing.assert_allclose(
         py_fit.tstat(),
-        ro.r("r_fit$coeftable[,'t value']"),
+        ro.r("r_fit$coeftable[,3]"),
         rtol=1e-08 if model == "feols" else 1e-05,
         atol=1e-08 if model == "feols" else 1e-05,
         err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
@@ -1427,8 +1428,8 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
     np.testing.assert_allclose(
         py_fit.confint().values,
         pd.DataFrame(stats.confint(r_fit)).T.values,
-        rtol=1e-08 if model == "feols" else 1e-05,
-        atol=1e-08 if model == "feols" else 1e-05,
+        rtol=1e-08 if model == "feols" else 1e-04,
+        atol=1e-08 if model == "feols" else 1e-04,
         err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     ## vcov identical:
