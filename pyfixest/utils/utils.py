@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
+import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
@@ -11,7 +12,7 @@ from pyfixest.utils.dev_utils import _create_rng
 
 def ssc(
     adj: bool = True,
-    fixef_k: str = "none",
+    fixef_k: str = "nested",
     cluster_adj: bool = True,
     cluster_df: str = "min",
 ) -> dict[str, Union[str, bool]]:
@@ -87,8 +88,8 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    if fixef_k not in ["none"]:
-        raise ValueError("fixef_k must be 'none'.")
+    if fixef_k not in ["none", "full", "nested"]:
+        raise ValueError(f"fixef_k must be 'none', 'full', or 'nested' but it is {fixef_k}.")
     if cluster_adj not in [True, False]:
         raise ValueError("cluster_adj must be True or False.")
     if cluster_df not in ["conventional", "min"]:
@@ -106,11 +107,13 @@ def get_ssc(
     ssc_dict: dict[str, Union[str, bool]],
     N: int,
     k: int,
+    k_fe: int,
+    k_fe_nested: int,
+    n_fe: int,
     G: int,
     vcov_sign: int,
     vcov_type: "str",
-    is_twoway: bool = False,
-) -> np.ndarray:
+) -> tuple[np.ndarray, int, int]:
     """
     Compute small sample adjustment factors.
 
@@ -121,21 +124,24 @@ def get_ssc(
     N : int
         The number of observations.
     k : int
-        The number of estimated parameters.
+        The number of estimated parameters (as in the first part of the model formula)
+    k_fe : int
+        The number of estimated fixed effects (as specified in the second part of the model formula).
+    k_fe_nested : int
+        The number of estimated fixed effects nested within clusters.
+    n_fe : int
+        The number of fixed effects in the model. I.e. 'Y ~ X1  | f1 + f2' has 2 fixed effects.
     G : int
         The number of clusters.
     vcov_sign : array-like
         A vector that helps create the covariance matrix.
     vcov_type : str
         The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
-    is_twoway : bool, optional
-        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12.
-            Default is False.
 
     Returns
     -------
-    float
-        A small sample adjustment factor.
+    tuple of np.ndarray and int
+        A small sample adjustment factor and the effective number of coefficients k used in the adjustment.
 
     Raises
     ------
@@ -144,16 +150,41 @@ def get_ssc(
         "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
-    fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
+    fixef_k = ssc_dict["fixef_k"]
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 
     cluster_adj_value = 1.0
     adj_value = 1.0
 
-    if adj:
-        adj_value = (N - 1) / (N - k)
+    # see here for why:
+    # https://github.com/lrberge/fixest/issues/554
 
+    # subtract one for each fixed effect, except for the first
+    k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
+
+    if fixef_k == "none":
+        dof_k = k
+    elif fixef_k == "nested":
+        if n_fe == 0:
+            dof_k = k
+        elif k_fe_nested == 0:
+            # no nested fe, so just add all fixed effects
+            dof_k = k + k_fe_adj
+        else:
+            # subtract nested fixed effects and add one previously
+            # subtracted fixed effect back
+            dof_k = k + k_fe_adj - k_fe_nested + 1
+    elif fixef_k == "full":
+        # add all fixed effects
+        dof_k = k + k_fe_adj if n_fe > 0 else k
+    else:
+        raise ValueError("fixef_k is neither none, nested, nor full.")
+
+    if adj:
+        adj_value = (N - 1) / (N - dof_k)
+
+    # cluster_adj applied with G = N for hetero but not for iid
     if vcov_type in ["hetero", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
             cluster_adj_value = G / (G - 1)
@@ -163,7 +194,40 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    return np.array([adj_value * cluster_adj_value * vcov_sign])
+    df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
+
+    return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
+
+
+@nb.njit(parallel=True)
+def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> int:
+    """
+    Count the number of fixed effects that are fully nested within clusters.
+
+    Parameters
+    ----------
+    clusters : np.ndarray
+        A vector of cluster assignments.
+    f : np.ndarray
+        A matrix of fixed effects.
+
+    Returns
+    -------
+    int
+        The number of fixed effects that fully nested within clusters.
+    """
+    _, k = f.shape
+    counts = np.zeros(k, dtype=np.int64)
+    for j in nb.prange(k):
+        unique_vals = np.unique(f[:, j])
+        c = 0
+        for val in unique_vals:
+            mask = f[:, j] == val
+            distinct_clusters = np.unique(clusters[mask])
+            if len(distinct_clusters) == 1:
+                c += 1
+        counts[j] = c
+    return np.sum(counts)
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
