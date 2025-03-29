@@ -559,14 +559,7 @@ class Feols:
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
-        # _tZXinv = self._tZXinv
         _hessian = self._hessian
-
-        _ssc_dict = self._ssc_dict
-        _N = self._N
-        _k = self._k
-        _k_fe = self._k_fe.sum() if self._has_fixef else 0
-        # k_fe_nested only updated in case of clustered errors
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
@@ -583,18 +576,25 @@ class Feols:
 
         # compute vcov
 
+
+        ssc_kwargs = {
+            "ssc_dict": self._ssc_dict,
+            "N": self._N,
+            "k": self._k,
+            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "n_fe": self._n_fe,
+        }
+
         if self._vcov_type == "iid":
-            self._ssc, self._dof_k, self._df_t = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=self._k,
-                k_fe=_k_fe,
-                k_fe_nested=0,
-                n_fe=self._n_fe,
-                G=1,
-                vcov_sign=1,
-                vcov_type="iid",
-            )
+
+            ssc_kwargs_iid = {
+                "k_fe_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "iid",
+                "G": 1,
+            }
+
+            self._ssc, self._dof_k, self._df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_iid)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -602,17 +602,14 @@ class Feols:
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
             # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
 
-            self._ssc, self._dof_k, self._df_t = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=self._k,
-                k_fe=_k_fe,
-                k_fe_nested=0,  # nested fe not relevant for ssc as no cluster
-                n_fe=self._n_fe,
-                G=_N,  # all clusters are singletons
-                vcov_sign=1,
-                vcov_type="hetero",
-            )
+            ssc_kwargs_hetero = {
+                "k_fe_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N
+            }
+
+            self._ssc, self._dof_k, self._df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_hetero)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -636,7 +633,7 @@ class Feols:
                 )
 
             self._G = _count_G_for_ssc_correction(
-                cluster_df=self._cluster_df, ssc_dict=_ssc_dict
+                cluster_df=self._cluster_df, ssc_dict=self._ssc_dict
             )
 
             # loop over columns of cluster_df
@@ -650,7 +647,6 @@ class Feols:
                 clustid = np.unique(cluster_col)
 
                 if self._has_fixef:
-                    # import pdb; pdb.set_trace()
                     if col in self._fixef.split("+"):
                         k_fe_nested = len(clustid)
                     else:
@@ -663,17 +659,15 @@ class Feols:
                 else:
                     k_fe_nested = 0
 
-                ssc, dof_k, df_t = get_ssc(
-                    ssc_dict=_ssc_dict,
-                    N=_N,
-                    k=self._k,
-                    k_fe=_k_fe,
-                    k_fe_nested=k_fe_nested,
-                    n_fe=self._n_fe,
-                    G=self._G[x],
-                    vcov_sign=vcov_sign_list[x],
-                    vcov_type="CRV",
-                )
+
+                ssc_kwargs_crv = {
+                    "k_fe_nested": k_fe_nested,
+                    "G": self._G[x],
+                    "vcov_sign": vcov_sign_list[x],
+                    "vcov_type": "CRV",
+                }
+
+                ssc, dof_k, df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_crv)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
                 self._dof_k = (

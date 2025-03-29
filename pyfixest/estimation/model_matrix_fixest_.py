@@ -11,7 +11,6 @@ from pyfixest.estimation.detect_singletons_ import detect_singletons
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.utils import capture_context
 
-
 def model_matrix_fixest(
     FixestFormula: FixestFormula,
     data: pd.DataFrame,
