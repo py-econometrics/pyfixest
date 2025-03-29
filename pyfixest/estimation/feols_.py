@@ -653,7 +653,7 @@ class Feols:
                         k_fe_nested = _count_fixef_fully_nested(
                             clusters=cluster_col.flatten(),
                             f=self._fe.to_numpy()
-                            if type(self._fe) == pd.DataFrame
+                            if isinstance(self._fe, pd.DataFrame)
                             else self._fe,  # self._fe is a array for IV, Fepois
                         )
                 else:

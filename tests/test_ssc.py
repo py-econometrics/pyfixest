@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from pyfixest.utils.utils import _count_fixef_fully_nested, get_ssc
