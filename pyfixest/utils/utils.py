@@ -88,8 +88,8 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    # if fixef_k not in ["none"]:
-    #    raise ValueError("fixef_k must be 'none'.")
+    if fixef_k not in ["none", "full", "nested"]:
+        raise ValueError(f"fixef_k must be 'none', 'full', or 'nested' but it is {fixef_k}.")
     if cluster_adj not in [True, False]:
         raise ValueError("cluster_adj must be True or False.")
     if cluster_df not in ["conventional", "min"]:

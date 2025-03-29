@@ -137,7 +137,7 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
 
 
 @pytest.fixture
-def data_fepois(N=10000, seed=545, beta_type="1", error_type="1"):
+def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
     )
@@ -1316,11 +1316,12 @@ def test_singleton_dropping():
 
 
 ssc_fmls = [
-    # "Y ~ X1 + X2 + f1",
+     "Y ~ X1 + X2 + f1",
     "Y ~ X1 + X2 | f1",
-    # "Y ~ X1 + X2 | f1 + f2",
-    # "Y ~ X1 + X2 | f1 + f2 + f3",
-    # "Y ~ X1 + X2 | f1^f2",
+    "Y ~ X1 + X2 | f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2 + f3",
+    "Y ~ X1 + X2 | f1^f2",
 ]
 
 
@@ -1398,29 +1399,29 @@ def test_ssc(fml, vcov, adj, cluster_adj, fixef_k, weights, model):
         err_msg=f"dof.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # SEs identical:
-    #np.testing.assert_allclose(
-    #    py_fit.se(),
-    #    ro.r("r_fit$coeftable[,'Std. Error']"),
-    #    rtol=1e-08 if model == "feols" else 1e-05,
-    #    atol=1e-08 if model == "feols" else 1e-05,
-    #    err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
-    #)
+    np.testing.assert_allclose(
+        py_fit.se(),
+        ro.r("r_fit$coeftable[,'Std. Error']"),
+        rtol=1e-08 if model == "feols" else 1e-05,
+        atol=1e-08 if model == "feols" else 1e-05,
+        err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
     # p-values identical:
-    #np.testing.assert_allclose(
-    #    py_fit.pvalue(),
-    #    ro.r("r_fit$coeftable[,'Pr(>|t|)']"),
-    #    rtol=1e-08 if model == "feols" else 1e-05,
-    #    atol=1e-08 if model == "feols" else 1e-05,
-    #    err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
-    #)
+    np.testing.assert_allclose(
+        py_fit.pvalue(),
+        ro.r("r_fit$coeftable[,'Pr(>|t|)']"),
+        rtol=1e-08 if model == "feols" else 1e-05,
+        atol=1e-08 if model == "feols" else 1e-05,
+        err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
     # t-stats identical:
-    #np.testing.assert_allclose(
-    #    py_fit.tstat(),
-    #    ro.r("r_fit$coeftable[,'t value']"),
-    #    rtol=1e-08 if model == "feols" else 1e-05,
-    #    atol=1e-08 if model == "feols" else 1e-05,
-    #    err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
-    #)
+    np.testing.assert_allclose(
+        py_fit.tstat(),
+        ro.r("r_fit$coeftable[,'t value']"),
+        rtol=1e-08 if model == "feols" else 1e-05,
+        atol=1e-08 if model == "feols" else 1e-05,
+        err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
 
     # confint identical:
     np.testing.assert_allclose(

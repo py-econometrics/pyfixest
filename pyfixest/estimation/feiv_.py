@@ -11,8 +11,6 @@ from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
 
-call_count = 0
-
 class Feiv(Feols):
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
