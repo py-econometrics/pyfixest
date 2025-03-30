@@ -1,11 +1,10 @@
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Union, cast
+from typing import Any, Literal, Optional, Union
 
 import pandas as pd
 
-from pyfixest import estimation
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.felogit_ import Felogit
@@ -371,11 +370,10 @@ class FixestMulti:
                         FIT.vcov(vcov=vcov_type, data=FIT._data)
 
                         FIT.get_inference()
-                        if estimation == "feols" and not _is_iv:
+                        if _method == "feols" and not FIT._is_iv:
                             FIT.get_performance()
-                        if estimation == "feols" and _is_iv:
-                            cast(Feiv, FIT).first_stage()
-
+                        if isinstance(FIT, Feiv):
+                            FIT.first_stage()
                     # delete large attributes
                     FIT._clear_attributes()
 
