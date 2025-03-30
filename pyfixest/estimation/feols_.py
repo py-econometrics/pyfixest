@@ -592,8 +592,8 @@ class Feols:
                 "vcov_type": "iid",
                 "G": 1,
             }
-
-            self._ssc, self._dof_k, self._df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_iid)
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -609,9 +609,8 @@ class Feols:
                 "G": self._N,
             }
 
-            self._ssc, self._dof_k, self._df_t = get_ssc(
-                **ssc_kwargs, **ssc_kwargs_hetero
-            )
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -681,7 +680,8 @@ class Feols:
                     "vcov_type": "CRV",
                 }
 
-                ssc, dof_k, df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_crv)
+                all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
+                ssc, dof_k, df_t = get_ssc(**all_kwargs)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
                 self._dof_k = dof_k  # the same across all vcov's

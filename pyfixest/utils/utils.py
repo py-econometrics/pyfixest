@@ -106,7 +106,8 @@ def ssc(
 
 
 def get_ssc(
-    ssc_dict: dict[str, Union[str, bool]],
+    *,
+    ssc_dict: dict[str, Union[str, str | bool]],
     N: int,
     k: int,
     k_fe: int,
@@ -210,7 +211,7 @@ def _count_fixef_fully_nested_all(
     cluster_colnames: np.ndarray,
     cluster_data: np.ndarray,
     fe_data: np.ndarray,
-) -> tuple[int, int]:
+) -> tuple[np.ndarray, int]:
     """
 
     Compute the number of nested fixed effects over all fixed effects.
@@ -262,9 +263,7 @@ def _count_fixef_fully_nested_all(
 
 
 @nb.njit
-def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> np.array(
-    np.bool_
-):
+def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> bool:
     """
     Check if a given fixed effect is fully nested within a given cluster.
 

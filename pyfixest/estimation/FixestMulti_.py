@@ -314,7 +314,6 @@ class FixestMulti:
                             }
                         )
 
-                    # GLM specific kwargs
                     if _method in {
                         "fepois",
                         "feglm-logit",
@@ -339,7 +338,6 @@ class FixestMulti:
                         ("compression", None): FeolsCompressed,
                     }
 
-                    # compression specific kwargs
                     if _method == "compression":
                         model_kwargs.update(
                             {
@@ -348,23 +346,20 @@ class FixestMulti:
                             }
                         )
 
-                    # set model class
                     model_key = (
                         (_method, _is_iv) if _method == "feols" else (_method, None)
                     )
-                    ModelClass = model_map[model_key]
+                    ModelClass = model_map[model_key]  # type: ignore
                     FIT = ModelClass(**model_kwargs)
 
-                    # Shared method calls
                     FIT.prepare_model_matrix()
-                    # Optional steps based on model type
                     if type(FIT) in [Feols, Feiv]:
                         FIT.demean()
                     FIT.to_array()
-                    if type(FIT) in [Felogit, Feprobit, Fegaussian]:
+                    if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
                         FIT._check_dependent_variable()
                     FIT.drop_multicol_vars()
-                    if type(FIT) in [Feols, Feiv, FeolsCompressed]:
+                    if isinstance(FIT, (Feols, Feiv, FeolsCompressed)):
                         FIT.wls_transform()
 
                     FIT.get_fit()
@@ -375,13 +370,12 @@ class FixestMulti:
                         FIT.vcov(vcov=vcov_type, data=FIT._data)
 
                         FIT.get_inference()
-                        # other regression stats
-                        if type(FIT) in [Feols]:
+                        if isinstance(FIT, (Feols)):
                             FIT.get_performance()
-                        if type(FIT) in [Feiv]:
+                        if isinstance(FIT, Feiv):
                             FIT.first_stage()
 
-                    # delete large attributescl
+                    # delete large attributes
                     FIT._clear_attributes()
 
                     self.all_fitted_models[FIT._model_name] = FIT
