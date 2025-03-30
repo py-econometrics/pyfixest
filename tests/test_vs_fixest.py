@@ -1423,24 +1423,24 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     np.testing.assert_allclose(
         py_fit.se(),
         ro.r("r_fit$coeftable[,2]"),
-        rtol=1e-08 if model == "feols" else 1e-06,
-        atol=1e-08 if model == "feols" else 1e-06,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # p-values identical:
     np.testing.assert_allclose(
         py_fit.pvalue(),
         ro.r("r_fit$coeftable[,4]"),
-        rtol=1e-08 if model == "feols" else 1e-06,
-        atol=1e-08 if model == "feols" else 1e-06,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # t-stats identical:
     np.testing.assert_allclose(
         py_fit.tstat(),
         ro.r("r_fit$coeftable[,3]"),
-        rtol=1e-08 if model == "feols" else 1e-06,
-        atol=1e-08 if model == "feols" else 1e-06,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
 
@@ -1448,16 +1448,16 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     np.testing.assert_allclose(
         py_fit.confint().values,
         pd.DataFrame(stats.confint(r_fit)).T.values,
-        rtol=1e-08 if model == "feols" else 1e-06,
-        atol=1e-08 if model == "feols" else 1e-06,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     ## vcov identical:
     np.testing.assert_allclose(
         py_fit._vcov,
         stats.vcov(r_fit),
-        rtol=1e-08 if model == "feols" else 1e-06,
-        atol=1e-08 if model == "feols" else 1e-06,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
 

@@ -53,7 +53,7 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import (
-    _count_fixef_fully_nested,
+    _count_fixef_fully_nested_all,
     capture_context,
     get_ssc,
     simultaneous_crit_val,
@@ -587,6 +587,7 @@ class Feols:
         if self._vcov_type == "iid":
             ssc_kwargs_iid = {
                 "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
                 "vcov_sign": 1,
                 "vcov_type": "iid",
                 "G": 1,
@@ -602,6 +603,7 @@ class Feols:
 
             ssc_kwargs_hetero = {
                 "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
                 "vcov_sign": 1,
                 "vcov_type": "hetero",
                 "G": self._N,
@@ -640,29 +642,40 @@ class Feols:
             vcov_sign_list = [1, 1, -1]
             df_t_full = np.zeros(self._cluster_df.shape[1])
 
+            cluster_arr_int = np.column_stack(
+                [
+                    pd.factorize(self._cluster_df[col])[0]
+                    for col in self._cluster_df.columns
+                ]
+            )
+
+            k_fe_nested = 0
+            n_fe_fully_nested = 0
+            if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
+                k_fe_nested_flag, n_fe_fully_nested = _count_fixef_fully_nested_all(
+                    all_fixef_array=np.array(
+                        self._fixef.replace("^", "_").split("+"), dtype=str
+                    ),
+                    cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
+                    cluster_data=cluster_arr_int,
+                    fe_data=self._fe.to_numpy()
+                    if isinstance(self._fe, pd.DataFrame)
+                    else self._fe,
+                )
+
+                k_fe_nested = (
+                    np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+                )
+
             self._vcov = np.zeros((self._k, self._k))
 
-            for x, col in enumerate(self._cluster_df.columns):
-                cluster_col_pd = self._cluster_df[col]
-                cluster_col, _ = pd.factorize(cluster_col_pd)
+            for x, _ in enumerate(self._cluster_df.columns):
+                cluster_col = cluster_arr_int[:, x]
                 clustid = np.unique(cluster_col)
-
-                if self._has_fixef:
-                    if col in self._fixef.split("+"):
-                        k_fe_nested = len(clustid)
-                    else:
-                        k_fe_nested_flag = _count_fixef_fully_nested(
-                            clusters=cluster_col.flatten(),
-                            f=self._fe.to_numpy()
-                            if isinstance(self._fe, pd.DataFrame)
-                            else self._fe,  # self._fe is a array for IV, Fepois
-                        )
-                        k_fe_nested = int(self._k_fe[k_fe_nested_flag].sum())
-                else:
-                    k_fe_nested = 0
 
                 ssc_kwargs_crv = {
                     "k_fe_nested": k_fe_nested,
+                    "n_fe_fully_nested": n_fe_fully_nested,
                     "G": self._G[x],
                     "vcov_sign": vcov_sign_list[x],
                     "vcov_type": "CRV",
@@ -671,9 +684,7 @@ class Feols:
                 ssc, dof_k, df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_crv)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
-                self._dof_k = (
-                    np.array([dof_k]) if x == 0 else np.append(self._dof_k, dof_k)
-                )
+                self._dof_k = dof_k  # the same across all vcov's
 
                 # update. take min(df_t) ad the end of loop
                 df_t_full[x] = df_t
