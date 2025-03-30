@@ -1323,12 +1323,13 @@ ssc_fmls = [
 @pytest.mark.against_r
 @pytest.mark.parametrize("fml", ssc_fmls)
 @pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2"])
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
 @pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
 @pytest.mark.parametrize("model", ["feols", "fepois"])
-def test_ssc(fml, dropna, vcov, adj, cluster_adj, fixef_k, model):
+def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     df = (
         pf.get_data(model="Feols")
         if model == "feols"
@@ -1354,6 +1355,10 @@ def test_ssc(fml, dropna, vcov, adj, cluster_adj, fixef_k, model):
         "ssc": pf.ssc(adj, fixef_k=fixef_k, cluster_adj=cluster_adj, cluster_df="min"),
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
+
+    if weights is not None:
+        r_kwargs["weights"] = ro.Formula(f"~{weights}")
+        py_kwargs["weights"] = weights
 
     if model == "feols":
         r_fit = fixest.feols(**r_kwargs)
