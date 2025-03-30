@@ -277,7 +277,15 @@ class FixestMulti:
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
                     # get Y, X, Z, fe, NA indices for model
 
-                    FIT: Union[Feols, Feiv, Fepois]
+                    FIT: Union[
+                        Feols,
+                        Feiv,
+                        Fepois,
+                        Fegaussian,
+                        Felogit,
+                        Feprobit,
+                        FeolsCompressed,
+                    ]
 
                     model_kwargs = {
                         "FixestFormula": FixestFormula,
@@ -300,18 +308,26 @@ class FixestMulti:
                     }
 
                     if _method in {"feols", "fepois"}:
-                        model_kwargs.update({
-                            "demeaner_backend": demeaner_backend,
-
-                        })
+                        model_kwargs.update(
+                            {
+                                "demeaner_backend": demeaner_backend,
+                            }
+                        )
 
                     # GLM specific kwargs
-                    if _method in {"fepois", "feglm-logit", "feglm-probit", "feglm-gaussian"}:
-                        model_kwargs.update({
-                            "separation_check": separation_check,
-                            "tol": iwls_tol,
-                            "maxiter": iwls_maxiter,
-                        })
+                    if _method in {
+                        "fepois",
+                        "feglm-logit",
+                        "feglm-probit",
+                        "feglm-gaussian",
+                    }:
+                        model_kwargs.update(
+                            {
+                                "separation_check": separation_check,
+                                "tol": iwls_tol,
+                                "maxiter": iwls_maxiter,
+                            }
+                        )
 
                     model_map = {
                         ("feols", False): Feols,
@@ -325,19 +341,23 @@ class FixestMulti:
 
                     # compression specific kwargs
                     if _method == "compression":
-                        model_kwargs.update({
-                            "reps": self._reps,
-                            "seed": self._seed,
-                        })
+                        model_kwargs.update(
+                            {
+                                "reps": self._reps,
+                                "seed": self._seed,
+                            }
+                        )
 
                     # set model class
-                    model_key = (_method, _is_iv) if _method == "feols" else (_method, None)
+                    model_key = (
+                        (_method, _is_iv) if _method == "feols" else (_method, None)
+                    )
                     ModelClass = model_map[model_key]
                     FIT = ModelClass(**model_kwargs)
 
                     # Shared method calls
                     FIT.prepare_model_matrix()
-                        # Optional steps based on model type
+                    # Optional steps based on model type
                     if type(FIT) in [Feols, Feiv]:
                         FIT.demean()
                     FIT.to_array()

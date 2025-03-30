@@ -576,7 +576,6 @@ class Feols:
 
         # compute vcov
 
-
         ssc_kwargs = {
             "ssc_dict": self._ssc_dict,
             "N": self._N,
@@ -586,7 +585,6 @@ class Feols:
         }
 
         if self._vcov_type == "iid":
-
             ssc_kwargs_iid = {
                 "k_fe_nested": 0,
                 "vcov_sign": 1,
@@ -606,10 +604,12 @@ class Feols:
                 "k_fe_nested": 0,
                 "vcov_sign": 1,
                 "vcov_type": "hetero",
-                "G": self._N
+                "G": self._N,
             }
 
-            self._ssc, self._dof_k, self._df_t = get_ssc(**ssc_kwargs, **ssc_kwargs_hetero)
+            self._ssc, self._dof_k, self._df_t = get_ssc(
+                **ssc_kwargs, **ssc_kwargs_hetero
+            )
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -638,6 +638,7 @@ class Feols:
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+            df_t_full = np.zeros(self._cluster_df.shape[1])
 
             self._vcov = np.zeros((self._k, self._k))
 
@@ -651,15 +652,14 @@ class Feols:
                         k_fe_nested = len(clustid)
                     else:
                         k_fe_nested_flag = _count_fixef_fully_nested(
-                                clusters=cluster_col.flatten(),
-                                f=self._fe.to_numpy()
-                                if isinstance(self._fe, pd.DataFrame)
-                                else self._fe,  # self._fe is a array for IV, Fepois
-                            )
+                            clusters=cluster_col.flatten(),
+                            f=self._fe.to_numpy()
+                            if isinstance(self._fe, pd.DataFrame)
+                            else self._fe,  # self._fe is a array for IV, Fepois
+                        )
                         k_fe_nested = int(self._k_fe[k_fe_nested_flag].sum())
                 else:
                     k_fe_nested = 0
-
 
                 ssc_kwargs_crv = {
                     "k_fe_nested": k_fe_nested,
@@ -674,7 +674,9 @@ class Feols:
                 self._dof_k = (
                     np.array([dof_k]) if x == 0 else np.append(self._dof_k, dof_k)
                 )
-                self._df_t = np.array([df_t]) if x == 0 else np.append(self._df_t, df_t)
+
+                # update. take min(df_t) ad the end of loop
+                df_t_full[x] = df_t
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
@@ -703,7 +705,8 @@ class Feols:
                         self._vcov += self._ssc[x] * self._vcov_crv3_slow(
                             clustid=clustid, cluster_col=cluster_col
                         )
-
+            # take minimum cluster for dof for multiway clustering
+            self._df_t = np.min(df_t_full)
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -879,7 +882,6 @@ class Feols:
 
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
-
         # use t-dist for linear models, but normal for non-linear models
         if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))

@@ -1324,7 +1324,7 @@ ssc_fmls = [
 @pytest.mark.parametrize("fml", ssc_fmls)
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2", "f1+f2"])
 @pytest.mark.parametrize("adj", [True, False])
 @pytest.mark.parametrize("cluster_adj", [True, False])
 @pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
@@ -1337,7 +1337,7 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     )
     df = df.dropna() if dropna else df
 
-    if not dropna and vcov in ["f1", "f2"] and vcov not in fml:
+    if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
         pytest.skip(
             "vcov = f2 requires dropping NAs internally, which is not supported."
         )
@@ -1359,11 +1359,18 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
         py_kwargs["weights"] = weights
+        if model == "fepois":
+            pytest.skip("pf.fepois does not support weights.")
 
     if model == "feols":
         r_fit = fixest.feols(**r_kwargs)
         py_fit = pf.feols(**py_kwargs)
     else:
+        r_kwargs["glm_tol"] = 1e-10
+        r_kwargs["glm_maxiter"] = 100
+        py_kwargs["iwls_tol"] = 1e-10
+        py_kwargs["iwls_maxiter"] = 100
+
         r_fit = fixest.fepois(**r_kwargs)
         py_fit = pf.fepois(**py_kwargs)
 
@@ -1416,24 +1423,24 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     np.testing.assert_allclose(
         py_fit.se(),
         ro.r("r_fit$coeftable[,2]"),
-        rtol=1e-08 if model == "feols" else 1e-05,
-        atol=1e-08 if model == "feols" else 1e-05,
+        rtol=1e-08 if model == "feols" else 1e-06,
+        atol=1e-08 if model == "feols" else 1e-06,
         err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # p-values identical:
     np.testing.assert_allclose(
         py_fit.pvalue(),
         ro.r("r_fit$coeftable[,4]"),
-        rtol=1e-08 if model == "feols" else 1e-04,
-        atol=1e-08 if model == "feols" else 1e-04,
+        rtol=1e-08 if model == "feols" else 1e-06,
+        atol=1e-08 if model == "feols" else 1e-06,
         err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     # t-stats identical:
     np.testing.assert_allclose(
         py_fit.tstat(),
         ro.r("r_fit$coeftable[,3]"),
-        rtol=1e-08 if model == "feols" else 1e-04,
-        atol=1e-08 if model == "feols" else 1e-04,
+        rtol=1e-08 if model == "feols" else 1e-06,
+        atol=1e-08 if model == "feols" else 1e-06,
         err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
 
@@ -1441,8 +1448,8 @@ def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
     np.testing.assert_allclose(
         py_fit.confint().values,
         pd.DataFrame(stats.confint(r_fit)).T.values,
-        rtol=1e-08 if model == "feols" else 1e-04,
-        atol=1e-08 if model == "feols" else 1e-04,
+        rtol=1e-08 if model == "feols" else 1e-06,
+        atol=1e-08 if model == "feols" else 1e-06,
         err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
     )
     ## vcov identical:

@@ -116,3 +116,5 @@ For computing critical values, we compute degrees of freedom `df_t` as `N - dof_
 
 To compute critical values for OLS and IV regression, we compute t-statistics using `df_t` degrees of freedom. For GLMs, we compute critical values
 based on a normal distribution (z-statistics). See [here](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for the implementation.
+
+For multiway-clustered errors, we set `df_t = min(G_1 - 1, G_2 - 1)` in case of two-way clustering, `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` in case of three-way clustering (currently not supported), etc.
