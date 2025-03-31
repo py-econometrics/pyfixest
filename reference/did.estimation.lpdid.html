@@ -165,6 +165,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Regression Decomposition</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
@@ -565,7 +569,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="4c91868e" class="cell" data-execution_count="1">
+<div id="c4e48310" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -588,7 +592,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>fit.iplot(figsize<span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>], coord_flip<span class="op">=</span><span class="va">False</span>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="mcdkQM"></div>
+            <div id="NUmK8j"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -612,9 +616,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("mcdkQM").appendChild(div);
+                        document.getElementById("NUmK8j").appendChild(div);
                     };
-                    var e = document.getElementById("mcdkQM");
+                    var e = document.getElementById("NUmK8j");
                     e.appendChild(script);
                 })()
             </script>
@@ -622,7 +626,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="ftjOHs"></div>
+            <div id="fIJy6v"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -646,22 +650,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("ftjOHs").appendChild(div);
+                        document.getElementById("fIJy6v").appendChild(div);
                     };
-                    var e = document.getElementById("ftjOHs");
+                    var e = document.getElementById("fIJy6v");
                     e.appendChild(script);
                 })()
             </script>
             
 </div>
 <div class="cell-output cell-output-display">
-   <div id="0sWJ1v"></div>
+   <div id="0x4xlQ"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("0sWJ1v");
+   var containerDiv = document.getElementById("0x4xlQ");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -677,8 +681,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
 "Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.07556131947831908,-0.051277562684252105,0.047891216349789587,0.030061024401231366,0.039869683844842616,0.04845789728984681,-0.012820133350277497,0.013685361040923884,0.005199898128597303,0.016416277464837318,0.056416738856818846,0.0016957198969680782,-0.06496834258802509,0.010741616233677878,0.04275993550129887,0.003229015933287125,1.4520234748273066,1.6676220565025497,1.7336997045580052,1.843611819985164,1.962093749379402,2.0880835635857604,2.18196604372757,2.254678404642131,2.348473587127565,2.360384864306778,2.5161139333617535,2.552977994310089,2.603938509344383,2.578044287902035,2.7229688455567262,2.9092747255962252,2.859325154708493,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
-"2.5%":[-0.2270826961098405,-0.16693825914268584,-0.17099960310693896,-0.09826170522707196,-0.2245534183857584,-0.11489451024530282,-0.13002612178576892,-0.13437295272167693,-0.1173010055117267,-0.17771607684726956,-0.11566892795170586,-0.11001240538935621,-0.10769379379405317,-0.06859048773331215,-0.12148536092865644,-0.18961678740617083,-0.09887320410930792,-0.07743835566370613,-0.11859018554785668,1.3363996527847266,1.524945762456689,1.625340829962487,1.7294961753234745,1.8189783249343026,1.962310567624104,2.0419614198097022,2.1171577125178023,2.2274111169856234,2.220744686000169,2.3975983601691073,2.3713023787051064,2.4123591058037954,2.4020113970239434,2.5168920592954493,2.721146526114488,2.6740882866258033,2.727898103368657,2.6590374444987335,2.672165750808046,2.7127030711606706],
-"97.5%":[0.08097210700779937,0.15544318034117843,0.21072479490410218,0.24938434418371014,0.1219982930172542,0.21067694294488198,0.19014817058823166,0.21411232041136213,0.21421680009142033,0.1520758101467146,0.14303965003355362,0.12041220164655082,0.1405263487237278,0.18142396544694983,0.1248768007225926,0.05968010223012066,0.12035643657666367,0.16295822666630388,0.12504821741443092,1.5676472968698867,1.8102983505484105,1.8420585791535233,1.9577274646468537,2.1052091738245013,2.2138565595474167,2.321970667645438,2.39219909676646,2.4695360572695066,2.500025042613387,2.6346295065543996,2.734653609915072,2.7955179128849705,2.7540771787801264,2.929045631818003,3.0974029250779624,3.0445620227911823,3.0879882331536614,3.0883189139840796,3.093448749830277,3.1102989649765993],
+"2.5%":[-0.2272172766523859,-0.1670700586084853,-0.17114762452140675,-0.09839081142269913,-0.22467756818724255,-0.11500764428838851,-0.1301345106499768,-0.13448828156159565,-0.11740856214252185,-0.1778212132667099,-0.11574797121541741,-0.11008024082082961,-0.1077645144171558,-0.06865967673907451,-0.12155178659801844,-0.1896824463496264,-0.09892973087903476,-0.07749915399392934,-0.11865072513025429,1.3363431157797134,1.5248748576801467,1.625286020209566,1.7294373275440609,1.8189029384537496,1.9622427442587915,2.041883930043748,2.1170793502306977,2.227339837055906,2.220659357438398,2.397524930438895,2.371183992798811,2.412231721161752,2.401891620382779,2.5167480629209837,2.7210109316903197,2.6739497917518147,2.7277574304593997,2.658860445512023,2.671979873230292,2.7125289161146497],
+"97.5%":[0.08110668755034477,0.1555749798069779,0.2108728163185699,0.2495134503793373,0.12212244281873835,0.2107900769879677,0.19025655945243955,0.21422764925128085,0.21432435672221548,0.15218094656615494,0.14311869329726518,0.12048003707802422,0.14059706934683044,0.1814931544527122,0.1249432263919546,0.0597457611735762,0.12041296334639051,0.16301902499652707,0.12510875699682855,1.5677038338748999,1.8103692553249526,1.8421133889064443,1.9577863124262673,2.1052845603050545,2.213924382912729,2.322048157411392,2.3922774590535645,2.469607337199224,2.500110371175158,2.634702936284612,2.7347719958213674,2.795645297527014,2.754196955421291,2.9291896281924688,3.0975385195021308,3.044700517665171,3.0881289060629187,3.08849591297079,3.093634627408031,3.11047312002262],
 "Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
 },
 "mapping":{
@@ -802,7 +806,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>To get the ATT, set <code>att=True</code>:</p>
-<div id="74321d0b" class="cell" data-execution_count="2">
+<div id="e2f8fbcb" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.lpdid(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    df_het,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -836,11 +840,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td data-quarto-table-cell-role="th">treat_diff</td>
 <td>2.506746</td>
-<td>0.071357</td>
-<td>35.129648</td>
+<td>0.07142</td>
+<td>35.0989</td>
 <td>0.0</td>
-<td>2.362413</td>
-<td>2.65108</td>
+<td>2.362287</td>
+<td>2.651206</td>
 <td>5716.0</td>
 </tr>
 </tbody>

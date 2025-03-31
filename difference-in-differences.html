@@ -194,6 +194,10 @@ window.Quarto = {
  <span class="dropdown-text">Regression Decomposition</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
@@ -273,7 +277,7 @@ window.Quarto = {
 <p>See also <a href="https://www.nber.org/conferences/si-2023-methods-lectures-linear-panel-event-studies">NBER SI methods lectures on Linear Panel Event Studies</a>.</p>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
-<div id="f66e3fbc" class="cell" data-execution_count="1">
+<div id="bdede735" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> importlib <span class="im">import</span> resources</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -288,7 +292,7 @@ window.Quarto = {
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="GtBfSa"></div>
+            <div id="YYIKe5"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -312,9 +316,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("GtBfSa").appendChild(div);
+                        document.getElementById("YYIKe5").appendChild(div);
                     };
-                    var e = document.getElementById("GtBfSa");
+                    var e = document.getElementById("YYIKe5");
                     e.appendChild(script);
                 })()
             </script>
@@ -322,7 +326,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="x7fVk3"></div>
+            <div id="DTzADA"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -346,9 +350,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("x7fVk3").appendChild(div);
+                        document.getElementById("DTzADA").appendChild(div);
                     };
-                    var e = document.getElementById("x7fVk3");
+                    var e = document.getElementById("DTzADA");
                     e.appendChild(script);
                 })()
             </script>
@@ -360,7 +364,7 @@ pyfixest: 0.28.0
 </code></pre>
 </div>
 </div>
-<div id="08a5b203" class="cell" data-execution_count="2">
+<div id="f2a69643" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># one-shot adoption data - parallel trends is true</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df_one_cohort <span class="op">=</span> get_sharkfin()</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>df_one_cohort.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -424,7 +428,7 @@ pyfixest: 0.28.0
 </div>
 </div>
 </div>
-<div id="4eaf5706" class="cell" data-execution_count="3">
+<div id="fe7383bd" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># multi-cohort adoption data</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df_multi_cohort <span class="op">=</span> pd.read_csv(</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    resources.files(<span class="st">"pyfixest.did.data"</span>).joinpath(<span class="st">"df_het.csv"</span>)</span>
@@ -548,7 +552,7 @@ pyfixest: 0.28.0
 <section id="examining-treatment-timing" class="level2">
 <h2 class="anchored" data-anchor-id="examining-treatment-timing">Examining Treatment Timing</h2>
 <p>Before any DiD estimation, we need to examine the treatment timing, since it is crucial to our choice of estimator.</p>
-<div id="147fdb5e" class="cell" data-execution_count="4">
+<div id="34f6f862" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -569,7 +573,7 @@ pyfixest: 0.28.0
 </div>
 </div>
 </div>
-<div id="1dd86c91" class="cell" data-execution_count="5">
+<div id="124e729a" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -592,7 +596,7 @@ pyfixest: 0.28.0
 </div>
 <p>We immediately see that we have staggered adoption of treatment in the second case, which implies that a naive application of 2WFE might yield biased estimates under substantial effect heterogeneity.</p>
 <p>We can also plot treatment assignment in a disaggregated fashion, which gives us a sense of cohort sizes.</p>
-<div id="898408ea" class="cell" data-execution_count="6">
+<div id="3adccc75" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    unit<span class="op">=</span><span class="st">"unit"</span>,</span>
@@ -616,7 +620,7 @@ pyfixest: 0.28.0
 <section id="inspecting-the-outcome-variable" class="level2">
 <h2 class="anchored" data-anchor-id="inspecting-the-outcome-variable">Inspecting the Outcome Variable</h2>
 <p><code>pf.panelview()</code> further allows us to inspect the “outcome” variable over time:</p>
-<div id="ff68d0e8" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
+<div id="9c3eccb0" class="cell" data-fig-height="0.1" data-fig-width="0.4" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -638,7 +642,7 @@ pyfixest: 0.28.0
 </div>
 <p>We immediately see that the first cohort is switched into treatment in 2000, while the second cohort is switched into treatment by 2010. Before each cohort is switched into treatment, the trends are parallel.</p>
 <p>We can additionally inspect individual units by dropping the collapse_to_cohort argument. Because we have a large sample, we might want to inspect only a subset of units.</p>
-<div id="b7387dba" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
+<div id="e64f7773" class="cell" data-fig-height="1" data-fig-width="4" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.panelview(</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    outcome<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -662,7 +666,7 @@ pyfixest: 0.28.0
 <section id="one-shot-adoption-static-and-dynamic-specifications" class="level2">
 <h2 class="anchored" data-anchor-id="one-shot-adoption-static-and-dynamic-specifications">One-shot adoption: Static and Dynamic Specifications</h2>
 <p>After taking a first look at the data, let’s turn to estimation. We return to the <code>df_one_cohort</code> data set (without staggered treatment rollout).</p>
-<div id="e34327e4" class="cell" data-execution_count="9">
+<div id="140ffdec" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_static_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ treat | unit + year"</span>,</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
@@ -679,20 +683,20 @@ Observations:  30000
 
 | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| treat         |      0.206 |        0.052 |     3.929 |      0.000 |  0.103 |   0.308 |
+| treat         |      0.206 |        0.052 |     3.927 |      0.000 |  0.103 |   0.308 |
 ---
 RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 </div>
 </div>
 <p>Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:</p>
-<div id="97786ba8" class="cell" data-execution_count="10">
+<div id="52020017" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Y ~ i(year, ever_treated,  ref = 14) | unit + year"</span>,</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    df_one_cohort,</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"unit"</span>},</span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="6cb99d77" class="cell" data-execution_count="11">
+<div id="22805dfa" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
@@ -702,13 +706,13 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
-   <div id="cc5M1q"></div>
+   <div id="RDzGpZ"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("cc5M1q");
+   var containerDiv = document.getElementById("RDzGpZ");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -724,8 +728,8 @@ RMSE: 0.701 R2: 0.905 R2 Within: 0.003 </code></pre>
 "data":{
 "Coefficient":["C(year, contr.treatment(base=14))[0] x ever_treated","C(year, contr.treatment(base=14))[1] x ever_treated","C(year, contr.treatment(base=14))[2] x ever_treated","C(year, contr.treatment(base=14))[3] x ever_treated","C(year, contr.treatment(base=14))[4] x ever_treated","C(year, contr.treatment(base=14))[5] x ever_treated","C(year, contr.treatment(base=14))[6] x ever_treated","C(year, contr.treatment(base=14))[7] x ever_treated","C(year, contr.treatment(base=14))[8] x ever_treated","C(year, contr.treatment(base=14))[9] x ever_treated","C(year, contr.treatment(base=14))[10] x ever_treated","C(year, contr.treatment(base=14))[11] x ever_treated","C(year, contr.treatment(base=14))[12] x ever_treated","C(year, contr.treatment(base=14))[13] x ever_treated","C(year, contr.treatment(base=14))[15] x ever_treated","C(year, contr.treatment(base=14))[16] x ever_treated","C(year, contr.treatment(base=14))[17] x ever_treated","C(year, contr.treatment(base=14))[18] x ever_treated","C(year, contr.treatment(base=14))[19] x ever_treated","C(year, contr.treatment(base=14))[20] x ever_treated","C(year, contr.treatment(base=14))[21] x ever_treated","C(year, contr.treatment(base=14))[22] x ever_treated","C(year, contr.treatment(base=14))[23] x ever_treated","C(year, contr.treatment(base=14))[24] x ever_treated","C(year, contr.treatment(base=14))[25] x ever_treated","C(year, contr.treatment(base=14))[26] x ever_treated","C(year, contr.treatment(base=14))[27] x ever_treated","C(year, contr.treatment(base=14))[28] x ever_treated","C(year, contr.treatment(base=14))[29] x ever_treated"],
 "Estimate":[-0.11793283974656359,-0.05873668086088999,-0.08000343580727644,-0.08379134398914469,-0.008748851140694253,0.005462239132207826,-0.03792992222408484,-0.047858895285601076,-0.04635988251882408,-0.13226806862443427,-0.18717489395203823,-0.08522349395857241,-0.043167595587728876,-0.028736070277643244,0.13735875479469034,0.3202363651170549,0.35905884723796505,0.4679812538969211,0.43820157848587044,0.41808368984607336,0.44002628348630957,0.44998930169725365,-0.08217326994918277,-0.11627011066492698,-0.13906483994322796,-0.16796427436573771,-0.14675611869060404,-0.12969798817452705,-0.11725958933841685],
-"2.5%":[-0.2646203141251003,-0.21536791843610353,-0.23973586353429105,-0.2458403189506942,-0.16733850596573008,-0.15649254611894278,-0.20229098166314988,-0.21292690877741946,-0.2066112246103699,-0.2840960568727473,-0.3237359289947721,-0.20988608425111524,-0.15404164224926398,-0.11052168074371048,0.0570491990838977,0.21469003336651524,0.2391681646317093,0.3398891800460955,0.3030968309525902,0.2783550173944074,0.2931274469753816,0.29975900856238713,-0.2378610851098964,-0.2734666246145111,-0.29904427475200107,-0.3357858319501993,-0.3129137436468471,-0.29812073078914647,-0.2877540571654244],
-"97.5%":[0.0287546346319731,0.09789455671432357,0.07972899191973816,0.0782576309724048,0.14984080368434155,0.16741702438335845,0.1264311372149802,0.1172091182062173,0.11389145957272173,0.019559919623878735,-0.050613858909304366,0.039439096333970414,0.06770645107380624,0.05304954018842399,0.21766831050548296,0.4257826968675945,0.4789495298442208,0.5960733277477467,0.5733063260191507,0.5578123622977393,0.5869251199972375,0.6002195948321202,0.07351454521153085,0.04092640328465716,0.020914594865545144,-1.4271678127614207E-4,0.019401506265638996,0.03872475444009235,0.05323487848859071],
+"2.5%":[-0.26469378399015653,-0.21544636873281084,-0.23981586709260388,-0.245921482774486,-0.16741793715498923,-0.15657366276689125,-0.20237330351720487,-0.21300958471636874,-0.20669148807204876,-0.2841721014147617,-0.3238043269330353,-0.20994852273623577,-0.15409717460661743,-0.11056264387154358,0.057008975252614266,0.21463716944760364,0.23910811620351258,0.33982502387038616,0.3030291624102571,0.278285032913776,0.29305387124752136,0.29968376424169285,-0.2379390628842034,-0.27354535803545327,-0.2991244020262416,-0.33586988702880427,-0.3129969653284209,-0.2982050869771899,-0.2878394509974278],
+"97.5%":[0.02882810449702934,0.09797300701103087,0.07980899547805102,0.07833879479619661,0.1499202348736007,0.16749814103130692,0.1265134590690352,0.11729179414516658,0.11397172303440059,0.01963596416589314,-0.05054546097104118,0.03950153481909094,0.06776198343115966,0.05309050331625709,0.2177085343367664,0.42583556078650614,0.4790095782724175,0.596137483923456,0.5733739945614837,0.5578823467783707,0.5869986957250978,0.6002948391528145,0.07359252298583789,0.0410051367055993,0.02099472213978562,-5.866170267113113E-5,0.019484727947212815,0.0388091106281358,0.05332027232059411],
 "Model":["Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year"]
 },
 "mapping":{
@@ -882,7 +886,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 \]</span></p>
 <p>These bands can be constructed by using a carefully chosen critical value <span class="math inline">\(c\)</span> that <a href="https://www.annualreviews.org/docserver/fulltext/statistics/10/1/annurev-statistics-040120-022239.pdf?expires=1724543273&amp;id=id&amp;accname=guest&amp;checksum=0D11ADF816FFFA0AE21BD7EDC6DB1801#page=14">accounts for the covariance between coefficients using the multiplier bootstrap</a>. In pointwise inference, the critical value is <span class="math inline">\(c = z_{1 - \alpha/2} = 1.96\)</span> for <span class="math inline">\(\alpha = 0.05\)</span>; the corresponding critical value for simultaneous inference is typically larger. These are also known as <code>sup-t</code> bands in the literature (see lec 3 of the NBER SI methods lectures linked above).</p>
 <p>This is implemented in the <code>confint(joint=True)</code> method in the <code>feols</code> class. If we pass the <code>joint='both'</code> argument to <code>iplot</code>, we get the simultaneous confidence bands (for all event study coefficients) in addition to the pointwise confidence intervals. Note that simultaneous inference for all event study coefficients may be overly conservative, especially when the number of coefficients is large; one may instead choose to perform joint inference for <a href="https://gist.github.com/apoorvalal/8a7687d3620577fd5214f1d43fc740b3">all pre-treatment coefficients and all post-treatment coefficients separately</a>.</p>
-<div id="a801c421" class="cell" data-execution_count="12">
+<div id="56d17c7a" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit_dynamic_twfe.iplot(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Event Study"</span>,</span>
@@ -893,13 +897,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_dynamic_twfe._coefnames),</span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-   <div id="i7TQ2A"></div>
+   <div id="cQ4nDu"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("i7TQ2A");
+   var containerDiv = document.getElementById("cQ4nDu");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -915,8 +919,8 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 "data":{
 "Coefficient":["C(year, contr.treatment(base=14))[0] x ever_treated","C(year, contr.treatment(base=14))[1] x ever_treated","C(year, contr.treatment(base=14))[2] x ever_treated","C(year, contr.treatment(base=14))[3] x ever_treated","C(year, contr.treatment(base=14))[4] x ever_treated","C(year, contr.treatment(base=14))[5] x ever_treated","C(year, contr.treatment(base=14))[6] x ever_treated","C(year, contr.treatment(base=14))[7] x ever_treated","C(year, contr.treatment(base=14))[8] x ever_treated","C(year, contr.treatment(base=14))[9] x ever_treated","C(year, contr.treatment(base=14))[10] x ever_treated","C(year, contr.treatment(base=14))[11] x ever_treated","C(year, contr.treatment(base=14))[12] x ever_treated","C(year, contr.treatment(base=14))[13] x ever_treated","C(year, contr.treatment(base=14))[15] x ever_treated","C(year, contr.treatment(base=14))[16] x ever_treated","C(year, contr.treatment(base=14))[17] x ever_treated","C(year, contr.treatment(base=14))[18] x ever_treated","C(year, contr.treatment(base=14))[19] x ever_treated","C(year, contr.treatment(base=14))[20] x ever_treated","C(year, contr.treatment(base=14))[21] x ever_treated","C(year, contr.treatment(base=14))[22] x ever_treated","C(year, contr.treatment(base=14))[23] x ever_treated","C(year, contr.treatment(base=14))[24] x ever_treated","C(year, contr.treatment(base=14))[25] x ever_treated","C(year, contr.treatment(base=14))[26] x ever_treated","C(year, contr.treatment(base=14))[27] x ever_treated","C(year, contr.treatment(base=14))[28] x ever_treated","C(year, contr.treatment(base=14))[29] x ever_treated","C(year, contr.treatment(base=14))[0] x ever_treated","C(year, contr.treatment(base=14))[1] x ever_treated","C(year, contr.treatment(base=14))[2] x ever_treated","C(year, contr.treatment(base=14))[3] x ever_treated","C(year, contr.treatment(base=14))[4] x ever_treated","C(year, contr.treatment(base=14))[5] x ever_treated","C(year, contr.treatment(base=14))[6] x ever_treated","C(year, contr.treatment(base=14))[7] x ever_treated","C(year, contr.treatment(base=14))[8] x ever_treated","C(year, contr.treatment(base=14))[9] x ever_treated","C(year, contr.treatment(base=14))[10] x ever_treated","C(year, contr.treatment(base=14))[11] x ever_treated","C(year, contr.treatment(base=14))[12] x ever_treated","C(year, contr.treatment(base=14))[13] x ever_treated","C(year, contr.treatment(base=14))[15] x ever_treated","C(year, contr.treatment(base=14))[16] x ever_treated","C(year, contr.treatment(base=14))[17] x ever_treated","C(year, contr.treatment(base=14))[18] x ever_treated","C(year, contr.treatment(base=14))[19] x ever_treated","C(year, contr.treatment(base=14))[20] x ever_treated","C(year, contr.treatment(base=14))[21] x ever_treated","C(year, contr.treatment(base=14))[22] x ever_treated","C(year, contr.treatment(base=14))[23] x ever_treated","C(year, contr.treatment(base=14))[24] x ever_treated","C(year, contr.treatment(base=14))[25] x ever_treated","C(year, contr.treatment(base=14))[26] x ever_treated","C(year, contr.treatment(base=14))[27] x ever_treated","C(year, contr.treatment(base=14))[28] x ever_treated","C(year, contr.treatment(base=14))[29] x ever_treated"],
 "Estimate":[-0.11793283974656359,-0.05873668086088999,-0.08000343580727644,-0.08379134398914469,-0.008748851140694253,0.005462239132207826,-0.03792992222408484,-0.047858895285601076,-0.04635988251882408,-0.13226806862443427,-0.18717489395203823,-0.08522349395857241,-0.043167595587728876,-0.028736070277643244,0.13735875479469034,0.3202363651170549,0.35905884723796505,0.4679812538969211,0.43820157848587044,0.41808368984607336,0.44002628348630957,0.44998930169725365,-0.08217326994918277,-0.11627011066492698,-0.13906483994322796,-0.16796427436573771,-0.14675611869060404,-0.12969798817452705,-0.11725958933841685,-0.11793283974656359,-0.05873668086088999,-0.08000343580727644,-0.08379134398914469,-0.008748851140694253,0.005462239132207826,-0.03792992222408484,-0.047858895285601076,-0.04635988251882408,-0.13226806862443427,-0.18717489395203823,-0.08522349395857241,-0.043167595587728876,-0.028736070277643244,0.13735875479469034,0.3202363651170549,0.35905884723796505,0.4679812538969211,0.43820157848587044,0.41808368984607336,0.44002628348630957,0.44998930169725365,-0.08217326994918277,-0.11627011066492698,-0.13906483994322796,-0.16796427436573771,-0.14675611869060404,-0.12969798817452705,-0.11725958933841685],
-"2.5%":[-0.2646203141251003,-0.21536791843610353,-0.23973586353429105,-0.2458403189506942,-0.16733850596573008,-0.15649254611894278,-0.20229098166314988,-0.21292690877741946,-0.2066112246103699,-0.2840960568727473,-0.3237359289947721,-0.20988608425111524,-0.15404164224926398,-0.11052168074371048,0.0570491990838977,0.21469003336651524,0.2391681646317093,0.3398891800460955,0.3030968309525902,0.2783550173944074,0.2931274469753816,0.29975900856238713,-0.2378610851098964,-0.2734666246145111,-0.29904427475200107,-0.3357858319501993,-0.3129137436468471,-0.29812073078914647,-0.2877540571654244,-0.33842975262907793,-0.2941808078568871,-0.3201091936455171,-0.3273792772205163,-0.2471368215667536,-0.2379841105014078,-0.2849933225447606,-0.29598497111311417,-0.2872456593458317,-0.36049207234219227,-0.39244999855476337,-0.2726131564222503,-0.20983066693199545,-0.15167413777373434,0.01663945558922858,0.16158178049307317,0.17884219608860966,0.27543647822002304,0.23511552854827142,0.2080470725595979,0.21921165637570592,0.224166912989468,-0.31619926815931926,-0.3525639468539019,-0.37954189259868876,-0.420229408244976,-0.39652007099778874,-0.3828668082327154,-0.37354257449902994],
-"97.5%":[0.0287546346319731,0.09789455671432357,0.07972899191973816,0.0782576309724048,0.14984080368434155,0.16741702438335845,0.1264311372149802,0.1172091182062173,0.11389145957272173,0.019559919623878735,-0.050613858909304366,0.039439096333970414,0.06770645107380624,0.05304954018842399,0.21766831050548296,0.4257826968675945,0.4789495298442208,0.5960733277477467,0.5733063260191507,0.5578123622977393,0.5869251199972375,0.6002195948321202,0.07351454521153085,0.04092640328465716,0.020914594865545144,-1.4271678127614207E-4,0.019401506265638996,0.03872475444009235,0.05323487848859071,0.10256407313595077,0.17670744613510714,0.1601023220309642,0.1597965892422269,0.22963911928536507,0.24890858876582347,0.20913347809659097,0.200267180541912,0.1945258943081835,0.0959559350933237,0.01810021065068687,0.1021661685051055,0.12349547575653771,0.09420199721844787,0.2580780540001521,0.47889094974103663,0.5392754983873205,0.6605260295738191,0.6412876284234694,0.6281203071325488,0.6608409105969132,0.6758116904050393,0.1518527282609537,0.12002372552404797,0.10141221271223283,0.08430085951350055,0.10300783361658064,0.12347083188366131,0.13902339582219625],
+"2.5%":[-0.26469378399015653,-0.21544636873281084,-0.23981586709260388,-0.245921482774486,-0.16741793715498923,-0.15657366276689125,-0.20237330351720487,-0.21300958471636874,-0.20669148807204876,-0.2841721014147617,-0.3238043269330353,-0.20994852273623577,-0.15409717460661743,-0.11056264387154358,0.057008975252614266,0.21463716944760364,0.23910811620351258,0.33982502387038616,0.3030291624102571,0.278285032913776,0.29305387124752136,0.29968376424169285,-0.2379390628842034,-0.27354535803545327,-0.2991244020262416,-0.33586988702880427,-0.3129969653284209,-0.2982050869771899,-0.2878394509974278,-0.3385401906777486,-0.2942987323648383,-0.32022945297714944,-0.32750128063396144,-0.24725622052765625,-0.23810604300131474,-0.2851170666800987,-0.29610924749993733,-0.28736630935765056,-0.3606063805803481,-0.3925528126109632,-0.2727070123787488,-0.2099141417713667,-0.15173571251464169,0.016578992140253934,0.16150231678308524,0.17875193280541576,0.27534004027434156,0.23501381090164256,0.20794187365291364,0.21910105919673756,0.22405380762382365,-0.3163164823835125,-0.3526822969470641,-0.3796623378969841,-0.42035575771975575,-0.39664516773116465,-0.3829936103276108,-0.37367093635416265],
+"97.5%":[0.02882810449702934,0.09797300701103087,0.07980899547805102,0.07833879479619661,0.1499202348736007,0.16749814103130692,0.1265134590690352,0.11729179414516658,0.11397172303440059,0.01963596416589314,-0.05054546097104118,0.03950153481909094,0.06776198343115966,0.05309050331625709,0.2177085343367664,0.42583556078650614,0.4790095782724175,0.596137483923456,0.5733739945614837,0.5578823467783707,0.5869986957250978,0.6002948391528145,0.07359252298583789,0.0410051367055993,0.02099472213978562,-5.866170267113113E-5,0.019484727947212815,0.0388091106281358,0.05332027232059411,0.10267451118462144,0.17682537064305828,0.16022258136259654,0.1599185926556721,0.22975851824626772,0.24903052126573041,0.209257222231929,0.20039145692873517,0.1946465443200024,0.09607024333147957,0.0182030247068867,0.10226002446160394,0.12357895059590895,0.0942635719593552,0.25813851744912675,0.47897041345102453,0.5393657616705143,0.6606224675195006,0.6413893460700983,0.6282255060392331,0.6609515077758816,0.6759247957706837,0.15196994248514695,0.12014207561721013,0.10153265801052819,0.08442720898828035,0.10313293034995658,0.12359763397855672,0.13915175767732896],
 "Model":["Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)","Y~i(year,ever_treated,ref=14)|unit+year (joint CIs)"]
 },
 "mapping":{
@@ -1069,7 +1073,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="two-way-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="two-way-fixed-effects">Two-Way Fixed Effects</h3>
 <p>As a baseline model, we can estimate a simple two-way fixed effects DiD regression via <code>feols()</code>:</p>
-<div id="a0f769ed" class="cell" data-execution_count="13">
+<div id="deb2454b" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(rel_year, ref=-1.0) | state + year"</span>,</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
@@ -1080,7 +1084,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="gardners-2-step-estimator" class="level3">
 <h3 class="anchored" data-anchor-id="gardners-2-step-estimator">Gardner’s 2-Step Estimator</h3>
 <p>To do the same via Gardners 2-stage estimator, we employ the the <code>pf.did2s()</code> function:</p>
-<div id="3adbe6cd" class="cell" data-execution_count="14">
+<div id="38069c7f" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit_did2s <span class="op">=</span> pf.did2s(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -1094,7 +1098,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <section id="local-projections-dube-et-al" class="level3">
 <h3 class="anchored" data-anchor-id="local-projections-dube-et-al">Local Projections (Dube et al)</h3>
 <p>Last, we can estimate the ATT for each time period via local projections by using the <code>lpdid()</code> function:</p>
-<div id="bc92bf7d" class="cell" data-execution_count="15">
+<div id="085587c9" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid <span class="op">=</span> pf.lpdid(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_multi_cohort,</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    yname<span class="op">=</span><span class="st">"dep_var"</span>,</span>
@@ -1108,10 +1112,10 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s look at some results:</p>
-<div id="8fcb6095" class="cell" data-execution_count="16">
+<div id="99cc8842" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>figsize <span class="op">=</span> [<span class="dv">1200</span>, <span class="dv">400</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="e96b6600" class="cell" data-execution_count="17">
+<div id="dfb48e4b" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit_twfe.iplot(</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"TWFE-Estimator"</span>,</span>
@@ -1121,13 +1125,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>rename_event_study_coefs(fit_twfe._coefnames),  <span class="co"># rename coefficients</span></span>
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="NKkuVY"></div>
+   <div id="skFulu"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("NKkuVY");
+   var containerDiv = document.getElementById("skFulu");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -1143,8 +1147,8 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 "data":{
 "Coefficient":["C(rel_year, contr.treatment(base=-1.0))[T.-inf]","rel_year::-20.0","rel_year::-19.0","rel_year::-18.0","rel_year::-17.0","rel_year::-16.0","rel_year::-15.0","rel_year::-14.0","rel_year::-13.0","rel_year::-12.0","rel_year::-11.0","rel_year::-10.0","rel_year::-9.0","rel_year::-8.0","rel_year::-7.0","rel_year::-6.0","rel_year::-5.0","rel_year::-4.0","rel_year::-3.0","rel_year::-2.0","rel_year::0.0","rel_year::1.0","rel_year::2.0","rel_year::3.0","rel_year::4.0","rel_year::5.0","rel_year::6.0","rel_year::7.0","rel_year::8.0","rel_year::9.0","rel_year::10.0","rel_year::11.0","rel_year::12.0","rel_year::13.0","rel_year::14.0","rel_year::15.0","rel_year::16.0","rel_year::17.0","rel_year::18.0","rel_year::19.0","rel_year::20.0"],
 "Estimate":[0.12805306243570133,-0.09944466441184449,6.23519975370285E-4,0.00412476618667578,0.02189908545945476,-0.03693340882839153,0.0695778383653906,0.037734423170293394,0.06177914337446599,0.08991270466789324,9.822487465397979E-4,-0.11303282051984812,-0.06922462711948521,-0.06128951309365942,-0.002022430937119629,-0.05580979472637442,-0.06500868193868489,-0.009849959807211716,0.046338079900943435,0.015947312893745614,1.406404490822561,1.6605518884803792,1.7287900538934913,1.8548389960026752,1.9586760781129218,2.082161283635821,2.191061994921298,2.27907284237141,2.3645934393350916,2.3721626936772324,2.649271188090792,2.7535908715364323,2.813935474227457,2.756069650642742,2.8634270216427313,2.986652345533223,2.963032216596509,2.9725964211140754,2.93505132901261,2.9187065136809824,2.9797012024915777],
-"2.5%":[-0.030754737319493908,-0.264697230493372,-0.16769018688349321,-0.17734940744471872,-0.15141773681728035,-0.23297450453672766,-0.09484387010245669,-0.1374674552181981,-0.10683560211194931,-0.08181351401237112,-0.1590212369807721,-0.2443506562457204,-0.1846117252547806,-0.18338272511271658,-0.13269288666666415,-0.18662566311569181,-0.1960991761769093,-0.11725094987362002,-0.08099122414394433,-0.11642114159512872,1.2938600189553278,1.5290095619722313,1.613915005015455,1.7368859662793061,1.8147741857905435,1.9530023735556754,2.0524866773274133,2.1273424786361526,2.24606684400105,2.2577594429164396,2.535641480165935,2.600825552379814,2.6534963681556265,2.5975551692264953,2.6644161435657736,2.797916336046787,2.790239340478435,2.785720671699511,2.7446638314602865,2.7484109878125826,2.802156143045286],
-"97.5%":[0.28686086219089657,0.065807901669683,0.16893722683423376,0.1855989398180703,0.19521590773618988,0.15910768687994462,0.23399954683323787,0.2129363015587849,0.2303938888608813,0.2616389233481576,0.1609857344738517,0.018285015206024158,0.04616247101581017,0.06080369892539775,0.1286480247924249,0.07500607366294296,0.06608181229953952,0.09755103025919658,0.1736673839458312,0.14831576738261995,1.5189489626897943,1.792094214988527,1.8436651027715276,1.9727920257260443,2.1025779704353,2.211320193715967,2.329637312515183,2.430803206106668,2.4831200346691333,2.4865659444380253,2.762900896015649,2.906356190693051,2.974374580299288,2.9145841320589887,3.062437899719689,3.1753883550196584,3.1358250927145828,3.1594721705286397,3.1254388265649338,3.0890020395493822,3.1572462619378694],
+"2.5%":[-0.03080774649808496,-0.2647523908998605,-0.16774636908210033,-0.17740998253545426,-0.1514755890285638,-0.23303994198671188,-0.09489875317319914,-0.13752593665094442,-0.10689188479561063,-0.0818708352888375,-0.15907464527282822,-0.2443944894240461,-0.18465024083966736,-0.18342347916189206,-0.1327365037530731,-0.1866693287400546,-0.19614293346988465,-0.11728679973913077,-0.08103372597211897,-0.11646532546427517,1.2938224522236066,1.528965653860105,1.6138766603498211,1.736846594200431,1.8147261521226667,1.9529592610149715,2.052440421641169,2.1272918318671565,2.246027280469098,2.257721255734448,2.5356035511883284,2.6007745601483356,2.653442814455872,2.597502257955968,2.6643497148186097,2.7978533369947955,2.790181663157526,2.7856582935921996,2.7446002811505736,2.748354144093584,2.802096879471465],
+"97.5%":[0.28691387136948765,0.06586306207617154,0.16899340903284088,0.18565951490880583,0.19527375994747334,0.15917312432992883,0.23405442990398034,0.21299478299153124,0.23045017154454261,0.261696244624624,0.1610391427659078,0.018328848384349866,0.04620098660069695,0.060844452974573235,0.12869164187883386,0.07504973928730574,0.06612556959251487,0.09758688012470733,0.17370988577400584,0.1483599512517664,1.5189865294215155,1.7921381231006532,1.8437034474371614,1.9728313978049195,2.102626004103177,2.211363306256671,2.3296835682014274,2.430853852875664,2.4831595982010852,2.486604131620017,2.7629388249932556,2.906407182924529,2.974428133999042,2.914637043329516,3.062504328466853,3.17545135407165,3.135882770035492,3.159534548635951,3.1255023768746466,3.0890588832683807,3.15730552551169],
 "Model":["dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year","dep_var~i(rel_year,ref=-1.0)|state+year"]
 },
 "mapping":{
@@ -1289,7 +1293,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
    </script>
 </div>
 </div>
-<div id="00fbe86e" class="cell" data-execution_count="18">
+<div id="0792d2a9" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit_lpdid.iplot(</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    coord_flip<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Local-Projections-Estimator"</span>,</span>
@@ -1298,13 +1302,13 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 <span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    xintercept<span class="op">=</span><span class="fl">18.5</span>,</span>
 <span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>).show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-   <div id="sbsrdO"></div>
+   <div id="ifzx4k"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("sbsrdO");
+   var containerDiv = document.getElementById("ifzx4k");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -1320,8 +1324,8 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 "data":{
 "Coefficient":["time_to_treatment::-20","time_to_treatment::-19","time_to_treatment::-18","time_to_treatment::-17","time_to_treatment::-16","time_to_treatment::-15","time_to_treatment::-14","time_to_treatment::-13","time_to_treatment::-12","time_to_treatment::-11","time_to_treatment::-10","time_to_treatment::-9","time_to_treatment::-8","time_to_treatment::-7","time_to_treatment::-6","time_to_treatment::-5","time_to_treatment::-4","time_to_treatment::-3","time_to_treatment::-2","time_to_treatment::0","time_to_treatment::1","time_to_treatment::2","time_to_treatment::3","time_to_treatment::4","time_to_treatment::5","time_to_treatment::6","time_to_treatment::7","time_to_treatment::8","time_to_treatment::9","time_to_treatment::10","time_to_treatment::11","time_to_treatment::12","time_to_treatment::13","time_to_treatment::14","time_to_treatment::15","time_to_treatment::16","time_to_treatment::17","time_to_treatment::18","time_to_treatment::19","time_to_treatment::20"],
 "Estimate":[-0.07305529455102057,-0.005747539400753715,0.019862595898581595,0.07556131947831908,-0.051277562684252105,0.047891216349789587,0.030061024401231366,0.039869683844842616,0.04845789728984681,-0.012820133350277497,0.013685361040923884,0.005199898128597303,0.016416277464837318,0.056416738856818846,0.0016957198969680782,-0.06496834258802509,0.010741616233677878,0.04275993550129887,0.003229015933287125,1.4520234748273066,1.6676220565025497,1.7336997045580052,1.843611819985164,1.962093749379402,2.0880835635857604,2.18196604372757,2.254678404642131,2.348473587127565,2.360384864306778,2.5161139333617535,2.552977994310089,2.603938509344383,2.578044287902035,2.7229688455567262,2.9092747255962252,2.859325154708493,2.907943168261159,2.8736781792414066,2.8828072503191615,2.911501018068635],
-"2.5%":[-0.2270826961098405,-0.16693825914268584,-0.17099960310693896,-0.09826170522707196,-0.2245534183857584,-0.11489451024530282,-0.13002612178576892,-0.13437295272167693,-0.1173010055117267,-0.17771607684726956,-0.11566892795170586,-0.11001240538935621,-0.10769379379405317,-0.06859048773331215,-0.12148536092865644,-0.18961678740617083,-0.09887320410930792,-0.07743835566370613,-0.11859018554785668,1.3363996527847266,1.524945762456689,1.625340829962487,1.7294961753234745,1.8189783249343026,1.962310567624104,2.0419614198097022,2.1171577125178023,2.2274111169856234,2.220744686000169,2.3975983601691073,2.3713023787051064,2.4123591058037954,2.4020113970239434,2.5168920592954493,2.721146526114488,2.6740882866258033,2.727898103368657,2.6590374444987335,2.672165750808046,2.7127030711606706],
-"97.5%":[0.08097210700779937,0.15544318034117843,0.21072479490410218,0.24938434418371014,0.1219982930172542,0.21067694294488198,0.19014817058823166,0.21411232041136213,0.21421680009142033,0.1520758101467146,0.14303965003355362,0.12041220164655082,0.1405263487237278,0.18142396544694983,0.1248768007225926,0.05968010223012066,0.12035643657666367,0.16295822666630388,0.12504821741443092,1.5676472968698867,1.8102983505484105,1.8420585791535233,1.9577274646468537,2.1052091738245013,2.2138565595474167,2.321970667645438,2.39219909676646,2.4695360572695066,2.500025042613387,2.6346295065543996,2.734653609915072,2.7955179128849705,2.7540771787801264,2.929045631818003,3.0974029250779624,3.0445620227911823,3.0879882331536614,3.0883189139840796,3.093448749830277,3.1102989649765993],
+"2.5%":[-0.2272172766523859,-0.1670700586084853,-0.17114762452140675,-0.09839081142269913,-0.22467756818724255,-0.11500764428838851,-0.1301345106499768,-0.13448828156159565,-0.11740856214252185,-0.1778212132667099,-0.11574797121541741,-0.11008024082082961,-0.1077645144171558,-0.06865967673907451,-0.12155178659801844,-0.1896824463496264,-0.09892973087903476,-0.07749915399392934,-0.11865072513025429,1.3363431157797134,1.5248748576801467,1.625286020209566,1.7294373275440609,1.8189029384537496,1.9622427442587915,2.041883930043748,2.1170793502306977,2.227339837055906,2.220659357438398,2.397524930438895,2.371183992798811,2.412231721161752,2.401891620382779,2.5167480629209837,2.7210109316903197,2.6739497917518147,2.7277574304593997,2.658860445512023,2.671979873230292,2.7125289161146497],
+"97.5%":[0.08110668755034477,0.1555749798069779,0.2108728163185699,0.2495134503793373,0.12212244281873835,0.2107900769879677,0.19025655945243955,0.21422764925128085,0.21432435672221548,0.15218094656615494,0.14311869329726518,0.12048003707802422,0.14059706934683044,0.1814931544527122,0.1249432263919546,0.0597457611735762,0.12041296334639051,0.16301902499652707,0.12510875699682855,1.5677038338748999,1.8103692553249526,1.8421133889064443,1.9577863124262673,2.1052845603050545,2.213924382912729,2.322048157411392,2.3922774590535645,2.469607337199224,2.500110371175158,2.634702936284612,2.7347719958213674,2.795645297527014,2.754196955421291,2.9291896281924688,3.0975385195021308,3.044700517665171,3.0881289060629187,3.08849591297079,3.093634627408031,3.11047312002262],
 "Model":["lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid","lpdid"]
 },
 "mapping":{
@@ -1467,7 +1471,7 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
 </div>
 </div>
 <p>What if we are not interested in the ATT per treatment period, but in a pooled effects?</p>
-<div id="f4cc0ffd" class="cell" data-execution_count="19">
+<div id="88534e5d" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>fit_twfe <span class="op">=</span> pf.feols(</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dep_var ~ i(treat) | unit + year"</span>,</span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    df_multi_cohort,</span>
@@ -1522,11 +1526,11 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
     <tr>
       <th>C(treat)[T.True]</th>
       <td>1.982540</td>
-      <td>0.019331</td>
-      <td>102.556180</td>
+      <td>0.019338</td>
+      <td>102.521988</td>
       <td>0.0</td>
-      <td>1.943439</td>
-      <td>2.021642</td>
+      <td>1.943426</td>
+      <td>2.021655</td>
       <td>TWFE</td>
     </tr>
     <tr>
@@ -1535,18 +1539,18 @@ P(\beta \in [a, b]) = P(\beta_k \in [a_k, b_k] \forall k) \rightarrow 1 - \alpha
       <td>0.024709</td>
       <td>90.271444</td>
       <td>0.0</td>
-      <td>2.180504</td>
-      <td>2.280459</td>
+      <td>2.182052</td>
+      <td>2.278911</td>
       <td>DID2s</td>
     </tr>
     <tr>
       <th>treat_diff</th>
       <td>2.506746</td>
-      <td>0.071357</td>
-      <td>35.129648</td>
+      <td>0.071420</td>
+      <td>35.098900</td>
       <td>0.0</td>
-      <td>2.362413</td>
-      <td>2.651080</td>
+      <td>2.362287</td>
+      <td>2.651206</td>
       <td>LPDID</td>
     </tr>
   </tbody>

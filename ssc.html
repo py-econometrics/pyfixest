@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>index</title>
+<title>On Small Sample Corrections</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -23,22 +23,22 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../site_libs/quarto-nav/headroom.min.js"></script>
-<script src="../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../">
-<script src="../site_libs/quarto-html/quarto.js"></script>
-<script src="../site_libs/quarto-html/popper.min.js"></script>
-<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-831a6e13d34e89ab8943621a9b1bffba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-831a6e13d34e89ab8943621a9b1bffba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -67,10 +67,39 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent">
+<body class="floating nav-fixed">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -83,23 +112,23 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../pyfixest.html"> 
+    <a class="nav-link" href="./pyfixest.html"> 
 <span class="menu-text">PyFixest</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../quickstart.html"> 
+    <a class="nav-link" href="./quickstart.html"> 
 <span class="menu-text">Quickstart</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../changelog.html"> 
+    <a class="nav-link" href="./changelog.html"> 
 <span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
+    <a class="nav-link" href="./contributing.html"> 
 <span class="menu-text">Contributing</span></a>
   </li>  
   <li class="nav-item dropdown ">
@@ -108,39 +137,39 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
         <li>
-    <a class="dropdown-item" href="../table-layout.html">
+    <a class="dropdown-item" href="./table-layout.html">
  <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../marginaleffects.html">
+    <a class="dropdown-item" href="./marginaleffects.html">
  <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../difference-in-differences.html">
+    <a class="dropdown-item" href="./difference-in-differences.html">
  <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../multiple_testing.html">
+    <a class="dropdown-item" href="./multiple_testing.html">
  <span class="dropdown-text">Multiple Testing Corrections</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../regression_decomposition.html">
+    <a class="dropdown-item" href="./regression_decomposition.html">
  <span class="dropdown-text">Regression Decomposition</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../ssc.html">
+    <a class="dropdown-item" href="./ssc.html">
  <span class="dropdown-text">On Small Sample Corrections</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
+    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../pyfixest_gpu.html">
+    <a class="dropdown-item" href="./pyfixest_gpu.html">
  <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../replicating-the-effect.html">
+    <a class="dropdown-item" href="./replicating-the-effect.html">
  <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
   </li>  
     </ul>
@@ -158,381 +187,141 @@ ul.task-list li input[type="checkbox"] {
 </div>
       </div> <!-- /container-fluid -->
     </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/index.html">PyFixest Function Reference</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">PyFixest Function Reference</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Functions</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.feols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.fepois</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.estimation.feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.estimation.feglm</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.did2s.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.did2s</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.lpdid.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.lpdid</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.estimation.event_study.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.estimation.event_study</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.bonferroni.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.bonferroni</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.rwolf.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.rwolf</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Estimation Classes</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_.Feols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_.Feols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fepois_.Fepois.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fepois_.Fepois</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feiv_.Feiv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feiv_.Feiv</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feglm_.Feglm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feglm_.Feglm</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.felogit_.Felogit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.felogit_.Felogit</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feprobit_.Feprobit.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feprobit_.Feprobit</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.fegaussian_.Fegaussian.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.fegaussian_.Fegaussian</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.feols_compressed_.FeolsCompressed.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.feols_compressed_.FeolsCompressed</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Summarize and Visualize</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.visualize.panelview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.summary</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.etable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.etable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.dtable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.dtable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.coefplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.coefplot</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/report.iplot.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">report.iplot</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/did.visualize.panelview.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">did.visualize.panelview</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">Misc / Utilities</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.demean</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.detect_singletons.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.detect_singletons</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.model_matrix_fixest.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">estimation.model_matrix_fixest</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-    </ul>
-    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#small-sample-adjustments" id="toc-small-sample-adjustments" class="nav-link active" data-scroll-target="#small-sample-adjustments">Small Sample Adjustments</a>
+  <ul class="collapse">
+  <li><a href="#adj-true" id="toc-adj-true" class="nav-link" data-scroll-target="#adj-true"><code>adj = True</code></a></li>
+  <li><a href="#fixef_k" id="toc-fixef_k" class="nav-link" data-scroll-target="#fixef_k"><code>fixef_k</code></a>
+  <ul class="collapse">
+  <li><a href="#fixef_k-none" id="toc-fixef_k-none" class="nav-link" data-scroll-target="#fixef_k-none"><code>fixef_k = "none"</code></a></li>
+  <li><a href="#fixef_k-full" id="toc-fixef_k-full" class="nav-link" data-scroll-target="#fixef_k-full"><code>fixef_k = "full"</code></a></li>
+  <li><a href="#fixef_k-nested" id="toc-fixef_k-nested" class="nav-link" data-scroll-target="#fixef_k-nested"><code>fixef_k = nested</code></a></li>
+  </ul></li>
+  <li><a href="#cluster_adj" id="toc-cluster_adj" class="nav-link" data-scroll-target="#cluster_adj"><code>cluster_adj</code></a></li>
+  <li><a href="#cluster_df" id="toc-cluster_df" class="nav-link" data-scroll-target="#cluster_df"><code>cluster_df</code></a></li>
+  </ul></li>
+  <li><a href="#more-on-inference" id="toc-more-on-inference" class="nav-link" data-scroll-target="#more-on-inference">More on Inference</a></li>
+  </ul>
+</nav>
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">On Small Sample Corrections</h1>
+</div>
 
 
 
+<div class="quarto-title-meta">
 
-<section id="pyfixest-function-reference" class="level1 doc doc-index">
-<h1 class="doc doc-index">PyFixest Function Reference</h1>
-<section id="estimation-functions" class="level2">
-<h2 class="anchored" data-anchor-id="estimation-functions">Estimation Functions</h2>
-<p>User facing estimation functions</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols">estimation.estimation.feols</a></td>
-<td>Estimate a linear regression models with fixed effects using fixest formula syntax.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.estimation.fepois.html#pyfixest.estimation.estimation.fepois">estimation.estimation.fepois</a></td>
-<td>Estimate Poisson regression model with fixed effects using the <code>ppmlhdfe</code> algorithm.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.estimation.feglm.html#pyfixest.estimation.estimation.feglm">estimation.estimation.feglm</a></td>
-<td>Estimate GLM regression models (currently without fixed effects, this is work in progress).</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/did.estimation.did2s.html#pyfixest.did.estimation.did2s">did.estimation.did2s</a></td>
-<td>Estimate a Difference-in-Differences model using Gardner’s two-step DID2S estimator.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/did.estimation.lpdid.html#pyfixest.did.estimation.lpdid">did.estimation.lpdid</a></td>
-<td>Local projections approach to estimation.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/did.estimation.event_study.html#pyfixest.did.estimation.event_study">did.estimation.event_study</a></td>
-<td>Estimate Event Study Model.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.bonferroni.html#pyfixest.estimation.bonferroni">estimation.bonferroni</a></td>
-<td>Compute Bonferroni adjusted p-values for multiple hypothesis testing.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.rwolf.html#pyfixest.estimation.rwolf">estimation.rwolf</a></td>
-<td>Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.</td>
-</tr>
-</tbody>
-</table>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The <code>fixest</code> R package offers a myriad of options to control small sample corrections. Despite an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, I have spent way too much time trying to make <code>pyfixest</code> standard errors with fixest. Before I forget <strong>why</strong> things are implemented the way they are, I though I’d document them here.</p>
+<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections can be controlled via the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> has four function arguments:</p>
+<ul>
+<li><code>adj</code>: controls if a first ssc adjustment should be applied.</li>
+<li><code>fixef_k</code>: controls how to compute the “effective” number of estimated parameters “k”.</li>
+<li><code>cluster_adj</code>: controls if a second ssc adjustment should be applied.</li>
+<li><code>cluster_df</code>: controls how to compute ssc adjustments in case of multi-way clustering.</li>
+</ul>
+<p>To compute an adjusted variance covariance formula, the following formula is used:</p>
+<p><span class="math display">\[
+    vcov_adj = 1(adj, adj_val(N, dof_k(fixef_k)), 1) x 1(cluster_adj, cluster_adj_val(G, cluster_df), 1) x vcov
+\]</span></p>
+<p>where</p>
+<ul>
+<li><code>1()</code> denotes an indicator function</li>
+<li><code>adj</code> is a boolean that denotes if there is a is a scalar adjustment</li>
+<li><code>cluster_df</code> is a boolean that denotes if there is another scalar adjustment</li>
+<li><code>dof_k</code> set the number of ‘variables’ used to compute <code>adj</code>.</li>
+<li><code>fixef_k</code> controls how <code>dof_k</code> is computed</li>
+<li><code>G</code> sets the numebr of unique clusters in the data. In case of heteroskedastic errors, <code>G = N</code>.</li>
+<li><code>vcov</code> is the unadjusted variance-covariance matrix.</li>
+</ul>
+<p>Last, but not part of the formula above, is <code>df_t</code>, which denotes the degrees of freedom used in computing t-statistics needed for pvalues and confidence intervals. We always have that <code>df_t = N - dof_k</code>.</p>
+<section id="small-sample-adjustments" class="level1">
+<h1>Small Sample Adjustments</h1>
+<section id="adj-true" class="level2">
+<h2 class="anchored" data-anchor-id="adj-true"><code>adj = True</code></h2>
+<p>If <code>adj=True</code>, we multiply the unadjusted variance covariance matrix with</p>
+<p><span class="math display">\[
+    adj_val = \frac{N-1}{N-dof_k}.
+\]</span></p>
+<p>If not, no adjustment is made.</p>
 </section>
-<section id="estimation-classes" class="level2">
-<h2 class="anchored" data-anchor-id="estimation-classes">Estimation Classes</h2>
-<p>Details on Methods and Attributes</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/estimation.feols_.Feols.html#pyfixest.estimation.feols_.Feols">estimation.feols_.Feols</a></td>
-<td>Non user-facing class to estimate a linear regression via OLS.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.fepois_.Fepois.html#pyfixest.estimation.fepois_.Fepois">estimation.fepois_.Fepois</a></td>
-<td>Estimate a Poisson regression model.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.feiv_.Feiv.html#pyfixest.estimation.feiv_.Feiv">estimation.feiv_.Feiv</a></td>
-<td>Non user-facing class to estimate an IV model using a 2SLS estimator.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.feglm_.Feglm.html#pyfixest.estimation.feglm_.Feglm">estimation.feglm_.Feglm</a></td>
-<td>Abstract base class for the estimation of a fixed-effects GLM model.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.felogit_.Felogit.html#pyfixest.estimation.felogit_.Felogit">estimation.felogit_.Felogit</a></td>
-<td>Class for the estimation of a fixed-effects logit model.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.feprobit_.Feprobit.html#pyfixest.estimation.feprobit_.Feprobit">estimation.feprobit_.Feprobit</a></td>
-<td>Class for the estimation of a fixed-effects probit model.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.fegaussian_.Fegaussian.html#pyfixest.estimation.fegaussian_.Fegaussian">estimation.fegaussian_.Fegaussian</a></td>
-<td>Class for the estimation of a fixed-effects GLM with normal errors.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.feols_compressed_.FeolsCompressed.html#pyfixest.estimation.feols_compressed_.FeolsCompressed">estimation.feols_compressed_.FeolsCompressed</a></td>
-<td>Non-user-facing class for compressed regression with fixed effects.</td>
-</tr>
-</tbody>
-</table>
+<section id="fixef_k" class="level2">
+<h2 class="anchored" data-anchor-id="fixef_k"><code>fixef_k</code></h2>
+<p>The value for <code>adj_val</code> depends on <code>dof_k</code>. The <code>fixef_k</code> argument allows us control how <code>dof_k</code> is computed. Three options are supported: <code>fixef_k in ["none", "full", "nested"]</code>.</p>
+<section id="fixef_k-none" class="level3">
+<h3 class="anchored" data-anchor-id="fixef_k-none"><code>fixef_k = "none"</code></h3>
+<p>If <code>fixef_k = "none"</code>, the fixed effects are discarded. For example, if we fit a model <code>Y ~ X1 | f1</code>, we have <code>k = 1</code>, where <code>k</code> denotes the number of covariates that are not specified as fixed effects using two-part formula syntax. For a model <code>Y ~ X1 + X2 | f1</code>, we would set <code>k = 2</code>, etc.</p>
 </section>
-<section id="summarize-and-visualize" class="level2">
-<h2 class="anchored" data-anchor-id="summarize-and-visualize">Summarize and Visualize</h2>
-<p>Post-Processing of Estimation Results</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/did.visualize.panelview.html#pyfixest.did.visualize.panelview">did.visualize.panelview</a></td>
-<td>Generate a panel view of the treatment variable over time for each unit.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/report.summary.html#pyfixest.report.summary">report.summary</a></td>
-<td>Print a summary of estimation results for each estimated model.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/report.etable.html#pyfixest.report.etable">report.etable</a></td>
-<td>Generate a table summarizing the results of multiple regression models.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/report.dtable.html#pyfixest.report.dtable">report.dtable</a></td>
-<td>Generate descriptive statistics tables and create a booktab style table in</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/report.coefplot.html#pyfixest.report.coefplot">report.coefplot</a></td>
-<td>Plot model coefficients with confidence intervals.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/report.iplot.html#pyfixest.report.iplot">report.iplot</a></td>
-<td>Plot model coefficients for variables interacted via “i()” syntax, with</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/did.visualize.panelview.html#pyfixest.did.visualize.panelview">did.visualize.panelview</a></td>
-<td>Generate a panel view of the treatment variable over time for each unit.</td>
-</tr>
-</tbody>
-</table>
+<section id="fixef_k-full" class="level3">
+<h3 class="anchored" data-anchor-id="fixef_k-full"><code>fixef_k = "full"</code></h3>
+<p>Here, we add the levels of fixed effects. To avoid multicollinearity, we have to drop one level from each fixed effects whenever we have more than one fixed effects. Hence if <code>n_fe</code> denotes the total number of fixed effects and <code>f_{i}</code> a given fixed effect, we compute <code>dof_k</code> as <code>dof_k = k + k_fe</code>, where <code>k_fe = \sum_{i}^{n_fe} levels(f_i)</code> + (n_fe - 1)<code>if we have more than one fixed effect and</code>k_fe = <em>{i}^{n_fe} levels(f_i) = levels(f</em>{1})` if we have only one fixed effects.</p>
 </section>
-<section id="misc-utilities" class="level2">
-<h2 class="anchored" data-anchor-id="misc-utilities">Misc / Utilities</h2>
-<p>PyFixest internals and utilities</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/estimation.demean.html#pyfixest.estimation.demean">estimation.demean</a></td>
-<td>Demean an array.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/estimation.detect_singletons.html#pyfixest.estimation.detect_singletons">estimation.detect_singletons</a></td>
-<td>Detect singleton fixed effects in a dataset.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/estimation.model_matrix_fixest.html#pyfixest.estimation.model_matrix_fixest">estimation.model_matrix_fixest</a></td>
-<td>Create model matrices for fixed effects estimation.</td>
-</tr>
-</tbody>
-</table>
+<section id="fixef_k-nested" class="level3">
+<h3 class="anchored" data-anchor-id="fixef_k-nested"><code>fixef_k = nested</code></h3>
+<p>If we have <strong>clustered</strong> standard errors, fixed effects might be fully nested within fixed effects. One simple example are <strong>cluster fixed effects</strong>. If we run a model</p>
+<pre><code>pf.feols("Y ~ X1 | f1", vcov = {"CRV1":f1})</code></pre>
+<p>the fixed effect <code>f1</code> is fully nested in the cluster variable <code>f1</code> because they are identical.</p>
+<p>A common example of fixed effects nested within a cluster would be district fixed effects and state level clustering - each district is fully nested in a given state.</p>
+<p>If <code>fixef_k</code> is set to <code>"nested"</code>, any “nested” fixed effects are dropped from the computation of <code>k_fe</code>, hence we have</p>
+<p><span class="math display">\[
+    k_fe =  \sum_{i}^{n_fe} levels(f_i)  - k_fe_nested - (n_fe - 1)
+\]</span></p>
+<p>where <span class="math inline">\(k_fe_nested\)</span> is the cardinality of the nested fixed effects. For a cluster fixed effect, <code>k_fe_nested = G</code>, where <code>G</code> is the number of clusters.</p>
+<p>Note that if you previously subtracted a level from a nested fixed effect, you might have to add it back (I have lost a few hours on figuring this one out).</p>
+</section>
+</section>
+<section id="cluster_adj" class="level2">
+<h2 class="anchored" data-anchor-id="cluster_adj"><code>cluster_adj</code></h2>
+<p>If <code>cluster_adj = True</code>, another small sample correction is applied:</p>
+<p><span class="math display">\[
+    cluster_df_val = G / (G - 1)
+\]</span></p>
+<p>with <span class="math inline">\(G\)</span> the number of clusters in case of clustered standard errors and <code>G = N</code> for heteroskedastic errors. This was a point of great confusion for me - why would the cluster adjustment be applied to heteroskedastic errors too? But it turns out that this is consistent with R’s sandwich package, which is the benchmark implementation for sandwich covariance matrices. One way to think about this: if errors are heteroskedastic, we have “singleton” clusters, hence <span class="math inline">\(G = N\)</span>.</p>
+<p>One other point of great confusion for me was that even if <code>cluster_adj = True</code> for “iid” errors, the <code>cluster_val_df</code> is set to <code>1</code>.</p>
+</section>
+<section id="cluster_df" class="level2">
+<h2 class="anchored" data-anchor-id="cluster_df"><code>cluster_df</code></h2>
+<p>This is only relevant when we use multi-way clustered standard errors. Recall that we can write two-way clustered errors as</p>
+<p><span class="math display">\[
+    vcov = ssc_{A} x vcov_{A} + ssc_{B} x vcov_B - ssc_{AB} x vcov_{AB}
+\]</span></p>
+<p>where <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> denote the clustering variables with <code>G(AB) &gt; G_{A} &gt; G_{B}</code> clusters.</p>
+<p>If we set <code>cluster_df = "min"</code>, we compute <code>ssc_{A}</code>, <code>ssc_{B}</code>, <code>ssc_{AB}</code> setting <code>G_{A} = G_{B} = G_{AB} = min(G_{A}, G_{B}, G_{AB})</code>. If we set <code>cluster_df = "conventional</code>, we use <code>G_{A</code> to compute <code>ssc_{A}</code>, <code>G_{B}</code> to compute <code>ssc_{B}</code>, etc.</p>
+</section>
+</section>
+<section id="more-on-inference" class="level1">
+<h1>More on Inference</h1>
+<p>For computing critical values, we compute degrees of freedom <code>df_t</code> as <code>N - dof_k</code> unless errors are <strong>clustered</strong>, in which case we use <code>G - 1</code>.</p>
+<p>To compute critical values for OLS and IV regression, we compute t-statistics using <code>df_t</code> degrees of freedom. For GLMs, we compute critical values based on a normal distribution (z-statistics). See <a href="https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851">here</a> for the implementation.</p>
+<p>For multiway-clustered errors, we set <code>df_t = min(G_1 - 1, G_2 - 1)</code> in case of two-way clustering, <code>df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)</code> in case of three-way clustering (currently not supported), etc.</p>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
