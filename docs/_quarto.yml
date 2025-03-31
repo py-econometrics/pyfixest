@@ -39,6 +39,8 @@ website:
           text: "Multiple Testing Corrections"
         - file: regression_decomposition.ipynb
           text: "Regression Decomposition"
+        - file: ssc.qmd
+          text: "On Small Sample Corrections"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
         - text: "PyFixest on the GPU"

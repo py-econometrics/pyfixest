@@ -63,7 +63,6 @@ r_fit = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov="iid",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 
 r_fit_weights = fixest.feols(
@@ -71,7 +70,6 @@ r_fit_weights = fixest.feols(
     data=data,
     weights=ro.Formula("~weights"),
     vcov="iid",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 ```
 
@@ -135,7 +133,6 @@ r_fit = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov="hetero",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 
 r_fit_weights = fixest.feols(
@@ -143,7 +140,6 @@ r_fit_weights = fixest.feols(
     data=data,
     weights=ro.Formula("~weights"),
     vcov="hetero",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 ```
 
@@ -192,14 +188,12 @@ r_fit = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov=ro.Formula("~f1"),
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 r_fit_weights = fixest.feols(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     weights=ro.Formula("~weights"),
     vcov=ro.Formula("~f1"),
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 ```
 
@@ -250,21 +244,18 @@ fit_r_iid = fixest.fepois(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov="iid",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 
 fit_r_hetero = fixest.fepois(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov="hetero",
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 
 fit_r_crv = fixest.fepois(
     ro.Formula("Y ~ X1 + X2 | f1 + f2"),
     data=data,
     vcov=ro.Formula("~f1"),
-    ssc=fixest.ssc(True, "none", True, "min", "min", False),
 )
 ```
 
