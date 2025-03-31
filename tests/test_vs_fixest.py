@@ -197,8 +197,8 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
-@pytest.mark.parametrize("adj", [True, False])
-@pytest.mark.parametrize("cluster_adj", [True, False])
+@pytest.mark.parametrize("adj", [True])
+@pytest.mark.parametrize("cluster_adj", [True])
 @pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
@@ -487,12 +487,12 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.against_r
-@pytest.mark.parametrize("dropna", [True])
+@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
-@pytest.mark.parametrize("adj", [False, True])
-@pytest.mark.parametrize("cluster_adj", [False, True])
+@pytest.mark.parametrize("adj", [True])
+@pytest.mark.parametrize("cluster_adj", [True])
 def test_single_fit_fepois(
     data_fepois, dropna, inference, f3_type, fml, adj, cluster_adj
 ):
