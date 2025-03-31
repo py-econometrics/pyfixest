@@ -60,6 +60,42 @@ def _count_G_for_ssc_correction(
 
     return G
 
+def _get_vcov_type(
+    vcov: Union[str, dict[str, str], None], fval: str
+) -> Union[str, dict[str, str]]:
+    """
+    Pass the specified vcov type.
+
+    Passes the specified vcov type. If no vcov type specified, sets the default
+    vcov type as iid if no fixed effect is included in the model, and CRV1
+    clustered by the first fixed effect if a fixed effect is included in the model.
+
+    Parameters
+    ----------
+    vcov : Union[str, dict[str, str], None]
+        The specified vcov type.
+    fval : str
+        The specified fixed effects. (i.e. "X1+X2")
+
+    Returns
+    -------
+    str
+        vcov_type (str) : The specified vcov type.
+    """
+    if vcov is None:
+        # iid if no fixed effects
+        if fval == "0":
+            vcov_type = "iid"  # type: ignore
+        else:
+            # CRV1 inference, clustered by first fixed effect
+            first_fe = fval.split("+")[0]
+            vcov_type = {"CRV1": first_fe}  # type: ignore
+    else:
+        vcov_type = vcov  # type: ignore
+
+    return vcov_type  # type: ignore
+
+
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
     cluster_one = clustervar[0]

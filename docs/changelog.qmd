@@ -13,6 +13,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest (In Development, can be installed from github)
 
+- We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
 - We add R2-within values to the default `etable()` output.
 - We fix a small bug in the Gelbach `decompose()` method, which would fail if a user selected `only_coef = True`.
 - We fix a small bug in the `predict()` method with `newdata`, see [here](https://github.com/py-econometrics/pyfixest/issues/840) for details.
