@@ -1725,7 +1725,9 @@ class Feols:
         fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
-        Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
+        Y, X = Formula(fml_linear).get_model_matrix(
+            _data, output="pandas", context=self._context
+        )
         if self._X_is_empty:
             Y = Y.to_numpy()
             uhat = Y.flatten()
@@ -1872,6 +1874,7 @@ class Feols:
             y_hat, X, X_index = get_design_matrix_and_yhat(
                 model=self,
                 newdata=newdata if newdata is not None else None,
+                context=self._context,
             )
 
             y_hat += _get_fixed_effects_prediction_component(
