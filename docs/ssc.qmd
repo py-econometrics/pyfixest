@@ -8,113 +8,128 @@ toc-title: "On this page"
 toc-location: left
 ---
 
-The `fixest` R package offers a myriad of options to control small sample corrections. Despite an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, I have spent way too much time trying to make `pyfixest` standard errors with fixest. Before I forget **why** things
-are implemented the way they are, I though I'd document them here.
+The `fixest` R package provides various options for small sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in `fixest` and how they are implemented in `pyfixest` in this document.
 
-In both `fixest` and `pyfixest`, small sample corrections can be controlled via the `ssc` function. In `pyfixest`, `ssc` has four function arguments:
+In both `fixest` and `pyfixest`, small sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `adj`, `cluster_adj`, `fixef_k` and `cluster_df`.
 
-- `adj`: controls if a first ssc adjustment should be applied.
-- `fixef_k`: controls how to compute the "effective" number of estimated parameters "k".
-- `cluster_adj`: controls if a second ssc adjustment should be applied.
-- `cluster_df`: controls how to compute ssc adjustments in case of multi-way clustering.
+Based on these inputs, the adjusted variance-covariance matrix is computed as:
 
-To compute an adjusted variance covariance formula, the following formula is used:
+```
+vcov_adj = adj_val(N, dof_k) if adj else 1
+          * cluster_adj_val(G, cluster_df) if cluster_adj else 1
+          * vcov
+```
 
-$$
-    vcov_adj = 1(adj, adj_val(N, dof_k(fixef_k)), 1) x 1(cluster_adj, cluster_adj_val(G, cluster_df), 1) x vcov
-$$
+Where:
 
-where
+- **`adj`**: Enables or disables the first scalar adjustment.
+- **`cluster_adj`**: Enables or disables the second scalar adjustment.
+- **`vcov`**: The unadjusted variance-covariance matrix.
+- **`dof_k`**: The number of estimated parameters considered in the first adjustment. Impacts `adj_val`.
+- **`fixef_k`**: Determines how `dof_k` is computed (how fixed effects are counted).
+- **`cluster_df`**: Determines how `cluster_adj_val` is computed (only relevant for multi-way clustering).
+- **`G`**: The number of unique clusters (`G = N` for heteroskedastic errors).
 
-- `1()` denotes an indicator function
-- `adj` is a boolean that denotes if there is a is a scalar adjustment
-- `cluster_df` is a boolean that denotes if there is another scalar adjustment
-- `dof_k` set the number of 'variables' used to compute `adj`.
-- `fixef_k` controls how `dof_k` is computed
-- `G` sets the numebr of unique clusters in the data. In case of heteroskedastic errors, `G = N`.
-- `vcov` is the unadjusted variance-covariance matrix.
+Outside of this formula, we have **`df_t`**, which is the degrees of freedom used for p-values and confidence intervals:
 
-Last, but not part of the formula above, is `df_t`, which denotes the degrees of freedom used in computing t-statistics needed for pvalues and confidence intervals.
-We always have that `df_t = N - dof_k`.
+- `df_t = N - dof_k` for IID or heteroskedastic errors.
+- `df_t = G - 1` for clustered errors.
+
+---
 
 # Small Sample Adjustments
 
 ## `adj = True`
 
-If `adj=True`, we multiply the unadjusted variance covariance matrix with
+If `adj = True`, the adjustment factor is:
 
-$$
-    adj_val = \frac{N-1}{N-dof_k}.
-$$
+`adj_val = (N - 1) / (N - dof_k)`
 
-If not, no adjustment is made.
+If `adj = False`, no adjustment is applied.
+
+---
 
 ## `fixef_k`
 
-The value for `adj_val` depends on `dof_k`. The `fixef_k` argument allows us control how `dof_k` is computed. Three options are supported: `fixef_k in ["none", "full", "nested"]`.
+The `fixef_k` argument controls how fixed effects contribute to `dof_k`, and thus to `adj_val`. It supports three options:
+
+- **`"none"`**
+- **`"full"`**
+- **`"nested"`**
 
 ### `fixef_k = "none"`
 
-If `fixef_k = "none"`, the fixed effects are discarded. For example, if we fit a model `Y ~ X1 | f1`, we have `k = 1`, where `k` denotes the number of covariates that are not specified as fixed effects using two-part formula syntax. For a model `Y ~ X1 + X2 | f1`, we would set `k = 2`, etc.
+Fixed effects are ignored when counting parameters:
+
+- **Example**:
+  - `Y ~ X1 | f1` → `k = 1`
+  - `Y ~ X1 + X2 | f1` → `k = 2`
 
 ### `fixef_k = "full"`
 
-Here, we add the levels of fixed effects. To avoid multicollinearity, we have to drop one level from each fixed effects whenever we have more than one fixed effects. Hence if `n_fe` denotes the total number of fixed effects and `f_{i}` a given fixed effect, we compute `dof_k` as `dof_k = k + k_fe`, where `k_fe = \sum_{i}^{n_fe} levels(f_i)` + (n_fe - 1)` if we have more than one fixed effect and `k_fe = \sum_{i}^{n_fe} levels(f_i) = levels(f_{1})` if we have only one fixed effects.
+Fixed effects are fully counted. For `n_fe` total fixed effects and each fixed effect `f_i`, we set `dof_k = k + k_fe`,
 
-### `fixef_k = nested`
 
-If we have **clustered** standard errors, fixed effects might be fully nested within fixed effects. One simple example are **cluster fixed effects**.
-If we run a model
+- If there is **more than one** fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity)
+  `k_fe = sum_{i=1}^{n_fe} levels(f_i) - (n_fe - 1)`
 
-```
-pf.feols("Y ~ X1 | f1", vcov = {"CRV1":f1})
-```
-the fixed effect `f1` is fully nested in the cluster variable `f1` because they are identical.
+- If there is **only one** fixed effect:
+  `k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)`
 
-A common example of fixed effects nested within a cluster would be district fixed effects and state level clustering - each district is fully nested in a given state.
+### `fixef_k = "nested"`
 
-If `fixef_k` is set to `"nested"`, any "nested" fixed effects are dropped from the computation of `k_fe`, hence we have
+Fixed effects may be **nested** within cluster variables (e.g., district FEs nested in state clusters). If `fixef_k = "nested"`, nested fixed effects do not count toward `k_fe`:
 
-$$
-    k_fe =  \sum_{i}^{n_fe} levels(f_i)  - k_fe_nested - (n_fe - 1)
-$$
+`k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)`
 
-where $k_fe_nested$ is the cardinality of the nested fixed effects. For a cluster fixed effect, `k_fe_nested = G`, where `G` is the number of clusters.
+where `k_fe_nested` is the count of nested fixed effects. For cluster fixed effects, `k_fe_nested = G`, the number of clusters.
 
-Note that if you previously subtracted a level from a nested fixed effect, you might have to add it back (I have lost a few hours on figuring this one out).
+> ⚠️ *Note:* If you already subtracted a level from a nested FE, you may need to add it back.
+
+---
 
 ## `cluster_adj`
 
-If `cluster_adj = True`, another small sample correction is applied:
+If `cluster_adj = True`, we apply a second correction:
 
-$$
-    cluster_df_val = G / (G - 1)
-$$
+`cluster_df_val = G / (G - 1)`
 
-with $G$ the number of clusters in case of clustered standard errors and `G = N` for heteroskedastic errors. This was a point of great confusion for me - why would the
-cluster adjustment be applied to heteroskedastic errors too? But it turns out that this is consistent with R's sandwich package, which is the benchmark implementation
-for sandwich covariance matrices. One way to think about this: if errors are heteroskedastic, we have "singleton" clusters, hence $G = N$.
+Where:
 
-One other point of great confusion for me was that even if `cluster_adj = True` for "iid" errors, the `cluster_val_df` is set to `1`.
+- `G` is the number of clusters for clustered errors, or `N` for heteroskedastic errors.
+- This follows the approach in R’s `sandwich` package, interpreting heteroskedastic errors as “singleton clusters.”
+
+> *Tip:* If `cluster_adj = True` for IID errors, `cluster_df_val` defaults to `1`. For *heteroskedastic erros*, despite its name, `cluster_adj=True` will apply an adjustment of (N-1) / N, as there are $G = N$ singleton clusters.
+
+---
 
 ## `cluster_df`
 
-This is only relevant when we use multi-way clustered standard errors. Recall that we can write two-way clustered errors as
+Relevant only for **multi-way clustering**. Two-way clustering, for example, can be written as:
 
-$$
-    vcov = ssc_{A} x vcov_{A} + ssc_{B} x vcov_B - ssc_{AB} x vcov_{AB}
-$$
+`vcov = ssc_A * vcov_A + ssc_B * vcov_B - ssc_AB * vcov_AB`
 
-where $A$ and $B$ denote the clustering variables with `G(AB) > G_{A} > G_{B}` clusters.
+where `A` and `B` are clustering dimensions, with `G_AB > G_A > G_B`.
 
-If we set `cluster_df = "min"`, we compute `ssc_{A}`,  `ssc_{B}`,  `ssc_{AB}` setting `G_{A} = G_{B} = G_{AB} = min(G_{A}, G_{B}, G_{AB})`.
-If we set `cluster_df = "conventional`, we use `G_{A ` to compute `ssc_{A}`,  `G_{B}` to compute `ssc_{B}`, etc.
+- If `cluster_df = "min"`, then G is set to the minimum value of `G_A`, `G_B`, and `G_AB`.
+- If `cluster_df = "conventional"`, each clustering dimension uses its own cluster count (`G_A`, `G_B`, etc.) for its respective adjustment.
+
+---
 
 # More on Inference
 
-For computing critical values, we compute degrees of freedom `df_t` as `N - dof_k` unless errors are **clustered**, in which case we use `G - 1`.
+For computing critical values:
 
-To compute critical values for OLS and IV regression, we compute t-statistics using `df_t` degrees of freedom. For GLMs, we compute critical values
-based on a normal distribution (z-statistics). See [here](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for the implementation.
+- **OLS and IV**: use t-statistics with `df_t = N - dof_k` (non-clustered) or `df_t = G - 1` (clustered).
+- **GLMs**: use z-statistics (normal approximation).
 
-For multiway-clustered errors, we set `df_t = min(G_1 - 1, G_2 - 1)` in case of two-way clustering, `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` in case of three-way clustering (currently not supported), etc.
+For multi-way clustering:
+
+- **Two-way**: `df_t = min(G_1 - 1, G_2 - 1)`
+- **Three-way**: `df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)` *(not currently supported)*
+
+See [this implementation](https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851) for details.
+
+# In Code
+
+All of the above logic is implemented [here](https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108).
