@@ -203,12 +203,13 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#fixef_k-none" id="toc-fixef_k-none" class="nav-link" data-scroll-target="#fixef_k-none"><code>fixef_k = "none"</code></a></li>
   <li><a href="#fixef_k-full" id="toc-fixef_k-full" class="nav-link" data-scroll-target="#fixef_k-full"><code>fixef_k = "full"</code></a></li>
-  <li><a href="#fixef_k-nested" id="toc-fixef_k-nested" class="nav-link" data-scroll-target="#fixef_k-nested"><code>fixef_k = nested</code></a></li>
+  <li><a href="#fixef_k-nested" id="toc-fixef_k-nested" class="nav-link" data-scroll-target="#fixef_k-nested"><code>fixef_k = "nested"</code></a></li>
   </ul></li>
   <li><a href="#cluster_adj" id="toc-cluster_adj" class="nav-link" data-scroll-target="#cluster_adj"><code>cluster_adj</code></a></li>
   <li><a href="#cluster_df" id="toc-cluster_df" class="nav-link" data-scroll-target="#cluster_df"><code>cluster_df</code></a></li>
   </ul></li>
   <li><a href="#more-on-inference" id="toc-more-on-inference" class="nav-link" data-scroll-target="#more-on-inference">More on Inference</a></li>
+  <li><a href="#in-code" id="toc-in-code" class="nav-link" data-scroll-target="#in-code">In Code</a></li>
   </ul>
 </nav>
 </nav>
@@ -238,88 +239,118 @@ window.Quarto = {
 </header>
 
 
-<p>The <code>fixest</code> R package offers a myriad of options to control small sample corrections. Despite an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, I have spent way too much time trying to make <code>pyfixest</code> standard errors with fixest. Before I forget <strong>why</strong> things are implemented the way they are, I though I’d document them here.</p>
-<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections can be controlled via the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> has four function arguments:</p>
+<p>The <code>fixest</code> R package provides various options for small sample corrections. While it has an excellent <a href="https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html">vignette</a> on the topic, reproducing its behavior in <code>pyfixest</code> took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in <code>fixest</code> and how they are implemented in <code>pyfixest</code> in this document.</p>
+<p>In both <code>fixest</code> and <code>pyfixest</code>, small sample corrections are controlled by the <code>ssc</code> function. In <code>pyfixest</code>, <code>ssc</code> accepts four arguments: <code>adj</code>, <code>cluster_adj</code>, <code>fixef_k</code> and <code>cluster_df</code>.</p>
+<p>Based on these inputs, the adjusted variance-covariance matrix is computed as:</p>
+<pre><code>vcov_adj = adj_val(N, dof_k) if adj else 1
+          * cluster_adj_val(G, cluster_df) if cluster_adj else 1
+          * vcov</code></pre>
+<p>Where:</p>
 <ul>
-<li><code>adj</code>: controls if a first ssc adjustment should be applied.</li>
-<li><code>fixef_k</code>: controls how to compute the “effective” number of estimated parameters “k”.</li>
-<li><code>cluster_adj</code>: controls if a second ssc adjustment should be applied.</li>
-<li><code>cluster_df</code>: controls how to compute ssc adjustments in case of multi-way clustering.</li>
+<li><strong><code>adj</code></strong>: Enables or disables the first scalar adjustment.</li>
+<li><strong><code>cluster_adj</code></strong>: Enables or disables the second scalar adjustment.</li>
+<li><strong><code>vcov</code></strong>: The unadjusted variance-covariance matrix.</li>
+<li><strong><code>dof_k</code></strong>: The number of estimated parameters considered in the first adjustment. Impacts <code>adj_val</code>.</li>
+<li><strong><code>fixef_k</code></strong>: Determines how <code>dof_k</code> is computed (how fixed effects are counted).</li>
+<li><strong><code>cluster_df</code></strong>: Determines how <code>cluster_adj_val</code> is computed (only relevant for multi-way clustering).</li>
+<li><strong><code>G</code></strong>: The number of unique clusters (<code>G = N</code> for heteroskedastic errors).</li>
 </ul>
-<p>To compute an adjusted variance covariance formula, the following formula is used:</p>
-<p><span class="math display">\[
-    vcov_adj = 1(adj, adj_val(N, dof_k(fixef_k)), 1) x 1(cluster_adj, cluster_adj_val(G, cluster_df), 1) x vcov
-\]</span></p>
-<p>where</p>
+<p>Outside of this formula, we have <strong><code>df_t</code></strong>, which is the degrees of freedom used for p-values and confidence intervals:</p>
 <ul>
-<li><code>1()</code> denotes an indicator function</li>
-<li><code>adj</code> is a boolean that denotes if there is a is a scalar adjustment</li>
-<li><code>cluster_df</code> is a boolean that denotes if there is another scalar adjustment</li>
-<li><code>dof_k</code> set the number of ‘variables’ used to compute <code>adj</code>.</li>
-<li><code>fixef_k</code> controls how <code>dof_k</code> is computed</li>
-<li><code>G</code> sets the numebr of unique clusters in the data. In case of heteroskedastic errors, <code>G = N</code>.</li>
-<li><code>vcov</code> is the unadjusted variance-covariance matrix.</li>
+<li><code>df_t = N - dof_k</code> for IID or heteroskedastic errors.</li>
+<li><code>df_t = G - 1</code> for clustered errors.</li>
 </ul>
-<p>Last, but not part of the formula above, is <code>df_t</code>, which denotes the degrees of freedom used in computing t-statistics needed for pvalues and confidence intervals. We always have that <code>df_t = N - dof_k</code>.</p>
+<hr>
 <section id="small-sample-adjustments" class="level1">
 <h1>Small Sample Adjustments</h1>
 <section id="adj-true" class="level2">
 <h2 class="anchored" data-anchor-id="adj-true"><code>adj = True</code></h2>
-<p>If <code>adj=True</code>, we multiply the unadjusted variance covariance matrix with</p>
-<p><span class="math display">\[
-    adj_val = \frac{N-1}{N-dof_k}.
-\]</span></p>
-<p>If not, no adjustment is made.</p>
+<p>If <code>adj = True</code>, the adjustment factor is:</p>
+<p><code>adj_val = (N - 1) / (N - dof_k)</code></p>
+<p>If <code>adj = False</code>, no adjustment is applied.</p>
+<hr>
 </section>
 <section id="fixef_k" class="level2">
 <h2 class="anchored" data-anchor-id="fixef_k"><code>fixef_k</code></h2>
-<p>The value for <code>adj_val</code> depends on <code>dof_k</code>. The <code>fixef_k</code> argument allows us control how <code>dof_k</code> is computed. Three options are supported: <code>fixef_k in ["none", "full", "nested"]</code>.</p>
+<p>The <code>fixef_k</code> argument controls how fixed effects contribute to <code>dof_k</code>, and thus to <code>adj_val</code>. It supports three options:</p>
+<ul>
+<li><strong><code>"none"</code></strong></li>
+<li><strong><code>"full"</code></strong></li>
+<li><strong><code>"nested"</code></strong></li>
+</ul>
 <section id="fixef_k-none" class="level3">
 <h3 class="anchored" data-anchor-id="fixef_k-none"><code>fixef_k = "none"</code></h3>
-<p>If <code>fixef_k = "none"</code>, the fixed effects are discarded. For example, if we fit a model <code>Y ~ X1 | f1</code>, we have <code>k = 1</code>, where <code>k</code> denotes the number of covariates that are not specified as fixed effects using two-part formula syntax. For a model <code>Y ~ X1 + X2 | f1</code>, we would set <code>k = 2</code>, etc.</p>
+<p>Fixed effects are ignored when counting parameters:</p>
+<ul>
+<li><strong>Example</strong>:
+<ul>
+<li><code>Y ~ X1 | f1</code> → <code>k = 1</code></li>
+<li><code>Y ~ X1 + X2 | f1</code> → <code>k = 2</code></li>
+</ul></li>
+</ul>
 </section>
 <section id="fixef_k-full" class="level3">
 <h3 class="anchored" data-anchor-id="fixef_k-full"><code>fixef_k = "full"</code></h3>
-<p>Here, we add the levels of fixed effects. To avoid multicollinearity, we have to drop one level from each fixed effects whenever we have more than one fixed effects. Hence if <code>n_fe</code> denotes the total number of fixed effects and <code>f_{i}</code> a given fixed effect, we compute <code>dof_k</code> as <code>dof_k = k + k_fe</code>, where <code>k_fe = \sum_{i}^{n_fe} levels(f_i)</code> + (n_fe - 1)<code>if we have more than one fixed effect and</code>k_fe = <em>{i}^{n_fe} levels(f_i) = levels(f</em>{1})` if we have only one fixed effects.</p>
+<p>Fixed effects are fully counted. For <code>n_fe</code> total fixed effects and each fixed effect <code>f_i</code>, we set <code>dof_k = k + k_fe</code>,</p>
+<ul>
+<li><p>If there is <strong>more than one</strong> fixed effect, we drop one level from each fixed effects except the first (to avoid multicollinearity) <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - (n_fe - 1)</code></p></li>
+<li><p>If there is <strong>only one</strong> fixed effect: <code>k_fe = sum_{i=1}^{n_fe} levels(f_i) = levels(f_1)</code></p></li>
+</ul>
 </section>
 <section id="fixef_k-nested" class="level3">
-<h3 class="anchored" data-anchor-id="fixef_k-nested"><code>fixef_k = nested</code></h3>
-<p>If we have <strong>clustered</strong> standard errors, fixed effects might be fully nested within fixed effects. One simple example are <strong>cluster fixed effects</strong>. If we run a model</p>
-<pre><code>pf.feols("Y ~ X1 | f1", vcov = {"CRV1":f1})</code></pre>
-<p>the fixed effect <code>f1</code> is fully nested in the cluster variable <code>f1</code> because they are identical.</p>
-<p>A common example of fixed effects nested within a cluster would be district fixed effects and state level clustering - each district is fully nested in a given state.</p>
-<p>If <code>fixef_k</code> is set to <code>"nested"</code>, any “nested” fixed effects are dropped from the computation of <code>k_fe</code>, hence we have</p>
-<p><span class="math display">\[
-    k_fe =  \sum_{i}^{n_fe} levels(f_i)  - k_fe_nested - (n_fe - 1)
-\]</span></p>
-<p>where <span class="math inline">\(k_fe_nested\)</span> is the cardinality of the nested fixed effects. For a cluster fixed effect, <code>k_fe_nested = G</code>, where <code>G</code> is the number of clusters.</p>
-<p>Note that if you previously subtracted a level from a nested fixed effect, you might have to add it back (I have lost a few hours on figuring this one out).</p>
+<h3 class="anchored" data-anchor-id="fixef_k-nested"><code>fixef_k = "nested"</code></h3>
+<p>Fixed effects may be <strong>nested</strong> within cluster variables (e.g., district FEs nested in state clusters). If <code>fixef_k = "nested"</code>, nested fixed effects do not count toward <code>k_fe</code>:</p>
+<p><code>k_fe = sum_{i=1}^{n_fe} levels(f_i) - k_fe_nested - (n_fe - 1)</code></p>
+<p>where <code>k_fe_nested</code> is the count of nested fixed effects. For cluster fixed effects, <code>k_fe_nested = G</code>, the number of clusters.</p>
+<blockquote class="blockquote">
+<p>⚠️ <em>Note:</em> If you already subtracted a level from a nested FE, you may need to add it back.</p>
+</blockquote>
+<hr>
 </section>
 </section>
 <section id="cluster_adj" class="level2">
 <h2 class="anchored" data-anchor-id="cluster_adj"><code>cluster_adj</code></h2>
-<p>If <code>cluster_adj = True</code>, another small sample correction is applied:</p>
-<p><span class="math display">\[
-    cluster_df_val = G / (G - 1)
-\]</span></p>
-<p>with <span class="math inline">\(G\)</span> the number of clusters in case of clustered standard errors and <code>G = N</code> for heteroskedastic errors. This was a point of great confusion for me - why would the cluster adjustment be applied to heteroskedastic errors too? But it turns out that this is consistent with R’s sandwich package, which is the benchmark implementation for sandwich covariance matrices. One way to think about this: if errors are heteroskedastic, we have “singleton” clusters, hence <span class="math inline">\(G = N\)</span>.</p>
-<p>One other point of great confusion for me was that even if <code>cluster_adj = True</code> for “iid” errors, the <code>cluster_val_df</code> is set to <code>1</code>.</p>
+<p>If <code>cluster_adj = True</code>, we apply a second correction:</p>
+<p><code>cluster_df_val = G / (G - 1)</code></p>
+<p>Where:</p>
+<ul>
+<li><code>G</code> is the number of clusters for clustered errors, or <code>N</code> for heteroskedastic errors.</li>
+<li>This follows the approach in R’s <code>sandwich</code> package, interpreting heteroskedastic errors as “singleton clusters.”</li>
+</ul>
+<blockquote class="blockquote">
+<p><em>Tip:</em> If <code>cluster_adj = True</code> for IID errors, <code>cluster_df_val</code> defaults to <code>1</code>. For <em>heteroskedastic erros</em>, despite its name, <code>cluster_adj=True</code> will apply an adjustment of (N-1) / N, as there are <span class="math inline">\(G = N\)</span> singleton clusters.</p>
+</blockquote>
+<hr>
 </section>
 <section id="cluster_df" class="level2">
 <h2 class="anchored" data-anchor-id="cluster_df"><code>cluster_df</code></h2>
-<p>This is only relevant when we use multi-way clustered standard errors. Recall that we can write two-way clustered errors as</p>
-<p><span class="math display">\[
-    vcov = ssc_{A} x vcov_{A} + ssc_{B} x vcov_B - ssc_{AB} x vcov_{AB}
-\]</span></p>
-<p>where <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> denote the clustering variables with <code>G(AB) &gt; G_{A} &gt; G_{B}</code> clusters.</p>
-<p>If we set <code>cluster_df = "min"</code>, we compute <code>ssc_{A}</code>, <code>ssc_{B}</code>, <code>ssc_{AB}</code> setting <code>G_{A} = G_{B} = G_{AB} = min(G_{A}, G_{B}, G_{AB})</code>. If we set <code>cluster_df = "conventional</code>, we use <code>G_{A</code> to compute <code>ssc_{A}</code>, <code>G_{B}</code> to compute <code>ssc_{B}</code>, etc.</p>
+<p>Relevant only for <strong>multi-way clustering</strong>. Two-way clustering, for example, can be written as:</p>
+<p><code>vcov = ssc_A * vcov_A + ssc_B * vcov_B - ssc_AB * vcov_AB</code></p>
+<p>where <code>A</code> and <code>B</code> are clustering dimensions, with <code>G_AB &gt; G_A &gt; G_B</code>.</p>
+<ul>
+<li>If <code>cluster_df = "min"</code>, then G is set to the minimum value of <code>G_A</code>, <code>G_B</code>, and <code>G_AB</code>.</li>
+<li>If <code>cluster_df = "conventional"</code>, each clustering dimension uses its own cluster count (<code>G_A</code>, <code>G_B</code>, etc.) for its respective adjustment.</li>
+</ul>
+<hr>
 </section>
 </section>
 <section id="more-on-inference" class="level1">
 <h1>More on Inference</h1>
-<p>For computing critical values, we compute degrees of freedom <code>df_t</code> as <code>N - dof_k</code> unless errors are <strong>clustered</strong>, in which case we use <code>G - 1</code>.</p>
-<p>To compute critical values for OLS and IV regression, we compute t-statistics using <code>df_t</code> degrees of freedom. For GLMs, we compute critical values based on a normal distribution (z-statistics). See <a href="https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851">here</a> for the implementation.</p>
-<p>For multiway-clustered errors, we set <code>df_t = min(G_1 - 1, G_2 - 1)</code> in case of two-way clustering, <code>df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)</code> in case of three-way clustering (currently not supported), etc.</p>
+<p>For computing critical values:</p>
+<ul>
+<li><strong>OLS and IV</strong>: use t-statistics with <code>df_t = N - dof_k</code> (non-clustered) or <code>df_t = G - 1</code> (clustered).</li>
+<li><strong>GLMs</strong>: use z-statistics (normal approximation).</li>
+</ul>
+<p>For multi-way clustering:</p>
+<ul>
+<li><strong>Two-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1)</code></li>
+<li><strong>Three-way</strong>: <code>df_t = min(G_1 - 1, G_2 - 1, G_3 - 1)</code> <em>(not currently supported)</em></li>
+</ul>
+<p>See <a href="https://github.com/py-econometrics/pyfixest/blob/864da9c0d1797aff70e3f5b420e4c73f7256642d/pyfixest/estimation/feols_.py#L851">this implementation</a> for details.</p>
+</section>
+<section id="in-code" class="level1">
+<h1>In Code</h1>
+<p>All of the above logic is implemented <a href="https://github.com/py-econometrics/pyfixest/blob/69acf9d22eab4300853d80264ee6d01bc4bdcb35/pyfixest/utils/utils.py#L108">here</a>.</p>
 
 
 </section>
