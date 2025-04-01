@@ -52,7 +52,12 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import capture_context, get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import (
+    _count_fixef_fully_nested_all,
+    capture_context,
+    get_ssc,
+    simultaneous_crit_val,
+)
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -379,9 +384,12 @@ class Feols:
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
         self._depvar = self._Y.columns[0]
-        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+
         self._has_fixef = self._fe is not None
         self._fixef = self.FixestFormula._fval
+
+        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+        self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
@@ -551,12 +559,9 @@ class Feols:
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
-        # _tZXinv = self._tZXinv
         _hessian = self._hessian
 
-        _ssc_dict = self._ssc_dict
-        _N = self._N
-        _k = self._k
+        # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
         _check_vcov_input(vcov, _data)
@@ -570,15 +575,25 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # compute vcov
+
+        ssc_kwargs = {
+            "ssc_dict": self._ssc_dict,
+            "N": self._N,
+            "k": self._k,
+            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "n_fe": self._n_fe,
+        }
+
         if self._vcov_type == "iid":
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=1,
-                vcov_sign=1,
-                vcov_type="iid",
-            )
+            ssc_kwargs_iid = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "iid",
+                "G": 1,
+            }
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -586,15 +601,16 @@ class Feols:
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
             # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
 
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=_N,  # all clusters are singletons
-                vcov_sign=1,
-                vcov_type="hetero",
-            )
+            ssc_kwargs_hetero = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N,
+            }
 
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -618,29 +634,60 @@ class Feols:
                 )
 
             self._G = _count_G_for_ssc_correction(
-                cluster_df=self._cluster_df, ssc_dict=_ssc_dict
+                cluster_df=self._cluster_df, ssc_dict=self._ssc_dict
             )
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+            df_t_full = np.zeros(self._cluster_df.shape[1])
+
+            cluster_arr_int = np.column_stack(
+                [
+                    pd.factorize(self._cluster_df[col])[0]
+                    for col in self._cluster_df.columns
+                ]
+            )
+
+            k_fe_nested = 0
+            n_fe_fully_nested = 0
+            if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
+                k_fe_nested_flag, n_fe_fully_nested = _count_fixef_fully_nested_all(
+                    all_fixef_array=np.array(
+                        self._fixef.replace("^", "_").split("+"), dtype=str
+                    ),
+                    cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
+                    cluster_data=cluster_arr_int,
+                    fe_data=self._fe.to_numpy()
+                    if isinstance(self._fe, pd.DataFrame)
+                    else self._fe,
+                )
+
+                k_fe_nested = (
+                    np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+                )
 
             self._vcov = np.zeros((self._k, self._k))
 
-            for x, col in enumerate(self._cluster_df.columns):
-                cluster_col_pd = self._cluster_df[col]
-                cluster_col, _ = pd.factorize(cluster_col_pd)
+            for x, _ in enumerate(self._cluster_df.columns):
+                cluster_col = cluster_arr_int[:, x]
                 clustid = np.unique(cluster_col)
 
-                ssc = get_ssc(
-                    ssc_dict=_ssc_dict,
-                    N=_N,
-                    k=_k,
-                    G=self._G[x],
-                    vcov_sign=vcov_sign_list[x],
-                    vcov_type="CRV",
-                )
+                ssc_kwargs_crv = {
+                    "k_fe_nested": k_fe_nested,
+                    "n_fe_fully_nested": n_fe_fully_nested,
+                    "G": self._G[x],
+                    "vcov_sign": vcov_sign_list[x],
+                    "vcov_type": "CRV",
+                }
+
+                all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
+                ssc, dof_k, df_t = get_ssc(**all_kwargs)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
+                self._dof_k = dof_k  # the same across all vcov's
+
+                # update. take min(df_t) ad the end of loop
+                df_t_full[x] = df_t
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
@@ -669,7 +716,8 @@ class Feols:
                         self._vcov += self._ssc[x] * self._vcov_crv3_slow(
                             clustid=clustid, cluster_col=cluster_col
                         )
-
+            # take minimum cluster for dof for multiway clustering
+            self._df_t = np.min(df_t_full)
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -830,30 +878,28 @@ class Feols:
         Returns
         -------
         None
+
+        Details
+        -------
+        relevant fixest functions:
+        - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
+        -
         """
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
-        _vcov_type = self._vcov_type
-        _N = self._N
-        _k = self._k
-        _G = (
-            np.min(np.array(self._G)) if self._vcov_type == "CRV" else np.array(self._G)
-        )  # fixest default
+
         _method = self._method
 
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
-
-        df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
-
         # use t-dist for linear models, but normal for non-linear models
         if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
         else:
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), self._df_t))
+            z = np.abs(t.ppf(alpha / 2, self._df_t))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -2127,15 +2173,8 @@ class Feols:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
         if not joint:
-            if self._vcov_type in ["iid", "hetero"]:
-                df = self._N - self._k
-            else:
-                _G = np.min(np.array(self._G))  # fixest default
-                df = _G - 1
-
-            # use t-dist for linear models, but normal for non-linear models
             if self._method == "feols":
-                crit_val = np.abs(t.ppf(alpha / 2, df))
+                crit_val = np.abs(t.ppf(alpha / 2, self._df_t))
             else:
                 crit_val = np.abs(norm.ppf(alpha / 2))
         else:
