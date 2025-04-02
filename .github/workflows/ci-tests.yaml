@@ -99,6 +99,7 @@ jobs:
       - name: Run tests against r
         run: |
           pixi run tests-against-r
+          pixi run tests-fixest-minimal
 
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v4
