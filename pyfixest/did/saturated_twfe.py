@@ -1,10 +1,14 @@
-from typing import Optional
+from typing import Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.feols_ import Feols
+from pyfixest.estimation.literals import (
+    VcovTypeOptions,
+)
 
 from .did2s import DID
 
@@ -41,9 +45,9 @@ class SaturatedEventStudy(DID):
         idname: str,
         tname: str,
         gname: str,
+        att: bool = True,
         cluster: Optional[str] = None,
         xfml: Optional[str] = None,
-        att: Optional[bool] = True,
     ):
         super().__init__(
             data=data,
@@ -138,7 +142,7 @@ def _saturated_event_study(
     # formula
     ff = f"""
                 {outcome} ~
-                {'+'.join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like = "cohort_dummy", axis = 1).columns])}
+                {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like="cohort_dummy", axis=1).columns])}
                 | {unit_id} + {time_id}
                 """
     m = feols(ff, df_int, vcov={"CRV1": unit_id})
@@ -147,7 +151,7 @@ def _saturated_event_study(
         # plot
         res = m.tidy()
         # create a dict with cohort specific effect curves
-        res_dict = {}
+        res_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
         for c in cohort_dummies.columns:
             res_cohort = res.filter(like=c, axis=0)
             event_time = (
@@ -200,6 +204,24 @@ def test_treatment_heterogeneity(
     -------
     float
         The p-value of the test.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils.dgps import get_sharkfin
+
+    df_one_cohort = get_sharkfin()
+    df_one_cohort.head()
+
+    pf.test_treatment_heterogeneity(
+        df_one_cohort,
+        outcome = "Y",
+        treatment = "treat",
+        unit_id = "unit",
+        time_id = "year"
+    )
+    ```
     """
     # Get treatment timing info
     df = df.merge(
@@ -226,11 +248,11 @@ def test_treatment_heterogeneity(
     ff = f"""
     {outcome} ~
     i(rel_time, ref=-1.0) +
-    {'+'.join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like = "cohort_dummy", axis = 1).columns])}
+    {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like="cohort_dummy", axis=1).columns])}
     | {unit_id} + {time_id}
     """
 
-    model = feols(ff, df_int, vcov={"CRV1": unit_id})
+    model: Feols = cast(Feols, feols(ff, df_int, vcov={"CRV1": unit_id}))
     P = model.coef().shape[0]
 
     if retmod:
@@ -252,13 +274,16 @@ def test_treatment_heterogeneity(
 
 
 def _test_dynamics(
-    df,
-    outcome="Y",
-    treatment="W",
-    time_id="time",
-    unit_id="unit",
-    vcv={"CRV1": "unit"},
+    df: pd.DataFrame,
+    outcome: str = "Y",
+    treatment: str = "W",
+    time_id: str = "time",
+    unit_id: str = "unit",
+    vcv: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
 ):
+    if vcv is None:
+        vcv = {"CRV1": unit_id}
+
     # Fit models
     df = df.merge(
         df.assign(first_treated_period=df[time_id] * df[treatment])
@@ -268,9 +293,12 @@ def _test_dynamics(
     )
     df["rel_time"] = df[time_id] - df["first_treated_period"]
     df["rel_time"] = df["rel_time"].replace(np.nan, np.inf)
-    restricted = feols(f"{outcome} ~ i({treatment}) | {unit_id} + {time_id}", df)
-    unrestricted = feols(
-        f"{outcome} ~ i(rel_time, ref=0) | {unit_id} + {time_id}", df, vcov=vcv
+    restricted: Feols = cast(
+        Feols, feols(f"{outcome} ~ i({treatment}) | {unit_id} + {time_id}", df)
+    )
+    unrestricted: Feols = cast(
+        Feols,
+        feols(f"{outcome} ~ i(rel_time, ref=0) | {unit_id} + {time_id}", df, vcov=vcv),
     )
     # Get the restricted estimate
     restricted_effect = restricted.coef().iloc[0]
