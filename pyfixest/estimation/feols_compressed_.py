@@ -1,13 +1,14 @@
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import narwhals as nw
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pyfixest.estimation.feols_ import Feols, PredictionType
+from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -59,6 +60,11 @@ class FeolsCompressed(Feols):
         Whether to copy the data.
     lean : bool
         Whether to keep memory-heavy objects as attributes or not.
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
     reps : int
         The number of bootstrap repetitions. Default is 100. Only used for CRV1 inference, where
         a wild cluster bootstrap is used.
@@ -79,10 +85,14 @@ class FeolsCompressed(Feols):
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ],
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         reps=100,
         seed: Optional[int] = None,
         sample_split_var: Optional[str] = None,
@@ -100,9 +110,11 @@ class FeolsCompressed(Feols):
             fixef_tol,
             lookup_demeaned_data,
             solver,
+            demeaner_backend,
             store_data,
             copy_data,
             lean,
+            context,
             sample_split_var,
             sample_split_value,
         )
@@ -347,7 +359,10 @@ class FeolsCompressed(Feols):
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
+        alpha: float = 0.05,
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Compute predicted values.
 
@@ -361,11 +376,21 @@ class FeolsCompressed(Feols):
             The relative tolerance.
         type : str
             The type of prediction.
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        np.ndarray
-            The predicted values. If newdata is None, the predicted values are based on the uncompressed data set.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         raise NotImplementedError(
             "Predictions are not supported for compressed regression."

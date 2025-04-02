@@ -3,31 +3,34 @@
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest.svg)
+![Python Versions](https://img.shields.io/badge/Python-3.9–3.12-blue)
 [![PyPI -Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![image](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pixi Badge][pixi-badge]][pixi-url]
-[![All Contributors](https://img.shields.io/badge/all_contributors-18-green.svg?style=flat-square)](#contributors-)
+[![Known Bugs](https://img.shields.io/github/issues/py-econometrics/pyfixest/bug?color=red&label=Bugs)](https://github.com/py-econometrics/pyfixest/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+[![File an Issue](https://img.shields.io/github/issues/py-econometrics/pyfixest)](https://github.com/py-econometrics/pyfixest/issues)
+[![All Contributors](https://img.shields.io/badge/all_contributors-27-green.svg?style=flat-square)](#contributors-)
 [![Downloads](https://static.pepy.tech/badge/pyfixest)](https://pepy.tech/project/pyfixest)
 [![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Pixi Badge][pixi-badge]][pixi-url]
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
 
 `PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest` - currently with only [one small exception](https://github.com/py-econometrics/pyfixest/issues/260).
+The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
 Nevertheless, for a quick introduction, you can take a look at the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
-For questions on `PyFixest`, head on over to our [PyFixest Discourse forum](https://pyfixest.discourse.group/).
+For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions).
 
 ## Features
 
--   **OLS**, **WLS** and **IV** Regression
+-   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
 -   Multiple Estimation Syntax
+-   Probit, Logit and Gaussian Family GLMs (currently without fixed effects demeaning, this is WIP)
 -   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
@@ -59,6 +62,14 @@ or the development version from github by running
 ```py
 python -m pip install git+https://github.com/py-econometrics/pyfixest
 ```
+
+For visualization features using the lets-plot backend, install the optional dependency:
+
+```py
+python -m pip install pyfixest[plots]
+```
+
+Note that matplotlib is included by default, so you can always use the matplotlib backend for plotting even without installing the optional lets-plot dependency.
 
 ## Benchmarks
 
@@ -251,7 +262,12 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/RoyalTS"><img src="https://avatars.githubusercontent.com/u/702580?v=4?s=100" width="100px;" alt="Tobias Schmidt"/><br /><sub><b>Tobias Schmidt</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=RoyalTS" title="Documentation">📖</a></td>
     </tr>
     <tr>
-      <td align="center" valign="top" width="12.5%"><a href="https://github.com/escherpf"><img src="https://avatars.githubusercontent.com/u/3789736?v=4?s=100" width="100px;" alt="escherpf"/><br /><sub><b>escherpf</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aescherpf" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/escherpf"><img src="https://avatars.githubusercontent.com/u/3789736?v=4?s=100" width="100px;" alt="escherpf"/><br /><sub><b>escherpf</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Aescherpf" title="Bug reports">🐛</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=escherpf" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://www.ivanhigueram.com"><img src="https://avatars.githubusercontent.com/u/9004403?v=4?s=100" width="100px;" alt="Iván Higuera Mendieta"/><br /><sub><b>Iván Higuera Mendieta</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=ivanhigueram" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/adamvig96"><img src="https://avatars.githubusercontent.com/u/52835042?v=4?s=100" width="100px;" alt="Ádám Vig"/><br /><sub><b>Ádám Vig</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=adamvig96" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://szymon.info"><img src="https://avatars.githubusercontent.com/u/13162607?v=4?s=100" width="100px;" alt="Szymon Sacher"/><br /><sub><b>Szymon Sacher</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=elchorro" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/AronNemeth"><img src="https://avatars.githubusercontent.com/u/96979880?v=4?s=100" width="100px;" alt="AronNemeth"/><br /><sub><b>AronNemeth</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=AronNemeth" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/DTchebotarev"><img src="https://avatars.githubusercontent.com/u/6100882?v=4?s=100" width="100px;" alt="Dmitri Tchebotarev"/><br /><sub><b>Dmitri Tchebotarev</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=DTchebotarev" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

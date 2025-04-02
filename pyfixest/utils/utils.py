@@ -1,15 +1,18 @@
-from typing import Optional, Union
+from collections.abc import Mapping
+from typing import Any, Optional, Union
 
+import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
+from formulaic.utils.context import capture_context as _capture_context
 
 from pyfixest.utils.dev_utils import _create_rng
 
 
 def ssc(
     adj: bool = True,
-    fixef_k: str = "none",
+    fixef_k: str = "nested",
     cluster_adj: bool = True,
     cluster_df: str = "min",
 ) -> dict[str, Union[str, bool]]:
@@ -85,8 +88,10 @@ def ssc(
     """
     if adj not in [True, False]:
         raise ValueError("adj must be True or False.")
-    if fixef_k not in ["none"]:
-        raise ValueError("fixef_k must be 'none'.")
+    if fixef_k not in ["none", "full", "nested"]:
+        raise ValueError(
+            f"fixef_k must be 'none', 'full', or 'nested' but it is {fixef_k}."
+        )
     if cluster_adj not in [True, False]:
         raise ValueError("cluster_adj must be True or False.")
     if cluster_df not in ["conventional", "min"]:
@@ -101,14 +106,18 @@ def ssc(
 
 
 def get_ssc(
-    ssc_dict: dict[str, Union[str, bool]],
+    *,
+    ssc_dict: dict[str, Union[str, str | bool]],
     N: int,
     k: int,
+    k_fe: int,
+    k_fe_nested: int,
+    n_fe: int,
+    n_fe_fully_nested: int,
     G: int,
     vcov_sign: int,
     vcov_type: "str",
-    is_twoway: bool = False,
-) -> np.ndarray:
+) -> tuple[np.ndarray, int, int]:
     """
     Compute small sample adjustment factors.
 
@@ -119,21 +128,26 @@ def get_ssc(
     N : int
         The number of observations.
     k : int
-        The number of estimated parameters.
+        The number of estimated parameters (as in the first part of the model formula)
+    k_fe : int
+        The number of estimated fixed effects (as specified in the second part of the model formula).
+    k_fe_nested : int
+        The number of estimated fixed effects nested within clusters.
+    n_fe : int
+        The number of fixed effects in the model. I.e. 'Y ~ X1  | f1 + f2' has 2 fixed effects.
+    n_fe_fully_nested : int
+        The number of fixed effects that are fully nested within clusters.
     G : int
         The number of clusters.
     vcov_sign : array-like
         A vector that helps create the covariance matrix.
     vcov_type : str
         The type of covariance matrix. Must be one of "iid", "hetero", or "CRV".
-    is_twoway : bool, optional
-        Whether the covariance matrix is of the form V = V_1 + V_2 - V_12.
-            Default is False.
 
     Returns
     -------
-    float
-        A small sample adjustment factor.
+    tuple of np.ndarray and int
+        A small sample adjustment factor and the effective number of coefficients k used in the adjustment.
 
     Raises
     ------
@@ -142,16 +156,41 @@ def get_ssc(
         "conventional" nor "min".
     """
     adj = ssc_dict["adj"]
-    fixef_k = ssc_dict["fixef_k"]  # noqa: F841 TODO: is this used?
+    fixef_k = ssc_dict["fixef_k"]
     cluster_adj = ssc_dict["cluster_adj"]
     cluster_df = ssc_dict["cluster_df"]
 
     cluster_adj_value = 1.0
     adj_value = 1.0
 
-    if adj:
-        adj_value = (N - 1) / (N - k)
+    # see here for why:
+    # https://github.com/lrberge/fixest/issues/554
 
+    # subtract one for each fixed effect, except for the first
+    k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
+
+    if fixef_k == "none":
+        dof_k = k
+    elif fixef_k == "nested":
+        if n_fe == 0:
+            dof_k = k
+        elif k_fe_nested == 0:
+            # no nested fe, so just add all fixed effects
+            dof_k = k + k_fe_adj
+        else:
+            # subtract nested fixed effects and add one for each fully nested
+            # subtracted fixed effect back
+            dof_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
+    elif fixef_k == "full":
+        # add all fixed effects
+        dof_k = k + k_fe_adj if n_fe > 0 else k
+    else:
+        raise ValueError("fixef_k is neither none, nested, nor full.")
+
+    if adj:
+        adj_value = (N - 1) / (N - dof_k)
+
+    # cluster_adj applied with G = N for hetero but not for iid
     if vcov_type in ["hetero", "CRV"] and cluster_adj:
         if cluster_df == "conventional":
             cluster_adj_value = G / (G - 1)
@@ -161,7 +200,97 @@ def get_ssc(
         else:
             raise ValueError("cluster_df is neither conventional nor min.")
 
-    return np.array([adj_value * cluster_adj_value * vcov_sign])
+    df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
+
+    return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
+
+
+@nb.njit(parallel=True)
+def _count_fixef_fully_nested_all(
+    all_fixef_array: np.ndarray,
+    cluster_colnames: np.ndarray,
+    cluster_data: np.ndarray,
+    fe_data: np.ndarray,
+) -> tuple[np.ndarray, int]:
+    """
+
+    Compute the number of nested fixed effects over all fixed effects.
+
+    Parameters
+    ----------
+    all_fixef_array : np.ndarray
+        A 1D array with the names of all fixed effects in the model.
+    cluster_colnames : np.ndarray
+        A 1D array with the names of all cluster variables in the model.
+    cluster_data : np.ndarray
+        A 2D array with the cluster data.
+    fe_data : np.ndarray
+        A 2D array with the fixed effects.
+
+    Returns
+    -------
+    k_fe_nested : np.ndarray
+        A numpy array with shape (all_fixef_array.size, ) containing boolean values that
+        indicate whether a given fixed effect is fully nested within a cluster or not.
+    n_fe_fully_nested : int
+        The number of fixed effects that are fully nested within a clusters.
+    """
+    k_fe_nested_flag = np.zeros(all_fixef_array.size, dtype=np.bool_)
+    n_fe_fully_nested = 0
+
+    for fi in nb.prange(all_fixef_array.size):
+        this_fe_name = all_fixef_array[fi]
+
+        found_in_cluster = False
+        for col_i in range(cluster_colnames.size):
+            if this_fe_name == cluster_colnames[col_i]:
+                found_in_cluster = True
+                k_fe_nested_flag[fi] = True
+                n_fe_fully_nested += 1
+                break
+
+        if not found_in_cluster:
+            for col_j in range(cluster_colnames.size):
+                clusters_col = cluster_data[:, col_j]
+                fe_col = fe_data[:, fi]
+                is_fully_nested = _count_fixef_fully_nested(clusters_col, fe_col)
+                if is_fully_nested:
+                    k_fe_nested_flag[fi] = True
+                    n_fe_fully_nested += 1
+                    break
+
+    return k_fe_nested_flag, n_fe_fully_nested
+
+
+@nb.njit
+def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> bool:
+    """
+    Check if a given fixed effect is fully nested within a given cluster.
+
+    Parameters
+    ----------
+    clusters : np.ndarray
+        A vector of cluster assignments.
+    f : np.ndarray
+        A matrix of fixed effects.
+
+    Returns
+    -------
+    np.array(np.bool_)
+        An array of booleans indicating whether each fixed effect is fully nested within clusters.
+        True if the fixed effect is fully nested within clusters, False otherwise.
+    """
+    unique_vals = np.unique(f)
+    n_unique_vals = len(unique_vals)
+    counts = 0
+    for val in unique_vals:
+        mask = f == val
+        distinct_clusters = np.unique(clusters[mask])
+        if len(distinct_clusters) == 1:
+            counts += 1
+    is_fe_nested = counts == n_unique_vals
+
+    return is_fe_nested
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
@@ -322,3 +451,34 @@ def simultaneous_crit_val(
     p = C.shape[0]
     tmaxs = np.max(np.abs(msqrt(C) @ rng.normal(size=(p, S))), axis=0)
     return np.quantile(tmaxs, 1 - alpha)
+
+
+def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]:
+    """
+    Explicitly capture the context to be used by subsequent formula
+    materialisations.
+
+    Parameters
+    ----------
+    context: Union[int, Mapping[str, Any]]
+        The context from which variables (and custom transforms/etc)
+        should be inherited.
+
+        When specified as an integer, it is interpreted as a frame offset
+        from the caller's frame. Since we use this function in the context
+        of a library, we need to account for the extra frames, hence
+        we add 2 to the context (one for this and one for the frame the
+        function is being called in).
+
+        Otherwise, a mapping from variable name to value is expected.
+
+        When nesting in a library, and attempting to capture user-context,
+        make sure you account for the extra frames introduced by your wrappers.
+
+    Returns
+    -------
+    Mapping[str, Any]
+        The context that should be later passed to the Formulaic materialization
+        procedure like: `.get_model_matrix(..., context=<this object>)`.
+    """
+    return _capture_context(context + 2) if isinstance(context, int) else context

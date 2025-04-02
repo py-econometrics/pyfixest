@@ -1,11 +1,15 @@
 from unittest.mock import patch
 
+import matplotlib
 import pandas as pd
 import pytest
 
+import pyfixest as pf
 from pyfixest.estimation.estimation import feols
-from pyfixest.report.visualize import coefplot, iplot, set_figsize
+from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
+
+matplotlib.use("Agg")  # Use a non-interactive backend
 
 
 @pytest.fixture
@@ -51,6 +55,9 @@ def fit_multi(data):
     ids=["lets_plot", "matplotlib"],
 )
 def test_set_figsize(figsize, plot_backend):
+    if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     figsize_not_none = set_figsize(figsize, plot_backend)
 
     if figsize is None:
@@ -120,6 +127,9 @@ def test_iplot(
     coord_flip,
     labels,
 ):
+    if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -197,6 +207,9 @@ def test_coefplot(
     coord_flip,
     labels,
 ):
+    if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     plot_kwargs = {
         "plot_backend": plot_backend,
         "figsize": figsize,
@@ -237,6 +250,9 @@ def test_coefplot_non_default_figsize_matplotlib(_coefplot_matplotlib_mock, fit1
 @pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_lets_plot")
 def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    if not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     coefplot(fit1, plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (500, 300)
@@ -245,6 +261,82 @@ def test_coefplot_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data
 @pytest.mark.extended
 @patch("pyfixest.report.visualize._coefplot_lets_plot")
 def test_coefplot_non_default_figsize_lets_plot(_coefplot_lets_plot_mock, fit1, data):
+    if not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
     coefplot(fit1, figsize=(600, 400), plot_backend="lets_plot")
     _, kwargs = _coefplot_lets_plot_mock.call_args
     assert kwargs.get("figsize") == (600, 400)
+
+
+def test_rename_models():
+    # Skip the entire test if lets-plot is not installed
+    # This is because the default backend is lets-plot if available
+    if not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ i(f1)", data=df)
+    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+
+    pf.iplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    pf.coefplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+    )
+
+    fit_multi = pf.feols("Y ~ sw(f1, f2)", data=df)
+    fit_multi.coefplot(rename_models={"Y~f1": "Model 1", "Y~f2": "Model 2"})
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint=True)
+
+    pf.coefplot(models=[fit1], rename_models={"Y~i(f1)": "Model 1"}, joint="both")
+
+    with pytest.warns(
+        UserWarning,
+        match="The following model names specified in rename_models are not found in the models",
+    ):
+        coefplot(models=[fit1], rename_models={"Y~a": "Model 1"}, joint="bad")
+
+
+def test_rename_models_matplotlib():
+    """Test rename_models functionality with matplotlib backend."""
+    df = pf.get_data()
+    fit1 = pf.feols("Y ~ i(f1)", data=df)
+    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+
+    pf.iplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+        plot_backend="matplotlib",
+    )
+
+    pf.coefplot(
+        models=[fit1, fit2],
+        rename_models={"Y~i(f1)": "Model 1", "Y~i(f1)+f2": "Model 2"},
+        plot_backend="matplotlib",
+    )
+
+    fit_multi = pf.feols("Y ~ sw(f1, f2)", data=df)
+    fit_multi.coefplot(
+        rename_models={"Y~f1": "Model 1", "Y~f2": "Model 2"},
+        plot_backend="matplotlib",
+    )
+
+    pf.coefplot(
+        models=[fit1],
+        rename_models={"Y~i(f1)": "Model 1"},
+        joint=True,
+        plot_backend="matplotlib",
+    )
+
+    pf.coefplot(
+        models=[fit1],
+        rename_models={"Y~i(f1)": "Model 1"},
+        joint="both",
+        plot_backend="matplotlib",
+    )

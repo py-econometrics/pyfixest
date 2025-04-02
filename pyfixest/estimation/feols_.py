@@ -2,23 +2,33 @@ import functools
 import gc
 import re
 import warnings
+from collections.abc import Mapping
 from importlib import import_module
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
-from scipy.sparse import diags
+from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import PredictionType, _validate_literal_argument
+from pyfixest.estimation.literals import (
+    PredictionErrorOptions,
+    PredictionType,
+    _validate_literal_argument,
+)
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
+from pyfixest.estimation.prediction import (
+    _compute_prediction_error,
+    _get_fixed_effects_prediction_component,
+    get_design_matrix_and_yhat,
+)
 from pyfixest.estimation.ritest import (
     _decode_resampvar,
     _get_ritest_pvalue,
@@ -26,6 +36,7 @@ from pyfixest.estimation.ritest import (
     _get_ritest_stats_slow,
     _plot_ritest_pvalue,
 )
+from pyfixest.estimation.solvers import solve_ols
 from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
@@ -41,7 +52,12 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
     _select_order_coefs,
 )
-from pyfixest.utils.utils import get_ssc, simultaneous_crit_val
+from pyfixest.utils.utils import (
+    _count_fixef_fully_nested_all,
+    capture_context,
+    get_ssc,
+    simultaneous_crit_val,
+)
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -77,6 +93,11 @@ class Feols:
     solver : str, optional.
         The solver to use for the regression. Can be either "np.linalg.solve" or
         "np.linalg.lstsq". Defaults to "np.linalg.solve".
+    context : int or Mapping[str, Any]
+        A dictionary containing additional context variables to be used by
+        formulaic during the creation of the model matrix. This can include
+        custom factorization functions, transformations, or any other
+        variables that need to be available in the formula environment.
 
     Attributes
     ----------
@@ -183,8 +204,10 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-    _solver: str
-        The solver used to fit the normal equation.
+    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+        default is 'np.linalg.solve'. Solver to use for the estimation.
+    _demeaner_backend: Literal["numba", "jax"]
+        The backend used for demeaning.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -210,16 +233,24 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: str = "np.linalg.solve",
+        solver: Literal[
+            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+        ] = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
-        self._model_name = f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self._model_name = (
+            FixestFormula.fml
+            if self._sample_split_var is None
+            else f"{FixestFormula.fml} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        )
         self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
@@ -241,11 +272,13 @@ class Feols:
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
         self._solver = solver
+        self._demeaner_backend = demeaner_backend
         self._lookup_demeaned_data = lookup_demeaned_data
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
         self._use_mundlak = False
+        self._context = capture_context(context)
 
         self._support_crv3_inference = True
         if self._weights_name is not None:
@@ -332,6 +365,7 @@ class Feols:
             drop_singletons=self._drop_singletons,
             drop_intercept=self._drop_intercept,
             weights=self._weights_name,
+            context=self._context,
         )
 
         self._Y = mm_dict.get("Y")
@@ -344,13 +378,18 @@ class Feols:
         self._na_index = mm_dict.get("na_index")
         self._na_index_str = mm_dict.get("na_index_str")
         self._icovars = mm_dict.get("icovars")
+        self._X_is_empty = mm_dict.get("X_is_empty")
+        self._model_spec = mm_dict.get("model_spec")
 
         self._coefnames = self._X.columns.tolist()
         self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
         self._depvar = self._Y.columns[0]
-        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+
         self._has_fixef = self._fe is not None
         self._fixef = self.FixestFormula._fval
+
+        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
+        self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         # update data:
         self._data = _drop_cols(self._data, self._na_index)
@@ -407,6 +446,7 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._demeaner_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
@@ -438,34 +478,6 @@ class Feols:
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
-    def solve_ols(self, tZX: np.ndarray, tZY: np.ndarray, solver: str):
-        """
-        Solve the ordinary least squares problem using the specified solver.
-
-        Parameters
-        ----------
-        tZX (array-like): Z'X.
-        tZY (array-like): Z'Y.
-        solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-        "np.linalg.solve", and "scipy.sparse.linalg.lsqr".
-
-        Returns
-        -------
-        array-like: The solution to the ordinary least squares problem.
-
-        Raises
-        ------
-        ValueError: If the specified solver is not supported.
-        """
-        if solver == "np.linalg.lstsq":
-            return np.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
-        elif solver == "np.linalg.solve":
-            return np.linalg.solve(tZX, tZY).flatten()
-        elif solver == "scipy.sparse.linalg.lsqr":
-            return lsqr(tZX, tZY)[0].flatten()
-        else:
-            raise ValueError(f"Solver {solver} not supported.")
-
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.values.flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
@@ -489,7 +501,7 @@ class Feols:
             self._tZX = _Z.T @ _X
             self._tZy = _Z.T @ _Y
 
-            self._beta_hat = self.solve_ols(self._tZX, self._tZy, _solver)
+            self._beta_hat = solve_ols(self._tZX, self._tZy, _solver)
 
             self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
 
@@ -547,12 +559,9 @@ class Feols:
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
-        # _tZXinv = self._tZXinv
         _hessian = self._hessian
 
-        _ssc_dict = self._ssc_dict
-        _N = self._N
-        _k = self._k
+        # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
         _check_vcov_input(vcov, _data)
@@ -566,15 +575,25 @@ class Feols:
         self._bread = _compute_bread(_is_iv, _tXZ, _tZZinv, _tZX, _hessian)
 
         # compute vcov
+
+        ssc_kwargs = {
+            "ssc_dict": self._ssc_dict,
+            "N": self._N,
+            "k": self._k,
+            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "n_fe": self._n_fe,
+        }
+
         if self._vcov_type == "iid":
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=1,
-                vcov_sign=1,
-                vcov_type="iid",
-            )
+            ssc_kwargs_iid = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "iid",
+                "G": 1,
+            }
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
 
             self._vcov = self._ssc * self._vcov_iid()
 
@@ -582,15 +601,16 @@ class Feols:
             # this is what fixest does internally: see fixest:::vcov_hetero_internal:
             # adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
 
-            self._ssc = get_ssc(
-                ssc_dict=_ssc_dict,
-                N=_N,
-                k=_k,
-                G=_N,  # all clusters are singletons
-                vcov_sign=1,
-                vcov_type="hetero",
-            )
+            ssc_kwargs_hetero = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N,
+            }
 
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "CRV":
@@ -614,29 +634,60 @@ class Feols:
                 )
 
             self._G = _count_G_for_ssc_correction(
-                cluster_df=self._cluster_df, ssc_dict=_ssc_dict
+                cluster_df=self._cluster_df, ssc_dict=self._ssc_dict
             )
 
             # loop over columns of cluster_df
             vcov_sign_list = [1, 1, -1]
+            df_t_full = np.zeros(self._cluster_df.shape[1])
+
+            cluster_arr_int = np.column_stack(
+                [
+                    pd.factorize(self._cluster_df[col])[0]
+                    for col in self._cluster_df.columns
+                ]
+            )
+
+            k_fe_nested = 0
+            n_fe_fully_nested = 0
+            if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
+                k_fe_nested_flag, n_fe_fully_nested = _count_fixef_fully_nested_all(
+                    all_fixef_array=np.array(
+                        self._fixef.replace("^", "_").split("+"), dtype=str
+                    ),
+                    cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
+                    cluster_data=cluster_arr_int,
+                    fe_data=self._fe.to_numpy()
+                    if isinstance(self._fe, pd.DataFrame)
+                    else self._fe,
+                )
+
+                k_fe_nested = (
+                    np.sum(self._k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+                )
 
             self._vcov = np.zeros((self._k, self._k))
 
-            for x, col in enumerate(self._cluster_df.columns):
-                cluster_col_pd = self._cluster_df[col]
-                cluster_col, _ = pd.factorize(cluster_col_pd)
+            for x, _ in enumerate(self._cluster_df.columns):
+                cluster_col = cluster_arr_int[:, x]
                 clustid = np.unique(cluster_col)
 
-                ssc = get_ssc(
-                    ssc_dict=_ssc_dict,
-                    N=_N,
-                    k=_k,
-                    G=self._G[x],
-                    vcov_sign=vcov_sign_list[x],
-                    vcov_type="CRV",
-                )
+                ssc_kwargs_crv = {
+                    "k_fe_nested": k_fe_nested,
+                    "n_fe_fully_nested": n_fe_fully_nested,
+                    "G": self._G[x],
+                    "vcov_sign": vcov_sign_list[x],
+                    "vcov_type": "CRV",
+                }
+
+                all_kwargs = {**ssc_kwargs, **ssc_kwargs_crv}
+                ssc, dof_k, df_t = get_ssc(**all_kwargs)
 
                 self._ssc = np.array([ssc]) if x == 0 else np.append(self._ssc, ssc)
+                self._dof_k = dof_k  # the same across all vcov's
+
+                # update. take min(df_t) ad the end of loop
+                df_t_full[x] = df_t
 
                 if self._vcov_type_detail == "CRV1":
                     self._vcov += self._ssc[x] * self._vcov_crv1(
@@ -665,7 +716,8 @@ class Feols:
                         self._vcov += self._ssc[x] * self._vcov_crv3_slow(
                             clustid=clustid, cluster_col=cluster_col
                         )
-
+            # take minimum cluster for dof for multiway clustering
+            self._df_t = np.min(df_t_full)
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -674,14 +726,8 @@ class Feols:
     def _vcov_iid(self):
         _N = self._N
         _u_hat = self._u_hat
-        _method = self._method
         _bread = self._bread
-
-        if _method == "feols":
-            sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
-        elif _method == "fepois":
-            sigma2 = 1
-
+        sigma2 = np.sum(_u_hat.flatten() ** 2) / (_N - 1)
         _vcov = _bread * sigma2
 
         return _vcov
@@ -714,35 +760,27 @@ class Feols:
         return _vcov
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        _Z = self._Z
-        _u_hat = self._u_hat
         _is_iv = self._is_iv
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
         _tZX = self._tZX
         _bread = self._bread
 
-        k_instruments = _Z.shape[1]
-        meat = np.zeros((k_instruments, k_instruments))
+        _scores = self._scores
 
-        # deviance uniquely for Poisson
-
-        weighted_uhat = _u_hat.reshape(-1, 1) if _u_hat.ndim == 1 else _u_hat
+        k = _scores.shape[1]
+        meat = np.zeros((k, k))
 
         meat = _crv1_meat_loop(
-            _Z=_Z.astype(np.float64),
-            weighted_uhat=weighted_uhat.astype(np.float64),
+            scores=_scores.astype(np.float64),
             clustid=clustid,
             cluster_col=cluster_col,
         )
 
-        if _is_iv is False:
-            _vcov = _bread @ meat @ _bread
-        else:
-            meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX
-            _vcov = _bread @ meat @ _bread
+        meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX if _is_iv else meat
+        vcov = _bread @ meat @ _bread
 
-        return _vcov
+        return vcov
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
         _k = self._k
@@ -840,29 +878,28 @@ class Feols:
         Returns
         -------
         None
+
+        Details
+        -------
+        relevant fixest functions:
+        - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
+        -
         """
-        _vcov = self._vcov
+        if len(self._vcov) == 0:
+            raise EmptyVcovError()
         _beta_hat = self._beta_hat
-        _vcov_type = self._vcov_type
-        _N = self._N
-        _k = self._k
-        _G = (
-            np.min(np.array(self._G)) if self._vcov_type == "CRV" else np.array(self._G)
-        )  # fixest default
+
         _method = self._method
 
-        self._se = np.sqrt(np.diagonal(_vcov))
+        self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = _beta_hat / self._se
-
-        df = _N - _k if _vcov_type in ["iid", "hetero"] else _G - 1
-
         # use t-dist for linear models, but normal for non-linear models
-        if _method == "fepois":
+        if _method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
             self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
             z = np.abs(norm.ppf(alpha / 2))
         else:
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), df))
-            z = np.abs(t.ppf(alpha / 2, df))
+            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), self._df_t))
+            z = np.abs(t.ppf(alpha / 2, self._df_t))
 
         z_se = z * self._se
         self._conf_int = np.array([_beta_hat - z_se, _beta_hat + z_se])
@@ -1366,13 +1403,13 @@ class Feols:
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert (
-            self._supports_cluster_causal_variance
-        ), "The model does not support the causal cluster variance estimator."
+        assert self._supports_cluster_causal_variance, (
+            "The model does not support the causal cluster variance estimator."
+        )
         assert isinstance(treatment, str), "treatment must be a string."
-        assert (
-            isinstance(cluster, str) or cluster is None
-        ), "cluster must be a string or None."
+        assert isinstance(cluster, str) or cluster is None, (
+            "cluster must be a string or None."
+        )
         assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
@@ -1423,9 +1460,9 @@ class Feols:
         data = self._data
         Y = self._Y.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(
-            np.isin(W, [0, 1])
-        ), "Treatment variable must be binary with values 0 and 1"
+        assert np.all(np.isin(W, [0, 1])), (
+            "Treatment variable must be binary with values 0 and 1"
+        )
         X = self._X
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1503,9 +1540,18 @@ class Feols:
             n_splits=n_splits,
         )
 
-    def _model_matrix_one_hot(self) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    def _model_matrix_one_hot(
+        self, output="numpy"
+    ) -> tuple[np.ndarray, Union[np.ndarray, spmatrix], list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
+
+        Parameters
+        ----------
+        output : str, optional
+            The type of output. Defaults to "numpy", in which case the returned matrices
+            Y and X are numpy arrays. If set to "sparse", the returned design matrix X will
+            be sparse.
 
         Returns
         -------
@@ -1521,15 +1567,18 @@ class Feols:
             # output = "pandas" as Y, X need to be np.arrays for parallel processing
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
-            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output="pandas")
+
+            Y, X = Formula(fml_dummies).get_model_matrix(self._data, output=output)
             xnames = X.model_spec.column_names
-            Y = Y.to_numpy().flatten()
-            X = X.to_numpy()
+            Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
+            X = csc_matrix(X) if output == "sparse" else X
 
         else:
             Y = self._Y.flatten()
             X = self._X
             xnames = self._coefnames
+
+        X = csc_matrix(X) if output == "sparse" else X
 
         return Y, X, xnames
 
@@ -1639,7 +1688,7 @@ class Feols:
         else:
             cluster_df = None
 
-        Y, X, xnames = self._model_matrix_one_hot()
+        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
@@ -1722,7 +1771,9 @@ class Feols:
         fixef_fml = "+".join(fixef_vars_C)
 
         fml_linear = f"{depvars} ~ {covars}"
-        Y, X = Formula(fml_linear).get_model_matrix(_data, output="pandas")
+        Y, X = Formula(fml_linear).get_model_matrix(
+            _data, output="pandas", context=self._context
+        )
         if self._X_is_empty:
             Y = Y.to_numpy()
             uhat = Y.flatten()
@@ -1767,7 +1818,10 @@ class Feols:
         atol: float = 1e-6,
         btol: float = 1e-6,
         type: PredictionType = "link",
-    ) -> np.ndarray:
+        se_fit: Optional[bool] = False,
+        interval: Optional[PredictionErrorOptions] = None,
+        alpha: float = 0.05,
+    ) -> Union[np.ndarray, pd.DataFrame]:
         """
         Predict values of the model on new data.
 
@@ -1792,66 +1846,103 @@ class Feols:
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        link:
+        type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
+        se_fit: Optional[bool], optional
+            If True, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to False.
+        interval: str, optional
+            The type of interval to compute. Can be either 'prediction' or None.
+        alpha: float, optional
+            The alpha level for the confidence interval. Defaults to 0.05. Only
+            used if interval = "prediction" is not None.
 
         Returns
         -------
-        y_hat : np.ndarray
-            A flat np.array with predicted values of the regression model.
+        Union[np.ndarray, pd.DataFrame]
+            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
+            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
+            standard errors if argument "se_fit=True".
         """
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
 
+        if interval == "prediction" or se_fit:
+            if self._has_fixef:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with fixed effects."
+                )
+
+            if self._has_weights:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with weights."
+                )
+
         _validate_literal_argument(type, PredictionType)
+        if interval is not None:
+            _validate_literal_argument(interval, PredictionErrorOptions)
 
         if newdata is None:
-            if type == "link" or self._method == "feols":
-                return self._Y_hat_link
+            # note: no need to worry about fixed effects, as not supported with
+            # prediction errors; will throw error later;
+            # divide by sqrt(weights) as self._X is "weighted"
+
+            X = self._X
+            X_index = np.arange(self._N)
+
+            yhat = (
+                self._Y_hat_link
+                if type == "link" or self._method == "feols"
+                else self._Y_hat_response
+            )
+            if not se_fit and interval != "prediction":
+                return yhat
             else:
-                return self._Y_hat_response
-
-        newdata = _narwhals_to_pandas(newdata).reset_index(drop=False)
-
-        if not self._X_is_empty:
-            xfml = self._fml.split("|")[0].split("~")[1]
-            if self._icovars is not None:
-                raise NotImplementedError(
-                    "predict() with argument newdata is not supported with i() syntax to interact variables."
+                prediction_df = _compute_prediction_error(
+                    model=self,
+                    nobs=self._N,
+                    yhat=yhat,
+                    X=X,
+                    X_index=X_index,
+                    alpha=alpha,
                 )
-            X = Formula(xfml).get_model_matrix(newdata)
-            X_index = X.index
-            coef_idx = np.isin(self._coefnames, X.columns)
-            X = X[np.array(self._coefnames)[coef_idx]]
-            X = X.to_numpy()
-            y_hat = np.full(newdata.shape[0], np.nan)
-            y_hat[X_index] = X @ self._beta_hat[coef_idx]
+
+                if interval == "prediction":
+                    return prediction_df
+                else:
+                    return prediction_df["se_fit"].to_numpy()
+
         else:
-            y_hat = np.zeros(newdata.shape[0])
+            y_hat, X, X_index = get_design_matrix_and_yhat(
+                model=self,
+                newdata=newdata if newdata is not None else None,
+                context=self._context,
+            )
 
-        if self._has_fixef:
-            if self._sumFE is None:
-                self.fixef(atol, btol)
-            fvals = self._fixef.split("+")
-            df_fe = newdata[fvals].astype(str)
-            # populate fixed effect dicts with omitted categories handling
-            fixef_dicts = {}
-            for f in fvals:
-                fdict = self._fixef_dict[f"C({f})"]
-                omitted_cat = set(self._data[f].unique().astype(str).tolist()) - set(
-                    fdict.keys()
+            y_hat += _get_fixed_effects_prediction_component(
+                model=self, newdata=newdata, atol=atol, btol=btol
+            )
+
+            if not se_fit and interval != "prediction":
+                return y_hat
+            else:
+                prediction_df = _compute_prediction_error(
+                    model=self,
+                    nobs=newdata.shape[0],
+                    yhat=y_hat,
+                    X=X,
+                    X_index=X_index,
+                    alpha=alpha,
                 )
-                if omitted_cat:
-                    fdict.update({x: 0 for x in omitted_cat})
-                fixef_dicts[f"C({f})"] = fdict
-            _fixef_mat = _apply_fixef_numpy(df_fe.values, fixef_dicts)
-            y_hat += np.sum(_fixef_mat, axis=1)
 
-        return y_hat.flatten()
+                if interval == "prediction":
+                    return prediction_df
+                else:
+                    return prediction_df["se_fit"].to_numpy()
 
     def get_performance(self) -> None:
         """
@@ -1880,48 +1971,31 @@ class Feols:
         _u_hat = self._u_hat
         _N = self._N
         _k = self._k
+        _has_intercept = not self._drop_intercept
         _has_fixef = self._has_fixef
         _weights = self._weights
-        _has_weights = self._has_weights
 
         if _has_fixef:
             _k_fe = np.sum(self._k_fe - 1) + 1
-            _adj_factor = (_N - _k_fe) / (_N - _k - _k_fe)
+            _adj_factor = (_N - _has_intercept) / (_N - _k - _k_fe)
+            _adj_factor_within = (_N - _k_fe) / (_N - _k - _k_fe)
         else:
-            _adj_factor = (_N) / (_N - 1)
+            _adj_factor = (_N - _has_intercept) / (_N - _k)
 
         ssu = np.sum(_u_hat**2)
+        ssy = np.sum(_weights * (_Y - np.average(_Y, weights=_weights)) ** 2)
+        self._rmse = np.sqrt(ssu / _N)
+        self._r2 = 1 - (ssu / ssy)
+        self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
 
-        ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-
-        if _has_weights:
-            ssy = np.sum(_Y**2) - np.sum(_Y**2) / np.sum(_weights)
-            self._rmse = np.nan
-            self._r2 = np.nan
-            self._adj_r2 = np.nan
-        else:
-            ssy = np.sum((_Y - np.mean(_Y)) ** 2)
-            self._rmse = np.sqrt(ssu / _N)
-            self._r2 = 1 - (ssu / ssy)
-            self._adj_r2 = 1 - (ssu / ssy) * _adj_factor
-
-        if _has_fixef and not _has_weights:
-            ssy_within = np.sum((_Y_within - np.mean(_Y_within)) ** 2)
+        if _has_fixef:
+            ssy_within = np.sum(_Y_within**2)
             self._r2_within = 1 - (ssu / ssy_within)
-            self._r2_adj_within = 1 - (ssu / ssy_within) * _adj_factor
-        else:
-            self._r2_within = np.nan
-            self._adj_r2_within = np.nan
-
-        # overwrite self._adj_r2 and self._adj_r2_within
-        # reason: currently I cannot match fixest dof correction, so
-        # better not to report it
-        self._adj_r2 = np.nan
-        self._adj_r2_within = np.nan
+            self._adj_r2_within = 1 - (ssu / ssy_within) * _adj_factor_within
 
     def tidy(
         self,
-        alpha: Optional[float] = None,
+        alpha: float = 0.05,
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
@@ -1941,29 +2015,25 @@ class Feols:
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
         """
-        if alpha is None:
-            ub, lb = 0.975, 0.025
-            self.get_inference()
-        else:
-            ub, lb = 1 - alpha / 2, alpha / 2
+        ub, lb = 1 - alpha / 2, alpha / 2
+        try:
             self.get_inference(alpha=alpha)
-
-        _coefnames = self._coefnames
-        _se = self._se
-        _tstat = self._tstat
-        _pvalue = self._pvalue
-        _beta_hat = self._beta_hat
-        _conf_int = self._conf_int
+        except EmptyVcovError:
+            warnings.warn(
+                "Empty variance-covariance matrix detected",
+                UserWarning,
+            )
 
         tidy_df = pd.DataFrame(
             {
-                "Coefficient": _coefnames,
-                "Estimate": _beta_hat,
-                "Std. Error": _se,
-                "t value": _tstat,
-                "Pr(>|t|)": _pvalue,
-                f"{lb*100:.1f}%": _conf_int[0],
-                f"{ub*100:.1f}%": _conf_int[1],
+                "Coefficient": self._coefnames,
+                "Estimate": self._beta_hat,
+                "Std. Error": self._se,
+                "t value": self._tstat,
+                "Pr(>|t|)": self._pvalue,
+                # use slice because self._conf_int might be empty
+                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
             }
         )
 
@@ -2103,15 +2173,8 @@ class Feols:
             raise ValueError("No coefficients match the keep/drop patterns.")
 
         if not joint:
-            if self._vcov_type in ["iid", "hetero"]:
-                df = self._N - self._k
-            else:
-                _G = np.min(np.array(self._G))  # fixest default
-                df = _G - 1
-
-            # use t-dist for linear models, but normal for non-linear models
             if self._method == "feols":
-                crit_val = np.abs(t.ppf(alpha / 2, df))
+                crit_val = np.abs(t.ppf(alpha / 2, self._df_t))
             else:
                 crit_val = np.abs(norm.ppf(alpha / 2))
         else:
@@ -2129,8 +2192,8 @@ class Feols:
 
         df = pd.DataFrame(
             {
-                f"{alpha / 2*100:.1f}%": lb,
-                f"{(1-alpha / 2)*100:.1f}%": ub,
+                f"{alpha / 2 * 100:.1f}%": lb,
+                f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
         # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
@@ -2361,8 +2424,8 @@ class Feols:
         )
 
         alpha = 1 - level
-        ci_lower_name = str(f"{alpha/2*100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1-alpha/2)*100:.1f}% (Pr(>|t|))")
+        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
+        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
         res[ci_lower_name] = ci_pvalue[0]
         res[ci_upper_name] = ci_pvalue[1]
 
@@ -2572,7 +2635,7 @@ def _drop_multicollinear_variables(
         names_array = np.delete(names_array, id_excl)
         collin_index = id_excl.tolist()
 
-    return X, names_array.tolist(), collin_vars, collin_index
+    return X, list(names_array), collin_vars, collin_index
 
 
 @nb.njit(parallel=False)
@@ -2660,17 +2723,17 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "CRV1",
             "CRV3",
         ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(
-            next(iter(vcov.values())), str
-        ), "vcov dict value must be a string"
+        assert isinstance(next(iter(vcov.values())), str), (
+            "vcov dict value must be a string"
+        )
         deparse_vcov = next(iter(vcov.values())).split("+")
         assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(
-            v in data.columns for v in vcov
-        ), "vcov list must contain columns in the data"
+        assert all(v in data.columns for v in vcov), (
+            "vcov list must contain columns in the data"
+        )
     if isinstance(vcov, str):
         assert vcov in [
             "iid",
@@ -2749,13 +2812,3 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
         )
 
     return vcov_type, vcov_type_detail, is_clustered, clustervar
-
-
-def _apply_fixef_numpy(df_fe_values, fixef_dicts):
-    fixef_mat = np.zeros_like(df_fe_values, dtype=float)
-    for i, (_, subdict) in enumerate(fixef_dicts.items()):
-        unique_levels, inverse = np.unique(df_fe_values[:, i], return_inverse=True)
-        mapping = np.array([subdict.get(level, np.nan) for level in unique_levels])
-        fixef_mat[:, i] = mapping[inverse]
-
-    return fixef_mat

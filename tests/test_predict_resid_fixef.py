@@ -7,10 +7,9 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
-from pyfixest.estimation.estimation import feols, fepois
+import pyfixest as pf
 from pyfixest.utils.dev_utils import _extract_variable_level
 from pyfixest.utils.set_rpy2_path import update_r_paths
-from pyfixest.utils.utils import get_data
 
 update_r_paths()
 
@@ -22,7 +21,7 @@ stats = importr("stats")
 
 @pytest.fixture
 def data():
-    data = get_data(seed=65714, model="Fepois")
+    data = pf.get_data(seed=65714, model="Fepois")
     data = data.dropna()
 
     return data
@@ -48,8 +47,8 @@ def test_ols_prediction_internally(data, fml, weights):
     -----
     Currently only for OLS.
     """
-    # predict via feols, without fixed effect
-    mod = feols(fml=fml, data=data, vcov="iid", weights=weights)
+    # predict via pf.feols, without fixed effect
+    mod = pf.feols(fml=fml, data=data, vcov="iid", weights=weights)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)
     np.allclose(original_prediction, updated_prediction)
@@ -57,19 +56,20 @@ def test_ols_prediction_internally(data, fml, weights):
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
     # now expect error with updated predicted being a subset of data
-    with pytest.raises(ValueError):
-        updated_prediction = mod.predict(newdata=data.iloc[0:100, :])
-        np.allclose(original_prediction, updated_prediction)
+    updated_prediction2 = mod.predict(newdata=data.iloc[0:100, :])
+    assert len(updated_prediction2) != len(updated_prediction), (
+        "Arrays have the same length"
+    )
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
     with pytest.raises(TypeError):
-        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict(newdata=fit._data)
     with pytest.raises(TypeError):
-        fit = fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+        fit = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
         fit.predict()
 
 
@@ -83,8 +83,8 @@ def test_poisson_prediction_internally(data, weights, fml):
 )
 def test_vs_fixest(data, fml):
     """Test predict and resid methods against fixest."""
-    feols_mod = feols(fml=fml, data=data, vcov="HC1")
-    fepois_mod = fepois(fml=fml, data=data, vcov="HC1")
+    feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
+    fepois_mod = pf.fepois(fml=fml, data=data, vcov="HC1")
 
     data2 = data.copy()[1:500]
 
@@ -138,7 +138,8 @@ def test_vs_fixest(data, fml):
 
     # test on new data - OLS.
     if not np.allclose(
-        feols_mod.predict(newdata=data2), stats.predict(r_fixest_ols, newdata=data2)
+        feols_mod.predict(newdata=data2),
+        stats.predict(r_fixest_ols, newdata=data2),
     ):
         raise ValueError("Predictions for OLS are not equal")
 
@@ -170,11 +171,11 @@ def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
     # NaNs in depvar, covar and fixed effects
-    data = get_data()
+    data = pf.get_data()
 
     # test 1
     fml = "Y ~ X1 + X2 | f1"
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
@@ -187,7 +188,7 @@ def test_predict_nas():
     newdata.loc[199, "f1"] = np.nan
 
     fml = "Y ~ X1 + X2 | f1"
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=newdata)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=newdata)
@@ -204,7 +205,7 @@ def test_predict_nas():
 
     # test 3
     fml = "Y ~ X1 + X2 | f1 "
-    fit = feols(fml, data=data)
+    fit = pf.feols(fml, data=data)
     res = fit.predict(newdata=data)
     fit_r = fixest.feols(ro.Formula(fml), data=data)
     res_r = stats.predict(fit_r, newdata=data)
@@ -224,7 +225,7 @@ def test_predict_nas():
 def test_new_fixef_level(data, fml):
     data2 = data.copy()[1:500]
 
-    feols_mod = feols(fml=fml, data=data, vcov="HC1")
+    feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
     # fixest estimation
     r_fixest_ols = fixest.feols(
         ro.Formula(fml),
@@ -252,7 +253,7 @@ def test_categorical_covariate_predict():
 
     df_sub = df.query("x == 1 or x == 2 or x == 3").copy()
 
-    py_fit = feols("y ~ C(x, contr.treatment(base=1))", df)
+    py_fit = pf.feols("y ~ C(x, contr.treatment(base=1))", df)
     py_predict = py_fit.predict(df_sub)
 
     r_predict = np.array(
@@ -297,6 +298,17 @@ def test_categorical_covariate_predict():
     np.testing.assert_allclose(py_predict, r_predict, rtol=1e-08, atol=1e-08)
 
 
+def test_specific_categorical_prediction():
+    """Test prediction with a specific categorical case."""
+    test_df = pd.DataFrame(
+        {"y": [2, 3, 4, 5], "x": [1, 1, 2, 3], "f": ["a", "b", "a", "a"]}
+    )
+    test_model = pf.feols("y ~ x + C(f)", data=test_df)
+    prediction = test_model.predict(newdata=pd.DataFrame({"x": [1], "f": ["b"]}))
+    expected_prediction = 3
+    np.testing.assert_almost_equal(prediction[0], expected_prediction, decimal=3)
+
+
 def test_extract_variable_level():
     """Verify the correct extracation of lists, floats, and integers."""
     var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
@@ -305,3 +317,50 @@ def test_extract_variable_level():
     assert _extract_variable_level(var) == ("C(f3)", "1.0")
     var = "C(f4)[T.1]"
     assert _extract_variable_level(var) == ("C(f4)", "1")
+    var = "C(f5)[1.0]"
+    assert _extract_variable_level(var) == ("C(f5)", "1.0")
+
+
+def _lspline(series: pd.Series, knots: list[float]) -> np.array:
+    """Generate a linear spline design matrix for the input series based on knots."""
+    vector = series.values
+    columns = []
+
+    for i, knot in enumerate(knots):
+        column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
+        columns.append(column)
+        vector = vector - column
+
+    # Add the remainder as the last column
+    columns.append(vector)
+
+    # Combine columns into a design matrix
+    return np.column_stack(columns)
+
+
+def test_context_capture_with_out_of_sample_predict():
+    data = pf.get_data(N=2000)
+
+    spline_split = _lspline(data["X2"], [0, 1])
+    data["X2_0"] = spline_split[:, 0]
+    data["0_X2_1"] = spline_split[:, 1]
+    data["1_X2"] = spline_split[:, 2]
+
+    # Split data to training and testing
+    data_train = data.iloc[:1000]
+    data_test = data.iloc[1000:]
+
+    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data_train)
+    context_captured_fit = pf.feols(
+        "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
+    )
+    context_captured_fit_map = pf.feols(
+        "Y ~ _lspline(X2,[0,1]) | f1 + f2",
+        data=data_train,
+        context={"_lspline": _lspline},
+    )
+
+    for context_fit in [context_captured_fit, context_captured_fit_map]:
+        np.testing.assert_almost_equal(
+            context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
+        )

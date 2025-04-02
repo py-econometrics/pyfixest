@@ -40,7 +40,7 @@ fmls = [
 ]
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("fml", fmls)
 @pytest.mark.parametrize("vcov", ["iid", "hetero"])
 @pytest.mark.parametrize(
@@ -140,7 +140,7 @@ def test_feols_compressed(data, fml, vcov, ssc, dropna):
             ), "Error in pvalue"
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_identical_seed():
     data = pf.get_data()
 
@@ -153,7 +153,7 @@ def test_identical_seed():
     assert np.allclose(fit1.pvalue().xs("f1"), fit2.pvalue().xs("f1")), "Error in seed"
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_different_seed():
     data = pf.get_data()
 
@@ -162,9 +162,9 @@ def test_different_seed():
     fit4 = pf.feols("Y ~ f1", data=data, use_compression=True, seed=125, reps=1000)
 
     assert np.allclose(fit3.coef().xs("f1"), fit4.coef().xs("f1")), "Error in seed"
-    assert np.all(
-        np.abs(fit3.se().xs("f1") / fit4.se().xs("f1")) < RTOL_BOOT
-    ), "Error in se"
+    assert np.all(np.abs(fit3.se().xs("f1") / fit4.se().xs("f1")) < RTOL_BOOT), (
+        "Error in se"
+    )
     assert np.all(
         np.abs(fit3.pvalue().xs("f1") / fit4.pvalue().xs("f1")) < RTOL_BOOT
     ), "Error in pvalue"

@@ -1,0 +1,58 @@
+name: Extended Tests (Optional)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Tests Core
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.12"]
+        pytest_opts: ["--workers 4 --tests-per-worker 1"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
+        with:
+          pixi-version: v0.41.4
+          cache: true
+
+      - name: Set numba parallel flags
+        run: echo "NUMBA_NUM_THREADS=1" >> $GITHUB_ENV
+
+      - name: Setup r2u
+        uses: eddelbuettel/github-actions/r2u-setup@master
+
+      - name: Print R version
+        run: Rscript -e 'R.version'
+
+      - name: Install R packages
+        run: |
+          R_LIB_PATH="${{ github.workspace }}/.pixi/envs/dev/lib/R/library"
+          mkdir -p $R_LIB_PATH
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages(c('fixest', 'broom','did2s', 'wildrwolf', 'ivDiag', 'car'),  lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library')"
+          Rscript -e ".libPaths('$R_LIB_PATH'); install.packages('ritest', lib='/home/runner/work/pyfixest/pyfixest/.pixi/envs/dev/lib/R/library', repos = c('https://grantmcdermott.r-universe.dev'))"
+      - name: Run long tests with coverage
+        run: pixi r tests-extended
+
+      - name: Upload coverage to Codecov (partial)
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          flags: tests-extended
+          partial: true

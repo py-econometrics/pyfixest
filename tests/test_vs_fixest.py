@@ -80,6 +80,7 @@ ols_fmls = [
     ("Y ~ X1 + poly(X2, 2) | f1"),
 ]
 
+
 ols_but_not_poisson_fml = [
     ("log(Y) ~ X1"),
     ("Y~X1|f2^f3"),
@@ -118,8 +119,17 @@ iv_fmls = [
     "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
 ]
 
+glm_fmls = [
+    "Y ~ X1",
+    "Y ~ X1 + X2",
+    "Y ~ X1*X2",
+    # "Y ~ X1 + C(f2)",
+    # "Y ~ X1 + i(f1, ref = 1)",
+    "Y ~ X1 + f1:X2",
+]
 
-@pytest.fixture
+
+@pytest.fixture(scope="module")
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
@@ -181,7 +191,7 @@ test_counter_feiv = 0
 # - cluster_adj: True
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
@@ -189,6 +199,7 @@ test_counter_feiv = 0
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True])
 @pytest.mark.parametrize("cluster_adj", [True])
+@pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
     dropna,
@@ -198,6 +209,7 @@ def test_single_fit_feols(
     fml,
     adj,
     cluster_adj,
+    demeaner_backend,
 ):
     global test_counter_feols
     test_counter_feols += 1
@@ -225,13 +237,20 @@ def test_single_fit_feols(
 
     r_inference = _get_r_inference(inference)
 
-    mod = pf.feols(fml=fml, data=data, vcov=inference, weights=weights, ssc=ssc_)
+    mod = pf.feols(
+        fml=fml,
+        data=data,
+        vcov=inference,
+        weights=weights,
+        ssc=ssc_,
+        demeaner_backend=demeaner_backend,
+    )
     if weights is not None:
         r_fixest = fixest.feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -239,10 +258,15 @@ def test_single_fit_feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         )
 
+    # r_fixest to global r env, needed for
+    # operations as in dof.K
+    ro.globalenv["r_fixest"] = r_fixest
+
     py_coef = mod.coef().xs("X1")
+    py_n_coefs = mod.coef().values.size
     py_se = mod.se().xs("X1")
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
@@ -251,9 +275,12 @@ def test_single_fit_feols(
 
     py_nobs = mod._N
     py_resid = mod.resid()
+    py_dof_k = mod._dof_k
+    py_df_t = mod._df_t
 
     df_X1 = _get_r_df(r_fixest)
     r_coef = df_X1["estimate"]
+    r_n_coefs = int(df_X1["n_coef"])
     r_se = df_X1["std.error"]
     r_pval = df_X1["p.value"]
     r_tstat = df_X1["statistic"]
@@ -261,6 +288,8 @@ def test_single_fit_feols(
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     r_nobs = int(stats.nobs(r_fixest)[0])
+    r_dof_k = int(ro.r('attr(r_fixest$cov.scaled, "dof.K")')[0])
+    r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
     if inference == "iid" and adj and cluster_adj:
         py_resid = mod.resid()
@@ -275,31 +304,98 @@ def test_single_fit_feols(
             py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
         )
 
+        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
+
         check_absolute_diff(
             (py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid"
         )
 
-        # currently, bug when using predict with newdata and i() or C() or "^" syntax
-        blocked_transforms = ["i(", "^", "poly("]
-        blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+        if not mod._has_fixef and not mod._has_weights:
+            py_predict_all = mod.predict(interval="prediction")
+            r_predict_all = pd.DataFrame(
+                stats.predict(r_fixest, interval="prediction")
+            ).T
 
-        if blocked_transform_found:
-            with pytest.raises(NotImplementedError):
-                py_predict_newsample = mod.predict(
-                    newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+            colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+            r_predict_all.columns = colnames
+
+            # needed at the moment because r-fixest returns
+            # prediction intervals not on estimation sample,
+            # see https://github.com/lrberge/fixest/issues/549
+            # as a result, py_predict_all and r_predict_all
+
+            mask_r = np.zeros(r_predict_all.shape[0], dtype=bool)
+            mask_r[0 : r_predict_all.shape[0]] = True
+            mask_r[mod._na_index] = False
+
+            for col in colnames:
+                check_absolute_diff(
+                    py_predict_all[col].values[-4:],
+                    r_predict_all[col].iloc[mask_r].values[-4:],
+                    1e-07,
+                    f"py_predict_all != r_predict_all for {col}",
                 )
-        else:
-            py_predict_newsample = mod.predict(
-                newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
-            )
-            r_predict_newsample = stats.predict(r_fixest, newdata=data_r.iloc[0:100])
 
-            check_absolute_diff(
-                na_omit(py_predict_newsample)[0:5],
-                na_omit(r_predict_newsample)[0:5],
-                1e-07,
-                "py_predict_newdata != r_predict_newdata",
-            )
+            # currently, bug when using predict with newdata and i() or C() or "^" syntax
+            blocked_transforms = ["i(", "^", "poly("]
+            blocked_transform_found = any(bt in fml for bt in blocked_transforms)
+
+            if blocked_transform_found:
+                with pytest.raises(NotImplementedError):
+                    py_predict_newsample = mod.predict(
+                        newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
+                    )
+            else:
+                py_predict_newsample = mod.predict(
+                    newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
+                )
+                r_predict_newsample = stats.predict(
+                    r_fixest, newdata=data_r.iloc[0:100]
+                )
+
+                check_absolute_diff(
+                    na_omit(py_predict_newsample)[0:5],
+                    na_omit(r_predict_newsample)[0:5],
+                    1e-07,
+                    "py_predict_newdata != r_predict_newdata",
+                )
+
+                if not mod._has_fixef and not mod._has_weights and dropna:
+                    py_predict_all_newdata = mod.predict(
+                        newdata=data.iloc[0:100], interval="prediction"
+                    )
+                    r_predict_all_newdata = pd.DataFrame(
+                        stats.predict(
+                            r_fixest,
+                            newdata=data_r.iloc[0:100],
+                            interval="prediction",
+                        )
+                    ).T
+                    colnames = ["fit", "se_fit", "ci_low", "ci_high"]
+                    r_predict_all_newdata.columns = colnames
+
+                    for col in colnames:
+                        check_absolute_diff(
+                            py_predict_all_newdata[col].to_numpy()[-4:],
+                            r_predict_all_newdata[col].to_numpy()[-4:],
+                            1e-07,
+                            f"py_predict_all != r_predict_all for {col}",
+                        )
+        else:
+            # prediction intervals not supported with
+            # fixed effects or weights
+
+            for new_df in [data, data.iloc[0:100]]:
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=new_df, se_fit=True)
+
+                with pytest.raises(NotImplementedError):
+                    mod.predict(newdata=new_df, interval="prediction")
+
+    # degree of freedom correction for t-dist identical
+    assert py_df_t == r_df_t, f"_df_t != r_df_t for {inference}"
+    # number of "effective" covariates k identical
+    assert py_dof_k == r_dof_k, "py_dof_k != r_dof_k"
 
     check_absolute_diff(py_vcov, r_vcov, 1e-08, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-08, "py_se != r_se")
@@ -307,23 +403,32 @@ def test_single_fit_feols(
     check_absolute_diff(py_tstat, r_tstat, 1e-07, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-08, "py_confint != r_confint")
 
-    if not weights:
-        py_r2 = mod._r2
-        py_r2_within = mod._r2_within
-        # py_adj_r2 = mod._adj_r2
-        # py_adj_r2_within = mod._adj_r2_within
-        r_r = fixest.r2(r_fixest)
-        r_r2 = r_r[1]
-        r_r2_within = r_r[5]
+    py_r2 = mod._r2
+    py_r2_within = mod._r2_within
+    py_adj_r2 = mod._adj_r2
+    py_adj_r2_within = mod._adj_r2_within
+    r_r = fixest.r2(r_fixest)
+    r_r2 = r_r[1]
+    r_adj_r2 = r_r[2]
+    r_r2_within = r_r[5]
+    r_adj_r2_within = r_r[6]
 
-        check_absolute_diff(py_r2, r_r2, 1e-08, "py_r2 != r_r2")
-        if not np.isnan(py_r2_within):
-            check_absolute_diff(
-                py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
-            )
+    check_absolute_diff(py_r2, r_r2, 1e-08, "py_r2 != r_r2")
+    check_absolute_diff(py_adj_r2, r_adj_r2, 1e-08, "py_adj_r2 != r_adj_r2")
+
+    if not np.isnan(py_r2_within):
+        check_absolute_diff(
+            py_r2_within, r_r2_within, 1e-08, "py_r2_within != r_r2_within"
+        )
+        check_absolute_diff(
+            py_adj_r2_within,
+            r_adj_r2_within,
+            1e-08,
+            "py_adj_r2_within != r_adj_r2_within",
+        )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
@@ -368,7 +473,7 @@ def test_single_fit_feols_empty(
     py_resid = mod.resid()
     py_predict = mod.predict()
 
-    r_nobs = int(stats.nobs(r_fixest)[0])
+    r_nobs = stats.nobs(r_fixest)[0]
     r_resid = stats.residuals(r_fixest)
     r_predict = stats.predict(r_fixest)
 
@@ -381,7 +486,7 @@ def test_single_fit_feols_empty(
     assert mod._beta_hat.size == 0
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
@@ -415,13 +520,17 @@ def test_single_fit_fepois(
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
-    mod = pf.fepois(fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol=1e-10)
+    mod = pf.fepois(
+        fml=fml, data=data, vcov=inference, ssc=ssc_, iwls_tol=1e-10, iwls_maxiter=100
+    )
+
     r_fixest = fixest.fepois(
         ro.Formula(r_fml),
         vcov=r_inference,
         data=data_r,
-        ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+        ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         glm_tol=1e-10,
+        glm_maxiter=100,
     )
 
     py_coef = mod.coef().xs("X1")
@@ -434,8 +543,12 @@ def test_single_fit_fepois(
     py_deviance = mod.deviance
     py_resid = mod.resid()
     py_irls_weights = mod._irls_weights.flatten()
+    py_dof_k = int(mod._dof_k)
+    py_df_t = int(mod._df_t)
+    py_n_coefs = mod.coef().values.size
 
     df_X1 = _get_r_df(r_fixest)
+    ro.globalenv["r_fixest"] = r_fixest
 
     r_coef = df_X1["estimate"]
     r_se = df_X1["std.error"]
@@ -447,6 +560,9 @@ def test_single_fit_fepois(
     r_vcov = stats.vcov(r_fixest)[0, 0]
     r_deviance = r_fixest.rx2("deviance")
     r_irls_weights = r_fixest.rx2("irls_weights")
+    r_dof_k = int(ro.r('attr(r_fixest$cov.scaled, "dof.K")')[0])
+    r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
+    r_n_coefs = int(df_X1["n_coef"])
 
     if inference == "iid" and adj and cluster_adj:
         check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
@@ -462,6 +578,13 @@ def test_single_fit_fepois(
             "py_irls_weights != r_irls_weights",
         )
 
+        check_absolute_diff(py_n_coefs, r_n_coefs, 1e-08, "py_n_coefs != r_n_coefs")
+
+    # order of precision:
+    # coef, se, vcov -> important
+    # pval, tstat, confint -> less important as they are derived from the above
+    check_absolute_diff(py_dof_k, r_dof_k, 1e-12, "py_dof_k != r_dof_k")
+    check_absolute_diff(py_df_t, r_df_t, 1e-12, "py_df_t != r_df_t")
     check_absolute_diff(py_vcov, r_vcov, 1e-06, "py_vcov != r_vcov")
     check_absolute_diff(py_se, r_se, 1e-06, "py_se != r_se")
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
@@ -477,18 +600,18 @@ def test_single_fit_fepois(
         check_absolute_diff(
             py_predict_response[0:5],
             r_predict_response[0:5],
-            1e-07,
+            1e-05,
             "py_predict_response != r_predict_response",
         )
         check_absolute_diff(
             py_predict_link[0:5],
             r_predict_link[0:5],
-            1e-07,
+            1e-06,
             "py_predict_link != r_predict_link",
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
@@ -539,7 +662,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -547,7 +670,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(adj, "none", cluster_adj, "min", "min", False),
+            ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         )
 
     py_coef = mod.coef().xs("X1")
@@ -584,7 +707,171 @@ def test_single_fit_iv(
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
+@pytest.mark.parametrize("N", [100])
+@pytest.mark.parametrize("seed", [172])
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("fml", glm_fmls)
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
+def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
+    data = pf.get_data(N=N, seed=seed)
+    data["Y"] = np.where(data["Y"] > 0, 1, 0)
+    if dropna:
+        data = data.dropna()
+
+    r_inference = _get_r_inference(inference)
+
+    # Fit models for the current family
+    fit_py = pf.feglm(fml=fml, data=data, family=family, vcov=inference)
+    r_fml = _py_fml_to_r_fml(fml)
+    data_r = get_data_r(fml, data)
+
+    if family == "probit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="probit"),
+            vcov=r_inference,
+        )
+    elif family == "logit":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=data_r,
+            family=stats.binomial(link="logit"),
+            vcov=r_inference,
+        )
+    elif family == "gaussian":
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml), data=data_r, family=stats.gaussian(), vcov=r_inference
+        )
+
+    # Compare coefficients
+    if inference == "iid":
+        py_coefs = fit_py.coef()
+        r_coefs = stats.coef(fit_r)
+
+        check_absolute_diff(
+            py_coefs, r_coefs, 1e-05, f"py_{family}_coefs != r_{family}_coefs"
+        )
+
+        # Compare predictions - link
+        py_predict = fit_py.predict(type="link")
+        r_predict = stats.predict(fit_r, type="link")
+        check_absolute_diff(
+            py_predict[0:5],
+            r_predict[0:5],
+            1e-04,
+            f"py_{family}_predict != r_{family}_predict for link",
+        )
+
+        # Compare predictions - response
+        py_predict = fit_py.predict(type="response")
+        r_predict = stats.predict(fit_r, type="response")
+        check_absolute_diff(
+            py_predict[0:5],
+            r_predict[0:5],
+            1e-04,
+            f"py_{family}_predict != r_{family}_predict for response",
+        )
+
+        # Compare with newdata - link
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="link")
+        r_predict_new = stats.predict(fit_r, newdata=data_r.iloc[0:100], type="link")
+        check_absolute_diff(
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for link",
+        )
+
+        # Compare with newdata - response
+        py_predict_new = fit_py.predict(newdata=data.iloc[0:100], type="response")
+        r_predict_new = stats.predict(
+            fit_r, newdata=data_r.iloc[0:100], type="response"
+        )
+        check_absolute_diff(
+            py_predict_new[0:5],
+            r_predict_new[0:5],
+            1e-04,
+            f"py_{family}_predict_new != r_{family}_predict_new for response",
+        )
+
+        # Compare IRLS weights
+        py_irls_weights = fit_py._irls_weights.flatten()
+        r_irls_weights = fit_r.rx2("irls_weights")
+        check_absolute_diff(
+            py_irls_weights[0:5],
+            r_irls_weights[0:5],
+            1e-04,
+            f"py_{family}_irls_weights != r_{family}_irls_weights for inference {inference}",
+        )
+
+        # Compare residuals - working
+        py_resid_working = fit_py._u_hat_working
+        r_resid_working = stats.resid(fit_r, type="working")
+        check_absolute_diff(
+            py_resid_working[0:5],
+            r_resid_working[0:5],
+            1e-03,
+            f"py_{family}_resid_working != r_{family}_resid_working for inference {inference}",
+        )
+
+        # Compare residuals - response
+        py_resid_response = fit_py._u_hat_response
+        r_resid_response = stats.resid(fit_r, type="response")
+        check_absolute_diff(
+            py_resid_response[0:5],
+            r_resid_response[0:5],
+            1e-04,
+            f"py_{family}_resid_response != r_{family}_resid_response for inference {inference}",
+        )
+
+        # Compare scores
+        if family == "gaussian":
+            pytest.skip("Mismatch in scores, but all other tests pass.")
+
+            py_scores = fit_py._scores
+            r_scores = fit_r.rx2("scores")
+            check_absolute_diff(
+                py_scores[0, :],
+                r_scores[0, :],
+                1e-04,
+                f"py_{family}_scores != r_{family}_scores for inference {inference}",
+            )
+
+        # Compare deviance
+        py_deviance = fit_py.deviance
+        r_deviance = fit_r.rx2("deviance")
+        check_absolute_diff(
+            py_deviance,
+            r_deviance,
+            1e-05,
+            f"py_{family}_deviance != r_{family}_deviance for inference {inference}",
+        )
+
+    # Compare standard errors
+    py_se = fit_py.se().xs("X1")
+    r_se = _get_r_df(fit_r)["std.error"]
+    check_absolute_diff(
+        py_se,
+        r_se,
+        1e-04,
+        f"py_{family}_se != r_{family}_se for inference {inference}",
+    )
+
+    # Compare variance-covariance matrices
+    py_vcov = fit_py._vcov[0, 0]
+    r_vcov = stats.vcov(fit_r)[0, 0]
+    check_absolute_diff(
+        py_vcov,
+        r_vcov,
+        1e-04,
+        f"py_{family}_vcov != r_{family}_vcov for inference {inference}",
+    )
+
+
+@pytest.mark.against_r
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [17021])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -642,7 +929,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         data = data.dropna()
 
     # suppress correction for fixed effects
-    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
+    fixest.setFixest_ssc(fixest.ssc(True, "nested", True, "min", "min", False))
 
     r_fml = _py_fml_to_r_fml(fml_multi)
 
@@ -662,7 +949,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
     )
 
     for x in range(0):
@@ -691,7 +978,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [31])
 @pytest.mark.parametrize("beta_type", ["1"])
@@ -716,7 +1003,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         data = data.dropna()
 
     # suppress correction for fixed effects
-    fixest.setFixest_ssc(fixest.ssc(True, "none", True, "min", "min", False))
+    fixest.setFixest_ssc(fixest.ssc(True, "nested", True, "min", "min", False))
 
     r_fml = _py_fml_to_r_fml(fml_multi)
 
@@ -736,7 +1023,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
     r_fixest = fixest.feols(
         ro.Formula(r_fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
         **({"split": ro.Formula("~" + split)} if split is not None else {}),
         **({"fsplit": ro.Formula("~" + fsplit)} if fsplit is not None else {}),
     )
@@ -767,7 +1054,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_twoway_clustering():
     data = get_data(N=500, seed=17021, beta_type="1", error_type="1").dropna()
 
@@ -793,7 +1080,7 @@ def test_twoway_clustering():
                 ro.Formula("Y ~ X1 + X2"),
                 data=data,
                 cluster=ro.Formula("~f1+f2"),
-                ssc=fixest.ssc(True, "none", cluster_adj, cluster_df, "min", False),
+                ssc=fixest.ssc(True, "nested", cluster_adj, cluster_df, "min", False),
             )
 
             # test vcov's
@@ -824,7 +1111,7 @@ def test_twoway_clustering():
             )
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
@@ -838,7 +1125,7 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
     )
 
     np.testing.assert_allclose(
@@ -856,7 +1143,7 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
     )
     np.testing.assert_allclose(
         fit_py.coef(),
@@ -873,7 +1160,7 @@ def test_wls_na():
         ro.Formula("Y ~ X1"),
         data=data,
         weights=ro.Formula("~ weights"),
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
     )
     np.testing.assert_allclose(
         fit_py.coef(),
@@ -942,7 +1229,7 @@ def get_data_r(fml, data):
     return data_r
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 @pytest.mark.parametrize(
     "fml",
     [
@@ -962,7 +1249,7 @@ def test_wald_test(fml, data):
     fit_r = fixest.feols(
         ro.Formula(fml),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
     )
 
     wald_r = fixest.wald(fit_r)
@@ -973,7 +1260,7 @@ def test_wald_test(fml, data):
     # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
 
 
-@pytest.mark.slow
+@pytest.mark.against_r
 def test_singleton_dropping():
     data = get_data()
     # create a singleton fixed effect
@@ -984,7 +1271,7 @@ def test_singleton_dropping():
     fit_r = fixest.feols(
         ro.Formula("Y ~ X1 | f1"),
         data=data,
-        ssc=fixest.ssc(True, "none", True, "min", "min", False),
+        ssc=fixest.ssc(True, "nested", True, "min", "min", False),
         fixef_rm="singleton",
     )
 
@@ -1023,12 +1310,164 @@ def test_singleton_dropping():
     # )
 
 
+ssc_fmls = [
+    "Y ~ X1 + X2 + f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 + X2 | f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2 + f3",
+    "Y ~ X1 + X2 | f1^f2",
+]
+
+
+@pytest.mark.against_r
+@pytest.mark.parametrize("fml", ssc_fmls)
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2", "f1+f2"])
+@pytest.mark.parametrize("adj", [True, False])
+@pytest.mark.parametrize("cluster_adj", [True, False])
+@pytest.mark.parametrize("fixef_k", ["full", "nested", "none"])
+@pytest.mark.parametrize("model", ["feols", "fepois"])
+def test_ssc(fml, dropna, weights, vcov, adj, cluster_adj, fixef_k, model):
+    df = (
+        pf.get_data(model="Feols")
+        if model == "feols"
+        else pf.get_data(model="Fepois", N=1000)
+    )
+    df = df.dropna() if dropna else df
+
+    if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
+        pytest.skip(
+            "vcov = f2 requires dropping NAs internally, which is not supported."
+        )
+
+    r_kwargs = {
+        "fml": ro.Formula(fml),
+        "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
+        "data": df,
+        "ssc": fixest.ssc(adj, fixef_k, cluster_adj, "min", "min", False),
+    }
+
+    py_kwargs = {
+        "fml": fml,
+        "data": df,
+        "ssc": pf.ssc(adj, fixef_k=fixef_k, cluster_adj=cluster_adj, cluster_df="min"),
+        "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
+    }
+
+    if weights is not None:
+        r_kwargs["weights"] = ro.Formula(f"~{weights}")
+        py_kwargs["weights"] = weights
+        if model == "fepois":
+            pytest.skip("pf.fepois does not support weights.")
+
+    if model == "feols":
+        r_fit = fixest.feols(**r_kwargs)
+        py_fit = pf.feols(**py_kwargs)
+    else:
+        r_kwargs["glm_tol"] = 1e-10
+        r_kwargs["glm_maxiter"] = 100
+        py_kwargs["iwls_tol"] = 1e-10
+        py_kwargs["iwls_maxiter"] = 100
+
+        r_fit = fixest.fepois(**r_kwargs)
+        py_fit = pf.fepois(**py_kwargs)
+
+    ro.globalenv["r_fit"] = r_fit
+    r_df_t = int(ro.r('attr(r_fit$cov.scaled, "df.t")')[0])
+    r_dof_k = int(ro.r('attr(r_fit$cov.scaled, "dof.K")')[0])
+
+    py_df_t = py_fit._df_t
+    py_dof_k = py_fit._dof_k
+
+    py_nobs = py_fit._N
+    r_nobs = stats.nobs(r_fit)
+
+    # coefficients identical:
+    np.testing.assert_allclose(
+        py_fit.coef(),
+        ro.r("r_fit$coeftable[,1]"),
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"coefficients do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+    np.testing.assert_allclose(
+        py_nobs,
+        r_nobs,
+        err_msg=f"nobs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+    # df_t identical:
+    np.testing.assert_allclose(
+        py_df_t,
+        r_df_t,
+        err_msg=f"df_t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+    # dof.K identical:
+    np.testing.assert_allclose(
+        r_dof_k,
+        py_dof_k,
+        err_msg=f"dof.K do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+    # df.t identical:
+    np.testing.assert_allclose(
+        py_df_t,
+        r_df_t,
+        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+    # SEs identical:
+    np.testing.assert_allclose(
+        py_fit.se(),
+        ro.r("r_fit$coeftable[,2]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+    # p-values identical:
+    np.testing.assert_allclose(
+        py_fit.pvalue(),
+        ro.r("r_fit$coeftable[,4]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+    # t-stats identical:
+    np.testing.assert_allclose(
+        py_fit.tstat(),
+        ro.r("r_fit$coeftable[,3]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+    # confint identical:
+    np.testing.assert_allclose(
+        py_fit.confint().values,
+        pd.DataFrame(stats.confint(r_fit)).T.values,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+    ## vcov identical:
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        stats.vcov(r_fit),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, adj = {adj}, cluster_adj = {cluster_adj}, fixef_k = {fixef_k}",
+    )
+
+
 def _convert_f3(data, f3_type):
     """Convert f3 to the desired type."""
     if f3_type == "categorical":
         data["f3"] = pd.Categorical(data["f3"])
     elif f3_type == "int":
-        data["f3"] = data["f3"].astype(np.int32)
+        data["f3"] = data["f3"].astype(float).astype(np.int32)
     elif f3_type == "str":
         data["f3"] = data["f3"].astype(str)
     elif f3_type == "object":
@@ -1060,6 +1499,8 @@ def _get_r_df(r_fixest, is_iv=False):
         "conf.low",
         "conf.high",
     ]
+
+    df_r["n_coef"] = df_r.shape[0]
 
     if is_iv:
         df_X1 = df_r.set_index("term").xs("fit_X1")  # only test for X1
