@@ -6,7 +6,7 @@ from pyfixest import (
     report,
     utils,
 )
-from pyfixest.did import did2s, event_study, lpdid, panelview
+from pyfixest.did import did2s, event_study, lpdid, panelview, test_treatment_heterogeneity
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (
@@ -44,6 +44,7 @@ __all__ = [
     "make_table",
     "panelview",
     "report",
+    "test_treatment_heterogeneity",
     "rwolf",
     "ssc",
     "summary",
