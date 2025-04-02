@@ -4,55 +4,38 @@ import pytest
 import pyfixest as pf
 
 
-# @pytest.mark.skip(reason="Bug for fweights and heteroskedastic errors.")
-def test_fweights_ols():
-    "Test that the fweights are correctly implemented for OLS models."
-    # Fepois model for discrete Y
-    data = pf.get_data(model="Fepois")
-    data2_w = (
-        data[["Y", "X1"]]
-        .groupby(["Y", "X1"])
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f1"}])
+def test_fweights_ols_equivalence(fml, vcov):
+    "Test that frequency weights yield same result as long data for various vcov types."
+    data = pf.get_data(model="Fepois").dropna()
+
+    # Compressed versions
+    group_vars = (
+        ["Y", "X1", "f1"] if "f1" in fml or vcov == {"CRV1": "f1"} else ["Y", "X1"]
+    )
+
+    data_w = (
+        data[group_vars]
+        .groupby(group_vars)
         .size()
         .reset_index()
         .rename(columns={0: "count"})
     )
-    data3_w = (
-        data[["Y", "X1", "f1"]]
-        .groupby(["Y", "X1", "f1"])
-        .size()
-        .reset_index()
-        .rename(columns={0: "count"})
+
+    # Fit models
+    fit_long = pf.feols(fml, data=data, vcov=vcov)
+    fit_compressed = pf.feols(
+        fml, data=data_w, vcov=vcov, weights="count", weights_type="fweights"
     )
 
-    fit1 = pf.feols("Y ~ X1", data=data, ssc=pf.ssc(adj=False, cluster_adj=False))
-    fit2 = pf.feols(
-        "Y ~ X1",
-        data=data2_w,
-        weights="count",
-        weights_type="fweights",
-        ssc=pf.ssc(adj=False, cluster_adj=False),
+    # Assert point estimates match
+    np.testing.assert_allclose(
+        fit_long.tidy().values, fit_compressed.tidy().values, rtol=1e-6, atol=1e-8
     )
 
-    assert fit1._N == fit2._N, "Number of observations is not the same."
-
-    if False:
-        np.testing.assert_allclose(fit1.tidy().values, fit2.tidy().values)
-
-        np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
-
-        fit3 = pf.feols("Y ~ X1 | f1", data=data)
-        fit4 = pf.feols(
-            "Y ~ X1 | f1", data=data3_w, weights="count", weights_type="fweights"
-        )
-        np.testing.assert_allclose(fit3.tidy().values, fit4.tidy().values)
-        np.testing.assert_allclose(
-            fit3.vcov({"CRV3": "f1"})._vcov, fit4.vcov({"CRV3": "f1"})._vcov
-        )
-        np.testing.assert_allclose(fit1.vcov("HC1")._vcov, fit2.vcov("HC1")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC2")._vcov, fit2.vcov("HC2")._vcov)
-        np.testing.assert_allclose(fit1.vcov("HC3")._vcov, fit2.vcov("HC3")._vcov)
+    # Optional: also check N is the same
+    assert fit_long._N == fit_compressed._N, "Sample size mismatch"
 
 
 @pytest.mark.skip(reason="Not implemented yet.")
