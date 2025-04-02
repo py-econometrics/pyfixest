@@ -75,7 +75,7 @@ class SaturatedEventStudy(DID):
         pd.DataFrame
             A DataFrame containing the estimates.
         """
-        self.mod = _saturated_event_study(
+        self.mod, self._res_dict = _saturated_event_study(
             self._data,
             outcome=self._yname,
             treatment="ATT",
@@ -99,7 +99,14 @@ class SaturatedEventStudy(DID):
 
     def iplot(self):
         """Plot DID estimates."""
-        pass
+        cmp = plt.get_cmap("Set1")
+        for i, (k, v) in enumerate(self._res_dict.items()):
+            ax.plot(v["time"], v["est"]["Estimate"], marker=".", label=k, color=cmp(i))
+            ax.fill_between(
+                v["time"], v["est"]["2.5%"], v["est"]["97.5%"], alpha=0.2, color=cmp(i)
+            )
+        ax.axvline(-1, color="black", linestyle="--")
+        ax.axhline(0, color="black", linestyle=":")
 
     def tidy(self):
         """Tidy result dataframe."""
@@ -119,7 +126,6 @@ def _saturated_event_study(
     treatment: str = "treated",
     time_id: str = "time",
     unit_id: str = "unit",
-    ax: plt.Axes = None,
 ):
     ######################################################################
     # this chunk creates gname internally here - assume that data already contains it?
@@ -146,30 +152,20 @@ def _saturated_event_study(
                 | {unit_id} + {time_id}
                 """
     m = feols(ff, df_int, vcov={"CRV1": unit_id})
-    # !TODO move this into a separate function / integrate logic into iplot method that overrides feols's plot
-    if ax:
-        # plot
-        res = m.tidy()
-        # create a dict with cohort specific effect curves
-        res_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
-        for c in cohort_dummies.columns:
-            res_cohort = res.filter(like=c, axis=0)
-            event_time = (
-                res_cohort.index.str.extract(r"\[T\.(-?\d+\.\d+)\]")
-                .astype(float)
-                .values.flatten()
-            )
-            res_dict[c] = {"est": res_cohort, "time": event_time}
 
-        cmp = plt.get_cmap("Set1")
-        for i, (k, v) in enumerate(res_dict.items()):
-            ax.plot(v["time"], v["est"]["Estimate"], marker=".", label=k, color=cmp(i))
-            ax.fill_between(
-                v["time"], v["est"]["2.5%"], v["est"]["97.5%"], alpha=0.2, color=cmp(i)
-            )
-        ax.axvline(-1, color="black", linestyle="--")
-        ax.axhline(0, color="black", linestyle=":")
-    return m
+    res = m.tidy()
+    # create a dict with cohort specific effect curves
+    res_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
+    for c in cohort_dummies.columns:
+        res_cohort = res.filter(like=c, axis=0)
+        event_time = (
+            res_cohort.index.str.extract(r"\[T\.(-?\d+\.\d+)\]")
+            .astype(float)
+            .values.flatten()
+        )
+        res_dict[c] = {"est": res_cohort, "time": event_time}
+
+    return m, res_dict
 
 
 def test_treatment_heterogeneity(
