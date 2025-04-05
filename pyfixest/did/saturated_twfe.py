@@ -129,6 +129,7 @@ def _saturated_event_study(
 ):
     ######################################################################
     # this chunk creates gname internally here - assume that data already contains it?
+
     df = df.merge(
         df.assign(first_treated_period=df[time_id] * df[treatment])
         .groupby(unit_id)["first_treated_period"]
@@ -144,11 +145,12 @@ def _saturated_event_study(
         df.first_treated_period, drop_first=True, prefix="cohort_dummy"
     )
     df_int = pd.concat([df, cohort_dummies], axis=1)
+
     ######################################################################
     # formula
     ff = f"""
                 {outcome} ~
-                {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like="cohort_dummy", axis=1).columns])}
+                {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
     m = feols(ff, df_int, vcov={"CRV1": unit_id})
@@ -244,7 +246,7 @@ def test_treatment_heterogeneity(
     ff = f"""
     {outcome} ~
     i(rel_time, ref=-1.0) +
-    {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in df_int.filter(like="cohort_dummy", axis=1).columns])}
+    {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
     | {unit_id} + {time_id}
     """
 
