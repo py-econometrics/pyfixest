@@ -4,6 +4,7 @@ import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
+from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.literals import VcovTypeOptions
 
@@ -42,7 +43,7 @@ def event_study(
     xfml : str
         The formula for the covariates.
     estimator : str
-        The estimator to use. Options are "did2s" and "twfe".
+        The estimator to use. Options are "did2s", "twfe", and "saturated".
     att : bool, optional
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
@@ -128,6 +129,21 @@ def event_study(
         fit = twfe.estimate()
         vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
+
+    elif estimator == "saturated":
+        saturated = SaturatedEventStudy(
+            data=data,
+            yname=yname,
+            idname=idname,
+            tname=tname,
+            gname=gname,
+            xfml=xfml,
+            att=att,
+            cluster=cluster,
+        )
+        fit = saturated.estimate()
+        vcov = fit.vcov(vcov={"CRV1": saturated._idname})
+        fit._method = "saturated"
 
     else:
         raise NotImplementedError("Estimator not supported")
