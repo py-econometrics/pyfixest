@@ -76,6 +76,19 @@ def event_study(
     )
 
     fit_twfe.tidy()
+
+    # run saturated event study
+    fit_twfe_saturated = pf.event_study(
+        df_het,
+        yname="dep_var",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="twfe",
+        att=True,
+    )
+
+    fit_twfe_saturated.iplot()
     ```
     """
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
@@ -142,8 +155,10 @@ def event_study(
             cluster=cluster,
         )
         fit = saturated.estimate()
+        fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
         vcov = fit.vcov(vcov={"CRV1": saturated._idname})
         fit._method = "saturated"
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))
 
     else:
         raise NotImplementedError("Estimator not supported")

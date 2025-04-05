@@ -100,13 +100,26 @@ class SaturatedEventStudy(DID):
     def iplot(self):
         """Plot DID estimates."""
         cmp = plt.get_cmap("Set1")
-        for i, (k, v) in enumerate(self.res_cohort_eventtime_dict.items()):
-            ax.plot(v["time"], v["est"]["Estimate"], marker=".", label=k, color=cmp(i))
-            ax.fill_between(
-                v["time"], v["est"]["2.5%"], v["est"]["97.5%"], alpha=0.2, color=cmp(i)
-            )
-        ax.axvline(-1, color="black", linestyle="--")
-        ax.axhline(0, color="black", linestyle=":")
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        for cohort, values in self._res_cohort_eventtime_dict.items():
+            time = np.array(values['time'], dtype=float)
+            est = values['est']['Estimate'].astype(float).values
+            ci_lower = values['est']['2.5%'].astype(float).values
+            ci_upper = values['est']['97.5%'].astype(float).values
+
+            ax.plot(time, est, marker='o', label=cohort, color=cmp(len(ax.lines)))
+            ax.fill_between(time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines)))
+
+        ax.axhline(0, color='black', linewidth=1, linestyle='--')
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Coefficient (with 95% CI)")
+        ax.set_title("Event Study Estimates by Cohort")
+        ax.legend()
+        plt.tight_layout()
+        plt.show()
+
 
     def tidy(self):
         """Tidy result dataframe."""
