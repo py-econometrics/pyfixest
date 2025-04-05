@@ -8,7 +8,6 @@ from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.literals import VcovTypeOptions
 
-
 def event_study(
     data: pd.DataFrame,
     yname: str,
@@ -140,8 +139,16 @@ def event_study(
             cluster=cluster,
         )
         fit = twfe.estimate()
+        fit._yname = twfe._yname
+        fit._gname = twfe._gname
+        fit._tname = twfe._tname
+        fit._idname = twfe._idname
+        fit._att = twfe._att
+
         vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
+        fit.test_treatment_dynamics = twfe.test_treatment_dynamics.__get__(fit, type(fit))
+
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -156,6 +163,12 @@ def event_study(
         )
         fit = saturated.estimate()
         fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
+        fit._yname = saturated._yname
+        fit._gname = saturated._gname
+        fit._tname = saturated._tname
+        fit._idname = saturated._idname
+        fit._att = saturated._att
+
         vcov = fit.vcov(vcov={"CRV1": saturated._idname})
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))

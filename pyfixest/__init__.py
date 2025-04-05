@@ -11,7 +11,6 @@ from pyfixest.did import (
     event_study,
     lpdid,
     panelview,
-    test_treatment_heterogeneity,
 )
 
 # Import frequently used functions and classes
@@ -53,7 +52,6 @@ __all__ = [
     "rwolf",
     "ssc",
     "summary",
-    "test_treatment_heterogeneity",
     "utils",
     "wyoung",
 ]

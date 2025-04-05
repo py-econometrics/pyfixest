@@ -3,11 +3,8 @@ from pyfixest.did.estimation import (
     event_study,
     lpdid,
 )
-from pyfixest.did.saturated_twfe import (
-    test_treatment_heterogeneity,
-)
 from pyfixest.did.visualize import (
     panelview,
 )
 
-__all__ = ["did2s", "event_study", "lpdid", "panelview", "test_treatment_heterogeneity"]
+__all__ = ["did2s", "event_study", "lpdid", "panelview"]

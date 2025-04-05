@@ -6,9 +6,6 @@ import pandas as pd
 
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.feols_ import Feols
-from pyfixest.estimation.literals import (
-    VcovTypeOptions,
-)
 
 from .did2s import DID
 
@@ -130,14 +127,24 @@ class SaturatedEventStudy(DID):
         """Get summary table."""
         return self.mod.summary()
 
-    def test_treatment_heterogeneity(self, by = "cohort"):
+    def test_treatment_heterogeneity(self) -> pd.Series:
 
-        if by == "cohort":
-            return test_treatment_heterogeneity(
-                model = self.mod if isinstance(self, SaturatedEventStudy) else self,
-            )
-        else:
-            raise ValueError("Invalid value for 'by'. Must be 'cohort'.")
+        """
+        Test for treatment heterogeneity in the event study design.
+
+        Parameters
+        ----------
+        by : str, optional
+
+                The type of test to perform. Can be either "cohort" or "time".
+                Default is "cohort". If "cohort", tests for treatment heterogeneity
+                across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
+                for details.
+        """
+
+        return _test_treatment_heterogeneity(
+            model = self.mod if isinstance(self, SaturatedEventStudy) else self,
+        )
 
 
 ######################################################################
@@ -193,7 +200,7 @@ def _saturated_event_study(
     return m, res_cohort_eventtime_dict
 
 
-def test_treatment_heterogeneity(
+def _test_treatment_heterogeneity(
     model: SaturatedEventStudy,
 ) -> pd.Series:
     """
@@ -203,19 +210,8 @@ def test_treatment_heterogeneity(
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Dataframe containing the data.
-    outcome : str
-        Name of the outcome variable.
-    treatment : str
-        Name of the treatment variable.
-    unit_id : str
-        Name of the unit identifier variable.
-    time_id : str
-        Name of the time variable.
-    retmod : bool
-        Whether to return the model object.
-
+    model : SaturatedEventStudy
+        The fitted event study model
     Returns
     -------
     pd.Series
@@ -238,43 +234,3 @@ def test_treatment_heterogeneity(
 
     test_result = model.wald_test(R=R2, distribution="chi2")
     return test_result
-
-
-def _test_dynamics(
-    df: pd.DataFrame,
-    outcome: str = "Y",
-    treatment: str = "W",
-    time_id: str = "time",
-    unit_id: str = "unit",
-    vcv: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-):
-    if vcv is None:
-        vcv = {"CRV1": unit_id}
-
-    # Fit models
-    df = df.merge(
-        df.assign(first_treated_period=df[time_id] * df[treatment])
-        .groupby(unit_id)["first_treated_period"]
-        .apply(lambda x: x[x > 0].min()),
-        on=unit_id,
-    )
-    df["rel_time"] = df[time_id] - df["first_treated_period"]
-    df["rel_time"] = df["rel_time"].replace(np.nan, np.inf)
-    restricted: Feols = cast(
-        Feols, feols(f"{outcome} ~ i({treatment}) | {unit_id} + {time_id}", df)
-    )
-    unrestricted: Feols = cast(
-        Feols,
-        feols(f"{outcome} ~ i(rel_time, ref=0) | {unit_id} + {time_id}", df, vcov=vcv),
-    )
-    # Get the restricted estimate
-    restricted_effect = restricted.coef().iloc[0]
-    # Create R matrix - each row tests one event study coefficient
-    # against restricted estimate
-    n_evstudy_coefs = unrestricted.coef().shape[0]
-    R = np.eye(n_evstudy_coefs)
-    # q vector is the restricted estimate repeated
-    q = np.repeat(restricted_effect, n_evstudy_coefs)
-    # Conduct Wald test
-    pv = unrestricted.wald_test(R=R, q=q, distribution="chi2")["pvalue"]
-    return pv
