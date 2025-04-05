@@ -75,7 +75,7 @@ class SaturatedEventStudy(DID):
         pd.DataFrame
             A DataFrame containing the estimates.
         """
-        self.mod, self._res_dict = _saturated_event_study(
+        self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
             self._data,
             outcome=self._yname,
             treatment="ATT",
@@ -100,7 +100,7 @@ class SaturatedEventStudy(DID):
     def iplot(self):
         """Plot DID estimates."""
         cmp = plt.get_cmap("Set1")
-        for i, (k, v) in enumerate(self._res_dict.items()):
+        for i, (k, v) in enumerate(self.res_cohort_eventtime_dict.items()):
             ax.plot(v["time"], v["est"]["Estimate"], marker=".", label=k, color=cmp(i))
             ax.fill_between(
                 v["time"], v["est"]["2.5%"], v["est"]["97.5%"], alpha=0.2, color=cmp(i)
@@ -157,17 +157,17 @@ def _saturated_event_study(
 
     res = m.tidy()
     # create a dict with cohort specific effect curves
-    res_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
-    for c in cohort_dummies.columns:
-        res_cohort = res.filter(like=c, axis=0)
+    res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
+    for cohort in cohort_dummies.columns:
+        res_cohort = res.filter(like=cohort, axis=0)
         event_time = (
-            res_cohort.index.str.extract(r"\[T\.(-?\d+\.\d+)\]")
+            res_cohort.index.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]")
             .astype(float)
             .values.flatten()
         )
-        res_dict[c] = {"est": res_cohort, "time": event_time}
+        res_cohort_eventtime_dict[cohort] = {"est": res_cohort, "time": event_time}
 
-    return m, res_dict
+    return m, res_cohort_eventtime_dict
 
 
 def test_treatment_heterogeneity(
