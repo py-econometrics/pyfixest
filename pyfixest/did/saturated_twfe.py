@@ -104,22 +104,23 @@ class SaturatedEventStudy(DID):
         fig, ax = plt.subplots(figsize=(10, 6))
 
         for cohort, values in self._res_cohort_eventtime_dict.items():
-            time = np.array(values['time'], dtype=float)
-            est = values['est']['Estimate'].astype(float).values
-            ci_lower = values['est']['2.5%'].astype(float).values
-            ci_upper = values['est']['97.5%'].astype(float).values
+            time = np.array(values["time"], dtype=float)
+            est = values["est"]["Estimate"].astype(float).values
+            ci_lower = values["est"]["2.5%"].astype(float).values
+            ci_upper = values["est"]["97.5%"].astype(float).values
 
-            ax.plot(time, est, marker='o', label=cohort, color=cmp(len(ax.lines)))
-            ax.fill_between(time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines)))
+            ax.plot(time, est, marker="o", label=cohort, color=cmp(len(ax.lines)))
+            ax.fill_between(
+                time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines))
+            )
 
-        ax.axhline(0, color='black', linewidth=1, linestyle='--')
+        ax.axhline(0, color="black", linewidth=1, linestyle="--")
         ax.set_xlabel("Time")
         ax.set_ylabel("Coefficient (with 95% CI)")
         ax.set_title("Event Study Estimates by Cohort")
         ax.legend()
         plt.tight_layout()
         plt.show()
-
 
     def tidy(self):
         """Tidy result dataframe."""
@@ -128,6 +129,15 @@ class SaturatedEventStudy(DID):
     def summary(self):
         """Get summary table."""
         return self.mod.summary()
+
+    def test_treatment_heterogeneity(self, by = "cohort"):
+
+        if by == "cohort":
+            return test_treatment_heterogeneity(
+                model = self.mod if isinstance(self, SaturatedEventStudy) else self,
+            )
+        else:
+            raise ValueError("Invalid value for 'by'. Must be 'cohort'.")
 
 
 ######################################################################
@@ -184,13 +194,8 @@ def _saturated_event_study(
 
 
 def test_treatment_heterogeneity(
-    df: pd.DataFrame,
-    outcome: str = "Y_it",
-    treatment: str = "W_it",
-    unit_id: str = "unit_id",
-    time_id: str = "time_id",
-    retmod: bool = False,
-):
+    model: SaturatedEventStudy,
+) -> pd.Series:
     """
     Test for treatment heterogeneity in the event study design.
 
@@ -213,64 +218,15 @@ def test_treatment_heterogeneity(
 
     Returns
     -------
-    float
-        The p-value of the test.
+    pd.Series
 
-    Examples
-    --------
-    ```{python}
-    import pyfixest as pf
-    from pyfixest.utils.dgps import get_sharkfin
-
-    df_one_cohort = get_sharkfin()
-    df_one_cohort.head()
-
-    pf.test_treatment_heterogeneity(
-        df_one_cohort,
-        outcome = "Y",
-        treatment = "treat",
-        unit_id = "unit",
-        time_id = "year"
-    )
-    ```
-    """
-    # Get treatment timing info
-    df = df.merge(
-        df.assign(first_treated_period=df[time_id] * df[treatment])
-        .groupby(unit_id)["first_treated_period"]
-        .apply(lambda x: x[x > 0].min()),
-        on=unit_id,
-    )
-    df["rel_time"] = df[time_id] - df["first_treated_period"]
-    df["first_treated_period"] = (
-        df["first_treated_period"].replace(np.nan, 0).astype("int")
-    )
-    df["rel_time"] = df["rel_time"].replace(np.nan, np.inf)
-    # Create dummies but drop TWO cohorts - one serves as base for pooled effects
-    cohort_dummies = pd.get_dummies(
-        df.first_treated_period, drop_first=True, prefix="cohort_dummy"
-    ).iloc[
-        :, 1:
-    ]  # drop an additional cohort - drops interactions for never treated and baseline
-
-    df_int = pd.concat([df, cohort_dummies], axis=1)
-
-    # Modified formula with base effects + cohort-specific deviations
-    ff = f"""
-    {outcome} ~
-    i(rel_time, ref=-1.0) +
-    {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
-    | {unit_id} + {time_id}
+            A Series containing the p-value of the test and the test statistic.
     """
 
-    model: Feols = cast(Feols, feols(ff, df_int, vcov={"CRV1": unit_id}))
-    P = model.coef().shape[0]
-
-    if retmod:
-        return model
     mmres = model.tidy().reset_index()
+    P = mmres.shape[0]
     mmres[["time", "cohort"]] = mmres.Coefficient.str.split(":", expand=True)
-    mmres["time"] = mmres.time.str.extract(r"\[T\.(-?\d+\.\d+)\]").astype(float)
+    mmres["time"] = mmres.time.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]").astype(float)
     mmres["cohort"] = mmres.cohort.str.extract(r"(\d+)")
     # indices of coefficients that are deviations from common event study coefs
     event_study_coefs = mmres.loc[~(mmres.cohort.isna()) & (mmres.time > 0)].index
@@ -281,7 +237,7 @@ def test_treatment_heterogeneity(
         R2[i, idx] = 1
 
     test_result = model.wald_test(R=R2, distribution="chi2")
-    return test_result["pvalue"]
+    return test_result
 
 
 def _test_dynamics(

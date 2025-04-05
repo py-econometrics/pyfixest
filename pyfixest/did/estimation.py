@@ -159,6 +159,7 @@ def event_study(
         vcov = fit.vcov(vcov={"CRV1": saturated._idname})
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
+        fit.test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
 
     else:
         raise NotImplementedError("Estimator not supported")
