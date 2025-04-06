@@ -8,6 +8,7 @@ from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.literals import VcovTypeOptions
 
+
 def event_study(
     data: pd.DataFrame,
     yname: str,
@@ -173,6 +174,7 @@ def event_study(
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
         fit.test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))
 
     else:
         raise NotImplementedError("Estimator not supported")

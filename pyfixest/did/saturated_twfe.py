@@ -1,11 +1,12 @@
-from typing import Optional, Union, cast
+from typing import Optional
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.estimation.feols_ import Feols
 
 from .did2s import DID
 
@@ -128,7 +129,6 @@ class SaturatedEventStudy(DID):
         return self.mod.summary()
 
     def test_treatment_heterogeneity(self) -> pd.Series:
-
         """
         Test for treatment heterogeneity in the event study design.
 
@@ -141,10 +141,76 @@ class SaturatedEventStudy(DID):
                 across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
                 for details.
         """
-
         return _test_treatment_heterogeneity(
             model = self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
+
+    def aggregate(self, agg = "cohort", weighting: Optional[str] = None) -> pd.Series:
+        """
+        Aggregate the fully interacted event study estimates by relative time, cohort, and time.
+
+        Parameters
+        ----------
+        agg : str, optional
+
+                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
+                Default is "att". If "att", computes the average treatment effect on the treated.
+                If "cohort", computes the average treatment effect by cohort. If "period",
+                computes the average treatment effect by period.
+
+        weighting : str, optional
+
+                    The type of weighting to use. Can be either ...
+
+        Returns
+        -------
+        pd.Series
+            A Series containing the aggregated estimates.
+        """
+
+        model = self.mod if isinstance(self, SaturatedEventStudy) else self
+
+        cohort_event_dict = model._res_cohort_eventtime_dict
+        cohort_list = list(cohort_event_dict.keys())
+        period_set = sorted(set(t for x in cohort_list for t in cohort_event_dict[x]["time"].tolist()))
+
+        coefs = model._beta_hat
+        coefnames = model._coefnames
+        # just set to one for now, change later
+        weights = np.ones(len(coefs))
+
+        if agg == "cohort":
+
+            df_agg = pd.DataFrame(index=period_set, columns=["coef", "se", "pval", "tstat","conf_lower", "conf_upper"])
+            df_agg.index.name = "period"
+
+        for period in period_set:
+            R = np.zeros(len(coefs))
+            for cohort in cohort_list:
+                cohort_pattern = rf"\[(?:T\.?)?{re.escape(str(period))}\]:.*$"
+                matched_indices = [i for i, name in enumerate(coefnames) if re.search(cohort_pattern, name)]
+                R[matched_indices] = weights[matched_indices]
+
+            coef = np.sum(R * coefs)
+            se = np.sqrt(R @ model._vcov @ R.T)
+            tstat = coef / se
+            pval = 2 * (1 - norm.cdf(np.abs(tstat)))
+            conf_lower = coef - 1.96 * se
+            conf_upper = coef + 1.96 * se
+
+            row = {
+                "coef": coef,
+                "se": se,
+                "tstat": tstat,
+                "pval": pval,
+                "conf_lower": conf_lower,
+                "conf_upper": conf_upper
+            }
+
+            df_agg.loc[period] = row
+
+        return df_agg
+
 
 
 ######################################################################
@@ -212,13 +278,13 @@ def _test_treatment_heterogeneity(
     ----------
     model : SaturatedEventStudy
         The fitted event study model
+
     Returns
     -------
     pd.Series
 
             A Series containing the p-value of the test and the test statistic.
     """
-
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
     mmres[["time", "cohort"]] = mmres.Coefficient.str.split(":", expand=True)

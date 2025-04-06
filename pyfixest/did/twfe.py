@@ -1,7 +1,7 @@
 from typing import Optional, cast
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from pyfixest.did.did import DID
 from pyfixest.estimation.estimation import feols
@@ -120,7 +120,6 @@ class TWFE(DID):
         return self.summary()
 
     def test_treatment_dynamics(self) -> pd.Series:
-
         """
         Test for dynamic treatment effects using a Wald test.
 
@@ -130,8 +129,6 @@ class TWFE(DID):
             A Series containing test statistic and p-value of a
             Wald test for dynamic treatment effects.
         """
-
-
         return _test_dynamics(
             model = self.mod if isinstance(self, TWFE) else self,
         )
@@ -140,8 +137,6 @@ class TWFE(DID):
 def _test_dynamics(
     model: TWFE,
 ):
-
-
     """"
     Test for dynamic treatment effects using a Wald test."
     """
