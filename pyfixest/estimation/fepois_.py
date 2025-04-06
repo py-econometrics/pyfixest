@@ -170,14 +170,13 @@ class Fepois(Feols):
             self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
-            self._N_rows = self._N # ok as weights not supported
+            self._N_rows = self._N  # ok as weights not supported
 
             self.na_index = np.concatenate([self.na_index, np.array(na_separation)])
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
-
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
