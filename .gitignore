@@ -9,7 +9,7 @@ dist
 .mypy_cache
 .pytest_cache
 .vscode
-.coverage
+.coverage*
 *.pyc
 __pycache__/
 #docs/figures

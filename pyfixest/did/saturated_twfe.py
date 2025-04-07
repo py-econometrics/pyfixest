@@ -145,7 +145,7 @@ class SaturatedEventStudy(DID):
             model = self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
 
-    def aggregate(self, agg = "cohort", weighting: Optional[str] = None) -> pd.Series:
+    def aggregate(self, agg = "period", weighting: Optional[str] = "shares") -> pd.Series:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
 
@@ -160,13 +160,16 @@ class SaturatedEventStudy(DID):
 
         weighting : str, optional
 
-                    The type of weighting to use. Can be either ...
+                    The type of weighting to use. Can be either 'shares' or 'variance'.
 
         Returns
         -------
         pd.Series
             A Series containing the aggregated estimates.
         """
+
+        if agg not in ["period"]:
+            raise ValueError("agg must be either 'period'")
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
 
@@ -175,45 +178,75 @@ class SaturatedEventStudy(DID):
         period_set = sorted(set(t for x in cohort_list for t in cohort_event_dict[x]["time"].tolist()))
 
         coefs = model._beta_hat
+        se = model._se # not yet used, but needed for variance weighted effects
         coefnames = model._coefnames
-        # just set to one for now, change later
-        weights = np.ones(len(coefs))
 
-        if agg == "cohort":
+        weights_df = compute_period_weights(
+            data = model._data,
+            cohort = model._gname,
+            period = "rel_time",
+            treatment = "treat"
+        ).set_index([self._gname, "rel_time"])
 
-            df_agg = pd.DataFrame(index=period_set, columns=["coef", "se", "pval", "tstat","conf_lower", "conf_upper"])
-            df_agg.index.name = "period"
+        treated_periods = [x for x in period_set if x >= 0]
+        df_agg = pd.DataFrame(index=treated_periods, columns=["coef", "se", "pval", "tstat","conf_lower", "conf_upper"])
+        df_agg.index.name = "period"
 
-        for period in period_set:
+        for period in treated_periods:
             R = np.zeros(len(coefs))
             for cohort in cohort_list:
-                cohort_pattern = rf"\[(?:T\.?)?{re.escape(str(period))}\]:.*$"
-                matched_indices = [i for i, name in enumerate(coefnames) if re.search(cohort_pattern, name)]
-                R[matched_indices] = weights[matched_indices]
 
-            coef = np.sum(R * coefs)
-            se = np.sqrt(R @ model._vcov @ R.T)
-            tstat = coef / se
-            pval = 2 * (1 - norm.cdf(np.abs(tstat)))
-            conf_lower = coef - 1.96 * se
-            conf_upper = coef + 1.96 * se
+                cohort_pattern = rf"\[(?:T\.?)?{re.escape(str(period))}\]:.*{cohort}$"
+                match_idx = [i for i, name in enumerate(coefnames) if re.search(cohort_pattern, name)]
 
-            row = {
-                "coef": coef,
-                "se": se,
-                "tstat": tstat,
-                "pval": pval,
-                "conf_lower": conf_lower,
-                "conf_upper": conf_upper
-            }
+                cohort_int = int(cohort.replace("cohort_dummy_", ""))
+                R[match_idx] = weights_df.xs((cohort_int,period)).values[0]
 
-            df_agg.loc[period] = row
+            res_dict = _compute_lincomb_stats(R = R, coefs = coefs, vcov = model._vcov)
+            df_agg.loc[period] = res_dict
 
         return df_agg
 
 
 
-######################################################################
+
+def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -> dict:
+    """
+    Compute linear combination of coefficients and statistics of interest.
+
+    Parameters
+    ----------
+    R : np.ndarray
+        1D numpy array of weights (same length as coefs),
+    coefs: np.ndarray
+        1D numpy array of coefficient estimates,
+    vcov: np.ndarray
+        The covariance matrix of coefs (same dimension as len(coefs)),
+
+    Returns
+    -------
+    dict
+        A dictionary containing the coefficient, standard error, t-statistic,
+        p-value, and confidence interval bounds.
+    """
+    coef_val = np.sum(R * coefs)
+    se = np.sqrt(R @ vcov @ R)
+    tstat = coef_val / se
+    pval = 2 * (1 - norm.cdf(abs(tstat)))
+    z = norm.ppf(0.975)
+
+    ci_margin = z * se
+    conf_lower = coef_val - ci_margin
+    conf_upper = coef_val + ci_margin
+
+    return {
+        "coef": coef_val,
+        "se": se,
+        "tstat": tstat,
+        "pval": pval,
+        "conf_lower": conf_lower,
+        "conf_upper": conf_upper
+    }
 
 
 def _saturated_event_study(
@@ -300,3 +333,65 @@ def _test_treatment_heterogeneity(
 
     test_result = model.wald_test(R=R2, distribution="chi2")
     return test_result
+
+
+def compute_period_weights(data, cohort='g', period='rel_time', treatment='treatment'):
+    """
+    Computes period-based weights for DiD analysis, based on the number of
+    treated observations in each (cohort, period) cell. Fills in a full grid of
+    all (cohort, period) combinations and assigns weight 0 to missing ones.
+
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        Must contain at least `cohort`, `period`, and `treatment` columns.
+    cohort : str
+        Name of the column containing group identifiers.
+    period : str
+        Name of the column containing relative time identifiers.
+    treatment : str
+        Name of the column containing treatment indicators (boolean or 0/1).
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame with columns [cohort, period, weight].
+        For each (cohort, period) combination, the weight is the ratio of the number of treated
+        observations in that cell to the total number of treated observations in that period.
+    """
+    data = data[[cohort, period, treatment]].copy()
+    data = data[data[treatment]]
+
+    counts_grel = (
+        data
+        .groupby([cohort, period])
+        .size()
+        .reset_index(name='count_grel')
+    )
+
+    counts_rel = (
+        data
+        .groupby(period)
+        .size()
+        .reset_index(name='count_rel')
+    )
+
+    df_weights = counts_grel.merge(counts_rel, on=period, how='left')
+    df_weights['weight'] = df_weights['count_grel'] / df_weights['count_rel']
+
+    all_cohorts = data[cohort].unique()
+    all_periods = data[period].unique()
+    full_grid = pd.MultiIndex.from_product(
+        [all_cohorts, all_periods],
+        names=[cohort, period]
+    ).to_frame(index=False)
+
+    df_full = full_grid.merge(df_weights[[cohort, period, 'weight']],
+                              on=[cohort, period], how='left')
+
+    # Fill missing weights with 0.0; i.e. some cohorts never treated in some periods
+    # (for example, because treatment starts later for some cohorts)
+    df_full['weight'] = df_full['weight'].fillna(0.0)
+
+    return df_full
+
