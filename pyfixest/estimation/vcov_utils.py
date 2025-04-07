@@ -60,6 +60,7 @@ def _count_G_for_ssc_correction(
 
     return G
 
+
 def _get_vcov_type(
     vcov: Union[str, dict[str, str], None], fval: str
 ) -> Union[str, dict[str, str]]:
@@ -94,7 +95,6 @@ def _get_vcov_type(
         vcov_type = vcov  # type: ignore
 
     return vcov_type  # type: ignore
-
 
 
 def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
