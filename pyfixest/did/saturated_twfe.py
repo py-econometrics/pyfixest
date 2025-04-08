@@ -167,7 +167,6 @@ class SaturatedEventStudy(DID):
         pd.Series
             A Series containing the aggregated estimates.
         """
-
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
 
@@ -188,7 +187,10 @@ class SaturatedEventStudy(DID):
 
         if weighting == "shares":
             weights_df = compute_period_weights(
-                data=model._data, cohort=model._gname, period="rel_time", treatment="treat"
+                data=model._data,
+                cohort=model._gname,
+                period="rel_time",
+                treatment="treat",
             ).set_index([self._gname, "rel_time"])
             # 0-weights for pre-treatment periods
             treated_periods = [x for x in period_set if x >= 0]
@@ -198,7 +200,7 @@ class SaturatedEventStudy(DID):
 
         df_agg = pd.DataFrame(
             index=treated_periods,
-            columns=["coef", "se", "pval", "tstat", "conf_lower", "conf_upper"],
+            columns=["Estimate", "Std. Error", "t value", "Pr(>|t|)", "2.5%", "97.5%"],
         )
         df_agg.index.name = "period"
 
@@ -213,7 +215,11 @@ class SaturatedEventStudy(DID):
                 ]
 
                 cohort_int = int(cohort.replace("cohort_dummy_", ""))
-                R[match_idx] = weights_df.xs((cohort_int, period)).values[0] if weighting == "shares" else 1 / se[match_idx]
+                R[match_idx] = (
+                    weights_df.xs((cohort_int, period)).values[0]
+                    if weighting == "shares"
+                    else 1 / se[match_idx]
+                )
 
             if weighting == "variance":
                 R = R / np.sum(R)
@@ -242,30 +248,26 @@ class SaturatedEventStudy(DID):
         -------
         None
         """
-
         df_agg = self.aggregate(agg=agg, weighting=weighting)
 
         time = np.array(df_agg.index, dtype=float).astype(float)
-        est = df_agg["coef"].values.astype(float)
-        ci_lower = df_agg["conf_lower"].values.astype(float)
-        ci_upper = df_agg["conf_upper"].values.astype(float)
+        est = df_agg["Estimate"].values.astype(float)
+        ci_lower = df_agg["2.5%"].values.astype(float)
+        ci_upper = df_agg["97.5%"].values.astype(float)
 
         cmp = plt.get_cmap("Set1")
         fig, ax = plt.subplots(figsize=(10, 6))
 
         ax.plot(time, est, marker="o", color=cmp(len(ax.lines)))
-        ax.fill_between(
-            time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines))
-        )
+        ax.fill_between(time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines)))
 
         ax.axhline(0, color="black", linewidth=1, linestyle="--")
         ax.set_xlabel("Time")
         ax.set_ylabel("Coefficient (with 95% CI)")
-        ax.set_title("Event Study Estimates by Cohort")
+        ax.set_title("Event Study Estimates")
         ax.legend()
         plt.tight_layout()
         plt.show()
-
 
 
 def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -> dict:
@@ -298,12 +300,12 @@ def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -
     conf_upper = coef_val + ci_margin
 
     return {
-        "coef": coef_val,
-        "se": se,
-        "tstat": tstat,
-        "pval": pval,
-        "conf_lower": conf_lower,
-        "conf_upper": conf_upper,
+        "Estimate": coef_val,
+        "Std. Error": se,
+        "t value": tstat,
+        "Pr(>|t|)": pval,
+        "2.5%": conf_lower,
+        "97.5%": conf_upper,
     }
 
 
@@ -395,9 +397,11 @@ def _test_treatment_heterogeneity(
     return test_result
 
 
-def compute_period_weights(data, cohort: str="g", period : str="rel_time", treatment: str="treatment") -> pd.DataFrame:
+def compute_period_weights(
+    data, cohort: str = "g", period: str = "rel_time", treatment: str = "treatment"
+) -> pd.DataFrame:
     """
-    Computes period-based weights for DiD analysis, based on the number of
+    Compute period-based weights for DiD analysis, based on the number of
     treated observations in each (cohort, period) cell. Fills in a full grid of
     all (cohort, period) combinations and assigns weight 0 to missing ones.
 
