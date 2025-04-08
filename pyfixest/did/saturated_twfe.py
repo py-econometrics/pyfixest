@@ -167,8 +167,12 @@ class SaturatedEventStudy(DID):
         pd.Series
             A Series containing the aggregated estimates.
         """
+
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
+
+        if weighting not in ["shares", "variance"]:
+            raise ValueError("weighting must be either 'shares' or 'variance'")
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
 
@@ -179,14 +183,19 @@ class SaturatedEventStudy(DID):
         )
 
         coefs = model._beta_hat
-        se = model._se  # not yet used, but needed for variance weighted effects
+        se = model._se
         coefnames = model._coefnames
 
-        weights_df = compute_period_weights(
-            data=model._data, cohort=model._gname, period="rel_time", treatment="treat"
-        ).set_index([self._gname, "rel_time"])
+        if weighting == "shares":
+            weights_df = compute_period_weights(
+                data=model._data, cohort=model._gname, period="rel_time", treatment="treat"
+            ).set_index([self._gname, "rel_time"])
+            # 0-weights for pre-treatment periods
+            treated_periods = [x for x in period_set if x >= 0]
+        else:
+            # can compute pre-treatment weights
+            treated_periods = list(period_set)
 
-        treated_periods = [x for x in period_set if x >= 0]
         df_agg = pd.DataFrame(
             index=treated_periods,
             columns=["coef", "se", "pval", "tstat", "conf_lower", "conf_upper"],
@@ -204,12 +213,59 @@ class SaturatedEventStudy(DID):
                 ]
 
                 cohort_int = int(cohort.replace("cohort_dummy_", ""))
-                R[match_idx] = weights_df.xs((cohort_int, period)).values[0]
+                R[match_idx] = weights_df.xs((cohort_int, period)).values[0] if weighting == "shares" else 1 / se[match_idx]
+
+            if weighting == "variance":
+                R = R / np.sum(R)
 
             res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
             df_agg.loc[period] = res_dict
 
         return df_agg
+
+    def iplot_aggregate(self, agg="period", weighting: Optional[str] = "shares"):
+        """
+        Plot the aggregated estimates.
+
+        Parameters
+        ----------
+        agg : str, optional
+            The type of aggregation to perform. Can be either "att" or "cohort" or "period".
+            Default is "att". If "att", computes the average treatment effect on the treated.
+            If "cohort", computes the average treatment effect by cohort. If "period",
+            computes the average treatment effect by period.
+
+        weighting : str, optional
+            The type of weighting to use. Can be either 'shares' or 'variance'.
+
+        Returns
+        -------
+        None
+        """
+
+        df_agg = self.aggregate(agg=agg, weighting=weighting)
+
+        time = np.array(df_agg.index, dtype=float).astype(float)
+        est = df_agg["coef"].values.astype(float)
+        ci_lower = df_agg["conf_lower"].values.astype(float)
+        ci_upper = df_agg["conf_upper"].values.astype(float)
+
+        cmp = plt.get_cmap("Set1")
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.plot(time, est, marker="o", color=cmp(len(ax.lines)))
+        ax.fill_between(
+            time, ci_lower, ci_upper, alpha=0.3, color=cmp(len(ax.lines))
+        )
+
+        ax.axhline(0, color="black", linewidth=1, linestyle="--")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Coefficient (with 95% CI)")
+        ax.set_title("Event Study Estimates by Cohort")
+        ax.legend()
+        plt.tight_layout()
+        plt.show()
+
 
 
 def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -> dict:
@@ -339,7 +395,7 @@ def _test_treatment_heterogeneity(
     return test_result
 
 
-def compute_period_weights(data, cohort="g", period="rel_time", treatment="treatment"):
+def compute_period_weights(data, cohort: str="g", period : str="rel_time", treatment: str="treatment") -> pd.DataFrame:
     """
     Computes period-based weights for DiD analysis, based on the number of
     treated observations in each (cohort, period) cell. Fills in a full grid of
