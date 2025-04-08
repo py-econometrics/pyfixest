@@ -1,4 +1,5 @@
 import logging
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
@@ -6,7 +7,18 @@ from typing import Any, Literal, Optional, Union
 import narwhals as nw
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    warnings.warn(
+        "The tqdm package is not installed. Progress bars are disabled. Note that tqdm is included in the pyfixest default environment."
+    )
+
+    def tqdm(iterable, *args, **kwargs):
+        "Define a dummy tqdm function."
+        return iterable
+
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
