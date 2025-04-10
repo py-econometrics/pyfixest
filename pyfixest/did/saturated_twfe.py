@@ -7,6 +7,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation.estimation import feols
+from pyfixest.estimation.feols_ import Feols
 
 from .did2s import DID
 
@@ -64,14 +65,14 @@ class SaturatedEventStudy(DID):
             self._data[self._gname] > 0
         )
 
-    def estimate(self):
+    def estimate(self) -> Feols:
         """
         Estimate the model.
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame containing the estimates.
+        Feols
+            The fitted Feols model object.
         """
         self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
             self._data,
@@ -190,7 +191,7 @@ class SaturatedEventStudy(DID):
                 data=model._data,
                 cohort=model._gname,
                 period="rel_time",
-                treatment="treat",
+                treatment="ATT",
             ).set_index([self._gname, "rel_time"])
             # 0-weights for pre-treatment periods
             treated_periods = [x for x in period_set if x >= 0]

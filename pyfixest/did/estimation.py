@@ -163,6 +163,7 @@ def event_study(
             cluster=cluster,
         )
         fit = saturated.estimate()
+
         fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
         fit._yname = saturated._yname
         fit._gname = saturated._gname
@@ -170,7 +171,8 @@ def event_study(
         fit._idname = saturated._idname
         fit._att = saturated._att
 
-        vcov = fit.vcov(vcov={"CRV1": saturated._idname})
+        vcov = fit.vcov(vcov={"CRV1": fit._idname})
+
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
         fit.test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
