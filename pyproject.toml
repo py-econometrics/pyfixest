@@ -21,8 +21,7 @@ dependencies = [
   "great-tables>=0.10.0",
   "numpy>=1.19.0",
   "narwhals>=1.13.3",
-  "joblib>=1.4.2,<2",
-]
+  "joblib>=1.4.2,<2",]
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
@@ -49,7 +48,6 @@ plots = [
 ]
 
 docs = [
-  "quartodoc>=0.7.2",
   "jupyterlab>=4.0.12",
   "jupytext==1.16.1",
   "watermark==2.4.3",
@@ -61,6 +59,10 @@ docs = [
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
   "lets-plot>=4.0.0",
+  "colorama",
+  "griffe>=1.7.2,<2",
+  "quartodoc>=0.9.1,<0.10",
+  "nbconvert"
 ]
 
 jax = [

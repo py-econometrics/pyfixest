@@ -84,11 +84,11 @@ def event_study(
         idname="unit",
         tname="year",
         gname="g",
-        estimator="twfe",
-        att=True,
+        estimator="saturated",
     )
 
-    fit_twfe_saturated.iplot()
+    fit_twfe_saturated.aggregate()
+    fit_twfe_saturated.iplot_aggregate()
     ```
     """
     assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"

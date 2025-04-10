@@ -249,7 +249,7 @@ difference-in-differences implementations:
 fit_twfe_event = pf.event_study(
     data=df_multi_cohort,
     yname="dep_var",
-    idname=unit,
+    idname="unit",
     tname="year",
     gname="g",
     estimator="twfe",
@@ -264,7 +264,7 @@ In a similar spirit, you can fit a fully-interacted difference-in-differences mo
 fit_saturated = pf.event_study(
     data=df_multi_cohort,
     yname="dep_var",
-    idname=unit,
+    idname="unit",
     tname="year",
     gname="g",
     estimator="saturated",
