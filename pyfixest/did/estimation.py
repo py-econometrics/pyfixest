@@ -148,8 +148,9 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
-        fit.test_treatment_dynamics = twfe.test_treatment_dynamics.__get__(fit, type(fit))
-
+        fit.test_treatment_dynamics = twfe.test_treatment_dynamics.__get__(
+            fit, type(fit)
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -175,7 +176,9 @@ def event_study(
 
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
-        fit.test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        fit.test_treatment_heterogeneity = (
+            saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        )
         fit.aggregate = saturated.aggregate.__get__(fit, type(fit))
         fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))
 
