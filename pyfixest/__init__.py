@@ -6,7 +6,12 @@ from pyfixest import (
     report,
     utils,
 )
-from pyfixest.did import did2s, event_study, lpdid, panelview
+from pyfixest.did import (
+    did2s,
+    event_study,
+    lpdid,
+    panelview,
+)
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (

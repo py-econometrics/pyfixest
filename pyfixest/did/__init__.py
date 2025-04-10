@@ -7,9 +7,4 @@ from pyfixest.did.visualize import (
     panelview,
 )
 
-__all__ = [
-    "did2s",
-    "event_study",
-    "lpdid",
-    "panelview",
-]
+__all__ = ["did2s", "event_study", "lpdid", "panelview"]

@@ -1,3 +1,5 @@
+from importlib import resources
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,6 +9,7 @@ from rpy2.robjects import pandas2ri
 # rpy2 imports
 from rpy2.robjects.packages import importr
 
+import pyfixest as pf
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
 from pyfixest.utils.set_rpy2_path import update_r_paths
@@ -17,6 +20,7 @@ pandas2ri.activate()
 did2s = importr("did2s")
 stats = importr("stats")
 broom = importr("broom")
+fixest = importr("fixest")
 
 
 @pytest.fixture
@@ -273,6 +277,68 @@ def test_lpdid():
 
     fit.iplot()
     fit.tidy()
+
+
+@pytest.mark.parametrize("unit", ["unit", "g"])
+def test_fully_interacted(unit):
+    df_multi_cohort = pd.read_csv(
+        resources.files("pyfixest.did.data").joinpath("df_het.csv")
+    )
+
+    # Python fit
+
+    saturated_py = pf.event_study(
+        data=df_multi_cohort,
+        yname="dep_var",
+        idname=unit,
+        tname="year",
+        gname="g",
+        estimator="saturated",
+    )
+
+    saturated_agg_py = saturated_py.aggregate()
+
+    # R fit via rpy2
+    saturated_r = fixest.feols(
+        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
+        data=df_multi_cohort,
+    )
+    saturated_agg_r = fixest.feols(
+        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
+        data=df_multi_cohort,
+    )
+
+    assert (
+        np.abs(
+            np.mean(np.sort(stats.coef(saturated_r)) - np.sort(saturated_py._beta_hat))
+        )
+        < 1e-8
+    ), "R and Python SEs do not match for saturated model"
+    assert (
+        np.abs(
+            np.mean(np.sort(saturated_r.rx2("se")) - np.sort(saturated_py._beta_hat))
+        )
+        < 1e-8
+    ), "R and Python SEs do not match for saturated model"
+
+    assert (
+        np.abs(
+            np.mean(
+                np.sort(stats.coef(saturated_agg_r))
+                - np.sort(saturated_agg_py[["Estimate"]].values)
+            )
+        )
+        < 1e-8
+    ), "R and Python SEs do not match for period aggregated model"
+    assert (
+        np.abs(
+            np.mean(
+                np.sort(saturated_agg_r.rx2("se"))
+                - np.sort(saturated_agg_py[["Std. Error"]].values)
+            )
+        )
+        < 1e-8
+    ), "R and Python SEs do not match for period aggregated model"
 
 
 def _get_r_did2s_results(data, weights):
