@@ -734,6 +734,8 @@ class Feols:
 
     def _vcov_hetero(self):
         _scores = self._scores
+        if self._weights_type == "fweights":
+            _scores /= np.sqrt(self._weights)  # remove one sqrt(w)
         _vcov_type_detail = self._vcov_type_detail
         _tXZ = self._tXZ
         _tZZinv = self._tZZinv
