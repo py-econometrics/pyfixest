@@ -9350,7 +9350,7 @@ packages:
 - pypi: .
   name: pyfixest
   version: 0.28.0
-  sha256: c5cac40bc090f93baeb4c735861d9496b904b26c93b2ad89ed2c40d1ef85f989
+  sha256: 3ac29c9b6384267e069846e7297ffdc6af723e61b99da7729b03cc7add6d468c
   requires_dist:
   - scipy>=1.6
   - formulaic>=1.1.0
@@ -9388,10 +9388,7 @@ packages:
   - jax>=0.4.15 ; extra == 'docs'
   - jaxlib>=0.4.15 ; extra == 'docs'
   - lets-plot>=4.0.0 ; extra == 'docs'
-  - colorama ; extra == 'docs'
-  - griffe>=1.7.2,<2 ; extra == 'docs'
   - quartodoc>=0.9.1,<0.10 ; extra == 'docs'
-  - nbconvert ; extra == 'docs'
   - jax>=0.4.15 ; extra == 'jax'
   - jaxlib>=0.4.15 ; extra == 'jax'
   requires_python: '>=3.9'

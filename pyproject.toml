@@ -59,10 +59,7 @@ docs = [
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
   "lets-plot>=4.0.0",
-  "colorama",
-  "griffe>=1.7.2,<2",
   "quartodoc>=0.9.1,<0.10",
-  "nbconvert"
 ]
 
 jax = [
