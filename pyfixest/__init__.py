@@ -7,6 +7,7 @@ from pyfixest import (
     utils,
 )
 from pyfixest.did import (
+    SaturatedEventStudy,
     did2s,
     event_study,
     lpdid,
@@ -30,6 +31,7 @@ from pyfixest.utils import (
 )
 
 __all__ = [
+    "SaturatedEventStudy",
     "bonferroni",
     "coefplot",
     "did",

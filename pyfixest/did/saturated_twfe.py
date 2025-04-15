@@ -1,4 +1,5 @@
 import re
+import warnings
 from typing import Optional
 
 import matplotlib.pyplot as plt
@@ -31,9 +32,11 @@ class SaturatedEventStudy(DID):
     cluster : str
         The name of the cluster variable.
     xfml : str
-        The formula for the fixed effects.
+        Additional covariates to include in the model.
     att : bool
         Whether to use the average treatment effect.
+    display_warning: bool
+        Whether to display (some) warning messages.
 
     """
 
@@ -47,6 +50,7 @@ class SaturatedEventStudy(DID):
         att: bool = True,
         cluster: Optional[str] = None,
         xfml: Optional[str] = None,
+        display_warning: bool = True,
     ):
         super().__init__(
             data=data,
@@ -59,6 +63,11 @@ class SaturatedEventStudy(DID):
             att=att,
         )
         self._estimator = "Saturated Event Study"
+
+        if display_warning:
+            warnings.warn(
+                "The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter."
+            )
 
     def estimate(self) -> Feols:
         """

@@ -3,8 +3,9 @@ from pyfixest.did.estimation import (
     event_study,
     lpdid,
 )
+from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.visualize import (
     panelview,
 )
 
-__all__ = ["did2s", "event_study", "lpdid", "panelview"]
+__all__ = ["SaturatedEventStudy", "did2s", "event_study", "lpdid", "panelview"]
