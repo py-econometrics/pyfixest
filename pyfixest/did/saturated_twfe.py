@@ -324,7 +324,6 @@ def _saturated_event_study(
                 | {unit_id} + {time_id}
                 """
     m = feols(fml = ff, data = df_int, vcov={"CRV1": unit_id})
-
     res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
@@ -332,7 +331,7 @@ def _saturated_event_study(
         res_cohort = res.filter(like=cohort, axis=0)
         event_time = (
             res_cohort.index.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]")
-            .astype(int)
+            .astype(float)
             .values.flatten()
         )
         res_cohort_eventtime_dict[cohort] = {"est": res_cohort, "time": event_time}
