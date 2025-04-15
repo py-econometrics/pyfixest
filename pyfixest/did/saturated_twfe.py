@@ -141,7 +141,9 @@ class SaturatedEventStudy(DID):
             model=self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
 
-    def aggregate(self, agg="period", weighting: Optional[str] = "shares") -> pd.Series:
+    def aggregate(
+        self, agg="period", weighting: Optional[str] = "shares"
+    ) -> pd.DataFrame:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
 
@@ -220,7 +222,7 @@ class SaturatedEventStudy(DID):
                 R /= np.sum(R)
 
             res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
-            df_agg.loc[period] = res_dict
+            df_agg.loc[period] = pd.Series(res_dict)
 
         return df_agg
 

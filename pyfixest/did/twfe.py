@@ -1,6 +1,5 @@
 from typing import Optional, cast
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.did.did import DID

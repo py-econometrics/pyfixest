@@ -148,9 +148,6 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": twfe._idname})
         fit._method = "twfe"
-        fit.test_treatment_dynamics = twfe.test_treatment_dynamics.__get__(
-            fit, type(fit)
-        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
