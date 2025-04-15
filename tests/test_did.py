@@ -301,10 +301,10 @@ def test_fully_interacted(unit):
 
     r_tidy = pd.DataFrame(broom.tidy_fixest(saturated_r)).T
     r_est = r_tidy.iloc[:, 1].astype(float).values
-    r_se  = r_tidy.iloc[:, 2].astype(float).values
+    r_se = r_tidy.iloc[:, 2].astype(float).values
 
     py_est = np.asarray(saturated_py.coef(), dtype=float)
-    py_se  = np.asarray(saturated_py.se(),   dtype=float)
+    py_se = np.asarray(saturated_py.se(), dtype=float)
 
     np.testing.assert_allclose(
         np.sort(r_est)[:5],
@@ -329,19 +329,90 @@ def test_fully_interacted(unit):
 
     r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T.tail()
 
-    r_agg_est = r_agg_tidy.iloc[:,1].astype(float).values
-    r_agg_se  = r_agg_tidy.loc[:,2].astype(float).values
+    r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
+    r_agg_se = r_agg_tidy.loc[:, 2].astype(float).values
 
     py_agg_est = py_agg_tidy["Estimate"].astype(float).values
-    py_agg_se  = py_agg_tidy["Std. Error"].astype(float).values
+    py_agg_se = py_agg_tidy["Std. Error"].astype(float).values
 
     np.testing.assert_allclose(
-        r_agg_est, py_agg_est,
+        r_agg_est,
+        py_agg_est,
         err_msg="R and Python *aggregated coefs* do not match",
     )
     np.testing.assert_allclose(
-        r_agg_se, py_agg_se,
+        r_agg_se,
+        py_agg_se,
         err_msg="R and Python *aggregated SEs* do not match",
+    )
+
+
+@pytest.mark.skip("mpdata not available online as csv, only run test locally.")
+@pytest.mark.parametrize(
+    "mpdata_path", [r"C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"]
+)
+def test_fully_interacted_mpdata(mpdata_path):
+    mpdata = pd.read_csv(mpdata_path)
+    mpdata["first_treat"] = mpdata["first.treat"]
+
+    fit_twfe = pf.event_study(
+        data=mpdata,
+        yname="lemp",
+        idname="countyreal",
+        tname="year",
+        gname="first_treat",
+        estimator="saturated",
+    )
+
+    r_model = fixest.feols(
+        ro.Formula(
+            "lemp ~ 1 + sunab(first.treat, year, no_agg=TRUE) | countyreal + year"
+        ),
+        data=mpdata,
+    )
+
+    r_tidy = pd.DataFrame(broom.tidy_fixest(r_model)).T
+    r_est = r_tidy.iloc[:, 1].astype(float).values
+    r_se = r_tidy.iloc[:, 2].astype(float).values
+
+    py_est = np.asarray(fit_twfe.coef(), dtype=float)
+    py_se = np.asarray(fit_twfe.se(), dtype=float)
+
+    np.testing.assert_allclose(
+        np.sort(r_est)[:5],
+        np.sort(py_est)[:5],
+        err_msg="R and Python *estimates* do not match for mpdata (fully interacted model)",
+    )
+    np.testing.assert_allclose(
+        np.sort(r_se)[:5],
+        np.sort(py_se)[:5],
+        err_msg="R and Python *standard errors* do not match for mpdata (fully interacted model)",
+    )
+
+    py_agg_tidy = fit_twfe.aggregate().tail()
+
+    r_agg_model = fixest.feols(
+        ro.Formula(
+            "lemp ~ 1 + sunab(first.treat, year, no_agg=FALSE) | countyreal + year"
+        ),
+        data=mpdata,
+    )
+    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(r_agg_model)).T.iloc[-3:, :]
+    r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
+    r_agg_se = r_agg_tidy.iloc[:, 2].astype(float).values
+
+    py_agg_est = py_agg_tidy["Estimate"].astype(float).values
+    py_agg_se = py_agg_tidy["Std. Error"].astype(float).values
+
+    np.testing.assert_allclose(
+        r_agg_est,
+        py_agg_est,
+        err_msg="R and Python *aggregated coefs* do not match for mpdata",
+    )
+    np.testing.assert_allclose(
+        r_agg_se,
+        py_agg_se,
+        err_msg="R and Python *aggregated SEs* do not match for mpdata",
     )
 
 
