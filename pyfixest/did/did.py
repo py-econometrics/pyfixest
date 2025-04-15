@@ -59,35 +59,35 @@ class DID(ABC):
         self._cluster = cluster
 
         # check if tname and gname are of type int (either int 64, 32, 8)
-        if self._data[self._tname].dtype not in [
-            "int64",
-            "int32",
-            "int8",
-            "float64",
-            "float32",
-        ]:
-            raise ValueError(
-                f"""The variable {self._tname} must be of a numeric type, and more
-                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                etc. or 201201, 201202, 201203 etc."""
-            )
-        if self._data[self._gname].dtype not in [
-            "int64",
-            "int32",
-            "int8",
-            "float64",
-            "float32",
-        ]:
-            raise ValueError(
-                f"""The variable {self._tname} must be of a numeric type, and more
-                specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                etc. or 201201, 201202, 201203 etc."""
-            )
+
+        for var in [self._tname, self._gname]:
+            if self._data[var].dtype not in [
+                "int64",
+                "int32",
+                "int8",
+                "float64",
+                "float32",
+            ]:
+                raise ValueError(
+                    f"""The variable {var} must be of a numeric type, and more
+                    specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
+                    etc. or 201201, 201202, 201203 etc."""
+                )
 
         # create a treatment variable
-        self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (
-            self._data[self._gname] > 0
+        self._data["is_treated"] = (self._data[self._tname] >= self._data[self._gname])
+        self._data = self._data.merge(
+            self._data.assign(first_treated_period=self._data[self._tname] * self._data["is_treated"])
+            .groupby(self._idname)["first_treated_period"]
+            .apply(lambda x: x[x > 0].min()),
+            on=self._idname,
         )
+        self._data["rel_time"] = (self._data[self._tname] - self._data["first_treated_period"]).astype("int")
+        self._data["first_treated_period"] = (
+            self._data["first_treated_period"].replace(np.nan, 0).astype("int")
+        )
+        self._data["rel_time"] = self._data["rel_time"].replace(np.nan, np.inf)
+
 
     @abstractmethod
     def estimate(self):  # noqa: D102

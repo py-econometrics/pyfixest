@@ -172,8 +172,6 @@ def event_study(
         fit._idname = saturated._idname
         fit._att = saturated._att
 
-        vcov = fit.vcov(vcov={"CRV1": fit._idname})
-
         fit._method = "saturated"
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
         fit.test_treatment_heterogeneity = (

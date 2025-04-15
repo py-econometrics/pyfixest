@@ -60,11 +60,6 @@ class SaturatedEventStudy(DID):
         )
         self._estimator = "Saturated Event Study"
 
-        # create a treatment variable
-        self._data["ATT"] = (self._data[self._tname] >= self._data[self._gname]) * (
-            self._data[self._gname] > 0
-        )
-
     def estimate(self) -> Feols:
         """
         Estimate the model.
@@ -168,6 +163,7 @@ class SaturatedEventStudy(DID):
         pd.Series
             A Series containing the aggregated estimates.
         """
+
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
 
@@ -191,10 +187,10 @@ class SaturatedEventStudy(DID):
                 data=model._data,
                 cohort=model._gname,
                 period="rel_time",
-                treatment="ATT",
+                treatment="is_treated",
             ).set_index([self._gname, "rel_time"])
             # 0-weights for pre-treatment periods
-            treated_periods = [x for x in period_set if x >= 0]
+            treated_periods = [x for x in period_set if x > 0]
         else:
             # can compute pre-treatment weights
             treated_periods = list(period_set)
@@ -208,13 +204,12 @@ class SaturatedEventStudy(DID):
         for period in treated_periods:
             R = np.zeros(len(coefs))
             for cohort in cohort_list:
-                cohort_pattern = rf"\[(?:T\.?)?{re.escape(str(period))}\]:.*{cohort}$"
+                cohort_pattern = rf"\[{re.escape(str(period))}\]:.*{re.escape(cohort)}$"
                 match_idx = [
                     i
                     for i, name in enumerate(coefnames)
                     if re.search(cohort_pattern, name)
                 ]
-
                 cohort_int = int(cohort.replace("cohort_dummy_", ""))
                 R[match_idx] = (
                     weights_df.xs((cohort_int, period)).values[0]
@@ -317,33 +312,18 @@ def _saturated_event_study(
     time_id: str = "time",
     unit_id: str = "unit",
 ):
-    ######################################################################
-    # this chunk creates gname internally here - assume that data already contains it?
 
-    df = df.merge(
-        df.assign(first_treated_period=df[time_id] * df[treatment])
-        .groupby(unit_id)["first_treated_period"]
-        .apply(lambda x: x[x > 0].min()),
-        on=unit_id,
-    )
-    df["rel_time"] = df[time_id] - df["first_treated_period"]
-    df["first_treated_period"] = (
-        df["first_treated_period"].replace(np.nan, 0).astype("int")
-    )
-    df["rel_time"] = df["rel_time"].replace(np.nan, np.inf)
     cohort_dummies = pd.get_dummies(
         df.first_treated_period, drop_first=True, prefix="cohort_dummy"
     )
     df_int = pd.concat([df, cohort_dummies], axis=1)
 
-    ######################################################################
-    # formula
     ff = f"""
                 {outcome} ~
                 {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
-    m = feols(ff, df_int, vcov={"CRV1": unit_id})
+    m = feols(fml = ff, data = df_int, vcov={"CRV1": unit_id})
 
     res = m.tidy()
     # create a dict with cohort specific effect curves
@@ -352,7 +332,7 @@ def _saturated_event_study(
         res_cohort = res.filter(like=cohort, axis=0)
         event_time = (
             res_cohort.index.str.extract(r"\[(?:T\.)?(-?\d+(?:\.\d+)?)\]")
-            .astype(float)
+            .astype(int)
             .values.flatten()
         )
         res_cohort_eventtime_dict[cohort] = {"est": res_cohort, "time": event_time}
