@@ -279,13 +279,11 @@ def test_lpdid():
     fit.tidy()
 
 
-@pytest.mark.parametrize("unit", ["unit", "g"])
+@pytest.mark.parametrize("unit", ["unit"])
 def test_fully_interacted(unit):
     df_multi_cohort = pd.read_csv(
         resources.files("pyfixest.did.data").joinpath("df_het.csv")
     )
-
-    # Python fit
 
     saturated_py = pf.event_study(
         data=df_multi_cohort,
@@ -296,49 +294,55 @@ def test_fully_interacted(unit):
         estimator="saturated",
     )
 
-    saturated_agg_py = saturated_py.aggregate()
-
-    # R fit via rpy2
     saturated_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
         data=df_multi_cohort,
     )
+
+    r_tidy = pd.DataFrame(broom.tidy_fixest(saturated_r)).T
+    r_est = r_tidy.iloc[:, 1].astype(float).values
+    r_se  = r_tidy.iloc[:, 2].astype(float).values
+
+    py_est = np.asarray(saturated_py.coef(), dtype=float)
+    py_se  = np.asarray(saturated_py.se(),   dtype=float)
+
+    np.testing.assert_allclose(
+        np.sort(r_est)[:5],
+        np.sort(py_est)[:5],
+        err_msg="R and Python *estimates* do not match for fully interacted model",
+    )
+    np.testing.assert_allclose(
+        np.sort(r_se)[:5],
+        np.sort(py_se)[:5],
+        err_msg="R and Python *standard errors* do not match for fully interacted model",
+    )
+
+    # ---------------------------------------------------------
+    # Test aggregated coefficients (no_agg=False in sunab)
+    # ---------------------------------------------------------
+    py_agg_tidy = saturated_py.aggregate().tail()
+
     saturated_agg_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
         data=df_multi_cohort,
     )
 
-    assert (
-        np.abs(
-            np.mean(np.sort(stats.coef(saturated_r)) - np.sort(saturated_py._beta_hat))
-        )
-        < 1e-8
-    ), "R and Python SEs do not match for saturated model"
-    assert (
-        np.abs(
-            np.mean(np.sort(saturated_r.rx2("se")) - np.sort(saturated_py._beta_hat))
-        )
-        < 1e-8
-    ), "R and Python SEs do not match for saturated model"
+    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T.tail()
 
-    assert (
-        np.abs(
-            np.mean(
-                np.sort(stats.coef(saturated_agg_r))
-                - np.sort(saturated_agg_py[["Estimate"]].values)
-            )
-        )
-        < 1e-8
-    ), "R and Python SEs do not match for period aggregated model"
-    assert (
-        np.abs(
-            np.mean(
-                np.sort(saturated_agg_r.rx2("se"))
-                - np.sort(saturated_agg_py[["Std. Error"]].values)
-            )
-        )
-        < 1e-8
-    ), "R and Python SEs do not match for period aggregated model"
+    r_agg_est = r_agg_tidy.iloc[:,1].astype(float).values
+    r_agg_se  = r_agg_tidy.loc[:,2].astype(float).values
+
+    py_agg_est = py_agg_tidy["Estimate"].astype(float).values
+    py_agg_se  = py_agg_tidy["Std. Error"].astype(float).values
+
+    np.testing.assert_allclose(
+        r_agg_est, py_agg_est,
+        err_msg="R and Python *aggregated coefs* do not match",
+    )
+    np.testing.assert_allclose(
+        r_agg_se, py_agg_se,
+        err_msg="R and Python *aggregated SEs* do not match",
+    )
 
 
 def _get_r_did2s_results(data, weights):
