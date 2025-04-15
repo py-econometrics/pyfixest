@@ -2619,7 +2619,9 @@ def _drop_multicollinear_variables(
         collin_vars = names_array[id_excl].tolist()
         if len(collin_vars) > 5:
             indent = "    "
-            formatted_collinear_vars = f"\n{indent}" + f"\n{indent}".join(collin_vars[:5]) + f"\n{indent}..."
+            formatted_collinear_vars = (
+                f"\n{indent}" + f"\n{indent}".join(collin_vars[:5]) + f"\n{indent}..."
+            )
         else:
             formatted_collinear_vars = str(collin_vars)
 
