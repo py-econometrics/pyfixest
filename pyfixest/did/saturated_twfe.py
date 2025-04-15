@@ -163,7 +163,6 @@ class SaturatedEventStudy(DID):
         pd.Series
             A Series containing the aggregated estimates.
         """
-
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
 
@@ -218,7 +217,7 @@ class SaturatedEventStudy(DID):
                 )
 
             if weighting == "variance":
-                R = R / np.sum(R)
+                R /= np.sum(R)
 
             res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
             df_agg.loc[period] = res_dict
@@ -312,7 +311,6 @@ def _saturated_event_study(
     time_id: str = "time",
     unit_id: str = "unit",
 ):
-
     cohort_dummies = pd.get_dummies(
         df.first_treated_period, drop_first=True, prefix="cohort_dummy"
     )
@@ -323,7 +321,7 @@ def _saturated_event_study(
                 {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
-    m = feols(fml = ff, data = df_int, vcov={"CRV1": unit_id})
+    m = feols(fml=ff, data=df_int, vcov={"CRV1": unit_id})
     res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
@@ -340,7 +338,7 @@ def _saturated_event_study(
 
 
 def _test_treatment_heterogeneity(
-    model: SaturatedEventStudy,
+    model: Feols,
 ) -> pd.Series:
     """
     Test for treatment heterogeneity in the event study design.

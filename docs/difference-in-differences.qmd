@@ -308,7 +308,7 @@ To do the same via Gardners 2-stage estimator, we employ the the `pf.did2s()` fu
 fit_did2s = pf.did2s(
     df_multi_cohort,
     yname="dep_var",
-    first_stage="~ 0 | state + year",
+    first_stage="~ 0 | unit + year",
     second_stage="~i(rel_year,ref=-1.0)",
     treatment="treat",
     cluster="state",
