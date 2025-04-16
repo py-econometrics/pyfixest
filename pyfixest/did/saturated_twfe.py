@@ -199,11 +199,8 @@ class SaturatedEventStudy(DID):
                 period="rel_time",
                 treatment="is_treated",
             ).set_index([self._gname, "rel_time"])
-            # 0-weights for pre-treatment periods
-            treated_periods = [x for x in period_set if x > 0]
-        else:
-            # can compute pre-treatment weights
-            treated_periods = list(period_set)
+
+        treated_periods = list(period_set)
 
         df_agg = pd.DataFrame(
             index=treated_periods,
@@ -387,53 +384,79 @@ def _test_treatment_heterogeneity(
 
 
 def compute_period_weights(
-    data, cohort: str = "g", period: str = "rel_time", treatment: str = "treatment"
+    data: pd.DataFrame,
+    cohort: str = "g",
+    period: str = "rel_time",
+    treatment: str = "treatment",
+    include_grid: bool = True,
 ) -> pd.DataFrame:
     """
-    Compute period-based weights for DiD analysis, based on the number of
-    treated observations in each (cohort, period) cell. Fills in a full grid of
-    all (cohort, period) combinations and assigns weight 0 to missing ones.
+    Compute Sun & Abraham interaction weights for all relative times.
+
+    For l < 0, weight_{g,l} = n^0_{g,l} / Σ_{g'} n^0_{g',l}, where
+      n^0_{g,l} = count of (cohort=g, period=l) still untreated but eventually treated.
+    For l > 0, weight_{g,l} = n^1_{g,l} / Σ_{g'} n^1_{g',l}, where
+      n^1_{g,l} = count of (cohort=g, period=l) already treated.
+    For l = 0, weight is set to zero in the final grid.
 
     Parameters
     ----------
     data : pd.DataFrame
-        Must contain at least `cohort`, `period`, and `treatment` columns.
+        Must include columns for `cohort`, `period`, and `treatment`.
     cohort : str
-        Name of the column containing group identifiers.
+        Column name of cohort/adoption group.
     period : str
-        Name of the column containing relative time identifiers.
+        Column name of relative time (lead/lag) indicator.
     treatment : str
-        Name of the column containing treatment indicators (boolean or 0/1).
+        Column name of treatment indicator (0/1).
+    include_grid : bool, default True
+        If True, returns a full (cohort x period) grid with zero-filled weights.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns [cohort, period, weight].
-        For each (cohort, period) combination, the weight is the ratio of the number of treated
-        observations in that cell to the total number of treated observations in that period.
+        Columns [cohort, period, weight]. If `include_grid`, every
+        combination appears (with weight=0 where not defined).
     """
-    data = data[[cohort, period, treatment]].copy()
-    data = data[data[treatment]]
+    df = data[[cohort, period, treatment]].copy()
+    ever_treated = df.loc[df[treatment] == 1, cohort].unique()
 
-    counts_grel = data.groupby([cohort, period]).size().reset_index(name="count_grel")
+    # post-treatment cells (l > 0)
+    post = (
+        df[df[treatment] == 1]
+        .groupby([cohort, period])
+        .size()
+        .reset_index(name="n_grel")
+    )
+    post = post[post[period] >= 0]
+    denom_post = post.groupby(period)["n_grel"].sum().reset_index(name="n_rel")
+    post = post.merge(denom_post, on=period)
+    post["weight"] = post["n_grel"] / post["n_rel"]
 
-    counts_rel = data.groupby(period).size().reset_index(name="count_rel")
+    # pre-treatment cells (l < 0)
+    pre = (
+        df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
+        .groupby([cohort, period])
+        .size()
+        .reset_index(name="n_grel")
+    )
+    pre = pre[pre[period] < 0]
+    denom_pre = pre.groupby(period)["n_grel"].sum().reset_index(name="n_rel")
+    pre = pre.merge(denom_pre, on=period)
+    pre["weight"] = pre["n_grel"] / pre["n_rel"]
 
-    df_weights = counts_grel.merge(counts_rel, on=period, how="left")
-    df_weights["weight"] = df_weights["count_grel"] / df_weights["count_rel"]
-
-    all_cohorts = data[cohort].unique()
-    all_periods = data[period].unique()
-    full_grid = pd.MultiIndex.from_product(
-        [all_cohorts, all_periods], names=[cohort, period]
-    ).to_frame(index=False)
-
-    df_full = full_grid.merge(
-        df_weights[[cohort, period, "weight"]], on=[cohort, period], how="left"
+    # combine and (optionally) fill out the full grid
+    out = pd.concat(
+        [pre[[cohort, period, "weight"]], post[[cohort, period, "weight"]]],
+        ignore_index=True,
     )
 
-    # Fill missing weights with 0.0; i.e. some cohorts never treated in some periods
-    # (for example, because treatment starts later for some cohorts)
-    df_full["weight"] = df_full["weight"].fillna(0.0)
+    if include_grid:
+        all_periods = sorted(df[period].unique())
+        grid = pd.MultiIndex.from_product(
+            [ever_treated, all_periods], names=[cohort, period]
+        ).to_frame(index=False)
+        out = grid.merge(out, on=[cohort, period], how="left")
+        out["weight"] = out["weight"].fillna(0.0)
 
-    return df_full
+    return out[[cohort, period, "weight"]]
