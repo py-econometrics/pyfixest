@@ -97,7 +97,7 @@ class DID2S(DID):
             _first_stage=self._fml1,
             _second_stage=self._fml2,
             weights=self._weights_name,
-            treatment="ATT",
+            treatment="is_treated",
         )  # returns triple Feols, first_u, second_u
 
     def vcov(self):
@@ -117,7 +117,7 @@ class DID2S(DID):
             yname=self._yname,
             first_stage=self._fml1,
             second_stage=self._fml2,
-            treatment="ATT",
+            treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
             cluster=self._cluster,
