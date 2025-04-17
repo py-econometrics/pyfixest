@@ -75,14 +75,20 @@ class DID(ABC):
                 )
 
         # create a treatment variable
-        self._data["is_treated"] = (self._data[self._tname] >= self._data[self._gname]) *( self._data[self._gname] > 0)
+        self._data["is_treated"] = (
+            self._data[self._tname] >= self._data[self._gname]
+        ) * (self._data[self._gname] > 0)
         self._data = self._data.merge(
-            self._data.assign(first_treated_period=self._data[self._tname] * self._data["is_treated"])
+            self._data.assign(
+                first_treated_period=self._data[self._tname] * self._data["is_treated"]
+            )
             .groupby(self._idname)["first_treated_period"]
             .apply(lambda x: x[x > 0].min()),
             on=self._idname,
         )
-        self._data["rel_time"] = (self._data[self._tname] - self._data["first_treated_period"])
+        self._data["rel_time"] = (
+            self._data[self._tname] - self._data["first_treated_period"]
+        )
         self._data["first_treated_period"] = (
             self._data["first_treated_period"].replace(np.nan, 0).astype(int)
         )
