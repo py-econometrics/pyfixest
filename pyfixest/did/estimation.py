@@ -16,9 +16,9 @@ def event_study(
     tname: str,
     gname: str,
     xfml: Optional[str] = None,
+    cluster: Optional[str] = None,
     estimator: Optional[str] = "twfe",
     att: Optional[bool] = True,
-    cluster: Optional[str] = "idname",
 ):
     """
     Estimate Event Study Model.
@@ -40,6 +40,8 @@ def event_study(
         Variable name for calendar period.
     gname : str
         Unit-specific time of initial treatment.
+    cluster: Optional[str]
+        The name of the cluster variable. If None, defaults to idname.
     xfml : str
         The formula for the covariates.
     estimator : str
@@ -48,8 +50,6 @@ def event_study(
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
         lags. Default is True.
-    cluster: Optional[str]
-        The name of the cluster variable.
 
     Returns
     -------
@@ -99,15 +99,9 @@ def event_study(
     assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
     assert isinstance(estimator, str), "estimator must be a string"
     assert isinstance(att, bool), "att must be a boolean"
-    assert isinstance(cluster, str), "cluster must be a string"
-    assert cluster == "idname", "cluster must be idname"
+    assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
 
-    if cluster == "idname":
-        cluster = idname
-    else:
-        raise NotImplementedError(
-            "Clustering by a variable of your choice is not yet supported."
-        )
+    cluster = idname if cluster is None else cluster
 
     if estimator == "did2s":
         did2s = DID2S(
@@ -120,6 +114,7 @@ def event_study(
             att=att,
             cluster=cluster,
         )
+
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
         fit._vcov = vcov
@@ -146,7 +141,7 @@ def event_study(
         fit._idname = twfe._idname
         fit._att = twfe._att
 
-        vcov = fit.vcov(vcov={"CRV1": twfe._idname})
+        vcov = fit.vcov(vcov={"CRV1": cluster})
         fit._method = "twfe"
 
     elif estimator == "saturated":
@@ -161,6 +156,7 @@ def event_study(
             cluster=cluster,
         )
         fit = saturated.estimate()
+        vcov = fit.vcov(vcov={"CRV1": cluster})
 
         fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
         fit._yname = saturated._yname

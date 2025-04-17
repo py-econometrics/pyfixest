@@ -81,9 +81,9 @@ class SaturatedEventStudy(DID):
         self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
             self._data,
             outcome=self._yname,
-            treatment="ATT",
             time_id=self._tname,
             unit_id=self._idname,
+            cluster=self._cluster,
         )
 
         return self.mod
@@ -314,10 +314,10 @@ def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -
 
 def _saturated_event_study(
     df: pd.DataFrame,
-    outcome: str = "outcome",
-    treatment: str = "treated",
-    time_id: str = "time",
-    unit_id: str = "unit",
+    outcome: str,
+    time_id: str,
+    unit_id: str,
+    cluster: Optional[str] = None,
 ):
     cohort_dummies = pd.get_dummies(
         df.first_treated_period, drop_first=True, prefix="cohort_dummy"
@@ -329,7 +329,7 @@ def _saturated_event_study(
                 {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
-    m = feols(fml=ff, data=df_int, vcov={"CRV1": unit_id})
+    m = feols(fml=ff, data=df_int, vcov={"CRV1": cluster})  # type: ignore
     res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}

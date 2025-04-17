@@ -280,10 +280,14 @@ def test_lpdid():
 
 
 @pytest.mark.parametrize("unit", ["unit"])
-def test_fully_interacted(unit):
+@pytest.mark.parametrize("cluster", ["unit", "unit2"])
+def test_fully_interacted(unit, cluster):
     df_multi_cohort = pd.read_csv(
         resources.files("pyfixest.did.data").joinpath("df_het.csv")
     )
+    if cluster == "unit2":
+        rng = np.random.default_rng(21)
+        df_multi_cohort["unit2"] = rng.choice(range(100), size=len(df_multi_cohort))
 
     saturated_py = pf.event_study(
         data=df_multi_cohort,
@@ -292,11 +296,13 @@ def test_fully_interacted(unit):
         tname="year",
         gname="g",
         estimator="saturated",
+        cluster=cluster,
     )
 
     saturated_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
         data=df_multi_cohort,
+        vcov=ro.Formula(f"~{cluster}"),
     )
 
     r_tidy = pd.DataFrame(broom.tidy_fixest(saturated_r)).T
@@ -325,6 +331,7 @@ def test_fully_interacted(unit):
     saturated_agg_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
         data=df_multi_cohort,
+        vcov=ro.Formula(f"~{cluster}"),
     )
 
     r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T
