@@ -320,14 +320,14 @@ def test_fully_interacted(unit):
     # ---------------------------------------------------------
     # Test aggregated coefficients (no_agg=False in sunab)
     # ---------------------------------------------------------
-    py_agg_tidy = saturated_py.aggregate().tail()
+    py_agg_tidy = saturated_py.aggregate()
 
     saturated_agg_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
         data=df_multi_cohort,
     )
 
-    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T.tail()
+    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T
 
     r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
     r_agg_se = r_agg_tidy.loc[:, 2].astype(float).values
@@ -389,7 +389,7 @@ def test_fully_interacted_mpdata(mpdata_path):
         err_msg="R and Python *standard errors* do not match for mpdata (fully interacted model)",
     )
 
-    py_agg_tidy = fit_twfe.aggregate().tail()
+    py_agg_tidy = fit_twfe.aggregate()
 
     r_agg_model = fixest.feols(
         ro.Formula(
@@ -397,7 +397,7 @@ def test_fully_interacted_mpdata(mpdata_path):
         ),
         data=mpdata,
     )
-    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(r_agg_model)).T.iloc[-3:, :]
+    r_agg_tidy = pd.DataFrame(broom.tidy_fixest(r_agg_model)).T
     r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
     r_agg_se = r_agg_tidy.iloc[:, 2].astype(float).values
 
