@@ -298,6 +298,7 @@ def test_fully_interacted(unit, cluster):
         estimator="saturated",
         cluster=cluster,
     )
+    saturated_py.test_treatment_heterogeneity()
 
     saturated_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
@@ -362,7 +363,7 @@ def test_fully_interacted_mpdata(mpdata_path):
     mpdata = pd.read_csv(mpdata_path)
     mpdata["first_treat"] = mpdata["first.treat"]
 
-    fit_twfe = pf.event_study(
+    fit_saturated = pf.event_study(
         data=mpdata,
         yname="lemp",
         idname="countyreal",
@@ -370,6 +371,7 @@ def test_fully_interacted_mpdata(mpdata_path):
         gname="first_treat",
         estimator="saturated",
     )
+    fit_saturated.test_treatment_heterogeneity()
 
     r_model = fixest.feols(
         ro.Formula(
@@ -382,8 +384,8 @@ def test_fully_interacted_mpdata(mpdata_path):
     r_est = r_tidy.iloc[:, 1].astype(float).values
     r_se = r_tidy.iloc[:, 2].astype(float).values
 
-    py_est = np.asarray(fit_twfe.coef(), dtype=float)
-    py_se = np.asarray(fit_twfe.se(), dtype=float)
+    py_est = np.asarray(fit_saturated.coef(), dtype=float)
+    py_se = np.asarray(fit_saturated.se(), dtype=float)
 
     np.testing.assert_allclose(
         np.sort(r_est)[:5],
@@ -396,7 +398,7 @@ def test_fully_interacted_mpdata(mpdata_path):
         err_msg="R and Python *standard errors* do not match for mpdata (fully interacted model)",
     )
 
-    py_agg_tidy = fit_twfe.aggregate()
+    py_agg_tidy = fit_saturated.aggregate()
 
     r_agg_model = fixest.feols(
         ro.Formula(
