@@ -246,8 +246,8 @@ def _get_columns_to_drop_and_check_ivars(
                 var2 = _i_ref.get("var2", "")
                 ref = _i_ref.get("ref", "")
 
-                if isinstance(
-                    data[var2], pd.CategoricalDtype
+                if pd.api.types.is_categorical_dtype(  # type: ignore
+                    data[var2]  # type: ignore
                 ) or pd.api.types.is_object_dtype(data[var2]):  # type: ignore
                     raise ValueError(
                         f"""
