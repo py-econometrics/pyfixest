@@ -177,8 +177,8 @@ class SaturatedEventStudy(DID):
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
 
-        if weighting not in ["shares", "variance"]:
-            raise ValueError("weighting must be either 'shares' or 'variance'")
+        if weighting not in ["shares"]:
+            raise ValueError("weighting must be 'shares'.")
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
 

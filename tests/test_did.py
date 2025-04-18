@@ -424,6 +424,10 @@ def test_fully_interacted_mpdata(mpdata_path):
         err_msg="R and Python *aggregated SEs* do not match for mpdata",
     )
 
+    # run plotting
+    fit_saturated.iplot()
+    fit_saturated.iplot_aggregate()
+
 
 def _get_r_did2s_results(data, weights):
     """Test the did2s() function."""
