@@ -11,7 +11,7 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
-## PyFixest (In Development, can be installed from github)
+## PyFixest 0.29.0
 
 - We add options `fixef_k = "nested"` and `fixef_k = "full"` for computing small sample corrections via `pf.ssc()`. We set the defaults for `pf.feols()` and other estimation functions to `fixef_k = "nested"` to 100% mimic the defaults of `r-fixest`. This is a "breaking change" in the sense that it might (slightly) impact the standard errors of your estimations.
 - We add support for fully saturated event study estimation via the `SaturatedEventStudy` class, which can be called via `pf.event_study()`.
