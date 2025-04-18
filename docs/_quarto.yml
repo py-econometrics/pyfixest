@@ -2,6 +2,10 @@ project:
   type: website
   output-dir: _site
 
+execute:
+  # point quarto to the correct python environment
+  python: "/pyfixest/.pixi/envs/docs/Scripts/python.exe"
+
 metadata-files:
   - _sidebar.yml
 

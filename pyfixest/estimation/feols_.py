@@ -2617,10 +2617,18 @@ def _drop_multicollinear_variables(
     names_array = np.array(names)
     if n_excl > 0:
         collin_vars = names_array[id_excl].tolist()
+        if len(collin_vars) > 5:
+            indent = "    "
+            formatted_collinear_vars = (
+                f"\n{indent}" + f"\n{indent}".join(collin_vars[:5]) + f"\n{indent}..."
+            )
+        else:
+            formatted_collinear_vars = str(collin_vars)
+
         warnings.warn(
             f"""
-            The following variables are collinear: {collin_vars}.
-            The variables are dropped from the model.
+            {len(collin_vars)} variables dropped due to multicollinearity.
+            The following variables are dropped: {formatted_collinear_vars}.
             """
         )
 

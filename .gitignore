@@ -9,7 +9,7 @@ dist
 .mypy_cache
 .pytest_cache
 .vscode
-.coverage
+.coverage*
 *.pyc
 __pycache__/
 #docs/figures
@@ -29,3 +29,4 @@ tests/.coverage
 # pixi environments
 .pixi
 *.egg-info
+pyfixest/did/data/mpdata.csv
