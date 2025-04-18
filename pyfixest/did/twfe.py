@@ -65,9 +65,9 @@ class TWFE(DID):
         self._estimator = "twfe"
 
         if self._xfml is not None:
-            self._fml = f"{yname} ~ ATT + {xfml} | {idname} + {tname}"
+            self._fml = f"{yname} ~ is_treated + {xfml} | {idname} + {tname}"
         else:
-            self._fml = f"{yname} ~ ATT | {idname} + {tname}"
+            self._fml = f"{yname} ~ is_treated | {idname} + {tname}"
 
     def estimate(self):
         """Estimate the TWFE model."""

@@ -77,10 +77,10 @@ class DID2S(DID):
 
         if self._xfml is not None:
             self._fml1 = f" ~ {xfml} | {idname} + {tname}"
-            self._fml2 = f" ~ 0 + ATT + {xfml}"
+            self._fml2 = f" ~ 0 + is_treated + {xfml}"
         else:
             self._fml1 = f" ~ 0 | {idname} + {tname}"
-            self._fml2 = " ~ 0 + ATT"
+            self._fml2 = " ~ 0 + is_treated"
 
         # first and second stage residuals
         self._first_u = np.array([])
@@ -97,7 +97,7 @@ class DID2S(DID):
             _first_stage=self._fml1,
             _second_stage=self._fml2,
             weights=self._weights_name,
-            treatment="ATT",
+            treatment="is_treated",
         )  # returns triple Feols, first_u, second_u
 
     def vcov(self):
@@ -117,7 +117,7 @@ class DID2S(DID):
             yname=self._yname,
             first_stage=self._fml1,
             second_stage=self._fml2,
-            treatment="ATT",
+            treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
             cluster=self._cluster,
@@ -204,7 +204,7 @@ def _did2s_estimate(
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
-        _not_yet_treated_data = data[data["ATT"] == False]  # noqa: E712
+        _not_yet_treated_data = data[data["is_treated"] == False]  # noqa: E712
 
     # check if first stage formulas has fixed effects
     if "|" not in _first_stage:

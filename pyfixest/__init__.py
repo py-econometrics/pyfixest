@@ -6,7 +6,13 @@ from pyfixest import (
     report,
     utils,
 )
-from pyfixest.did import did2s, event_study, lpdid, panelview
+from pyfixest.did import (
+    SaturatedEventStudy,
+    did2s,
+    event_study,
+    lpdid,
+    panelview,
+)
 
 # Import frequently used functions and classes
 from pyfixest.estimation import (
@@ -25,6 +31,7 @@ from pyfixest.utils import (
 )
 
 __all__ = [
+    "SaturatedEventStudy",
     "bonferroni",
     "coefplot",
     "did",

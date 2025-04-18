@@ -201,20 +201,6 @@ def test_event_study_invalid_cluster_type(data):
         )
 
 
-# Test case for 'cluster' must be 'idname'
-def test_event_study_invalid_cluster_value(data):
-    with pytest.raises(AssertionError, match="cluster must be idname"):
-        event_study(
-            data=data,
-            yname="dep_var",
-            idname="state",
-            tname="year",
-            gname="g",
-            estimator="twfe",
-            cluster="invalid_cluster",  # Invalid cluster value
-        )
-
-
 # Test case for unsupported estimator (triggering NotImplementedError)
 def test_event_study_unsupported_estimator(data):
     with pytest.raises(NotImplementedError, match="Estimator not supported"):

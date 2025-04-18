@@ -225,7 +225,7 @@ fit_dynamic_twfe.iplot(
 
 The joint confidence bands are wider than the pointwise confidence intervals, and they include zero for all pre-treatment coefficients. This is consistent with the parallel trends assumption.
 
-## Event Study under Staggered Adoption via `feols()`, `did2s()` and `lpdid()`
+## Event Study under Staggered Adoption via `feols()`, `event_study()`, `did2s()`,  `lpdid()`
 
 We now return to the data set with staggered treatment rollout, `df_multi_cohort`.
 
@@ -242,6 +242,64 @@ fit_twfe = pf.feols(
 )
 ```
 
+You can also estimate a TWFE model via the `event_study()` function, which aims to provide a common interface to multiple
+difference-in-differences implementations:
+
+```{python}
+fit_twfe_event = pf.event_study(
+    data=df_multi_cohort,
+    yname="dep_var",
+    idname="unit",
+    tname="year",
+    gname="g",
+    estimator="twfe",
+)
+```
+
+### Fully-Interacted / Saturated Event Study (Sun-Abraham)
+
+In a similar spirit, you can fit a fully-interacted difference-in-differences model by selecting the `estimator = "saturated"`:
+
+```{python}
+fit_saturated = pf.event_study(
+    data=df_multi_cohort,
+    yname="dep_var",
+    idname="unit",
+    tname="year",
+    gname="g",
+    estimator="saturated",
+)
+
+fit_saturated.iplot()
+```
+
+We can obtain treatment effects by period via the `aggregate()` method
+
+```{python}
+fit_saturated.aggregate(weighting = "shares")
+```
+
+and plot the effects
+
+```{python}
+fit_saturated.iplot_aggregate(weighting = "shares")
+```
+
+### When can we get away with using the two-way fixed effects regression?
+
+We will motivate this section by lazily quoting the abstract of [Lal (2025)](https://arxiv.org/abs/2503.05125):
+
+> The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.
+
+You can employ the proposed test after running a saturated event study by calling the `test_treatment_heterogeneity()` method:
+
+```{python}
+fit_saturated.test_treatment_heterogeneity()
+```
+
+In this case, we might be willing to rely on the simple TWFE model to produce unbiased estimates. If we're not, two "new" difference-in-differences
+estimators are implemented (beyond the already-presented saturated Sun-Abraham approach) that produce unbiased estimates under staggered assignment and heterogeneous treatment effects: Gardner's 2-Step Estimator and the Local Projections estimator from Dube et al.
+
 ### Gardner's 2-Step Estimator
 
 To do the same via Gardners 2-stage estimator, we employ the the `pf.did2s()` function:
@@ -250,7 +308,7 @@ To do the same via Gardners 2-stage estimator, we employ the the `pf.did2s()` fu
 fit_did2s = pf.did2s(
     df_multi_cohort,
     yname="dep_var",
-    first_stage="~ 0 | state + year",
+    first_stage="~ 0 | unit + year",
     second_stage="~i(rel_year,ref=-1.0)",
     treatment="treat",
     cluster="state",
