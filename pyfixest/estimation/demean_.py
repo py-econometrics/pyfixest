@@ -3,6 +3,7 @@ from typing import Any, Callable, Literal, Optional
 import numba as nb
 import numpy as np
 import pandas as pd
+
 import pyfixest_core
 
 
@@ -69,7 +70,7 @@ def demean_model(
     if weights is not None and weights.ndim > 1:
         weights = weights.flatten()
 
-    demean_func = _set_demeaner_backend(demeaner_backend = "rust")
+    demean_func = _set_demeaner_backend(demeaner_backend="rust")
 
     if fe is not None:
         fe_array = fe.to_numpy()
@@ -100,7 +101,11 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean_func(
-                    x=var_diff, flist=fe_array.astype(np.uintp)  , weights=weights, tol=fixef_tol, maxiter = 100_000
+                    x=var_diff,
+                    flist=fe_array.astype(np.uintp),
+                    weights=weights,
+                    tol=fixef_tol,
+                    maxiter=100_000,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -123,7 +128,11 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean_func(
-                x=YX_array, flist=fe_array.astype(np.uintp)  , weights=weights, tol=fixef_tol, maxiter = 100_000
+                x=YX_array,
+                flist=fe_array.astype(np.uintp),
+                weights=weights,
+                tol=fixef_tol,
+                maxiter=100_000,
             )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -306,7 +315,9 @@ def demean(
     return (res, success)
 
 
-def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax","rust"]) -> Callable:
+def _set_demeaner_backend(
+    demeaner_backend: Literal["numba", "jax", "rust"],
+) -> Callable:
     """Set the demeaning backend.
 
     Currently, we allow for a numba backend and a jax backend. The latter is
@@ -327,7 +338,6 @@ def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax","rust"]) -> C
     ValueError
         If the demeaning backend is not supported.
     """
-
     if demeaner_backend == "rust":
         return pyfixest_core.demean
     elif demeaner_backend == "numba":
