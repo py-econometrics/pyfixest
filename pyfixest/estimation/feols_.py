@@ -14,6 +14,7 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
+import pyfixest_core
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
@@ -41,7 +42,6 @@ from pyfixest.estimation.vcov_utils import (
     _check_cluster_df,
     _compute_bread,
     _count_G_for_ssc_correction,
-    _crv1_meat_loop,
     _get_cluster_df,
     _prepare_twoway_clustering,
 )
@@ -58,8 +58,6 @@ from pyfixest.utils.utils import (
     get_ssc,
     simultaneous_crit_val,
 )
-
-import pyfixest_core
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -2604,7 +2602,9 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    id_excl, n_excl, all_removed = pyfixest_core.find_collinear_variables(tXX, collin_tol)
+    id_excl, n_excl, all_removed = pyfixest_core.find_collinear_variables(
+        tXX, collin_tol
+    )
 
     collin_vars = []
     collin_index = []
