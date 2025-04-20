@@ -59,6 +59,8 @@ from pyfixest.utils.utils import (
     simultaneous_crit_val,
 )
 
+import pyfixest_core
+
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
@@ -771,10 +773,10 @@ class Feols:
         k = _scores.shape[1]
         meat = np.zeros((k, k))
 
-        meat = _crv1_meat_loop(
+        meat = pyfixest_core.crv1_meat_loop(
             scores=_scores.astype(np.float64),
-            clustid=clustid,
-            cluster_col=cluster_col,
+            clustid=clustid.astype(np.uintp),
+            cluster_col=cluster_col.astype(np.uintp),
         )
 
         meat = _tXZ @ _tZZinv @ meat @ _tZZinv @ _tZX if _is_iv else meat
@@ -2602,7 +2604,7 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    id_excl, n_excl, all_removed = _find_collinear_variables(tXX, collin_tol)
+    id_excl, n_excl, all_removed = pyfixest_core.find_collinear_variables(tXX, collin_tol)
 
     collin_vars = []
     collin_index = []
