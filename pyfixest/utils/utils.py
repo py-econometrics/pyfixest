@@ -1,7 +1,6 @@
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
@@ -203,6 +202,7 @@ def get_ssc(
     df_t = N - dof_k if vcov_type in ["iid", "hetero"] else G - 1
 
     return np.array([adj_value * cluster_adj_value * vcov_sign]), dof_k, df_t
+
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     """

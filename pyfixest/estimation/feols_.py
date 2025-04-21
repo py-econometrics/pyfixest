@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from importlib import import_module
 from typing import Any, Literal, Optional, Union
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from formulaic import Formula
@@ -14,8 +13,8 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, norm, t
 
-import pyfixest_core
 from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
+from pyfixest.estimation.backends import BACKENDS
 from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_arg_check
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -57,8 +56,6 @@ from pyfixest.utils.utils import (
     get_ssc,
     simultaneous_crit_val,
 )
-
-from pyfixest.estimation.backends import BACKENDS
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -245,7 +242,6 @@ class Feols:
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
-
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = (
@@ -459,7 +455,7 @@ class Feols:
                 self._na_index_str,
                 self._fixef_tol,
                 self._demean_func,
-                #self._demeaner_backend,
+                # self._demeaner_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
@@ -481,14 +477,18 @@ class Feols:
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-
         if self._X.shape[1] > 0:
             (
                 self._X,
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
-            ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol, backend_func = self._find_collinear_variables_func)
+            ) = _drop_multicollinear_variables(
+                self._X,
+                self._coefnames,
+                self._collin_tol,
+                backend_func=self._find_collinear_variables_func,
+            )
         # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
@@ -2589,7 +2589,8 @@ def _get_vcov_type(vcov: str, fval: str):
 
 
 def _drop_multicollinear_variables(
-    X: np.ndarray, names: list[str],
+    X: np.ndarray,
+    names: list[str],
     collin_tol: float,
     backend_func: callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
@@ -2621,9 +2622,7 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    id_excl, n_excl, all_removed = backend_func(
-        tXX, collin_tol
-    )
+    id_excl, n_excl, all_removed = backend_func(tXX, collin_tol)
 
     collin_vars = []
     collin_index = []

@@ -4,8 +4,6 @@ import numba as nb
 import numpy as np
 import pandas as pd
 
-import pyfixest_core
-
 
 def demean_model(
     Y: pd.DataFrame,
@@ -16,7 +14,7 @@ def demean_model(
     na_index_str: str,
     fixef_tol: float,
     demean_func: Callable,
-    #demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
+    # demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -339,6 +337,7 @@ def _set_demeaner_backend(
     """
     if demeaner_backend == "rust":
         from pyfixest_core import demean_rs as demean_rs
+
         return demean_rs
     elif demeaner_backend == "numba":
         return demean
