@@ -15,7 +15,8 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
-    demeaner_backend: Literal["numba", "jax"] = "numba",
+    demean_func: Callable,
+    #demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -45,7 +46,7 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
-    demeaner_backend: Literal["numba", "jax"]
+    demeaner_backend: Literal["numba", "jax","rust"]
         The backend to use for demeaning.
 
     Returns
@@ -69,8 +70,6 @@ def demean_model(
 
     if weights is not None and weights.ndim > 1:
         weights = weights.flatten()
-
-    demean_func = _set_demeaner_backend(demeaner_backend="rust")
 
     if fe is not None:
         fe_array = fe.to_numpy()
@@ -325,7 +324,7 @@ def _set_demeaner_backend(
 
     Parameters
     ----------
-    demeaner_backend : Literal["numba", "jax"]
+    demeaner_backend : Literal["numba", "jax", "rust"]
         The demeaning backend to use.
 
     Returns
@@ -339,7 +338,8 @@ def _set_demeaner_backend(
         If the demeaning backend is not supported.
     """
     if demeaner_backend == "rust":
-        return pyfixest_core.demean
+        from pyfixest_core import demean_rs as demean_rs
+        return demean_rs
     elif demeaner_backend == "numba":
         return demean
     elif demeaner_backend == "jax":

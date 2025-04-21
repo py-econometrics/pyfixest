@@ -53,11 +53,12 @@ from pyfixest.utils.dev_utils import (
     _select_order_coefs,
 )
 from pyfixest.utils.utils import (
-    _count_fixef_fully_nested_all,
     capture_context,
     get_ssc,
     simultaneous_crit_val,
 )
+
+from pyfixest.estimation.backends import BACKENDS
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -244,6 +245,7 @@ class Feols:
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int, float]] = None,
     ) -> None:
+
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
         self._model_name = (
@@ -296,6 +298,16 @@ class Feols:
         self._fixef = FixestFormula._fval
         # self._coefnames = None
         self._icovars = None
+
+        try:
+            impl = BACKENDS[demeaner_backend]
+        except KeyError:
+            raise ValueError(f"Unknown backend {demeaner_backend!r}")
+
+        self._demean_func = impl["demean"]
+        self._find_collinear_variables_func = impl["collinear"]
+        self._crv1_meat_func = impl["crv1_meat"]
+        self._cound_nested_fixef_func = impl["nested"]
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -446,7 +458,8 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
-                self._demeaner_backend,
+                self._demean_func,
+                #self._demeaner_backend,
             )
         else:
             self._Yd, self._Xd = self._Y, self._X
@@ -468,13 +481,15 @@ class Feols:
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-        (
-            self._X,
-            self._coefnames,
-            self._collin_vars,
-            self._collin_index,
-        ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol)
 
+        if self._X.shape[1] > 0:
+            (
+                self._X,
+                self._coefnames,
+                self._collin_vars,
+                self._collin_index,
+            ) = _drop_multicollinear_variables(self._X, self._coefnames, self._collin_tol, backend_func = self._find_collinear_variables_func)
+        # update X_is_empty
         self._X_is_empty = self._X.shape[1] == 0
         self._k = self._X.shape[1] if not self._X_is_empty else 0
 
@@ -651,15 +666,15 @@ class Feols:
             k_fe_nested = 0
             n_fe_fully_nested = 0
             if self._has_fixef and self._ssc_dict["fixef_k"] == "nested":
-                k_fe_nested_flag, n_fe_fully_nested = _count_fixef_fully_nested_all(
+                k_fe_nested_flag, n_fe_fully_nested = self._cound_nested_fixef_func(
                     all_fixef_array=np.array(
                         self._fixef.replace("^", "_").split("+"), dtype=str
                     ),
                     cluster_colnames=np.array(self._cluster_df.columns, dtype=str),
-                    cluster_data=cluster_arr_int,
-                    fe_data=self._fe.to_numpy()
+                    cluster_data=cluster_arr_int.astype(np.uintp),
+                    fe_data=self._fe.to_numpy().astype(np.uintp)
                     if isinstance(self._fe, pd.DataFrame)
-                    else self._fe,
+                    else self._fe.astype(np.uintp),
                 )
 
                 k_fe_nested = (
@@ -771,7 +786,7 @@ class Feols:
         k = _scores.shape[1]
         meat = np.zeros((k, k))
 
-        meat = pyfixest_core.crv1_meat_loop(
+        meat = self._crv1_meat_func(
             scores=_scores.astype(np.float64),
             clustid=clustid.astype(np.uintp),
             cluster_col=cluster_col.astype(np.uintp),
@@ -2574,7 +2589,9 @@ def _get_vcov_type(vcov: str, fval: str):
 
 
 def _drop_multicollinear_variables(
-    X: np.ndarray, names: list[str], collin_tol: float
+    X: np.ndarray, names: list[str],
+    collin_tol: float,
+    backend_func: callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
@@ -2587,6 +2604,8 @@ def _drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
+    backend_func: Callable
+        Which backend function to use for the multicollinearity check.
 
     Returns
     -------
@@ -2602,7 +2621,7 @@ def _drop_multicollinear_variables(
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = X.T @ X
-    id_excl, n_excl, all_removed = pyfixest_core.find_collinear_variables(
+    id_excl, n_excl, all_removed = backend_func(
         tXX, collin_tol
     )
 
@@ -2646,70 +2665,6 @@ def _drop_multicollinear_variables(
         collin_index = id_excl.tolist()
 
     return X, list(names_array), collin_vars, collin_index
-
-
-@nb.njit(parallel=False)
-def _find_collinear_variables(
-    X: np.ndarray, tol: float = 1e-10
-) -> tuple[np.ndarray, int, bool]:
-    """
-    Detect multicollinear variables.
-
-    Detect multicollinear variables, replicating Laurent Berge's C++ implementation
-    from the fixest package. See the fixest repo [here](https://github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130)
-
-    Parameters
-    ----------
-    X : numpy.ndarray
-        A symmetric matrix X used to check for multicollinearity.
-    tol : float
-        The tolerance level for the multicollinearity check.
-
-    Returns
-    -------
-    - id_excl (numpy.ndarray): A boolean array, where True indicates a collinear
-        variable.
-    - n_excl (int): The number of collinear variables.
-    - all_removed (bool): True if all variables are identified as collinear.
-    """
-    K = X.shape[1]
-    R = np.zeros((K, K))
-    id_excl = np.zeros(K, dtype=np.int32)
-    n_excl = 0
-    min_norm = X[0, 0]
-
-    for j in range(K):
-        R_jj = X[j, j]
-        for k in range(j):
-            if id_excl[k]:
-                continue
-            R_jj -= R[k, j] * R[k, j]
-
-        if R_jj < tol:
-            n_excl += 1
-            id_excl[j] = 1
-
-            if n_excl == K:
-                all_removed = True
-                return id_excl.astype(np.bool_), n_excl, all_removed
-
-            continue
-
-        if min_norm > R_jj:
-            min_norm = R_jj
-
-        R_jj = np.sqrt(R_jj)
-        R[j, j] = R_jj
-
-        for i in range(j + 1, K):
-            value = X[i, j]
-            for k in range(j):
-                if id_excl[k]:
-                    continue
-                value -= R[k, i] * R[k, j]
-            R[j, i] = value / R_jj
-
-    return id_excl.astype(np.bool_), n_excl, False
 
 
 def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):

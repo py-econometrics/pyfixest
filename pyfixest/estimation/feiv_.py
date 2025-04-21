@@ -207,7 +207,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
-                self._demeaner_backend,
+                self._demean_func,
             )
         else:
             self._endogvard = self._endogvar
@@ -221,7 +221,7 @@ class Feiv(Feols):
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
-        ) = _drop_multicollinear_variables(self._Z, self._coefnames_z, self._collin_tol)
+        ) = _drop_multicollinear_variables(self._Z, self._coefnames_z, self._collin_tol, self._find_collinear_variables_func)
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
