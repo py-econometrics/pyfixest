@@ -1,5 +1,6 @@
-import numpy as np
 import numba as nb
+import numpy as np
+
 
 @nb.njit(parallel=True)
 def _count_fixef_fully_nested_all(
@@ -57,6 +58,7 @@ def _count_fixef_fully_nested_all(
 
     return k_fe_nested_flag, n_fe_fully_nested
 
+
 @nb.njit
 def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> bool:
     """
@@ -86,4 +88,3 @@ def _count_fixef_fully_nested(clusters: np.ndarray, f: np.ndarray) -> bool:
     is_fe_nested = counts == n_unique_vals
 
     return is_fe_nested
-

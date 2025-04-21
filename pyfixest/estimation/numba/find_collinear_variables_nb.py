@@ -1,5 +1,6 @@
-import numpy as np
 import numba as nb
+import numpy as np
+
 
 @nb.njit(parallel=False)
 def _find_collinear_variables_nb(
@@ -63,4 +64,3 @@ def _find_collinear_variables_nb(
             R[j, i] = value / R_jj
 
     return id_excl.astype(np.bool_), n_excl, False
-
