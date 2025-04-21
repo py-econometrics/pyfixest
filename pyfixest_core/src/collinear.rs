@@ -5,7 +5,7 @@ use numpy::IntoPyArray;
 
 /// Detect multicollinear variables (Rust version of `_find_collinear_variables`).
 #[pyfunction]
-pub fn find_collinear_variables(
+pub fn find_collinear_variables_rs(
     py: Python,
     x: PyReadonlyArray2<f64>,
     tol: f64
@@ -18,7 +18,6 @@ pub fn find_collinear_variables(
     let mut min_norm = X[(0,0)];
 
     for j in 0..K {
-        // Compute R_jj = X[j,j] - Σ_{k<j & !id_excl[k]} R[k,j]²
         let mut R_jj = X[(j,j)];
         for k in 0..j {
             if id_excl[k] { continue; }
@@ -30,7 +29,6 @@ pub fn find_collinear_variables(
             id_excl[j] = true;
             n_excl += 1;
             if n_excl == K {
-                // convert id_excl to a 2D bool array of shape (K,1)
                 let arr = ndarray::Array2::from_shape_vec((K, 1),
                     id_excl.iter().map(|&b| b).collect()
                 ).unwrap();
@@ -55,7 +53,6 @@ pub fn find_collinear_variables(
         }
     }
 
-    // Build the final id_excl array (K×1) and return
     let arr = ndarray::Array2::from_shape_vec((K, 1),
         id_excl.iter().map(|&b| b).collect()
     ).unwrap();
