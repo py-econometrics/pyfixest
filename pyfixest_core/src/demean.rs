@@ -1,12 +1,10 @@
 use numpy::{
     PyArray2,
     PyReadonlyArray2,
-    PyArray1,
     PyReadonlyArray1,
-    IntoPyArray,
 };
 use pyo3::prelude::*;
-use ndarray::{Array2, ArrayView1, ArrayView2, Axis};
+use ndarray::{Array2, ArrayView1, ArrayView2};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -139,12 +137,10 @@ pub fn demean_rs(
     tol: f64,
     maxiter: usize,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
-    // convert to ndarray views
     let x_arr      = x.as_array();
     let flist_arr  = flist.as_array();
     let weights_arr= weights.as_array();
 
-    // this lets Rayon run freely
     let (out, success) = py.allow_threads(|| {
         demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter)
     });

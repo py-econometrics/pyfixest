@@ -1,6 +1,5 @@
 use pyo3::prelude::*;
 
-// bring in your sub‑modules
 mod collinear;
 mod crv1;
 mod demean;
