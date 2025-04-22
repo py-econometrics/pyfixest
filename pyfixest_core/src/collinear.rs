@@ -1,35 +1,33 @@
-use numpy::{PyArray2, PyReadonlyArray2, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
-use ndarray::{Array2, ArrayView2, ArrayView1};
 use numpy::IntoPyArray;
 
-/// Detect multicollinear variables (Rust version of `_find_collinear_variables`).
 #[pyfunction]
 pub fn find_collinear_variables_rs(
     py: Python,
     x: PyReadonlyArray2<f64>,
     tol: f64
 ) -> PyResult<(Py<PyArray2<bool>>, usize, bool)> {
-    let X = x.as_array();
-    let K = X.ncols();
-    let mut R = ndarray::Array2::<f64>::zeros((K, K));
-    let mut id_excl = vec![false; K];
+    let x = x.as_array();
+    let k = x.ncols();
+    let mut r = ndarray::Array2::<f64>::zeros((k, k));
+    let mut id_excl = vec![false; k];
     let mut n_excl = 0usize;
-    let mut min_norm = X[(0,0)];
+    let mut min_norm = x[(0,0)];
 
-    for j in 0..K {
-        let mut R_jj = X[(j,j)];
+    for j in 0..k {
+        let mut r_jj = x[(j,j)];
         for k in 0..j {
             if id_excl[k] { continue; }
-            let r_kj = R[(k,j)];
-            R_jj -= r_kj * r_kj;
+            let r_kj = r[(k,j)];
+            r_jj -= r_kj * r_kj;
         }
 
-        if R_jj < tol {
+        if r_jj < tol {
             id_excl[j] = true;
             n_excl += 1;
-            if n_excl == K {
-                let arr = ndarray::Array2::from_shape_vec((K, 1),
+            if n_excl == k {
+                let arr = ndarray::Array2::from_shape_vec((k, 1),
                     id_excl.iter().map(|&b| b).collect()
                 ).unwrap();
                 return Ok((arr.into_pyarray(py).to_owned(), n_excl, true));
@@ -37,23 +35,23 @@ pub fn find_collinear_variables_rs(
             continue;
         }
 
-        if R_jj < min_norm {
-            min_norm = R_jj;
+        if r_jj < min_norm {
+            min_norm = r_jj;
         }
-        let Rjj_sqrt = R_jj.sqrt();
-        R[(j,j)] = Rjj_sqrt;
+        let rjj_sqrt = r_jj.sqrt();
+        r[(j,j)] = rjj_sqrt;
 
-        for i in (j+1)..K {
-            let mut value = X[(i,j)];
+        for i in (j+1)..k {
+            let mut value = x[(i,j)];
             for k in 0..j {
                 if id_excl[k] { continue; }
-                value -= R[(k,i)] * R[(k,j)];
+                value -= r[(k,i)] * r[(k,j)];
             }
-            R[(j,i)] = value / Rjj_sqrt;
+            r[(j,i)] = value / rjj_sqrt;
         }
     }
 
-    let arr = ndarray::Array2::from_shape_vec((K, 1),
+    let arr = ndarray::Array2::from_shape_vec((k, 1),
         id_excl.iter().map(|&b| b).collect()
     ).unwrap();
     Ok((arr.into_pyarray(py).to_owned(), n_excl, false))
