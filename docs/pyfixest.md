@@ -26,6 +26,9 @@ Nevertheless, for a quick introduction, you can take a look at the [quickstart](
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions).
 
+> If you enjoy using `PyFixest`, please consider donating to [GiveDirectly](https://donate.givedirectly.org/dedicate) and dedicating your donation to `pyfixest.dev@gmail.com`.
+> You can also leave a message through the donation form - your support and encouragement mean a lot to the developers!
+
 ## Features
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
