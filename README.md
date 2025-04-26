@@ -27,6 +27,7 @@ Nevertheless, for a quick introduction, you can take a look at the [documentatio
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions).
 
 ## Support PyFixest
+
 If you enjoy using `PyFixest`, please consider donating to [GiveDirectly](https://donate.givedirectly.org/dedicate) and dedicating your donation to `pyfixest.dev@gmail.com`.
 You can also leave a message through the donation form - your support and encouragement mean a lot to the developers!
 
