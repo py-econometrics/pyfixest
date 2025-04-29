@@ -71,7 +71,7 @@ def _rename_categorical(
         pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[(?:T\.)?([^]]+)\]"
     else:
         pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
-    
+
     # Replace labels with empty dictionary if not provided
     if labels is None:
         labels = {}
