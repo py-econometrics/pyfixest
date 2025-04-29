@@ -36,7 +36,7 @@ def _relabel_expvar(
         # Check whether template for categorical variables is provided &
         # whether the variable is a categorical variable
         v = vars[i]
-        if cat_template != "" and ("C(" in v or "[T." in v):
+        if cat_template != "" and ("C(" in v or "[" in v):
             vars[i] = _rename_categorical(v, template=cat_template, labels=labels)
         else:
             vars[i] = labels.get(v, v)
@@ -68,9 +68,10 @@ def _rename_categorical(
     # Here two patterns are used to extract the variable and level
     # Note the second pattern matches the notation when the variable is categorical at the outset
     if col_name.startswith("C("):
-        pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[T\.([^]]+)\]"
+        pattern = r"C\(([^,]+)(?:,[^]]+)?\)\[(?:T\.)?([^]]+)\]"
     else:
-        pattern = r"([^[]+)\[T\.([^]]+)\]"
+        pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
+    
     # Replace labels with empty dictionary if not provided
     if labels is None:
         labels = {}
