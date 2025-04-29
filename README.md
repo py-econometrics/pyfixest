@@ -275,6 +275,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://szymon.info"><img src="https://avatars.githubusercontent.com/u/13162607?v=4?s=100" width="100px;" alt="Szymon Sacher"/><br /><sub><b>Szymon Sacher</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=elchorro" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/AronNemeth"><img src="https://avatars.githubusercontent.com/u/96979880?v=4?s=100" width="100px;" alt="AronNemeth"/><br /><sub><b>AronNemeth</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=AronNemeth" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/DTchebotarev"><img src="https://avatars.githubusercontent.com/u/6100882?v=4?s=100" width="100px;" alt="Dmitri Tchebotarev"/><br /><sub><b>Dmitri Tchebotarev</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=DTchebotarev" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/FuZhiyu"><img src="https://avatars.githubusercontent.com/u/11523699?v=4?s=100" width="100px;" alt="FuZhiyu"/><br /><sub><b>FuZhiyu</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3AFuZhiyu" title="Bug reports">🐛</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=FuZhiyu" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
