@@ -138,6 +138,28 @@ def test_rename_categoricals():
         "C(f4, contr.treatment(base='A'))[T.C]": "f4::C",
     }
 
+    # without 'T.' in the categorical notation:
+    coefnames = [
+        "C(f4)[B]",
+        "C(f4)[C]",
+    ]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "C(f4)[B]": "f4::B",
+        "C(f4)[C]": "f4::C",
+    }
+
+    # without C() and no 'T.' notation
+    coefnames = [
+        "f4[B]",
+        "f4[C]",
+    ]
+    renamed = rename_categoricals(coefnames)
+    assert renamed == {
+        "f4[B]": "f4::B",
+        "f4[C]": "f4::C",
+    }
+
     # with categoricals:
     coefnames = ["Intercept", "variable1[T.value1]", "variable1[T.value2]"]
     renamed = rename_categoricals(coefnames)
