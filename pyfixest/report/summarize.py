@@ -39,8 +39,7 @@ def etable(
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
-    filename: Optional[str] = None,
-    print_tex: Optional[bool] = False,
+    file_name: Optional[str] = None,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -129,11 +128,8 @@ def etable(
         (provided the user has specified them). With "hd" it is the other way around.
         When head_order is "d", only the dependent variable and model numbers are displayed
         and with "" only the model numbers. Default is "dh".
-    filename: str, optional
-        The filename to save the LaTeX table to. If None, the LaTeX code is returned
-        as a string. Default is None.
-    print_tex: bool, optional
-        Whether to print the LaTeX code to the console. Default is False.
+    file_name: str, optional
+        The name/path of the file to save the LaTeX table to. Default is None.
 
     Returns
     -------
