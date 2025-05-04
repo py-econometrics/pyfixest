@@ -230,7 +230,7 @@ class Fepois(Feols):
         _solver = self._solver
 
         # Select the appropriate demeaning function based on the backend setting
-        demean_function = _set_demeaner_backend(self.demeaner_backend)
+        demean_function = _set_demeaner_backend(self._demeaner_backend)
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
