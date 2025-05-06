@@ -7,7 +7,7 @@ FixedRmOptions = Literal["singleton", "none"]
 SolverOptions = Literal[
     "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
 ]
-DemeanerBackendOptions = Literal["numba", "jax"]
+DemeanerBackendOptions = Literal["numba", "jax", "rust"]
 PredictionErrorOptions = Literal["prediction"]
 
 
