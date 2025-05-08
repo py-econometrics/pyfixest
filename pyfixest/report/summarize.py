@@ -90,7 +90,7 @@ def etable(
         instead of using regular expressions.
     labels: dict, optional
         A dictionary to relabel the variables. The keys in this dictionary are the 
-        original variable names, which correspond to the names stored in the `_coefname` 
+        original variable names, which correspond to the names stored in the `_coefnames` 
         attribute of the model. The values in the dictionary are the new names you want 
         to assign to these variables. 
         Note that interaction terms will also be relabeled using the labels of the individual variables.
