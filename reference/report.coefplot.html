@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.29">
+<meta name="generator" content="quarto-1.7.30">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -71,10 +71,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-0815c480559380816a4d1ea211a47e91.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-de070a7b0ab54f8780927367ac907214.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-eddeaa0ef5a08eafde92c8df792b2f05.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-85d6ed6ef93f7b75ae44cb4d7fc8909c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -567,7 +567,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>labels</td>
 <td>Optional[dict]</td>
-<td>A dictionary to relabel the variables. The keys are the original variable names and the values the new names. The renaming is applied after the selection of the coefficients via <code>keep</code> and <code>drop</code>.</td>
+<td>A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the <code>_coefnames</code> attribute of the model. The values in the dictionary are the new names you want to assign to these variables. Note that interaction terms will also be relabeled using the labels of the individual variables. The renaming is applied after the selection of the coefficients via <code>keep</code> and <code>drop</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
@@ -606,7 +606,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="252a4a47" class="cell" data-execution_count="1">
+<div id="047d88a8" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
@@ -634,7 +634,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="JOlIuv"></div>
+            <div id="NnINsN"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -658,9 +658,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("JOlIuv").appendChild(div);
+                        document.getElementById("NnINsN").appendChild(div);
                     };
-                    var e = document.getElementById("JOlIuv");
+                    var e = document.getElementById("NnINsN");
                     e.appendChild(script);
                 })()
             </script>
@@ -668,7 +668,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="WCR5Sw"></div>
+            <div id="cOF1pp"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -692,9 +692,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("WCR5Sw").appendChild(div);
+                        document.getElementById("cOF1pp").appendChild(div);
                     };
-                    var e = document.getElementById("WCR5Sw");
+                    var e = document.getElementById("cOF1pp");
                     e.appendChild(script);
                 })()
             </script>
@@ -714,13 +714,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="KMWWrN"></div>
+   <div id="wQ8GjW"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
    // ----------
    
-   var containerDiv = document.getElementById("KMWWrN");
+   var containerDiv = document.getElementById("wQ8GjW");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
@@ -736,8 +736,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 "data":{
 "Coefficient":["C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]","C(f1)[T.1.0]","C(f1)[T.2.0]","C(f1)[T.3.0]","C(f1)[T.4.0]","C(f1)[T.5.0]","C(f1)[T.6.0]","C(f1)[T.7.0]","C(f1)[T.8.0]","C(f1)[T.9.0]","C(f1)[T.10.0]","C(f1)[T.11.0]","C(f1)[T.12.0]","C(f1)[T.13.0]","C(f1)[T.14.0]","C(f1)[T.15.0]","C(f1)[T.16.0]","C(f1)[T.17.0]","C(f1)[T.18.0]","C(f1)[T.19.0]","C(f1)[T.20.0]","C(f1)[T.21.0]","C(f1)[T.22.0]","C(f1)[T.23.0]","C(f1)[T.24.0]","C(f1)[T.25.0]","C(f1)[T.26.0]","C(f1)[T.27.0]","C(f1)[T.28.0]","C(f1)[T.29.0]"],
 "Estimate":[2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367,2.544287983738055,-1.6346807837677444,-0.46398054159364766,-1.762712219827264,1.4348086119364796,-0.8992225420858186,0.8901916963536632,-0.4708119794251317,0.0839289566193817,0.2887817438084839,1.2881639264088718,0.6873080715508432,1.8043009738995925,-0.2165668418938774,1.390369881952681,2.240478065436786,-0.3263697830683055,1.6520823541202085,0.5883570616384415,2.791607486899845,-1.4464082114876389,-1.0659170994410567,-0.5480905346838362,-0.9775601740834311,-1.7019175178822936,1.0750127541094727,-0.48200420903080216,1.5173786526283046,0.21151214409505367],
-"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.2459994526151308,-2.996337282687297,-1.8675439343071618,-3.1340603463829204,-0.03594850303010433,-2.327339926321036,-0.49134405116391944,-1.8324684783446843,-1.2684958663731853,-1.0728747551110687,-0.09337182110871134,-0.7408093126843741,0.3888034310846413,-1.6580522310111687,-0.03774750228253598,0.8788215665172336,-1.782041810905759,0.28073422756455235,-0.8397603225967758,1.5178944625420734,-2.817756338043295,-2.3930956857652035,-2.070468781478081,-2.3590959216010137,-3.2440250314884183,-0.3957443608571114,-1.9101215932660194,0.2123144322404753,-1.2441598837424],
-"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.84257651486098,-0.27302428484819186,0.9395828511198664,-0.3913640932716078,2.9055657269030633,0.5288948421493986,2.271727443871246,0.8908445194944208,1.4363537796119488,1.6504382427280364,2.6696996739264547,2.1154254557860606,3.219798516714544,1.224918547223414,2.818487266187898,3.602134564356339,1.129302244769148,3.0234304806758647,2.0164744458736585,4.0653205112576165,-0.07506008493198268,0.26126148688309003,0.9742877121104084,0.4039755734341516,-0.15981000427616898,2.545769869076057,0.9461131752044152,2.8224428730161337,1.6671841719325071],
+"2.5%":[1.6988810797044172,-2.5213510250223585,-1.3779393065398144,-2.6556933609461773,0.4770952921754974,-1.8291701365228208,-0.009423320741525854,-1.3574822206797457,-0.7967298916533315,-0.59788849744613,0.38854890931368247,-0.24263952288615898,0.8825710451114387,-1.1552192837893147,0.46042228751567904,1.353807824182172,-1.2742601424462938,0.7591012130012952,-0.34159053279856066,1.9622034224441052,-2.3393893526065526,-1.9301363487581438,-1.539418001219564,-1.8771751911786203,-2.70609209657718,0.11729943434849033,-1.4119518034678042,0.667559621130841,-0.7363782152829346,1.2420185417564085,-3.0005124972197015,-1.8718476469388414,-3.13826527811976,-0.04045825015422744,-2.3317189282656305,-0.4955802209575856,-1.836643692877089,-1.2726427740400044,-1.0770499696434734,-0.09760799090237748,-0.7451883146289687,0.3844631250558934,-1.6624722229472166,-0.0421265042271306,0.8746463519848289,-1.786505302990484,0.27652929582771235,-0.8441393245413704,1.5139889069679389,-2.821961269780135,-2.397165181504484,-2.075136813235632,-2.36333209139468,-3.248753558621692,-0.40025410798123473,-1.914500595210614,0.20831274524892618,-1.248623375827125],
+"97.5%":[3.389694887771693,-0.7480105425131305,0.44997822335251925,-0.8697310787083505,2.3925219316974617,0.0307250523511835,1.7898067134488524,0.4158582618294822,0.964587804892095,1.175451985063098,2.1877789435040613,1.6172556659878454,2.7260309026877465,0.7220856000015599,2.320317476389683,3.1271483066914003,0.6215205763096827,2.545063495239122,1.5183046560754436,3.6210115513555845,-0.5534270703687254,-0.20169785012396968,0.4432369318518916,-0.077945156988242,-0.6977429391874073,2.032726073870455,0.4479433854062,2.3671976841257685,1.159402503473042,3.846557425719702,-0.2688490703157871,0.943886563751546,-0.3871591615347678,2.9100754740271864,0.5332738440939933,2.275963613664912,0.8950197340268256,1.4405006872787678,1.6546134572604412,2.673935843720121,2.119804457730655,3.2241388227432917,1.229338539159462,2.8228662681324925,3.6063097788887433,1.1337657368538732,3.027635412412705,2.0208534478182534,4.069226066831751,-0.07085515319514268,0.26533098262237065,0.9789557438679594,0.4082117432278177,-0.15508147714289566,2.5502796162001804,0.9504921771490098,2.8264445600076833,1.6716476640172322],
 "Model":["Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)","Y~i(f1) (joint CIs)"]
 },
 "mapping":{
