@@ -11,13 +11,13 @@ toc-location: left
 # How to Get Started
 
 This guide will focus on how to replicate the regression results you would get in Stata
-with the Python package `pyfixest` and assumes you know how to do things like install 
-Python packages and load data into Pandas.  For a broader introduction to doing 
-econmetrics in Python you might check out Arthur Turrell's 
-[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html), 
-which includes a section on 
-[Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html), 
-or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher 
+with the Python package `pyfixest` and assumes you know how to do things like install
+Python packages and load data into Pandas.  For a broader introduction to doing
+econmetrics in Python you might check out Arthur Turrell's
+[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html),
+which includes a section on
+[Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
+or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
 Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey.
 
 # Data
@@ -29,7 +29,7 @@ import pyfixest as pf
 df = pf.get_data()
 ```
 
-If you want to use the same dataset in Stata, you can save the data to your home 
+If you want to use the same dataset in Stata, you can save the data to your home
 directory as a .dta file with
 
 ```{python}
@@ -53,15 +53,15 @@ fit1 = pf.feols("Y ~ X1", data = df)
 fit2 = pf.feols("Y ~ X1 + X2", data = df)
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reg Y X1
 reg y X1 X2
 ```
 
-in Stata.  However, you should note that this will only run the regressions and store 
-the results in `fit1` and `fit2`.  To show the results you can use some of the following 
+in Stata.  However, you should note that this will only run the regressions and store
+the results in `fit1` and `fit2`.  To show the results you can use some of the following
 methods and functions.
 
 ```{python}
@@ -99,14 +99,14 @@ or
 reg Y X1 X2, vce(robust)
 ```
 
-or you can choose a different type of robust standard errors like "HC3" using 
+or you can choose a different type of robust standard errors like "HC3" using
 
 ```{python}
 fit4 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3")
 fit4.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reg Y X1 X2, vce(HC3)
@@ -121,7 +121,7 @@ fit5 = pf.feols("Y ~ X1 + X2", data=df.dropna(subset=['f1']), vcov={"CRV1": "f1"
 fit5.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reg Y X1 X2, vce(cluster f1)
@@ -134,8 +134,8 @@ For two way clustering you would need to use
 
 ```{python}
 fit6 = pf.feols(
-  "Y ~ X1 + X2", 
-  data=df.dropna(subset=['f1', 'f2']), 
+  "Y ~ X1 + X2",
+  data=df.dropna(subset=['f1', 'f2']),
   vcov={"CRV1": "f1 + f2"}
 )
 fit6.summary()
@@ -148,15 +148,15 @@ reg Y X1 X2, vce(cluster f1 f2)
 ```
 
 this is because by default, `pyfixest` uses a small sample size correction that adjusts
-each clustering dimentsion by whichever dimension has the smallest number of clusters, 
+each clustering dimentsion by whichever dimension has the smallest number of clusters,
 while in Stata the default is to adjust each dimension based on the number of clusters
 in that dimension. You can use the same correction as Stata through the `ssc` argument.
 
 ```{python}
 fit7 = pf.feols(
-  "Y ~ X1 + X2", 
-  df.dropna(subset=['f1', 'f2']), 
-  vcov={"CRV1": "f1 + f2"}, 
+  "Y ~ X1 + X2",
+  df.dropna(subset=['f1', 'f2']),
+  vcov={"CRV1": "f1 + f2"},
   ssc=pf.ssc(cluster_df="conventional")
 )
 fit7.summary()
@@ -174,7 +174,7 @@ fit8 = pf.feols("Y ~ X1 + X2 | f1", data=df, vcov="iid")
 fit8.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 xtset f1
@@ -187,7 +187,7 @@ or
 reghdfe Y X1 X2, absorb(f1)
 ```
 
-Note: You need to specify `vcov="iid`.  This is because the default for `fixest` is to 
+Note: You need to specify `vcov="iid`.  This is because the default for `fixest` is to
 cluster standard errors based on the first fixed effect.  So
 
 ```{python}
@@ -195,7 +195,7 @@ fit9 = pf.feols("Y ~ X1 + X2 | f1", data=df)
 fit9.summary()
 ```
 
-is equivalent to 
+is equivalent to
 
 ```{stata}
 xtset f1
@@ -215,12 +215,12 @@ fit10 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=df)
 fit10.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 ```
 
 Note: By default `pyfixest` will stull cluster standard errors just by the first group
-specified.  You can change this using the `vcov` argument.  See the `fit7` example above 
+specified.  You can change this using the `vcov` argument.  See the `fit7` example above
 for how to specify two way clustering.
