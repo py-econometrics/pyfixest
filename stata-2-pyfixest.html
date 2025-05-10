@@ -175,6 +175,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./stata-2-pyfixest.html">
+ <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./pyfixest_gpu.html">
  <span class="dropdown-text">PyFixest on the GPU</span></a>
   </li>  
@@ -245,17 +249,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="how-to-get-started" class="level1">
 <h1>How to Get Started</h1>
-<p>This guide will focus on how to replicate the regression results you would get in Stata with the Python package <code>pyfixest</code> and assumes you know how to do things like install Python packages and load data into Pandas. For a broader introduction to doing econmetrics in Python you might check out Arthur Turrell’s <a href="https://aeturrell.github.io/coding-for-economists/intro.html">Coding for Economist</a>, which includes a section on <a href="https://aeturrell.github.io/coding-for-economists/coming-from-stata.html">Coming from Stata</a>, or <a href="https://www.tidy-finance.org/python/">Tidy Finance with Python</a> by Christopher Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey.</p>
+<p>This guide will focus on how to replicate the regression results you would get in Stata with the Python package <code>pyfixest</code> and assumes you know how to do things like install Python packages and load data into Pandas. For a broader introduction to doing econmetrics in Python you might check out Arthur Turrell’s <a href="https://aeturrell.github.io/coding-for-economists/intro.html">Coding for Economist</a>, which includes a section on <a href="https://aeturrell.github.io/coding-for-economists/coming-from-stata.html">Coming from Stata</a>, or <a href="https://www.tidy-finance.org/python/">Tidy Finance with Python</a> by Christopher Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section of <a href="https://stata2r.github.io/fixest/">stata2r</a> as there is a lot of overlap between fixest and PyFixest syntax.</p>
 </section>
 <section id="data" class="level1">
 <h1>Data</h1>
 <p><code>pyfixest</code> includes a function to generate a dataset for testing.</p>
-<div id="ad52a460" class="cell" data-execution_count="1">
+<div id="80a5eeaf" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="b6tJCw"></div>
+            <div id="NaGUvI"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -279,9 +283,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("b6tJCw").appendChild(div);
+                        document.getElementById("NaGUvI").appendChild(div);
                     };
-                    var e = document.getElementById("b6tJCw");
+                    var e = document.getElementById("NaGUvI");
                     e.appendChild(script);
                 })()
             </script>
@@ -289,7 +293,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="b8GZj2"></div>
+            <div id="k1r6Ga"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -313,9 +317,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("b8GZj2").appendChild(div);
+                        document.getElementById("k1r6Ga").appendChild(div);
                     };
-                    var e = document.getElementById("b8GZj2");
+                    var e = document.getElementById("k1r6Ga");
                     e.appendChild(script);
                 })()
             </script>
@@ -323,56 +327,56 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>If you want to use the same dataset in Stata, you can save the data to your home directory as a .dta file with</p>
-<div id="a40b46e8" class="cell" data-execution_count="2">
+<div id="62e4f6bb" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df.to_stata(os.path.join(os.path.expanduser(<span class="st">"~"</span>), <span class="st">"pyfixest-data.dta"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>and then load the data in Stata with</p>
-<pre class="{stata}"><code>cd ~
-use pyfixest-data.dta</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>cd ~</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> pyfixest-<span class="kw">data</span>.dta</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="basic-ols" class="level1">
 <h1>Basic OLS</h1>
 <p>To do a basic linear regression in <code>pyfixest</code> you would simply use</p>
-<div id="afd57ac8" class="cell" data-execution_count="3">
+<div id="a1b62330" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>which is equivalent to</p>
-<pre class="{stata}"><code>reg Y X1
-
-*       Source |       SS           df       MS      Number of obs   =       998
-* -------------+----------------------------------   F(1, 996)       =    139.30
-*        Model |  650.171727         1  650.171727   Prob &gt; F        =    0.0000
-*     Residual |  4648.80985       996  4.66747977   R-squared       =    0.1227
-* -------------+----------------------------------   Adj R-squared   =    0.1218
-*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.1604
-*
-* ------------------------------------------------------------------------------
-*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -1.000086   .0847353   -11.80   0.000    -1.166366   -.8338056
-*        _cons |   .9185178   .1118212     8.21   0.000     .6990856     1.13795
-* ------------------------------------------------------------------------------
-
-reg y X1 X2
-
-*       Source |       SS           df       MS      Number of obs   =       998
-* -------------+----------------------------------   F(2, 995)       =    106.99
-*        Model |  937.866146         2  468.933073   Prob &gt; F        =    0.0000
-*     Residual |  4361.11543       995  4.38303058   R-squared       =    0.1770
-* -------------+----------------------------------   Adj R-squared   =    0.1753
-*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.0936
-*
-* ------------------------------------------------------------------------------
-*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9929358   .0821175   -12.09   0.000    -1.154079   -.8317925
-*           X2 |  -.1763424    .021766    -8.10   0.000    -.2190549   -.1336299
-*        _cons |   .8887791   .1084224     8.20   0.000     .6760163    1.101542
-* ------------------------------------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>*       Source |       SS           df       MS      Number <span class="kw">of</span> <span class="kw">obs</span>   =       998</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------   <span class="fu">F</span>(1, 996)       =    139.30</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>*        Model |  650.171727         1  650.171727   Prob &gt; <span class="fu">F</span>        =    0.0000</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>*     Residual |  4648.80985       996  4.66747977   R-squared       =    0.1227</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------   Adj R-squared   =    0.1218</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.1604</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>*           X1 |  -1.000086   .0847353   -11.80   0.000    -1.166366   -.8338056</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .9185178   .1118212     8.21   0.000     .6990856     1.13795</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> <span class="fu">y</span> X1 X2</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>*       Source |       SS           df       MS      Number <span class="kw">of</span> <span class="kw">obs</span>   =       998</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------   <span class="fu">F</span>(2, 995)       =    106.99</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>*        Model |  937.866146         2  468.933073   Prob &gt; <span class="fu">F</span>        =    0.0000</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>*     Residual |  4361.11543       995  4.38303058   R-squared       =    0.1770</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------   Adj R-squared   =    0.1753</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.0936</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9929358   .0821175   -12.09   0.000    -1.154079   -.8317925</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1763424    .021766    -8.10   0.000    -.2190549   -.1336299</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8887791   .1084224     8.20   0.000     .6760163    1.101542</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>in Stata. However, you should note that this will only run the regressions and store the results in <code>fit1</code> and <code>fit2</code>. To show the results you can use some of the following methods and functions.</p>
-<div id="9d9a5c8a" class="cell" data-execution_count="4">
+<div id="6c0a2368" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit1.summary() <span class="co"># Basic summary statisticsmodels</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
@@ -390,7 +394,7 @@ Observations:  998
 RMSE: 2.158 R2: 0.123 </code></pre>
 </div>
 </div>
-<div id="6ea73321" class="cell" data-execution_count="5">
+<div id="21208607" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit1.tidy() <span class="co"># Estimates, std errors, t-values, etc. in a "tidy" tablemodels</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
 <div>
@@ -440,55 +444,55 @@ RMSE: 2.158 R2: 0.123 </code></pre>
 </div>
 </div>
 </div>
-<div id="b256d24e" class="cell" data-execution_count="6">
+<div id="57d47078" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.report.etable([fit1, fit2]) <span class="co"># Customizable table that can include results for multiple models</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
-<div id="kkgvybxtfb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="jrwfwxhdgr" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#kkgvybxtfb table {
+#jrwfwxhdgr table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#kkgvybxtfb thead, tbody, tfoot, tr, td, th { border-style: none; }
+#jrwfwxhdgr thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#kkgvybxtfb p { margin: 0; padding: 0; }
- #kkgvybxtfb .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #kkgvybxtfb .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #kkgvybxtfb .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #kkgvybxtfb .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #kkgvybxtfb .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #kkgvybxtfb .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #kkgvybxtfb .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #kkgvybxtfb .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #kkgvybxtfb .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #kkgvybxtfb .gt_column_spanner_outer:first-child { padding-left: 0; }
- #kkgvybxtfb .gt_column_spanner_outer:last-child { padding-right: 0; }
- #kkgvybxtfb .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
- #kkgvybxtfb .gt_spanner_row { border-bottom-style: hidden; }
- #kkgvybxtfb .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #kkgvybxtfb .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
- #kkgvybxtfb .gt_from_md> :first-child { margin-top: 0; }
- #kkgvybxtfb .gt_from_md> :last-child { margin-bottom: 0; }
- #kkgvybxtfb .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #kkgvybxtfb .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #kkgvybxtfb .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #kkgvybxtfb .gt_row_group_first td { border-top-width: 0.5px; }
- #kkgvybxtfb .gt_row_group_first th { border-top-width: 0.5px; }
- #kkgvybxtfb .gt_striped { background-color: rgba(128,128,128,0.05); }
- #kkgvybxtfb .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #kkgvybxtfb .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #kkgvybxtfb .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #kkgvybxtfb .gt_left { text-align: left; }
- #kkgvybxtfb .gt_center { text-align: center; }
- #kkgvybxtfb .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #kkgvybxtfb .gt_font_normal { font-weight: normal; }
- #kkgvybxtfb .gt_font_bold { font-weight: bold; }
- #kkgvybxtfb .gt_font_italic { font-style: italic; }
- #kkgvybxtfb .gt_super { font-size: 65%; }
- #kkgvybxtfb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #kkgvybxtfb .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#jrwfwxhdgr p { margin: 0; padding: 0; }
+ #jrwfwxhdgr .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #jrwfwxhdgr .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #jrwfwxhdgr .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #jrwfwxhdgr .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #jrwfwxhdgr .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #jrwfwxhdgr .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #jrwfwxhdgr .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #jrwfwxhdgr .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #jrwfwxhdgr .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #jrwfwxhdgr .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #jrwfwxhdgr .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #jrwfwxhdgr .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #jrwfwxhdgr .gt_spanner_row { border-bottom-style: hidden; }
+ #jrwfwxhdgr .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #jrwfwxhdgr .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #jrwfwxhdgr .gt_from_md> :first-child { margin-top: 0; }
+ #jrwfwxhdgr .gt_from_md> :last-child { margin-bottom: 0; }
+ #jrwfwxhdgr .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #jrwfwxhdgr .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #jrwfwxhdgr .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #jrwfwxhdgr .gt_row_group_first td { border-top-width: 0.5px; }
+ #jrwfwxhdgr .gt_row_group_first th { border-top-width: 0.5px; }
+ #jrwfwxhdgr .gt_striped { background-color: rgba(128,128,128,0.05); }
+ #jrwfwxhdgr .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #jrwfwxhdgr .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #jrwfwxhdgr .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #jrwfwxhdgr .gt_left { text-align: left; }
+ #jrwfwxhdgr .gt_center { text-align: center; }
+ #jrwfwxhdgr .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #jrwfwxhdgr .gt_font_normal { font-weight: normal; }
+ #jrwfwxhdgr .gt_font_bold { font-weight: bold; }
+ #jrwfwxhdgr .gt_font_italic { font-style: italic; }
+ #jrwfwxhdgr .gt_super { font-size: 65%; }
+ #jrwfwxhdgr .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #jrwfwxhdgr .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -565,7 +569,7 @@ Coefficient
 </div>
 </div>
 <p>You can also access individual parts of the results with a variety of methods like</p>
-<div id="17af63aa" class="cell" data-execution_count="7">
+<div id="fed9e392" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit1.coef() <span class="co"># Get the coefficients</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <pre><code>Coefficient
@@ -574,7 +578,7 @@ X1          -1.000086
 Name: Estimate, dtype: float64</code></pre>
 </div>
 </div>
-<div id="0910130c" class="cell" data-execution_count="8">
+<div id="26308a68" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit1.se() <span class="co"># Get the standard errors</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <pre><code>Coefficient
@@ -583,7 +587,7 @@ X1           0.084735
 Name: Std. Error, dtype: float64</code></pre>
 </div>
 </div>
-<div id="b5317c23" class="cell" data-execution_count="9">
+<div id="d5c6a6d3" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit1.pvalue() <span class="co"># Get the p-values</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>Coefficient
@@ -595,7 +599,7 @@ Name: Pr(&gt;|t|), dtype: float64</code></pre>
 <section id="robust-standard-errors" class="level2">
 <h2 class="anchored" data-anchor-id="robust-standard-errors">Robust Standard Errors</h2>
 <p>To get heteroskedasticity robust standard errors you can use</p>
-<div id="4a8aa913" class="cell" data-execution_count="10">
+<div id="d7968dd4" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit3.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -616,28 +620,28 @@ RMSE: 2.09 R2: 0.177 </code></pre>
 </div>
 </div>
 <p>which is equivalent to</p>
-<pre class="{stata}"><code>reg Y X1 X2, robust
-
-* Linear regression                               Number of obs     =        998
-*                                                 F(2, 995)         =     107.91
-*                                                 Prob &gt; F          =     0.0000
-*                                                 R-squared         =     0.1770
-*                                                 Root MSE          =     2.0936
-*
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9929358   .0798259   -12.44   0.000    -1.149582   -.8362893
-*           X2 |  -.1763424   .0216936    -8.13   0.000    -.2189129   -.1337719
-*        _cons |   .8887791   .1077457     8.25   0.000     .6773442    1.100214
-* ------------------------------------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1 X2, <span class="kw">robust</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>* Linear regression                               Number <span class="kw">of</span> <span class="kw">obs</span>     =        998</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>*                                                 <span class="fu">F</span>(2, 995)         =     107.91</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>*                                                 Prob &gt; <span class="fu">F</span>          =     0.0000</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>*                                                 R-squared         =     0.1770</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>*                                                 Root MSE          =     2.0936</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9929358   .0798259   -12.44   0.000    -1.149582   -.8362893</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1763424   .0216936    -8.13   0.000    -.2189129   -.1337719</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8887791   .1077457     8.25   0.000     .6773442    1.100214</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or</p>
-<pre class="{stata}"><code>reg Y X1 X2, vce(robust)
-
-* Identical output to above</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1 X2, <span class="kw">vce</span>(<span class="kw">robust</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>* Identical output to above</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or you can choose a different type of robust standard errors like “HC3” using</p>
-<div id="4f8a9b4a" class="cell" data-execution_count="11">
+<div id="e4bdf83b" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>)</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>fit4.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -658,24 +662,24 @@ RMSE: 2.09 R2: 0.177 </code></pre>
 </div>
 </div>
 <p>Note: This will not exactly match the output of the equivalent Stata command, which is</p>
-<pre class="{stata}"><code>reg Y X1 X2, vce(hc3)
-
-* Linear regression                               Number of obs     =        998
-*                                                 F(2, 995)         =     107.38
-*                                                 Prob &gt; F          =     0.0000
-*                                                 R-squared         =     0.1770
-*                                                 Root MSE          =     2.0936
-*
-* ------------------------------------------------------------------------------
-*              |             Robust HC3
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9929358   .0799832   -12.41   0.000    -1.149891   -.8359807
-*           X2 |  -.1763424   .0217734    -8.10   0.000    -.2190693   -.1336154
-*        _cons |   .8887791   .1079372     8.23   0.000     .6769684     1.10059
-* ------------------------------------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb22"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1 X2, <span class="kw">vce</span>(hc3)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>* Linear regression                               Number <span class="kw">of</span> <span class="kw">obs</span>     =        998</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>*                                                 <span class="fu">F</span>(2, 995)         =     107.38</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>*                                                 Prob &gt; <span class="fu">F</span>          =     0.0000</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>*                                                 R-squared         =     0.1770</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>*                                                 Root MSE          =     2.0936</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>*              |             Robust HC3</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9929358   .0799832   -12.41   0.000    -1.149891   -.8359807</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1763424   .0217734    -8.10   0.000    -.2190693   -.1336154</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8887791   .1079372     8.23   0.000     .6769684     1.10059</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>this is because by default, <code>pyfixest</code> uses two small sample size corrections for HC3 robust standard errors, while Stata only uses one of them. You can turn off the correction that Stata doesn’t use with the <code>ssc</code> argument.</p>
-<div id="61ac9260" class="cell" data-execution_count="12">
+<div id="5ed31177" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit5 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>, ssc<span class="op">=</span>pf.ssc(adj <span class="op">=</span> <span class="va">False</span>))</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>fit5.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -700,7 +704,7 @@ RMSE: 2.09 R2: 0.177 </code></pre>
 <section id="clustered-standard-errors" class="level2">
 <h2 class="anchored" data-anchor-id="clustered-standard-errors">Clustered Standard Errors</h2>
 <p>To cluster the standard errors by group you can use</p>
-<div id="43cc89d4" class="cell" data-execution_count="13">
+<div id="dcdcf89f" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit6 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>]), vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>fit6.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -721,26 +725,26 @@ RMSE: 2.091 R2: 0.177 </code></pre>
 </div>
 </div>
 <p>which is equivalent to</p>
-<pre class="{stata}"><code>reg Y X1 X2, vce(cluster f1)
-
-* Linear regression                               Number of obs     =        997
-*                                                 F(2, 29)          =     102.51
-*                                                 Prob &gt; F          =     0.0000
-*                                                 R-squared         =     0.1774
-*                                                 Root MSE          =      2.094
-*
-*                                     (Std. err. adjusted for 30 clusters in f1)
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9951969   .0757246   -13.14   0.000    -1.150071   -.8403227
-*           X2 |  -.1766173    .019799    -8.92   0.000    -.2171109   -.1361237
-*        _cons |   .8895569   .2622066     3.39   0.002     .3532841     1.42583
-* ------------------------------------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb27"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1 X2, <span class="kw">vce</span>(<span class="kw">cluster</span> f1)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>* Linear regression                               Number <span class="kw">of</span> <span class="kw">obs</span>     =        997</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>*                                                 <span class="fu">F</span>(2, 29)          =     102.51</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>*                                                 Prob &gt; <span class="fu">F</span>          =     0.0000</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>*                                                 R-squared         =     0.1774</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>*                                                 Root MSE          =      2.094</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>*                                     (Std. err. adjusted <span class="kw">for</span> 30 clusters <span class="kw">in</span> f1)</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9951969   .0757246   -13.14   0.000    -1.150071   -.8403227</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1766173    .019799    -8.92   0.000    -.2171109   -.1361237</span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8895569   .2622066     3.39   0.002     .3532841     1.42583</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Note: clustered standard errors are not supported with missing values in the cluster variable, which is why we drop the rows with missing values for <code>f1</code>.</p>
 <p>For two way clustering you would need to use</p>
-<div id="55ac5f9b" class="cell" data-execution_count="14">
+<div id="5ee4e58a" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit7 <span class="op">=</span> pf.feols(</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Y ~ X1 + X2"</span>,</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  data<span class="op">=</span>df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>, <span class="st">'f2'</span>]),</span>
@@ -765,28 +769,28 @@ RMSE: 2.091 R2: 0.177 </code></pre>
 </div>
 </div>
 <p>Note: This will not exactly match the output of the equivalent Stata command, which is</p>
-<pre class="{stata}"><code>reg Y X1 X2, vce(cluster f1 f2)
-
-* Linear regression                                       Number of obs =    997
-* Clusters per comb.:                                     Cluster comb. =      3
-*   min =  30                                             F(2, 29)      =  88.58
-*   avg = 211                                             Prob &gt; F      = 0.0000
-*   max = 572                                             R-squared     = 0.1774
-*                                                         Adj R-squared = 0.1758
-*                                                         Root MSE      = 2.0940
-*
-*                                   (Std. err. adjusted for multiway clustering)
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9951969    .074771   -13.31   0.000    -1.148121   -.8422731
-*           X2 |  -.1766173     .02376    -7.43   0.000     -.225212   -.1280226
-*        _cons |   .8895569   .3016464     2.95   0.006     .2726208    1.506493
-* ------------------------------------------------------------------------------
-* Cluster combinations formed by f1 and f2.</code></pre>
+<div class="sourceCode" id="cb30"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">reg</span> Y X1 X2, <span class="kw">vce</span>(<span class="kw">cluster</span> f1 f2)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>* Linear regression                                       Number <span class="kw">of</span> <span class="kw">obs</span> =    997</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>* Clusters per <span class="fu">comb</span>.:                                     Cluster <span class="fu">comb</span>. =      3</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>*   <span class="fu">min</span> =  30                                             <span class="fu">F</span>(2, 29)      =  88.58</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>*   avg = 211                                             Prob &gt; <span class="fu">F</span>      = 0.0000</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>*   <span class="fu">max</span> = 572                                             R-squared     = 0.1774</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>*                                                         Adj R-squared = 0.1758</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>*                                                         Root MSE      = 2.0940</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>*                                   (Std. err. adjusted <span class="kw">for</span> multiway clustering)</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9951969    .074771   -13.31   0.000    -1.148121   -.8422731</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1766173     .02376    -7.43   0.000     -.225212   -.1280226</span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8895569   .3016464     2.95   0.006     .2726208    1.506493</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>* Cluster combinations formed <span class="kw">by</span> f1 and f2.</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>this is because by default, <code>pyfixest</code> uses a small sample size correction that adjusts each clustering dimentsion by whichever dimension has the smallest number of clusters, while in Stata the default is to adjust each dimension based on the number of clusters in that dimension. You can use the same correction as Stata through the <code>ssc</code> argument.</p>
-<div id="98de2f45" class="cell" data-execution_count="15">
+<div id="2d8435ee" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>fit8 <span class="op">=</span> pf.feols(</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Y ~ X1 + X2"</span>,</span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>, <span class="st">'f2'</span>]),</span>
@@ -817,7 +821,7 @@ RMSE: 2.091 R2: 0.177 </code></pre>
 <section id="fixed-effect-regressions" class="level1">
 <h1>Fixed Effect Regressions</h1>
 <p>To do a fixed effect regression with one fixed effect you could use</p>
-<div id="df90cc29" class="cell" data-execution_count="16">
+<div id="7022ab8d" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit9 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"iid"</span>)</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>fit9.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -837,59 +841,59 @@ RMSE: 1.648 R2: 0.489 R2 Within: 0.239 </code></pre>
 </div>
 </div>
 <p>which is equivalent to</p>
-<pre class="{stata}"><code>xtset f1
-xtreg Y X1 X2, fe
-
-* Fixed-effects (within) regression               Number of obs     =        997
-* Group variable: f1                              Number of groups  =         30
-*
-* R-squared:                                      Obs per group:
-*      Within  = 0.2388                                         min =         23
-*      Between = 0.0770                                         avg =       33.2
-*      Overall = 0.1774                                         max =         48
-*
-*                                                 F(2, 965)         =     151.33
-* corr(u_i, Xb) = 0.0268                          Prob &gt; F          =     0.0000
-*
-* ------------------------------------------------------------------------------
-*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
-*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
-*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
-* -------------+----------------------------------------------------------------
-*      sigma_u |  1.2570454
-*      sigma_e |  1.6751049
-*          rho |  .36026283   (fraction of variance due to u_i)
-* ------------------------------------------------------------------------------
-* F test that all u_i=0: F(29, 965) = 20.29                    Prob &gt; F = 0.0000</code></pre>
+<div class="sourceCode" id="cb35"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>xtset f1</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="kw">xtreg</span> Y X1 X2, <span class="kw">fe</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>* Fixed-<span class="kw">effects</span> (within) regression               Number <span class="kw">of</span> <span class="kw">obs</span>     =        997</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>* Group <span class="kw">variable</span>: f1                              Number <span class="kw">of</span> groups  =         30</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>* R-squared:                                      Obs per <span class="fu">group</span>:</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>*      Within  = 0.2388                                         <span class="fu">min</span> =         23</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>*      Between = 0.0770                                         avg =       33.2</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>*      Overall = 0.1774                                         <span class="fu">max</span> =         48</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>*                                                 <span class="fu">F</span>(2, 965)         =     151.33</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>* <span class="fu">corr</span>(u_i, Xb) = 0.0268                          Prob &gt; <span class="fu">F</span>          =     0.0000</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951</span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |    .842222   .0872525     9.65   0.000     .6709955    1.013448</span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>*      sigma_u |  1.2570454</span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>*      sigma_e |  1.6751049</span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a>*          rho |  .36026283   (fraction <span class="kw">of</span> <span class="kw">variance</span> due to u_i)</span>
+<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>* <span class="fu">F</span> <span class="kw">test</span> that <span class="ot">all</span> u_i=0: <span class="fu">F</span>(29, 965) = 20.29                    Prob &gt; <span class="fu">F</span> = 0.0000</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or</p>
-<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1)
-
-* HDFE Linear regression                            Number of obs   =        997
-* Absorbing 1 HDFE group                            F(   2,    965) =     151.33
-*                                                   Prob &gt; F        =     0.0000
-*                                                   R-squared       =     0.4890
-*                                                   Adj R-squared   =     0.4726
-*                                                   Within R-sq.    =     0.2388
-*                                                   Root MSE        =     1.6751
-*
-* ------------------------------------------------------------------------------
-*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
-*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
-*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
-* ------------------------------------------------------------------------------
-*
-* Absorbed degrees of freedom:
-* -----------------------------------------------------+
-*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
-* -------------+---------------------------------------|
-*           f1 |        30           0          30     |
-* -----------------------------------------------------+</code></pre>
+<div class="sourceCode" id="cb36"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>reghdfe Y X1 X2, absorb(f1)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>* HDFE Linear regression                            Number <span class="kw">of</span> <span class="kw">obs</span>   =        997</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>* Absorbing 1 HDFE <span class="fu">group</span>                            <span class="fu">F</span>(   2,    965) =     151.33</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>*                                                   Prob &gt; <span class="fu">F</span>        =     0.0000</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>*                                                   R-squared       =     0.4890</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>*                                                   Adj R-squared   =     0.4726</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>*                                                   Within R-sq.    =     0.2388</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>*                                                   Root MSE        =     1.6751</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739</span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951</span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |    .842222   .0872525     9.65   0.000     .6709955    1.013448</span>
+<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>* Absorbed degrees <span class="kw">of</span> freedom:</span>
+<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span>
+<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>*  Absorbed FE | Categories  - Redundant  = Num. Coefs |</span>
+<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>* -------------+---------------------------------------|</span>
+<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>*           f1 |        30           0          30     |</span>
+<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Note: You need to specify <code>vcov="iid</code>. This is because the default for <code>fixest</code> is to cluster standard errors based on the first fixed effect. So</p>
-<div id="f54a9486" class="cell" data-execution_count="17">
+<div id="10cb6a79" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit10 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data<span class="op">=</span>df)</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>fit10.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -909,63 +913,63 @@ RMSE: 1.648 R2: 0.489 R2 Within: 0.239 </code></pre>
 </div>
 </div>
 <p>is equivalent to</p>
-<pre class="{stata}"><code>xtset f1
-xtreg Y X1 X2, fe vce(cluster f1)
-
-* Fixed-effects (within) regression               Number of obs     =        997
-* Group variable: f1                              Number of groups  =         30
-*
-* R-squared:                                      Obs per group:
-*      Within  = 0.2388                                         min =         23
-*      Between = 0.0770                                         avg =       33.2
-*      Overall = 0.1774                                         max =         48
-*
-*                                                 F(2, 29)          =     146.33
-* corr(u_i, Xb) = 0.0268                          Prob &gt; F          =     0.0000
-*
-*                                     (Std. err. adjusted for 30 clusters in f1)
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
-*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
-*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
-* -------------+----------------------------------------------------------------
-*      sigma_u |  1.2570454
-*      sigma_e |  1.6751049
-*          rho |  .36026283   (fraction of variance due to u_i)
-* ------------------------------------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb39"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>xtset f1</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="kw">xtreg</span> Y X1 X2, <span class="kw">fe</span> <span class="kw">vce</span>(<span class="kw">cluster</span> f1)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>* Fixed-<span class="kw">effects</span> (within) regression               Number <span class="kw">of</span> <span class="kw">obs</span>     =        997</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>* Group <span class="kw">variable</span>: f1                              Number <span class="kw">of</span> groups  =         30</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>* R-squared:                                      Obs per <span class="fu">group</span>:</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>*      Within  = 0.2388                                         <span class="fu">min</span> =         23</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>*      Between = 0.0770                                         avg =       33.2</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>*      Overall = 0.1774                                         <span class="fu">max</span> =         48</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>*                                                 <span class="fu">F</span>(2, 29)          =     146.33</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>* <span class="fu">corr</span>(u_i, Xb) = 0.0268                          Prob &gt; <span class="fu">F</span>          =     0.0000</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>*                                     (Std. err. adjusted <span class="kw">for</span> 30 clusters <span class="kw">in</span> f1)</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |    .842222   .0694639    12.12   0.000     .7001523    .9842916</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>*      sigma_u |  1.2570454</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>*      sigma_e |  1.6751049</span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a>*          rho |  .36026283   (fraction <span class="kw">of</span> <span class="kw">variance</span> due to u_i)</span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>or</p>
-<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1) cluster(f1)
-
-* HDFE Linear regression                            Number of obs   =        997
-* Absorbing 1 HDFE group                            F(   2,     29) =     146.33
-* Statistics robust to heteroskedasticity           Prob &gt; F        =     0.0000
-*                                                   R-squared       =     0.4890
-*                                                   Adj R-squared   =     0.4726
-*                                                   Within R-sq.    =     0.2388
-* Number of clusters (f1)      =         30         Root MSE        =     1.6751
-*
-*                                     (Std. err. adjusted for 30 clusters in f1)
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
-*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
-*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
-* ------------------------------------------------------------------------------
-*
-* Absorbed degrees of freedom:
-* -----------------------------------------------------+
-*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
-* -------------+---------------------------------------|
-*           f1 |        30          30           0    *|
-* -----------------------------------------------------+
-* * = FE nested within cluster; treated as redundant for DoF computation</code></pre>
+<div class="sourceCode" id="cb40"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>reghdfe Y X1 X2, absorb(f1) <span class="kw">cluster</span>(f1)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>* HDFE Linear regression                            Number <span class="kw">of</span> <span class="kw">obs</span>   =        997</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>* Absorbing 1 HDFE <span class="fu">group</span>                            <span class="fu">F</span>(   2,     29) =     146.33</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>* Statistics <span class="kw">robust</span> to heteroskedasticity           Prob &gt; <span class="fu">F</span>        =     0.0000</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>*                                                   R-squared       =     0.4890</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>*                                                   Adj R-squared   =     0.4726</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>*                                                   Within R-sq.    =     0.2388</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>* Number <span class="kw">of</span> clusters (f1)      =         30         Root MSE        =     1.6751</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>*                                     (Std. err. adjusted <span class="kw">for</span> 30 clusters <span class="kw">in</span> f1)</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746</span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |    .842222   .0694639    12.12   0.000     .7001523    .9842916</span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>* Absorbed degrees <span class="kw">of</span> freedom:</span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>*  Absorbed FE | Categories  - Redundant  = Num. Coefs |</span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>* -------------+---------------------------------------|</span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a>*           f1 |        30          30           0    *|</span>
+<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span>
+<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a>* * = FE nested within <span class="kw">cluster</span>; treated <span class="kw">as</span> redundant <span class="kw">for</span> DoF computation</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>For multiple fixed effects you could do</p>
-<div id="6532e2bf" class="cell" data-execution_count="18">
+<div id="ed6c6c0c" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>fit11 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>df)</span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>fit11.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -985,34 +989,34 @@ RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
 </div>
 </div>
 <p>which is equivalent to</p>
-<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
-
-* HDFE Linear regression                            Number of obs   =        997
-* Absorbing 2 HDFE groups                           F(   2,     29) =     182.76
-* Statistics robust to heteroskedasticity           Prob &gt; F        =     0.0000
-*                                                   R-squared       =     0.6590
-*                                                   Adj R-squared   =     0.6372
-*                                                   Within R-sq.    =     0.3026
-* Number of clusters (f1)      =         30         Root MSE        =     1.3893
-*
-*                                     (Std. err. adjusted for 30 clusters in f1)
-* ------------------------------------------------------------------------------
-*              |               Robust
-*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
-* -------------+----------------------------------------------------------------
-*           X1 |  -.9240462   .0618743   -14.93   0.000    -1.050593   -.7974991
-*           X2 |  -.1741073   .0148338   -11.74   0.000    -.2044458   -.1437689
-*        _cons |   .8156588    .064596    12.63   0.000     .6835452    .9477723
-* ------------------------------------------------------------------------------
-*
-* Absorbed degrees of freedom:
-* -----------------------------------------------------+
-*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
-* -------------+---------------------------------------|
-*           f1 |        30          30           0    *|
-*           f2 |        30           1          29     |
-* -----------------------------------------------------+
-* * = FE nested within cluster; treated as redundant for DoF computation</code></pre>
+<div class="sourceCode" id="cb43"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>reghdfe Y X1 X2, absorb(f1 f2) <span class="kw">cluster</span>(f1)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>* HDFE Linear regression                            Number <span class="kw">of</span> <span class="kw">obs</span>   =        997</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>* Absorbing 2 HDFE groups                           <span class="fu">F</span>(   2,     29) =     182.76</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>* Statistics <span class="kw">robust</span> to heteroskedasticity           Prob &gt; <span class="fu">F</span>        =     0.0000</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>*                                                   R-squared       =     0.6590</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>*                                                   Adj R-squared   =     0.6372</span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>*                                                   Within R-sq.    =     0.3026</span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>* Number <span class="kw">of</span> clusters (f1)      =         30         Root MSE        =     1.3893</span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>*                                     (Std. err. adjusted <span class="kw">for</span> 30 clusters <span class="kw">in</span> f1)</span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>*              |               Robust</span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>*            Y | Coefficient  <span class="fu">std</span>. err.      t    P&gt;|t|     [95% conf. interval]</span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a>* -------------+----------------------------------------------------------------</span>
+<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>*           X1 |  -.9240462   .0618743   -14.93   0.000    -1.050593   -.7974991</span>
+<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>*           X2 |  -.1741073   .0148338   -11.74   0.000    -.2044458   -.1437689</span>
+<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>*        <span class="dt">_cons</span> |   .8156588    .064596    12.63   0.000     .6835452    .9477723</span>
+<span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>* ------------------------------------------------------------------------------</span>
+<span id="cb43-20"><a href="#cb43-20" aria-hidden="true" tabindex="-1"></a>*</span>
+<span id="cb43-21"><a href="#cb43-21" aria-hidden="true" tabindex="-1"></a>* Absorbed degrees <span class="kw">of</span> freedom:</span>
+<span id="cb43-22"><a href="#cb43-22" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span>
+<span id="cb43-23"><a href="#cb43-23" aria-hidden="true" tabindex="-1"></a>*  Absorbed FE | Categories  - Redundant  = Num. Coefs |</span>
+<span id="cb43-24"><a href="#cb43-24" aria-hidden="true" tabindex="-1"></a>* -------------+---------------------------------------|</span>
+<span id="cb43-25"><a href="#cb43-25" aria-hidden="true" tabindex="-1"></a>*           f1 |        30          30           0    *|</span>
+<span id="cb43-26"><a href="#cb43-26" aria-hidden="true" tabindex="-1"></a>*           f2 |        30           1          29     |</span>
+<span id="cb43-27"><a href="#cb43-27" aria-hidden="true" tabindex="-1"></a>* -----------------------------------------------------+</span>
+<span id="cb43-28"><a href="#cb43-28" aria-hidden="true" tabindex="-1"></a>* * = FE nested within <span class="kw">cluster</span>; treated <span class="kw">as</span> redundant <span class="kw">for</span> DoF computation</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Note: By default <code>pyfixest</code> will still cluster standard errors just by the first group specified. You can change this using the <code>vcov</code> argument. See the <code>fit8</code> example above for how to specify two way clustering.</p>
 
 
