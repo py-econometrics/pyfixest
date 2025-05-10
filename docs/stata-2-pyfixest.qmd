@@ -11,13 +11,13 @@ toc-location: left
 # How to Get Started
 
 This guide will focus on how to replicate the regression results you would get in Stata
-with the Python package `pyfixest` and assumes you know how to do things like install 
-Python packages and load data into Pandas.  For a broader introduction to doing 
-econmetrics in Python you might check out Arthur Turrell's 
-[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html), 
-which includes a section on 
-[Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html), 
-or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher 
+with the Python package `pyfixest` and assumes you know how to do things like install
+Python packages and load data into Pandas.  For a broader introduction to doing
+econmetrics in Python you might check out Arthur Turrell's
+[Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html),
+which includes a section on
+[Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
+or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
 Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey.
 
 # Data
@@ -29,7 +29,7 @@ import pyfixest as pf
 df = pf.get_data()
 ```
 
-If you want to use the same dataset in Stata, you can save the data to your home 
+If you want to use the same dataset in Stata, you can save the data to your home
 directory as a .dta file with
 
 ```{python}
@@ -53,7 +53,7 @@ fit1 = pf.feols("Y ~ X1", data = df)
 fit2 = pf.feols("Y ~ X1 + X2", data = df)
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reg Y X1
@@ -64,7 +64,7 @@ reg Y X1
 *     Residual |  4648.80985       996  4.66747977   R-squared       =    0.1227
 * -------------+----------------------------------   Adj R-squared   =    0.1218
 *        Total |  5298.98157       997  5.31492635   Root MSE        =    2.1604
-* 
+*
 * ------------------------------------------------------------------------------
 *            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
 * -------------+----------------------------------------------------------------
@@ -80,7 +80,7 @@ reg y X1 X2
 *     Residual |  4361.11543       995  4.38303058   R-squared       =    0.1770
 * -------------+----------------------------------   Adj R-squared   =    0.1753
 *        Total |  5298.98157       997  5.31492635   Root MSE        =    2.0936
-* 
+*
 * ------------------------------------------------------------------------------
 *            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
 * -------------+----------------------------------------------------------------
@@ -90,8 +90,8 @@ reg y X1 X2
 * ------------------------------------------------------------------------------
 ```
 
-in Stata.  However, you should note that this will only run the regressions and store 
-the results in `fit1` and `fit2`.  To show the results you can use some of the following 
+in Stata.  However, you should note that this will only run the regressions and store
+the results in `fit1` and `fit2`.  To show the results you can use some of the following
 methods and functions.
 
 ```{python}
@@ -139,7 +139,7 @@ reg Y X1 X2, robust
 *                                                 Prob > F          =     0.0000
 *                                                 R-squared         =     0.1770
 *                                                 Root MSE          =     2.0936
-* 
+*
 * ------------------------------------------------------------------------------
 *              |               Robust
 *            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
@@ -158,7 +158,7 @@ reg Y X1 X2, vce(robust)
 * Identical output to above
 ```
 
-or you can choose a different type of robust standard errors like "HC3" using 
+or you can choose a different type of robust standard errors like "HC3" using
 
 ```{python}
 fit4 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3")
@@ -175,7 +175,7 @@ reg Y X1 X2, vce(hc3)
 *                                                 Prob > F          =     0.0000
 *                                                 R-squared         =     0.1770
 *                                                 Root MSE          =     2.0936
-* 
+*
 * ------------------------------------------------------------------------------
 *              |             Robust HC3
 *            Y | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
@@ -187,7 +187,7 @@ reg Y X1 X2, vce(hc3)
 ```
 
 this is because by default, `pyfixest` uses two small sample size corrections for HC3
-robust standard errors, while Stata only uses one of them. You can turn off the 
+robust standard errors, while Stata only uses one of them. You can turn off the
 correction that Stata doesn't use with the `ssc` argument.
 
 ```{python}
@@ -196,7 +196,7 @@ fit5.summary()
 ```
 
 which matches Stata exactly.  You can read all about the small sample size corrections
-implememnted by `pyfixest` at 
+implememnted by `pyfixest` at
 [On Small Sample Corrections](https://py-econometrics.github.io/pyfixest/ssc.html).
 
 ## Clustered Standard Errors
@@ -208,7 +208,7 @@ fit6 = pf.feols("Y ~ X1 + X2", data=df.dropna(subset=['f1']), vcov={"CRV1": "f1"
 fit6.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reg Y X1 X2, vce(cluster f1)
@@ -218,7 +218,7 @@ reg Y X1 X2, vce(cluster f1)
 *                                                 Prob > F          =     0.0000
 *                                                 R-squared         =     0.1774
 *                                                 Root MSE          =      2.094
-* 
+*
 *                                     (Std. err. adjusted for 30 clusters in f1)
 * ------------------------------------------------------------------------------
 *              |               Robust
@@ -237,8 +237,8 @@ For two way clustering you would need to use
 
 ```{python}
 fit7 = pf.feols(
-  "Y ~ X1 + X2", 
-  data=df.dropna(subset=['f1', 'f2']), 
+  "Y ~ X1 + X2",
+  data=df.dropna(subset=['f1', 'f2']),
   vcov={"CRV1": "f1 + f2"}
 )
 fit7.summary()
@@ -256,7 +256,7 @@ reg Y X1 X2, vce(cluster f1 f2)
 *   max = 572                                             R-squared     = 0.1774
 *                                                         Adj R-squared = 0.1758
 *                                                         Root MSE      = 2.0940
-* 
+*
 *                                   (Std. err. adjusted for multiway clustering)
 * ------------------------------------------------------------------------------
 *              |               Robust
@@ -270,21 +270,21 @@ reg Y X1 X2, vce(cluster f1 f2)
 ```
 
 this is because by default, `pyfixest` uses a small sample size correction that adjusts
-each clustering dimentsion by whichever dimension has the smallest number of clusters, 
+each clustering dimentsion by whichever dimension has the smallest number of clusters,
 while in Stata the default is to adjust each dimension based on the number of clusters
 in that dimension. You can use the same correction as Stata through the `ssc` argument.
 
 ```{python}
 fit8 = pf.feols(
-  "Y ~ X1 + X2", 
-  df.dropna(subset=['f1', 'f2']), 
-  vcov={"CRV1": "f1 + f2"}, 
+  "Y ~ X1 + X2",
+  df.dropna(subset=['f1', 'f2']),
+  vcov={"CRV1": "f1 + f2"},
   ssc=pf.ssc(cluster_df="conventional")
 )
 fit8.summary()
 ```
 
-As a reminder, for an excellent breakdown on small sample correction in the `pyfixest` package, you can check out 
+As a reminder, for an excellent breakdown on small sample correction in the `pyfixest` package, you can check out
 [On Small Sample Correction](https://py-econometrics.github.io/pyfixest/ssc.html).
 
 # Fixed Effect Regressions
@@ -296,7 +296,7 @@ fit9 = pf.feols("Y ~ X1 + X2 | f1", data=df, vcov="iid")
 fit9.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 xtset f1
@@ -304,15 +304,15 @@ xtreg Y X1 X2, fe
 
 * Fixed-effects (within) regression               Number of obs     =        997
 * Group variable: f1                              Number of groups  =         30
-* 
+*
 * R-squared:                                      Obs per group:
 *      Within  = 0.2388                                         min =         23
 *      Between = 0.0770                                         avg =       33.2
 *      Overall = 0.1774                                         max =         48
-* 
+*
 *                                                 F(2, 965)         =     151.33
 * corr(u_i, Xb) = 0.0268                          Prob > F          =     0.0000
-* 
+*
 * ------------------------------------------------------------------------------
 *            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
 * -------------+----------------------------------------------------------------
@@ -339,7 +339,7 @@ reghdfe Y X1 X2, absorb(f1)
 *                                                   Adj R-squared   =     0.4726
 *                                                   Within R-sq.    =     0.2388
 *                                                   Root MSE        =     1.6751
-* 
+*
 * ------------------------------------------------------------------------------
 *            Y | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
 * -------------+----------------------------------------------------------------
@@ -347,7 +347,7 @@ reghdfe Y X1 X2, absorb(f1)
 *           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
 *        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
 * ------------------------------------------------------------------------------
-* 
+*
 * Absorbed degrees of freedom:
 * -----------------------------------------------------+
 *  Absorbed FE | Categories  - Redundant  = Num. Coefs |
@@ -356,7 +356,7 @@ reghdfe Y X1 X2, absorb(f1)
 * -----------------------------------------------------+
 ```
 
-Note: You need to specify `vcov="iid`.  This is because the default for `fixest` is to 
+Note: You need to specify `vcov="iid`.  This is because the default for `fixest` is to
 cluster standard errors based on the first fixed effect.  So
 
 ```{python}
@@ -364,7 +364,7 @@ fit10 = pf.feols("Y ~ X1 + X2 | f1", data=df)
 fit10.summary()
 ```
 
-is equivalent to 
+is equivalent to
 
 ```{stata}
 xtset f1
@@ -372,15 +372,15 @@ xtreg Y X1 X2, fe vce(cluster f1)
 
 * Fixed-effects (within) regression               Number of obs     =        997
 * Group variable: f1                              Number of groups  =         30
-* 
+*
 * R-squared:                                      Obs per group:
 *      Within  = 0.2388                                         min =         23
 *      Between = 0.0770                                         avg =       33.2
 *      Overall = 0.1774                                         max =         48
-* 
+*
 *                                                 F(2, 29)          =     146.33
 * corr(u_i, Xb) = 0.0268                          Prob > F          =     0.0000
-* 
+*
 *                                     (Std. err. adjusted for 30 clusters in f1)
 * ------------------------------------------------------------------------------
 *              |               Robust
@@ -408,7 +408,7 @@ reghdfe Y X1 X2, absorb(f1) cluster(f1)
 *                                                   Adj R-squared   =     0.4726
 *                                                   Within R-sq.    =     0.2388
 * Number of clusters (f1)      =         30         Root MSE        =     1.6751
-* 
+*
 *                                     (Std. err. adjusted for 30 clusters in f1)
 * ------------------------------------------------------------------------------
 *              |               Robust
@@ -418,7 +418,7 @@ reghdfe Y X1 X2, absorb(f1) cluster(f1)
 *           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
 *        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
 * ------------------------------------------------------------------------------
-* 
+*
 * Absorbed degrees of freedom:
 * -----------------------------------------------------+
 *  Absorbed FE | Categories  - Redundant  = Num. Coefs |
@@ -435,7 +435,7 @@ fit11 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=df)
 fit11.summary()
 ```
 
-which is equivalent to 
+which is equivalent to
 
 ```{stata}
 reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
@@ -447,7 +447,7 @@ reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 *                                                   Adj R-squared   =     0.6372
 *                                                   Within R-sq.    =     0.3026
 * Number of clusters (f1)      =         30         Root MSE        =     1.3893
-* 
+*
 *                                     (Std. err. adjusted for 30 clusters in f1)
 * ------------------------------------------------------------------------------
 *              |               Robust
@@ -457,7 +457,7 @@ reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 *           X2 |  -.1741073   .0148338   -11.74   0.000    -.2044458   -.1437689
 *        _cons |   .8156588    .064596    12.63   0.000     .6835452    .9477723
 * ------------------------------------------------------------------------------
-* 
+*
 * Absorbed degrees of freedom:
 * -----------------------------------------------------+
 *  Absorbed FE | Categories  - Redundant  = Num. Coefs |
@@ -469,5 +469,5 @@ reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 ```
 
 Note: By default `pyfixest` will still cluster standard errors just by the first group
-specified.  You can change this using the `vcov` argument.  See the `fit8` example above 
+specified.  You can change this using the `vcov` argument.  See the `fit8` example above
 for how to specify two way clustering.
