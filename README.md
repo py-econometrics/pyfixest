@@ -278,6 +278,9 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/FuZhiyu"><img src="https://avatars.githubusercontent.com/u/11523699?v=4?s=100" width="100px;" alt="FuZhiyu"/><br /><sub><b>FuZhiyu</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3AFuZhiyu" title="Bug reports">🐛</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=FuZhiyu" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://www.marceloortizm.com"><img src="https://avatars.githubusercontent.com/u/70643379?v=4?s=100" width="100px;" alt="Marcelo Ortiz M."/><br /><sub><b>Marcelo Ortiz M.</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mortizm1988" title="Documentation">📖</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/jestover"><img src="https://avatars.githubusercontent.com/u/11298484?v=4?s=100" width="100px;" alt="Joseph Stover"/><br /><sub><b>Joseph Stover</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jestover" title="Documentation">📖</a></td>
+    </tr>
   </tbody>
 </table>
 
