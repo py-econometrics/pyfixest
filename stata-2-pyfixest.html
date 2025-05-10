@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.30">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Translating Stata to PyFixest</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-de070a7b0ab54f8780927367ac907214.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-85d6ed6ef93f7b75ae44cb4d7fc8909c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./pyfixest.html"> 
+<span class="menu-text">PyFixest</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./quickstart.html"> 
+<span class="menu-text">Quickstart</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./reference/index.html"> 
+<span class="menu-text">Function Reference</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./changelog.html"> 
+<span class="menu-text">Changelog</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./contributing.html"> 
+<span class="menu-text">Contributing</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Learn more</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
+        <li>
+    <a class="dropdown-item" href="./table-layout.html">
+ <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./marginaleffects.html">
+ <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./difference-in-differences.html">
+ <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./multiple_testing.html">
+ <span class="dropdown-text">Multiple Testing Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./regression_decomposition.html">
+ <span class="dropdown-text">Regression Decomposition</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./ssc.html">
+ <span class="dropdown-text">On Small Sample Corrections</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
+ <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./pyfixest_gpu.html">
+ <span class="dropdown-text">PyFixest on the GPU</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./replicating-the-effect.html">
+ <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#how-to-get-started" id="toc-how-to-get-started" class="nav-link active" data-scroll-target="#how-to-get-started">How to Get Started</a></li>
+  <li><a href="#data" id="toc-data" class="nav-link" data-scroll-target="#data">Data</a></li>
+  <li><a href="#basic-ols" id="toc-basic-ols" class="nav-link" data-scroll-target="#basic-ols">Basic OLS</a>
+  <ul class="collapse">
+  <li><a href="#robust-standard-errors" id="toc-robust-standard-errors" class="nav-link" data-scroll-target="#robust-standard-errors">Robust Standard Errors</a></li>
+  <li><a href="#clustered-standard-errors" id="toc-clustered-standard-errors" class="nav-link" data-scroll-target="#clustered-standard-errors">Clustered Standard Errors</a></li>
+  </ul></li>
+  <li><a href="#fixed-effect-regressions" id="toc-fixed-effect-regressions" class="nav-link" data-scroll-target="#fixed-effect-regressions">Fixed Effect Regressions</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Translating Stata to PyFixest</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="how-to-get-started" class="level1">
+<h1>How to Get Started</h1>
+<p>This guide will focus on how to replicate the regression results you would get in Stata with the Python package <code>pyfixest</code> and assumes you know how to do things like install Python packages and load data into Pandas. For a broader introduction to doing econmetrics in Python you might check out Arthur Turrell’s <a href="https://aeturrell.github.io/coding-for-economists/intro.html">Coding for Economist</a>, which includes a section on <a href="https://aeturrell.github.io/coding-for-economists/coming-from-stata.html">Coming from Stata</a>, or <a href="https://www.tidy-finance.org/python/">Tidy Finance with Python</a> by Christopher Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey.</p>
+</section>
+<section id="data" class="level1">
+<h1>Data</h1>
+<p><code>pyfixest</code> includes a function to generate a dataset for testing.</p>
+<div id="ad52a460" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+            <div id="b6tJCw"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.2/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("b6tJCw").appendChild(div);
+                    };
+                    var e = document.getElementById("b6tJCw");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+<div class="cell-output cell-output-display">
+
+            <div id="b8GZj2"></div>
+            <script type="text/javascript" data-lets-plot-script="library">
+                if(!window.letsPlotCallQueue) {
+                    window.letsPlotCallQueue = [];
+                }; 
+                window.letsPlotCall = function(f) {
+                    window.letsPlotCallQueue.push(f);
+                };
+                (function() {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.2/js-package/distr/lets-plot.min.js";
+                    script.onload = function() {
+                        window.letsPlotCall = function(f) {f();};
+                        window.letsPlotCallQueue.forEach(function(f) {f();});
+                        window.letsPlotCallQueue = [];
+                        
+                    };
+                    script.onerror = function(event) {
+                        window.letsPlotCall = function(f) {};    // noop
+                        window.letsPlotCallQueue = [];
+                        var div = document.createElement("div");
+                        div.style.color = 'darkred';
+                        div.textContent = 'Error loading Lets-Plot JS';
+                        document.getElementById("b8GZj2").appendChild(div);
+                    };
+                    var e = document.getElementById("b8GZj2");
+                    e.appendChild(script);
+                })()
+            </script>
+            
+</div>
+</div>
+<p>If you want to use the same dataset in Stata, you can save the data to your home directory as a .dta file with</p>
+<div id="a40b46e8" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>df.to_stata(os.path.join(os.path.expanduser(<span class="st">"~"</span>), <span class="st">"pyfixest-data.dta"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>and then load the data in Stata with</p>
+<pre class="{stata}"><code>cd ~
+use pyfixest-data.dta</code></pre>
+</section>
+<section id="basic-ols" class="level1">
+<h1>Basic OLS</h1>
+<p>To do a basic linear regression in <code>pyfixest</code> you would simply use</p>
+<div id="afd57ac8" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1"</span>, data <span class="op">=</span> df)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit2 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data <span class="op">=</span> df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>which is equivalent to</p>
+<pre class="{stata}"><code>reg Y X1
+
+*       Source |       SS           df       MS      Number of obs   =       998
+* -------------+----------------------------------   F(1, 996)       =    139.30
+*        Model |  650.171727         1  650.171727   Prob &gt; F        =    0.0000
+*     Residual |  4648.80985       996  4.66747977   R-squared       =    0.1227
+* -------------+----------------------------------   Adj R-squared   =    0.1218
+*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.1604
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -1.000086   .0847353   -11.80   0.000    -1.166366   -.8338056
+*        _cons |   .9185178   .1118212     8.21   0.000     .6990856     1.13795
+* ------------------------------------------------------------------------------
+
+reg y X1 X2
+
+*       Source |       SS           df       MS      Number of obs   =       998
+* -------------+----------------------------------   F(2, 995)       =    106.99
+*        Model |  937.866146         2  468.933073   Prob &gt; F        =    0.0000
+*     Residual |  4361.11543       995  4.38303058   R-squared       =    0.1770
+* -------------+----------------------------------   Adj R-squared   =    0.1753
+*        Total |  5298.98157       997  5.31492635   Root MSE        =    2.0936
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0821175   -12.09   0.000    -1.154079   -.8317925
+*           X2 |  -.1763424    .021766    -8.10   0.000    -.2190549   -.1336299
+*        _cons |   .8887791   .1084224     8.20   0.000     .6760163    1.101542
+* ------------------------------------------------------------------------------</code></pre>
+<p>in Stata. However, you should note that this will only run the regressions and store the results in <code>fit1</code> and <code>fit2</code>. To show the results you can use some of the following methods and functions.</p>
+<div id="9d9a5c8a" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit1.summary() <span class="co"># Basic summary statisticsmodels</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  iid
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.919 |        0.112 |     8.214 |      0.000 |  0.699 |   1.138 |
+| X1            |     -1.000 |        0.085 |   -11.802 |      0.000 | -1.166 |  -0.834 |
+---
+RMSE: 2.158 R2: 0.123 </code></pre>
+</div>
+</div>
+<div id="6ea73321" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fit1.tidy() <span class="co"># Estimates, std errors, t-values, etc. in a "tidy" tablemodels</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<div>
+
+<table class="dataframe table table-sm table-striped small">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Estimate</th>
+      <th>Std. Error</th>
+      <th>t value</th>
+      <th>Pr(&gt;|t|)</th>
+      <th>2.5%</th>
+      <th>97.5%</th>
+    </tr>
+    <tr>
+      <th>Coefficient</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Intercept</th>
+      <td>0.918518</td>
+      <td>0.111821</td>
+      <td>8.214166</td>
+      <td>6.661338e-16</td>
+      <td>0.699086</td>
+      <td>1.137950</td>
+    </tr>
+    <tr>
+      <th>X1</th>
+      <td>-1.000086</td>
+      <td>0.084735</td>
+      <td>-11.802468</td>
+      <td>0.000000e+00</td>
+      <td>-1.166366</td>
+      <td>-0.833806</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="b256d24e" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>pf.report.etable([fit1, fit2]) <span class="co"># Customizable table that can include results for multiple models</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<div id="kkgvybxtfb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>
+#kkgvybxtfb table {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+#kkgvybxtfb thead, tbody, tfoot, tr, td, th { border-style: none; }
+ tr { background-color: transparent; }
+#kkgvybxtfb p { margin: 0; padding: 0; }
+ #kkgvybxtfb .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #kkgvybxtfb .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #kkgvybxtfb .gt_title { color: #333333; font-size: 125%; font-weight: initial; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #kkgvybxtfb .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 3px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #kkgvybxtfb .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #kkgvybxtfb .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #kkgvybxtfb .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #kkgvybxtfb .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 4px; padding-bottom: 5px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #kkgvybxtfb .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #kkgvybxtfb .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #kkgvybxtfb .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #kkgvybxtfb .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: bottom; padding-top: 4px; padding-bottom: 4px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #kkgvybxtfb .gt_spanner_row { border-bottom-style: hidden; }
+ #kkgvybxtfb .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #kkgvybxtfb .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.5px; border-bottom-color: black; vertical-align: middle; }
+ #kkgvybxtfb .gt_from_md> :first-child { margin-top: 0; }
+ #kkgvybxtfb .gt_from_md> :last-child { margin-bottom: 0; }
+ #kkgvybxtfb .gt_row { padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #kkgvybxtfb .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #kkgvybxtfb .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #kkgvybxtfb .gt_row_group_first td { border-top-width: 0.5px; }
+ #kkgvybxtfb .gt_row_group_first th { border-top-width: 0.5px; }
+ #kkgvybxtfb .gt_striped { background-color: rgba(128,128,128,0.05); }
+ #kkgvybxtfb .gt_table_body { border-top-style: solid; border-top-width: 0.5px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #kkgvybxtfb .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #kkgvybxtfb .gt_sourcenote { font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #kkgvybxtfb .gt_left { text-align: left; }
+ #kkgvybxtfb .gt_center { text-align: center; }
+ #kkgvybxtfb .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #kkgvybxtfb .gt_font_normal { font-weight: normal; }
+ #kkgvybxtfb .gt_font_bold { font-weight: bold; }
+ #kkgvybxtfb .gt_font_italic { font-style: italic; }
+ #kkgvybxtfb .gt_super { font-size: 65%; }
+ #kkgvybxtfb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #kkgvybxtfb .gt_asterisk { font-size: 100%; vertical-align: 0; }
+ 
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+<thead>
+
+<tr class="gt_col_headings gt_spanner_row">
+  <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="2" colspan="1" scope="col" id=""></th>
+  <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup" id="Y">
+    <span class="gt_column_spanner">Y</span>
+  </th>
+</tr>
+<tr class="gt_col_headings">
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="(1)">(1)</th>
+  <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="(2)">(2)</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">coef</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X1</th>
+    <td class="gt_row gt_center">-1.000*** <br> (0.085)</td>
+    <td class="gt_row gt_center">-0.993*** <br> (0.082)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">X2</th>
+    <td class="gt_row gt_center"></td>
+    <td class="gt_row gt_center">-0.176*** <br> (0.022)</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Intercept</th>
+    <td class="gt_row gt_center">0.919*** <br> (0.112)</td>
+    <td class="gt_row gt_center">0.889*** <br> (0.108)</td>
+  </tr>
+  <tr class="gt_group_heading_row">
+    <th class="gt_group_heading" colspan="3">stats</th>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Observations</th>
+    <td class="gt_row gt_center">998</td>
+    <td class="gt_row gt_center">998</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">S.E. type</th>
+    <td class="gt_row gt_center">iid</td>
+    <td class="gt_row gt_center">iid</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.123</td>
+    <td class="gt_row gt_center">0.177</td>
+  </tr>
+  <tr>
+    <th class="gt_row gt_left gt_stub">Adj. R<sup>2</sup></th>
+    <td class="gt_row gt_center">0.122</td>
+    <td class="gt_row gt_center">0.175</td>
+  </tr>
+</tbody>
+  <tfoot class="gt_sourcenotes">
+  
+  <tr>
+    <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
+Coefficient 
+ (Std. Error)</td>
+  </tr>
+
+</tfoot>
+
+</table>
+
+</div>
+        
+</div>
+</div>
+<p>You can also access individual parts of the results with a variety of methods like</p>
+<div id="17af63aa" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit1.coef() <span class="co"># Get the coefficients</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<pre><code>Coefficient
+Intercept    0.918518
+X1          -1.000086
+Name: Estimate, dtype: float64</code></pre>
+</div>
+</div>
+<div id="0910130c" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fit1.se() <span class="co"># Get the standard errors</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<pre><code>Coefficient
+Intercept    0.111821
+X1           0.084735
+Name: Std. Error, dtype: float64</code></pre>
+</div>
+</div>
+<div id="b5317c23" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fit1.pvalue() <span class="co"># Get the p-values</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<pre><code>Coefficient
+Intercept    6.661338e-16
+X1           0.000000e+00
+Name: Pr(&gt;|t|), dtype: float64</code></pre>
+</div>
+</div>
+<section id="robust-standard-errors" class="level2">
+<h2 class="anchored" data-anchor-id="robust-standard-errors">Robust Standard Errors</h2>
+<p>To get heteroskedasticity robust standard errors you can use</p>
+<div id="4a8aa913" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>fit3 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC1"</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fit3.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  HC1
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.889 |        0.108 |     8.249 |      0.000 |  0.677 |   1.100 |
+| X1            |     -0.993 |        0.080 |   -12.439 |      0.000 | -1.150 |  -0.836 |
+| X2            |     -0.176 |        0.022 |    -8.129 |      0.000 | -0.219 |  -0.134 |
+---
+RMSE: 2.09 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>which is equivalent to</p>
+<pre class="{stata}"><code>reg Y X1 X2, robust
+
+* Linear regression                               Number of obs     =        998
+*                                                 F(2, 995)         =     107.91
+*                                                 Prob &gt; F          =     0.0000
+*                                                 R-squared         =     0.1770
+*                                                 Root MSE          =     2.0936
+*
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0798259   -12.44   0.000    -1.149582   -.8362893
+*           X2 |  -.1763424   .0216936    -8.13   0.000    -.2189129   -.1337719
+*        _cons |   .8887791   .1077457     8.25   0.000     .6773442    1.100214
+* ------------------------------------------------------------------------------</code></pre>
+<p>or</p>
+<pre class="{stata}"><code>reg Y X1 X2, vce(robust)
+
+* Identical output to above</code></pre>
+<p>or you can choose a different type of robust standard errors like “HC3” using</p>
+<div id="4f8a9b4a" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>fit4 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>fit4.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  HC3
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.889 |        0.108 |     8.222 |      0.000 |  0.677 |   1.101 |
+| X1            |     -0.993 |        0.080 |   -12.396 |      0.000 | -1.150 |  -0.836 |
+| X2            |     -0.176 |        0.022 |    -8.087 |      0.000 | -0.219 |  -0.134 |
+---
+RMSE: 2.09 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>Note: This will not exactly match the output of the equivalent Stata command, which is</p>
+<pre class="{stata}"><code>reg Y X1 X2, vce(hc3)
+
+* Linear regression                               Number of obs     =        998
+*                                                 F(2, 995)         =     107.38
+*                                                 Prob &gt; F          =     0.0000
+*                                                 R-squared         =     0.1770
+*                                                 Root MSE          =     2.0936
+*
+* ------------------------------------------------------------------------------
+*              |             Robust HC3
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9929358   .0799832   -12.41   0.000    -1.149891   -.8359807
+*           X2 |  -.1763424   .0217734    -8.10   0.000    -.2190693   -.1336154
+*        _cons |   .8887791   .1079372     8.23   0.000     .6769684     1.10059
+* ------------------------------------------------------------------------------</code></pre>
+<p>this is because by default, <code>pyfixest</code> uses two small sample size corrections for HC3 robust standard errors, while Stata only uses one of them. You can turn off the correction that Stata doesn’t use with the <code>ssc</code> argument.</p>
+<div id="61ac9260" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit5 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"HC3"</span>, ssc<span class="op">=</span>pf.ssc(adj <span class="op">=</span> <span class="va">False</span>))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>fit5.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  HC3
+Observations:  998
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.889 |        0.108 |     8.230 |      0.000 |  0.677 |   1.101 |
+| X1            |     -0.993 |        0.080 |   -12.408 |      0.000 | -1.150 |  -0.836 |
+| X2            |     -0.176 |        0.022 |    -8.095 |      0.000 | -0.219 |  -0.134 |
+---
+RMSE: 2.09 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>which matches Stata exactly. You can read all about the small sample size corrections implememnted by <code>pyfixest</code> at <a href="https://py-econometrics.github.io/pyfixest/ssc.html">On Small Sample Corrections</a>.</p>
+</section>
+<section id="clustered-standard-errors" class="level2">
+<h2 class="anchored" data-anchor-id="clustered-standard-errors">Clustered Standard Errors</h2>
+<p>To cluster the standard errors by group you can use</p>
+<div id="43cc89d4" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit6 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2"</span>, data<span class="op">=</span>df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>]), vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1"</span>})</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>fit6.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.890 |        0.262 |     3.393 |      0.002 |  0.353 |   1.426 |
+| X1            |     -0.995 |        0.076 |   -13.142 |      0.000 | -1.150 |  -0.840 |
+| X2            |     -0.177 |        0.020 |    -8.920 |      0.000 | -0.217 |  -0.136 |
+---
+RMSE: 2.091 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>which is equivalent to</p>
+<pre class="{stata}"><code>reg Y X1 X2, vce(cluster f1)
+
+* Linear regression                               Number of obs     =        997
+*                                                 F(2, 29)          =     102.51
+*                                                 Prob &gt; F          =     0.0000
+*                                                 R-squared         =     0.1774
+*                                                 Root MSE          =      2.094
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9951969   .0757246   -13.14   0.000    -1.150071   -.8403227
+*           X2 |  -.1766173    .019799    -8.92   0.000    -.2171109   -.1361237
+*        _cons |   .8895569   .2622066     3.39   0.002     .3532841     1.42583
+* ------------------------------------------------------------------------------</code></pre>
+<p>Note: clustered standard errors are not supported with missing values in the cluster variable, which is why we drop the rows with missing values for <code>f1</code>.</p>
+<p>For two way clustering you would need to use</p>
+<div id="55ac5f9b" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>fit7 <span class="op">=</span> pf.feols(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Y ~ X1 + X2"</span>,</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  data<span class="op">=</span>df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>, <span class="st">'f2'</span>]),</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1 + f2"</span>}</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>fit7.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.890 |        0.301 |     2.958 |      0.006 |  0.274 |   1.505 |
+| X1            |     -0.995 |        0.073 |   -13.570 |      0.000 | -1.145 |  -0.845 |
+| X2            |     -0.177 |        0.023 |    -7.535 |      0.000 | -0.225 |  -0.129 |
+---
+RMSE: 2.091 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>Note: This will not exactly match the output of the equivalent Stata command, which is</p>
+<pre class="{stata}"><code>reg Y X1 X2, vce(cluster f1 f2)
+
+* Linear regression                                       Number of obs =    997
+* Clusters per comb.:                                     Cluster comb. =      3
+*   min =  30                                             F(2, 29)      =  88.58
+*   avg = 211                                             Prob &gt; F      = 0.0000
+*   max = 572                                             R-squared     = 0.1774
+*                                                         Adj R-squared = 0.1758
+*                                                         Root MSE      = 2.0940
+*
+*                                   (Std. err. adjusted for multiway clustering)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9951969    .074771   -13.31   0.000    -1.148121   -.8422731
+*           X2 |  -.1766173     .02376    -7.43   0.000     -.225212   -.1280226
+*        _cons |   .8895569   .3016464     2.95   0.006     .2726208    1.506493
+* ------------------------------------------------------------------------------
+* Cluster combinations formed by f1 and f2.</code></pre>
+<p>this is because by default, <code>pyfixest</code> uses a small sample size correction that adjusts each clustering dimentsion by whichever dimension has the smallest number of clusters, while in Stata the default is to adjust each dimension based on the number of clusters in that dimension. You can use the same correction as Stata through the <code>ssc</code> argument.</p>
+<div id="98de2f45" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>fit8 <span class="op">=</span> pf.feols(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Y ~ X1 + X2"</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  df.dropna(subset<span class="op">=</span>[<span class="st">'f1'</span>, <span class="st">'f2'</span>]),</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  vcov<span class="op">=</span>{<span class="st">"CRV1"</span>: <span class="st">"f1 + f2"</span>},</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  ssc<span class="op">=</span>pf.ssc(cluster_df<span class="op">=</span><span class="st">"conventional"</span>)</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>fit8.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: 0
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| Intercept     |      0.890 |        0.302 |     2.949 |      0.006 |  0.273 |   1.506 |
+| X1            |     -0.995 |        0.075 |   -13.310 |      0.000 | -1.148 |  -0.842 |
+| X2            |     -0.177 |        0.024 |    -7.433 |      0.000 | -0.225 |  -0.128 |
+---
+RMSE: 2.091 R2: 0.177 </code></pre>
+</div>
+</div>
+<p>As a reminder, for an excellent breakdown on small sample correction in the <code>pyfixest</code> package, you can check out <a href="https://py-econometrics.github.io/pyfixest/ssc.html">On Small Sample Correction</a>.</p>
+</section>
+</section>
+<section id="fixed-effect-regressions" class="level1">
+<h1>Fixed Effect Regressions</h1>
+<p>To do a fixed effect regression with one fixed effect you could use</p>
+<div id="df90cc29" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>fit9 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data<span class="op">=</span>df, vcov<span class="op">=</span><span class="st">"iid"</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>fit9.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1
+Inference:  iid
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.950 |        0.066 |   -14.306 |      0.000 | -1.080 |  -0.819 |
+| X2            |     -0.174 |        0.018 |    -9.902 |      0.000 | -0.209 |  -0.140 |
+---
+RMSE: 1.648 R2: 0.489 R2 Within: 0.239 </code></pre>
+</div>
+</div>
+<p>which is equivalent to</p>
+<pre class="{stata}"><code>xtset f1
+xtreg Y X1 X2, fe
+
+* Fixed-effects (within) regression               Number of obs     =        997
+* Group variable: f1                              Number of groups  =         30
+*
+* R-squared:                                      Obs per group:
+*      Within  = 0.2388                                         min =         23
+*      Between = 0.0770                                         avg =       33.2
+*      Overall = 0.1774                                         max =         48
+*
+*                                                 F(2, 965)         =     151.33
+* corr(u_i, Xb) = 0.0268                          Prob &gt; F          =     0.0000
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
+*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
+*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
+* -------------+----------------------------------------------------------------
+*      sigma_u |  1.2570454
+*      sigma_e |  1.6751049
+*          rho |  .36026283   (fraction of variance due to u_i)
+* ------------------------------------------------------------------------------
+* F test that all u_i=0: F(29, 965) = 20.29                    Prob &gt; F = 0.0000</code></pre>
+<p>or</p>
+<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 1 HDFE group                            F(   2,    965) =     151.33
+*                                                   Prob &gt; F        =     0.0000
+*                                                   R-squared       =     0.4890
+*                                                   Adj R-squared   =     0.4726
+*                                                   Within R-sq.    =     0.2388
+*                                                   Root MSE        =     1.6751
+*
+* ------------------------------------------------------------------------------
+*            Y | Coefficient  Std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0663728   -14.31   0.000    -1.079777   -.8192739
+*           X2 |  -.1742253   .0175957    -9.90   0.000    -.2087555   -.1396951
+*        _cons |    .842222   .0872525     9.65   0.000     .6709955    1.013448
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30           0          30     |
+* -----------------------------------------------------+</code></pre>
+<p>Note: You need to specify <code>vcov="iid</code>. This is because the default for <code>fixest</code> is to cluster standard errors based on the first fixed effect. So</p>
+<div id="f54a9486" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit10 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1"</span>, data<span class="op">=</span>df)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>fit10.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.950 |        0.067 |   -14.266 |      0.000 | -1.086 |  -0.813 |
+| X2            |     -0.174 |        0.018 |    -9.464 |      0.000 | -0.212 |  -0.137 |
+---
+RMSE: 1.648 R2: 0.489 R2 Within: 0.239 </code></pre>
+</div>
+</div>
+<p>is equivalent to</p>
+<pre class="{stata}"><code>xtset f1
+xtreg Y X1 X2, fe vce(cluster f1)
+
+* Fixed-effects (within) regression               Number of obs     =        997
+* Group variable: f1                              Number of groups  =         30
+*
+* R-squared:                                      Obs per group:
+*      Within  = 0.2388                                         min =         23
+*      Between = 0.0770                                         avg =       33.2
+*      Overall = 0.1774                                         max =         48
+*
+*                                                 F(2, 29)          =     146.33
+* corr(u_i, Xb) = 0.0268                          Prob &gt; F          =     0.0000
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
+*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
+*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
+* -------------+----------------------------------------------------------------
+*      sigma_u |  1.2570454
+*      sigma_e |  1.6751049
+*          rho |  .36026283   (fraction of variance due to u_i)
+* ------------------------------------------------------------------------------</code></pre>
+<p>or</p>
+<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1) cluster(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 1 HDFE group                            F(   2,     29) =     146.33
+* Statistics robust to heteroskedasticity           Prob &gt; F        =     0.0000
+*                                                   R-squared       =     0.4890
+*                                                   Adj R-squared   =     0.4726
+*                                                   Within R-sq.    =     0.2388
+* Number of clusters (f1)      =         30         Root MSE        =     1.6751
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9495256   .0665572   -14.27   0.000     -1.08565   -.8134009
+*           X2 |  -.1742253    .018409    -9.46   0.000    -.2118759   -.1365746
+*        _cons |    .842222   .0694639    12.12   0.000     .7001523    .9842916
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30          30           0    *|
+* -----------------------------------------------------+
+* * = FE nested within cluster; treated as redundant for DoF computation</code></pre>
+<p>For multiple fixed effects you could do</p>
+<div id="6532e2bf" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>fit11 <span class="op">=</span> pf.feols(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>, data<span class="op">=</span>df)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>fit11.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>###
+
+Estimation:  OLS
+Dep. var.: Y, Fixed effects: f1+f2
+Inference:  CRV1
+Observations:  997
+
+| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(&gt;|t|) |   2.5% |   97.5% |
+|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+| X1            |     -0.924 |        0.062 |   -14.934 |      0.000 | -1.051 |  -0.797 |
+| X2            |     -0.174 |        0.015 |   -11.737 |      0.000 | -0.204 |  -0.144 |
+---
+RMSE: 1.346 R2: 0.659 R2 Within: 0.303 </code></pre>
+</div>
+</div>
+<p>which is equivalent to</p>
+<pre class="{stata}"><code>reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
+
+* HDFE Linear regression                            Number of obs   =        997
+* Absorbing 2 HDFE groups                           F(   2,     29) =     182.76
+* Statistics robust to heteroskedasticity           Prob &gt; F        =     0.0000
+*                                                   R-squared       =     0.6590
+*                                                   Adj R-squared   =     0.6372
+*                                                   Within R-sq.    =     0.3026
+* Number of clusters (f1)      =         30         Root MSE        =     1.3893
+*
+*                                     (Std. err. adjusted for 30 clusters in f1)
+* ------------------------------------------------------------------------------
+*              |               Robust
+*            Y | Coefficient  std. err.      t    P&gt;|t|     [95% conf. interval]
+* -------------+----------------------------------------------------------------
+*           X1 |  -.9240462   .0618743   -14.93   0.000    -1.050593   -.7974991
+*           X2 |  -.1741073   .0148338   -11.74   0.000    -.2044458   -.1437689
+*        _cons |   .8156588    .064596    12.63   0.000     .6835452    .9477723
+* ------------------------------------------------------------------------------
+*
+* Absorbed degrees of freedom:
+* -----------------------------------------------------+
+*  Absorbed FE | Categories  - Redundant  = Num. Coefs |
+* -------------+---------------------------------------|
+*           f1 |        30          30           0    *|
+*           f2 |        30           1          29     |
+* -----------------------------------------------------+
+* * = FE nested within cluster; treated as redundant for DoF computation</code></pre>
+<p>Note: By default <code>pyfixest</code> will still cluster standard errors just by the first group specified. You can change this using the <code>vcov</code> argument. See the <code>fit8</code> example above for how to specify two way clustering.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
