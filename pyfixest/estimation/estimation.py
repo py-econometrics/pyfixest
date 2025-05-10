@@ -982,6 +982,110 @@ def feglm(
         return fixest.fetch_model(0, print_fml=False)
 
 
+def quantreg(
+    fml: str,
+    data: DataFrameType,  # type: ignore
+    quantile: float,
+    vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
+    ssc: Optional[dict[str, Union[str, bool]]] = None,
+    collin_tol: float = 1e-10,
+    separation_check: Optional[list[str]] = None,
+    solver: SolverOptions = "np.linalg.solve",
+    drop_intercept: bool = False,
+    i_ref1=None,
+    copy_data: bool = True,
+    store_data: bool = True,
+    lean: bool = False,
+    context: Optional[Union[int, Mapping[str, Any]]] = None,
+    split: Optional[str] = None,
+    fsplit: Optional[str] = None,
+):
+
+
+    # WLS currently not supported for quantile regression
+    weights = None
+    weights_type = "aweights"
+
+    if ssc is None:
+        ssc = ssc_func()
+
+
+    context = {} if context is None else capture_context(context)
+
+    fixef_rm = "none"
+    fixef_tol = 1e-08
+    iwls_tol = 1e-08
+    iwls_maxiter = 25
+
+    _estimation_input_checks(
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
+        split=split,
+        fsplit=fsplit,
+        separation_check=separation_check,
+        quantile=quantile,
+    )
+
+    fixest = FixestMulti(
+        data=data,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        fixef_tol=fixef_tol,
+        weights_type=weights_type,
+        use_compression=False,
+        reps=None,
+        seed=None,
+        split=split,
+        fsplit=fsplit,
+        context=context,
+    )
+
+    # same checks as for Poisson regression
+    fixest._prepare_estimation(
+        f"quantreg", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+    )
+    if fixest._is_iv:
+        raise NotImplementedError(
+            "IV Estimation is not supported for Quantile Regression"
+        )
+
+    fixest._estimate_all_models(
+        vcov=vcov,
+        iwls_tol=iwls_tol,
+        iwls_maxiter=iwls_maxiter,
+        collin_tol=collin_tol,
+        separation_check=separation_check,
+        solver=solver,
+        quantile=quantile,
+    )
+
+    if fixest._is_multiple_estimation:
+        return fixest
+    else:
+        return fixest.fetch_model(0, print_fml=False)
+
+
+
+
+
+
+
+
+
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
@@ -1001,6 +1105,7 @@ def _estimation_input_checks(
     split: Optional[str],
     fsplit: Optional[str],
     separation_check: Optional[list[str]] = None,
+    quantile: Optional[float] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -1109,3 +1214,10 @@ def _estimation_input_checks(
             raise ValueError(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
+
+
+    if quantile is not None:
+        if not isinstance(quantile, float):
+            raise TypeError("The function argument `quantile` must be of type float.")
+        if quantile <= 0 or quantile >= 1:
+            raise ValueError("The function argument `quantile` must be between 0 and 1.")

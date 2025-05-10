@@ -155,6 +155,7 @@ def get_ssc(
         If vcov_type is not "iid", "hetero", or "CRV", or if cluster_df is neither
         "conventional" nor "min".
     """
+
     adj = ssc_dict["adj"]
     fixef_k = ssc_dict["fixef_k"]
     cluster_adj = ssc_dict["cluster_adj"]
