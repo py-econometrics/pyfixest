@@ -49,9 +49,9 @@ __all__ = [
     "feglm",
     "feols",
     "fepois",
-    "quantreg",
     "literals",
     "model_matrix_fixest",
+    "quantreg",
     "rwolf",
     "wyoung",
 ]

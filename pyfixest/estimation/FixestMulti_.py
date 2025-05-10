@@ -12,8 +12,8 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
-from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -311,7 +311,6 @@ class FixestMulti:
                         "sample_split_value": sample_split_value,
                         "sample_split_var": _splitvar,
                         "lookup_demeaned_data": lookup_demeaned_data,
-
                     }
 
                     if _method in {"feols", "fepois"}:

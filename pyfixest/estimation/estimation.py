@@ -1000,15 +1000,12 @@ def quantreg(
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
 ):
-
-
     # WLS currently not supported for quantile regression
     weights = None
     weights_type = "aweights"
 
     if ssc is None:
         ssc = ssc_func()
-
 
     context = {} if context is None else capture_context(context)
 
@@ -1056,7 +1053,7 @@ def quantreg(
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        f"quantreg", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        "quantreg", fml, vcov, weights, ssc, fixef_rm, drop_intercept
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -1077,13 +1074,6 @@ def quantreg(
         return fixest
     else:
         return fixest.fetch_model(0, print_fml=False)
-
-
-
-
-
-
-
 
 
 def _estimation_input_checks(
@@ -1215,9 +1205,10 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-
     if quantile is not None:
         if not isinstance(quantile, float):
             raise TypeError("The function argument `quantile` must be of type float.")
         if quantile <= 0 or quantile >= 1:
-            raise ValueError("The function argument `quantile` must be between 0 and 1.")
+            raise ValueError(
+                "The function argument `quantile` must be between 0 and 1."
+            )
