@@ -9,6 +9,7 @@ from pyfixest.estimation.estimation import (
     feglm,
     feols,
     fepois,
+    quantreg,
 )
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import (
@@ -48,6 +49,7 @@ __all__ = [
     "feglm",
     "feols",
     "fepois",
+    "quantreg",
     "literals",
     "model_matrix_fixest",
     "rwolf",

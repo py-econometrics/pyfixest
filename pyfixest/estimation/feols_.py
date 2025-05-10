@@ -592,6 +592,7 @@ class Feols:
                 "vcov_type": "iid",
                 "G": 1,
             }
+
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
 

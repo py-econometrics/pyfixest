@@ -20,6 +20,7 @@ from pyfixest.estimation import (
     feglm,
     feols,
     fepois,
+    quantreg,
     rwolf,
     wyoung,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "feglm",
     "feols",
     "fepois",
+    "quantreg",
     "get_data",
     "get_ssc",
     "iplot",

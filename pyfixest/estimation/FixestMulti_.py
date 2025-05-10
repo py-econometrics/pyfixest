@@ -12,6 +12,7 @@ from pyfixest.estimation.feols_ import Feols, _check_vcov_input, _deparse_vcov_i
 from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
+from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
@@ -208,6 +209,7 @@ class FixestMulti:
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        quantile: Optional[float] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -236,6 +238,9 @@ class FixestMulti:
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
+        quantile: float, optional
+            The quantile to use for quantile regression. Default is None.
+            Only relevant for "quantreg" estimation.
 
         Returns
         -------
@@ -285,6 +290,7 @@ class FixestMulti:
                         Felogit,
                         Feprobit,
                         FeolsCompressed,
+                        Quantreg,
                     ]
 
                     model_kwargs = {
@@ -305,6 +311,7 @@ class FixestMulti:
                         "sample_split_value": sample_split_value,
                         "sample_split_var": _splitvar,
                         "lookup_demeaned_data": lookup_demeaned_data,
+
                     }
 
                     if _method in {"feols", "fepois"}:
@@ -328,6 +335,13 @@ class FixestMulti:
                             }
                         )
 
+                    if _method == "quantreg":
+                        model_kwargs.update(
+                            {
+                                "quantile": quantile,
+                            }
+                        )
+
                     model_map = {
                         ("feols", False): Feols,
                         ("feols", True): Feiv,
@@ -336,6 +350,7 @@ class FixestMulti:
                         ("feglm-probit", None): Feprobit,
                         ("feglm-gaussian", None): Fegaussian,
                         ("compression", None): FeolsCompressed,
+                        ("quantreg", None): Quantreg,
                     }
 
                     if _method == "compression":
