@@ -16,6 +16,6 @@ __all__ = [
     "etable",
     "iplot",
     "make_table",
-    "summary",
     "qplot",
+    "summary",
 ]

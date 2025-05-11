@@ -413,8 +413,6 @@ def coefplot(
 
 
 def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
-
-
     if rename_models is None:
         rename_models = {}
 
@@ -425,7 +423,9 @@ def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
     df_all = pd.DataFrame()
     for model in models:
         if not isinstance(model, Quantreg):
-            raise ValueError("The 'qplot' function is only supported for objects of type Quantreg.")
+            raise ValueError(
+                "The 'qplot' function is only supported for objects of type Quantreg."
+            )
 
         df = model.tidy()
         df["quantile"] = model._quantile
@@ -435,7 +435,6 @@ def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
 
     df_all.reset_index(inplace=True)
     return _qplot(df_all)
-
 
 
 def _coefplot(plot_backend, *, figsize, **plot_kwargs):
@@ -674,6 +673,7 @@ def _coefplot_matplotlib(
     plt.close()
     return f
 
+
 def _qplot(data: pd.DataFrame) -> plt.Figure:
     """
     Plots quantile regression coefficients with 95% confidence intervals.
@@ -693,32 +693,30 @@ def _qplot(data: pd.DataFrame) -> plt.Figure:
     nrows = math.ceil(n / ncols)
 
     fig, axes = plt.subplots(
-        nrows=nrows, ncols=ncols,
+        nrows=nrows,
+        ncols=ncols,
         sharey=True,
-        figsize=(4*ncols, 4*nrows),
+        figsize=(4 * ncols, 4 * nrows),
     )
 
     for ax, coef in zip(axes, coeffs):
-        sub = df[df['Coefficient'] == coef].sort_values('quantile')
-        x = sub['quantile']
-        y = sub['Estimate']
-        lower_err = y - sub['2.5%']
-        upper_err = sub['97.5%'] - y
+        sub = df[df["Coefficient"] == coef].sort_values("quantile")
+        x = sub["quantile"]
+        y = sub["Estimate"]
+        lower_err = y - sub["2.5%"]
+        upper_err = sub["97.5%"] - y
 
-        ax.errorbar(
-            x, y,
-            yerr=[lower_err, upper_err],
-            fmt='o-', capsize=5
-        )
+        ax.errorbar(x, y, yerr=[lower_err, upper_err], fmt="o-", capsize=5)
         ax.set_title(coef)
-        ax.set_xlabel('Quantile')
+        ax.set_xlabel("Quantile")
         ax.set_xticks(x)
         ax.grid(True)
 
-    axes[0].set_ylabel('Coefficient estimate')
-    fig.suptitle('Quantile Regression Coefficients with 95% CIs', y=1.02)
+    axes[0].set_ylabel("Coefficient estimate")
+    fig.suptitle("Quantile Regression Coefficients with 95% CIs", y=1.02)
     plt.tight_layout()
     return fig
+
 
 def _get_model_df(
     fxst: Union[Feols, Fepois, Feiv],

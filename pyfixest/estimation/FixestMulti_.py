@@ -246,8 +246,9 @@ class FixestMulti:
         -------
             None
         """
-
-        self._is_multiple_estimation = True if len(quantile) > 1 else self._is_multiple_estimation
+        self._is_multiple_estimation = (
+            True if len(quantile) > 1 else self._is_multiple_estimation
+        )
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
@@ -285,7 +286,6 @@ class FixestMulti:
                     # get Y, X, Z, fe, NA indices for model
 
                     for q in quantile:
-
                         FIT: Union[
                             Feols,
                             Feiv,

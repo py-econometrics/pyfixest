@@ -24,7 +24,7 @@ from pyfixest.estimation import (
     rwolf,
     wyoung,
 )
-from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary, qplot
+from pyfixest.report import coefplot, dtable, etable, iplot, make_table, qplot, summary
 from pyfixest.utils import (
     get_data,
     get_ssc,
@@ -48,10 +48,10 @@ __all__ = [
     "get_data",
     "get_ssc",
     "iplot",
-    "qplot",
     "lpdid",
     "make_table",
     "panelview",
+    "qplot",
     "quantreg",
     "report",
     "rwolf",

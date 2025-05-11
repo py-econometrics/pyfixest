@@ -75,7 +75,6 @@ class Quantreg(Feols):
 
         self._rng = np.random.default_rng()
 
-
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (
@@ -103,11 +102,9 @@ class Quantreg(Feols):
         m = 0.8
 
         while not has_converged:
-
             if update_initial_model:
-
                 # get subsample size
-                n_init = int(np.ceil((k * N)**(2/3)))
+                n_init = int(np.ceil((k * N) ** (2 / 3)))
                 M = m * n_init
 
                 # get initial sample
@@ -136,7 +133,9 @@ class Quantreg(Feols):
             mispredicted_signs_H = rz[JH_idx] < 0
             mispredicted_signs_L_idx = idx_init[JL_idx][mispredicted_signs_L]
             mispredicted_signs_H_idx = idx_init[JH_idx][mispredicted_signs_H]
-            n_mispredicted_signs = np.sum(mispredicted_signs_L) + np.sum(mispredicted_signs_H)
+            n_mispredicted_signs = np.sum(mispredicted_signs_L) + np.sum(
+                mispredicted_signs_H
+            )
 
             # get indices of estimation sample
             idx = np.ones(N, dtype=bool)
@@ -162,15 +161,13 @@ class Quantreg(Feols):
         self._hessian = X.T @ X
         self._bread = np.linalg.inv(self._hessian)
 
-
     def fit(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
         """Fit a quantile regression model and return the coefficients."""
-
         q = self._quantile
         N, k = X.shape
         X_sparse = csc_matrix(X)
         I_N = eye(N, format="csc")
-        c1 = np.hstack([np.zeros(k), (1-q) * np.ones(N), q * np.ones(N)])
+        c1 = np.hstack([np.zeros(k), (1 - q) * np.ones(N), q * np.ones(N)])
         A_eq = hstack([-X_sparse, I_N, -I_N])
         b_eq = -Y
         bounds = [(None, None)] * k + [(0, None)] * (2 * N)
@@ -188,8 +185,8 @@ class Quantreg(Feols):
 
         return res.x[:k].flatten()
 
-
     def _vcov_iid(self) -> np.ndarray:
+
         u_hat = self._u_hat
         N = self._N
         q = self._quantile
