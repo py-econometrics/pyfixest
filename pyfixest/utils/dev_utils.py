@@ -191,3 +191,35 @@ def _extract_variable_level(fe_string: str):
     level = match.group(2)
 
     return f"C({variable})", level
+
+
+def _feols_input_checks(Y: np.ndarray, X: np.ndarray, weights: np.ndarray):
+    """
+    Perform basic checks on the input matrices Y and X for the FEOLS.
+
+    Parameters
+    ----------
+    Y : np.ndarray
+        FEOLS input matrix Y.
+    X : np.ndarray
+        FEOLS input matrix X.
+    weights : np.ndarray
+        FEOLS weights.
+
+    Returns
+    -------
+    None
+    """
+    if not isinstance(Y, (np.ndarray)):
+        raise TypeError("Y must be a numpy array.")
+    if not isinstance(X, (np.ndarray)):
+        raise TypeError("X must be a numpy array.")
+    if not isinstance(weights, (np.ndarray)):
+        raise TypeError("weights must be a numpy array.")
+
+    if Y.ndim != 2:
+        raise ValueError("Y must be a 2D array")
+    if X.ndim != 2:
+        raise ValueError("X must be a 2D array")
+    if weights.ndim != 2:
+        raise ValueError("weights must be a 2D array")
