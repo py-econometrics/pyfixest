@@ -1206,9 +1206,18 @@ def _estimation_input_checks(
             )
 
     if quantile is not None:
-        if not isinstance(quantile, float):
-            raise TypeError("The function argument `quantile` must be of type float.")
-        if quantile <= 0 or quantile >= 1:
-            raise ValueError(
-                "The function argument `quantile` must be between 0 and 1."
-            )
+
+        if isinstance(quantile, list):
+            if not all(isinstance(q, float) for q in quantile):
+                raise TypeError("The function argument `quantile` must be a list of floats.")
+            if any(q <= 0 or q >= 1 for q in quantile):
+                raise ValueError(
+                    "All arguments in the `quantile` list must be between 0 and 1."
+                )
+        elif isinstance(quantile, float):
+            if quantile <= 0 or quantile >= 1:
+                raise ValueError(
+                    "The function argument `quantile` must be between 0 and 1."
+                )
+        else:
+            raise TypeError("The function argument `quantile` must be of type float or list.")

@@ -31,6 +31,7 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
@@ -411,6 +412,32 @@ def coefplot(
     )
 
 
+def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
+
+
+    if rename_models is None:
+        rename_models = {}
+
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
+
+    df_all = pd.DataFrame()
+    for model in models:
+        if not isinstance(model, Quantreg):
+            raise ValueError("The 'qplot' function is only supported for objects of type Quantreg.")
+
+        df = model.tidy()
+        df["quantile"] = model._quantile
+        df["model"] = model._model_name_plot
+
+        df_all = pd.concat([df_all, df], axis=0)
+
+    df_all.reset_index(inplace=True)
+    return _qplot(df_all)
+
+
+
 def _coefplot(plot_backend, *, figsize, **plot_kwargs):
     """Coefplot function that dispatches to the correct plotting backend."""
     figsize = set_figsize(figsize, plot_backend)
@@ -647,6 +674,51 @@ def _coefplot_matplotlib(
     plt.close()
     return f
 
+def _qplot(data: pd.DataFrame) -> plt.Figure:
+    """
+    Plots quantile regression coefficients with 95% confidence intervals.
+    Each coefficient gets its own panel, quantiles on the x-axis, and
+    coefficient estimates with error bars on the y-axis.
+
+    Expects `data` to have columns:
+      - 'Coefficient'   (e.g. 'Intercept', 'X1', 'X2')
+      - 'quantile'      (numeric, e.g. 0.1, 0.5, 0.9)
+      - 'Estimate'      (point estimate)
+      - '2.5%'          (lower bound of 95% CI)
+      - '97.5%'         (upper bound of 95% CI)
+    """
+    df = pd.DataFrame(data)
+
+    ncols = min(n, 4)
+    nrows = math.ceil(n / ncols)
+
+    fig, axes = plt.subplots(
+        nrows=nrows, ncols=ncols,
+        sharey=True,
+        figsize=(4*ncols, 4*nrows),
+    )
+
+    for ax, coef in zip(axes, coeffs):
+        sub = df[df['Coefficient'] == coef].sort_values('quantile')
+        x = sub['quantile']
+        y = sub['Estimate']
+        lower_err = y - sub['2.5%']
+        upper_err = sub['97.5%'] - y
+
+        ax.errorbar(
+            x, y,
+            yerr=[lower_err, upper_err],
+            fmt='o-', capsize=5
+        )
+        ax.set_title(coef)
+        ax.set_xlabel('Quantile')
+        ax.set_xticks(x)
+        ax.grid(True)
+
+    axes[0].set_ylabel('Coefficient estimate')
+    fig.suptitle('Quantile Regression Coefficients with 95% CIs', y=1.02)
+    plt.tight_layout()
+    return fig
 
 def _get_model_df(
     fxst: Union[Feols, Fepois, Feiv],

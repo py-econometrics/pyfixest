@@ -246,6 +246,8 @@ class FixestMulti:
         -------
             None
         """
+
+        self._is_multiple_estimation = True if len(quantile) > 1 else self._is_multiple_estimation
         _is_iv = self._is_iv
         _data = self._data
         _method = self._method
@@ -282,116 +284,118 @@ class FixestMulti:
                     # loop over both dictfe and dictfe_iv (if the latter is not None)
                     # get Y, X, Z, fe, NA indices for model
 
-                    FIT: Union[
-                        Feols,
-                        Feiv,
-                        Fepois,
-                        Fegaussian,
-                        Felogit,
-                        Feprobit,
-                        FeolsCompressed,
-                        Quantreg,
-                    ]
+                    for q in quantile:
 
-                    model_kwargs = {
-                        "FixestFormula": FixestFormula,
-                        "data": _data,
-                        "ssc_dict": _ssc_dict,
-                        "drop_singletons": _drop_singletons,
-                        "drop_intercept": _drop_intercept,
-                        "weights": _weights,
-                        "weights_type": _weights_type,
-                        "solver": solver,
-                        "collin_tol": collin_tol,
-                        "fixef_tol": _fixef_tol,
-                        "store_data": _store_data,
-                        "copy_data": _copy_data,
-                        "lean": _lean,
-                        "context": _context,
-                        "sample_split_value": sample_split_value,
-                        "sample_split_var": _splitvar,
-                        "lookup_demeaned_data": lookup_demeaned_data,
-                    }
+                        FIT: Union[
+                            Feols,
+                            Feiv,
+                            Fepois,
+                            Fegaussian,
+                            Felogit,
+                            Feprobit,
+                            FeolsCompressed,
+                            Quantreg,
+                        ]
 
-                    if _method in {"feols", "fepois"}:
-                        model_kwargs.update(
-                            {
-                                "demeaner_backend": demeaner_backend,
-                            }
+                        model_kwargs = {
+                            "FixestFormula": FixestFormula,
+                            "data": _data,
+                            "ssc_dict": _ssc_dict,
+                            "drop_singletons": _drop_singletons,
+                            "drop_intercept": _drop_intercept,
+                            "weights": _weights,
+                            "weights_type": _weights_type,
+                            "solver": solver,
+                            "collin_tol": collin_tol,
+                            "fixef_tol": _fixef_tol,
+                            "store_data": _store_data,
+                            "copy_data": _copy_data,
+                            "lean": _lean,
+                            "context": _context,
+                            "sample_split_value": sample_split_value,
+                            "sample_split_var": _splitvar,
+                            "lookup_demeaned_data": lookup_demeaned_data,
+                        }
+
+                        if _method in {"feols", "fepois"}:
+                            model_kwargs.update(
+                                {
+                                    "demeaner_backend": demeaner_backend,
+                                }
+                            )
+
+                        if _method in {
+                            "fepois",
+                            "feglm-logit",
+                            "feglm-probit",
+                            "feglm-gaussian",
+                        }:
+                            model_kwargs.update(
+                                {
+                                    "separation_check": separation_check,
+                                    "tol": iwls_tol,
+                                    "maxiter": iwls_maxiter,
+                                }
+                            )
+
+                        if _method == "quantreg":
+                            model_kwargs.update(
+                                {
+                                    "quantile": q,
+                                }
+                            )
+
+                        model_map = {
+                            ("feols", False): Feols,
+                            ("feols", True): Feiv,
+                            ("fepois", None): Fepois,
+                            ("feglm-logit", None): Felogit,
+                            ("feglm-probit", None): Feprobit,
+                            ("feglm-gaussian", None): Fegaussian,
+                            ("compression", None): FeolsCompressed,
+                            ("quantreg", None): Quantreg,
+                        }
+
+                        if _method == "compression":
+                            model_kwargs.update(
+                                {
+                                    "reps": self._reps,
+                                    "seed": self._seed,
+                                }
+                            )
+
+                        model_key = (
+                            (_method, _is_iv) if _method == "feols" else (_method, None)
                         )
+                        ModelClass = model_map[model_key]  # type: ignore
+                        FIT = ModelClass(**model_kwargs)
 
-                    if _method in {
-                        "fepois",
-                        "feglm-logit",
-                        "feglm-probit",
-                        "feglm-gaussian",
-                    }:
-                        model_kwargs.update(
-                            {
-                                "separation_check": separation_check,
-                                "tol": iwls_tol,
-                                "maxiter": iwls_maxiter,
-                            }
-                        )
+                        FIT.prepare_model_matrix()
+                        if type(FIT) in [Feols, Feiv]:
+                            FIT.demean()
+                        FIT.to_array()
+                        if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
+                            FIT._check_dependent_variable()
+                        FIT.drop_multicol_vars()
+                        if isinstance(FIT, (Feols, Feiv, FeolsCompressed)):
+                            FIT.wls_transform()
 
-                    if _method == "quantreg":
-                        model_kwargs.update(
-                            {
-                                "quantile": quantile,
-                            }
-                        )
+                        FIT.get_fit()
+                        # if X is empty: no inference (empty X only as shorthand for demeaning)
+                        if not FIT._X_is_empty:
+                            # inference
+                            vcov_type = _get_vcov_type(vcov, fval)
+                            FIT.vcov(vcov=vcov_type, data=FIT._data)
 
-                    model_map = {
-                        ("feols", False): Feols,
-                        ("feols", True): Feiv,
-                        ("fepois", None): Fepois,
-                        ("feglm-logit", None): Felogit,
-                        ("feglm-probit", None): Feprobit,
-                        ("feglm-gaussian", None): Fegaussian,
-                        ("compression", None): FeolsCompressed,
-                        ("quantreg", None): Quantreg,
-                    }
+                            FIT.get_inference()
+                            if _method == "feols" and not FIT._is_iv:
+                                FIT.get_performance()
+                            if isinstance(FIT, Feiv):
+                                FIT.first_stage()
+                        # delete large attributes
+                        FIT._clear_attributes()
 
-                    if _method == "compression":
-                        model_kwargs.update(
-                            {
-                                "reps": self._reps,
-                                "seed": self._seed,
-                            }
-                        )
-
-                    model_key = (
-                        (_method, _is_iv) if _method == "feols" else (_method, None)
-                    )
-                    ModelClass = model_map[model_key]  # type: ignore
-                    FIT = ModelClass(**model_kwargs)
-
-                    FIT.prepare_model_matrix()
-                    if type(FIT) in [Feols, Feiv]:
-                        FIT.demean()
-                    FIT.to_array()
-                    if isinstance(FIT, (Felogit, Feprobit, Fegaussian)):
-                        FIT._check_dependent_variable()
-                    FIT.drop_multicol_vars()
-                    if isinstance(FIT, (Feols, Feiv, FeolsCompressed)):
-                        FIT.wls_transform()
-
-                    FIT.get_fit()
-                    # if X is empty: no inference (empty X only as shorthand for demeaning)
-                    if not FIT._X_is_empty:
-                        # inference
-                        vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data)
-
-                        FIT.get_inference()
-                        if _method == "feols" and not FIT._is_iv:
-                            FIT.get_performance()
-                        if isinstance(FIT, Feiv):
-                            FIT.first_stage()
-                    # delete large attributes
-                    FIT._clear_attributes()
-
-                    self.all_fitted_models[FIT._model_name] = FIT
+                        self.all_fitted_models[FIT._model_name] = FIT
 
     def to_list(self) -> list[Union[Feols, Fepois, Feiv]]:
         """
