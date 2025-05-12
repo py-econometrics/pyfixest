@@ -13,7 +13,7 @@ from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
-from pyfixest.utils.dev_utils import DataFrameType, _to_integer
+from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
 
 class Fepois(Feols):
@@ -139,6 +139,9 @@ class Fepois(Feols):
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
+
+        # check that self._Y is a pandas Series or DataFrame
+        self._Y = _check_series_or_dataframe(self._Y)
 
         # check that self._Y is a weakly positive integer
         if np.any(self._Y < 0):
