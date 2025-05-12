@@ -140,8 +140,6 @@ class Fepois(Feols):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        # check if Y is a weakly positive integer
-        self._Y = _to_integer(self._Y)
         # check that self._Y is a weakly positive integer
         if np.any(self._Y < 0):
             raise ValueError(
