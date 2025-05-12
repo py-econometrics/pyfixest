@@ -13,7 +13,7 @@ from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
-from pyfixest.utils.dev_utils import DataFrameType, _to_integer
+from pyfixest.utils.dev_utils import DataFrameType
 
 
 class Fepois(Feols):
