@@ -9,7 +9,8 @@ import pandas as pd
 from pyfixest.errors import (
     NonConvergenceError,
 )
-from pyfixest.estimation.demean_ import demean
+# Updated import: Added _set_demeaner_backend
+from pyfixest.estimation.demean_ import demean, _set_demeaner_backend
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.solvers import solve_ols
@@ -229,6 +230,9 @@ class Fepois(Feols):
         _fixef_tol = self._fixef_tol
         _solver = self._solver
 
+        # Select the appropriate demeaning function based on the backend setting
+        demean_function = _set_demeaner_backend(self._demeaner_backend)
+
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -273,8 +277,8 @@ class Fepois(Feols):
             ZX = np.concatenate([reg_Z, _X], axis=1)
 
             if _fe is not None:
-                # ZX_resid = algorithm.residualize(ZX, mu)
-                ZX_resid, success = demean(
+                # Updated call: Use demean_function instead of hardcoded demean
+                ZX_resid, success = demean_function(
                     x=ZX, flist=_fe, weights=mu.flatten(), tol=_fixef_tol
                 )
                 if success is False:
@@ -475,7 +479,7 @@ def _check_for_separation(
         iterative rectifier ("ir"). Executes all methods by default.
 
     Returns
-    -------
+    ------
     list
         List of indices of observations that are removed due to separation.
     """
@@ -532,7 +536,7 @@ class _SeparationMethod(Protocol):
             Fixed effects.
 
         Returns
-        -------
+        ------
         set
             Set of indices of separated observations.
         """
@@ -559,7 +563,7 @@ def _check_for_separation_fe(
         Fixed effects.
 
     Returns
-    -------
+    ------
     set
         Set of indices of separated observations.
     """
@@ -619,7 +623,7 @@ def _check_for_separation_ir(
         Maximum number of iterations. Defaults to 100.
 
     Returns
-    -------
+    ------
     set
         Set of indices of separated observations.
     """
