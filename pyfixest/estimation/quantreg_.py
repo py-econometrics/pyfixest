@@ -5,13 +5,12 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
 from scipy.sparse import csc_matrix, eye, hstack
-from scipy.stats import gaussian_kde
+from scipy.stats import norm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
 
-from warnings import warn
-
+import warnings
 class Quantreg(Feols):
     """
     Quantile regression model.
@@ -116,13 +115,19 @@ class Quantreg(Feols):
 
         return betas
 
-    def get_fit(self, beta_init: Optional[np.ndarray] = None) -> None:
+    def get_fit(self) -> None:
+        """Fit a quantile regression model using the interior point method."""
 
-        rng = np.random.default_rng(2)
-        q = self._quantile
+        self._beta_hat = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile, rng = self._rng, beta_init = None)
+        self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
+        self._hessian = self._X.T @ self._X
+        self._bread = np.linalg.inv(self._hessian)
+
+    def fit_qreg_ip(self, X: np.ndarray, Y: np.ndarray, q: float, rng: np.random.Generator, beta_init: Optional[np.ndarray] = None) -> np.ndarray:
+
+        """Fit a quantile regression model using the interior point method."""
+
         N, k = self._X.shape
-        X = self._X
-        Y = self._Y
         update_initial_model = True
         has_converged = False
         compute_beta_init = True if beta_init is None else False
@@ -141,7 +146,7 @@ class Quantreg(Feols):
 
                 # get initial sample
                 idx_init = rng.choice(N, size=n_init, replace=False)
-                beta_hat_init = self.fit(X[idx_init, :], Y[idx_init])
+                beta_hat_init = self.fit_qreg(X[idx_init, :], Y[idx_init], q = q)
 
             else:
                 beta_hat_init = beta_init
@@ -176,7 +181,7 @@ class Quantreg(Feols):
             while not has_converged and n_bad_fixups < max_bad_fixups:
 
                 # solve the modified problem
-                beta_hat = self.fit(X = X_sub, Y = Y_sub)
+                beta_hat = self.fit_qreg(X = X_sub, Y = Y_sub, q = q)
                 r = Y.flatten() - X @ beta_hat
 
                 # count wrong predictions and get their indices
@@ -196,16 +201,11 @@ class Quantreg(Feols):
                     JL = JL & ~mis_L
                     JH = JH & ~mis_H
 
-            self._beta_hat = beta_hat
-            self._u_hat = Y - X @ beta_hat
-            self._hessian = X.T @ X
-            self._bread = np.linalg.inv(self._hessian)
+        return beta_hat
 
-            self._beta_hat
 
-    def fit(self, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+    def fit_qreg(self, X: np.ndarray, Y: np.ndarray, q: float) -> np.ndarray:
         """Fit a quantile regression model and return the coefficients."""
-        q = self._quantile
         N, k = X.shape
         X_sparse = csc_matrix(X)
         I_N = eye(N, format="csc")
@@ -229,108 +229,47 @@ class Quantreg(Feols):
 
     def _vcov_iid(self) -> np.ndarray:
 
-        import pdb; pdb.set_trace()
+        raise NotImplementedError(
+            """vcov = 'iid' for quantile regression is not yet implemented. "
+            For iid errors, please select vcov = 'nid'.
+            """
+        )
+
+    def _vcov_nid(self) -> np.ndarray:
+
+        "Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth."
+
+        h = get_hall_sheather_bandwidth(q = self._quantile, N = self._N)
+        beta_hat_plus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile + h, rng = self._rng)
+        yhat_plus = self._X @ beta_hat_plus
+        beta_hat_minus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile - h, rng = self._rng)
+        yhat_minus = self._X @ beta_hat_minus
+
+        s = (yhat_plus - yhat_minus) / (2 * h)
         u_hat = self._u_hat
-        N = self._N
-        q = self._quantile
+        psi = self._quantile - (u_hat < 0)
 
-        kde = gaussian_kde(u_hat)
-        f0 = kde.evaluate(0)[0]
-
-        k = q * (1 - q) / (N * f0)
-
-        return k * self._bread
-
-    def _vcov_hetero(self) -> np.ndarray:
-        u_hat = self._u_hat
-        X = self._X
-        N = self._N
-        q = self._quantile
-        bread = self._bread
-
-        psi = q - (u_hat < 0)
-
-        meat = X.T * psi[:, None] ** 2 @ X / N
+        meat = (self._X.T * (psi**2)) @ self._X / self._N
+        bread = (self._X.T / s) @ self._X / self._N
 
         return bread @ meat @ bread
 
-    def _vcov_crv1(self) -> np.ndarray:
-        raise NotImplementedError(
-            "CRV1 is not yet implemented for quantile regression."
-        )
 
-    def _vcov_crv3(self) -> np.ndarray:
-        raise NotImplementedError(
-            "CRV3 is not yet implemented for quantile regression."
-        )
+def get_hall_sheather_bandwidth(q: float, N: int) -> float:
 
-
-def hall_sheather_bandwidth(tau, n, alpha=0.05):
     """
-    Compute the Hall and Sheather (1988) bandwidth for quantile tau.
+    Compute the Hall-Sheater Bandwith.
 
-    Parameters:
-    -----------
-    tau : float
-        Quantile level (0 < tau < 1).
-    n : int
-        Sample size.
-    alpha : float, optional
-        Significance level for interval (default 0.05).
+    Parameters
+    ----------
+    q : float
+        The quantile to compute the bandwidth for.
+    N : int
+        The number of observations.
 
-    Returns:
-    --------
-    h : float
-        Bandwidth for kernel estimation.
     """
-    x0 = norm.ppf(tau)
-    f0 = norm.pdf(x0)
-    z = norm.ppf(1 - alpha/2)
-    return n**(-1/3) * z**(2/3) * ((1.5 * f0**2) / (2 * x0**2 + 1))**(1/3)
 
-def jacobian_powell(X, Y, beta, tau, kernel='epanechnikov'):
-    """
-    Estimate the Jacobian matrix J(tau) using Powell (1991) estimator.
+    x = norm.cdf(q, loc=0, scale=1)
+    f = norm.ppf(x, loc=0, scale=1)
 
-    J(tau) = E[f_{Y|X}(Xβ | X) X X^T] ≈ (1/(n*h)) Σ K(r_i / h) X_i X_i^T
-
-    Parameters:
-    -----------
-    X : ndarray, shape (n_samples, n_features)
-        Design matrix.
-    Y : ndarray, shape (n_samples,)
-        Response vector.
-    beta : ndarray, shape (n_features,)
-        Estimated regression coefficients at quantile tau.
-    tau : float
-        Quantile level (0 < tau < 1).
-    kernel : str, optional
-        Kernel to use ('epanechnikov' or 'gaussian').
-
-    Returns:
-    --------
-    J_hat : ndarray, shape (n_features, n_features)
-        Estimated Jacobian matrix.
-    h : float
-        Bandwidth used for kernel estimation.
-    """
-    n, k = X.shape
-    # Residuals
-    r = Y - X.dot(beta)
-    # Bandwidth selection
-    h = hall_sheather_bandwidth(tau, n)
-    u = r / h
-
-    # Kernel weights
-    if kernel == 'epanechnikov':
-        w = 0.75 * (1 - u**2) * (np.abs(u) <= 1)
-    elif kernel == 'gaussian':
-        w = norm.pdf(u)
-    else:
-        raise ValueError("Unsupported kernel. Choose 'epanechnikov' or 'gaussian'.")
-
-    # Weighted sum of X_i X_i^T
-    WX = X * w[:, np.newaxis]  # shape (n, k)
-    J_hat = (1.0 / (n * h)) * (X.T.dot(WX))
-
-    return J_hat, h
+    return N**(-1/3) * norm.ppf(1 - q/2)**(2/3) * ((1.5 * f**2)/(2 * x**2 + 1))**(1/3)
