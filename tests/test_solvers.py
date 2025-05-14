@@ -25,8 +25,8 @@ def test_solve_ols_identity():
 
 @pytest.mark.parametrize(
     argnames="solver",
-    argvalues=["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-    ids=["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+    argvalues=["scipy.linalg.solve","np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
+    ids=["scipy.linalg.solve","np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
 )
 def test_solve_ols_different_solvers(solver):
     # Test case 3: Test different solvers give same result
