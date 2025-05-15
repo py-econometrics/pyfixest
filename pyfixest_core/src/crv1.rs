@@ -48,7 +48,7 @@ pub fn crv1_meat_loop_rs(
     let mut meat_i = Array2::<f64>::zeros((k,k));
 
     let cl = clustid.as_array();
-    for (&g, i) in cl.iter().zip(0..) {
+    for (&g, _i) in cl.iter().zip(0..) {
         let start = g_locs[g];
         let end   = g_locs[g+1];
         let group = &g_indices[start..end];
