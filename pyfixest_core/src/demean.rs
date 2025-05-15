@@ -4,7 +4,7 @@ use numpy::{
     PyReadonlyArray1,
 };
 use pyo3::prelude::*;
-use ndarray::{Array2, ArrayView1, ArrayView2};
+use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -21,15 +21,29 @@ mod internal {
         group_weights: &[f64],
         group_weighted_sums: &mut [f64],
     ) {
-        group_weighted_sums.iter_mut().for_each(|s| *s = 0.0);
-        for (i, &val) in x.iter().enumerate() {
-            let id = group_ids[i];
-            group_weighted_sums[id] += sample_weights[i] * val;
-        }
-        for (i, xi) in x.iter_mut().enumerate() {
-            let id = group_ids[i];
-            *xi -= group_weighted_sums[id] / group_weights[id];
-        }
+        group_weighted_sums.fill(0.0);
+
+        // Accumulate weighted sums per group
+        x.iter()
+            .zip(sample_weights)
+            .zip(group_ids)
+            .for_each(|((&xi, &wi), &gid)| {
+                group_weighted_sums[gid] += wi * xi;
+            });
+
+        // Compute group means
+        let group_means: Vec<f64> = group_weighted_sums
+            .iter()
+            .zip(group_weights)
+            .map(|(&sum, &weight)| sum / weight)
+            .collect();
+
+        // Subtract means from each sample
+        x.iter_mut()
+            .zip(group_ids)
+            .for_each(|(xi, &gid)| {
+                *xi -= group_means[gid];
+            });
     }
 
     pub(super) fn calc_group_weights(
@@ -40,15 +54,15 @@ mod internal {
         n_groups: usize,
     ) -> Vec<f64> {
         let mut group_weights = vec![0.0; n_factors * n_groups];
-        for j in 0..n_factors {
-            for i in 0..n_samples {
+        for i in 0..n_samples {
+            let weight = sample_weights[i];
+            for j in 0..n_factors {
                 let id = group_ids[i * n_factors + j];
-                group_weights[j * n_groups + id] += sample_weights[i];
+                group_weights[j * n_groups + id] += weight;
             }
         }
         group_weights
     }
-
 }
 
 fn demean_impl(
@@ -69,63 +83,64 @@ fn demean_impl(
     );
 
     let not_converged = Arc::new(AtomicUsize::new(0));
-
-    let columns: Vec<Vec<f64>> = (0..n_features)
-        .into_par_iter()
-        .map(|k| {
-            let mut xk_curr = vec![0.0; n_samples];
-            let mut xk_prev = vec![0.0; n_samples];
-            let mut gw_sums = vec![0.0; n_groups];
-
-            for i in 0..n_samples {
-                let v = x[[i, k]];
-                xk_curr[i] = v;
-                xk_prev[i] = v - 1.0;
-            }
-
-            let mut converged = false;
-            for _ in 0..maxiter {
-                for j in 0..n_factors {
-                    let ids_j: Vec<usize> = (0..n_samples)
-                        .map(|i| group_ids[i * n_factors + j])
-                        .collect();
-                    let gw_j = &group_weights[j * n_groups .. (j + 1) * n_groups];
-
-                    internal::subtract_weighted_group_mean(
-                        &mut xk_curr,
-                        &sample_weights,
-                        &ids_j,
-                        gw_j,
-                        &mut gw_sums,
-                    );
-                }
-                if internal::sad_converged(&xk_curr, &xk_prev, tol) {
-                    converged = true;
-                    break;
-                }
-                xk_prev.copy_from_slice(&xk_curr);
-            }
-
-            if !converged {
-                not_converged.fetch_add(1, Ordering::SeqCst);
-            }
-
-            xk_curr
+    
+    // Precompute slices of group_ids for each factor
+    let group_ids_by_factor: Vec<Vec<usize>> = (0..n_factors)
+        .map(|j| {
+            (0..n_samples)
+                .map(|i| group_ids[i * n_factors + j])
+                .collect()
         })
         .collect();
 
-    let mut res = Array2::<f64>::zeros((n_samples, n_features));
-    for (k, col) in columns.into_iter().enumerate() {
-        for i in 0..n_samples {
-            res[[i, k]] = col[i];
+    // Precompute group weight slices
+    let group_weight_slices: Vec<&[f64]> = (0..n_factors)
+        .map(|j| &group_weights[j * n_groups..(j + 1) * n_groups])
+        .collect();
+
+    
+    let process_column = |(k, mut col): (usize, ndarray::ArrayViewMut1<f64>)| {
+        let mut xk_curr: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
+        let mut xk_prev: Vec<f64> = xk_curr.iter().map(|&v| v - 1.0).collect();
+        let mut gw_sums = vec![0.0; n_groups];
+
+        let mut converged = false;
+        for _ in 0..maxiter {
+            for j in 0..n_factors {
+                internal::subtract_weighted_group_mean(
+                    &mut xk_curr,
+                    &sample_weights,
+                    &group_ids_by_factor[j],
+                    group_weight_slices[j],
+                    &mut gw_sums,
+                );
+            }
+
+            if internal::sad_converged(&xk_curr, &xk_prev, tol) {
+                converged = true;
+                break;
+            }
+            xk_prev.copy_from_slice(&xk_curr);
         }
-    }
+
+        if !converged {
+            not_converged.fetch_add(1, Ordering::SeqCst);
+        }
+        Zip::from(&mut col).and(&xk_curr).for_each(|col_elm, &val| {
+            *col_elm = val;
+        });
+    };
+
+    let mut res = Array2::<f64>::zeros((n_samples, n_features));
+
+    res.axis_iter_mut(ndarray::Axis(1))
+        .into_par_iter()
+        .enumerate()
+        .for_each(process_column);
 
     let success = not_converged.load(Ordering::SeqCst) == 0;
     (res, success)
 }
-
-
 
 
 #[pyfunction]
