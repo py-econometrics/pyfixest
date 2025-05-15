@@ -25,6 +25,7 @@ dependencies = [
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
+pixi-pycharm = ">=0.0.8,<0.0.9"
 
 [project.optional-dependencies]
 dev = [
@@ -43,6 +44,7 @@ dev = [
   "jaxlib>=0.4.15",
   "maturin>=1.8.0",
   "pip",
+  "pytest-benchmark>=5.1.0,<6"
 ]
 
 plots = [
@@ -78,6 +80,7 @@ requires = [
   "maturin>=1.8.0"         # to build the Rust extension
 ]
 build-backend = "hatchling.build"
+
 
 [tool.pixi.project]
 channels = ["conda-forge"]
