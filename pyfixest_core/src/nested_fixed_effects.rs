@@ -63,7 +63,7 @@ pub fn count_fixef_fully_nested_all_rs(
 }
 
 #[pymodule]
-fn your_module(py: Python, m: &PyModule) -> PyResult<()> {
+fn your_module(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(count_fixef_fully_nested_all_rs, m)?)?;
     Ok(())
 }
