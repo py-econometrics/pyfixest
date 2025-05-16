@@ -8,8 +8,8 @@ from pyfixest.estimation.numba.nested_fixef_nb import (
     _count_fixef_fully_nested_all as count_fixef_fully_nested_all_nb,
 )
 from pyfixest.estimation.vcov_utils import _crv1_meat_loop as crv1_meat_loop_nb
+from pyfixest.estimation.rust.demean_rs_ import demean_rs
 
-demean_rs = pyfixest_core.demean_rs
 find_collinear_variables_rs = pyfixest_core.find_collinear_variables_rs
 crv1_meat_loop_rs = pyfixest_core.crv1_meat_loop_rs
 count_fixef_fully_nested_all_rs = pyfixest_core.count_fixef_fully_nested_all_rs
