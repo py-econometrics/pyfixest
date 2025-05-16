@@ -1,12 +1,8 @@
-use numpy::{
-    PyArray2,
-    PyReadonlyArray2,
-    PyReadonlyArray1,
-};
-use pyo3::prelude::*;
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use pyo3::prelude::*;
 use rayon::prelude::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 mod internal {
@@ -39,11 +35,9 @@ mod internal {
             .collect();
 
         // Subtract means from each sample
-        x.iter_mut()
-            .zip(group_ids)
-            .for_each(|(xi, &gid)| {
-                *xi -= group_means[gid];
-            });
+        x.iter_mut().zip(group_ids).for_each(|(xi, &gid)| {
+            *xi -= group_means[gid];
+        });
     }
 
     pub(super) fn calc_group_weights(
@@ -77,13 +71,12 @@ fn demean_impl(
     let n_groups = flist.iter().cloned().max().unwrap() + 1;
 
     let sample_weights: Vec<f64> = weights.iter().cloned().collect();
-    let group_ids: Vec<usize>        = flist.iter().cloned().collect();
-    let group_weights = internal::calc_group_weights(
-        &sample_weights, &group_ids, n_samples, n_factors, n_groups
-    );
+    let group_ids: Vec<usize> = flist.iter().cloned().collect();
+    let group_weights =
+        internal::calc_group_weights(&sample_weights, &group_ids, n_samples, n_factors, n_groups);
 
     let not_converged = Arc::new(AtomicUsize::new(0));
-    
+
     // Precompute slices of group_ids for each factor
     let group_ids_by_factor: Vec<Vec<usize>> = (0..n_factors)
         .map(|j| {
@@ -98,7 +91,6 @@ fn demean_impl(
         .map(|j| &group_weights[j * n_groups..(j + 1) * n_groups])
         .collect();
 
-    
     let process_column = |(k, mut col): (usize, ndarray::ArrayViewMut1<f64>)| {
         let mut xk_curr: Vec<f64> = (0..n_samples).map(|i| x[[i, k]]).collect();
         let mut xk_prev: Vec<f64> = xk_curr.iter().map(|&v| v - 1.0).collect();
@@ -142,7 +134,6 @@ fn demean_impl(
     (res, success)
 }
 
-
 #[pyfunction]
 pub fn demean_rs(
     py: Python<'_>,
@@ -152,13 +143,12 @@ pub fn demean_rs(
     tol: f64,
     maxiter: usize,
 ) -> PyResult<(Py<PyArray2<f64>>, bool)> {
-    let x_arr      = x.as_array();
-    let flist_arr  = flist.as_array();
-    let weights_arr= weights.as_array();
+    let x_arr = x.as_array();
+    let flist_arr = flist.as_array();
+    let weights_arr = weights.as_array();
 
-    let (out, success) = py.allow_threads(|| {
-        demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter)
-    });
+    let (out, success) =
+        py.allow_threads(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into_py(py), success))
