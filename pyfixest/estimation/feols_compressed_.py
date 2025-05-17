@@ -86,7 +86,11 @@ class FeolsCompressed(Feols):
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+            "np.linalg.lstsq",
+            "np.linalg.solve",
+            "scipy.linalg.solve",
+            "scipy.sparse.linalg.lsqr",
+            "jax",
         ],
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,

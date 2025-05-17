@@ -91,8 +91,9 @@ class Feols:
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
     solver : str, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
@@ -204,8 +205,9 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-        default is 'np.linalg.solve'. Solver to use for the estimation.
+    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
+        "scipy.sparse.linalg.lsqr", "jax"],
+        default is "scipy.linalg.solve". Solver to use for the estimation.
     _demeaner_backend: Literal["numba", "jax"]
         The backend used for demeaning.
     _data: pd.DataFrame
@@ -234,8 +236,12 @@ class Feols:
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+            "np.linalg.lstsq",
+            "np.linalg.solve",
+            "scipy.linalg.solve",
+            "scipy.sparse.linalg.lsqr",
+            "jax",
+        ] = "scipy.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
