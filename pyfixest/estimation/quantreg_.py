@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from math import e
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
@@ -9,6 +10,7 @@ from scipy.stats import norm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.frisch_newton import lpfnc
 
 import warnings
 class Quantreg(Feols):
@@ -92,33 +94,26 @@ class Quantreg(Feols):
 
         quantiles = np.sort(np.array(quantiles))
 
-        betas = np.zeros((len(quantiles), self._X.shape[1]))
+        beta_hat_all = np.zeros((len(quantiles), self._X.shape[1]))
 
         for i, q in enumerate(quantiles):
             if i == 0:
-                self.get_fit()
-                beta_new = self._beta_hat
+                beta_hat_all[i,:] = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile, rng = self._rng, beta_init = None)
             else:
-                beta_init = beta_new
-                u_init = self._u_hat
-                self.get_fit(beta_init = beta_init)
-                J = jacobian_powell(
-                    X = self._X,
-                    Y = self._Y,
-                    beta = self._beta_hat,
-                    tau = q,
-                    kernel = "epanechnikov"
-                )
-                beta_new = beta_init - np.linalg.inv(J) * np.mean(q - u_init < 0)
+                beta_hat = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile, rng = self._rng, beta_init = beta_hat)
+                u_hat = self._Y.flatten() - self._X @ beta_hat
+                h = get_hall_sheather_bandwidth(q = q, N = self._N)
+                Ku = norm.pdf(u_hat / h)
+                J = (self._X.T * Ku) @ self._X / (self._N * h)
+                beta_hat_all[i,:] = beta_hat_all[i,:] - np.linalg.inv(J) * np.mean(q - u_hat < 0)
 
-            betas[i, :] = beta_new
-
-        return betas
+        return beta_hat_all
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
 
-        self._beta_hat = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile, rng = self._rng, beta_init = None)
+        self._beta_hat = self.fit_qreg(X = self._X, Y = self._Y, q = self._quantile)
+        #self._beta_hat = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile, rng = self._rng, beta_init = None)
         self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
         self._hessian = self._X.T @ self._X
         self._bread = np.linalg.inv(self._hessian)
@@ -206,26 +201,21 @@ class Quantreg(Feols):
 
     def fit_qreg(self, X: np.ndarray, Y: np.ndarray, q: float) -> np.ndarray:
         """Fit a quantile regression model and return the coefficients."""
-        N, k = X.shape
-        X_sparse = csc_matrix(X)
-        I_N = eye(N, format="csc")
-        c1 = np.hstack([np.zeros(k), (1 - q) * np.ones(N), q * np.ones(N)])
-        A_eq = hstack([-X_sparse, I_N, -I_N])
-        b_eq = -Y
-        bounds = [(None, None)] * k + [(0, None)] * (2 * N)
 
-        res = linprog(
-            c=c1,
-            A_eq=A_eq,
-            b_eq=b_eq,
-            bounds=bounds,
-            method="highs-ds",
+        N, k = X.shape
+
+        beta_hat, has_converged = frisch_newton_solver(
+            A = X.T,
+            b = (1 - q) * X.T @ np.ones(N),
+            c = -Y,
+            u = np.ones(N),
+            q = q,
+            tol = 1e-6,
+            max_iter = 50,
+            backoff = 0.9995
         )
 
-        if not res.success:
-            raise ValueError(f"Linear programming failed: {res.message}")
-
-        return res.x[:k].flatten()
+        return beta_hat.flatten()
 
     def _vcov_iid(self) -> np.ndarray:
 
@@ -240,9 +230,11 @@ class Quantreg(Feols):
         "Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth."
 
         h = get_hall_sheather_bandwidth(q = self._quantile, N = self._N)
-        beta_hat_plus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile + h, rng = self._rng)
+        beta_hat_plus = self.fit_qreg(X = self._X, Y = self._Y, q = self._quantile + h)
+        #beta_hat_plus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile + h, rng = self._rng)
         yhat_plus = self._X @ beta_hat_plus
-        beta_hat_minus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile - h, rng = self._rng)
+        beta_hat_minus = self.fit_qreg(X = self._X, Y = self._Y, q = self._quantile - h)
+        #beta_hat_minus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile - h, rng = self._rng)
         yhat_minus = self._X @ beta_hat_minus
 
         s = (yhat_plus - yhat_minus) / (2 * h)
@@ -273,3 +265,185 @@ def get_hall_sheather_bandwidth(q: float, N: int) -> float:
     f = norm.ppf(x, loc=0, scale=1)
 
     return N**(-1/3) * norm.ppf(1 - q/2)**(2/3) * ((1.5 * f**2)/(2 * x**2 + 1))**(1/3)
+
+
+
+def frisch_newton_solver(A: np.ndarray, b: np.ndarray, c: np.ndarray, u: np.ndarray, q: float = 0.5,
+          tol: float = 1e-6, max_iter: int = 1000, backoff: float = 0.9995) -> tuple[np.ndarray, bool]:
+    """
+    Solve
+        min_x  c^T x
+        s.t.   A x = b,
+               0 <= x <= u
+    via the Frisch–Newton predictor–corrector IPM as described in
+    Koenker and Ng ("A FRISCH-NEWTON ALGORITHM FOR SPARSE QUANTILE
+    REGRESSION").
+    """
+
+    # Initialize
+    m, n = A.shape
+    c = c.flatten()
+    b = b.flatten()
+    u = u.flatten()
+
+    m, n = A.shape
+    x = (1 - 0.5) * np.ones(n)
+    s = u - x
+    d = c.copy()
+    d_plus  = np.maximum(d,  0)
+    d_minus = np.maximum(-d, 0)
+    U      = x @ d_plus + s @ d_minus
+
+    mu0   = max(1, U/n)
+    alpha = (n*mu0 - U) / (np.sum(1/x) + np.sum(1/s))
+    z = d_plus  + alpha / x
+    w = d_minus + alpha / s
+
+    y  = np.linalg.solve(A @ A.T, A @ (c - z + w) )
+
+    e = np.ones(n)
+
+    print(f"z: {z[:5]}")
+    print(f"w: {w[:5]}")
+    print(f"x: {x[:5]}")
+    print(f"s: {s[:5]}")
+    print(f"d: {d[:5]}")
+
+    # 6) Quick sanity checks (optional)
+    if True:
+        #import pdb; pdb.set_trace()
+        assert np.all(z > 0)
+        assert np.all(x > 0)
+        assert np.all(s > 0)
+        assert np.all(w > 0)
+        assert np.all(u > x)
+
+    def duality_gap(x, z, s, w):
+        return (x.T @ z + s.T @ w)
+
+    mu_curr = duality_gap(x = x, z = z, s = s, w = w)
+
+    def bound(v, dv):
+        """Componentwise bound used by quantreg: returns +∞ where dv≥0."""
+        out = np.full_like(v, np.inf)
+        mask = dv < 0
+        out[mask] = -v[mask] / dv[mask]
+        return out
+
+    def step_length(a: tuple, b: tuple, backoff: float = 0.9995):
+
+        a_max = np.min(np.concatenate((bound(a[0], a[1]),
+                                    bound(b[0], b[1]))))
+        return min(backoff * a_max, 1.0)
+
+
+    has_converged = False
+
+    # Main loop
+    for it in range(max_iter):
+        if mu_curr < tol:
+            has_converged = True
+            break
+
+        # Residuals: equ. (7)
+        r1 = (A.T @ y).flatten() + z - w - c
+        r2 = A @ x - b
+
+        norm_r1 = np.linalg.norm(r1)
+        norm_r2 = np.linalg.norm(r2)
+        #print(f"it={it:3d}  mu={mu_curr:.3e}   ||r1||={norm_r1:.3e}  ||r2||={norm_r2:.3e}")
+
+        r1_tilde = c - A.T @ y
+        r2_tilde = b - A @ x
+
+
+        # Affine-Scaling Predictor Direction (eq. (8))
+        Q = z / x + w / s
+        Qinv = 1.0 / Q  # diag
+        M = A @ (Qinv[:, None] * A.T)
+
+        dy_aff = np.linalg.inv(M) @ (r2_tilde + A @ (Qinv * r1_tilde))
+        dx_aff = Qinv * ( A.T @ dy_aff - r1_tilde)
+        ds_aff = -dx_aff
+        dz_aff = -z - (z / x) * dx_aff
+        dw_aff = -w - (w / s) * ds_aff
+
+        # Step lengths (eq. (9))
+        alpha_p_aff = step_length(a = (x, dx_aff), b = (s, ds_aff))
+        alpha_d_aff = step_length(a = (z, dz_aff), b = (w, dw_aff))
+
+        # 6) Compute mu_new  and centering σ  (eq (10))
+
+        x_pred = x      + alpha_p_aff*dx_aff
+        s_pred = s      + alpha_p_aff*ds_aff
+        y_pred = y      + alpha_d_aff*dy_aff
+        z_pred = z      + alpha_d_aff*dz_aff
+        w_pred = w      + alpha_d_aff*dw_aff
+
+        mu_aff = duality_gap(
+            x = x_pred,
+            z = z_pred,
+            s = s_pred,
+            w = w_pred
+        )
+
+        ratio  = mu_aff / mu_curr
+        sigma  = ratio ** 2          # 0 ≤ σ ≤ 1
+
+        mu_targ = sigma * mu_curr / n
+
+        # corrector direction
+        r1_hat = (mu_targ*(1/s - 1/x)
+                + (dx_aff * dz_aff) / x
+                - (ds_aff * dw_aff) / s)
+
+        dy_cor = np.linalg.inv(M) @ (A @ (Qinv * r1_hat))
+        dx_cor = Qinv * (A.T @ dy_cor - r1_hat)
+        ds_cor = -dx_cor
+        dz_cor = - (z / x) * dx_cor + (mu_targ - dx_aff * dz_aff) / x
+        dw_cor = - (w / s) * ds_cor + (mu_targ - ds_aff * dw_aff) / s
+
+        # 9) Final step lengths (corrector) — eq (12)
+        alpha_p_cor = step_length(a = (x, dx_cor), b = (s, ds_cor))
+        alpha_d_cor = step_length(a = (z, dz_cor), b = (w, dw_cor))
+
+        # 10) Update all variables / corrector step
+        # Update
+        # corrector (starting from the predictor point)
+        x = x_pred     + alpha_p_cor*dx_cor
+        s = s_pred     + alpha_p_cor*ds_cor
+        y = y_pred     + alpha_d_cor*dy_cor
+        z = z_pred     + alpha_d_cor*dz_cor
+        w = w_pred     + alpha_d_cor*dw_cor
+
+        # update
+        mu_curr = duality_gap(x = x, z = z, s = s, w = w)
+        #print("mu_curr: ", mu_curr)
+
+        # sizes of the Newton directions  (ℓ∞ makes overflow obvious)
+        inf_dx   = np.max(np.abs(dx_aff))
+        inf_dz   = np.max(np.abs(dz_aff))
+        inf_dw   = np.max(np.abs(dw_aff))
+
+        cond_M   = np.linalg.cond(M)                    # κ₂ of normal matrix
+        print(f"""
+        it {it:3d}
+        μ_k        = {mu_curr:16.9e}
+        μ_aff      = {mu_aff:16.9e}
+        σ          = {sigma:10.4f}
+        μ_target   = {mu_targ:16.9e}
+        ||r1||₂    = {np.linalg.norm(r1):9.2e}
+        ||r2||₂    = {np.linalg.norm(r2):9.2e}
+        ||dx_aff||∞= {inf_dx:9.2e}
+        ||dz_aff||∞= {inf_dz:9.2e}
+        ||dw_aff||∞= {inf_dw:9.2e}
+        α_p_aff    = {alpha_p_aff:6.4f}
+        α_d_aff    = {alpha_d_aff:6.4f}
+        cond(M)    = {cond_M:9.2e}
+        min(x)     = {x.min():9.2e}   max(x) = {x.max():9.2e}
+        min(s)     = {s.min():9.2e}   max(s) = {s.max():9.2e}
+        min(z)     = {z.min():9.2e}   max(z) = {z.max():9.2e}
+        min(w)     = {w.min():9.2e}   max(w) = {w.max():9.2e}
+        """)
+    # Recover β,u,v if this was a quantile‐LP on [β;u;v].
+    return y, has_converged
