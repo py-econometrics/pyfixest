@@ -8,10 +8,10 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
 from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
-from pyfixest.utils.set_rpy2_path import update_r_paths
+from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
 
-update_r_paths()
+check_r_install("wildrwolf", strict=True)
 
 pandas2ri.activate()
 
@@ -21,6 +21,7 @@ stats = importr("stats")
 broom = importr("broom")
 
 
+@pytest.mark.against_r_core
 @pytest.mark.extended
 def test_bonferroni():
     data = get_data().dropna()
@@ -56,6 +57,7 @@ def test_bonferroni():
     )
 
 
+@pytest.mark.against_r_extended
 @pytest.mark.extended
 @pytest.mark.parametrize("seed", [293, 912, 831])
 @pytest.mark.parametrize("sd", [0.5, 1.0, 1.5])
@@ -96,6 +98,7 @@ def test_wildrwolf_hc(seed, sd):
         )
 
 
+@pytest.mark.against_r_extended
 @pytest.mark.extended
 @pytest.mark.parametrize("seed", [9391])
 @pytest.mark.parametrize("sd", [0.5, 1.5])
@@ -138,6 +141,7 @@ def test_wildrwolf_crv(seed, sd):
         )
 
 
+@pytest.mark.against_r_extended
 @pytest.mark.extended
 def test_stepwise_function():
     B = 1000

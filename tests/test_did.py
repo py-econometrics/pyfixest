@@ -12,9 +12,9 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
-from pyfixest.utils.set_rpy2_path import update_r_paths
+from pyfixest.utils.check_r_install import check_r_install
 
-update_r_paths()
+check_r_install("did2s", strict=True)
 
 pandas2ri.activate()
 did2s = importr("did2s")
@@ -33,6 +33,7 @@ def data():
     return df_het
 
 
+@pytest.mark.against_r_extended
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -73,6 +74,7 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
+@pytest.mark.against_r_extended
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""
@@ -279,6 +281,7 @@ def test_lpdid():
     fit.tidy()
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("unit", ["unit"])
 @pytest.mark.parametrize("cluster", ["unit", "unit2"])
 def test_fully_interacted(unit, cluster):
@@ -355,6 +358,7 @@ def test_fully_interacted(unit, cluster):
     )
 
 
+@pytest.mark.against_r_core
 @pytest.mark.skip("mpdata not available online as csv, only run test locally.")
 @pytest.mark.parametrize(
     "mpdata_path", [r"C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"]
