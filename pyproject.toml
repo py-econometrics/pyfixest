@@ -95,8 +95,9 @@ plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 tests = "pytest -n 4 --cov-report=term tests"
-tests-against-r = "pytest tests -n 4 -m \"against_r\" --cov=pyfixest --cov-report=xml"
-tests-regular = "pytest tests -n 4 -m \"not (extended or against_r or plots)\" --cov=pyfixest --cov-report=xml"
+tests-against-r-core = "pytest tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
+tests-against-r-extended = "pytest tests -n 4 -m \"against_r_extended\" --cov=pyfixest --cov-report=xml"
+tests-regular = "pytest tests -n 4 -m \"not (extended or against_r_core or against_r_extended or plots)\" --cov=pyfixest --cov-report=xml"
 tests-extended = "pytest tests -n 4 -m \"extended\" --cov=pyfixest --cov-report=xml"
 tests-fixest = "pytest tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
 tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
@@ -105,7 +106,7 @@ tests-rerun = "pytest --lf -n 4"
 debug = "python pyfixest/debug.py"
 lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
-install-r = "Rscript r_test_requirements.R"
+install-r-extended = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
 
 [tool.pixi.feature.build.tasks]
@@ -132,7 +133,8 @@ addopts = [
 ]
 
 markers = [
-  "against_r: mark test to be part of the test suite that depends on R",
+  "against_r_core: mark test to be part of the test suite that depends on conda available R modules",
+  "against_r_extended: mark test to be part of the test suite that depends on other R modules",
   "extended: mark test to be part of the extended test suite",
   "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
 ]
