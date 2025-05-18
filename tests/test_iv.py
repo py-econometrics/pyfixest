@@ -9,13 +9,12 @@ from pyfixest.estimation.estimation import feols
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
 
-check_r_install("ivDiag", strict=True)
-
 # Enable the automatic conversion between pandas DataFrame and R DataFrame
 pandas2ri.activate()
 
-# Import the ivDiag package
-ivDiag = importr("ivDiag")
+# Extend R packages
+if (import_check := check_r_install("ivDiag", strict=False)):
+    ivDiag = importr("ivDiag")
 
 
 @pytest.fixture(scope="module")
@@ -116,6 +115,7 @@ def r_results():
     }
 
 
+@pytest.mark.skipif(import_check is False, reason="R package ivDiag not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize("has_weight", [False, True])
 @pytest.mark.parametrize("adj_vcov", ["iid", "hetero", {"CRV1": "cluster"}])

@@ -14,13 +14,14 @@ from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
 from pyfixest.utils.check_r_install import check_r_install
 
-check_r_install("did2s", strict=True)
-
 pandas2ri.activate()
-did2s = importr("did2s")
+# Core Packages
 stats = importr("stats")
 broom = importr("broom")
 fixest = importr("fixest")
+# Extended Packages
+if (import_check := check_r_install("did2s", strict=False)):
+    did2s = importr("did2s")
 
 
 @pytest.fixture
@@ -33,6 +34,7 @@ def data():
     return df_het
 
 
+@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
 @pytest.mark.against_r_extended
 def test_event_study(data):
     """Test the event_study() function."""
@@ -74,6 +76,7 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
+@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):

@@ -11,14 +11,16 @@ from pyfixest.estimation.multcomp import _get_rwolf_pval, bonferroni, rwolf
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
 
-check_r_install("wildrwolf", strict=True)
-
 pandas2ri.activate()
 
+# Core R packages
 fixest = importr("fixest")
-wildrwolf = importr("wildrwolf")
 stats = importr("stats")
 broom = importr("broom")
+# Extended R packages
+if (import_check := check_r_install("wildrwolf", strict=False)):
+    wildrwolf = importr("wildrwolf")
+
 
 
 @pytest.mark.against_r_core
@@ -57,6 +59,7 @@ def test_bonferroni():
     )
 
 
+@pytest.mark.skipif(import_check is False, reason="R package wildrwolf not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.extended
 @pytest.mark.parametrize("seed", [293, 912, 831])
@@ -98,6 +101,7 @@ def test_wildrwolf_hc(seed, sd):
         )
 
 
+@pytest.mark.skipif(import_check is False, reason="R package wildrwolf not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.extended
 @pytest.mark.parametrize("seed", [9391])
@@ -141,6 +145,7 @@ def test_wildrwolf_crv(seed, sd):
         )
 
 
+@pytest.mark.skipif(import_check is False, reason="R package wildrwolf not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.extended
 def test_stepwise_function():
