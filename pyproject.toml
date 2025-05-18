@@ -94,12 +94,12 @@ jax = { features = ["jax"], solve-group = "default" }
 plots = { features = ["plots"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
-tests = "pytest -n 4 --cov-report=term tests"
-tests-against-r-core = "pytest tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
-tests-against-r-extended = "pytest tests -n 4 -m \"against_r_extended\" --cov=pyfixest --cov-report=xml"
+tests = "pytest -rs -n 4 --cov-report=term tests"
+tests-against-r-core = "pytest -rs tests -n 4 -m \"against_r_core\" --cov=pyfixest --cov-report=xml"
+tests-against-r-extended = "pytest -rs tests -n 4 -m \"against_r_extended\" --cov=pyfixest --cov-report=xml"
 tests-regular = "pytest tests -n 4 -m \"not (extended or against_r_core or against_r_extended or plots)\" --cov=pyfixest --cov-report=xml"
 tests-extended = "pytest tests -n 4 -m \"extended\" --cov=pyfixest --cov-report=xml"
-tests-fixest = "pytest tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
+tests-fixest = "pytest -rs tests/test_vs_fixest.py -n 4 --cov=pyfixest --cov-report=xml"
 tests-plots-dev = "pixi run --environment dev pytest tests/test_plots.py -n 4"
 tests-plots = "pixi run --environment plots pytest tests/test_plots.py -n 4"
 tests-rerun = "pytest --lf -n 4"
