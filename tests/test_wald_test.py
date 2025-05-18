@@ -20,7 +20,7 @@ stats = importr("stats")
 base = importr("base")
 broom = importr("broom")
 # Extended R packages
-if (import_check := check_r_install("car", strict=False)):
+if import_check := check_r_install("car", strict=False):
     car = importr("car")
 
 

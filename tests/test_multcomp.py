@@ -18,9 +18,8 @@ fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
 # Extended R packages
-if (import_check := check_r_install("wildrwolf", strict=False)):
+if import_check := check_r_install("wildrwolf", strict=False):
     wildrwolf = importr("wildrwolf")
-
 
 
 @pytest.mark.against_r_core

@@ -7,7 +7,9 @@ def _catch_import_issue(name: str, strict: bool) -> None | bool:
             f"{name} package not found. Make sure the extended R environment is installed."
         )
     else:
-        print(f"Warning: {name} is not installed. Extended R tests will be unable to run.")
+        print(
+            f"Warning: {name} is not installed. Extended R tests will be unable to run."
+        )
         return False
 
 

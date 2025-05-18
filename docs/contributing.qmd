@@ -90,7 +90,7 @@ pixi run lint
 
 and you're ready to go! After installation, the task will run all linting rules via `ruff`.
 
-We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment, 
+We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
 except for R packages unavailable through conda-forge.
 ```{.bash .code-copy}
 # attempt to install non-conda R dependencies
@@ -135,8 +135,8 @@ winget install -e --id Python.Python.3.11
 
 ### Installing R
 
-Note that R and R dependencies available through conda-forge are installed by pixi to the local project if you use the dev environment. 
-Some extra R dependencies may require additional development tools not included in the environment, for example: 
+Note that R and R dependencies available through conda-forge are installed by pixi to the local project if you use the dev environment.
+Some extra R dependencies may require additional development tools not included in the environment, for example:
 
 Depending on your local set up, you may need to install additional libraries to compile those extra dependencies, like a version of `gcc` and `cmake`.
 

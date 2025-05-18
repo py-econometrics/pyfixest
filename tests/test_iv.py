@@ -13,7 +13,7 @@ from pyfixest.utils.utils import get_data
 pandas2ri.activate()
 
 # Extend R packages
-if (import_check := check_r_install("ivDiag", strict=False)):
+if import_check := check_r_install("ivDiag", strict=False):
     ivDiag = importr("ivDiag")
 
 

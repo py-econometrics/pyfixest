@@ -20,7 +20,7 @@ stats = importr("stats")
 broom = importr("broom")
 fixest = importr("fixest")
 # Extended Packages
-if (import_check := check_r_install("did2s", strict=False)):
+if import_check := check_r_install("did2s", strict=False):
     did2s = importr("did2s")
 
 
