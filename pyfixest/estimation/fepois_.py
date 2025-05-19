@@ -12,6 +12,9 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import (
+    SolverOptions,
+)
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _to_integer
 
@@ -85,9 +88,7 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,

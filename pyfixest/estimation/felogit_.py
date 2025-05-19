@@ -6,6 +6,9 @@ import pandas as pd
 
 from pyfixest.estimation.feglm_ import Feglm
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import (
+    SolverOptions,
+)
 
 
 class Felogit(Feglm):
@@ -23,18 +26,15 @@ class Felogit(Feglm):
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ],
+        solver: SolverOptions = "np.linalg.solve",
+        demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
-        context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -47,16 +47,15 @@ class Felogit(Feglm):
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
             lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
             solver=solver,
+            demeaner_backend=demeaner_backend,
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
+            context=context,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             separation_check=separation_check,
-            context=context,
         )
 
         self._method = "feglm-logit"

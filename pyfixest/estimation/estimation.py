@@ -10,6 +10,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
+    QuantregMethodOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
@@ -986,11 +987,11 @@ def quantreg(
     fml: str,
     data: DataFrameType,  # type: ignore
     quantile: float,
+    method: QuantregMethodOptions = "fn",
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = "nid",
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
-    solver: SolverOptions = "np.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -1016,6 +1017,15 @@ def quantreg(
     quantile : float
         The quantile to estimate. Must be between 0 and 1.
 
+    method : QuantregMethodOptions, optional
+        The method to use for the quantile regression. Can be either "fn" or "pfn".
+        Defaults to "fn", which implements the Frisch-Newton interior point algorithm
+        described in Portnoy and Koenker (1997). The "pfn" method implements a variant of the
+        algorithm proposed by Portnoy and Koenker (1997) including preprocessing steps, which
+        a) can speed up the algorithm if N is very large but b) assumes independent observations.
+        For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
+        by Chernozhukov, Fernández-Val, and Melly (2019).
+
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. The only option currently supported is "nid",
         which is short for nonparametric IID (independent and identically distributed) and uses the Hall-Sheather bandwidth.
@@ -1030,10 +1040,6 @@ def quantreg(
 
     separation_check : list[str], optional
         Methods to identify and drop separated observations. Not used in quantile regression.
-
-    solver : SolverOptions, optional
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -1132,10 +1138,10 @@ def quantreg(
     fit.coefplot()
     ```
     """
-
     # WLS currently not supported for quantile regression
     weights = None
     weights_type = "aweights"
+    solver = "np.linalg.solve"
 
     if ssc is None:
         ssc = ssc_func()
@@ -1146,6 +1152,11 @@ def quantreg(
     fixef_tol = 1e-08
     iwls_tol = 1e-08
     iwls_maxiter = 25
+
+    if method not in ["fn", "pfn"]:
+        raise ValueError(
+            f"Invalid method. Must be either 'fn' or 'pfn' but you provided {method}."
+        )
 
     _estimation_input_checks(
         fml=fml,
@@ -1182,6 +1193,7 @@ def quantreg(
         split=split,
         fsplit=fsplit,
         context=context,
+        quantreg_method=method,
     )
 
     # same checks as for Poisson regression

@@ -412,7 +412,28 @@ def coefplot(
     )
 
 
-def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
+def qplot(
+    models: ModelInputType,
+    rename_models: Optional[dict] = None,
+    figsize: Optional[tuple] = None,
+):
+    """
+    Plot regression quantiles.
+
+    Parameters
+    ----------
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
+    figsize : tuple or None, optional
+        The size of the figure. If None, the default size is used.
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
+
+    Returns
+    -------
+    object
+        A matplotplit figure.
+    """
     if rename_models is None:
         rename_models = {}
 
@@ -423,7 +444,7 @@ def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
     df_all = pd.DataFrame()
     for model in models:
         if not isinstance(model, Quantreg):
-            raise ValueError(
+            raise TypeError(
                 "The 'qplot' function is only supported for objects of type Quantreg."
             )
 
@@ -434,7 +455,10 @@ def qplot(models: ModelInputType, rename_models: Optional[dict] = None):
         df_all = pd.concat([df_all, df], axis=0)
 
     df_all.reset_index(inplace=True)
-    return _qplot(df_all)
+    return _qplot(
+        data=df_all,
+        figsize=figsize,
+    )
 
 
 def _coefplot(plot_backend, *, figsize, **plot_kwargs):
@@ -674,29 +698,34 @@ def _coefplot_matplotlib(
     return f
 
 
-def _qplot(data: pd.DataFrame) -> plt.Figure:
+def _qplot(data: pd.DataFrame, figsize) -> plt.Figure:
     """
-    Plots quantile regression coefficients with 95% confidence intervals.
+    Plot quantile regression coefficients with 95% confidence intervals.
     Each coefficient gets its own panel, quantiles on the x-axis, and
     coefficient estimates with error bars on the y-axis.
 
-    Expects `data` to have columns:
-      - 'Coefficient'   (e.g. 'Intercept', 'X1', 'X2')
-      - 'quantile'      (numeric, e.g. 0.1, 0.5, 0.9)
-      - 'Estimate'      (point estimate)
-      - '2.5%'          (lower bound of 95% CI)
-      - '97.5%'         (upper bound of 95% CI)
+    Parameters
+    ----------
+    data: pd.DataFrame
+        Input data sets
+        Expects `data` to have columns:
+        - 'Coefficient'   (e.g. 'Intercept', 'X1', 'X2')
+        - 'quantile'      (numeric, e.g. 0.1, 0.5, 0.9)
+        - 'Estimate'      (point estimate)
+        - '2.5%'          (lower bound of 95% CI)
+        - '97.5%'         (upper bound of 95% CI)
+    figsize: tuple
+        tuple with the figsize of the matplotlib plt.
     """
+    figsize = set_figsize(figsize, plot_backend="matplotlib")
     df = pd.DataFrame(data)
-
-    ncols = min(n, 4)
-    nrows = math.ceil(n / ncols)
+    coeffs = df.Coefficient.unique()
 
     fig, axes = plt.subplots(
-        nrows=nrows,
-        ncols=ncols,
+        # nrows=4,
+        ncols=4,
         sharey=True,
-        figsize=(4 * ncols, 4 * nrows),
+        figsize=figsize,
     )
 
     for ax, coef in zip(axes, coeffs):

@@ -21,6 +21,7 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     PredictionErrorOptions,
     PredictionType,
+    SolverOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -233,9 +234,7 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
@@ -615,7 +614,6 @@ class Feols:
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "nid":
-
             ssc_kwargs_hetero = {
                 "k_fe_nested": 0,
                 "n_fe_fully_nested": 0,
@@ -773,6 +771,11 @@ class Feols:
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
+
+    def _vcov_nid(self):
+        raise NotImplementedError(
+            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _is_iv = self._is_iv
