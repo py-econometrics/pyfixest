@@ -51,8 +51,10 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-        default is 'np.linalg.solve'. Solver to use for the estimation.
+    solver : str, optional.
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
     demeaner_backend: Literal["numba", "jax"]
         The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
@@ -86,8 +88,12 @@ class Fepois(Feols):
         tol: float,
         maxiter: int,
         solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+            "np.linalg.lstsq",
+            "np.linalg.solve",
+            "scipy.linalg.solve",
+            "scipy.sparse.linalg.lsqr",
+            "jax",
+        ] = "scipy.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
