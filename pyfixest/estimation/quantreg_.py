@@ -89,12 +89,34 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
-        self._beta_hat = self.fit_qreg(X=self._X, Y=self._Y, q=self._quantile)
+        self._beta_hat = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile)
         self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
         self._hessian = self._X.T @ self._X
         self._bread = np.linalg.inv(self._hessian)
 
-    def fit_qreg_ip(
+    def fit_qreg_fn(self, X: np.ndarray, Y: np.ndarray, q: float) -> np.ndarray:
+        """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
+        N, _ = X.shape
+
+        beta_hat, has_converged = frisch_newton_solver(
+            A=X.T,
+            b=(1 - q) * X.T @ np.ones(N),
+            c=-Y,
+            u=np.ones(N),
+            q=q,
+            tol=1e-6,
+            max_iter=50,
+            backoff=0.9995,
+        )
+
+        if not has_converged:
+            warnings.warn(
+                "The Frisch-Newton Interior Point solver has not converged after 50 iterations."
+            )
+
+        return -beta_hat.flatten()
+
+    def fit_qreg_pfn(
         self,
         X: np.ndarray,
         Y: np.ndarray,
@@ -102,7 +124,7 @@ class Quantreg(Feols):
         rng: np.random.Generator,
         beta_init: Optional[np.ndarray] = None,
     ) -> np.ndarray:
-        """Fit a quantile regression model using the interior point method."""
+        """Fit a quantile regression model using preprocessing and the Frisch-Newton Interior Point Solver."""
         N, k = self._X.shape
         has_converged = False
         compute_beta_init = beta_init is None
@@ -118,7 +140,7 @@ class Quantreg(Feols):
             if compute_beta_init:
                 # get initial sample
                 idx_init = rng.choice(N, size=n_init, replace=False)
-                beta_hat_init = self.fit_qreg(X[idx_init, :], Y[idx_init], q=q)
+                beta_hat_init = self.fit_qreg_fn(X[idx_init, :], Y[idx_init], q=q)
 
             else:
                 beta_hat_init = beta_init
@@ -151,7 +173,7 @@ class Quantreg(Feols):
 
             while not has_converged and n_bad_fixups < max_bad_fixups:
                 # solve the modified problem
-                beta_hat = self.fit_qreg(X=X_sub, Y=Y_sub, q=q)
+                beta_hat = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
                 r = Y.flatten() - X @ beta_hat
 
                 # count wrong predictions and get their indices
@@ -173,28 +195,6 @@ class Quantreg(Feols):
 
         return beta_hat
 
-    def fit_qreg(self, X: np.ndarray, Y: np.ndarray, q: float) -> np.ndarray:
-        """Fit a quantile regression model and return the coefficients."""
-        N, k = X.shape
-
-        beta_hat, has_converged = frisch_newton_solver(
-            A=X.T,
-            b=(1 - q) * X.T @ np.ones(N),
-            c=-Y,
-            u=np.ones(N),
-            q=q,
-            tol=1e-6,
-            max_iter=50,
-            backoff=0.9995,
-        )
-
-        if not has_converged:
-            warnings.warn(
-                "The Frisch-Newton Interior Point solver has not converged after 50 iterations."
-            )
-
-        return -beta_hat.flatten()
-
     def _vcov_iid(self) -> np.ndarray:
         raise NotImplementedError(
             """vcov = 'iid' for quantile regression is not yet implemented. "
@@ -205,11 +205,11 @@ class Quantreg(Feols):
     def _vcov_nid(self) -> np.ndarray:
         "Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth."
         h = get_hall_sheather_bandwidth(q=self._quantile, N=self._N)
-        beta_hat_plus = self.fit_qreg(X=self._X, Y=self._Y, q=self._quantile + h)
-        # beta_hat_plus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile + h, rng = self._rng)
+        beta_hat_plus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile + h)
+        # beta_hat_plus = self.fit_qreg_pfn(X = self._X, Y = self._Y, q = self._quantile + h, rng = self._rng)
         yhat_plus = self._X @ beta_hat_plus
-        beta_hat_minus = self.fit_qreg(X=self._X, Y=self._Y, q=self._quantile - h)
-        # beta_hat_minus = self.fit_qreg_ip(X = self._X, Y = self._Y, q = self._quantile - h, rng = self._rng)
+        beta_hat_minus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile - h)
+        # beta_hat_minus = self.fit_qreg_pfn(X = self._X, Y = self._Y, q = self._quantile - h, rng = self._rng)
         yhat_minus = self._X @ beta_hat_minus
 
         s = (yhat_plus - yhat_minus) / (2 * h)
@@ -269,7 +269,7 @@ def frisch_newton_solver(
     b = b.flatten()
     u = u.flatten()
 
-    x = (1 - 0.5) * np.ones(n)
+    x = (1 - q) * np.ones(n)
     s = u - x
     d = c.copy()
     d_plus = np.maximum(d, 0)
@@ -285,7 +285,6 @@ def frisch_newton_solver(
 
     # 6) Quick sanity checks (optional)
     if True:
-        # import pdb; pdb.set_trace()
         assert np.all(z > 0)
         assert np.all(x > 0)
         assert np.all(s > 0)
@@ -331,8 +330,8 @@ def frisch_newton_solver(
         dw_aff = -w - (w / s) * ds_aff
 
         # Step lengths (eq. (9))
-        alpha_p_aff = step_length(a=(x, dx_aff), b=(s, ds_aff))
-        alpha_d_aff = step_length(a=(z, dz_aff), b=(w, dw_aff))
+        alpha_p_aff = step_length(a=(x, dx_aff), b=(s, ds_aff), backoff=backoff)
+        alpha_d_aff = step_length(a=(z, dz_aff), b=(w, dw_aff), backoff=backoff)
 
         # 6) Compute mu_new  and centering sigma  (eq (10))
         x_pred = x + alpha_p_aff * dx_aff
@@ -359,8 +358,8 @@ def frisch_newton_solver(
         dw_cor = -(w / s) * ds_cor + (mu_targ - ds_aff * dw_aff) / s
 
         # 9) Final step lengths (corrector) — eq (12)
-        alpha_p_cor = step_length(a=(x, dx_cor), b=(s, ds_cor))
-        alpha_d_cor = step_length(a=(z, dz_cor), b=(w, dw_cor))
+        alpha_p_cor = step_length(a=(x, dx_cor), b=(s, ds_cor), backoff=backoff)
+        alpha_d_cor = step_length(a=(z, dz_cor), b=(w, dw_cor), backoff=backoff)
 
         # 10) Update all variables / corrector step
         # Update

@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -416,6 +417,8 @@ def qplot(
     models: ModelInputType,
     rename_models: Optional[dict] = None,
     figsize: Optional[tuple] = None,
+    ncol: Optional[int] = None,
+    nrow: Optional[int] = None,
 ):
     """
     Plot regression quantiles.
@@ -428,7 +431,10 @@ def qplot(
         The size of the figure. If None, the default size is used.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
-
+    ncol : int, optional
+        Number of columns of subplots. Default is None. Note: cannot be set jointly with nrow argument.
+    nrow : int, optional
+        Number of rows of subplots. Default is None. Note: cannot be set jointly with ncol argument.
     Returns
     -------
     object
@@ -455,9 +461,12 @@ def qplot(
         df_all = pd.concat([df_all, df], axis=0)
 
     df_all.reset_index(inplace=True)
+
     return _qplot(
         data=df_all,
         figsize=figsize,
+        nrow=nrow,
+        ncol=ncol,
     )
 
 
@@ -698,53 +707,71 @@ def _coefplot_matplotlib(
     return f
 
 
-def _qplot(data: pd.DataFrame, figsize) -> plt.Figure:
+def _qplot(data: pd.DataFrame, nrow: Optional[int]=None, ncol: Optional[int]=None, figsize:tuple[int]=(10, 6)):
     """
-    Plot quantile regression coefficients with 95% confidence intervals.
-    Each coefficient gets its own panel, quantiles on the x-axis, and
-    coefficient estimates with error bars on the y-axis.
+    Plot point estimates ± confidence intervals by quantile,
+    with one subplot per coefficient.
 
     Parameters
     ----------
-    data: pd.DataFrame
-        Input data sets
-        Expects `data` to have columns:
-        - 'Coefficient'   (e.g. 'Intercept', 'X1', 'X2')
-        - 'quantile'      (numeric, e.g. 0.1, 0.5, 0.9)
-        - 'Estimate'      (point estimate)
-        - '2.5%'          (lower bound of 95% CI)
-        - '97.5%'         (upper bound of 95% CI)
-    figsize: tuple
-        tuple with the figsize of the matplotlib plt.
+    data : pandas.DataFrame
+        Must contain columns ['Coefficient', 'quantile', 'Estimate', '2.5%', '97.5%'].
+    nrow : int, optional
+        Number of rows of subplots. If both nrow and ncol are None, defaults to 1.
+    ncol : int, optional
+        Number of columns of subplots. Exactly one of nrow/ncol must be set, unless both are None.
+    figsize : tuple, optional
+        Figure size passed to plt.subplots().
+
+    Raises
+    ------
+    ValueError
+        If both nrow and ncol are specified.
     """
-    figsize = set_figsize(figsize, plot_backend="matplotlib")
-    df = pd.DataFrame(data)
-    coeffs = df.Coefficient.unique()
+    # --- default layout: one row if neither is specified ---
+    if nrow is None and ncol is None:
+        nrow = 1
 
-    fig, axes = plt.subplots(
-        # nrows=4,
-        ncols=4,
-        sharey=True,
-        figsize=figsize,
-    )
+    # --- error if both specified ---
+    if (nrow is not None) and (ncol is not None):
+        raise ValueError("Specify only one of nrow or ncol, not both.")
 
-    for ax, coef in zip(axes, coeffs):
-        sub = df[df["Coefficient"] == coef].sort_values("quantile")
-        x = sub["quantile"]
-        y = sub["Estimate"]
-        lower_err = y - sub["2.5%"]
-        upper_err = sub["97.5%"] - y
+    # --- determine number of panels ---
+    coeffs = list(data['Coefficient'].unique())
+    K = len(coeffs)
 
-        ax.errorbar(x, y, yerr=[lower_err, upper_err], fmt="o-", capsize=5)
+    # compute rows × cols
+    if nrow is not None:
+        rows = nrow
+        cols = math.ceil(K / rows)
+    else:
+        cols = ncol
+        rows = math.ceil(K / cols)
+
+    # --- make subplots ---
+    fig, axes = plt.subplots(rows, cols, figsize=figsize, squeeze=False)
+    axes = axes.flatten()
+
+    # --- plot each coefficient in its own panel ---
+    for i, coef in enumerate(coeffs):
+        ax = axes[i]
+        sub = data[data['Coefficient'] == coef].sort_values('quantile')
+        q    = sub['quantile'].values
+        est  = sub['Estimate'].values
+        lo   = est - sub['2.5%'].values
+        hi   = sub['97.5%'].values - est
+
+        ax.errorbar(q, est, yerr=[lo, hi], fmt='o-')
         ax.set_title(coef)
-        ax.set_xlabel("Quantile")
-        ax.set_xticks(x)
-        ax.grid(True)
+        ax.set_xlabel('Quantile')
+        ax.set_ylabel('Estimate')
 
-    axes[0].set_ylabel("Coefficient estimate")
-    fig.suptitle("Quantile Regression Coefficients with 95% CIs", y=1.02)
+    # --- hide any unused axes ---
+    for j in range(K, rows * cols):
+        axes[j].set_visible(False)
+
     plt.tight_layout()
-    return fig
+    return fig, axes
 
 
 def _get_model_df(
