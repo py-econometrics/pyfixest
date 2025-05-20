@@ -6,20 +6,15 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.utils.set_rpy2_path import update_r_paths
+from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
-
-update_r_paths()
-
-# Activate pandas2ri to enable conversion between pandas DataFrames and R DataFrames
-pandas2ri.activate()
-
-# Import the ivDiag package
-ivDiag = importr("ivDiag")
-
 
 # Enable the automatic conversion between pandas DataFrame and R DataFrame
 pandas2ri.activate()
+
+# Extend R packages
+if import_check := check_r_install("ivDiag", strict=False):
+    ivDiag = importr("ivDiag")
 
 
 @pytest.fixture(scope="module")
@@ -120,6 +115,8 @@ def r_results():
     }
 
 
+@pytest.mark.skipif(import_check is False, reason="R package ivDiag not installed.")
+@pytest.mark.against_r_extended
 @pytest.mark.parametrize("has_weight", [False, True])
 @pytest.mark.parametrize("adj_vcov", ["iid", "hetero", {"CRV1": "cluster"}])
 def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):

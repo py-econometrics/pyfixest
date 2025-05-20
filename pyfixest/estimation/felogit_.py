@@ -28,6 +28,8 @@ class Felogit(Feglm):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
+        tol: float,
+        maxiter: int,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,

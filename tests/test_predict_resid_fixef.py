@@ -9,9 +9,6 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.utils.dev_utils import _extract_variable_level
-from pyfixest.utils.set_rpy2_path import update_r_paths
-
-update_r_paths()
 
 pandas2ri.activate()
 
@@ -73,6 +70,7 @@ def test_poisson_prediction_internally(data, weights, fml):
         fit.predict()
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [
@@ -167,6 +165,7 @@ def test_vs_fixest(data, fml):
     # test with missing fixed effects
 
 
+@pytest.mark.against_r_core
 def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
@@ -214,6 +213,7 @@ def test_predict_nas():
     assert len(res) == len(res_r)
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [

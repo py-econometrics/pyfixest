@@ -35,7 +35,7 @@ def feols(
     store_data: bool = True,
     lean: bool = False,
     weights_type: WeightsTypeOptions = "aweights",
-    solver: SolverOptions = "np.linalg.solve",
+    solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
     use_compression: bool = False,
     reps: int = 100,
@@ -119,8 +119,9 @@ def feols(
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     solver : SolverOptions, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba" or "jax". Defaults to "numba".
@@ -511,7 +512,7 @@ def fepois(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
-    solver: SolverOptions = "np.linalg.solve",
+    solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
     i_ref1=None,
@@ -570,8 +571,9 @@ def fepois(
         Either "fe" or "ir". Executes "fe" by default (when None).
 
     solver : SolverOptions, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba" or "jax".
@@ -738,7 +740,7 @@ def feglm(
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
-    solver: SolverOptions = "np.linalg.solve",
+    solver: SolverOptions = "scipy.linalg.solve",
     drop_intercept: bool = False,
     i_ref1=None,
     copy_data: bool = True,
@@ -800,8 +802,9 @@ def feglm(
         Either "fe" or "ir". Executes "fe" by default (when None).
 
     solver : SolverOptions, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.

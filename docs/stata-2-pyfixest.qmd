@@ -18,7 +18,9 @@ econmetrics in Python you might check out Arthur Turrell's
 which includes a section on
 [Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html),
 or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher
-Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey.
+Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section
+of [stata2r](https://stata2r.github.io/fixest/) as there is a lot of overlap between fixest and PyFixest
+syntax.
 
 # Data
 
@@ -32,14 +34,14 @@ df = pf.get_data()
 If you want to use the same dataset in Stata, you can save the data to your home
 directory as a .dta file with
 
-```{python}
+```{python, eval = FALSE}
 import os
 df.to_stata(os.path.join(os.path.expanduser("~"), "pyfixest-data.dta"))
 ```
 
 and then load the data in Stata with
 
-```{stata}
+```stata
 cd ~
 use pyfixest-data.dta
 ```
@@ -55,7 +57,7 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 
 which is equivalent to
 
-```{stata}
+```stata
 reg Y X1
 
 *       Source |       SS           df       MS      Number of obs   =       998
@@ -131,7 +133,7 @@ fit3.summary()
 
 which is equivalent to
 
-```{stata}
+```stata
 reg Y X1 X2, robust
 
 * Linear regression                               Number of obs     =        998
@@ -152,7 +154,7 @@ reg Y X1 X2, robust
 
 or
 
-```{stata}
+```stata
 reg Y X1 X2, vce(robust)
 
 * Identical output to above
@@ -167,7 +169,7 @@ fit4.summary()
 
 Note: This will not exactly match the output of the equivalent Stata command, which is
 
-```{stata}
+```stata
 reg Y X1 X2, vce(hc3)
 
 * Linear regression                               Number of obs     =        998
@@ -210,7 +212,7 @@ fit6.summary()
 
 which is equivalent to
 
-```{stata}
+```stata
 reg Y X1 X2, vce(cluster f1)
 
 * Linear regression                               Number of obs     =        997
@@ -246,7 +248,7 @@ fit7.summary()
 
 Note: This will not exactly match the output of the equivalent Stata command, which is
 
-```{stata}
+```stata
 reg Y X1 X2, vce(cluster f1 f2)
 
 * Linear regression                                       Number of obs =    997
@@ -298,7 +300,7 @@ fit9.summary()
 
 which is equivalent to
 
-```{stata}
+```stata
 xtset f1
 xtreg Y X1 X2, fe
 
@@ -329,7 +331,7 @@ xtreg Y X1 X2, fe
 
 or
 
-```{stata}
+```stata
 reghdfe Y X1 X2, absorb(f1)
 
 * HDFE Linear regression                            Number of obs   =        997
@@ -366,7 +368,7 @@ fit10.summary()
 
 is equivalent to
 
-```{stata}
+```stata
 xtset f1
 xtreg Y X1 X2, fe vce(cluster f1)
 
@@ -398,7 +400,7 @@ xtreg Y X1 X2, fe vce(cluster f1)
 
 or
 
-```{stata}
+```stata
 reghdfe Y X1 X2, absorb(f1) cluster(f1)
 
 * HDFE Linear regression                            Number of obs   =        997
@@ -437,7 +439,7 @@ fit11.summary()
 
 which is equivalent to
 
-```{stata}
+```stata
 reghdfe Y X1 X2, absorb(f1 f2) cluster(f1)
 
 * HDFE Linear regression                            Number of obs   =        997
