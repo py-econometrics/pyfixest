@@ -1,4 +1,5 @@
 from importlib import resources
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,9 @@ fixest = importr("fixest")
 # Extended Packages
 if import_check := check_r_install("did2s", strict=False):
     did2s = importr("did2s")
+# Check mpdata avaialibility
+MPDATA_LOC = "C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"
+mpdata_check = Path(MPDATA_LOC).is_file()
 
 
 @pytest.fixture
@@ -362,9 +366,9 @@ def test_fully_interacted(unit, cluster):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.skip("mpdata not available online as csv, only run test locally.")
+@pytest.mark.skipif(mpdata_check is False, reason="mpdata not available online as csv, only run test locally.")
 @pytest.mark.parametrize(
-    "mpdata_path", [r"C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"]
+    "mpdata_path", [MPDATA_LOC]
 )
 def test_fully_interacted_mpdata(mpdata_path):
     mpdata = pd.read_csv(mpdata_path)
