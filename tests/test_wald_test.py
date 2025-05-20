@@ -19,12 +19,9 @@ fixest = importr("fixest")
 stats = importr("stats")
 base = importr("base")
 broom = importr("broom")
-# Extended R packages
-if import_check := check_r_install("car", strict=False):
-    car = importr("car")
+car = importr("car")
 
 
-@pytest.mark.skipif(import_check is False, reason="R package car not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize(
     "R",
@@ -70,7 +67,6 @@ def test_F_test_single_equation_no_clustering(R):
     np.testing.assert_allclose(p_stat, r_pvalue, rtol=1e-03, atol=1e-02)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package car not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize(
     "R",
@@ -108,7 +104,6 @@ def test_F_test_single_equation(R):
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package car not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize(
     "seedn",
@@ -159,7 +154,6 @@ def test_F_test_multiple_equation(seedn):
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package car not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize(
     "R, fml",
@@ -220,7 +214,6 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
 
 
-@pytest.mark.skipif(import_check is False, reason="R package car not installed.")
 @pytest.mark.against_r_extended
 @pytest.mark.parametrize(
     "R, q, fml",
