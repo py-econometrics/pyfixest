@@ -33,7 +33,11 @@ class Feglm(Feols, ABC):
         tol: float,
         maxiter: int,
         solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+            "np.linalg.lstsq",
+            "np.linalg.solve",
+            "scipy.linalg.solve",
+            "scipy.sparse.linalg.lsqr",
+            "jax",
         ],
         store_data: bool = True,
         copy_data: bool = True,
