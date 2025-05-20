@@ -366,10 +366,11 @@ def test_fully_interacted(unit, cluster):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.skipif(mpdata_check is False, reason="mpdata not available online as csv, only run test locally.")
-@pytest.mark.parametrize(
-    "mpdata_path", [MPDATA_LOC]
+@pytest.mark.skipif(
+    mpdata_check is False,
+    reason="mpdata not available online as csv, only run test locally.",
 )
+@pytest.mark.parametrize("mpdata_path", [MPDATA_LOC])
 def test_fully_interacted_mpdata(mpdata_path):
     mpdata = pd.read_csv(mpdata_path)
     mpdata["first_treat"] = mpdata["first.treat"]
