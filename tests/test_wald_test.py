@@ -9,20 +9,19 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import feols
-from pyfixest.utils.set_rpy2_path import update_r_paths
 from pyfixest.utils.utils import ssc
-
-update_r_paths()
 
 pandas2ri.activate()
 
+# Core R packages
 fixest = importr("fixest")
 stats = importr("stats")
+base = importr("base")
 broom = importr("broom")
 car = importr("car")
-base = importr("base")
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "R",
     [
@@ -67,6 +66,7 @@ def test_F_test_single_equation_no_clustering(R):
     np.testing.assert_allclose(p_stat, r_pvalue, rtol=1e-03, atol=1e-02)
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "R",
     [
@@ -103,6 +103,7 @@ def test_F_test_single_equation(R):
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "seedn",
     [
@@ -152,6 +153,7 @@ def test_F_test_multiple_equation(seedn):
     np.testing.assert_allclose(p_value, r_pvalue, rtol=1e-03, atol=1e-03)
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "R, fml",
     [
@@ -211,6 +213,7 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     np.testing.assert_allclose(f_stat, r_fstat, rtol=1e-02, atol=1e-02)
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "R, q, fml",
     [
