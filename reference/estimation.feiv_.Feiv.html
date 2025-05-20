@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.30">
+<meta name="generator" content="quarto-1.7.31">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -71,10 +71,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-de070a7b0ab54f8780927367ac907214.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-85d6ed6ef93f7b75ae44cb4d7fc8909c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d7a985b111ba49d75886cb228fa7d15a.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -464,7 +464,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol,</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_tol,</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">'numba'</span>,</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
@@ -479,10 +479,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 38%">
-<col style="width: 44%">
-<col style="width: 8%">
+<col style="width: 6%">
+<col style="width: 43%">
+<col style="width: 40%">
+<col style="width: 9%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -543,9 +543,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>solver</td>
-<td>Literal['np.linalg.lstsq', 'np.linalg.solve', 'scipy.sparse.linalg.lsqr', 'jax']</td>
-<td>default is ‘np.linalg.solve’. Solver to use for the estimation.</td>
-<td><code>'np.linalg.solve'</code></td>
+<td>Literal['np.linalg.lstsq', 'np.linalg.solve', 'scipy.linalg.solve', 'scipy.sparse.linalg.lsqr', 'jax']</td>
+<td>“scipy.sparse.linalg.lsqr”, “jax”], default is “scipy.linalg.solve”. Solver to use for the estimation.</td>
+<td><code>'scipy.linalg.solve'</code></td>
 </tr>
 <tr class="even">
 <td>demeaner_backend</td>
@@ -837,7 +837,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#c9c3313d .cell execution_count=1}
+<pre><code>::: {#c32cba9f .cell execution_count=1}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -901,7 +901,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="XTCCjm"&gt;&lt;/div&gt;
+            &lt;div id="aQNXvf"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -925,9 +925,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("XTCCjm").appendChild(div);
+                        document.getElementById("aQNXvf").appendChild(div);
                     };
-                    var e = document.getElementById("XTCCjm");
+                    var e = document.getElementById("aQNXvf");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -938,7 +938,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="xwWSxl"&gt;&lt;/div&gt;
+            &lt;div id="RXcKs5"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -962,9 +962,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("xwWSxl").appendChild(div);
+                        document.getElementById("RXcKs5").appendChild(div);
                     };
-                    var e = document.getElementById("xwWSxl");
+                    var e = document.getElementById("RXcKs5");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -974,8 +974,8 @@ print("Effective F stat :", F_stat_eff_pf)
 
 ::: {.cell-output .cell-output-stdout}
 ```
-(Unadjusted) F stat : 52.81535560457482
-Effective F stat : 48.61288119858688
+(Unadjusted) F stat : 52.81535560457488
+Effective F stat : 48.61288119858695
 ```
 :::
 :::</code></pre>
