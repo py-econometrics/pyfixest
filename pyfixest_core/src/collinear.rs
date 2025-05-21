@@ -69,13 +69,7 @@ impl<'a> CollinearFoldState<'a> {
     }
 }
 
-#[pyfunction]
-pub fn find_collinear_variables_rs(
-    py: Python,
-    x: PyReadonlyArray2<f64>,
-    tol: f64,
-) -> PyResult<(Py<PyArray1<bool>>, usize, bool)> {
-    let x = x.as_array();
+fn find_collinear_variables_impl(x: ArrayView2<f64>, tol: f64) -> (Array1<bool>, usize, bool) {
     let initial_state = CollinearFoldState::new(x);
     let final_state = (0..x.ncols()).fold(initial_state, |mut current_state, j| {
         let r_jj = current_state.compute_initial_diag_element(j);
@@ -86,6 +80,16 @@ pub fn find_collinear_variables_rs(
         }
         current_state
     });
-    let (arr, n_excl, flag) = final_state.into_result();
+    final_state.into_result()
+}
+
+#[pyfunction]
+pub fn find_collinear_variables_rs(
+    py: Python,
+    x: PyReadonlyArray2<f64>,
+    tol: f64,
+) -> PyResult<(Py<PyArray1<bool>>, usize, bool)> {
+    let x = x.as_array();
+    let (arr, n_excl, flag) = find_collinear_variables_impl(x, tol);
     Ok((arr.into_pyarray(py).to_owned(), n_excl, flag))
 }
