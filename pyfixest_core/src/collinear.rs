@@ -37,10 +37,10 @@ impl<'a> CollinearFoldState<'a> {
         let computed_row: Vec<(usize, f64)> = (j + 1..k)
             .into_par_iter()
             .map(|i| {
-                let mut value = self.x[(i, j)];
+                let mut value = self.x[[i, j]];
                 for p in 0..j {
                     if !self.collinear[p] {
-                        value -= self.r_matrix[(p, i)] * self.r_matrix[(p, j)];
+                        value -= self.r_matrix[[p, i]] * self.r_matrix[[p, j]];
                     }
                 }
                 (i, value / diag_val_sqrt)
@@ -53,7 +53,7 @@ impl<'a> CollinearFoldState<'a> {
     }
 
     fn compute_initial_diag_element(&mut self, j: usize) -> f64 {
-        (0..j).fold(self.x[(j, j)], |mut r_jj, n| {
+        (0..j).fold(self.x[[j, j]], |mut r_jj, n| {
             if !self.collinear[n] {
                 let r_kj = self.r_matrix[[n, j]];
                 r_jj -= r_kj * r_kj;
