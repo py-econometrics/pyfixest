@@ -222,6 +222,7 @@ fn find_collinear_variables_impl(
 /// - Boolean array indicating which columns are collinear
 /// - Number of collinear columns found
 #[pyfunction]
+#[pyo3(signature = (x, tol=1e-10))]
 pub fn find_collinear_variables_rs(
     py: Python,
     x: PyReadonlyArray2<f64>,

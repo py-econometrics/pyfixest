@@ -23,7 +23,7 @@ def test_find_collinear_variables(benchmark, fn):
     X1 = np.concat([X1, X1[:, [1]] + X1[:, [2]]], axis=1)
     X1 = X1.T @ X1
     # Test with default tolerance
-    collinear_flags, n_collinear, all_collinear = benchmark(fn, X1, tol=1e-10)
+    collinear_flags, n_collinear, all_collinear = benchmark(fn, X1)
 
     # Third column should be flagged as collinear
     expected_flags = np.array(N * [False] + [True])
