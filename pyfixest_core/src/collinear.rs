@@ -8,13 +8,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 enum CollinearityError {
-
     #[error("Input matrix must be square, got {rows}x{cols}")]
     NonSquareMatrix { rows: usize, cols: usize },
 
     #[error("Tolerance must be positive and finite, got {value}")]
-    InvalidTolerance {value: f64}
-    }
+    InvalidTolerance { value: f64 },
+}
 
 /// State struct for the collinearity detection algorithm using a modified Cholesky decomposition.
 ///
@@ -48,7 +47,10 @@ impl<'a> CollinearFoldState<'a> {
         let n_rows = x.nrows();
 
         if !x.is_square() {
-            return Err(CollinearityError::NonSquareMatrix {rows: n_rows, cols: n_cols})
+            return Err(CollinearityError::NonSquareMatrix {
+                rows: n_rows,
+                cols: n_cols,
+            });
         }
         // Validate that the matrix is square
         Ok(Self {
@@ -171,11 +173,13 @@ impl<'a> CollinearFoldState<'a> {
 /// - Boolean array indicating which columns are collinear
 /// - Number of collinear columns found
 /// - Flag indicating if all columns are collinear
-fn find_collinear_variables_impl(x: ArrayView2<f64>, tol: f64) -> Result<(Array1<bool>, usize, bool), CollinearityError> {
-
+fn find_collinear_variables_impl(
+    x: ArrayView2<f64>,
+    tol: f64,
+) -> Result<(Array1<bool>, usize, bool), CollinearityError> {
     // Validate tolerance
     if tol <= 0.0 {
-        return Err(CollinearityError::InvalidTolerance {value: tol});
+        return Err(CollinearityError::InvalidTolerance { value: tol });
     }
 
     // Create initial state
@@ -226,9 +230,7 @@ pub fn find_collinear_variables_rs(
     let x = x.as_array();
     // Call the implementation and convert any errors to Python ValueError
     match find_collinear_variables_impl(x, tol) {
-        Ok((arr, n_excl, flag)) => {
-            Ok((arr.into_pyarray(py).to_owned(), n_excl, flag))
-        },
+        Ok((arr, n_excl, flag)) => Ok((arr.into_pyarray(py).to_owned(), n_excl, flag)),
         Err(err) => {
             // Convert Rust errors to Python ValueError
             Err(PyValueError::new_err(err.to_string()))
