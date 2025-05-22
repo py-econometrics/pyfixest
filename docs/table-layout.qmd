@@ -218,7 +218,20 @@ fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
 
 pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
 ```
+##  Change reference category
+You can also change the reference category of a categorical variable using the `ref` argument in the  interaction `i()` operator. For example, repeating the last estimation but changing the reference category to "Managerial" instead of "Admin":
 
+```{python}
+
+fit9 = pf.feols("Y ~ X1 + X2 + i(job,ref='Managerial') + i(job,X2,ref='Managerial')", data = data)
+
+pf.etable([fit9], labels=labels, cat_template="{value}")
+```
+
+Notice that this process will change the `_coefnames`. In this example, the new `_coefnames` are:
+```{python}
+fit9._coefnames
+```
 
 ## Custom model headlines
 You can also add custom headers for each model by passing a list of strings to the `model_headers` argument.
