@@ -3,8 +3,8 @@ use numpy::IntoPyArray;
 use numpy::{PyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rayon::prelude::*;
 use thiserror::Error;
+
 
 #[derive(Debug, Error)]
 enum CollinearityError {
@@ -15,147 +15,6 @@ enum CollinearityError {
     InvalidTolerance { value: f64 },
 }
 
-/// State struct for the collinearity detection algorithm using a modified Cholesky decomposition.
-///
-/// This struct holds all the necessary data during the algorithm's execution:
-/// - The input matrix reference
-/// - The R matrix for Cholesky factorization
-/// - Tracking of which columns are collinear
-/// - Count of collinear columns found
-struct CollinearFoldState<'a> {
-    x: ArrayView2<'a, f64>,
-    r_matrix: Array2<f64>,
-    collinear: Vec<bool>,
-    n_collinear: usize,
-}
-
-impl<'a> CollinearFoldState<'a> {
-    /// Creates a new state for the collinearity detection algorithm.
-    ///
-    /// # Arguments
-    ///
-    /// * `x` - Input matrix view (must be square, typically a correlation or covariance matrix)
-    ///
-    /// # Returns
-    ///
-    /// A new `CollinearFoldState` with initialized values:
-    /// - R matrix filled with zeros
-    /// - Empty collinearity tracking
-    /// - Zero collinear count
-    fn new(x: ArrayView2<'a, f64>) -> Result<Self, CollinearityError> {
-        let n_cols = x.ncols();
-        let n_rows = x.nrows();
-
-        if !x.is_square() {
-            return Err(CollinearityError::NonSquareMatrix {
-                rows: n_rows,
-                cols: n_cols,
-            });
-        }
-        // Validate that the matrix is square
-        Ok(Self {
-            x,
-            r_matrix: Array2::<f64>::zeros((n_cols, n_cols)),
-            collinear: vec![false; n_cols],
-            n_collinear: 0,
-        })
-    }
-
-    /// Marks a column as collinear and updates the collinear count.
-    ///
-    /// This method is idempotent - calling it multiple times on the same
-    /// column will only increment the counter once.
-    ///
-    /// # Arguments
-    ///
-    /// * `j` - Index of the column to mark as collinear
-    #[inline]
-    fn mark_vector_as_collinear(&mut self, j: usize) {
-        if !self.collinear[j] {
-            self.collinear[j] = true;
-            self.n_collinear += 1;
-        }
-    }
-
-    /// Updates the R matrix for a non-collinear column using parallel computation.
-    ///
-    /// This is the core computational step of the algorithm. For column j, it:
-    /// 1. Stores the square root of the diagonal element
-    /// 2. Computes the off-diagonal elements in parallel using Rayon
-    /// 3. Updates the R matrix with the computed values
-    ///
-    /// # Arguments
-    ///
-    /// * `diag_val` - Computed diagonal value (r_jj) for column j
-    /// * `j` - Index of the column being processed
-    fn update_r_matrix(&mut self, diag_val: f64, j: usize) {
-        let k = self.x.ncols();
-        let diag_val_sqrt = diag_val.sqrt();
-
-        // Store the square root on the diagonal
-        self.r_matrix[[j, j]] = diag_val_sqrt;
-
-        // Parallel computation of the off-diagonal elements
-        let computed_row: Vec<(usize, f64)> = (j + 1..k)
-            .into_par_iter()
-            .map(|i| {
-                // Start with the value from the input matrix
-                let mut value = self.x[[i, j]];
-                for p in 0..j {
-                    // Subtract contributions from previous non-collinear columns
-                    if !self.collinear[p] {
-                        value -= self.r_matrix[[p, i]] * self.r_matrix[[p, j]];
-                    }
-                }
-                (i, value / diag_val_sqrt)
-            })
-            .collect();
-
-        // Update the R matrix with the computed values
-        for (i, val) in computed_row {
-            self.r_matrix[[j, i]] = val;
-        }
-    }
-
-    /// Computes the diagonal element r_jj for column j.
-    ///
-    /// This method calculates the diagonal element after removing the contributions
-    /// from all previous non-collinear columns. A small value indicates collinearity.
-    ///
-    /// # Arguments
-    ///
-    /// * `j` - Index of the column to compute the diagonal element for
-    ///
-    /// # Returns
-    ///
-    /// The computed diagonal element value
-    #[inline]
-    fn compute_initial_diag_element(&mut self, j: usize) -> f64 {
-        // Start with the diagonal element from the input matrix
-        (0..j).fold(self.x[[j, j]], |mut r_jj, n| {
-            // Skip collinear columns
-            if !self.collinear[n] {
-                let r_nj = self.r_matrix[[n, j]];
-                r_jj -= r_nj * r_nj;
-            }
-            r_jj
-        })
-    }
-
-    /// Converts the state into the final result tuple.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing:
-    /// - An ndarray Array1 indicating which columns are collinear
-    /// - Number of collinear columns found
-    /// - Boolean flag indicating if all columns are collinear
-    fn into_result(self) -> (Array1<bool>, usize, bool) {
-        let k = self.x.ncols();
-        let collinear_array = Array1::from_vec(self.collinear);
-        (collinear_array, self.n_collinear, self.n_collinear == k)
-    }
-}
 
 /// Detects collinear variables in a matrix using a modified Cholesky decomposition.
 ///
@@ -182,27 +41,51 @@ fn find_collinear_variables_impl(
         return Err(CollinearityError::InvalidTolerance { value: tol });
     }
 
-    // Create initial state
-    let initial_state = CollinearFoldState::new(x)?;
 
-    // Process each column sequentially using fold
-    // The algorithm is inherently sequential as each column depends on previous ones
-    let final_state = (0..x.ncols()).fold(initial_state, |mut current_state, j| {
-        // Compute the diagonal element after projections onto previous columns
-        let r_jj = current_state.compute_initial_diag_element(j);
-        // Check for collinearity using the specified tolerance
-        if r_jj < tol {
-            // If the diagonal element is too small, mark the column as collinear
-            current_state.mark_vector_as_collinear(j);
-        } else {
-            // Otherwise, update the R matrix for this non-collinear column
-            current_state.update_r_matrix(r_jj, j);
+    let k = x.ncols();
+    if !x.is_square() {
+        return Err(CollinearityError::NonSquareMatrix {rows: x.nrows(), cols: k})
+    }
+
+    let mut r = Array2::<f64>::zeros((k, k));
+    let mut id_excl = vec![false; k];
+    let mut n_excl = 0usize;
+
+    for j in 0..k {
+        let mut r_jj = x[(j,j)];
+        for k in 0..j {
+            if id_excl[k] { continue; }
+            let r_kj = r[(k,j)];
+            r_jj -= r_kj * r_kj;
         }
-        // Return the updated state for the next iteration
-        current_state
-    });
-    Ok(final_state.into_result())
+
+        if r_jj < tol {
+            id_excl[j] = true;
+            n_excl += 1;
+            if n_excl == k {
+                let arr = Array1::from_vec(id_excl);
+                return Ok((arr, n_excl, true));
+            }
+            continue;
+        }
+
+        let rjj_sqrt = r_jj.sqrt();
+        r[(j,j)] = rjj_sqrt;
+
+        for i in (j+1)..k {
+            let mut value = x[(i,j)];
+            for k in 0..j {
+                if id_excl[k] { continue; }
+                value -= r[(k,i)] * r[(k,j)];
+            }
+            r[(j,i)] = value / rjj_sqrt;
+        }
+    }
+
+    let arr = Array1::from_vec(id_excl);
+    Ok((arr, n_excl, false))
 }
+
 
 /// Detects collinear variables in a matrix using a modified Cholesky decomposition.
 ///
@@ -223,7 +106,7 @@ fn find_collinear_variables_impl(
 /// - Number of collinear columns found
 #[pyfunction]
 #[pyo3(signature = (x, tol=1e-10))]
-pub fn find_collinear_variables_rs(
+pub fn _find_collinear_variables_rs(
     py: Python,
     x: PyReadonlyArray2<f64>,
     tol: f64,
