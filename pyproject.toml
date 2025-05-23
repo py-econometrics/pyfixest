@@ -107,8 +107,7 @@ lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
-# cd into the Rust crate and develop‑install it
-maturin-develop = "cd pyfixest_core && python -m maturin develop --release --strip"
+maturin-develop = "maturin develop --release --strip"
 
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
