@@ -1,13 +1,12 @@
-from functools import partial
-
 import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
 
+from pyfixest.core import demean as demean_rs
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
-from pyfixest.estimation.rust.demean_rs_ import demean_rs
+
 
 @pytest.mark.parametrize(
     argnames="demean_func",
@@ -19,11 +18,11 @@ def test_demean(benchmark, demean_func):
 
     N = 10_000
     M = 100
-    x = rng.normal(0, 1,M * N).reshape((N, M))
+    x = rng.normal(0, 1, M * N).reshape((N, M))
     f1 = rng.choice(list(range(M)), N).reshape((N, 1))
     f2 = rng.choice(list(range(M)), N).reshape((N, 1))
 
-    flist = np.concatenate((f1, f2), axis=1)
+    flist = np.concatenate((f1, f2), axis=1).astype(np.uint)
 
     # without weights
     weights = np.ones(N)
@@ -36,7 +35,9 @@ def test_demean(benchmark, demean_func):
     weights = rng.uniform(0, 1, N).reshape((N, 1))
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x, weights)
-    res_pyfixest, success = benchmark(demean_func, x, flist, weights.flatten(), tol=1e-10)
+    res_pyfixest, success = benchmark(
+        demean_func, x, flist, weights.flatten(), tol=1e-10
+    )
     assert np.allclose(res_pyhdfe, res_pyfixest)
 
 

@@ -2,15 +2,16 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
+from pyfixest.core import count_fixef_fully_nested_all
+
 # Import your module here - adjust import path as needed
 from pyfixest.estimation.numba.nested_fixef_nb import (
     _count_fixef_fully_nested_all as count_fixef_fully_nested_all_nb,
 )
-from pyfixest_core import count_fixef_fully_nested_all_rs
 
 
 @pytest.mark.parametrize(
-    "fn", [count_fixef_fully_nested_all_rs, count_fixef_fully_nested_all_nb]
+    "fn", [count_fixef_fully_nested_all, count_fixef_fully_nested_all_nb]
 )
 def test_count_fixef_fully_nested_basic(benchmark, fn):
     """Basic test for count_fixef_fully_nested_all_rs function."""
