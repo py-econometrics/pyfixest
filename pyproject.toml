@@ -25,6 +25,7 @@ dependencies = [
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
+pixi-pycharm = ">=0.0.8,<0.0.9"
 
 [project.optional-dependencies]
 dev = [
@@ -43,6 +44,7 @@ dev = [
   "jaxlib>=0.4.15",
   "maturin>=1.8.0",
   "pip",
+  "pytest-benchmark>=5.1.0,<6"
 ]
 
 plots = [
@@ -73,11 +75,8 @@ jax = [
 python-build = ">=1.2.2,<2"
 
 [build-system]
-requires = [
-  "hatchling>=1.9.0",      # for your Python packaging
-  "maturin>=1.8.0"         # to build the Rust extension
-]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -108,8 +107,7 @@ lint = "pre-commit run ruff --all-files"
 update-test-data = "Rscript tests/r_test_comparisons.R"
 install-r = "Rscript r_test_requirements.R"
 render-notebooks = "python scripts/run_notebooks.py"
-# cd into the Rust crate and develop‑install it
-maturin-develop = "cd pyfixest_core && python -m maturin develop --release --strip"
+maturin-develop = "maturin develop --release --strip"
 
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
@@ -224,4 +222,5 @@ module = [
 ignore_missing_imports = true
 
 [tool.maturin]
-path = "pyfixest_core"
+module-name = "pyfixest.core._core_impl"
+features = ["pyo3/extension-module"]
