@@ -52,7 +52,7 @@ fn count_fixef_fully_nested_impl(
 }
 
 #[pyfunction]
-pub fn count_fixef_fully_nested_all_rs(
+pub fn _count_fixef_fully_nested_all_rs(
     py: Python<'_>,
     all_fixef_array: &PyAny,
     cluster_colnames: &PyAny,

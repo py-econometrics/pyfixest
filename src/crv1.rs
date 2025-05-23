@@ -67,7 +67,7 @@ fn crv1_meat_loop_imp(
 }
 
 #[pyfunction]
-pub fn crv1_meat_loop_rs(
+pub fn _crv1_meat_loop_rs(
     py: Python,
     scores: PyReadonlyArray2<f64>,
     clustid: PyReadonlyArray1<usize>,

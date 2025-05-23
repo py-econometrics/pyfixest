@@ -135,7 +135,8 @@ fn demean_impl(
 }
 
 #[pyfunction]
-pub fn demean_rs(
+#[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
+pub fn _demean_rs(
     py: Python<'_>,
     x: PyReadonlyArray2<f64>,
     flist: PyReadonlyArray2<usize>,
