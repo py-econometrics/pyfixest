@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -234,7 +234,7 @@ class Feols:
         solver: Literal[
             "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
         ] = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -2592,7 +2592,7 @@ def _drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
-    backend_func: callable,
+    backend_func: Callable,
 ) -> tuple[np.ndarray, list[str], list[str], list[int]]:
     """
     Check for multicollinearity in the design matrices X and Z.
