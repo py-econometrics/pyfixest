@@ -75,12 +75,8 @@ jax = [
 python-build = ">=1.2.2,<2"
 
 [build-system]
-requires = [
-  "hatchling>=1.9.0",      # for your Python packaging
-  "maturin>=1.8.0"         # to build the Rust extension
-]
-build-backend = "hatchling.build"
-
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -227,4 +223,5 @@ module = [
 ignore_missing_imports = true
 
 [tool.maturin]
-path = "pyfixest_core"
+module-name = "pyfixest.core._core_impl"
+features = ["pyo3/extension-module"]
