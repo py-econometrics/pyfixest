@@ -13,6 +13,11 @@ from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.literals import (
+    QuantregMethodOptions,
+    SolverOptions,
+)
+from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -36,6 +41,7 @@ class FixestMulti:
         fsplit: Optional[str],
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
+        quantreg_method: QuantregMethodOptions = "fn",
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -73,6 +79,9 @@ class FixestMulti:
             formulaic during the creation of the model matrix. This can include
             custom factorization functions, transformations, or any other
             variables that need to be available in the formula environment.
+        quantreg_method: QuantregMethodOptions, optional
+            The method to use for the quantile regression. Can be either "fn" or "pfn".
+            Defaults to "fn". See `quantreg` for more details.
 
         Returns
         -------
@@ -88,6 +97,7 @@ class FixestMulti:
         self._seed = seed if use_compression else None
         self._separation_check = separation_check
         self._context = capture_context(context)
+        self._quantreg_method = quantreg_method
 
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
@@ -200,18 +210,13 @@ class FixestMulti:
     def _estimate_all_models(
         self,
         vcov: Union[str, dict[str, str], None],
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-            "jax",
-        ],
+        solver: SolverOptions,
         demeaner_backend: Literal["numba", "jax"] = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
         separation_check: Optional[list[str]] = None,
+        quantile: Optional[float] = None,
     ) -> None:
         """
         Estimate multiple regression models.
@@ -224,8 +229,8 @@ class FixestMulti:
             - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
             - If a dictionary, it should have the format {"CRV1": "clustervar"}
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-        solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-            default is 'np.linalg.solve'. Solver to use for the estimation.
+        solver: SolverOptions
+            Solver to use for the estimation.
         demeaner_backend: Literal["numba", "jax"], optional
             The backend to use for demeaning. Can be either "numba" or "jax".
             Defaults to "numba".
@@ -240,6 +245,9 @@ class FixestMulti:
         separation_check: list[str], optional
             Only used in "fepois". Methods to identify and drop separated observations.
             Either "fe" or "ir". Executes both by default.
+        quantile: float
+            The quantile to use for quantile regression. Default is None.
+            Only relevant for "quantreg" estimation.
 
         Returns
         -------
@@ -261,6 +269,8 @@ class FixestMulti:
         _run_full = self._run_full
         _splitvar = self._splitvar
         _context = self._context
+        _quantreg_method = self._quantreg_method
+        self._quantiles = quantile
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -289,6 +299,7 @@ class FixestMulti:
                         Felogit,
                         Feprobit,
                         FeolsCompressed,
+                        Quantreg,
                     ]
 
                     model_kwargs = {
@@ -332,6 +343,14 @@ class FixestMulti:
                             }
                         )
 
+                    if _method == "quantreg":
+                        model_kwargs.update(
+                            {
+                                "quantile": self._quantiles,
+                                "method": _quantreg_method,
+                            }
+                        )
+
                     model_map = {
                         ("feols", False): Feols,
                         ("feols", True): Feiv,
@@ -340,6 +359,7 @@ class FixestMulti:
                         ("feglm-probit", None): Feprobit,
                         ("feglm-gaussian", None): Fegaussian,
                         ("compression", None): FeolsCompressed,
+                        ("quantreg", None): Quantreg,
                     }
 
                     if _method == "compression":

@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -31,6 +32,7 @@ from pyfixest.estimation.feiv_ import Feiv
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.quantreg_ import Quantreg
 from pyfixest.report.summarize import _post_processing_input_checks
 from pyfixest.report.utils import _relabel_expvar
 from pyfixest.utils.dev_utils import _select_order_coefs
@@ -411,6 +413,63 @@ def coefplot(
     )
 
 
+def qplot(
+    models: ModelInputType,
+    rename_models: Optional[dict] = None,
+    figsize: Optional[tuple] = None,
+    ncol: Optional[int] = None,
+    nrow: Optional[int] = None,
+):
+    """
+    Plot regression quantiles.
+
+    Parameters
+    ----------
+    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
+            Feols, Fepois & Feiv models.
+    figsize : tuple or None, optional
+        The size of the figure. If None, the default size is used.
+    rename_models : dict, optional
+        A dictionary to rename the models. The keys are the original model names and the values the new names.
+    ncol : int, optional
+        Number of columns of subplots. Default is None. Note: cannot be set jointly with nrow argument.
+    nrow : int, optional
+        Number of rows of subplots. Default is None. Note: cannot be set jointly with ncol argument.
+    Returns
+    -------
+    object
+        A matplotplit figure.
+    """
+    if rename_models is None:
+        rename_models = {}
+
+    models = _post_processing_input_checks(
+        models, check_duplicate_model_names=True, rename_models=rename_models
+    )
+
+    df_all = pd.DataFrame()
+    for model in models:
+        if not isinstance(model, Quantreg):
+            raise TypeError(
+                "The 'qplot' function is only supported for objects of type Quantreg."
+            )
+
+        df = model.tidy()
+        df["quantile"] = model._quantile
+        df["model"] = model._model_name_plot
+
+        df_all = pd.concat([df_all, df], axis=0)
+
+    df_all.reset_index(inplace=True)
+
+    return _qplot(
+        data=df_all,
+        figsize=figsize,
+        nrow=nrow,
+        ncol=ncol,
+    )
+
+
 def _coefplot(plot_backend, *, figsize, **plot_kwargs):
     """Coefplot function that dispatches to the correct plotting backend."""
     figsize = set_figsize(figsize, plot_backend)
@@ -646,6 +705,73 @@ def _coefplot_matplotlib(
     plt.tight_layout()
     plt.close()
     return f
+
+
+def _qplot(data: pd.DataFrame, nrow: Optional[int]=None, ncol: Optional[int]=None, figsize:tuple[int]=(10, 6)):
+    """
+    Plot point estimates ± confidence intervals by quantile,
+    with one subplot per coefficient.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Must contain columns ['Coefficient', 'quantile', 'Estimate', '2.5%', '97.5%'].
+    nrow : int, optional
+        Number of rows of subplots. If both nrow and ncol are None, defaults to 1.
+    ncol : int, optional
+        Number of columns of subplots. Exactly one of nrow/ncol must be set, unless both are None.
+    figsize : tuple, optional
+        Figure size passed to plt.subplots().
+
+    Raises
+    ------
+    ValueError
+        If both nrow and ncol are specified.
+    """
+    # --- default layout: one row if neither is specified ---
+    if nrow is None and ncol is None:
+        nrow = 1
+
+    # --- error if both specified ---
+    if (nrow is not None) and (ncol is not None):
+        raise ValueError("Specify only one of nrow or ncol, not both.")
+
+    # --- determine number of panels ---
+    coeffs = list(data['Coefficient'].unique())
+    K = len(coeffs)
+
+    # compute rows × cols
+    if nrow is not None:
+        rows = nrow
+        cols = math.ceil(K / rows)
+    else:
+        cols = ncol
+        rows = math.ceil(K / cols)
+
+    # --- make subplots ---
+    fig, axes = plt.subplots(rows, cols, figsize=figsize, squeeze=False)
+    axes = axes.flatten()
+
+    # --- plot each coefficient in its own panel ---
+    for i, coef in enumerate(coeffs):
+        ax = axes[i]
+        sub = data[data['Coefficient'] == coef].sort_values('quantile')
+        q    = sub['quantile'].values
+        est  = sub['Estimate'].values
+        lo   = est - sub['2.5%'].values
+        hi   = sub['97.5%'].values - est
+
+        ax.errorbar(q, est, yerr=[lo, hi], fmt='o-')
+        ax.set_title(coef)
+        ax.set_xlabel('Quantile')
+        ax.set_ylabel('Estimate')
+
+    # --- hide any unused axes ---
+    for j in range(K, rows * cols):
+        axes[j].set_visible(False)
+
+    plt.tight_layout()
+    return fig, axes
 
 
 def _get_model_df(

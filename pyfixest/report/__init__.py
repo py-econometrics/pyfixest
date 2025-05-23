@@ -7,6 +7,7 @@ from pyfixest.report.summarize import (
 from pyfixest.report.visualize import (
     coefplot,
     iplot,
+    qplot,
 )
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "etable",
     "iplot",
     "make_table",
+    "qplot",
     "summary",
 ]
