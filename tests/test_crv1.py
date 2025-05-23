@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
+from pyfixest.core import crv1_meat_loop as crv1_meat_loop_rs
 from pyfixest.estimation.vcov_utils import _crv1_meat_loop
-from pyfixest_core import crv1_meat_loop_rs
 
 
 @pytest.mark.parametrize("func", [_crv1_meat_loop, crv1_meat_loop_rs])
