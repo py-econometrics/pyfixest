@@ -317,8 +317,8 @@ def _set_demeaner_backend(
 ) -> Callable:
     """Set the demeaning backend.
 
-    Currently, we allow for a numba backend and a jax backend. The latter is
-    expected to be faster on GPU.
+    Currently, we allow for a numba backend, rust backend and a jax backend.
+    The latter is expected to be faster on GPU.
 
     Parameters
     ----------
@@ -336,7 +336,7 @@ def _set_demeaner_backend(
         If the demeaning backend is not supported.
     """
     if demeaner_backend == "rust":
-        from pyfixest_core import demean_rs as demean_rs
+        from pyfixest.core.demean import demean as demean_rs
 
         return demean_rs
     elif demeaner_backend == "numba":
