@@ -14,13 +14,13 @@ repos:
       - id: check-added-large-files
         exclude: pixi.lock
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.32.1
+    rev: 0.33.0
     hooks:
       - id: check-github-workflows
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.4
+    rev: v0.11.10
     hooks:
       - id: ruff
         args: ["--fix", "--output-format=full"]

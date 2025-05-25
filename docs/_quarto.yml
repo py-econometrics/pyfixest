@@ -47,6 +47,8 @@ website:
           text: "On Small Sample Corrections"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
+        - text: "Compare Stata & PyFixest"
+          file: stata-2-pyfixest.qmd
         - text: "PyFixest on the GPU"
           file: pyfixest_gpu.ipynb
         - text: "Replicating 'The Effect' with PyFixest"

@@ -5,7 +5,11 @@ VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 SolverOptions = Literal[
-    "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+    "np.linalg.lstsq",
+    "np.linalg.solve",
+    "scipy.linalg.solve",
+    "scipy.sparse.linalg.lsqr",
+    "jax",
 ]
 DemeanerBackendOptions = Literal["numba", "jax", "rust"]
 PredictionErrorOptions = Literal["prediction"]

@@ -13,6 +13,7 @@
 [![Downloads](https://static.pepy.tech/badge/pyfixest/month)](https://pepy.tech/project/pyfixest)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
+[![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
@@ -24,6 +25,11 @@ The package aims to mimic `fixest` syntax and functionality as closely as Python
 Nevertheless, for a quick introduction, you can take a look at the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
 For questions on `PyFixest`, head on over to our [github discussions](https://github.com/py-econometrics/pyfixest/discussions).
+
+## Support PyFixest
+
+If you enjoy using `PyFixest`, please consider donating to [GiveDirectly](https://donate.givedirectly.org/dedicate) and dedicating your donation to `pyfixest.dev@gmail.com`.
+You can also leave a message through the donation form - your support and encouragement mean a lot to the developers!
 
 ## Features
 
@@ -41,6 +47,7 @@ For questions on `PyFixest`, head on over to our [github discussions](https://gi
         estimator
     -   Basic Versions of the Local Projections estimator following
         [Dube et al (2023)](https://www.nber.org/papers/w31184)
+    - The fully saturated Event-Study estimator following [Sun & Abraham (2021)](https://www.sciencedirect.com/science/article/abs/pii/S030440762030378X)
 - **Multiple Hypothesis Corrections** following the Procedure by [Romano and Wolf](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20976314) and **Simultaneous Confidence Intervals** using a **Multiplier Bootstrap**
 - Fast **Randomization Inference** as in the [ritest Stata package](https://hesss.org/ritest.pdf)
 - The **Causal Cluster Variance Estimator (CCV)** following [Abadie et al.](https://economics.mit.edu/sites/default/files/2022-09/When%20Should%20You%20Adjust%20Standard%20Errors%20for%20Clustering.pdf)
@@ -268,6 +275,13 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://szymon.info"><img src="https://avatars.githubusercontent.com/u/13162607?v=4?s=100" width="100px;" alt="Szymon Sacher"/><br /><sub><b>Szymon Sacher</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=elchorro" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/AronNemeth"><img src="https://avatars.githubusercontent.com/u/96979880?v=4?s=100" width="100px;" alt="AronNemeth"/><br /><sub><b>AronNemeth</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=AronNemeth" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/DTchebotarev"><img src="https://avatars.githubusercontent.com/u/6100882?v=4?s=100" width="100px;" alt="Dmitri Tchebotarev"/><br /><sub><b>Dmitri Tchebotarev</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=DTchebotarev" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/FuZhiyu"><img src="https://avatars.githubusercontent.com/u/11523699?v=4?s=100" width="100px;" alt="FuZhiyu"/><br /><sub><b>FuZhiyu</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3AFuZhiyu" title="Bug reports">🐛</a> <a href="https://github.com/py-econometrics/pyfixest/commits?author=FuZhiyu" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://www.marceloortizm.com"><img src="https://avatars.githubusercontent.com/u/70643379?v=4?s=100" width="100px;" alt="Marcelo Ortiz M."/><br /><sub><b>Marcelo Ortiz M.</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mortizm1988" title="Documentation">📖</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/jestover"><img src="https://avatars.githubusercontent.com/u/11298484?v=4?s=100" width="100px;" alt="Joseph Stover"/><br /><sub><b>Joseph Stover</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=jestover" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/JaapCTJ"><img src="https://avatars.githubusercontent.com/u/157970664?v=4?s=100" width="100px;" alt="JaapCTJ"/><br /><sub><b>JaapCTJ</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=JaapCTJ" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://shapiromh.com"><img src="https://avatars.githubusercontent.com/u/2327833?v=4?s=100" width="100px;" alt="Matt Shapiro"/><br /><sub><b>Matt Shapiro</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=shapiromh" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

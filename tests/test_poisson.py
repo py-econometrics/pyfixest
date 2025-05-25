@@ -12,14 +12,10 @@ from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 from pyfixest.estimation.estimation import fepois
-from pyfixest.utils.set_rpy2_path import update_r_paths
-
-update_r_paths()
 
 pandas2ri.activate()
 
 fixest = importr("fixest")
-stats = importr("stats")
 
 
 def test_separation():
@@ -101,6 +97,7 @@ def test_separation():
             assert len(record) == 0
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
 def test_against_fixest(fml):
     data = pf.get_data(model="Fepois")
