@@ -21,6 +21,7 @@ from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     PredictionErrorOptions,
     PredictionType,
+    SolverOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -91,8 +92,9 @@ class Feols:
         Type of the weights variable. Either "aweights" for analytic weights or
         "fweights" for frequency weights.
     solver : str, optional.
-        The solver to use for the regression. Can be either "np.linalg.solve" or
-        "np.linalg.lstsq". Defaults to "np.linalg.solve".
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
     context : int or Mapping[str, Any]
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
@@ -204,8 +206,9 @@ class Feols:
         Adjusted R-squared value of the model.
     _adj_r2_within : float
         Adjusted R-squared value computed on demeaned dependent variable.
-    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-        default is 'np.linalg.solve'. Solver to use for the estimation.
+    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
+        "scipy.sparse.linalg.lsqr", "jax"],
+        default is "scipy.linalg.solve". Solver to use for the estimation.
     _demeaner_backend: Literal["numba", "jax"]
         The backend used for demeaning.
     _data: pd.DataFrame
@@ -233,9 +236,7 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         store_data: bool = True,
         copy_data: bool = True,
@@ -614,6 +615,19 @@ class Feols:
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
 
+        elif self._vcov_type == "nid":
+            ssc_kwargs_hetero = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N,
+            }
+
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._vcov = self._ssc * self._vcov_nid()
+
         elif self._vcov_type == "CRV":
             if data is not None:
                 # use input data set
@@ -759,6 +773,11 @@ class Feols:
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
+
+    def _vcov_nid(self):
+        raise NotImplementedError(
+            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _is_iv = self._is_iv
@@ -2750,6 +2769,7 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC1",
             "HC2",
             "HC3",
+            "nid",
         ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
 
 
@@ -2807,6 +2827,10 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
+
+    elif vcov_type_detail == "nid":
+        vcov_type = "nid"
+        is_clustered = False
 
     clustervar = deparse_vcov if is_clustered else None
 

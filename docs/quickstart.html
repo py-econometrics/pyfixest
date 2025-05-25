@@ -17,7 +17,7 @@ div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
   width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */
   vertical-align: middle;
 }
 /* CSS for syntax highlighting */
@@ -149,79 +149,79 @@ window.Quarto = {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
   <li class="nav-item">
-    <a class="nav-link" href="./pyfixest.html"> 
+    <a class="nav-link" href="./pyfixest.html">
 <span class="menu-text">PyFixest</span></a>
-  </li>  
+  </li>
   <li class="nav-item">
-    <a class="nav-link active" href="./quickstart.html" aria-current="page"> 
+    <a class="nav-link active" href="./quickstart.html" aria-current="page">
 <span class="menu-text">Quickstart</span></a>
-  </li>  
+  </li>
   <li class="nav-item">
-    <a class="nav-link" href="./reference/index.html"> 
+    <a class="nav-link" href="./reference/index.html">
 <span class="menu-text">Function Reference</span></a>
-  </li>  
+  </li>
   <li class="nav-item">
-    <a class="nav-link" href="./changelog.html"> 
+    <a class="nav-link" href="./changelog.html">
 <span class="menu-text">Changelog</span></a>
-  </li>  
+  </li>
   <li class="nav-item">
-    <a class="nav-link" href="./contributing.html"> 
+    <a class="nav-link" href="./contributing.html">
 <span class="menu-text">Contributing</span></a>
-  </li>  
+  </li>
   <li class="nav-item dropdown ">
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-learn-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Learn more</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">    
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-learn-more">
         <li>
     <a class="dropdown-item" href="./table-layout.html">
  <span class="dropdown-text">Regression Tables and Summary Statistics</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./marginaleffects.html">
  <span class="dropdown-text">Hypothesis Testing and Marginal Effects</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./difference-in-differences.html">
  <span class="dropdown-text">Difference-in-Differences Estimation</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./multiple_testing.html">
  <span class="dropdown-text">Multiple Testing Corrections</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./regression_decomposition.html">
  <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./ssc.html">
  <span class="dropdown-text">On Small Sample Corrections</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./stata-2-pyfixest.html">
  <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./pyfixest_gpu.html">
  <span class="dropdown-text">PyFixest on the GPU</span></a>
-  </li>  
+  </li>
         <li>
     <a class="dropdown-item" href="./replicating-the-effect.html">
  <span class="dropdown-text">Replicating ‘The Effect’ with PyFixest</span></a>
-  </li>  
+  </li>
     </ul>
   </li>
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
     <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
-</i> 
+</i>
 <span class="menu-text"></span></a>
-  </li>  
+  </li>
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -235,7 +235,7 @@ window.Quarto = {
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
     <nav id="TOC" role="doc-toc" class="toc-active">
     <h2 id="toc-title">On this page</h2>
-   
+
   <ul>
   <li><a href="#ols-with-fixed-effects" id="toc-ols-with-fixed-effects" class="nav-link active" data-scroll-target="#ols-with-fixed-effects">OLS with Fixed Effects</a>
   <ul class="collapse">
@@ -280,11 +280,11 @@ window.Quarto = {
 
 <div class="quarto-title-meta">
 
-    
-  
-    
+
+
+
   </div>
-  
+
 
 
 </header>
@@ -338,7 +338,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                }; 
+                };
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -350,7 +350,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-                        
+
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -364,7 +364,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                     e.appendChild(script);
                 })()
             </script>
-            
+
 </div>
 <div class="cell-output cell-output-display">
 
@@ -372,7 +372,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                }; 
+                };
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -384,7 +384,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-                        
+
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -398,7 +398,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                     e.appendChild(script);
                 })()
             </script>
-            
+
 </div>
 <div class="cell-output cell-output-display">
 
@@ -406,7 +406,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
-                }; 
+                };
                 window.letsPlotCall = function(f) {
                     window.letsPlotCallQueue.push(f);
                 };
@@ -418,7 +418,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
                         window.letsPlotCallQueue = [];
-                        
+
                     };
                     script.onerror = function(event) {
                         window.letsPlotCall = function(f) {};    // noop
@@ -432,7 +432,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
                     e.appendChild(script);
                 })()
             </script>
-            
+
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>matplotlib: 3.10.0
@@ -543,8 +543,8 @@ pyfixest  : 0.29.0
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
 RangeIndex: 1000 entries, 0 to 999
 Data columns (total 11 columns):
- #   Column    Non-Null Count  Dtype  
----  ------    --------------  -----  
+ #   Column    Non-Null Count  Dtype
+---  ------    --------------  -----
  0   Y         999 non-null    float64
  1   Y2        1000 non-null   float64
  2   X1        999 non-null    float64
@@ -656,7 +656,7 @@ RMSE: 2.141 R2: 0.137 R2 Within: 0.126 </code></pre>
  #yfkkglcuhv .gt_super { font-size: 65%; }
  #yfkkglcuhv .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #yfkkglcuhv .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -707,10 +707,10 @@ RMSE: 2.141 R2: 0.137 R2 Within: 0.126 </code></pre>
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="2">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -719,7 +719,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>Alternatively, the <code>.summarize</code> module contains a <code>summary</code> function, which can be applied on instances of regression model objects or lists of regression model objects. For details on how to customize <code>etable()</code>, please take a look at the <a href="https://py-econometrics.github.io/pyfixest/table-layout.html">dedicated vignette</a>.</p>
@@ -837,16 +837,16 @@ Name: t value, dtype: float64</code></pre>
 <div class="cell-output cell-output-display" data-execution_count="13">
    <div id="gAQQVb"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
-   
+
    (function() {
    // ----------
-   
+
    var containerDiv = document.getElementById("gAQQVb");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
            if (entry.contentBoxSize && width > 0) {
-           
+
                // Render plot
                if (observer) {
                    observer.disconnect();
@@ -963,10 +963,10 @@ Name: t value, dtype: float64</code></pre>
 "spec_id":"1"
 };
                window.letsPlotCall(function() {
-       
+
                var toolbar = null;
-               var plotContainer = containerDiv;               
-               
+               var plotContainer = containerDiv;
+
                    var options = {
                        sizing: {
                            width_mode: "min",
@@ -979,17 +979,17 @@ Name: t value, dtype: float64</code></pre>
                      toolbar.bind(fig);
                    }
                });
-               
+
                break;
            }
        }
    });
-   
+
    observer.observe(containerDiv);
-   
+
    // ----------
    })();
-   
+
    </script>
 </div>
 </div>
@@ -1067,7 +1067,7 @@ RMSE: 2.158 R2: 0.123 </code></pre>
  #xprmaaxupv .gt_super { font-size: 65%; }
  #xprmaaxupv .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #xprmaaxupv .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -1130,10 +1130,10 @@ RMSE: 2.158 R2: 0.123 </code></pre>
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -1142,7 +1142,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>We see that the <code>X1</code> coefficient is <code>-1.019</code>, which is less than the value from the OLS model in column (2). Where is the difference coming from? Well, in the fixed effect model we are interested in controlling for the feature <code>group_id</code>. One possibility to do this is by adding a simple dummy variable for each level of <code>group_id</code>.</p>
@@ -1285,7 +1285,7 @@ Observations:  998
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -1.019 |        0.121 |    -8.445 |      0.000 | -1.272 |  -0.766 |
 ---
-RMSE: 2.141 R2: 0.137 R2 Within: 0.126 
+RMSE: 2.141 R2: 0.137 R2 Within: 0.126
 ###
 
 Estimation:  OLS
@@ -1840,7 +1840,7 @@ dtype: object</code></pre>
  #wrbfnazmiu .gt_super { font-size: 65%; }
  #wrbfnazmiu .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #wrbfnazmiu .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -1907,10 +1907,10 @@ dtype: object</code></pre>
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="2">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -1919,7 +1919,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>We obtain the same results as in the book!</p>
@@ -2015,7 +2015,7 @@ Observations:  998
  #rhztrtwegf .gt_super { font-size: 65%; }
  #rhztrtwegf .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #rhztrtwegf .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -2091,10 +2091,10 @@ Observations:  998
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -2103,7 +2103,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>You can access the F-Statistic of the first stage via the <code>_f_stat_1st_stage</code> attribute:</p>
@@ -2257,7 +2257,7 @@ dtype: float64</code></pre>
  #fcsrjubxbb .gt_super { font-size: 65%; }
  #fcsrjubxbb .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #fcsrjubxbb .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -2319,10 +2319,10 @@ dtype: float64</code></pre>
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="4">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -2331,7 +2331,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>You can make predictions on the <code>response</code> and <code>link</code> scale via the <code>predict()</code> method:</p>
@@ -2427,7 +2427,7 @@ Coefficient
  #lmgicbbpwu .gt_super { font-size: 65%; }
  #lmgicbbpwu .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #lmgicbbpwu .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -2504,10 +2504,10 @@ Coefficient
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="4">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -2516,7 +2516,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>You can access an individual model by its name - i.e.&nbsp;a formula - via the <code>all_fitted_models</code> attribute.</p>
@@ -2641,7 +2641,7 @@ Observations:  998
 | Intercept     |      0.919 |        0.112 |     8.214 |      0.000 |  0.699 |   1.138 |
 | X1            |     -1.000 |        0.085 |   -11.802 |      0.000 | -1.166 |  -0.834 |
 ---
-RMSE: 2.158 R2: 0.123 
+RMSE: 2.158 R2: 0.123
 ###
 
 Estimation:  OLS
@@ -2653,7 +2653,7 @@ Observations:  997
 |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
 | X1            |     -0.949 |        0.070 |   -13.636 |      0.000 | -1.086 |  -0.813 |
 ---
-RMSE: 1.73 R2: 0.437 R2 Within: 0.161 
+RMSE: 1.73 R2: 0.437 R2 Within: 0.161
 ###
 
 Estimation:  OLS
@@ -2723,7 +2723,7 @@ RMSE: 1.441 R2: 0.609 R2 Within: 0.2 </code></pre>
  #hminynfvos .gt_super { font-size: 65%; }
  #hminynfvos .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #hminynfvos .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -2794,10 +2794,10 @@ RMSE: 1.441 R2: 0.609 R2 Within: 0.2 </code></pre>
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -2806,7 +2806,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>You can also visualize multiple estimation results via <code>iplot()</code> and <code>coefplot()</code>:</p>
@@ -2815,16 +2815,16 @@ Coefficient
 <div class="cell-output cell-output-display">
    <div id="FjXapo"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
-   
+
    (function() {
    // ----------
-   
+
    var containerDiv = document.getElementById("FjXapo");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
            if (entry.contentBoxSize && width > 0) {
-           
+
                // Render plot
                if (observer) {
                    observer.disconnect();
@@ -2941,10 +2941,10 @@ Coefficient
 "spec_id":"2"
 };
                window.letsPlotCall(function() {
-       
+
                var toolbar = null;
-               var plotContainer = containerDiv;               
-               
+               var plotContainer = containerDiv;
+
                    var options = {
                        sizing: {
                            width_mode: "min",
@@ -2957,17 +2957,17 @@ Coefficient
                      toolbar.bind(fig);
                    }
                });
-               
+
                break;
            }
        }
    });
-   
+
    observer.observe(containerDiv);
-   
+
    // ----------
    })();
-   
+
    </script>
 </div>
 </div>
@@ -3119,16 +3119,16 @@ Coefficient
 <div class="cell-output cell-output-display" data-execution_count="54">
    <div id="DfJYg0"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
-   
+
    (function() {
    // ----------
-   
+
    var containerDiv = document.getElementById("DfJYg0");
    var observer = new ResizeObserver(function(entries) {
        for (let entry of entries) {
            var width = containerDiv.clientWidth
            if (entry.contentBoxSize && width > 0) {
-           
+
                // Render plot
                if (observer) {
                    observer.disconnect();
@@ -3233,10 +3233,10 @@ Coefficient
 "spec_id":"3"
 };
                window.letsPlotCall(function() {
-       
+
                var toolbar = null;
-               var plotContainer = containerDiv;               
-               
+               var plotContainer = containerDiv;
+
                    var options = {
                        sizing: {
                            width_mode: "min",
@@ -3249,17 +3249,17 @@ Coefficient
                      toolbar.bind(fig);
                    }
                });
-               
+
                break;
            }
        }
    });
-   
+
    observer.observe(containerDiv);
-   
+
    // ----------
    })();
-   
+
    </script>
 </div>
 </div>
@@ -3331,7 +3331,7 @@ Coefficient
  #iaraevxyea .gt_super { font-size: 65%; }
  #iaraevxyea .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
  #iaraevxyea .gt_asterisk { font-size: 100%; vertical-align: 0; }
- 
+
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
 <thead>
@@ -3397,10 +3397,10 @@ Coefficient
   </tr>
 </tbody>
   <tfoot class="gt_sourcenotes">
-  
+
   <tr>
     <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell:
-Coefficient 
+Coefficient
  (Std. Error)</td>
   </tr>
 
@@ -3409,7 +3409,7 @@ Coefficient
 </table>
 
 </div>
-        
+
 </div>
 </div>
 <p>For more details see the vignette on <a href="https://py-econometrics.github.io/pyfixest/difference-in-differences.html">Difference-in-Differences Estimation</a>.</p>
@@ -3437,7 +3437,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       toggleBodyColorMode(bsSheetEl);
     }
   }
-  toggleBodyColorPrimary();  
+  toggleBodyColorPrimary();
   const icon = "";
   const anchorJS = new window.AnchorJS();
   anchorJS.options = {
@@ -3447,7 +3447,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   anchorJS.add('.anchored');
   const isCodeAnnotation = (el) => {
     for (const clz of el.classList) {
-      if (clz.startsWith('code-annotation-')) {                     
+      if (clz.startsWith('code-annotation-')) {
         return true;
       }
     }
@@ -3467,11 +3467,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       button.setAttribute("data-bs-toggle", "tooltip");
       button.setAttribute("data-bs-placement", "left");
       button.setAttribute("data-bs-title", "Copied!");
-      tooltip = new bootstrap.Tooltip(button, 
-        { trigger: "manual", 
+      tooltip = new bootstrap.Tooltip(button,
+        { trigger: "manual",
           customClass: "code-copy-button-tooltip",
           offset: [0, -8]});
-      tooltip.show();    
+      tooltip.show();
     }
     setTimeout(function() {
       if (tooltip) {
@@ -3549,7 +3549,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     if (onUntriggerFn) {
       config.onUntrigger = onUntriggerFn;
     }
-    window.tippy(el, config); 
+    window.tippy(el, config);
   }
   const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
   for (var i=0; i<noterefs.length; i++) {
@@ -3625,7 +3625,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     tippyHover(xref, undefined, function(instance) {
       instance.disable();
       let url = xref.getAttribute('href');
-      let hash = undefined; 
+      let hash = undefined;
       if (url.startsWith('#')) {
         hash = url;
       } else {
@@ -3653,7 +3653,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
             if (note !== null) {
               const html = processXRef(id, note);
               instance.setContent(html);
-            } 
+            }
           }).finally(() => {
             instance.enable();
             instance.show();
@@ -3677,7 +3677,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
             }
             const html = processXRef(null, note);
             instance.setContent(html);
-          } 
+          }
         }).finally(() => {
           instance.enable();
           instance.show();
@@ -3717,7 +3717,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
             height = bottom - top;
           }
           if (top !== null && height !== null && parent !== null) {
-            // cook up a div (if necessary) and position it 
+            // cook up a div (if necessary) and position it
             let div = window.document.getElementById("code-annotation-line-highlight");
             if (div === null) {
               div = window.document.createElement("div");

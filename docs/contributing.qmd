@@ -90,14 +90,17 @@ pixi run lint
 
 and you're ready to go! After installation, the task will run all linting rules via `ruff`.
 
-We’ve included other tasks to help install the necessary R packages for running unit tests or to run different sets of tests:
+We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
+except for R packages unavailable through conda-forge.
 ```{.bash .code-copy}
-# install all R development dependencies
-pixi run install-r
+# attempt to install non-conda R dependencies
+pixi run install-r-extended
 # run all tests via pytest
 pixi run tests
-# run all tests excluding very computationally demanding tests
+# run all tests excluding very computationally demanding tests or R-based tests
 pixi run tests-regular
+# run all tests that depend on the extra R dependencies
+pixi run tests-against-r-extended
 # rerun failed tests
 pixi run tests-rerun
 ```
@@ -132,26 +135,10 @@ winget install -e --id Python.Python.3.11
 
 ### Installing R
 
-Note that installing R and the R packages listed below is only necessary if you want to test against R in your local installation.
-You can also test against R by using github actions.
+Note that R and R dependencies available through conda-forge are installed by pixi to the local project if you use the dev environment.
+Some extra R dependencies may require additional development tools not included in the environment, for example:
 
-On Mac/Linux:
-```{.bash .code-copy}
-brew install r
-```
-
-Depending on your local set up, you may need to install additional libraries, for
-example:
-
-```{.bash .code-copy}
-sudo apt install gcc-11 cmake
-```
-
-On Windows using [Winget](https://winget.run/pkg/RProject/R):
-
-```{.bash .code-copy}
-winget install -e --id RProject.R
-```
+Depending on your local set up, you may need to install additional libraries to compile those extra dependencies, like a version of `gcc` and `cmake`.
 
 ### Installing Quarto
 

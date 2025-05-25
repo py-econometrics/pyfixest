@@ -1,14 +1,19 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 SolverOptions = Literal[
-    "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+    "np.linalg.lstsq",
+    "np.linalg.solve",
+    "scipy.linalg.solve",
+    "scipy.sparse.linalg.lsqr",
+    "jax",
 ]
 DemeanerBackendOptions = Literal["numba", "jax"]
 PredictionErrorOptions = Literal["prediction"]
+QuantregMethodOptions = Literal["fn", "pfn"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:

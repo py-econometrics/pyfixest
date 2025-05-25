@@ -12,8 +12,11 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import (
+    SolverOptions,
+)
 from pyfixest.estimation.solvers import solve_ols
-from pyfixest.utils.dev_utils import DataFrameType, _to_integer
+from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
 
 class Fepois(Feols):
@@ -51,8 +54,10 @@ class Fepois(Feols):
         Maximum number of iterations for the IRLS algorithm.
     tol : Optional[float], default=1e-08
         Tolerance level for the convergence of the IRLS algorithm.
-    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
-        default is 'np.linalg.solve'. Solver to use for the estimation.
+    solver : str, optional.
+        The solver to use for the regression. Can be "np.linalg.lstsq",
+        "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+        Defaults to "scipy.linalg.solve".
     demeaner_backend: Literal["numba", "jax"]
         The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
@@ -85,9 +90,7 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
-        ] = "np.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
@@ -140,8 +143,9 @@ class Fepois(Feols):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        # check if Y is a weakly positive integer
-        self._Y = _to_integer(self._Y)
+        # check that self._Y is a pandas Series or DataFrame
+        self._Y = _check_series_or_dataframe(self._Y)
+
         # check that self._Y is a weakly positive integer
         if np.any(self._Y < 0):
             raise ValueError(

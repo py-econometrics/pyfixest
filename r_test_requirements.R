@@ -1,7 +1,11 @@
-# note: fixest and broom are installed via conda
+# note: R, fixest, sandwich, broom are installed via conda
 install.packages(
-    c('fixest', 'broom','clubSandwich', 'did2s', 'wildrwolf', 'reticulate', 'ivDiag', 'stats', 'base', 'car'),
+   c('did2s', 'reticulate', 'ivDiag'),
     repos='https://cran.rstudio.com'
+);
+install.packages(
+   c('collapse', 'summclust', 'wildrwolf'),
+    repos = c('https://s3alfisc.r-universe.dev', 'https://cloud.r-project.org', 'https://fastverse.r-universe.dev')
 );
 install.packages(
     'ritest',
