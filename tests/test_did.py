@@ -1,4 +1,5 @@
 from importlib import resources
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -12,15 +13,19 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
-from pyfixest.utils.set_rpy2_path import update_r_paths
-
-update_r_paths()
+from pyfixest.utils.check_r_install import check_r_install
 
 pandas2ri.activate()
-did2s = importr("did2s")
+# Core Packages
 stats = importr("stats")
 broom = importr("broom")
 fixest = importr("fixest")
+# Extended Packages
+if import_check := check_r_install("did2s", strict=False):
+    did2s = importr("did2s")
+# Check mpdata avaialibility
+MPDATA_LOC = "C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"
+mpdata_check = Path(MPDATA_LOC).is_file()
 
 
 @pytest.fixture
@@ -33,6 +38,8 @@ def data():
     return df_het
 
 
+@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
+@pytest.mark.against_r_extended
 def test_event_study(data):
     """Test the event_study() function."""
     fit_did2s = event_study(
@@ -73,6 +80,8 @@ def test_event_study(data):
     np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
 
 
+@pytest.mark.skipif(import_check is False, reason="R package did2s not installed.")
+@pytest.mark.against_r_extended
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_did2s(data, weights):
     """Test the did2s() function."""
@@ -279,6 +288,7 @@ def test_lpdid():
     fit.tidy()
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("unit", ["unit"])
 @pytest.mark.parametrize("cluster", ["unit", "unit2"])
 def test_fully_interacted(unit, cluster):
@@ -355,10 +365,12 @@ def test_fully_interacted(unit, cluster):
     )
 
 
-@pytest.mark.skip("mpdata not available online as csv, only run test locally.")
-@pytest.mark.parametrize(
-    "mpdata_path", [r"C:/Users/alexa/Documents/pyfixest-zalando-talk/mpdta.csv"]
+@pytest.mark.against_r_core
+@pytest.mark.skipif(
+    mpdata_check is False,
+    reason="mpdata not available online as csv, only run test locally.",
 )
+@pytest.mark.parametrize("mpdata_path", [MPDATA_LOC])
 def test_fully_interacted_mpdata(mpdata_path):
     mpdata = pd.read_csv(mpdata_path)
     mpdata["first_treat"] = mpdata["first.treat"]
