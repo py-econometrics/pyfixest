@@ -39,8 +39,7 @@ def etable(
     notes: str = "",
     model_heads: Optional[list] = None,
     head_order: Optional[str] = "dh",
-    filename: Optional[str] = None,
-    print_tex: Optional[bool] = False,
+    file_name: Optional[str] = None,
     **kwargs,
 ) -> Union[pd.DataFrame, str, None]:
     r"""
@@ -90,9 +89,11 @@ def etable(
         If True, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys are the original variable
-        names and the values the new names. Note that interaction terms will also be
-        relabeled using the labels of the individual variables.
+        A dictionary to relabel the variables. The keys in this dictionary are the
+        original variable names, which correspond to the names stored in the `_coefnames`
+        attribute of the model. The values in the dictionary are the new names you want
+        to assign to these variables.
+        Note that interaction terms will also be relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
     cat_template: str, optional
         Template to relabel categorical variables. None by default, which applies no relabeling.
@@ -129,11 +130,8 @@ def etable(
         (provided the user has specified them). With "hd" it is the other way around.
         When head_order is "d", only the dependent variable and model numbers are displayed
         and with "" only the model numbers. Default is "dh".
-    filename: str, optional
-        The filename to save the LaTeX table to. If None, the LaTeX code is returned
-        as a string. Default is None.
-    print_tex: bool, optional
-        Whether to print the LaTeX code to the console. Default is False.
+    file_name: str, optional
+        The name/path of the file to save the LaTeX table to. Default is None.
 
     Returns
     -------

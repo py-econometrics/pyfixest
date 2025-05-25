@@ -7,7 +7,6 @@ from pyfixest.estimation.estimation import feols
 
 
 @pytest.fixture
-@pytest.mark.extended
 def data(local=False):
     """Load the census data used in the tests."""
     if local:
@@ -17,6 +16,7 @@ def data(local=False):
 
 
 # function retrieved from Harvard Dataverse
+@pytest.mark.extended
 def compute_CCV_AAIW(data, depvar, cluster, seed, nmx, pk):
     """
     Compute the CCV variance using a slight variation of AAIW's code.

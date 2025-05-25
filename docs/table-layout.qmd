@@ -121,8 +121,7 @@ pf.etable(
 )
 ```
 
-To obtain latex output use `format = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. If you want the latex code to be displayed in the notebook, you can use the `print_tex=True` argument.
-Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
+To obtain latex output use `format = "tex"`. If you want to save the table as a tex file, you can use the `file_name=` argument to specify the respective path where it should be saved. Etable will use latex packages `booktabs`, `threeparttable` and `makecell` for the table layout, so don't forget to include these packages in your latex document.
 
 ```{python}
 # LaTex output (include latex packages booktabs, threeparttable, and makecell in your document):
@@ -131,7 +130,6 @@ tab = pf.etable(
     signif_code=[0.01, 0.05, 0.1],
     digits=2,
     type="tex",
-    print_tex=True,
 )
 ```
 
@@ -220,7 +218,20 @@ fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
 
 pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
 ```
+##  Change reference category
+You can also change the reference category of a categorical variable using the `ref` argument in the  interaction `i()` operator. For example, repeating the last estimation but changing the reference category to "Managerial" instead of "Admin":
 
+```{python}
+
+fit9 = pf.feols("Y ~ X1 + X2 + i(job,ref='Managerial') + i(job,X2,ref='Managerial')", data = data)
+
+pf.etable([fit9], labels=labels, cat_template="{value}")
+```
+
+Notice that this process will change the `_coefnames`. In this example, the new `_coefnames` are:
+```{python}
+fit9._coefnames
+```
 
 ## Custom model headlines
 You can also add custom headers for each model by passing a list of strings to the `model_headers` argument.

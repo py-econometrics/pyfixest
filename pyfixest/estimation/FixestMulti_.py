@@ -201,7 +201,11 @@ class FixestMulti:
         self,
         vcov: Union[str, dict[str, str], None],
         solver: Literal[
-            "np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"
+            "np.linalg.lstsq",
+            "np.linalg.solve",
+            "scipy.linalg.solve",
+            "scipy.sparse.linalg.lsqr",
+            "jax",
         ],
         demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
         collin_tol: float = 1e-6,

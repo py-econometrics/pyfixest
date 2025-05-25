@@ -8,9 +8,6 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation.estimation import feols
-from pyfixest.utils.set_rpy2_path import update_r_paths
-
-update_r_paths()
 
 pandas2ri.activate()
 
@@ -19,6 +16,7 @@ stats = importr("stats")
 broom = importr("broom")
 
 
+@pytest.mark.against_r_core
 def test_i():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het["X"] = np.random.normal(size=len(df_het))
@@ -53,6 +51,7 @@ def test_i():
         feols("dep_var~i(rel_year, ref = [1.0, 'a'])", df_het)
 
 
+@pytest.mark.against_r_core
 def test_i_vs_fixest():
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
     df_het = df_het[df_het["year"] >= 2010]
@@ -115,6 +114,7 @@ def test_i_vs_fixest():
     )
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [
