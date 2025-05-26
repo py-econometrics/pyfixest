@@ -24,7 +24,7 @@ pandas2ri.activate()
 @pytest.mark.parametrize(
     "vcov",
     [
-        "iid",
+    #    "iid",
         "nid",
     ],
 )

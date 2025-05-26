@@ -276,43 +276,52 @@ class Quantreg(Feols):
 
         return beta_hat, has_converged
 
-    def _vcov_iid(self) -> np.ndarray:
-        "Compute Koenker-Bassett i.i.d. (homoskedastic) variance estimator."
-        h = get_hall_sheather_bandwidth(q=self._quantile, N=self._N)
-        res = self.fit_qreg_fn(
-            X=self._X, Y=self._Y, q=self._quantile + h
-        )  # , beta_init = -self._y_final)
-        beta_hat_plus = res[0]
-        yhat_plus = self._X @ beta_hat_plus
-        res = self.fit_qreg_fn(
-            X=self._X, Y=self._Y, q=self._quantile - h
-        )  # , beta_init = -self._y_final)
-        beta_hat_minus = res[0]
-        yhat_minus = self._X @ beta_hat_minus
-        s = (yhat_plus - yhat_minus) / (2 * h)
-        f0 = np.mean(1 / s)
-        return self._bread * self._quantile * (1 - self._quantile) / f0**2
-
     def _vcov_nid(self) -> np.ndarray:
-        "Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth. Note: the estimator is actually heteroskedasticity robust, despite its name."
-        h = get_hall_sheather_bandwidth(q=self._quantile, N=self._N)
-        res = self.fit_qreg_fn(
-            X=self._X, Y=self._Y, q=self._quantile + h
-        )  # , beta_init = -self._y_final)
-        beta_hat_plus = res[0]
+            """
+            Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
+            as developed in Hendricks and Koenker (1991).
+            Note: the estimator is actually heteroskedasticity robust, despite its name.
+            'nid' stands for 'non-iid'.
+            For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
+            """
 
-        yhat_plus = self._X @ beta_hat_plus
-        res = self._fit(
-            X=self._X, Y=self._Y, q=self._quantile - h
-        )  # , beta_init = -self._y_final)
-        beta_hat_minus = res[0]
-        yhat_minus = self._X @ beta_hat_minus
+            q = self._quantile
+            N = self._N
+            X = self._X
 
-        s = (yhat_plus - yhat_minus) / (2 * h)
-        u_hat = self._u_hat
-        psi = self._quantile - (u_hat < 0)
+            h = get_hall_sheather_bandwidth(q=q, N=N)
 
-        meat = (self._X.T * (psi**2)) @ self._X / self._N
-        bread = np.linalg.inv((self._X.T / s) @ self._X / self._N)
+            beta_hat_plus = self.fit_qreg_fn(
+                X=self._X, Y=self._Y, q=self._quantile + h
+            )[0]
+            beta_hat_minus = self.fit_qreg_fn(
+                X=self._X, Y=self._Y, q=self._quantile - h
+            )[0]
 
-        return bread @ meat @ bread / self._N
+            # eps: small tolerance parameter to avoid division by zero
+            # when di = 0; set to sqrt of machine epsilon in quantreg
+            eps = np.finfo(float).eps ** 0.5
+            # equation (2)
+            di = X @ (beta_hat_plus - beta_hat_minus)
+            # equation (3)
+            Fplus = np.maximum(0, (2 * h) / (di - eps))
+
+            # general Huber structure, see page 74 in Koenker.
+            J = X.T @ X
+            XFplus = X * np.sqrt(Fplus[:, np.newaxis])
+            H = XFplus.T @ XFplus
+            Hinv = np.linalg.inv(H)
+
+            return q * (1-q) * Hinv @ J @ Hinv
+
+    def _vcov_iid(self) -> np.ndarray:
+        raise NotImplementedError(
+            "The 'iid' vcov is not implemented for quantile regression. "
+            "Please use 'nid' instead, which is heteroskedasticity robust."
+        )
+
+    def _vcov_crv1(self) -> np.ndarray:
+        raise NotImplementedError(
+            "The 'crv1' vcov is not implemented for quantile regression. "
+            "Please use 'nid' instead, which is heteroskedasticity robust."
+        )
