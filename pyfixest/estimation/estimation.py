@@ -1042,8 +1042,8 @@ def quantreg(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. The only option currently supported is "nid",
-        which is short for nonparametric IID (independent and identically distributed) and uses the Hall-Sheather bandwidth.
-        Despite its name, the "nid" estimator is a heteroskedasticity-robust estimator.
+        which is short for non- IID (independent and identically distributed). The "nid" method implements
+        the sandwich estimator proposed in Hendricks and Koenker (1993).
 
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
