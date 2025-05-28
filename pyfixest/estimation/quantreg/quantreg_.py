@@ -364,18 +364,18 @@ def _crv1_vcov_loop(X: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray,
             start = g_locs[g]
             end = g_locs[g + 1]
             g_index = g_indices[start:end]
-            Xg      = X[g_index]
+            Xg  = X[g_index]
             WXg = np.zeros_like(Xg)
-            ug      = u_hat[g_index]
+            ug  = u_hat[g_index]
             Ng = Xg.shape[0]
 
             psi_g = q - 1.0 * (ug < 0)
 
             np.dot(Xg.T, psi_g, out=score_g)
             np.outer(score_g, score_g, out=tmp)
-            meat   += tmp
+            meat += tmp
 
-            mask    = (np.abs(ug) <= delta) * 1.0
+            mask= (np.abs(ug) <= delta) * 1.0
             for n in range(Ng):
                 WXg[n] = Xg[n] * mask[n]
 
