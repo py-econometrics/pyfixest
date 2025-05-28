@@ -158,7 +158,10 @@ class SaturatedEventStudy(DID):
         )
 
     def aggregate(
-        self, agg="period", use_weights: bool = True, weighting: Optional[str] = "shares"
+        self,
+        agg="period",
+        use_weights: bool = True,
+        weighting: Optional[str] = "shares",
     ) -> pd.DataFrame:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
@@ -451,8 +454,8 @@ def compute_period_weights(
     if weights is not None and use_weights:
         post = (
             df[df[treatment] == 1]
-            .groupby([cohort, period])
-            [weights].sum()
+            .groupby([cohort, period])[weights]
+            .sum()
             .reset_index(name="n_grel")
         )
     else:
@@ -471,8 +474,8 @@ def compute_period_weights(
     if weights is not None and use_weights:
         pre = (
             df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
-            .groupby([cohort, period])
-            [weights].sum()
+            .groupby([cohort, period])[weights]
+            .sum()
             .reset_index(name="n_grel")
         )
     else:

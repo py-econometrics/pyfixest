@@ -86,8 +86,8 @@ class TWFE(DID):
                 fml=_fml,
                 data=_data,
                 weights=self._weights,
-                weights_type=self._weights_type
-            )
+                weights_type=self._weights_type,
+            ),
         )
         self._fit = fit
 
