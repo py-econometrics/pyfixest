@@ -26,13 +26,17 @@ class DID(ABC):
         YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
         Datetime variables are currently not accepted. Never treated units must
         have a value of 0.
-    xfml : str
+    cluster : Optional[str]
+        The name of the cluster variable.
+    weights : Optional[str]
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights. Must be analytic weights for now.
+    xfml : Optional[str]
         The formula for the covariates.
-    att : str
+    att : Optional[bool], default=True
         Whether to estimate the average treatment effect on the treated (ATT) or
         the canonical event study design with all leads and lags. Default is True.
-    cluster : str
-        The name of the cluster variable.
     """
 
     @abstractmethod
@@ -44,8 +48,9 @@ class DID(ABC):
         tname: str,
         gname: str,
         cluster: Optional[str] = None,
+        weights: Optional[str] = None,
         xfml: Optional[str] = None,
-        att: bool = True,
+        att: Optional[bool] = True,
     ):
         # do some checks here
 
@@ -57,9 +62,10 @@ class DID(ABC):
         self._xfml = xfml
         self._att = att
         self._cluster = cluster
+        self._weights = weights
+        self._weights_type = "aweights"
 
         # check if tname and gname are of type int (either int 64, 32, 8)
-
         for var in [self._tname, self._gname]:
             if self._data[var].dtype not in [
                 "int64",

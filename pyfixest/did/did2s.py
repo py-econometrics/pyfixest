@@ -36,18 +36,18 @@ class DID2S(DID):
         YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
         Datetime variables are currently not accepted. Never treated units
         must have a value of 0.
-    xfml : str
+    cluster : str
+        The name of the cluster variable.
+    weights : Optional[str]
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights. Must be analytic weights for now.
+    xfml : Optional[str]
         The formula for the covariates.
-    att : str
+    att : Optional[bool], default=True
         Whether to estimate the pooled average treatment effect on the treated
         (ATT) or the canonical event study design with all leads and lags / the
         ATT for each period. Default is True.
-    cluster : str
-        The name of the cluster variable.
-    weights : Optional[str].
-        Default is None. Weights for WLS estimation. If None, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
     """
 
     def __init__(
@@ -59,8 +59,8 @@ class DID2S(DID):
         gname: str,
         cluster: str,
         weights: Optional[str] = None,
-        att: bool = True,
         xfml: Optional[str] = None,
+        att: Optional[bool] = True,
     ):
         super().__init__(
             data=data,
@@ -71,6 +71,7 @@ class DID2S(DID):
             xfml=xfml,
             att=att,
             cluster=cluster,
+            weights=weights,
         )
 
         self._estimator = "did2s"
@@ -86,9 +87,6 @@ class DID2S(DID):
         self._first_u = np.array([])
         self._second_u = np.array([])
 
-        # column name with weights. None by default
-        self._weights_name = weights
-
     def estimate(self):
         """Estimate the two-step DID2S model."""
         return _did2s_estimate(
@@ -96,7 +94,7 @@ class DID2S(DID):
             yname=self._yname,
             _first_stage=self._fml1,
             _second_stage=self._fml2,
-            weights=self._weights_name,
+            weights=self._weights,
             treatment="is_treated",
         )  # returns triple Feols, first_u, second_u
 
@@ -121,7 +119,7 @@ class DID2S(DID):
             first_u=self._first_u,
             second_u=self._second_u,
             cluster=self._cluster,
-            weights=self._weights_name,
+            weights=self._weights,
         )
 
     def iplot(
@@ -175,10 +173,10 @@ def _did2s_estimate(
         The formula for the second stage.
     treatment: str
         The name of the treatment variable. Must be boolean.
-    weights : Optional[str].
+    weights : Optional[str]
         Default is None. Weights for WLS estimation. If None, all observations
         are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
+        contains the weights. Must be analytic weights for now.
 
     Returns
     -------
@@ -283,10 +281,10 @@ def _did2s_vcov(
         The second stage residuals.
     cluster: str
         The name of the cluster variable.
-    weights : Optional[str].
+    weights : Optional[str]
         Default is None. Weights for WLS estimation. If None, all observations
         are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
+        contains the weights. Must be analytic weights for now.
 
     Returns
     -------

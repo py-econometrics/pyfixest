@@ -31,6 +31,10 @@ class SaturatedEventStudy(DID):
         Name of the treatment variable.
     cluster : str
         The name of the cluster variable.
+    weights : Optional[str]
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights. Must be analytic weights for now.
     xfml : str
         Additional covariates to include in the model.
     att : bool
@@ -47,10 +51,11 @@ class SaturatedEventStudy(DID):
         idname: str,
         tname: str,
         gname: str,
-        att: bool = True,
         cluster: Optional[str] = None,
+        weights: Optional[str] = None,
         xfml: Optional[str] = None,
-        display_warning: bool = True,
+        att: Optional[bool] = True,
+        display_warning: Optional[bool] = True,
     ):
         super().__init__(
             data=data,
@@ -61,6 +66,7 @@ class SaturatedEventStudy(DID):
             cluster=cluster,
             xfml=xfml,
             att=att,
+            weights=weights,
         )
         self._estimator = "Saturated Event Study"
 
@@ -83,6 +89,7 @@ class SaturatedEventStudy(DID):
             outcome=self._yname,
             time_id=self._tname,
             unit_id=self._idname,
+            weights=self._weights,
             cluster=self._cluster,
         )
 
@@ -151,23 +158,28 @@ class SaturatedEventStudy(DID):
         )
 
     def aggregate(
-        self, agg="period", weighting: Optional[str] = "shares"
+        self, agg="period", use_weights: bool = True, weighting: Optional[str] = "shares"
     ) -> pd.DataFrame:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
 
         Parameters
         ----------
-        agg : str, optional
+        agg : str
+            The type of aggregation to perform. Currently only "period" is supported.
 
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
-                computes the average treatment effect by period.
+            Unimplemented: Can be either "att" or "cohort" or "period".
+            Default is "att". If "att", computes the average treatment effect on the treated.
+            If "cohort", computes the average treatment effect by cohort. If "period",
+            computes the average treatment effect by period.
 
+        use_weights : bool, default=True
+            Whether to use analytic weights in the aggregation.
+            If True, uses the weights provided in the model set up.
+        
         weighting : str, optional
-
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+            The type of weighting to use. Can be either 'shares' or 'variance'.
+        
 
         Returns
         -------
@@ -198,6 +210,8 @@ class SaturatedEventStudy(DID):
                 cohort=model._gname,
                 period="rel_time",
                 treatment="is_treated",
+                weights=model._weights_name,
+                use_weights=use_weights,
             ).set_index([self._gname, "rel_time"])
 
         treated_periods = list(period_set)
@@ -317,6 +331,7 @@ def _saturated_event_study(
     outcome: str,
     time_id: str,
     unit_id: str,
+    weights: Optional[str] = None,
     cluster: Optional[str] = None,
 ):
     cohort_dummies = pd.get_dummies(
@@ -329,7 +344,7 @@ def _saturated_event_study(
                 {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
-    m = feols(fml=ff, data=df_int, vcov={"CRV1": cluster})  # type: ignore
+    m = feols(fml=ff, data=df_int, weights=weights, vcov={"CRV1": cluster})
     res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
@@ -389,6 +404,8 @@ def compute_period_weights(
     period: str = "rel_time",
     treatment: str = "treatment",
     include_grid: bool = True,
+    weights: Optional[str] = None,
+    use_weights: bool = True,
 ) -> pd.DataFrame:
     """
     Compute Sun & Abraham interaction weights for all relative times.
@@ -411,6 +428,11 @@ def compute_period_weights(
         Column name of treatment indicator (0/1).
     include_grid : bool, default True
         If True, returns a full (cohort x period) grid with zero-filled weights.
+    weights : Optional[str], default None
+        If provided, the name of the column in `data` that contains weights.
+    use_weights : bool, default True
+        If True, uses the analytic weights provided in the `weights` column for aggregation.
+        If False, uses simple counts.
 
     Returns
     -------
@@ -418,28 +440,48 @@ def compute_period_weights(
         Columns [cohort, period, weight]. If `include_grid`, every
         combination appears (with weight=0 where not defined).
     """
-    df = data[[cohort, period, treatment]].copy()
+    columns = [cohort, period, treatment]
+    if weights is not None:
+        columns.append(weights)
+
+    df = data[columns].copy()
     ever_treated = df.loc[df[treatment] == 1, cohort].unique()
 
     # post-treatment cells (l > 0)
-    post = (
-        df[df[treatment] == 1]
-        .groupby([cohort, period])
-        .size()
-        .reset_index(name="n_grel")
-    )
+    if weights is not None and use_weights:
+        post = (
+            df[df[treatment] == 1]
+            .groupby([cohort, period])
+            [weights].sum()
+            .reset_index(name="n_grel")
+        )
+    else:
+        post = (
+            df[df[treatment] == 1]
+            .groupby([cohort, period])
+            .size()
+            .reset_index(name="n_grel")
+        )
     post = post[post[period] >= 0]
     denom_post = post.groupby(period)["n_grel"].sum().reset_index(name="n_rel")
     post = post.merge(denom_post, on=period)
     post["weight"] = post["n_grel"] / post["n_rel"]
 
     # pre-treatment cells (l < 0)
-    pre = (
-        df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
-        .groupby([cohort, period])
-        .size()
-        .reset_index(name="n_grel")
-    )
+    if weights is not None and use_weights:
+        pre = (
+            df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
+            .groupby([cohort, period])
+            [weights].sum()
+            .reset_index(name="n_grel")
+        )
+    else:
+        pre = (
+            df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
+            .groupby([cohort, period])
+            .size()
+            .reset_index(name="n_grel")
+        )
     pre = pre[pre[period] < 0]
     denom_pre = pre.groupby(period)["n_grel"].sum().reset_index(name="n_rel")
     pre = pre.merge(denom_pre, on=period)
