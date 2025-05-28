@@ -291,29 +291,30 @@ def test_lpdid():
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("unit", ["unit"])
 @pytest.mark.parametrize("cluster", ["unit", "unit2"])
-def test_fully_interacted(unit, cluster):
-    df_multi_cohort = pd.read_csv(
-        resources.files("pyfixest.did.data").joinpath("df_het.csv")
-    )
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_fully_interacted(data, unit, cluster, weights):
     if cluster == "unit2":
         rng = np.random.default_rng(21)
-        df_multi_cohort["unit2"] = rng.choice(range(100), size=len(df_multi_cohort))
+        data["unit2"] = rng.choice(range(100), size=len(data))
+    extra_fixest_args = {"weights": data[weights]} if weights is not None else {}
 
     saturated_py = pf.event_study(
-        data=df_multi_cohort,
+        data=data,
         yname="dep_var",
         idname=unit,
         tname="year",
         gname="g",
         estimator="saturated",
         cluster=cluster,
+        weights=weights,
     )
     saturated_py.test_treatment_heterogeneity()
 
     saturated_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
-        data=df_multi_cohort,
+        data=data,
         vcov=ro.Formula(f"~{cluster}"),
+        **extra_fixest_args,
     )
 
     r_tidy = pd.DataFrame(broom.tidy_fixest(saturated_r)).T
@@ -341,8 +342,9 @@ def test_fully_interacted(unit, cluster):
 
     saturated_agg_r = fixest.feols(
         ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
-        data=df_multi_cohort,
+        data=data,
         vcov=ro.Formula(f"~{cluster}"),
+        **extra_fixest_args,
     )
 
     r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T
