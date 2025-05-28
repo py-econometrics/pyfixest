@@ -176,10 +176,10 @@ class SaturatedEventStudy(DID):
         use_weights : bool, default=True
             Whether to use analytic weights in the aggregation.
             If True, uses the weights provided in the model set up.
-        
+
         weighting : str, optional
             The type of weighting to use. Can be either 'shares' or 'variance'.
-        
+
 
         Returns
         -------
