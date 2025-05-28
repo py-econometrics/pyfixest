@@ -1,11 +1,14 @@
+from tkinter import W
 import warnings
 from collections.abc import Mapping
 from functools import partial
 from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
+import numba as nb
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
+from scipy.stats import norm
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.FormulaParser import FixestFormula
@@ -17,7 +20,7 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-
+from pyfixest.estimation.vcov_utils import bucket_argsort
 
 class Quantreg(Feols):
     "Quantile regression model."
@@ -320,8 +323,72 @@ class Quantreg(Feols):
             "Please use 'nid' instead, which is heteroskedasticity robust."
         )
 
-    def _vcov_crv1(self) -> np.ndarray:
-        raise NotImplementedError(
-            "The 'crv1' vcov is not implemented for quantile regression. "
-            "Please use 'nid' instead, which is heteroskedasticity robust."
-        )
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
+
+        """
+        Implement cluster robust variance estimator for quantile regression following
+        Parente and Santos Silva, 2016.
+        """
+
+        X = self._X
+        N, k = X.shape
+        q = self._quantile
+        u_hat = self._u_hat
+
+        # kappa: median absolute deviation of the a-th quantile regression residuals
+        kappa = np.median(np.abs(u_hat - np.median(u_hat)))
+        h_G     = get_hall_sheather_bandwidth(q=q, N=N)
+        delta = kappa*( norm.ppf(q + h_G) - norm.ppf(q - h_G) )
+
+
+        import pdb; pdb.set_trace()
+        vcov = _crv1_vcov_loop(X = X, clustid = clustid, cluster_col = cluster_col, q = q, u_hat = u_hat, delta = delta)
+
+        return vcov
+
+@nb.njit(parallel = False)
+def _crv1_vcov_loop(X: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray, q: float, u_hat: np.ndarray, delta: float) -> tuple[np.ndarray, np.ndarray]:
+
+        N, k = X.shape
+
+        meat = np.zeros((k,k))
+        bread = np.zeros((k,k))
+        tmp  = np.empty((k,k))
+        score_g = np.zeros(k)
+        g_indices, g_locs = bucket_argsort(cluster_col)
+        G = len(g_locs)
+
+        for i in range(clustid.size):
+
+            g = clustid[i]
+            start = g_locs[g]
+            end = g_locs[g + 1]
+            g_index = g_indices[start:end]
+            Xg      = X[g_index]
+            WXg = np.zeros_like(Xg)
+            ug      = u_hat[g_index]
+            Ng = Xg.shape[0]
+
+            psi_g = q - 1.0 * (ug < 0)
+
+            np.dot(Xg.T, psi_g, out=score_g)
+            np.outer(score_g, score_g, out=tmp)
+            meat   += tmp
+
+            mask    = (np.abs(ug) <= delta) * 1.0
+            for n in range(Ng):
+                WXg[n] = Xg[n] * mask[n]
+
+            np.dot(WXg.T, WXg, out=tmp)
+            bread  += tmp
+
+        meat  /= G
+        bread /= (2 * delta * G)
+
+        vcov     = np.linalg.inv(bread) @ meat @ np.linalg.inv(bread) / N
+
+
+        return vcov
+
+
+
