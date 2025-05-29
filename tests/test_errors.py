@@ -783,3 +783,39 @@ def test_empty_vcov_error():
 
     with pytest.warns(UserWarning):
         fit.tidy()
+
+
+def test_errors_quantreg(data):
+
+    data = data.dropna()
+
+    # error for iid errors
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1", data=data, vcov="iid")
+
+    # error for CRV3
+    with pytest.raises(VcovTypeNotSupportedError):
+        pf.quantreg("Y ~ X1", data=data, vcov={"CRV3": "f1"})
+
+    # error for two-way clustering
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": "f1+f2"})
+
+    # quantile outside of [0, 1]
+    with pytest.raises(ValueError):
+        pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
+    with pytest.raises(ValueError):
+        pf.quantreg("Y ~ X1", data=data, quantile=1.1)
+
+    # quantile not a float but a list
+    with pytest.raises(TypeError):
+        pf.quantreg("Y ~ X1", data=data, quantile=[0.5])
+
+    with pytest.raises(TypeError):
+        pf.quantreg("Y ~ X1", data=data, quantile=np.array([0.5]))
+
+    # error when fixed effects in formula
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1 | f1", data=data)
+
+

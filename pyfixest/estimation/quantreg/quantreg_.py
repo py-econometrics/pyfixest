@@ -73,7 +73,7 @@ class Quantreg(Feols):
         )
 
         self._supports_wildboottest = False
-        self._supports_wildboottest = False
+        self._support_crv3_inference = False
         self._supports_cluster_causal_variance = False
 
         self._quantile = quantile
@@ -131,6 +131,13 @@ class Quantreg(Feols):
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
+
+    def prepare_model_matrix(self):
+        "Prepare model inputs for estimation."
+        super().prepare_model_matrix()
+
+        if self._fe is not None:
+            raise NotImplementedError("Fixed effects are not yet supported for Quantile Regression.")
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
@@ -321,6 +328,10 @@ class Quantreg(Feols):
 
             return q * (1-q) * Hinv @ J @ Hinv
 
+    def _vcov_hetero(self) -> np.ndarray:
+
+        return self._vcov_nid()
+
     def _vcov_iid(self) -> np.ndarray:
         raise NotImplementedError(
             "The 'iid' vcov is not implemented for quantile regression. "
@@ -334,8 +345,13 @@ class Quantreg(Feols):
         Parente and Santos Silva, 2016.
         """
 
+        if len(self._clustervar) > 1:
+            raise NotImplementedError(
+                "Multiway clustering is not (yet) supported for quantile regression."
+            )
+
         X = self._X
-        N, k = X.shape
+        N, _ = X.shape
         q = self._quantile
         u_hat = self._u_hat
 
@@ -344,8 +360,6 @@ class Quantreg(Feols):
         h_G     = get_hall_sheather_bandwidth(q=q, N=N)
         delta = kappa*( norm.ppf(q + h_G) - norm.ppf(q - h_G) )
 
-
-        import pdb; pdb.set_trace()
         vcov = _crv1_vcov_loop(X = X, clustid = clustid, cluster_col = cluster_col, q = q, u_hat = u_hat, delta = delta)
 
         return vcov

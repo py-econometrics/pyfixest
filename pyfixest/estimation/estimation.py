@@ -1043,7 +1043,9 @@ def quantreg(
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. The only option currently supported is "nid",
         which is short for non- IID (independent and identically distributed). The "nid" method implements
-        the sandwich estimator proposed in Hendricks and Koenker (1993).
+        the sandwich estimator proposed in Hendricks and Koenker (1993). "hetero" also works and is
+        equivalent to nid. Alternatively, cluster robust inference following Parente and Santos Silva (2016)
+        can be specified via a dictionary with the keys "type" and "cluster". Only one-way clustering is supported.
 
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
@@ -1174,6 +1176,10 @@ def quantreg(
 
     if method not in ["fn"]:
         raise ValueError(f"Invalid method. Must be 'fn' but you provided {method}.")
+
+    if isinstance(vcov, str):
+        if vcov in ["hetero", "HC1", "HC2", "HC3"]:
+            vcov = "nid"
 
     # quantreg specific errors
     if tol <= 0:
