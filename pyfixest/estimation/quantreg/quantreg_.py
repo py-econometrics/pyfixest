@@ -72,6 +72,10 @@ class Quantreg(Feols):
             demeaner_backend=demeaner_backend,
         )
 
+        self._supports_wildboottest = False
+        self._supports_wildboottest = False
+        self._supports_cluster_causal_variance = False
+
         self._quantile = quantile
         self._method = f"quantreg_{method}"
         self._quantile_tol = quantile_tol
@@ -345,6 +349,7 @@ class Quantreg(Feols):
         vcov = _crv1_vcov_loop(X = X, clustid = clustid, cluster_col = cluster_col, q = q, u_hat = u_hat, delta = delta)
 
         return vcov
+
 
 @nb.njit(parallel = False)
 def _crv1_vcov_loop(X: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray, q: float, u_hat: np.ndarray, delta: float) -> tuple[np.ndarray, np.ndarray]:
