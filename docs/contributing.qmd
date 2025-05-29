@@ -90,6 +90,12 @@ pixi run lint
 
 and you're ready to go! After installation, the task will run all linting rules via `ruff`.
 
+To run type checks via `mypy`, you can run
+
+```{.bash .code-copy}
+pixi run mypy
+```
+
 We’ve included other tasks to help with testing. Almost all the necessary dependencies to run tests are included in the dev environment,
 except for R packages unavailable through conda-forge.
 ```{.bash .code-copy}
