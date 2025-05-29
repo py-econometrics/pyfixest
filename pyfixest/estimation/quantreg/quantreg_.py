@@ -1,4 +1,3 @@
-from tkinter import W
 import warnings
 from collections.abc import Mapping
 from functools import partial
@@ -70,6 +69,11 @@ class Quantreg(Feols):
             sample_split_value=sample_split_value,
             context=context,
             demeaner_backend=demeaner_backend,
+        )
+
+        warnings.warn(
+            "The Quantile Regression implementation is experimental and may change in future releases.",
+            FutureWarning,
         )
 
         self._supports_wildboottest = False
