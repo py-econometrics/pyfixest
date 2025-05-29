@@ -347,7 +347,7 @@ def _saturated_event_study(
                 {"+".join([f"i(rel_time, {x}, ref = -1.0)" for x in cohort_dummies.columns.tolist()])}
                 | {unit_id} + {time_id}
                 """
-    m = feols(fml=ff, data=df_int, weights=weights, vcov={"CRV1": cluster})
+    m = feols(fml=ff, data=df_int, weights=weights, vcov={"CRV1": cluster}, weights_type = "aweights")  # type: ignore
     res = m.tidy()
     # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
