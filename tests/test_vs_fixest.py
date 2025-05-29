@@ -196,9 +196,8 @@ BACKEND_F3 = [
 ]
 
 
-@pytest.mark.against_r
-@pytest.mark.parametrize("demeaner_backend,f3_type", BACKEND_F3)
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("demeaner_backend,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
