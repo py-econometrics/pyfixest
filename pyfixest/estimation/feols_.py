@@ -716,7 +716,7 @@ class Feols:
 
                     if not _support_crv3_inference:
                         raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV regression."
+                            f"CRV3 inference is not for models of type '{self._method}'."
                         )
 
                     if (
