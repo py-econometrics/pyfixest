@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 import pandas as pd
 
@@ -15,17 +15,19 @@ def event_study(
     idname: str,
     tname: str,
     gname: str,
-    xfml: Optional[str] = None,
     cluster: Optional[str] = None,
-    estimator: Optional[str] = "twfe",
+    weights: Optional[str] = None,
+    xfml: Optional[str] = None,
     att: Optional[bool] = True,
+    estimator: Optional[Literal["did2s", "twfe", "saturated"]] = "twfe",
 ):
     """
     Estimate Event Study Model.
 
     This function allows for the estimation of treatment effects using different
     estimators. Currently, it supports "twfe" for the two-way fixed effects
-    estimator and "did2s" for Gardner's two-step DID2S estimator. Other estimators
+    estimator, "did2s" for Gardner's two-step DID2S estimator, and "saturated" for
+    a Sun & Abraham staggered event study estimator. Other estimators
     are in development.
 
     Parameters
@@ -42,14 +44,18 @@ def event_study(
         Unit-specific time of initial treatment.
     cluster: Optional[str]
         The name of the cluster variable. If None, defaults to idname.
-    xfml : str
+    weights : Optional[str]
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights. Must be analytic weights for now.
+    xfml : Optional[str]
         The formula for the covariates.
-    estimator : str
-        The estimator to use. Options are "did2s", "twfe", and "saturated".
-    att : bool, optional
+    att : Optional[bool]
         If True, estimates the average treatment effect on the treated (ATT).
         If False, estimates the canonical event study design with all leads and
         lags. Default is True.
+    estimator : Optional[str], default="twfe"
+        The estimator to use. Options are "did2s", "twfe", and "saturated".
 
     Returns
     -------
@@ -96,10 +102,11 @@ def event_study(
     assert isinstance(idname, str), "idname must be a string"
     assert isinstance(tname, str), "tname must be a string"
     assert isinstance(gname, str), "gname must be a string"
-    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
-    assert isinstance(estimator, str), "estimator must be a string"
-    assert isinstance(att, bool), "att must be a boolean"
     assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
+    assert isinstance(weights, str) or weights is None, "weights must be a string"
+    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
+    assert isinstance(att, bool), "att must be a boolean"
+    assert isinstance(estimator, str), "estimator must be a string"
 
     cluster = idname if cluster is None else cluster
 
@@ -110,9 +117,10 @@ def event_study(
             idname=idname,
             tname=tname,
             gname=gname,
+            cluster=cluster,
+            weights=weights,
             xfml=xfml,
             att=att,
-            cluster=cluster,
         )
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
@@ -130,9 +138,10 @@ def event_study(
             idname=idname,
             tname=tname,
             gname=gname,
+            cluster=cluster,
+            weights=weights,
             xfml=xfml,
             att=att,
-            cluster=cluster,
         )
         fit = twfe.estimate()
         fit._yname = twfe._yname
@@ -151,9 +160,10 @@ def event_study(
             idname=idname,
             tname=tname,
             gname=gname,
+            cluster=cluster,
+            weights=weights,
             xfml=xfml,
             att=att,
-            cluster=cluster,
         )
         fit = saturated.estimate()
         vcov = fit.vcov(vcov={"CRV1": cluster})

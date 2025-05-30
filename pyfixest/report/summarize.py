@@ -568,6 +568,8 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
             estimation_method = "TWFE"
         elif fxst._method == "did2s":
             estimation_method = "DID2S"
+        elif fxst._method == "saturated":
+            estimation_method = "Saturated Event Study"
         else:
             raise ValueError("Unknown estimation method.")
         print("###")

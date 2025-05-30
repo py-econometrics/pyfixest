@@ -8,11 +8,14 @@ from pyfixest.did.estimation import did2s, event_study
 
 @pytest.fixture
 def data():
+    rng = np.random.default_rng(1243)
     df_het = pd.read_csv("pyfixest/did/data/df_het.csv")
+    df_het["weights"] = rng.uniform(0, 10, size=len(df_het))
     return df_het
 
 
-def test_event_study_twfe(data):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_event_study_twfe(data, weights):
     twfe = event_study(
         data=data,
         yname="dep_var",
@@ -21,9 +24,10 @@ def test_event_study_twfe(data):
         gname="g",
         att=True,
         estimator="twfe",
+        weights=weights,
     )
 
-    twfe_feols = pf.feols("dep_var ~ treat | state + year", data=data)
+    twfe_feols = pf.feols("dep_var ~ treat | state + year", data=data, weights=weights)
 
     assert np.allclose(twfe.coef().values, twfe_feols.coef().values), (
         "TWFE coefficients are not the same."
@@ -43,7 +47,8 @@ def test_event_study_twfe(data):
     # ), "TWFE confidence intervals are not the same."
 
 
-def test_event_study_did2s(data):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_event_study_did2s(data, weights):
     event_study_did2s = event_study(
         data=data,
         yname="dep_var",
@@ -52,6 +57,7 @@ def test_event_study_did2s(data):
         gname="g",
         att=True,
         estimator="did2s",
+        weights=weights,
     )
 
     fit_did2s = did2s(
@@ -61,6 +67,7 @@ def test_event_study_did2s(data):
         second_stage="~treat",
         treatment="treat",
         cluster="state",
+        weights=weights,
     )
 
     assert np.allclose(event_study_did2s.coef().values, fit_did2s.coef().values), (

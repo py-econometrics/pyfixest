@@ -23,7 +23,7 @@ def feols(
     fml: str,
     data: DataFrameType,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
-    weights: Union[None, str] = None,
+    weights: Optional[str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol=1e-08,

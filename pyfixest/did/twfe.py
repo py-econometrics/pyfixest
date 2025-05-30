@@ -31,13 +31,17 @@ class TWFE(DID):
         YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
         Datetime variables are currently not accepted. Never treated units
         must have a value of 0.
-    xfml: str
+    cluster: Optional[str], default="idname"
+        The name of the cluster variable.
+    weights : Optional[str]
+        Default is None. Weights for WLS estimation. If None, all observations
+        are weighted equally. If a string, the name of the column in `data` that
+        contains the weights. Must be analytic weights for now.
+    xfml: Optional[str]
         The formula for the covariates.
-    att: bool
+    att: Optional[bool], default=True
         Whether to estimate the average treatment effect on the treated (ATT) or the
         canonical event study design with all leads and lags. Default is True.
-    cluster: Optional[str]
-        The name of the cluster variable.
     """
 
     def __init__(
@@ -47,9 +51,10 @@ class TWFE(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: Optional[str] = None,
-        att: bool = True,
         cluster: Optional[str] = "idname",
+        weights: Optional[str] = None,
+        xfml: Optional[str] = None,
+        att: Optional[bool] = True,
     ) -> None:
         super().__init__(
             data=data,
@@ -60,6 +65,7 @@ class TWFE(DID):
             xfml=xfml,
             att=att,
             cluster=cluster,
+            weights=weights,
         )
 
         self._estimator = "twfe"
@@ -74,7 +80,15 @@ class TWFE(DID):
         _fml = self._fml
         _data = self._data
 
-        fit = cast(Feols, feols(fml=_fml, data=_data))
+        fit = cast(
+            Feols,
+            feols(
+                fml=_fml,
+                data=_data,
+                weights=self._weights,
+                weights_type=self._weights_type,
+            ),
+        )
         self._fit = fit
 
         return fit
