@@ -188,15 +188,22 @@ test_counter_feiv = 0
 # - cluster_adj: True
 
 
+ALL_F3 = ["str", "object", "int", "categorical", "float"]
+SINGLE_F3 = ALL_F3[0]
+BACKEND_F3 = [
+    *[("numba", t) for t in ALL_F3],
+    *[(b, SINGLE_F3) for b in ("jax", "rust")],
+]
+
+
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("demeaner_backend,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("f3_type", ["str", "object", "int", "categorical", "float"])
 @pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
 @pytest.mark.parametrize("adj", [True])
 @pytest.mark.parametrize("cluster_adj", [True])
-@pytest.mark.parametrize("demeaner_backend", ["numba", "jax"])
 def test_single_fit_feols(
     data_feols,
     dropna,

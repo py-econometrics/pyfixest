@@ -94,7 +94,7 @@ class Fepois(Feols):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ] = "scipy.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -281,7 +281,10 @@ class Fepois(Feols):
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(
-                    x=ZX, flist=_fe, weights=mu.flatten(), tol=_fixef_tol
+                    x=ZX,
+                    flist=_fe.astype(np.uintp),
+                    weights=mu.flatten(),
+                    tol=_fixef_tol,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")

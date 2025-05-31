@@ -207,7 +207,7 @@ class FixestMulti:
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,

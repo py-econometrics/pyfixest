@@ -25,6 +25,7 @@ dependencies = [
 
 [tool.pixi.feature.dev.dependencies]
 rpy2 = ">=3.5.11,<4"
+pixi-pycharm = ">=0.0.8,<0.0.9"
 r = "*"
 r-fixest = ">=0.12.1,<0.13"
 r-sandwich = ">=3.0_2,<4"
@@ -45,12 +46,18 @@ dev = [
   "pyarrow>=14.0",
   "jax>=0.4.15",
   "jaxlib>=0.4.15",
+  "pytest-benchmark>=5.1.0,<6"
 ]
 
 lint = [
   "pre-commit==3.6.0",
   "ruff>=0.4.0",
   "mypy>=1.10.0",
+]
+
+build = [
+  "pip",
+  "maturin>=1.8.0",
 ]
 
 plots = [
@@ -81,8 +88,8 @@ jax = [
 python-build = ">=1.2.2,<2"
 
 [build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -94,9 +101,9 @@ pyfixest = { path = ".", editable = true }
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }
 lint = { features = ["lint"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
-build = { features = ["build"], solve-group = "default" }
 jax = { features = ["jax"], solve-group = "default" }
 plots = { features = ["plots"], solve-group = "default" }
 
@@ -121,6 +128,8 @@ mypy = "pre-commit run mypy --all-files"
 
 [tool.pixi.feature.build.tasks]
 build-pip = 'python -m build .'
+maturin-develop = "maturin develop --release --strip"
+
 
 [tool.pixi.feature.docs.tasks]
 docs-build = "quartodoc build --verbose --config docs/_quarto.yml"
@@ -232,3 +241,7 @@ module = [
   "tqdm.*",
 ]
 ignore_missing_imports = true
+
+[tool.maturin]
+module-name = "pyfixest.core._core_impl"
+features = ["pyo3/extension-module"]

@@ -3,24 +3,26 @@ import pandas as pd
 import pyhdfe
 import pytest
 
+from pyfixest.core import demean as demean_rs
 from pyfixest.estimation.demean_ import _set_demeaner_backend, demean, demean_model
 from pyfixest.estimation.jax.demean_jax_ import demean_jax
 
 
 @pytest.mark.parametrize(
     argnames="demean_func",
-    argvalues=[demean, demean_jax],
-    ids=["demean_numba", "demean_jax"],
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
 )
-def test_demean(demean_func):
+def test_demean(benchmark, demean_func):
     rng = np.random.default_rng(929291)
 
     N = 10_000
-    x = rng.normal(0, 1, 100 * N).reshape((N, 100))
-    f1 = rng.choice(list(range(100)), N).reshape((N, 1))
-    f2 = rng.choice(list(range(100)), N).reshape((N, 1))
+    M = 100
+    x = rng.normal(0, 1, M * N).reshape((N, M))
+    f1 = rng.choice(list(range(M)), N).reshape((N, 1))
+    f2 = rng.choice(list(range(M)), N).reshape((N, 1))
 
-    flist = np.concatenate((f1, f2), axis=1)
+    flist = np.concatenate((f1, f2), axis=1).astype(np.uint)
 
     # without weights
     weights = np.ones(N)
@@ -33,7 +35,9 @@ def test_demean(demean_func):
     weights = rng.uniform(0, 1, N).reshape((N, 1))
     algorithm = pyhdfe.create(flist)
     res_pyhdfe = algorithm.residualize(x, weights)
-    res_pyfixest, success = demean_func(x, flist, weights.flatten(), tol=1e-10)
+    res_pyfixest, success = benchmark(
+        demean_func, x, flist, weights.flatten(), tol=1e-10
+    )
     assert np.allclose(res_pyhdfe, res_pyfixest)
 
 
@@ -46,12 +50,20 @@ def test_set_demeaner_backend():
     demean_func = _set_demeaner_backend("jax")
     assert demean_func == demean_jax
 
+    demean_func = _set_demeaner_backend("rust")
+    assert demean_func == demean_rs
+
     # Test invalid backend raises ValueError
     with pytest.raises(ValueError, match="Invalid demeaner backend: invalid"):
         _set_demeaner_backend("invalid")
 
 
-def test_demean_model_no_fixed_effects():
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
+)
+def test_demean_model_no_fixed_effects(benchmark, demean_func):
     """Test demean_model when there are no fixed effects."""
     # Create sample data
     N = 1000
@@ -61,7 +73,8 @@ def test_demean_model_no_fixed_effects():
     lookup_dict = {}
 
     # Test without fixed effects
-    Yd, Xd = demean_model(
+    Yd, Xd = benchmark(
+        demean_model,
         Y=Y,
         X=X,
         fe=None,
@@ -69,7 +82,7 @@ def test_demean_model_no_fixed_effects():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # When no fixed effects, output should equal input
@@ -79,7 +92,12 @@ def test_demean_model_no_fixed_effects():
     assert Xd.columns.equals(X.columns)
 
 
-def test_demean_model_with_fixed_effects():
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
+)
+def test_demean_model_with_fixed_effects(benchmark, demean_func):
     """Test demean_model with fixed effects."""
     # Create sample data
     N = 1000
@@ -92,7 +110,8 @@ def test_demean_model_with_fixed_effects():
     lookup_dict = {}
 
     # Run demean_model
-    Yd, Xd = demean_model(
+    Yd, Xd = benchmark(
+        demean_model,
         Y=Y,
         X=X,
         fe=fe,
@@ -100,7 +119,7 @@ def test_demean_model_with_fixed_effects():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Verify results are different from input (since we're demeaning)
@@ -118,7 +137,12 @@ def test_demean_model_with_fixed_effects():
     assert np.allclose(cached_data[X.columns].values, Xd.values)
 
 
-def test_demean_model_with_weights():
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
+)
+def test_demean_model_with_weights(benchmark, demean_func):
     """Test demean_model with weights."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -130,7 +154,8 @@ def test_demean_model_with_weights():
     lookup_dict = {}
 
     # Run with weights
-    Yd, Xd = demean_model(
+    Yd, Xd = benchmark(
+        demean_model,
         Y=Y,
         X=X,
         fe=fe,
@@ -138,7 +163,7 @@ def test_demean_model_with_weights():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Run without weights for comparison
@@ -150,7 +175,7 @@ def test_demean_model_with_weights():
         lookup_demeaned_data={},
         na_index_str="test2",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Results should be different with weights vs without
@@ -158,7 +183,12 @@ def test_demean_model_with_weights():
     assert not np.allclose(Xd.values, Xd_unweighted.values)
 
 
-def test_demean_model_caching():
+@pytest.mark.parametrize(
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
+)
+def test_demean_model_caching(benchmark, demean_func):
     """Test the caching behavior of demean_model."""
     N = 1000
     rng = np.random.default_rng(42)
@@ -178,11 +208,12 @@ def test_demean_model_caching():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Second run - should use cache
-    Yd2, Xd2 = demean_model(
+    Yd2, Xd2 = benchmark(
+        demean_model,
         Y=Y,
         X=X,
         fe=fe,
@@ -190,7 +221,7 @@ def test_demean_model_caching():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Results should be identical
@@ -209,7 +240,7 @@ def test_demean_model_caching():
         lookup_demeaned_data=lookup_dict,
         na_index_str="test",
         fixef_tol=1e-8,
-        demeaner_backend="numba",
+        demean_func=demean_func,
     )
 
     # Original columns should match previous results
