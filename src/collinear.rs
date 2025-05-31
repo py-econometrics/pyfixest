@@ -23,7 +23,7 @@ enum CollinearityError {
 ///
 /// # Arguments
 ///
-/// * `x` - Input matrix (must be square, typically a correlation or covariance matrix)
+/// * `x` - Input matrix (must be square, typically X'X in a regression model, where X is the N x k design matrix)
 /// * `tol` - Tolerance for detecting collinearity (smaller values require closer to exact linear dependence)
 ///
 /// # Returns
