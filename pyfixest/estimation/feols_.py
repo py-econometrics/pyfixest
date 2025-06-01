@@ -19,6 +19,7 @@ from pyfixest.estimation.decomposition import GelbachDecomposition, _decompose_a
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
     _validate_literal_argument,
@@ -206,7 +207,7 @@ class Feols:
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    _demeaner_backend: Literal["numba", "jax"]
+    _demeaner_backend: DemeanerBackendOptions
         The backend used for demeaning.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
@@ -240,7 +241,7 @@ class Feols:
             "scipy.sparse.linalg.lsqr",
             "jax",
         ] = "scipy.linalg.solve",
-        demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,

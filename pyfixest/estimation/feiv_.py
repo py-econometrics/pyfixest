@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
 
 
@@ -43,7 +44,7 @@ class Feiv(Feols):
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner_backend: Literal["numba", "jax"]
+    demeaner_backend: DemeanerBackendOptions.
         The backend used for demeaning.
     weights_name : Optional[str]
         Name of the weights variable.
@@ -151,7 +152,7 @@ class Feiv(Feols):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ] = "scipy.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,

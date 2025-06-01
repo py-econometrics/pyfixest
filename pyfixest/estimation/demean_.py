@@ -1,8 +1,10 @@
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Optional
 
 import numba as nb
 import numpy as np
 import pandas as pd
+
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 def demean_model(
@@ -44,7 +46,7 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
-    demeaner_backend: Literal["numba", "jax","rust"]
+    demeaner_backend: DemeanerBackendOptions
         The backend to use for demeaning.
 
     Returns
@@ -313,7 +315,7 @@ def demean(
 
 
 def _set_demeaner_backend(
-    demeaner_backend: Literal["numba", "jax", "rust"],
+    demeaner_backend: DemeanerBackendOptions,
 ) -> Callable:
     """Set the demeaning backend.
 

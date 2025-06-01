@@ -13,6 +13,7 @@ from pyfixest.estimation.feols_compressed_ import FeolsCompressed
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.vcov_utils import _get_vcov_type
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
@@ -207,7 +208,7 @@ class FixestMulti:
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -226,7 +227,7 @@ class FixestMulti:
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
         solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.sparse.linalg.lsqr", "jax"],
             default is 'np.linalg.solve'. Solver to use for the estimation.
-        demeaner_backend: Literal["numba", "jax"], optional
+        demeaner_backend: DemeanerBackendOptions, optional
             The backend to use for demeaning. Can be either "numba" or "jax".
             Defaults to "numba".
         collin_tol : float, optional
