@@ -46,8 +46,9 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
-    demeaner_backend: DemeanerBackendOptions
-        The backend to use for demeaning.
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
 
     Returns
     -------

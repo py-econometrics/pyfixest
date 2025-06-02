@@ -44,8 +44,9 @@ class Feiv(Feols):
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner_backend: DemeanerBackendOptions.
-        The backend used for demeaning.
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
