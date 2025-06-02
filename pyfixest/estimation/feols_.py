@@ -208,7 +208,6 @@ class Feols:
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
     _demeaner_backend: DemeanerBackendOptions
-        The backend used for demeaning.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
