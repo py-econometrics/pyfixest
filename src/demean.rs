@@ -134,6 +134,69 @@ fn demean_impl(
     (res, success)
 }
 
+
+/// Demean a 2D array x by a set of fixed effects using the alternating
+/// projection algorithm.
+///
+/// Parameters
+/// ----------
+/// x : np.ndarray[float64]
+///     2D array of data to be demeaned (shape: observations x variables).
+/// flist : np.ndarray[usize]
+///     2D array of group indicators (shape: observations x the number of fixed effects), must be integer-encoded.
+/// weights : np.ndarray[float64]
+///     1D array of observation weights (length: observations).
+/// tol : float, optional
+///     Convergence tolerance (default: 1e-8).
+/// maxiter : int, optional
+///     Maximum number of iterations (default: 100000).
+///
+/// Returns
+/// -------
+/// (np.ndarray[float64], bool)
+///     Tuple with:
+///         - demeaned array (same shape as `x`)
+///         - success flag (True if converged, False if maxiter was reached)
+///
+/// Notes
+/// -----
+/// This function performs iterative demeaning to remove all group means specified by
+/// `flist` from the data `x`, optionally using observation weights. Convergence is
+/// determined when the change between iterations falls below `tol`.
+/// Note that flist must be a 2D array of integers. NaNs are not allowed in
+/// either `x` or `flist`.
+///
+/// Example
+/// -------
+/// ```python
+/// import numpy as np
+/// from pyfixest.core.demean import _demean_rs
+///
+/// # Sample data: 5 observations, 2 variables
+/// x = np.array([[10.0, 2.0],
+///               [11.0, 3.0],
+///               [12.0, 4.0],
+///               [20.0, 5.0],
+///               [21.0, 6.0]])
+///
+/// # Grouping by two categorical variables, integer-encoded
+/// flist = np.array([[0, 1],
+///                   [0, 2],
+///                   [0, 2],
+///                   [1, 1],
+///                   [1, 2]])
+///
+/// # All observations equally weighted
+/// weights = np.ones(5)
+///
+/// # Call the function
+/// x_demeaned, converged = _demean_rs(x, flist, weights)
+///
+/// print("Demeaned x:")
+/// print(x_demeaned)
+/// print("Converged:", converged)
+/// ```
+
 #[pyfunction]
 #[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
 pub fn _demean_rs(

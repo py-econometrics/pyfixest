@@ -66,6 +66,23 @@ fn crv1_meat_loop_imp(
         })
 }
 
+/// Compute the CRV1 meat matrix for cluster-robust standard errors.
+///
+/// Parameters
+/// ----------
+/// scores : numpy.ndarray (float64), shape (n_obs, k)
+///     The score matrix, typically X' * u, where X is the design matrix and u are
+///     the residuals from the model fit. Rows correspond to observations, columns to parameters.
+/// clustid : numpy.ndarray (usize), shape (n_clusters,)
+///     Array of unique cluster identifiers (one for each cluster).
+/// cluster_col : numpy.ndarray (usize), shape (n_obs,)
+///     Cluster assignment for each observation; each entry must match a value in `clustid`.
+///
+/// Returns
+/// -------
+/// meat : numpy.ndarray (float64), shape (k, k)
+///     The CRV1 meat matrix (sum of cluster outer products), a square matrix where
+///     k is the number of regression coefficients.
 #[pyfunction]
 pub fn _crv1_meat_loop_rs(
     py: Python,
