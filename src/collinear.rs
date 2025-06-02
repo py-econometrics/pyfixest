@@ -16,22 +16,37 @@ enum CollinearityError {
 }
 
 
-/// Detects collinear variables in a matrix using a modified Cholesky decomposition.
+/// Detect collinear (linearly dependent) columns in a symmetric matrix.
 ///
-/// This algorithm identifies which columns in the input matrix can be expressed
-/// as linear combinations of other columns, within the specified tolerance.
+/// Parameters
+/// ----------
+/// x : ndarray-like of shape (p, p), dtype float64
+///     Symmetric (Gram) matrix `X.T @ X`.
+/// tol : float
+///     Multicollinearity threshold.
 ///
-/// # Arguments
+/// Returns
+/// -------
+/// mask : ndarray of bool, shape (p,)
+///     Boolean indicator of collinear columns
+/// n_excl : int
+///     Number of columns flagged as collinear
+/// all_collinear : bool
+///     `True` if all columns are collinear.
 ///
-/// * `x` - Input matrix (must be square, typically a correlation or covariance matrix)
-/// * `tol` - Tolerance for detecting collinearity (smaller values require closer to exact linear dependence)
+/// Raises
+/// ------
+/// CollinearityError
+///     * ``InvalidTolerance`` – when ``tol <= 0``.
+///     * ``NonSquareMatrix`` – when the input is not square.
 ///
-/// # Returns
+/// Notes
+/// -----
 ///
-/// A tuple containing:
-/// - Boolean array indicating which columns are collinear
-/// - Number of collinear columns found
-/// - Flag indicating if all columns are collinear
+/// The detection order depends on the original column ordering; an
+/// order-independent variant would add **column pivoting** (choose, at each
+/// step, the remaining column with the largest residual variance).
+
 fn find_collinear_variables_impl(
     x: ArrayView2<f64>,
     tol: f64,
@@ -86,24 +101,35 @@ fn find_collinear_variables_impl(
     Ok((arr, n_excl, false))
 }
 
+/// Detect collinear (linearly dependent) columns in a square matrix.
+///
+/// Uses a Cholesky-based algorithm to identify variables (columns) that are collinear or nearly collinear,
+/// based on a user-specified tolerance.
+///
+/// Parameters
+/// ----------
+/// x : numpy.ndarray (float64)
+///     A square 2D array (n x n) whose columns will be checked for collinearity.
+/// tol : float, optional
+///     Threshold below which a variable is considered collinear (default is 1e-10).
+///
+/// Returns
+/// -------
+/// mask : numpy.ndarray (bool)
+///     Boolean array of length `n`. `True` indicates that the column is collinear and should be excluded.
+/// n_excluded : int
+///     Number of columns detected as collinear.
+/// all_collinear : bool
+///     `True` if all columns are collinear (e.g., zero or singular matrix), else `False`.
+///
+/// Raises
+/// ------
+/// ValueError
+///     If the input matrix is not square, or if the tolerance is not positive.
+///
+/// Notes: This function is a translation of Laurent Bergé's c++ implementation in
+/// the fixest package.
 
-/// Detects collinear variables in a matrix using a modified Cholesky decomposition.
-///
-/// This algorithm identifies which columns in the input matrix can be expressed
-/// as linear combinations of other columns, within the specified tolerance.
-/// It's particularly useful for identifying multicollinearity in statistical models.
-///
-/// # Arguments
-///
-/// * `py` - Python interpreter token
-/// * `x` - Input matrix (must be square, typically a correlation or covariance matrix)
-/// * `tol` - Tolerance for detecting collinearity (smaller values require closer to exact linear dependence)
-///
-/// # Returns
-///
-/// A PyResult containing a tuple with:
-/// - Boolean array indicating which columns are collinear
-/// - Number of collinear columns found
 #[pyfunction]
 #[pyo3(signature = (x, tol=1e-10))]
 pub fn _find_collinear_variables_rs(

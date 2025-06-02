@@ -51,6 +51,31 @@ fn count_fixef_fully_nested_impl(
     (mask, count)
 }
 
+
+/// Compute which fixed effect columns are fully nested within any cluster variable,
+/// and count the number of such columns.
+///
+/// Parameters
+/// ----------
+/// all_fixef_array : list of str
+///     Names of all fixed effect variables in the model.
+/// cluster_colnames : list of str
+///     Names of all cluster variables in the model.
+/// cluster_data : np.ndarray[usize]
+///     2D array of cluster assignments (rows x cluster variables).
+/// fe_data : np.ndarray[usize]
+///     2D array of fixed effect values (rows x fixed effects).
+///
+/// Returns
+/// -------
+/// (np.ndarray[bool], int)
+///     Tuple of (mask indicating which FEs are fully nested, count of such FEs).
+///
+/// Notes
+/// -----
+/// A fixed effect column is "fully nested" if for every unique value in that column,
+/// all rows with that value share the same cluster assignment (for any cluster variable).
+
 #[pyfunction]
 pub fn _count_fixef_fully_nested_all_rs(
     py: Python<'_>,
