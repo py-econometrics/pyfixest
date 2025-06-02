@@ -34,11 +34,8 @@ enum CollinearityError {
 /// all_collinear : bool
 ///     `True` if all columns are collinear.
 ///
-/// Raises
-/// ------
-/// CollinearityError
-///     * ``InvalidTolerance`` – when ``tol <= 0``.
-///     * ``NonSquareMatrix`` – when the input is not square.
+/// * `x` - Input matrix (must be square, typically X'X in a regression model, where X is the N x k design matrix)
+/// * `tol` - Tolerance for detecting collinearity (smaller values require closer to exact linear dependence)
 ///
 /// Notes
 /// -----
