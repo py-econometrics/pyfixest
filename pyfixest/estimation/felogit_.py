@@ -51,6 +51,8 @@ class Felogit(Feglm):
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
             lookup_demeaned_data=lookup_demeaned_data,
+            tol=tol,
+            maxiter=maxiter,
             solver=solver,
             store_data=store_data,
             copy_data=copy_data,

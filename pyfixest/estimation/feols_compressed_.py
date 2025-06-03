@@ -311,6 +311,9 @@ class FeolsCompressed(Feols):
 
         boot_iter = self._reps
         rng = np.random.default_rng(self._seed)
+
+        assert boot_iter is not None, "boot_iter must not be None"
+        assert self._k is not None, "self._k must not be None"
         beta_boot = np.zeros((boot_iter, self._k))
 
         clustervar = self._clustervar

@@ -569,7 +569,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
         elif fxst._method == "did2s":
             estimation_method = "DID2S"
         elif "quantreg" in fxst._method:
-            estimation_method = f"quantreg: q = {fxst._quantile}"
+            estimation_method = f"quantreg: q = {fxst._quantile}"  # type: ignore
         else:
             raise ValueError("Unknown estimation method.")
         print("###")

@@ -1,10 +1,10 @@
 import warnings
 from collections.abc import Mapping
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union, cast
 
-import numpy as np
 import numba as nb
+import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
@@ -20,6 +20,7 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import (
 )
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.estimation.vcov_utils import bucket_argsort
+
 
 class Quantreg(Feols):
     "Quantile regression model."
@@ -76,6 +77,8 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
+        assert isinstance(quantile, float), "quantile must be a float."
+
         self._supports_wildboottest = False
         self._support_crv3_inference = False
         self._supports_cluster_causal_variance = False
@@ -100,7 +103,22 @@ class Quantreg(Feols):
         self._chol = None
         self._P = None
 
-        self._method_map: dict[str, Callable[..., tuple[np.ndarray, bool, int]]] = {
+        self._method_map: dict[
+            str,
+            Callable[
+                ...,
+                tuple[
+                    np.ndarray,
+                    bool,
+                    int,
+                    np.ndarray,
+                    np.ndarray,
+                    np.ndarray,
+                    np.ndarray,
+                    np.ndarray,
+                ],
+            ],
+        ] = {
             "fn": partial(
                 self.fit_qreg_fn,
                 q=self._quantile,
@@ -133,7 +151,9 @@ class Quantreg(Feols):
         super().prepare_model_matrix()
 
         if self._fe is not None:
-            raise NotImplementedError("Fixed effects are not yet supported for Quantile Regression.")
+            raise NotImplementedError(
+                "Fixed effects are not yet supported for Quantile Regression."
+            )
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
@@ -161,7 +181,14 @@ class Quantreg(Feols):
         maxiter: Optional[int] = None,
         beta_init: Optional[np.ndarray] = None,
     ) -> tuple[
-    np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+        np.ndarray,
+        bool,
+        int,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
     ]:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
         N, k = X.shape
@@ -173,6 +200,8 @@ class Quantreg(Feols):
         if self._chol is None or self._P is None:
             self._chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
             self._P = solve_triangular(self._chol, X.T, lower=True, check_finite=False)
+        if self._chol is None or self._P is None:
+            raise ValueError("...")
 
         fn_res = frisch_newton_solver(
             A=X.T,
@@ -184,8 +213,8 @@ class Quantreg(Feols):
             max_iter=maxiter,
             backoff=0.9995,
             beta_init=beta_init,
-            chol=self._chol,
-            P=self._P,
+            chol=cast(np.ndarray, self._chol),
+            P=cast(np.ndarray, self._P),
         )
 
         has_converged = fn_res[1]
@@ -199,45 +228,39 @@ class Quantreg(Feols):
         return fn_res
 
     def _vcov_nid(self) -> np.ndarray:
-            """
-            Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
-            as developed in Hendricks and Koenker (1991).
-            Note: the estimator is actually heteroskedasticity robust, despite its name.
-            'nid' stands for 'non-iid'.
-            For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
-            """
+        """
+        Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
+        as developed in Hendricks and Koenker (1991).
+        Note: the estimator is actually heteroskedasticity robust, despite its name.
+        'nid' stands for 'non-iid'.
+        For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
+        """
+        q = self._quantile
+        N = self._N
+        X = self._X
 
-            q = self._quantile
-            N = self._N
-            X = self._X
+        h = get_hall_sheather_bandwidth(q=q, N=N)
 
-            h = get_hall_sheather_bandwidth(q=q, N=N)
+        beta_hat_plus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile + h)[0]
+        beta_hat_minus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile - h)[0]
 
-            beta_hat_plus = self.fit_qreg_fn(
-                X=self._X, Y=self._Y, q=self._quantile + h
-            )[0]
-            beta_hat_minus = self.fit_qreg_fn(
-                X=self._X, Y=self._Y, q=self._quantile - h
-            )[0]
+        # eps: small tolerance parameter to avoid division by zero
+        # when di = 0; set to sqrt of machine epsilon in quantreg
+        eps = np.finfo(float).eps ** 0.5
+        # equation (2)
+        di = X @ (beta_hat_plus - beta_hat_minus)
+        # equation (3)
+        Fplus = np.maximum(0, (2 * h) / (di - eps))
 
-            # eps: small tolerance parameter to avoid division by zero
-            # when di = 0; set to sqrt of machine epsilon in quantreg
-            eps = np.finfo(float).eps ** 0.5
-            # equation (2)
-            di = X @ (beta_hat_plus - beta_hat_minus)
-            # equation (3)
-            Fplus = np.maximum(0, (2 * h) / (di - eps))
+        # general Huber structure, see page 74 in Koenker.
+        J = X.T @ X
+        XFplus = X * np.sqrt(Fplus[:, np.newaxis])
+        H = XFplus.T @ XFplus
+        Hinv = np.linalg.inv(H)
 
-            # general Huber structure, see page 74 in Koenker.
-            J = X.T @ X
-            XFplus = X * np.sqrt(Fplus[:, np.newaxis])
-            H = XFplus.T @ XFplus
-            Hinv = np.linalg.inv(H)
-
-            return q * (1-q) * Hinv @ J @ Hinv
+        return q * (1 - q) * Hinv @ J @ Hinv
 
     def _vcov_hetero(self) -> np.ndarray:
-
         return self._vcov_nid()
 
     def _vcov_iid(self) -> np.ndarray:
@@ -247,12 +270,10 @@ class Quantreg(Feols):
         )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-
         """
         Implement cluster robust variance estimator for quantile regression following
         Parente and Santos Silva, 2016.
         """
-
         if len(self._clustervar) > 1:
             raise NotImplementedError(
                 "Multiway clustering is not (yet) supported for quantile regression."
@@ -265,57 +286,60 @@ class Quantreg(Feols):
 
         # kappa: median absolute deviation of the a-th quantile regression residuals
         kappa = np.median(np.abs(u_hat - np.median(u_hat)))
-        h_G     = get_hall_sheather_bandwidth(q=q, N=N)
-        delta = kappa*( norm.ppf(q + h_G) - norm.ppf(q - h_G) )
+        h_G = get_hall_sheather_bandwidth(q=q, N=N)
+        delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
 
-        vcov = _crv1_vcov_loop(X = X, clustid = clustid, cluster_col = cluster_col, q = q, u_hat = u_hat, delta = delta)
-
-        return vcov
-
-
-@nb.njit(parallel = False)
-def _crv1_vcov_loop(X: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray, q: float, u_hat: np.ndarray, delta: float) -> tuple[np.ndarray, np.ndarray]:
-
-        N, k = X.shape
-
-        meat = np.zeros((k,k))
-        bread = np.zeros((k,k))
-        tmp  = np.empty((k,k))
-        score_g = np.zeros(k)
-        g_indices, g_locs = bucket_argsort(cluster_col)
-        G = len(g_locs)
-
-        for i in range(clustid.size):
-
-            g = clustid[i]
-            start = g_locs[g]
-            end = g_locs[g + 1]
-            g_index = g_indices[start:end]
-            Xg  = X[g_index]
-            WXg = np.zeros_like(Xg)
-            ug  = u_hat[g_index]
-            Ng = Xg.shape[0]
-
-            psi_g = q - 1.0 * (ug < 0)
-
-            np.dot(Xg.T, psi_g, out=score_g)
-            np.outer(score_g, score_g, out=tmp)
-            meat += tmp
-
-            mask= (np.abs(ug) <= delta) * 1.0
-            for n in range(Ng):
-                WXg[n] = Xg[n] * mask[n]
-
-            np.dot(WXg.T, WXg, out=tmp)
-            bread  += tmp
-
-        meat  /= G
-        bread /= (2 * delta * G)
-
-        vcov     = np.linalg.inv(bread) @ meat @ np.linalg.inv(bread) / N
-
+        vcov = _crv1_vcov_loop(
+            X=X, clustid=clustid, cluster_col=cluster_col, q=q, u_hat=u_hat, delta=delta
+        )
 
         return vcov
 
 
+@nb.njit(parallel=False)
+def _crv1_vcov_loop(
+    X: np.ndarray,
+    clustid: np.ndarray,
+    cluster_col: np.ndarray,
+    q: float,
+    u_hat: np.ndarray,
+    delta: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    N, k = X.shape
 
+    meat = np.zeros((k, k))
+    bread = np.zeros((k, k))
+    tmp = np.empty((k, k))
+    score_g = np.zeros(k)
+    g_indices, g_locs = bucket_argsort(cluster_col)
+    G = len(g_locs)
+
+    for i in range(clustid.size):
+        g = clustid[i]
+        start = g_locs[g]
+        end = g_locs[g + 1]
+        g_index = g_indices[start:end]
+        Xg = X[g_index]
+        WXg = np.zeros_like(Xg)
+        ug = u_hat[g_index]
+        Ng = Xg.shape[0]
+
+        psi_g = q - 1.0 * (ug < 0)
+
+        np.dot(Xg.T, psi_g, out=score_g)
+        np.outer(score_g, score_g, out=tmp)
+        meat += tmp
+
+        mask = (np.abs(ug) <= delta) * 1.0
+        for n in range(Ng):
+            WXg[n] = Xg[n] * mask[n]
+
+        np.dot(WXg.T, WXg, out=tmp)
+        bread += tmp
+
+    meat /= G
+    bread /= 2 * delta * G
+
+    vcov = np.linalg.inv(bread) @ meat @ np.linalg.inv(bread) / N
+
+    return vcov
