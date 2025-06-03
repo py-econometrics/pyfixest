@@ -98,11 +98,13 @@ def frisch_newton_solver(
     q: float,
     tol: float,
     max_iter: int,
+    chol: np.ndarray,
+    P: np.ndarray,
     backoff: float = 0.9995,
     beta_init: Optional[np.ndarray] = None,
-    chol: Optional[np.ndarray] = None,
-    P: Optional[np.ndarray] = None,
-) -> tuple[np.ndarray, bool]:
+) -> tuple[
+    np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+]:
     """
     Solve
         min_x  c^T x
