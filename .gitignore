@@ -30,3 +30,9 @@ tests/.coverage
 .pixi
 *.egg-info
 pyfixest/did/data/mpdata.csv
+target
+# Ignore compiled Python extensions from Rust (PyO3/maturin/pyo3-pack)
+*.so
+*.pyd
+*.dll
+*.dylib

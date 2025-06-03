@@ -12,6 +12,7 @@ from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, Prediction
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     SolverOptions,
+    DemeanerBackendOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -89,7 +90,7 @@ class FeolsCompressed(Feols):
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,

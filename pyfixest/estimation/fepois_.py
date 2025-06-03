@@ -14,6 +14,7 @@ from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, Prediction
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
     SolverOptions,
+    DemeanerBackendOptions,
 )
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
@@ -58,7 +59,7 @@ class Fepois(Feols):
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
         Defaults to "scipy.linalg.solve".
-    demeaner_backend: Literal["numba", "jax"]
+    demeaner_backend: DemeanerBackendOptions.
         The backend used for demeaning.
     fixef_tol: float, default = 1e-08.
         Tolerance level for the convergence of the demeaning algorithm.
@@ -91,7 +92,7 @@ class Fepois(Feols):
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
         copy_data: bool = True,
@@ -278,7 +279,10 @@ class Fepois(Feols):
             if _fe is not None:
                 # ZX_resid = algorithm.residualize(ZX, mu)
                 ZX_resid, success = demean(
-                    x=ZX, flist=_fe, weights=mu.flatten(), tol=_fixef_tol
+                    x=ZX,
+                    flist=_fe.astype(np.uintp),
+                    weights=mu.flatten(),
+                    tol=_fixef_tol,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")

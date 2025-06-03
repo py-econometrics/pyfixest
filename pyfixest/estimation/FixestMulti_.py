@@ -16,6 +16,7 @@ from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.literals import (
     QuantregMethodOptions,
     SolverOptions,
+    DemeanerBackendOptions,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.vcov_utils import _get_vcov_type
@@ -211,7 +212,7 @@ class FixestMulti:
         self,
         vcov: Union[str, dict[str, str], None],
         solver: SolverOptions,
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         collin_tol: float = 1e-6,
         iwls_maxiter: int = 25,
         iwls_tol: float = 1e-08,
@@ -233,7 +234,7 @@ class FixestMulti:
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
         solver: SolverOptions
             Solver to use for the estimation.
-        demeaner_backend: Literal["numba", "jax"], optional
+        demeaner_backend: DemeanerBackendOptions, optional
             The backend to use for demeaning. Can be either "numba" or "jax".
             Defaults to "numba".
         collin_tol : float, optional

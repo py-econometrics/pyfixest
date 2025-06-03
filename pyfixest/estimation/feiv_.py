@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.estimation.demean_ import demean_model
 from pyfixest.estimation.feols_ import Feols, _drop_multicollinear_variables
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.estimation.solvers import solve_ols
 
 
@@ -43,8 +44,9 @@ class Feiv(Feols):
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr", "jax"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner_backend: Literal["numba", "jax"]
-        The backend used for demeaning.
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -151,7 +153,7 @@ class Feiv(Feols):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ] = "scipy.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -212,7 +214,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
-                self._demeaner_backend,
+                self._demean_func,
             )
         else:
             self._endogvard = self._endogvar
@@ -226,7 +228,12 @@ class Feiv(Feols):
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
-        ) = _drop_multicollinear_variables(self._Z, self._coefnames_z, self._collin_tol)
+        ) = _drop_multicollinear_variables(
+            self._Z,
+            self._coefnames_z,
+            self._collin_tol,
+            self._find_collinear_variables_func,
+        )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
