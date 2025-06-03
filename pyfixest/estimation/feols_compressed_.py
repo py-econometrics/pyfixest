@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
+from pyfixest.estimation.literals import DemeanerBackendOptions
 from pyfixest.utils.dev_utils import DataFrameType
 
 logging.basicConfig(level=logging.INFO)
@@ -92,7 +93,7 @@ class FeolsCompressed(Feols):
             "scipy.sparse.linalg.lsqr",
             "jax",
         ],
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
