@@ -1,8 +1,10 @@
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Optional
 
 import numba as nb
 import numpy as np
 import pandas as pd
+
+from pyfixest.estimation.literals import DemeanerBackendOptions
 
 
 def demean_model(
@@ -13,7 +15,8 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
-    demeaner_backend: Literal["numba", "jax"] = "numba",
+    demean_func: Callable,
+    # demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Demean a regression model.
@@ -43,8 +46,9 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
-    demeaner_backend: Literal["numba", "jax"]
-        The backend to use for demeaning.
+    demeaner_backend: DemeanerBackendOptions, optional
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
 
     Returns
     -------
@@ -67,8 +71,6 @@ def demean_model(
 
     if weights is not None and weights.ndim > 1:
         weights = weights.flatten()
-
-    demean_func = _set_demeaner_backend(demeaner_backend)
 
     if fe is not None:
         fe_array = fe.to_numpy()
@@ -99,7 +101,11 @@ def demean_model(
                     var_diff = var_diff.reshape(len(var_diff), 1)
 
                 YX_demean_new, success = demean_func(
-                    x=var_diff, flist=fe_array, weights=weights, tol=fixef_tol
+                    x=var_diff,
+                    flist=fe_array.astype(np.uintp),
+                    weights=weights,
+                    tol=fixef_tol,
+                    maxiter=100_000,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -122,7 +128,11 @@ def demean_model(
 
         else:
             YX_demeaned, success = demean_func(
-                x=YX_array, flist=fe_array, weights=weights, tol=fixef_tol
+                x=YX_array,
+                flist=fe_array.astype(np.uintp),
+                weights=weights,
+                tol=fixef_tol,
+                maxiter=100_000,
             )
             if success is False:
                 raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -305,15 +315,17 @@ def demean(
     return (res, success)
 
 
-def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax"]) -> Callable:
+def _set_demeaner_backend(
+    demeaner_backend: DemeanerBackendOptions,
+) -> Callable:
     """Set the demeaning backend.
 
-    Currently, we allow for a numba backend and a jax backend. The latter is
-    expected to be faster on GPU.
+    Currently, we allow for a numba backend, rust backend and a jax backend.
+    The latter is expected to be faster on GPU.
 
     Parameters
     ----------
-    demeaner_backend : Literal["numba", "jax"]
+    demeaner_backend : Literal["numba", "jax", "rust"]
         The demeaning backend to use.
 
     Returns
@@ -326,7 +338,11 @@ def _set_demeaner_backend(demeaner_backend: Literal["numba", "jax"]) -> Callable
     ValueError
         If the demeaning backend is not supported.
     """
-    if demeaner_backend == "numba":
+    if demeaner_backend == "rust":
+        from pyfixest.core.demean import demean as demean_rs
+
+        return demean_rs
+    elif demeaner_backend == "numba":
         return demean
     elif demeaner_backend == "jax":
         from pyfixest.estimation.jax.demean_jax_ import demean_jax
