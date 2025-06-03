@@ -29,6 +29,7 @@ from pyfixest.utils import (
     get_ssc,
     ssc,
 )
+from pyfixest.options import set_option
 
 __all__ = [
     "SaturatedEventStudy",
@@ -56,6 +57,7 @@ __all__ = [
     "summary",
     "utils",
     "wyoung",
+    "set_option",
 ]
 
 from importlib.metadata import PackageNotFoundError, version

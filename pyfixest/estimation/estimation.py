@@ -17,11 +17,11 @@ from pyfixest.estimation.literals import (
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 from pyfixest.utils.utils import ssc as ssc_func
-
+from pyfixest.options import options
 
 def feols(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: Optional[DataFrameType] = None,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
@@ -433,6 +433,50 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
+
+    if data is None:
+        data = options.data
+    if data is None:
+        raise TypeError(
+            "Argument 'data' is missing and no global default has been set. "
+            "Pass data=... or call pf.set_option(data=...) first."
+        )
+
+    if vcov is None:
+        vcov = options.vcov
+    if weights is None:
+        weights = options.weights
+    if ssc is None:
+        ssc = options.ssc
+    if fixef_rm == "none":
+        fixef_rm = options.fixef_rm
+    if fixef_tol == 1e-8:          # match the literal default you use above
+        fixef_tol = options.fixef_tol
+    if collin_tol == 1e-10:
+        collin_tol = options.collin_tol
+    if drop_intercept is False:
+        drop_intercept = options.drop_intercept
+    if i_ref1 is None:
+        i_ref1 = options.i_ref1
+    if weights_type == "aweights":
+        weights_type = options.weights_type
+    if solver == "scipy.linalg.solve":
+        solver = options.solver
+    if demeaner_backend == "numba":
+        demeaner_backend = options.demeaner_backend
+    if use_compression is False:
+        use_compression = options.use_compression
+    if reps == 100:
+        reps = options.reps
+    if context is None:
+        context = options.context
+    if seed is None:
+        seed = options.seed
+    if split is None:
+        split = options.split
+    if fsplit is None:
+        fsplit = options.fsplit
+
     if ssc is None:
         ssc = ssc_func()
     if i_ref1 is not None:
