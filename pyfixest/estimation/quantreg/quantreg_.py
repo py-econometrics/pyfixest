@@ -168,7 +168,9 @@ class Quantreg(Feols):
         tol: Optional[float] = None,
         maxiter: Optional[int] = None,
         beta_init: Optional[np.ndarray] = None,
-    ) -> np.ndarray:
+    ) -> tuple[
+    np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+    ]:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
         N, k = X.shape
         if tol is None:
