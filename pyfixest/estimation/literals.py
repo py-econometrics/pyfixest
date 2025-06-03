@@ -11,7 +11,7 @@ SolverOptions = Literal[
     "scipy.sparse.linalg.lsqr",
     "jax",
 ]
-DemeanerBackendOptions = Literal["numba", "jax"]
+DemeanerBackendOptions = Literal["numba", "jax", "rust"]
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 

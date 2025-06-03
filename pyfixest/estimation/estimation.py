@@ -124,8 +124,8 @@ def feols(
         Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Can be either "numba" or "jax". Defaults to "numba".
-        The "jax" backend is experimental. A full release is planned for pyfixest 0.29.
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
 
     use_compression: bool
         Whether to use sufficient statistics to losslessly fit the regression model
@@ -576,10 +576,8 @@ def fepois(
         Defaults to "scipy.linalg.solve".
 
     demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Can be either "numba" or "jax".
-        Defaults to "numba". The "jax" backend is experimental.
-        A full release is planned for pyfixest 0.29.
-
+        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
+        Defaults to "numba".
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
