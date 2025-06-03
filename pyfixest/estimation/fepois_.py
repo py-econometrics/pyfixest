@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Protocol, Union
+from typing import Any, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -13,8 +13,8 @@ from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
-    SolverOptions,
     DemeanerBackendOptions,
+    SolverOptions,
 )
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
