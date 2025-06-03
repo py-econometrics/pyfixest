@@ -220,6 +220,8 @@ class Feols:
         `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical _model_name attributes are passed. In this case,
         the _model_name_plot attribute will be modified.
+    _quantile: Optional[float]
+        The quantile used for quantile regression. None if not a quantile regression.
     """
 
     def __init__(

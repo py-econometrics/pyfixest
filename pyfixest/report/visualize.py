@@ -428,7 +428,7 @@ def qplot(
     models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
             Feols, Fepois & Feiv models.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is used.
+        The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     ncol : int, optional
@@ -443,6 +443,9 @@ def qplot(
     """
     if rename_models is None:
         rename_models = {}
+
+    if figsize is None:
+        figsize = (10, 6)
 
     models = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
@@ -742,8 +745,10 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
+        assert nrow is not None  # for mypy, do people really do this?
         rows, cols = nrow, math.ceil(k / nrow)
     else:
+        assert ncol is not None
         cols, rows = ncol, math.ceil(k / ncol)
 
     fig, axes = plt.subplots(rows, cols, figsize=figsize, squeeze=False, sharey="all")

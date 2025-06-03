@@ -1160,7 +1160,7 @@ def quantreg(
     # WLS currently not supported for quantile regression
     weights = None
     weights_type = "aweights"
-    solver = "np.linalg.solve"
+    solver: SolverOptions = "np.linalg.solve"
 
     if ssc is None:
         ssc = ssc_func()
@@ -1175,9 +1175,8 @@ def quantreg(
     if method not in ["fn"]:
         raise ValueError(f"Invalid method. Must be 'fn' but you provided {method}.")
 
-    if isinstance(vcov, str):
-        if vcov in ["hetero", "HC1", "HC2", "HC3"]:
-            vcov = "nid"
+    if isinstance(vcov, str) and vcov in ["hetero", "HC1", "HC2", "HC3"]:
+        vcov = "nid"
 
     # quantreg specific errors
     if tol <= 0:
