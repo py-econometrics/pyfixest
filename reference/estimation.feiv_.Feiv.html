@@ -74,7 +74,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-d7a985b111ba49d75886cb228fa7d15a.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-cdbe2947715757e022544ab09c2be4d9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -549,8 +549,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>demeaner_backend</td>
-<td>Literal['numba', 'jax']</td>
-<td>The backend used for demeaning.</td>
+<td>DemeanerBackendOptions</td>
+<td>The backend to use for demeaning. Can be either “numba”, “jax”, or “rust”. Defaults to “numba”.</td>
 <td><code>'numba'</code></td>
 </tr>
 <tr class="odd">
@@ -837,7 +837,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#5116e3cd .cell execution_count=1}
+<pre><code>::: {#730f54f5 .cell execution_count=1}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -901,7 +901,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="eI8zuh"&gt;&lt;/div&gt;
+            &lt;div id="tO0irs"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -912,7 +912,7 @@ print("Effective F stat :", F_stat_eff_pf)
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.6.2/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -925,9 +925,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("eI8zuh").appendChild(div);
+                        document.getElementById("tO0irs").appendChild(div);
                     };
-                    var e = document.getElementById("eI8zuh");
+                    var e = document.getElementById("tO0irs");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
@@ -938,7 +938,7 @@ print("Effective F stat :", F_stat_eff_pf)
 ::: {.cell-output .cell-output-display}
 ```{=html}
 
-            &lt;div id="wgLfOa"&gt;&lt;/div&gt;
+            &lt;div id="HViwby"&gt;&lt;/div&gt;
             &lt;script type="text/javascript" data-lets-plot-script="library"&gt;
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -949,7 +949,7 @@ print("Effective F stat :", F_stat_eff_pf)
                 (function() {
                     var script = document.createElement("script");
                     script.type = "text/javascript";
-                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.5.2/js-package/distr/lets-plot.min.js";
+                    script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.6.2/js-package/distr/lets-plot.min.js";
                     script.onload = function() {
                         window.letsPlotCall = function(f) {f();};
                         window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -962,9 +962,9 @@ print("Effective F stat :", F_stat_eff_pf)
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("wgLfOa").appendChild(div);
+                        document.getElementById("HViwby").appendChild(div);
                     };
-                    var e = document.getElementById("wgLfOa");
+                    var e = document.getElementById("HViwby");
                     e.appendChild(script);
                 })()
             &lt;/script&gt;
