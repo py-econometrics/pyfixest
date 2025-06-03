@@ -35,10 +35,10 @@ class Felogit(Feglm):
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
+        context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
         separation_check: Optional[list[str]] = None,
-        context: Union[int, Mapping[str, Any]] = 0,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -57,10 +57,10 @@ class Felogit(Feglm):
             store_data=store_data,
             copy_data=copy_data,
             lean=lean,
+            context=context,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             separation_check=separation_check,
-            context=context,
         )
 
         self._method = "feglm-logit"
