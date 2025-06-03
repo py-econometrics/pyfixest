@@ -108,14 +108,6 @@ class Quantreg(Feols):
                 maxiter=self._quantile_maxiter,
                 beta_init=None,
             ),
-            "pfn": partial(
-                self.fit_qreg_pfn,
-                q=self._quantile,
-                rng=np.random.default_rng(seed),
-                tol=self._quantile_tol,
-                maxiter=self._quantile_maxiter,
-                beta_init=None,
-            ),
         }
 
         try:
@@ -205,96 +197,6 @@ class Quantreg(Feols):
             )
 
         return fn_res
-
-    def fit_qreg_pfn(
-        self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        q: float,
-        rng: np.random.Generator,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
-    ) -> np.ndarray:
-        """Fit a quantile regression model using preprocessing and the Frisch-Newton Interior Point Solver."""
-        N, k = self._X.shape
-        has_converged = False
-        compute_beta_init = beta_init is None
-        max_bad_fixups = 3
-        n_bad_fixups = 0
-
-        if tol is None:
-            tol = 1e-06
-        if maxiter is None:
-            maxiter = X.shape[0]
-
-        # m constant should be set by user
-        m = 0.8
-        n_init = int(np.ceil((k * N) ** (2 / 3)))
-        M = int(np.ceil(m * n_init))
-
-        while not has_converged:
-            if compute_beta_init:
-                # get initial sample
-                idx_init = rng.choice(N, size=n_init, replace=False)
-                beta_hat_init, _ = self.fit_qreg_fn(
-                    X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
-                )
-
-            else:
-                beta_hat_init = beta_init
-
-            r_init = Y.flatten() - X @ beta_hat_init
-            # conservative estimate of sigma^2
-            z = np.dot(r_init, r_init) / (N - k)
-            rz = r_init / np.sqrt(z)
-
-            ql = max(0, q - M / (2 * N))
-            qu = min(1, q + M / (2 * N))
-
-            JL = rz < np.quantile(rz, ql)
-            JH = rz > np.quantile(rz, qu)
-
-            keep = ~(JL | JH)
-            X_sub = X[keep, :]
-            Y_sub = Y[keep, :]
-
-            if np.any(JL):
-                X_neg = np.sum(X[JL, :], axis=0)
-                Y_neg = np.sum(Y[JL])
-                X_sub = np.concatenate([X_sub, X_neg.reshape((1, self._k))], axis=0)
-                Y_sub = np.concatenate([Y_sub, Y_neg.reshape((1, 1))], axis=0)
-            if np.any(JH):
-                X_pos = np.sum(X[JH, :], axis=0)
-                Y_pos = np.sum(Y[JH])
-                X_sub = np.concatenate([X_sub, X_pos.reshape(1, self._k)], axis=0)
-                Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
-
-            while not has_converged and n_bad_fixups < max_bad_fixups:
-                # solve the modified problem
-                beta_hat, _ = self.fit_qreg_fn(
-                    X=X_sub, Y=Y_sub, q=q, tol=tol, maxiter=maxiter
-                )
-                r = Y.flatten() - X @ beta_hat
-
-                # count wrong predictions and get their indices
-                mis_L = JL & (r > 0)
-                mis_H = JH & (r < 0)
-                n_bad = np.sum(mis_L) + np.sum(mis_H)
-
-                if n_bad == 0:
-                    has_converged = True
-                elif n_bad > 0.1 * M:
-                    warnings.warn("Too many bad fixups. Doubling m.")
-                    n_init = min(N, 2 * n_init)
-                    M = int(np.ceil(m * n_init))
-                    n_bad_fixups += 1
-                    break
-                else:
-                    JL = JL & ~mis_L
-                    JH = JH & ~mis_H
-
-        return beta_hat, has_converged
 
     def _vcov_nid(self) -> np.ndarray:
             """
