@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Union
+from typing import Any, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -11,8 +11,8 @@ from tqdm import tqdm
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
 from pyfixest.estimation.literals import (
-    SolverOptions,
     DemeanerBackendOptions,
+    SolverOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType
 

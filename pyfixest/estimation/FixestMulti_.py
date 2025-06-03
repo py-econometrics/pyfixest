@@ -1,7 +1,7 @@
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 
@@ -14,9 +14,9 @@ from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.feprobit_ import Feprobit
 from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
     QuantregMethodOptions,
     SolverOptions,
-    DemeanerBackendOptions,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.vcov_utils import _get_vcov_type
