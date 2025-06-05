@@ -2,7 +2,7 @@
 use rand::{Rng, SeedableRng};
 
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
-use rayon::prelude::*;
+//use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -127,7 +127,7 @@ pub fn demean_impl(
     let mut res = Array2::<f64>::zeros((n_samples, n_features));
 
     res.axis_iter_mut(ndarray::Axis(1))
-        .into_par_iter()
+        .into_iter()
         .enumerate()
         .for_each(process_column);
 
@@ -139,7 +139,7 @@ pub fn demean_impl(
 fn main() {
 
     // --- your setup and benchmarking code ---
-    const N: usize = 10_000_000;
+    const N: usize = 1_00_000;
     const SEED: u64 = 0x5eed;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(SEED);
