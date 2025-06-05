@@ -16,3 +16,5 @@ fn _core_impl(_py: Python, m: &PyModule) -> PyResult<()> {
     )?)?;
     Ok(())
 }
+
+pub use demean::demean_impl;

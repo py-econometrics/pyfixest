@@ -14,10 +14,19 @@ ndarray = { version = "0.15", features = ["rayon"] }
 rayon   = "1.9"
 numpy = "0.18"
 thiserror = "2.0.12"
+rand = "0.9.1"
+pprof = { version = "0.13", features = ["flamegraph"] }
+criterion = "0.5"
 
 [profile.release]
 opt-level = 3        # Maximize performance
 lto = "fat"          # Full link-time optimization
 codegen-units = 1    # Whole-program optimization
 panic = "abort"      # Smaller binary, no unwind support
-strip = true         # Remove symbol table
+#strip = true         # Remove symbol table
+debug = true              # keep DWARF info so frames have names
+
+[[bench]]
+name = "bench"
+path = "benches/bench.rs"
+harness = false

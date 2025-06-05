@@ -1,6 +1,7 @@
+// build with: cargo flamegraph --bin profile --root
+use rand::{Rng, SeedableRng};
+
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
-use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
-use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -135,85 +136,34 @@ pub fn demean_impl(
 }
 
 
-/// Demean a 2D array x by a set of fixed effects using the alternating
-/// projection algorithm.
-///
-/// Parameters
-/// ----------
-/// x : np.ndarray[float64]
-///     2D array of data to be demeaned (shape: observations x variables).
-/// flist : np.ndarray[usize]
-///     2D array of group indicators (shape: observations x the number of fixed effects), must be integer-encoded.
-/// weights : np.ndarray[float64]
-///     1D array of observation weights (length: observations).
-/// tol : float, optional
-///     Convergence tolerance (default: 1e-8).
-/// maxiter : int, optional
-///     Maximum number of iterations (default: 100000).
-///
-/// Returns
-/// -------
-/// (np.ndarray[float64], bool)
-///     Tuple with:
-///         - demeaned array (same shape as `x`)
-///         - success flag (True if converged, False if maxiter was reached)
-///
-/// Notes
-/// -----
-/// This function performs iterative demeaning to remove all group means specified by
-/// `flist` from the data `x`, optionally using observation weights. Convergence is
-/// determined when the change between iterations falls below `tol`.
-/// Note that flist must be a 2D array of integers. NaNs are not allowed in
-/// either `x` or `flist`.
-///
-/// Example
-/// -------
-/// ```python
-/// import numpy as np
-/// from pyfixest.core.demean import _demean_rs
-///
-/// # Sample data: 5 observations, 2 variables
-/// x = np.array([[10.0, 2.0],
-///               [11.0, 3.0],
-///               [12.0, 4.0],
-///               [20.0, 5.0],
-///               [21.0, 6.0]])
-///
-/// # Grouping by two categorical variables, integer-encoded
-/// flist = np.array([[0, 1],
-///                   [0, 2],
-///                   [0, 2],
-///                   [1, 1],
-///                   [1, 2]])
-///
-/// # All observations equally weighted
-/// weights = np.ones(5)
-///
-/// # Call the function
-/// x_demeaned, converged = _demean_rs(x, flist, weights)
-///
-/// print("Demeaned x:")
-/// print(x_demeaned)
-/// print("Converged:", converged)
-/// ```
+fn main() {
 
-#[pyfunction]
-#[pyo3(signature = (x, flist, weights, tol=1e-8, maxiter=100_000))]
-pub fn _demean_rs(
-    py: Python<'_>,
-    x: PyReadonlyArray2<f64>,
-    flist: PyReadonlyArray2<usize>,
-    weights: PyReadonlyArray1<f64>,
-    tol: f64,
-    maxiter: usize,
-) -> PyResult<(Py<PyArray2<f64>>, bool)> {
-    let x_arr = x.as_array();
-    let flist_arr = flist.as_array();
-    let weights_arr = weights.as_array();
+    // --- your setup and benchmarking code ---
+    const N: usize = 10_000_000;
+    const SEED: u64 = 0x5eed;
 
-    let (out, success) =
-        py.allow_threads(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let mut rng = rand::rngs::StdRng::seed_from_u64(SEED);
 
-    let pyarray = PyArray2::from_owned_array(py, out);
-    Ok((pyarray.into_py(py), success))
+    let x: ndarray::Array2<f64> = ndarray::Array2::from_shape_fn((N, 10), |_| rng.random::<f64>());
+    let flist: ndarray::Array2<usize> = ndarray::Array2::from_shape_fn((N, 3), |(_, j)| match j {
+        0 => rng.random_range(0..10_000),
+        1 => rng.random_range(0..3_000),
+        _ => rng.random_range(0..100),
+    });
+    let weights = ndarray::Array1::ones(N);
+
+    let guard = pprof::ProfilerGuard::new(100).unwrap();
+    let (out, success) = demean_impl(&x.view(), &flist.view(), &weights.view(), 1e-8, 100_000);
+
+    eprintln!("Converged? {success}");
+    std::hint::black_box(out);
+
+    // --- save the flamegraph ---
+    if let Ok(report) = guard.report().build() {
+        use std::fs::File;
+        let file = File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+    } else {
+        eprintln!("pprof: no report generated (maybe your code ran too fast?)");
+    }
 }
