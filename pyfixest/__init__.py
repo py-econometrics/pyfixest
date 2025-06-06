@@ -23,6 +23,7 @@ from pyfixest.estimation import (
     rwolf,
     wyoung,
 )
+from pyfixest.options import option_context, set_option
 from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
 from pyfixest.utils import (
     get_data,
@@ -49,9 +50,11 @@ __all__ = [
     "iplot",
     "lpdid",
     "make_table",
+    "option_context",
     "panelview",
     "report",
     "rwolf",
+    "set_option",
     "ssc",
     "summary",
     "utils",
