@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional, Union
-from contextlib import contextmanager
 
 import pandas as pd
 

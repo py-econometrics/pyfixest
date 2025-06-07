@@ -1,11 +1,10 @@
 import functools
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 from inspect import signature
 from typing import Any, Optional, Union
-from dataclasses import dataclass, field
 
 import pandas as pd
-import narwhals as nw
 
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
@@ -20,9 +19,13 @@ from pyfixest.estimation.literals import (
 from pyfixest.options import options
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
+from pyfixest.utils.api_input_checks import _check_type, _check_value, EstimationInputs
 
 
 def autofill_with_options(func):
+    """
+    Decorator to autofill the arguments of the estimation functions with the global options.
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         sig = signature(func)
@@ -445,11 +448,15 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-
     context = {} if context is None else capture_context(context)
 
+    if not isinstance(data, pd.DataFrame):
+        data = _narwhals_to_pandas(data)
+
     args = locals()
-    filtered_args = {k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args}
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
     EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
@@ -636,7 +643,9 @@ def fepois(
     weights_type = "aweights"
 
     args = locals()
-    filtered_args = {k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args}
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
     EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
@@ -859,7 +868,9 @@ def feglm(
     context = {} if context is None else capture_context(context)
 
     args = locals()
-    filtered_args = {k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args}
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
     EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
@@ -899,208 +910,3 @@ def feglm(
         return fixest
     else:
         return fixest.fetch_model(0, print_fml=False)
-
-
-def _check_type(value, expected_type, name):
-    if not isinstance(value, expected_type):
-        raise TypeError(f"Argument '{name}' must be {expected_type.__name__}, got {type(value).__name__}")
-
-def _check_value(value, valid_values, name):
-    if value not in valid_values:
-        raise ValueError(f"Argument '{name}' must be one of {valid_values}, got {value!r}")
-
-@dataclass
-class EstimationInputs:
-    fml: str
-    data: pd.DataFrame
-    vcov: Optional[Union[str, dict[str, str]]]
-    weights: Optional[str]
-    ssc: dict[str, Union[str, bool]]
-    fixef_rm: str
-    collin_tol: float
-    copy_data: bool
-    store_data: bool
-    lean: bool
-    fixef_tol: float
-    weights_type: str
-    use_compression: bool
-    reps: Optional[int]
-    seed: Optional[int]
-    split: Optional[str]
-    fsplit: Optional[str]
-    separation_check: Optional[list[str]] = field(default=None)
-
-    def validate(self):
-        _check_type(self.data, pd.DataFrame, "data")
-        _check_value(self.fixef_rm, ["none", "singleton"], "fixef_rm")
-        if not (0 < self.collin_tol < 1):
-            raise ValueError("collin_tol must be in (0, 1)")
-        if self.weights is not None:
-            _check_type(self.weights, str, "weights")
-            if self.weights not in self.data.columns:
-                raise ValueError(f"weights '{self.weights}' must be a column in data")
-        for bname in ["copy_data", "store_data", "lean", "use_compression"]:
-            _check_type(getattr(self, bname), bool, bname)
-        if not (0 < self.fixef_tol < 1):
-            raise ValueError("fixef_tol must be in (0, 1)")
-        _check_value(self.weights_type, ["aweights", "fweights"], "weights_type")
-        if self.use_compression and self.weights is not None:
-            raise NotImplementedError("Compressed regression is not supported with weights.")
-        if self.reps is not None:
-            _check_type(self.reps, int, "reps")
-            if self.reps <= 0:
-                raise ValueError("reps must be strictly positive")
-        if self.seed is not None:
-            _check_type(self.seed, int, "seed")
-        for cname in ["split", "fsplit"]:
-            cval = getattr(self, cname)
-            if cval is not None:
-                _check_type(cval, str, cname)
-                if cval not in self.data.columns:
-                    raise KeyError(f"Column '{cval}' not found in data.")
-        if self.split is not None and self.fsplit is not None and self.split != self.fsplit:
-            raise ValueError(f"split and fsplit specified but not identical: {self.split} vs {self.fsplit}")
-        if self.separation_check is not None:
-            _check_type(self.separation_check, list, "separation_check")
-            if not all(x in ("fe", "ir") for x in self.separation_check):
-                raise ValueError("separation_check must be a list containing only 'fe' and/or 'ir'.")
-
-def _estimation_input_checks(
-    fml: str,
-    data: DataFrameType,
-    vcov: Optional[Union[str, dict[str, str]]],
-    weights: Union[None, str],
-    ssc: dict[str, Union[str, bool]],
-    fixef_rm: str,
-    collin_tol: float,
-    copy_data: bool,
-    store_data: bool,
-    lean: bool,
-    fixef_tol: float,
-    weights_type: str,
-    use_compression: bool,
-    reps: Optional[int],
-    seed: Optional[int],
-    split: Optional[str],
-    fsplit: Optional[str],
-    separation_check: Optional[list[str]] = None,
-):
-    if not isinstance(fml, str):
-        raise TypeError("fml must be a string")
-    if not isinstance(data, pd.DataFrame):
-        data = _narwhals_to_pandas(data)
-    if not isinstance(vcov, (str, dict, type(None))):
-        raise TypeError("vcov must be a string, dictionary, or None")
-    if not isinstance(fixef_rm, str):
-        raise TypeError("fixef_rm must be a string")
-    if not isinstance(collin_tol, float):
-        raise TypeError("collin_tol must be a float")
-
-    if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
-    if collin_tol <= 0:
-        raise ValueError("collin_tol must be greater than zero")
-    if collin_tol >= 1:
-        raise ValueError("collin_tol must be less than one")
-
-    if not (isinstance(weights, str) or weights is None):
-        raise ValueError(
-            f"weights must be a string or None but you provided weights = {weights}."
-        )
-    if weights is not None:
-        assert weights in data.columns, "weights must be a column in data"
-
-    bool_args = [copy_data, store_data, lean]
-    for arg in bool_args:
-        if not isinstance(arg, bool):
-            raise TypeError(f"The function argument {arg} must be of type bool.")
-
-    if not isinstance(fixef_tol, float):
-        raise TypeError(
-            """The function argument `fixef_tol` needs to be of
-            type float.
-            """
-        )
-    if fixef_tol <= 0:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly larger than 0.
-            """
-        )
-    if fixef_tol >= 1:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly smaller than 1.
-            """
-        )
-
-    if weights_type not in ["aweights", "fweights"]:
-        raise ValueError(
-            f"""
-            The `weights_type` argument must be of type `aweights`
-            (for analytical / precision weights) or `fweights`
-            (for frequency weights) but it is {weights_type}.
-            """
-        )
-
-    if not isinstance(use_compression, bool):
-        raise TypeError("The function argument `use_compression` must be of type bool.")
-    if use_compression and weights is not None:
-        raise NotImplementedError(
-            "Compressed regression is not supported with weights."
-        )
-
-    if reps is not None:
-        if not isinstance(reps, int):
-            raise TypeError("The function argument `reps` must be of type int.")
-
-        if reps <= 0:
-            raise ValueError("The function argument `reps` must be strictly positive.")
-
-    if seed is not None and not isinstance(seed, int):
-        raise TypeError("The function argument `seed` must be of type int.")
-
-    if split is not None and not isinstance(split, str):
-        raise TypeError("The function argument split needs to be of type str.")
-
-    if fsplit is not None and not isinstance(fsplit, str):
-        raise TypeError("The function argument fsplit needs to be of type str.")
-
-    if split is not None and fsplit is not None and split != fsplit:
-        raise ValueError(
-            f"""
-                        Arguments split and fsplit are both specified, but not identical.
-                        split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """
-        )
-
-    if isinstance(split, str) and split not in data.columns:
-        raise KeyError(f"Column '{split}' not found in data.")
-
-    if isinstance(fsplit, str) and fsplit not in data.columns:
-        raise KeyError(f"Column '{fsplit}' not found in data.")
-
-    if separation_check is not None:
-        if not isinstance(separation_check, list):
-            raise TypeError(
-                "The function argument `separation_check` must be of type list."
-            )
-
-        if not all(x in ["fe", "ir"] for x in separation_check):
-            raise ValueError(
-                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
-            )
-
-
-def _enforce_types_and_not_none(args, required_types):
-    for key, expected_type in required_types.items():
-        if args[key] is None:
-            raise TypeError(
-                f"Argument '{key}' must be set, but is None after autofill."
-            )
-        if not isinstance(args[key], expected_type):
-            raise TypeError(
-                f"Argument '{key}' must be {expected_type}, got {type(args[key])}."
-            )
