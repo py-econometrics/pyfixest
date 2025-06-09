@@ -3,7 +3,6 @@ from collections.abc import Mapping
 from functools import partial
 from typing import Any, Callable, Literal, Optional, Union, cast
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
@@ -195,7 +194,7 @@ class Quantreg(Feols):
         if tol is None:
             tol = 1e-06
         if maxiter is None:
-            maxiter = X.shape[0]
+            maxiter = N
 
         if self._chol is None or self._P is None:
             self._chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
@@ -283,6 +282,7 @@ class Quantreg(Feols):
         N, _ = X.shape
         q = self._quantile
         u_hat = self._u_hat
+        G = len(clustid)
 
         # kappa: median absolute deviation of the a-th quantile regression residuals
         kappa = np.median(np.abs(u_hat - np.median(u_hat)))
@@ -304,42 +304,39 @@ def _crv1_vcov_loop(
     q: float,
     u_hat: np.ndarray,
     delta: float,
-) -> tuple[np.ndarray, np.ndarray]:
-    N, k = X.shape
+) -> np.ndarray:
+    _, k = X.shape
 
-    meat = np.zeros((k, k))
-    bread = np.zeros((k, k))
-    tmp = np.empty((k, k))
-    score_g = np.zeros(k)
+    A = np.zeros((k, k))
+    B = np.zeros((k, k))
     g_indices, g_locs = bucket_argsort(cluster_col)
-    G = len(g_locs)
+    G = clustid.size
 
-    for i in range(clustid.size):
-        g = clustid[i]
+    eps = 1e-7
+    mad = np.median(np.abs(u_hat))
+    meps = mad * eps
+
+    for g in clustid:
         start = g_locs[g]
         end = g_locs[g + 1]
         g_index = g_indices[start:end]
-        Xg = X[g_index]
-        WXg = np.zeros_like(Xg)
+
+        Xg = X[g_index, :]
         ug = u_hat[g_index]
-        Ng = Xg.shape[0]
 
-        psi_g = q - 1.0 * (ug < 0)
+        ng = g_index.size
+        for i in range(ng):
+            Xgi = Xg[i, :]
+            psi_i = q - 1.0 * (ug[i] <= meps)
+            for j in range(ng):
+                Xgj = Xg[j, :]
+                psi_j = q - 1.0 * (ug[j] <= meps)
+                A += np.outer(Xgi, Xgj) * psi_i * psi_j
 
-        np.dot(Xg.T, psi_g, out=score_g)
-        np.outer(score_g, score_g, out=tmp)
-        meat += tmp
+            mask_i = (np.abs(ug[i]) < delta) * 1.0
+            B += np.outer(Xgi, Xgi) * mask_i
 
-        mask = (np.abs(ug) <= delta) * 1.0
-        for n in range(Ng):
-            WXg[n] = Xg[n] * mask[n]
+    # A /= G
+    B /= 2 * delta
 
-        np.dot(WXg.T, WXg, out=tmp)
-        bread += tmp
-
-    meat /= G
-    bread /= 2 * delta * G
-
-    vcov = np.linalg.inv(bread) @ meat @ np.linalg.inv(bread) / N
-
-    return vcov
+    return np.linalg.inv(B) @ A @ np.linalg.inv(B)
