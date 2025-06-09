@@ -123,5 +123,5 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
     exp_coef = expected(quantile, coef_cols)
     exp_se = expected(quantile, se_cols)
 
-    np.testing.assert_allclose(coef, exp_coef, rtol=2e-3, atol=2e-3)
+    np.testing.assert_allclose(coef, exp_coef, rtol=1e-3, atol=1e-3)
     np.testing.assert_allclose(se, exp_se, rtol=2e-3, atol=2e-3)
