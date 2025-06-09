@@ -5,6 +5,7 @@ from typing import Any, Callable, Literal, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
+import numba as nb
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
