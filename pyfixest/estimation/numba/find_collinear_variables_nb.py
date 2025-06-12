@@ -1,3 +1,17 @@
+# ----------------------------------------------------------------------
+#
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2025  PyFixest Authors
+#
+# This function is a Python/Numba re-implementation of the algorithm
+# published by Laurent Berge in the **fixest**
+# project (see See the fixest repo
+# [here](https:#github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130)),
+# originally licensed under GPL-3.0.  Laurent Berge granted the maintainers of this
+# project an irrevocable, written permission to
+# redistribute and re-license the relevant code under the MIT License.
+
 import numba as nb
 import numpy as np
 
