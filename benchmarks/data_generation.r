@@ -1,19 +1,23 @@
 # ----------------------------------------------------------------------
 # SPDX-License-Identifier: MIT
 #
-# Copyright (c) 2019-2025  PyFixest Authors
+# Copyright (c) 2025  PyFixest Authors
 #
 # Original author: Laurent Berge
 # Original creation: Fri Oct 18 17:05:15 2019
 #
 # This script is adapted from the “benchmarking: data generation” code in
 # Laurent Berge’s **fixest** project
-# (see https://github.com/lrberge/fixest/blob/a4d1a9b/src/…),
+# (see https://github.com/lrberge/fixest/),
 # which was originally distributed under GPL-3.0-or-later.
 #
 # Laurent Berge granted the PyFixest maintainers an irrevocable, written
 # permission to redistribute and re-license the relevant
 # code under the MIT License.
+#
+# The full text of that permission is archived at:
+#
+# docs/THIRD_PARTY_PERMISSIONS.md
 # ----------------------------------------------------------------------
 
 setwd("/Users/marc/Documents/pyfixest/benchmarks/DATA/")

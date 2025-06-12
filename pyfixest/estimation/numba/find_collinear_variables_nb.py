@@ -11,6 +11,10 @@
 # originally licensed under GPL-3.0.  Laurent Berge granted the maintainers of this
 # project an irrevocable, written permission to
 # redistribute and re-license the relevant code under the MIT License.
+# The full text of that permission is archived at:
+#
+# docs/THIRD_PARTY_PERMISSIONS.md
+# ----------------------------------------------------------------------
 
 import numba as nb
 import numpy as np
