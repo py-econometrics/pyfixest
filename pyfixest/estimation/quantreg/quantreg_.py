@@ -314,8 +314,6 @@ def _crv1_vcov_loop(
     G = clustid.size
 
     eps = 1e-7
-    mad = np.median(np.abs(u_hat))
-    meps = mad * eps
 
     for g in clustid:
         start = g_locs[g]
@@ -328,10 +326,10 @@ def _crv1_vcov_loop(
         ng = g_index.size
         for i in range(ng):
             Xgi = Xg[i, :]
-            psi_i = q - 1.0 * (ug[i] <= meps)
+            psi_i = q - 1.0 * (ug[i] <= eps)
             for j in range(ng):
                 Xgj = Xg[j, :]
-                psi_j = q - 1.0 * (ug[j] <= meps)
+                psi_j = q - 1.0 * (ug[j] <= eps)
                 A += np.outer(Xgi, Xgj) * psi_i * psi_j
 
             mask_i = (np.abs(ug[i]) < delta) * 1.0
