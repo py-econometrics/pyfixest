@@ -112,7 +112,13 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
         ]
         return row[cols].to_numpy().ravel()
 
-    fit = pf.quantreg(fml, data=data, vcov={"CRV1": "f1"}, quantile=quantile, ssc = pf.ssc(adj = False, cluster_adj = False))
+    fit = pf.quantreg(
+        fml,
+        data=data,
+        vcov={"CRV1": "f1"},
+        quantile=quantile,
+        ssc=pf.ssc(adj=False, cluster_adj=False),
+    )
 
     coef = fit.coef().to_numpy()
     se = fit.se().to_numpy()
