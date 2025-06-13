@@ -112,7 +112,7 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
         ]
         return row[cols].to_numpy().ravel()
 
-    fit = pf.quantreg(fml, data=data, vcov={"CRV1": "f1"}, quantile=quantile)
+    fit = pf.quantreg(fml, data=data, vcov={"CRV1": "f1"}, quantile=quantile, ssc = pf.ssc(adj = False, cluster_adj = False))
 
     coef = fit.coef().to_numpy()
     se = fit.se().to_numpy()
@@ -123,5 +123,5 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
     exp_coef = expected(quantile, coef_cols)
     exp_se = expected(quantile, se_cols)
 
-    np.testing.assert_allclose(coef, exp_coef, rtol=1e-3, atol=1e-3)
-    np.testing.assert_allclose(se, exp_se, rtol=2e-3, atol=2e-3)
+    np.testing.assert_allclose(coef, exp_coef, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(se, exp_se, rtol=1e-6, atol=1e-6)
