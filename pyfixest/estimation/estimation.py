@@ -1,9 +1,11 @@
+import functools
 from collections.abc import Mapping
+from dataclasses import dataclass, field
+from inspect import signature
 from typing import Any, Optional, Union
 
 import pandas as pd
 
-from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -14,30 +16,48 @@ from pyfixest.estimation.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.options import options
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.api_input_checks import _check_type, _check_value, EstimationInputs
 
 
+def autofill_with_options(func):
+    """
+    Decorator to autofill the arguments of the estimation functions with the global options.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        sig = signature(func)
+        bound = sig.bind_partial(*args, **kwargs)
+        bound.apply_defaults()
+        for name, value in bound.arguments.items():
+            if value is None and hasattr(options, name):
+                bound.arguments[name] = getattr(options, name)
+        return func(**bound.arguments)
+
+    return wrapper
+
+
+@autofill_with_options
 def feols(
-    fml: str,
-    data: DataFrameType,  # type: ignore
+    fml: Optional[str] = None,
+    data: Optional[DataFrameType] = None,  # type: ignore
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     weights: Union[None, str] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
-    fixef_tol=1e-08,
-    collin_tol: float = 1e-10,
-    drop_intercept: bool = False,
-    i_ref1=None,
-    copy_data: bool = True,
-    store_data: bool = True,
-    lean: bool = False,
-    weights_type: WeightsTypeOptions = "aweights",
-    solver: SolverOptions = "scipy.linalg.solve",
-    demeaner_backend: DemeanerBackendOptions = "numba",
-    use_compression: bool = False,
-    reps: int = 100,
+    fixef_rm: Optional[FixedRmOptions] = None,
+    fixef_tol: Optional[float] = None,
+    collin_tol: Optional[float] = None,
+    drop_intercept: Optional[bool] = None,
+    copy_data: Optional[bool] = None,
+    store_data: Optional[bool] = None,
+    lean: Optional[bool] = None,
+    weights_type: Optional[WeightsTypeOptions] = None,
+    solver: Optional[SolverOptions] = None,
+    demeaner_backend: Optional[DemeanerBackendOptions] = None,
+    use_compression: Optional[bool] = None,
+    reps: Optional[int] = None,
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     seed: Optional[int] = None,
     split: Optional[str] = None,
@@ -82,11 +102,6 @@ def feols(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        feols('Y~ i(f1, ref=1)', data = data) instead of the former
-        feols('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
@@ -433,37 +448,16 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-    if ssc is None:
-        ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. feols('Y~ i(f1, ref=1)', data = data)
-            instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
     context = {} if context is None else capture_context(context)
 
-    _estimation_input_checks(
-        fml=fml,
-        data=data,
-        vcov=vcov,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        weights_type=weights_type,
-        use_compression=use_compression,
-        reps=reps,
-        seed=seed,
-        split=split,
-        fsplit=fsplit,
-    )
+    if not isinstance(data, pd.DataFrame):
+        data = _narwhals_to_pandas(data)
+
+    args = locals()
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
+    EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
         data=data,
@@ -500,6 +494,7 @@ def feols(
         return fixest.fetch_model(0, print_fml=False)
 
 
+@autofill_with_options
 def fepois(
     fml: str,
     data: DataFrameType,  # type: ignore
@@ -514,7 +509,6 @@ def fepois(
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -581,11 +575,6 @@ def fepois(
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
-        fepois('Y~ i(f1)', data = data, i_ref=1).
-
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
@@ -647,44 +636,17 @@ def fepois(
 
     For more examples on the use of other function arguments, please take a look at the documentation of the [feols()](https://py-econometrics.github.io/pyfixest/reference/estimation.estimation.feols.html#pyfixest.estimation.estimation.feols) function.
     """
-    if separation_check is None:
-        separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
-            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
     context = {} if context is None else capture_context(context)
 
     # WLS currently not supported for Poisson regression
     weights = None
     weights_type = "aweights"
 
-    _estimation_input_checks(
-        fml=fml,
-        data=data,
-        vcov=vcov,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
+    args = locals()
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
+    EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
         data=data,
@@ -725,24 +687,24 @@ def fepois(
         return fixest.fetch_model(0, print_fml=False)
 
 
+@autofill_with_options
 def feglm(
-    fml: str,
-    data: DataFrameType,  # type: ignore
-    family: str,
+    fml: Optional[str] = None,
+    data: Optional[DataFrameType] = None,  # type: ignore
+    family: Optional[str] = None,
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
-    fixef_rm: FixedRmOptions = "none",
-    fixef_tol: float = 1e-08,
-    iwls_tol: float = 1e-08,
-    iwls_maxiter: int = 25,
-    collin_tol: float = 1e-10,
+    fixef_rm: Optional[FixedRmOptions] = None,
+    fixef_tol: Optional[float] = None,
+    iwls_tol: Optional[float] = None,
+    iwls_maxiter: Optional[int] = None,
+    collin_tol: Optional[float] = None,
     separation_check: Optional[list[str]] = None,
-    solver: SolverOptions = "scipy.linalg.solve",
-    drop_intercept: bool = False,
-    i_ref1=None,
-    copy_data: bool = True,
-    store_data: bool = True,
-    lean: bool = False,
+    solver: Optional[SolverOptions] = None,
+    drop_intercept: Optional[bool] = None,
+    copy_data: Optional[bool] = None,
+    store_data: Optional[bool] = None,
+    lean: Optional[bool] = None,
     context: Optional[Union[int, Mapping[str, Any]]] = None,
     split: Optional[str] = None,
     fsplit: Optional[str] = None,
@@ -805,11 +767,6 @@ def feglm(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
-        fepois('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
@@ -904,45 +861,17 @@ def feglm(
             f"Only families 'gaussian', 'logit' and 'probit'are supported but you asked for {family}."
         )
 
-    if separation_check is None:
-        separation_check = ["fe"]
-    if ssc is None:
-        ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
-            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
-
     # WLS currently not supported for GLM regression
     weights = None
     weights_type = "aweights"
 
     context = {} if context is None else capture_context(context)
 
-    _estimation_input_checks(
-        fml=fml,
-        data=data,
-        vcov=vcov,
-        weights=weights,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        collin_tol=collin_tol,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_tol=fixef_tol,
-        weights_type=weights_type,
-        use_compression=False,
-        reps=None,
-        seed=None,
-        split=split,
-        fsplit=fsplit,
-        separation_check=separation_check,
-    )
+    args = locals()
+    filtered_args = {
+        k: args[k] for k in EstimationInputs.__dataclass_fields__ if k in args
+    }
+    EstimationInputs(**filtered_args).validate()
 
     fixest = FixestMulti(
         data=data,
@@ -981,132 +910,3 @@ def feglm(
         return fixest
     else:
         return fixest.fetch_model(0, print_fml=False)
-
-
-def _estimation_input_checks(
-    fml: str,
-    data: DataFrameType,
-    vcov: Optional[Union[str, dict[str, str]]],
-    weights: Union[None, str],
-    ssc: dict[str, Union[str, bool]],
-    fixef_rm: str,
-    collin_tol: float,
-    copy_data: bool,
-    store_data: bool,
-    lean: bool,
-    fixef_tol: float,
-    weights_type: str,
-    use_compression: bool,
-    reps: Optional[int],
-    seed: Optional[int],
-    split: Optional[str],
-    fsplit: Optional[str],
-    separation_check: Optional[list[str]] = None,
-):
-    if not isinstance(fml, str):
-        raise TypeError("fml must be a string")
-    if not isinstance(data, pd.DataFrame):
-        data = _narwhals_to_pandas(data)
-    if not isinstance(vcov, (str, dict, type(None))):
-        raise TypeError("vcov must be a string, dictionary, or None")
-    if not isinstance(fixef_rm, str):
-        raise TypeError("fixef_rm must be a string")
-    if not isinstance(collin_tol, float):
-        raise TypeError("collin_tol must be a float")
-
-    if fixef_rm not in ["none", "singleton"]:
-        raise ValueError("fixef_rm must be either 'none' or 'singleton'")
-    if collin_tol <= 0:
-        raise ValueError("collin_tol must be greater than zero")
-    if collin_tol >= 1:
-        raise ValueError("collin_tol must be less than one")
-
-    if not (isinstance(weights, str) or weights is None):
-        raise ValueError(
-            f"weights must be a string or None but you provided weights = {weights}."
-        )
-    if weights is not None:
-        assert weights in data.columns, "weights must be a column in data"
-
-    bool_args = [copy_data, store_data, lean]
-    for arg in bool_args:
-        if not isinstance(arg, bool):
-            raise TypeError(f"The function argument {arg} must be of type bool.")
-
-    if not isinstance(fixef_tol, float):
-        raise TypeError(
-            """The function argument `fixef_tol` needs to be of
-            type float.
-            """
-        )
-    if fixef_tol <= 0:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly larger than 0.
-            """
-        )
-    if fixef_tol >= 1:
-        raise ValueError(
-            """
-            The function argument `fixef_tol` needs to be of
-            strictly smaller than 1.
-            """
-        )
-
-    if weights_type not in ["aweights", "fweights"]:
-        raise ValueError(
-            f"""
-            The `weights_type` argument must be of type `aweights`
-            (for analytical / precision weights) or `fweights`
-            (for frequency weights) but it is {weights_type}.
-            """
-        )
-
-    if not isinstance(use_compression, bool):
-        raise TypeError("The function argument `use_compression` must be of type bool.")
-    if use_compression and weights is not None:
-        raise NotImplementedError(
-            "Compressed regression is not supported with weights."
-        )
-
-    if reps is not None:
-        if not isinstance(reps, int):
-            raise TypeError("The function argument `reps` must be of type int.")
-
-        if reps <= 0:
-            raise ValueError("The function argument `reps` must be strictly positive.")
-
-    if seed is not None and not isinstance(seed, int):
-        raise TypeError("The function argument `seed` must be of type int.")
-
-    if split is not None and not isinstance(split, str):
-        raise TypeError("The function argument split needs to be of type str.")
-
-    if fsplit is not None and not isinstance(fsplit, str):
-        raise TypeError("The function argument fsplit needs to be of type str.")
-
-    if split is not None and fsplit is not None and split != fsplit:
-        raise ValueError(
-            f"""
-                        Arguments split and fsplit are both specified, but not identical.
-                        split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """
-        )
-
-    if isinstance(split, str) and split not in data.columns:
-        raise KeyError(f"Column '{split}' not found in data.")
-
-    if isinstance(fsplit, str) and fsplit not in data.columns:
-        raise KeyError(f"Column '{fsplit}' not found in data.")
-
-    if separation_check is not None:
-        if not isinstance(separation_check, list):
-            raise TypeError(
-                "The function argument `separation_check` must be of type list."
-            )
-
-        if not all(x in ["fe", "ir"] for x in separation_check):
-            raise ValueError(
-                "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
-            )

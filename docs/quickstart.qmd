@@ -577,3 +577,41 @@ pf.etable([fit_twfe, fit_did2s])
 ```
 
 For more details see the vignette on [Difference-in-Differences Estimation](https://py-econometrics.github.io/pyfixest/difference-in-differences.html).
+
+## Setting Global Options
+
+We can set all function arguments of the estimation functions `feols`, `fepois`, and `feglm` as global options.
+
+For example, we can set the estimation data set, variance covariance matrix, weights, small sample corrections and demeaner backend defaults via `pf.set_options()`.
+
+```{python}
+pf.set_options(
+    data = pf.get_data().dropna(),
+    vcov = {"CRV1": "f1"},
+    weights = "weights",
+    demeaner_backend = "rust"
+)
+```
+
+In this case, we don't have to provide data, vcov, weights, etc to the model call: they will automatically be applied.
+
+```{python}
+fit1 = pf.feols(fml = "Y~X1")
+```
+
+If we actively set a function argument, the global default will be overwritten:
+
+```{python}
+fit2 = pf.feols(fml = "Y ~ X1", vcov = "hetero")
+
+pf.etable([fit1, fit2])
+```
+
+We can set a local option context in the following way:
+
+```{python}
+with option_context(vcov="hetero"):
+    fit3 = pf.feols("Y ~ X1")
+
+pf.etable([fit1, fit2, fit3])
+```
