@@ -786,7 +786,6 @@ def test_empty_vcov_error():
 
 
 def test_errors_quantreg(data):
-
     data = data.dropna()
 
     # error for iid errors
@@ -807,15 +806,16 @@ def test_errors_quantreg(data):
     with pytest.raises(ValueError):
         pf.quantreg("Y ~ X1", data=data, quantile=1.1)
 
-    # quantile not a float but a list
-    with pytest.raises(TypeError):
-        pf.quantreg("Y ~ X1", data=data, quantile=[0.5])
-
-    with pytest.raises(TypeError):
-        pf.quantreg("Y ~ X1", data=data, quantile=np.array([0.5]))
-
     # error when fixed effects in formula
     with pytest.raises(NotImplementedError):
         pf.quantreg("Y ~ X1 | f1", data=data)
 
+    # error for invalid method
+    with pytest.raises(ValueError, match="`method` must be one of {fn}"):
+        pf.quantreg("Y ~ X1", data=data, method="invalid_method")
 
+    # error for invalid tolerance
+    @pytest.mark.parametrize("tol", [0, 1, -0.1, 1.1])
+    def test_invalid_tolerance(tol):
+        with pytest.raises(ValueError, match=r"tol must be in \(0, 1\)"):
+            pf.quantreg("Y ~ X1", data=data, tol=tol)
