@@ -3,9 +3,9 @@ from collections.abc import Mapping
 from functools import partial
 from typing import Any, Callable, Literal, Optional, Union, cast
 
+import numba as nb
 import numpy as np
 import pandas as pd
-import numba as nb
 from scipy.linalg import cho_factor, solve_triangular
 from scipy.stats import norm
 
@@ -283,7 +283,6 @@ class Quantreg(Feols):
         N, _ = X.shape
         q = self._quantile
         u_hat = self._u_hat
-        G = len(clustid)
 
         # kappa: median absolute deviation of the a-th quantile regression residuals
         kappa = np.median(np.abs(u_hat - np.median(u_hat)))
@@ -311,7 +310,6 @@ def _crv1_vcov_loop(
     A = np.zeros((k, k))
     B = np.zeros((k, k))
     g_indices, g_locs = bucket_argsort(cluster_col)
-    G = clustid.size
 
     eps = 1e-7
 
