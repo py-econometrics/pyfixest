@@ -1172,17 +1172,12 @@ def quantreg(
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
-    if method not in ["fn"]:
-        raise ValueError(f"Invalid method. Must be 'fn' but you provided {method}.")
-
     if isinstance(vcov, str) and vcov in ["hetero", "HC1", "HC2", "HC3"]:
         vcov = "nid"
 
     # quantreg specific errors
-    if tol <= 0:
-        raise ValueError("tol must be greater than 0")
-    if tol >= 1:
-        raise ValueError("tol must be less than 1")
+    if not 0 < tol < 1:
+        raise ValueError("tol must be in (0, 1)")
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")
 
