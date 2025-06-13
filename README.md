@@ -298,3 +298,9 @@ Thanks goes to these wonderful people:
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+
+## Acknowledgements
+
+We thank all institutions that have funded or supported work on PyFixest!
+
+<img src="docs/source/_static/images/aai-institute-logo.svg" width="185">
