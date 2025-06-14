@@ -141,10 +141,6 @@ class Quantreg(Feols):
             self._X.to_numpy(),
             self._X.to_numpy(),
         )
-        if self._fe is not None:
-            self._fe = self._fe.to_numpy()
-            if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N, 1))
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -295,6 +291,11 @@ class Quantreg(Feols):
 
         return vcov
 
+    @property
+    def objective_value(self):
+        "Compute the total loss of the quantile regression model."
+        return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
+
 
 @nb.njit(parallel=False)
 def _crv1_vcov_loop(
@@ -333,7 +334,6 @@ def _crv1_vcov_loop(
             mask_i = (np.abs(ug[i]) < delta) * 1.0
             B += np.outer(Xgi, Xgi) * mask_i
 
-    # A /= G
     B /= 2 * delta
 
     return np.linalg.inv(B) @ A @ np.linalg.inv(B)
