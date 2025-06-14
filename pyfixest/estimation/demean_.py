@@ -50,6 +50,7 @@ def demean_model(
         The backend to use for demeaning. Can be either "numba", "jax", or "rust".
         Defaults to "numba".
 
+
     Returns
     -------
     tuple[pd.DataFrame, pd.DataFrame, Optional[pd.DataFrame]]

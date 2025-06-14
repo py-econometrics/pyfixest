@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Union
+from typing import Any, Optional, Union
 
 import narwhals as nw
 import numpy as np
@@ -10,7 +10,10 @@ from tqdm import tqdm
 
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
+    SolverOptions,
+)
 from pyfixest.utils.dev_utils import DataFrameType
 
 logging.basicConfig(level=logging.INFO)
@@ -53,7 +56,7 @@ class FeolsCompressed(Feols):
         The tolerance level for the fixed effects.
     lookup_demeaned_data : dict[str, pd.DataFrame]
         The lookup table for demeaned data.
-    solver : str
+    solver : SolverOptions
         The solver to use.
     store_data : bool
         Whether to store the data.
@@ -86,22 +89,16 @@ class FeolsCompressed(Feols):
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-            "jax",
-        ],
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
         context: Union[int, Mapping[str, Any]] = 0,
-        reps=100,
-        seed: Optional[int] = None,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
+        reps: Optional[int] = None,
+        seed: Optional[int] = None,
     ) -> None:
         super().__init__(
             FixestFormula,
@@ -314,6 +311,9 @@ class FeolsCompressed(Feols):
 
         boot_iter = self._reps
         rng = np.random.default_rng(self._seed)
+
+        assert boot_iter is not None, "boot_iter must not be None"
+        assert self._k is not None, "self._k must not be None"
         beta_boot = np.zeros((boot_iter, self._k))
 
         clustervar = self._clustervar
