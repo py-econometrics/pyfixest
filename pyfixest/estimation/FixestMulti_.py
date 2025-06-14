@@ -81,8 +81,9 @@ class FixestMulti:
             custom factorization functions, transformations, or any other
             variables that need to be available in the formula environment.
         quantreg_method: QuantregMethodOptions, optional
-            The method to use for the quantile regression. Can be either "fn" or "pfn".
-            Defaults to "fn". See `quantreg` for more details.
+            The method to use for the quantile regression. Currently, only "fn" is
+            supported, which implements the Frisch-Newton Interior Point solver.
+            See `quantreg` for more details.
 
         Returns
         -------
