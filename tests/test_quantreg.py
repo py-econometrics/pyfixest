@@ -78,7 +78,13 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     tol = 1e-6
 
     fit_py = pf.quantreg(
-        fml, data=data, vcov=vcov, quantile=quantile, method=method, tol=tol
+        fml,
+        data=data,
+        vcov=vcov,
+        quantile=quantile,
+        method=method,
+        tol=tol,
+        ssc=pf.ssc(adj=False, cluster_adj=False),
     )
 
     # Fit model in R
@@ -91,14 +97,14 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     # Compare coefficients
     py_coef = fit_py.coef().to_numpy()
     r_coef = np.array(fit_r.rx2("coefficients"))
-    np.testing.assert_allclose(py_coef, r_coef, rtol=1e-03, atol=1e-08)
+    np.testing.assert_allclose(py_coef, r_coef, rtol=1e-08, atol=1e-08)
 
     # compare standard errors
     py_se = fit_py.se().to_numpy()
     r_summ = ro.r["summary"](fit_r, se=vcov)
     coeff_mat = r_summ.rx2("coefficients")
     r_se = np.array(coeff_mat)[:, 1]
-    np.testing.assert_allclose(py_se, r_se, rtol=1e-03, atol=1e-08)
+    np.testing.assert_allclose(py_se, r_se, rtol=1e-08, atol=1e-08)
 
     # compare residuals
     py_resid = fit_py.resid()

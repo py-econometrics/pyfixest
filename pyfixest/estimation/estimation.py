@@ -1022,9 +1022,11 @@ def quantreg(
         The quantile to estimate. Must be between 0 and 1.
 
     method : QuantregMethodOptions, optional
-        The method to use for the quantile regression. Can be either "fn" or "pfn".
-        Defaults to "fn", which implements the Frisch-Newton interior point algorithm
-        described in Portnoy and Koenker (1997). The "pfn" method implements a variant of the
+        The method to use for the quantile regression. Currently, only "fn" is supported.
+        In the future, will be either "fn" or "pfn".
+        "fn" implements the Frisch-Newton interior point algorithm
+        described in Portnoy and Koenker (1997).
+        The "pfn" method implements a variant of the
         algorithm proposed by Portnoy and Koenker (1997) including preprocessing steps, which
         a) can speed up the algorithm if N is very large but b) assumes independent observations.
         For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
