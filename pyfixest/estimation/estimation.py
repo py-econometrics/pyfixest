@@ -1175,11 +1175,7 @@ def quantreg(
     if isinstance(vcov, str) and vcov in ["hetero", "HC1", "HC2", "HC3"]:
         vcov = "nid"
 
-    # quantreg specific errors
-    if not 0 < tol < 1:
-        raise ValueError("tol must be in (0, 1)")
-    if maxiter is not None and maxiter <= 0:
-        raise ValueError("maxiter must be greater than 0")
+    _quantreg_input_checks(quantile, tol, maxiter)
 
     _estimation_input_checks(
         fml=fml,
@@ -1200,7 +1196,6 @@ def quantreg(
         split=split,
         fsplit=fsplit,
         separation_check=separation_check,
-        quantile=quantile,
     )
 
     fixest = FixestMulti(
@@ -1265,7 +1260,6 @@ def _estimation_input_checks(
     split: Optional[str],
     fsplit: Optional[str],
     separation_check: Optional[list[str]] = None,
-    quantile: Optional[float] = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -1375,22 +1369,12 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    if quantile is not None:
-        if isinstance(quantile, list):
-            if not all(isinstance(q, float) for q in quantile):
-                raise TypeError(
-                    "The function argument `quantile` must be a list of floats."
-                )
-            if any(q <= 0 or q >= 1 for q in quantile):
-                raise ValueError(
-                    "All arguments in the `quantile` list must be between 0 and 1."
-                )
-        elif isinstance(quantile, float):
-            if quantile <= 0 or quantile >= 1:
-                raise ValueError(
-                    "The function argument `quantile` must be between 0 and 1."
-                )
-        else:
-            raise TypeError(
-                "The function argument `quantile` must be of type float or list."
-            )
+
+def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
+    "Run custom input checks for quantreg."
+    if not 0 < tol < 1:
+        raise ValueError("tol must be in (0, 1)")
+    if maxiter is not None and maxiter <= 0:
+        raise ValueError("maxiter must be greater than 0")
+    if not 0 < quantile < 1:
+        raise ValueError("quantile must be between 0 and 1")

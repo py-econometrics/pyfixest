@@ -800,11 +800,11 @@ def test_errors_quantreg(data):
     with pytest.raises(NotImplementedError):
         pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": "f1+f2"})
 
-    # quantile outside of [0, 1]
-    with pytest.raises(ValueError):
-        pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
-    with pytest.raises(ValueError):
+    # error for quantile outside [0, 1]
+    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
         pf.quantreg("Y ~ X1", data=data, quantile=1.1)
+    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+        pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
 
     # error when fixed effects in formula
     with pytest.raises(NotImplementedError):
