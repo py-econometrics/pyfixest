@@ -952,7 +952,6 @@ def quantreg(
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -1016,11 +1015,6 @@ def quantreg(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1 : None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        quantreg('Y~ i(f1, ref=1)', data = data) instead of the former
-        quantreg('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
