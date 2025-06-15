@@ -3,7 +3,6 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
