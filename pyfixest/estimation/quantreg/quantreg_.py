@@ -354,8 +354,8 @@ class Quantreg(Feols):
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
 
-        beta_hat_plus = self._fit(X=self._X, Y=self._Y, q=self._quantile + h)[0]
-        beta_hat_minus = self._fit(X=self._X, Y=self._Y, q=self._quantile - h)[0]
+        beta_hat_plus = self._fit(X=self._X, Y=self._Y, q=self._quantile + h, beta_init = self._beta_hat if self._method == "pfn" else None)[0]
+        beta_hat_minus = self._fit(X=self._X, Y=self._Y, q=self._quantile - h, beta_init = self._beta_hat if self._method == "pfn" else None)[0]
 
         # eps: small tolerance parameter to avoid division by zero
         # when di = 0; set to sqrt of machine epsilon in quantreg
