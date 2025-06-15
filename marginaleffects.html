@@ -200,6 +200,10 @@ window.Quarto = {
  <span class="dropdown-text">On Small Sample Corrections</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="./quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="./compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
@@ -274,7 +278,7 @@ window.Quarto = {
 
 
 <p>We can compute marginal effects and linear and non-linear hypothesis tests via the excellent <a href="https://github.com/vincentarelbundock/pymarginaleffects">marginaleffects</a> package.</p>
-<div id="d5274c28" class="cell" data-execution_count="1">
+<div id="16a0c52e" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> marginaleffects <span class="im">import</span> hypotheses</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
@@ -285,7 +289,7 @@ window.Quarto = {
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 
-            <div id="PcqNUY"></div>
+            <div id="zwPj24"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -309,9 +313,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("PcqNUY").appendChild(div);
+                        document.getElementById("zwPj24").appendChild(div);
                     };
-                    var e = document.getElementById("PcqNUY");
+                    var e = document.getElementById("zwPj24");
                     e.appendChild(script);
                 })()
             </script>
@@ -319,7 +323,7 @@ window.Quarto = {
 </div>
 <div class="cell-output cell-output-display">
 
-            <div id="iPkJp3"></div>
+            <div id="Hh2CIU"></div>
             <script type="text/javascript" data-lets-plot-script="library">
                 if(!window.letsPlotCallQueue) {
                     window.letsPlotCallQueue = [];
@@ -343,9 +347,9 @@ window.Quarto = {
                         var div = document.createElement("div");
                         div.style.color = 'darkred';
                         div.textContent = 'Error loading Lets-Plot JS';
-                        document.getElementById("iPkJp3").appendChild(div);
+                        document.getElementById("Hh2CIU").appendChild(div);
                     };
-                    var e = document.getElementById("iPkJp3");
+                    var e = document.getElementById("Hh2CIU");
                     e.appendChild(script);
                 })()
             </script>
@@ -410,7 +414,7 @@ window.Quarto = {
 </div>
 <p>Suppose we were interested in testing the hypothesis that <span class="math inline">\(X_{1} = X_{2}\)</span>. Given the relatively large differences in coefficients and small standard errors, we will likely reject the null that the two parameters are equal.</p>
 <p>We can run the formal test via the <code>hypotheses</code> function from the <code>marginaleffects</code> package.</p>
-<div id="c780a94c" class="cell" data-execution_count="2">
+<div id="37fa034b" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"X1 - X2 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <div><style>
@@ -429,7 +433,7 @@ window.Quarto = {
 <p>We can also test run-linear hypotheses, in which case <code>marginaleffects</code> will automatically compute correct standard errors based on the estimated covariance matrix and the Delta method. This is for example useful for computing inferential statistics for the “relative uplift” in an AB test.</p>
 <p>For the moment, let’s assume that <span class="math inline">\(X1\)</span> is a randomly assigned treatment variable. As before, <span class="math inline">\(Y\)</span> is our variable / KPI of interest.</p>
 <p>Under randomization, the model intercept measures the “baseline”, i.e.&nbsp;the population average of <span class="math inline">\(Y\)</span> in the absence of treatment. To compute a relative uplift, we might compute</p>
-<div id="ad8e3106" class="cell" data-execution_count="3">
+<div id="d09ca420" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(fit.coef().xs(<span class="st">"X1"</span>) <span class="op">/</span> fit.coef().xs(<span class="st">"Intercept"</span>) <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <pre><code>np.float64(-211.71906665561212)</code></pre>
@@ -456,7 +460,7 @@ window.Quarto = {
 <section id="using-the-delta-method-via-marginaleffects" class="level3">
 <h3 class="anchored" data-anchor-id="using-the-delta-method-via-marginaleffects">Using the Delta Method via <code>marginaleffects</code>:</h3>
 <p>We can employ the Delta Method via <code>marginaleffects</code> via the <code>hypotheses</code> function:</p>
-<div id="6c3d4d1c" class="cell" data-execution_count="4">
+<div id="a2e75543" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>hypotheses(fit, <span class="st">"(X1 / Intercept - 1) * 100 = 0"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
 <div><style>

@@ -168,6 +168,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">On Small Sample Corrections</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../quantile-regression.html">
+ <span class="dropdown-text">Quantile Regression</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../compare-fixest-pyfixest.html">
  <span class="dropdown-text">Compare fixest &amp; PyFixest</span></a>
   </li>  
@@ -447,16 +451,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    collin_tol,</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    fixef_tol,</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    demeaner_backend<span class="op">=</span><span class="st">'numba'</span>,</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="dv">100</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    reps<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Non-user-facing class for compressed regression with fixed effects.</p>
 <p>See the paper “You only compress once” by Wong et al (https://arxiv.org/abs/2102.11297) for details on regression compression.</p>
@@ -465,9 +469,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 10%">
-<col style="width: 79%">
-<col style="width: 3%">
+<col style="width: 9%">
+<col style="width: 77%">
+<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -540,9 +544,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>solver</td>
-<td>str</td>
+<td>SolverOptions</td>
 <td>The solver to use.</td>
-<td><em>required</em></td>
+<td><code>'np.linalg.solve'</code></td>
 </tr>
 <tr class="even">
 <td>store_data</td>
@@ -572,7 +576,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>reps</td>
 <td>int</td>
 <td>The number of bootstrap repetitions. Default is 100. Only used for CRV1 inference, where a wild cluster bootstrap is used.</td>
-<td><code>100</code></td>
+<td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>seed</td>
