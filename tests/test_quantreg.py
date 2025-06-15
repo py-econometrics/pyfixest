@@ -50,6 +50,7 @@ def stata_results_crv():
     )
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [
@@ -60,7 +61,7 @@ def stata_results_crv():
 @pytest.mark.parametrize(
     "vcov",
     [
-        # "hetero",
+        "hetero",
         "nid",
     ],
 )
@@ -101,7 +102,7 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
 
     # compare standard errors
     py_se = fit_py.se().to_numpy()
-    r_summ = ro.r["summary"](fit_r, se=vcov)
+    r_summ = ro.r["summary"](fit_r, se="nid")
     coeff_mat = r_summ.rx2("coefficients")
     r_se = np.array(coeff_mat)[:, 1]
     np.testing.assert_allclose(py_se, r_se, rtol=1e-08, atol=1e-08)
@@ -121,6 +122,7 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     np.testing.assert_allclose(py_loss, r_loss, rtol=1e-06, atol=1e-08)
 
 
+@pytest.mark.against_r_core
 def test_qplot():
     data = pf.get_data(N=1000)
     fit1 = pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5, method="fn")
@@ -129,6 +131,7 @@ def test_qplot():
     pf.qplot([fit1, fit2])
 
 
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("fml", ["Y~X1", "Y~X1+X2"])
 @pytest.mark.parametrize("data", [pf.get_data(seed=12).dropna()])
 @pytest.mark.parametrize("quantile", [0.35, 0.5, 0.95])
