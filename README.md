@@ -289,6 +289,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/JaapCTJ"><img src="https://avatars.githubusercontent.com/u/157970664?v=4?s=100" width="100px;" alt="JaapCTJ"/><br /><sub><b>JaapCTJ</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=JaapCTJ" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://shapiromh.com"><img src="https://avatars.githubusercontent.com/u/2327833?v=4?s=100" width="100px;" alt="Matt Shapiro"/><br /><sub><b>Matt Shapiro</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=shapiromh" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/schroedk"><img src="https://avatars.githubusercontent.com/u/38397037?v=4?s=100" width="100px;" alt="Kristof Schröder"/><br /><sub><b>Kristof Schröder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=schroedk" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/WiktorTheScriptor"><img src="https://avatars.githubusercontent.com/u/162815872?v=4?s=100" width="100px;" alt="Wiktor "/><br /><sub><b>Wiktor </b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=WiktorTheScriptor" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
