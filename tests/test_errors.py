@@ -7,7 +7,6 @@ import pyfixest as pf
 from pyfixest.errors import (
     DuplicateKeyError,
     EndogVarsAsCovarsError,
-    FeatureDeprecationError,
     InstrumentsAsCovarsError,
     NanInClusterVarError,
     UnderDeterminedIVError,
@@ -388,14 +387,6 @@ def test_errors_confint():
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
         fit.confint(alpha=0.5, keep=["abababa"])
-
-
-def test_deprecation_errors():
-    data = get_data()
-    with pytest.raises(FeatureDeprecationError):
-        feols("Y ~ i(f1)", data, i_ref1=1)
-    with pytest.raises(FeatureDeprecationError):
-        fepois("Y ~ i(f1)", data, i_ref1=1)
 
 
 def test_i_error():
