@@ -88,7 +88,6 @@ class Quantreg(Feols):
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
-
         self._model_name = (
             FixestFormula.fml
             if self._sample_split_var is None
@@ -206,10 +205,10 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        #if self._chol is None or self._P is None:
+        # if self._chol is None or self._P is None:
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
-        #if self._chol is None or self._P is None:
+        # if self._chol is None or self._P is None:
         #    raise ValueError("...")
 
         fn_res = frisch_newton_solver(
@@ -235,7 +234,6 @@ class Quantreg(Feols):
             )
 
         return fn_res
-
 
     def fit_qreg_pfn(
         self,
@@ -278,7 +276,9 @@ class Quantreg(Feols):
             if compute_beta_init:
                 # get initial sample
                 idx_init = rng.choice(N, size=n_init, replace=False)
-                beta_hat_init = self.fit_qreg_fn(X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter)[0]
+                beta_hat_init = self.fit_qreg_fn(
+                    X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
+                )[0]
 
             else:
                 beta_hat_init = beta_init
@@ -295,7 +295,6 @@ class Quantreg(Feols):
             JH = rz > np.quantile(rz, qu)
 
             while not has_converged and n_bad_fixups < max_bad_fixups:
-
                 keep = ~(JL | JH)
                 X_sub = X[keep, :]
                 Y_sub = Y[keep, :]
@@ -341,7 +340,6 @@ class Quantreg(Feols):
 
         return fn_res
 
-
     def _vcov_nid(self) -> np.ndarray:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
@@ -356,8 +354,8 @@ class Quantreg(Feols):
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
 
-        beta_hat_plus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile + h)[0]
-        beta_hat_minus = self.fit_qreg_fn(X=self._X, Y=self._Y, q=self._quantile - h)[0]
+        beta_hat_plus = self._fit(X=self._X, Y=self._Y, q=self._quantile + h)[0]
+        beta_hat_minus = self._fit(X=self._X, Y=self._Y, q=self._quantile - h)[0]
 
         # eps: small tolerance parameter to avoid division by zero
         # when di = 0; set to sqrt of machine epsilon in quantreg
