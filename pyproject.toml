@@ -31,6 +31,7 @@ r-fixest = ">=0.12.1,<0.13"
 r-sandwich = ">=3.0_2,<4"
 r-broom = ">=1.0.5,<2"
 r-car = ">=3.1_2,<4"
+r-quantreg = ">=5.0"
 
 [project.optional-dependencies]
 dev = [

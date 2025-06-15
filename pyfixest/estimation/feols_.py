@@ -22,6 +22,7 @@ from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     PredictionErrorOptions,
     PredictionType,
+    SolverOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.model_matrix_fixest_ import model_matrix_fixest
@@ -219,6 +220,8 @@ class Feols:
         `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical _model_name attributes are passed. In this case,
         the _model_name_plot attribute will be modified.
+    _quantile: Optional[float]
+        The quantile used for quantile regression. None if not a quantile regression.
     """
 
     def __init__(
@@ -233,13 +236,7 @@ class Feols:
         collin_tol: float,
         fixef_tol: float,
         lookup_demeaned_data: dict[str, pd.DataFrame],
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-            "jax",
-        ] = "scipy.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         store_data: bool = True,
         copy_data: bool = True,
@@ -613,6 +610,7 @@ class Feols:
                 "vcov_type": "iid",
                 "G": 1,
             }
+
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_iid}
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
 
@@ -633,6 +631,19 @@ class Feols:
             all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_hetero()
+
+        elif self._vcov_type == "nid":
+            ssc_kwargs_hetero = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N,
+            }
+
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_hetero}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
             if data is not None:
@@ -722,7 +733,7 @@ class Feols:
 
                     if not _support_crv3_inference:
                         raise VcovTypeNotSupportedError(
-                            "CRV3 inference is not supported with IV regression."
+                            f"CRV3 inference is not for models of type '{self._method}'."
                         )
 
                     if (
@@ -779,6 +790,11 @@ class Feols:
         _vcov = _bread @ _meat @ _bread
 
         return _vcov
+
+    def _vcov_nid(self):
+        raise NotImplementedError(
+            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _is_iv = self._is_iv
@@ -2711,6 +2727,7 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC1",
             "HC2",
             "HC3",
+            "nid",
         ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
 
 
@@ -2768,6 +2785,10 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
     elif vcov_type_detail in ["CRV1", "CRV3"]:
         vcov_type = "CRV"
         is_clustered = True
+
+    elif vcov_type_detail == "nid":
+        vcov_type = "nid"
+        is_clustered = False
 
     clustervar = deparse_vcov if is_clustered else None
 

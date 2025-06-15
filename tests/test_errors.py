@@ -774,3 +774,39 @@ def test_empty_vcov_error():
 
     with pytest.warns(UserWarning):
         fit.tidy()
+
+
+def test_errors_quantreg(data):
+    data = data.dropna()
+
+    # error for iid errors
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1", data=data, vcov="iid")
+
+    # error for CRV3
+    with pytest.raises(VcovTypeNotSupportedError):
+        pf.quantreg("Y ~ X1", data=data, vcov={"CRV3": "f1"})
+
+    # error for two-way clustering
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": "f1+f2"})
+
+    # error for quantile outside [0, 1]
+    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+        pf.quantreg("Y ~ X1", data=data, quantile=1.1)
+    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+        pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
+
+    # error when fixed effects in formula
+    with pytest.raises(NotImplementedError):
+        pf.quantreg("Y ~ X1 | f1", data=data)
+
+    # error for invalid method
+    with pytest.raises(ValueError, match="`method` must be one of {fn}"):
+        pf.quantreg("Y ~ X1", data=data, method="invalid_method")
+
+    # error for invalid tolerance
+    @pytest.mark.parametrize("tol", [0, 1, -0.1, 1.1])
+    def test_invalid_tolerance(tol):
+        with pytest.raises(ValueError, match=r"tol must be in \(0, 1\)"):
+            pf.quantreg("Y ~ X1", data=data, tol=tol)
