@@ -1170,7 +1170,9 @@ def quantreg(
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        "quantreg", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation = "quantreg" if not isinstance(quantile, list) else "quantreg_multi", fml = fml, vcov = vcov, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept,         quantile=quantile,
+        quantile_tol=tol,
+        quantile_maxiter=maxiter,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -1184,9 +1186,6 @@ def quantreg(
         collin_tol=collin_tol,
         separation_check=separation_check,
         solver=solver,
-        quantile=quantile,
-        quantile_tol=tol,
-        quantile_maxiter=maxiter,
     )
 
     if fixest._is_multiple_estimation:
@@ -1330,5 +1329,5 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
         raise ValueError("tol must be in (0, 1)")
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")
-    if not 0 < quantile < 1:
-        raise ValueError("quantile must be between 0 and 1")
+    #if not 0 < quantile < 1:
+    #    raise ValueError("quantile must be between 0 and 1")

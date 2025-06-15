@@ -77,7 +77,7 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
-        assert isinstance(quantile, float), "quantile must be a float."
+        #assert isinstance(quantile, float), "quantile must be a float."
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
@@ -340,6 +340,7 @@ class Quantreg(Feols):
 
         return fn_res
 
+
     def _vcov_nid(self) -> np.ndarray:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
@@ -348,14 +349,25 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
+
         q = self._quantile
         N = self._N
         X = self._X
 
         h = get_hall_sheather_bandwidth(q=q, N=N)
 
-        beta_hat_plus = self._fit(X=self._X, Y=self._Y, q=self._quantile + h, beta_init = self._beta_hat if self._method == "pfn" else None)[0]
-        beta_hat_minus = self._fit(X=self._X, Y=self._Y, q=self._quantile - h, beta_init = self._beta_hat if self._method == "pfn" else None)[0]
+        beta_hat_plus = self._fit(
+            X=self._X,
+            Y=self._Y,
+            q=self._quantile + h,
+            beta_init=self._beta_hat if self._method == "pfn" else None,
+        )[0]
+        beta_hat_minus = self._fit(
+            X=self._X,
+            Y=self._Y,
+            q=self._quantile - h,
+            beta_init=self._beta_hat if self._method == "pfn" else None,
+        )[0]
 
         # eps: small tolerance parameter to avoid division by zero
         # when di = 0; set to sqrt of machine epsilon in quantreg
