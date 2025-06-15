@@ -1,19 +1,16 @@
 import numpy as np
 from scipy.linalg import solve
 from scipy.sparse.linalg import lsqr
-from typing_extensions import Literal
+
+from pyfixest.estimation.literals import (
+    SolverOptions,
+)
 
 
 def solve_ols(
     tZX: np.ndarray,
     tZY: np.ndarray,
-    solver: Literal[
-        "np.linalg.lstsq",
-        "np.linalg.solve",
-        "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr",
-        "jax",
-    ],
+    solver: SolverOptions = "np.linalg.solve",
 ) -> np.ndarray:
     """
     Solve the ordinary least squares problem using the specified solver.

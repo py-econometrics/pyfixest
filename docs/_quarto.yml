@@ -45,6 +45,8 @@ website:
           text: "Regression Decomposition"
         - file: ssc.qmd
           text: "On Small Sample Corrections"
+        - file: quantile-regression.qmd
+          text: "Quantile Regression"
         - text: "Compare fixest & PyFixest"
           file: compare-fixest-pyfixest.qmd
         - text: "Compare Stata & PyFixest"

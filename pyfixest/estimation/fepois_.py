@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, Optional, Protocol, Union
+from typing import Any, Optional, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,10 @@ from pyfixest.errors import (
 from pyfixest.estimation.demean_ import demean
 from pyfixest.estimation.feols_ import Feols, PredictionErrorOptions, PredictionType
 from pyfixest.estimation.FormulaParser import FixestFormula
-from pyfixest.estimation.literals import DemeanerBackendOptions
+from pyfixest.estimation.literals import (
+    DemeanerBackendOptions,
+    SolverOptions,
+)
 from pyfixest.estimation.solvers import solve_ols
 from pyfixest.utils.dev_utils import DataFrameType, _check_series_or_dataframe
 
@@ -88,13 +91,7 @@ class Fepois(Feols):
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-            "jax",
-        ] = "scipy.linalg.solve",
+        solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: DemeanerBackendOptions = "numba",
         context: Union[int, Mapping[str, Any]] = 0,
         store_data: bool = True,
