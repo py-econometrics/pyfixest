@@ -23,6 +23,8 @@ def test_summary():
     fit4 = feols("Y ~ X1", data=df1, weights="weights")
     fit5 = feols("Y ~ 1 | Z1 ~ X1", data=df1)
 
+    fit_qreg = pf.quantreg("Y ~ X1", data=df1, vcov="nid")
+
     summary(fit1)
     summary(fit2)
     summary([fit1, fit2])
@@ -128,6 +130,9 @@ def test_summary():
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="h")
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="")
     etable([fit1, fit2], type="tex", filename="tests/texfiles/test.tex")
+
+    summary(fit_qreg)
+    etable(fit_qreg)
 
 
 @pytest.mark.skip("Pyfixest PR is not yet merged into stargazer.")
