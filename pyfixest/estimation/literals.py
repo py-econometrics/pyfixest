@@ -13,7 +13,7 @@ SolverOptions = Literal[
 ]
 DemeanerBackendOptions = Literal["numba", "jax", "rust"]
 PredictionErrorOptions = Literal["prediction"]
-QuantregMethodOptions = Literal["fn", "pfn"]
+QuantregMethodOptions = Literal["fn", "pfn", "pfn_process"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:

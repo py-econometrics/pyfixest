@@ -922,6 +922,7 @@ class Feols:
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
         -
         """
+
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
