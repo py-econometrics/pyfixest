@@ -1041,15 +1041,16 @@ def quantreg(
         (as in R's quantreg package via nit(3) = n).
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. The only option currently supported is "nid",
-        which is short for non- IID (independent and identically distributed). The "nid" method implements
-        the sandwich estimator proposed in Hendricks and Koenker (1993). "hetero" also works and is
-        equivalent to nid. Alternatively, cluster robust inference following Parente and Santos Silva (2016)
-        can be specified via a dictionary with the keys "type" and "cluster". Only one-way clustering is supported.
+        Type of variance-covariance matrix for inference. Currently supported are "nid" and cluster robust errors.
+        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
+        Any of "hetero" / HC1 / HC2 / HC3 also works and is equivalent to nid. Alternatively, cluster robust inference
+        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
+        Only one-way clustering is supported.
 
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `ssc_func()`.
+        If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
+        small sample corrections. To match their behavior, set `ssc = pf.ssc(adj = False, cluster_adj = False)`.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -1122,19 +1123,13 @@ def quantreg(
     fit.summary()
     ```
 
-    You can also estimate multiple quantiles in one call:
-
-    ```{python}
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.25, 0.5, 0.75])
-    pf.etable(fit)
-    ```
-
     The employed type of inference can be specified via the `vcov` argument. Currently,
-    only "nid" (nonparametric IID) inference is supported, which uses the Hall-Sheather
-    bandwidth for standard error estimation:
+    only "nid" (non-IID) and cluster robust errors as in Parente and Santos Silva (2016) are supported.
 
     ```{python}
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5, vcov="nid")
+    fit_nid = pf.quantreg("Y ~ X1 + X2", data.dropna(), quantile=0.5, vcov="nid")
+    fit_crv = pf.quantreg("Y ~ X1 + X2", data.dropna(), quantile=0.5, vcov = {"CRV1": "f1"})
+    pf.etable([fit_nid, fit_crv])
     ```
 
     After fitting a model via `quantreg()`, you can use the `predict()` method to
@@ -1157,6 +1152,13 @@ def quantreg(
     ```{python}
     fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
     fit.coefplot()
+    ```
+
+    You can visualize the quantile regression process via the `qplot()` function:
+
+    ```{python}
+    fit_process = [pf.quantreg("Y ~ X1 + X2", data, quantile=q) for q in [0.1, 0.25, 0.5, 0.75, 0.9]]
+    pf.qplot(fit_process)
     ```
     """
     # WLS currently not supported for quantile regression
