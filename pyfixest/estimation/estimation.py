@@ -3,7 +3,6 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from pyfixest.errors import FeatureDeprecationError
 from pyfixest.estimation.feols_ import Feols
 from pyfixest.estimation.fepois_ import Fepois
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -30,7 +29,6 @@ def feols(
     fixef_tol=1e-08,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -83,11 +81,6 @@ def feols(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        feols('Y~ i(f1, ref=1)', data = data) instead of the former
-        feols('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
@@ -436,14 +429,6 @@ def feols(
     """
     if ssc is None:
         ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. feols('Y~ i(f1, ref=1)', data = data)
-            instead of the former feols('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
     context = {} if context is None else capture_context(context)
 
     _estimation_input_checks(
@@ -515,7 +500,6 @@ def fepois(
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner_backend: DemeanerBackendOptions = "numba",
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -582,11 +566,6 @@ def fepois(
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
-        fepois('Y~ i(f1)', data = data, i_ref=1).
-
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
@@ -652,14 +631,6 @@ def fepois(
         separation_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
-            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
     context = {} if context is None else capture_context(context)
 
     # WLS currently not supported for Poisson regression
@@ -740,7 +711,6 @@ def feglm(
     separation_check: Optional[list[str]] = None,
     solver: SolverOptions = "scipy.linalg.solve",
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -806,11 +776,6 @@ def feglm(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1: None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        fepois('Y~ i(f1, ref=1)', data = data) instead of the former
-        fepois('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
@@ -909,15 +874,6 @@ def feglm(
         separation_check = ["fe"]
     if ssc is None:
         ssc = ssc_func()
-    if i_ref1 is not None:
-        raise FeatureDeprecationError(
-            """
-            The 'i_ref1' function argument is deprecated with pyfixest version 0.18.0.
-            Please use i-syntax instead, i.e. fepois('Y~ i(f1, ref=1)', data = data)
-            instead of the former fepois('Y~ i(f1)', data = data, i_ref=1).
-            """
-        )
-
     # WLS currently not supported for GLM regression
     weights = None
     weights_type = "aweights"
@@ -996,7 +952,6 @@ def quantreg(
     collin_tol: float = 1e-10,
     separation_check: Optional[list[str]] = None,
     drop_intercept: bool = False,
-    i_ref1=None,
     copy_data: bool = True,
     store_data: bool = True,
     lean: bool = False,
@@ -1060,11 +1015,6 @@ def quantreg(
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
-
-    i_ref1 : None
-        Deprecated with pyfixest version 0.18.0. Please use i-syntax instead, i.e.
-        quantreg('Y~ i(f1, ref=1)', data = data) instead of the former
-        quantreg('Y~ i(f1)', data = data, i_ref=1).
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
