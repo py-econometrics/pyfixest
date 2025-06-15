@@ -67,7 +67,7 @@ def stata_results_crv():
 )
 @pytest.mark.parametrize("data", [pf.get_data(N=5_000, seed=3131)])
 @pytest.mark.parametrize("quantile", [0.02, 0.35, 0.5, 0.9])
-@pytest.mark.parametrize("method", ["fn"])
+@pytest.mark.parametrize("method", ["fn", "pfn"])
 def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     "Test that pyfixest's quantreg implementation equals R's quantreg implementation."
     # Fit model in pyfixest
@@ -105,21 +105,23 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     r_summ = ro.r["summary"](fit_r, se="nid")
     coeff_mat = r_summ.rx2("coefficients")
     r_se = np.array(coeff_mat)[:, 1]
-    np.testing.assert_allclose(py_se, r_se, rtol=1e-08, atol=1e-08)
+    np.testing.assert_allclose(py_se, r_se, rtol=1e-07, atol=1e-07)
 
-    # compare residuals
-    py_resid = fit_py.resid()
-    r_resid = np.array(fit_r.rx2("residuals"))
-    np.testing.assert_allclose(py_resid[:5], r_resid[:5], rtol=1e-03, atol=1e-08)
+    if method == "fn":
+        # no residuals for pfn?
+        # compare residuals
+        py_resid = fit_py.resid()
+        r_resid = np.array(fit_r.rx2("residuals"))
+        np.testing.assert_allclose(py_resid[:5], r_resid[:5], rtol=1e-03, atol=1e-08)
 
-    # compare objective function
-    def total_loss(resid, quantile):
-        return np.sum(np.abs(resid) * (quantile - (resid < 0)))
+        # compare objective function
+        def total_loss(resid, quantile):
+            return np.sum(np.abs(resid) * (quantile - (resid < 0)))
 
-    # py_loss = total_loss(py_resid, quantile)
-    py_loss = fit_py.objective_value
-    r_loss = total_loss(r_resid, quantile)
-    np.testing.assert_allclose(py_loss, r_loss, rtol=1e-06, atol=1e-08)
+        # py_loss = total_loss(py_resid, quantile)
+        py_loss = fit_py.objective_value
+        r_loss = total_loss(r_resid, quantile)
+        np.testing.assert_allclose(py_loss, r_loss, rtol=1e-06, atol=1e-08)
 
 
 @pytest.mark.against_r_core

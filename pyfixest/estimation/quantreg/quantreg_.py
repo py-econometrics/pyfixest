@@ -88,6 +88,7 @@ class Quantreg(Feols):
         self._quantile_tol = quantile_tol
         self._quantile_maxiter = quantile_maxiter
 
+
         self._model_name = (
             FixestFormula.fml
             if self._sample_split_var is None
@@ -122,6 +123,14 @@ class Quantreg(Feols):
             "fn": partial(
                 self.fit_qreg_fn,
                 q=self._quantile,
+                tol=self._quantile_tol,
+                maxiter=self._quantile_maxiter,
+                beta_init=None,
+            ),
+            "pfn": partial(
+                self.fit_qreg_pfn,
+                q=self._quantile,
+                rng=np.random.default_rng(self._seed),
                 tol=self._quantile_tol,
                 maxiter=self._quantile_maxiter,
                 beta_init=None,
@@ -197,11 +206,11 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        if self._chol is None or self._P is None:
-            self._chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
-            self._P = solve_triangular(self._chol, X.T, lower=True, check_finite=False)
-        if self._chol is None or self._P is None:
-            raise ValueError("...")
+        #if self._chol is None or self._P is None:
+        _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
+        _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
+        #if self._chol is None or self._P is None:
+        #    raise ValueError("...")
 
         fn_res = frisch_newton_solver(
             A=X.T,
@@ -213,8 +222,8 @@ class Quantreg(Feols):
             max_iter=maxiter,
             backoff=0.9995,
             beta_init=beta_init,
-            chol=cast(np.ndarray, self._chol),
-            P=cast(np.ndarray, self._P),
+            chol=cast(np.ndarray, _chol),
+            P=cast(np.ndarray, _P),
         )
 
         has_converged = fn_res[1]
@@ -226,6 +235,112 @@ class Quantreg(Feols):
             )
 
         return fn_res
+
+
+    def fit_qreg_pfn(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        q: float,
+        tol: Optional[float] = None,
+        maxiter: Optional[int] = None,
+        beta_init: Optional[np.ndarray] = None,
+        rng: Optional[np.random.Generator] = None,
+    ) -> tuple[
+        np.ndarray,
+        bool,
+        int,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing."""
+        N, k = X.shape
+        if tol is None:
+            tol = 1e-06
+        if maxiter is None:
+            maxiter = N
+
+        max_bad_fixups = 3
+        n_bad_fixups = 0
+
+        has_converged = False
+        compute_beta_init = beta_init is None
+
+        # m constant should be set by user
+        m = 0.8
+        n_init = int(np.ceil((k * N) ** (2 / 3)))
+        M = int(np.ceil(m * n_init))
+
+        while not has_converged:
+            if compute_beta_init:
+                # get initial sample
+                idx_init = rng.choice(N, size=n_init, replace=False)
+                beta_hat_init = self.fit_qreg_fn(X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter)[0]
+
+            else:
+                beta_hat_init = beta_init
+
+            r_init = Y.flatten() - X @ beta_hat_init
+            # conservative estimate of sigma^2
+            z = np.sqrt(np.dot(r_init, r_init) / (N - k))
+            rz = r_init / z
+
+            ql = max(0, q - M / (2 * N))
+            qu = min(1, q + M / (2 * N))
+
+            JL = rz < np.quantile(rz, ql)
+            JH = rz > np.quantile(rz, qu)
+
+            while not has_converged and n_bad_fixups < max_bad_fixups:
+
+                keep = ~(JL | JH)
+                X_sub = X[keep, :]
+                Y_sub = Y[keep, :]
+
+                if np.any(JL):
+                    X_neg = np.sum(X[JL, :], axis=0)
+                    Y_neg = np.sum(Y[JL])
+                    X_sub = np.concatenate([X_sub, X_neg.reshape((1, self._k))], axis=0)
+                    Y_sub = np.concatenate([Y_sub, Y_neg.reshape((1, 1))], axis=0)
+                if np.any(JH):
+                    X_pos = np.sum(X[JH, :], axis=0)
+                    Y_pos = np.sum(Y[JH])
+                    X_sub = np.concatenate([X_sub, X_pos.reshape(1, self._k)], axis=0)
+                    Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
+
+                # solve the modified problem
+                fn_res = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
+                beta_hat = fn_res[0]
+
+                r = Y.flatten() - X @ beta_hat
+
+                # count wrong predictions and get their indices
+                mis_L = JL & (r > 0)
+                mis_H = JH & (r < 0)
+                n_bad = np.sum(mis_L) + np.sum(mis_H)
+
+                if n_bad == 0:
+                    has_converged = True
+                elif n_bad > 0.1 * M:
+                    warnings.warn("Too many bad fixups. Doubling m.")
+                    n_init = min(N, 2 * n_init)
+                    M = int(np.ceil(m * n_init))
+                    n_bad_fixups += 1
+                    break
+                else:
+                    JL = JL & ~mis_L
+                    JH = JH & ~mis_H
+
+        if not has_converged:
+            warnings.warn(
+                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups."
+            )
+
+        return fn_res
+
 
     def _vcov_nid(self) -> np.ndarray:
         """
