@@ -4,12 +4,10 @@ import numpy as np
 from scipy.linalg import lapack, solve_triangular
 
 
-# @nb.njit
 def _duality_gap(x, z, s, w):
     return x @ z + s @ w
 
 
-# @nb.njit
 def _bound(v: np.ndarray, dv: np.ndarray, backoff: float):
     mask = dv < 0
     if not mask.any():
@@ -18,7 +16,6 @@ def _bound(v: np.ndarray, dv: np.ndarray, backoff: float):
     return min(backoff * alpha_max, 1.0)
 
 
-# @nb.njit
 def _step_length(a: tuple, b: tuple, backoff: float) -> float:
     x, dx = a
     s, ds = b
@@ -45,7 +42,6 @@ def _solve_ADAt(
     return y
 
 
-# @nb.njit
 def cold_start(
     A: np.ndarray, c: np.ndarray, q: float, chol: np.ndarray, P: np.ndarray
 ) -> tuple[np.ndarray, ...]:
@@ -71,25 +67,6 @@ def cold_start(
     return x, s, z, w, y
 
 
-# @nb.njit
-def warm_start(A, c, beta, q, chol, P, eps=1e-8):
-    "Initiate Frisch-Newton solver with a warm start."
-    n = A.shape[1]
-    x = np.full(n, 1.0 - q) + eps
-    s = np.full(n, q) + eps
-
-    r = -(A.T @ beta)
-    z = np.maximum(r, 0.0) + eps
-    w = z - r
-
-    rhs = A @ (c - z + w)
-    y = _solve_ADAt(rhs, D=np.ones(n), chol=chol, P=P)
-    # y = np.linalg.solve(A @ A.T, rhs)
-
-    return x, s, z, w, y
-
-
-# @nb.njit
 def frisch_newton_solver(
     A: np.ndarray,
     b: np.ndarray,
@@ -114,22 +91,13 @@ def frisch_newton_solver(
     Koenker and Ng ("A FRISCH NEWTON ALGORITHM FOR SPARSE QUANTILE
     REGRESSION").
     """
-    # 1) Basic shapes
     m, n = A.shape
     c = c.ravel()
     b = b.ravel()
     u = u.ravel()
 
-    # 2) Initialize variables
-    # ---------- 2. persistent work-vectors ----------
+    x, s, z, w, y = cold_start(A=A, c=c, q=q, chol=chol, P=P)
 
-    x, s, z, w, y = (
-        cold_start(A=A, c=c, q=q, chol=chol, P=P)
-        if beta_init is None
-        else warm_start(A=A, c=c, beta=beta_init, q=q, chol=chol, P=P)
-    )
-
-    # reusable scratch pads (allocated once)
     r1_tilde = np.empty((n,))
     r2_tilde = np.empty((m,))
     r1_hat = np.empty_like(c)
@@ -166,7 +134,7 @@ def frisch_newton_solver(
     w_pred = np.empty_like(w)
     y_pred = np.empty_like(y)
 
-    # 6) Quick sanity checks on starting values
+    # quick sanity checks on starting values
     if True:
         for val in [x, z, s, w]:
             if np.any(val < 0):
@@ -229,7 +197,7 @@ def frisch_newton_solver(
         dz_cor[:] = -(z / x) * dx_cor + (mu_targ - dx_aff * dz_aff) / x
         dw_cor[:] = -(w / s) * ds_cor + (mu_targ - ds_aff * dw_aff) / s
 
-        # 9) Final step lengths (corrector) — eq (12)
+        # Final step lengths (corrector) — eq (12)
         alpha_p_cor = _step_length(
             a=(x_pred, dx_cor), b=(s_pred, ds_cor), backoff=backoff
         )
@@ -237,9 +205,7 @@ def frisch_newton_solver(
             a=(z_pred, dz_cor), b=(w_pred, dw_cor), backoff=backoff
         )
 
-        # 10) Update all variables / corrector step
-        # Update
-        # corrector (starting from the predictor point)
+        # Update all variables / corrector step
         x[:] = x_pred + alpha_p_cor * dx_cor
         s[:] = s_pred + alpha_p_cor * ds_cor
         y[:] = y_pred + alpha_d_cor * dy_cor

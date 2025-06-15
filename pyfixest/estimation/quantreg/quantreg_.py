@@ -164,6 +164,9 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
+        self._Y_hat_link = self._X @ self._beta_hat
+        self._Y_hat_response = self._Y_hat_link
+
         self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
         self._hessian = self._X.T @ self._X
         self._bread = np.linalg.inv(self._hessian)
@@ -193,6 +196,7 @@ class Quantreg(Feols):
         if maxiter is None:
             maxiter = N
 
+        # compute cholesky once outside of FN loop
         if self._chol is None or self._P is None:
             self._chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
             self._P = solve_triangular(self._chol, X.T, lower=True, check_finite=False)
