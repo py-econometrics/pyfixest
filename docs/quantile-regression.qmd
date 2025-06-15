@@ -1,0 +1,51 @@
+---
+title: "Quantile Regression"
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+PyFixest now experimentally supports quantile regression!
+
+```{python}
+%load_ext autoreload
+
+import pyfixest as pf
+import statsmodels.formula.api as smf
+import numpy as np
+
+data = pf.get_data()
+```
+
+## Basic Example
+
+Just as in `statsmodels`, the function that runs a quantile regression is `quantreg()`.
+
+Below, we loop over 10 different quantiles.
+
+```{python}
+%%capture
+fits = [pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = q) for q in np.arange(0.1, 1, 0.1)]
+```
+
+We can inspect the quantile regression results using the dedicated `qplot()` function.
+
+```{python}
+pf.qplot(fits, nrow = 2)
+```
+
+We observe some heterogeneity in the Intercept, but all other variants are homogeneous across users.
+
+## Inference
+
+`pf.quantreg` supports heteroskedasticity-robust inference ("nid") and cluster robust inference following
+Parente & Santos Silva. See this [slide set](https://www.stata.com/meeting/uk15/abstracts/materials/uk15_santossilva.pdf)
+or the [Journal of Econometrics paper](https://repository.essex.ac.uk/8976/1/dp728.pdf) for details.
+
+```{python}
+fit_nid = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = "nid")
+fit_crv = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = {"CRV1": "f1"})
+```
