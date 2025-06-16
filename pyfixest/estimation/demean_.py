@@ -139,7 +139,7 @@ def demean_model(
                 maxiter=fixef_maxiter,
             )
             if success is False:
-                raise ValueError("Demeaning failed after 100_000 iterations.")
+                raise ValueError(f"Demeaning failed after {fixef_maxiter} iterations.")
 
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
@@ -209,7 +209,7 @@ def demean(
     flist: np.ndarray,
     weights: np.ndarray,
     tol: float = 1e-08,
-    maxiter: int = 100,000,
+    maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]:
     """
     Demean an array.
