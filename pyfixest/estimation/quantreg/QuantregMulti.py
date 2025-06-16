@@ -91,6 +91,58 @@ class QuantregMulti:
 
         return self.all_quantregs
 
+    def get_fit2(self):
+
+        # sort q increasing
+
+        q = np.sort(self.quantiles)
+
+        n_quantiles = len(q)
+        q_reg_res = {}
+
+        # initial fit
+        Quantreg_0 = self.all_quantregs[0]
+        X = Quantreg_0._X
+        Y = Quantreg_0._Y
+        hessian = X.T @ X
+        rng = np.random.default_rng(Quantreg_0._seed)
+
+
+        # first quantile regression
+        q_reg_res[q[0]] = Quantreg_0.fit_qreg_pfn(X = X, Y = Y, q = q[0], rng = rng)
+        Quantreg_0._beta_hat = q_reg_res[q[0]][0]
+        Quantreg_0._u_hat = Y.flatten() - X @ Quantreg_0._beta_hat
+        Quantreg_0._hessian = hessian
+
+        # kernel estimate at zero: J
+
+
+        for i in range(1, n_quantiles):
+
+            # compute J
+            # cn in Koenker textbook p.81
+            Quantreg_i_prev = self.all_quantregs[i-1]
+            u_hat_prev = Quantreg_i_prev._u_hat
+            N_prev = Quantreg_i_prev._N
+            beta_hat_prev = Quantreg_i_prev._beta_hat
+
+            # compute inv(J)
+            kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
+            h_G = get_hall_sheather_bandwidth(q=q[i-1], N=N_prev)
+            delta = kappa * (norm.ppf(q[i-1] + h_G) - norm.ppf(q[i-1] - h_G))
+            J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N_prev * delta)
+            Jinv = np.linalg.inv(J)
+
+            beta_new = beta_hat_prev + Jinv @ np.mean((q[i] - (u_hat_prev < 0))[:,None] * X, axis = 0)
+
+            self.all_quantregs[i]._beta_hat = beta_new
+            self.all_quantregs[i]._u_hat = self.all_quantregs[i]._Y.flatten() - self.all_quantregs[i]._X @ beta_new
+            self.all_quantregs[i]._hessian = hessian
+            q_reg_res[q[i]] = self.all_quantregs[i]
+
+        return q_reg_res
+
+
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
         ):
