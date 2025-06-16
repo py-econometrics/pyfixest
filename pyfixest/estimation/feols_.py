@@ -232,6 +232,7 @@ class Feols:
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
@@ -275,6 +276,7 @@ class Feols:
         self._has_weights = weights is not None
         self._collin_tol = collin_tol
         self._fixef_tol = fixef_tol
+        self._fixef_maxiter = fixef_maxiter
         self._solver = solver
         self._demeaner_backend = demeaner_backend
         self._lookup_demeaned_data = lookup_demeaned_data
@@ -460,6 +462,7 @@ class Feols:
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._fixef_maxiter,
                 self._demean_func,
                 # self._demeaner_backend,
             )
