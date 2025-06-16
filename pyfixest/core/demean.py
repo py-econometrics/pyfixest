@@ -9,7 +9,7 @@ def demean(
     flist: NDArray[np.uint],
     weights: NDArray[np.float64],
     tol: float = 1e-08,
-    maxiter: int = 100_000,
+    maxiter: int = 100,000,
 ) -> tuple[NDArray, bool]:
     """
     Demean an array.

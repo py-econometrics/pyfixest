@@ -13,7 +13,7 @@ def _demean_jax_impl(
     weights: jnp.ndarray,
     n_groups: int,
     tol: float,
-    maxiter: int,
+    maxiter: int = 100,000,
 ) -> tuple[jnp.ndarray, bool]:
     """JIT-compiled implementation of demeaning."""
     n_factors = flist.shape[1]
@@ -71,7 +71,7 @@ def demean_jax(
     flist: np.ndarray,
     weights: np.ndarray,
     tol: float = 1e-08,
-    maxiter: int = 100_000,
+    maxiter: int,
 ) -> tuple[np.ndarray, bool]:
     """Fast and reliable JAX implementation with static shapes."""
     # Enable float64 precision
