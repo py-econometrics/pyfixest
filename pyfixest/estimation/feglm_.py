@@ -29,6 +29,7 @@ class Feglm(Feols, ABC):
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
@@ -57,6 +58,7 @@ class Feglm(Feols, ABC):
             weights_type=weights_type,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -146,6 +148,7 @@ class Feglm(Feols, ABC):
         _maxiter = self.maxiter
         _tol = self.tol
         _fixef_tol = self._fixef_tol
+        _fixef_maxiter = self._fixef_maxiter
         _solver = self._solver
 
         # initialize
@@ -188,6 +191,7 @@ class Feglm(Feols, ABC):
                 flist=_fe,
                 weights=W_tilde.flatten(),
                 tol=_fixef_tol,
+                maxiter=_fixef_maxiter
             )
 
             # Step 4: compute (beta(r) - beta(r-1)) and check for convergence, _update beta(r-1) s(eq. 3.5)
@@ -310,16 +314,17 @@ class Feglm(Feols, ABC):
         flist: np.ndarray,
         weights: np.ndarray,
         tol: np.ndarray,
+        maxiter: int
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
             return v, X
         else:
             vX_resid, success = demean(
-                x=np.c_[v, X], flist=flist, weights=weights, tol=tol
+                x=np.c_[v, X], flist=flist, weights=weights, tol=tol, maxiter=maxiter
             )
             if success is False:
-                raise ValueError("Demeaning failed after 100_000 iterations.")
+                raise ValueError(f"Demeaning failed after {maxiter} iterations.")
             else:
                 return vX_resid[:, 0], vX_resid[:, 1:]
 
