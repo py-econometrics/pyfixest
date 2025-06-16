@@ -51,6 +51,8 @@ class FeolsCompressed(Feols):
         The tolerance level for collinearity.
     fixef_tol : float
         The tolerance level for the fixed effects.
+    fixef_maxiter : int
+        The maximum iterations for the demeaning algorithm.
     lookup_demeaned_data : dict[str, pd.DataFrame]
         The lookup table for demeaned data.
     solver : str
@@ -85,6 +87,7 @@ class FeolsCompressed(Feols):
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
@@ -113,6 +116,7 @@ class FeolsCompressed(Feols):
             weights_type,
             collin_tol,
             fixef_tol,
+            fixef_maxiter,
             lookup_demeaned_data,
             solver,
             demeaner_backend,

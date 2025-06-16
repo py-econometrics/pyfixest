@@ -745,6 +745,7 @@ def feglm(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
+    fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
@@ -796,6 +797,9 @@ def feglm(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
+    fixef_maxiter: int, optional
+        Maximum iterations for the demeaning algorithm.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -947,6 +951,7 @@ def feglm(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -962,6 +967,7 @@ def feglm(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
