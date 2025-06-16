@@ -639,6 +639,7 @@ def _post_processing_input_checks(
     """
     models_list: list[Union[Feols, Fepois, Feiv]] = []
 
+
     if isinstance(models, (Feols, Fepois, Feiv)):
         models_list = [models]
     elif isinstance(models, FixestMulti):

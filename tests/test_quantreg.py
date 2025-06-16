@@ -165,3 +165,33 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
 
     np.testing.assert_allclose(coef, exp_coef, rtol=1e-6, atol=1e-6)
     np.testing.assert_allclose(se, exp_se, rtol=1e-6, atol=1e-6)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("data", [pf.get_data(N=1000, seed=3131).dropna()])
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
+@pytest.mark.parametrize("vcov", ["hetero", "nid", {"CRV1":"f1"}])
+
+def test_quantreg_multiple_quantiles(data, fml, vcov):
+
+    "Test that multiple quantile syntax via QuantregMulti produces the same results as the single quantile syntax."
+
+    quantiles = [0.1, 0.25, 0.5, 0.75, 0.9]
+
+    fit_single = [pf.quantreg(fml, data=data, quantile=q, method="pfn", vcov = vcov) for q in quantiles]
+
+    fit_multi = pf.quantreg(fml, data=data, quantile=quantiles, vcov = vcov, method="pfn")
+
+    for q in range(len(quantiles)):
+
+        # test coefficients
+        single_coef = fit_single[q].coef().to_numpy()
+        multi_coef = fit_multi.fetch_model(q).coef().to_numpy()
+
+        np.testing.assert_allclose(single_coef, multi_coef, rtol=1e-06, atol=1e-06, err_msg=f"Quantile: {quantiles[q]}")
+
+        # test standard errors
+        single_se = fit_single[q].se().to_numpy()
+        multi_se = fit_multi.fetch_model(q).se().to_numpy()
+
+        np.testing.assert_allclose(single_se, multi_se, rtol=1e-06, atol=1e-06, err_msg=f"Quantile: {quantiles[q]}")

@@ -9,6 +9,8 @@ from pyfixest.estimation.literals import (
     SolverOptions,
 )
 from pyfixest.utils.dev_utils import DataFrameType
+from scipy.stats import norm
+from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
 
 class QuantregMulti:
@@ -46,10 +48,13 @@ class QuantregMulti:
 
         # initiate a list of Quantreg objects
         self.quantiles = quantile
-        self.all_quantregs = [Quantreg(**args_dict, quantile = q) for q in self.quantiles]
-        [q.prepare_model_matrix() for q in self.all_quantregs]
-        [q.to_array() for q in self.all_quantregs]
-        [q.drop_multicol_vars() for q in self.all_quantregs]
+        self.all_quantregs = {q: Quantreg(**args_dict, quantile=q) for q in self.quantiles}
+
+        # TODO: call model_matrix(), to_array(), drop_multicol_vars() only once for model 0
+        # and then copy the attributes to the other models (less robust? but faster)
+        [q.prepare_model_matrix() for q in self.all_quantregs.values()]
+        [q.to_array() for q in self.all_quantregs.values()]
+        [q.drop_multicol_vars() for q in self.all_quantregs.values()]
 
         self._X_is_empty = False
 
@@ -62,40 +67,41 @@ class QuantregMulti:
         q = np.sort(self.quantiles)
 
         n_quantiles = len(q)
-        q_reg_res = {}
 
-        # initial fit
-        Quantreg_0 = self.all_quantregs[0]
-        beta_hat_mat = np.zeros((len(q), Quantreg_0._X.shape[1]))
+        # data fixed across qregs, just need take from first one
+        X = self.all_quantregs[q[0]]._X
+        Y = self.all_quantregs[q[0]]._Y
+        hessian = X.T @ X
+        rng = np.random.default_rng(self.all_quantregs[q[0]]._seed)
 
-        # first quantile regression
-        q_reg_res[q[0]] = Quantreg_0.fit_qreg_pfn(X = Quantreg_0._X, Y = Quantreg_0._Y, q = q[0], rng = np.random.default_rng(Quantreg_0._seed))
-        beta_hat_mat[0, :] = q_reg_res[q[0]][0]
-        Quantreg_0._beta_hat = beta_hat_mat[0, :]
-        hessian = Quantreg_0._X.T @ Quantreg_0._X
-        Quantreg_0._u_hat = Quantreg_0._Y.flatten() - Quantreg_0._X @ beta_hat_mat[0, :]
-        Quantreg_0._hessian = hessian
+        # fit first quantile regression using "pfn"
+        beta_hat = self.all_quantregs[q[0]].fit_qreg_pfn(X = X, Y = Y, q = q[0], rng = rng)[0]
+        self.all_quantregs[q[0]]._beta_hat = beta_hat
+        self.all_quantregs[q[0]]._u_hat = Y.flatten() - X @ beta_hat
+        self.all_quantregs[q[0]]._hessian = hessian
 
+        # sequentially loop over all other quantiles
         for i in range(1, n_quantiles):
-            Quantreg_i = self.all_quantregs[i]
-            q_reg_res[q[i]] = Quantreg_i.fit_qreg_pfn(X = Quantreg_i._X, Y = Quantreg_i._Y, q = q[i], beta_init=beta_hat_mat[i-1, :])
-            beta_hat_mat[i, :] = q_reg_res[q[i]][0]
-            Quantreg_i._beta_hat = beta_hat_mat[i, :]
-            Quantreg_i._u_hat = Quantreg_i._Y.flatten() - Quantreg_i._X @ beta_hat_mat[i, :]
-            Quantreg_i._hessian = hessian
-        return q_reg_res
+
+            beta_hat_prev = self.all_quantregs[q[i-1]]._beta_hat
+            beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(X = X, Y = Y, q = q[i], beta_init=beta_hat_prev)[0]
+            self.all_quantregs[q[i]]._beta_hat = beta_hat
+            self.all_quantregs[q[i]]._u_hat = Y.flatten() - X @ beta_hat
+            self.all_quantregs[q[i]]._hessian = hessian
+
+        return self.all_quantregs
 
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
         ):
 
-        [QuantReg.vcov(vcov = vcov, data = data) for QuantReg in self.all_quantregs]
+        [QuantReg.vcov(vcov = vcov, data = data) for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs
 
     def get_inference(self):
 
-        [QuantReg.get_inference() for QuantReg in self.all_quantregs]
+        [QuantReg.get_inference() for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs
 
@@ -116,7 +122,7 @@ class QuantregMulti:
         pass
 
     def _clear_attributes(self):
-        [QuantReg._clear_attributes() for QuantReg in self.all_quantregs]
+        [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs
 

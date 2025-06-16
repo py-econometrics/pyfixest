@@ -414,7 +414,7 @@ class FixestMulti:
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data if not isinstance(FIT, QuantregMulti) else FIT.all_quantregs[0]._data) #  a little hacky, but works
+                        FIT.vcov(vcov=vcov_type, data=FIT._data if not isinstance(FIT, QuantregMulti) else FIT.all_quantregs[FIT.quantiles[0]]._data) #  a little hacky, but works
 
                         FIT.get_inference()
                         if _method == "feols" and not FIT._is_iv:
@@ -425,7 +425,7 @@ class FixestMulti:
                     FIT._clear_attributes()
 
                     if isinstance(FIT, QuantregMulti):
-                        for q_model in FIT.all_quantregs:
+                        for q_model in FIT.all_quantregs.values():
                             self.all_fitted_models[q_model._model_name] = q_model
                     else:
                         self.all_fitted_models[FIT._model_name] = FIT
