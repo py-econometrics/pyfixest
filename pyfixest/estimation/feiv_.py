@@ -145,6 +145,7 @@ class Feiv(Feols):
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
@@ -171,6 +172,7 @@ class Feiv(Feols):
             weights_type=weights_type,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -214,6 +216,7 @@ class Feiv(Feols):
                 self._lookup_demeaned_data,
                 self._na_index_str,
                 self._fixef_tol,
+                self._fixef_maxiter,
                 self._demean_func,
             )
         else:
