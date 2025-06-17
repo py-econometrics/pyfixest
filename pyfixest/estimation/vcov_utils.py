@@ -239,9 +239,33 @@ def _nw_meat_panel(
     return meat_nw_panel
 
 
+def _get_scores_time(scores: np.ndarray, time_arr: np.ndarray) -> np.ndarray:
+    """
+
+    Get the time-aggregated scores needed for Driscoll-Kraay HAC.
+
+    Parameters
+    ----------
+    scores: np.ndarray
+        The scores matrix.
+    time_arr: np.ndarray
+        The time variable.
+
+    Returns
+    -------
+    scores_time: np.ndarray
+        The time-aggregated scores.
+    """
+    order = np.argsort(time_arr)
+    t = time_arr[order]
+    S = scores[order]
+    idx = np.unique(t, return_index=True)[1]
+    scores_time = np.add.reduceat(S, idx, axis=0)
+    return scores_time
+
 @nb.njit(parallel=False)
-def _dk_meat(
-    scores: np.ndarray,
+def _dk_meat_panel(
+    scores_time: np.ndarray,
     time_arr: np.ndarray,
     lag: Optional[int] = None,
 ):
@@ -249,40 +273,48 @@ def _dk_meat(
 
     Parameters
     ----------
-    scores: np.ndarray
-        The scores matrix.
+    scores_time: np.ndarray
+        The time-aggregated scores.
     time_arr: np.ndarray, optional
         The time variable for clustering. Assume that there are no duplicate time periods.
     lag: int, optional
         The number of lag for the HAC estimator. Defaults to floor (# of time periods)^(1/4).
     """
-    order = np.argsort(time_arr)
-    ordered_scores = scores[order]
-
-    time_periods, k = ordered_scores.shape
-    time_scores = np.zeros((time_periods, k))
-
-    for t in range(time_periods):
-        time_scores[t, :] += ordered_scores[t, :]
 
     # Set lag if not provided
     if lag is None:
-        lag = int(np.floor(time_periods**0.25))
+        lag = int(np.floor(np.unique(time_arr).shape[0]**0.25))
 
-    # bartlett kernel weights
-    weights = np.array([1 - j / (lag + 1) for j in range(lag + 1)])
+    time_periods, k = scores_time.shape
+
+    # Pre-compute bartlett kernel weights more efficiently
+    weights = np.empty(lag + 1)
+    lag_plus_one = lag + 1
+    for j in range(lag + 1):
+        weights[j] = 1.0 - j / lag_plus_one
     weights[0] = 0.5  # Halve first weight
 
     meat = np.zeros((k, k))
+    gamma_lag = np.zeros((k,k))
 
+    # note: just the same as for time series HAC
+    # only difference is computation on time scores
     for lag_value in range(lag + 1):
         weight = weights[lag_value]
-        gamma_lag = np.zeros((k, k))
 
+        gamma_lag.fill(0.0)
         for t in range(lag_value, time_periods):
-            gamma_lag += np.outer(time_scores[t, :], time_scores[t - lag_value, :])
+            scores_t = scores_time[t, :]
+            scores_t_lag = scores_time[t - lag_value, :]
 
-        meat += weight * (gamma_lag + gamma_lag.T)
+            for i in range(k):
+                scores_t_i = scores_t[i]
+                for j in range(k):
+                    gamma_lag[i, j] += scores_t_i * scores_t_lag[j]
+
+        for i in range(k):
+            for j in range(k):
+                meat[i, j] += weight * (gamma_lag[i, j] + gamma_lag[j, i])
 
     return meat
 

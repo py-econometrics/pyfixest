@@ -119,7 +119,10 @@ BACKEND_F3 = [
         #    True
     ],
 )
-@pytest.mark.parametrize("inference", ["NW"])
+@pytest.mark.parametrize("inference", [
+    "NW",
+    "DK"
+])
 @pytest.mark.parametrize(
     "vcov_kwargs",
     [
@@ -172,6 +175,9 @@ def test_single_fit_feols_hac_panel(
     if panel_id is None and balanced != "balanced-consecutive":
         pytest.skip("Don't test for non-balancedness when no panel data.")
 
+    if panel_id is None and inference == "DK":
+        pytest.skip("Don't test for DK when no panel data, as ill-defined / collapes back to TS HAC.")
+
     if panel_id is not None:
         # pick the subset of units to alter for the non-balanced cases
         first_25 = np.unique(data["unit"])[:25]
@@ -202,12 +208,14 @@ def test_single_fit_feols_hac_panel(
     r_panel_kwars = (
         ({"time": time_id} if time_id is not None else {})
         | ({"lag": lag} if lag is not None else {})
-        | ({"unit": panel_id} if panel_id is not None else {})
     )
+
+    if inference == "NW":
+        r_panel_kwars |= ({"unit": panel_id} if panel_id is not None else {})
 
     r_fixest = fixest.feols(
         ro.Formula(fml),
-        vcov=fixest.vcov_NW(**r_panel_kwars),
+        vcov= fixest.vcov_NW(**r_panel_kwars) if inference == "NW" else fixest.vcov_DK(**r_panel_kwars),
         data=data,
         ssc=fixest.ssc(adj, "nested", cluster_adj, "min", "min", False),
         **({"weights": ro.Formula(f"~{weights}")} if weights is not None else {}),
