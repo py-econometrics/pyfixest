@@ -1141,6 +1141,7 @@ def quantreg(
 
     fixef_rm = "none"
     fixef_tol = 1e-08
+    fixef_maxiter = 100_000
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
@@ -1156,6 +1157,7 @@ def quantreg(
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
+        fixef_maxiter=fixef_maxiter,
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -1176,6 +1178,7 @@ def quantreg(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
