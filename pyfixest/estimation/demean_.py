@@ -112,7 +112,9 @@ def demean_model(
                     maxiter=fixef_maxiter,
                 )
                 if success is False:
-                    raise ValueError(f"Demeaning failed after {fixef_maxiter} iterations.")
+                    raise ValueError(
+                        f"Demeaning failed after {fixef_maxiter} iterations."
+                    )
 
                 YX_demeaned = pd.DataFrame(YX_demean_new)
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)

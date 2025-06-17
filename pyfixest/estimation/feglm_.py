@@ -191,7 +191,7 @@ class Feglm(Feols, ABC):
                 flist=_fe,
                 weights=W_tilde.flatten(),
                 tol=_fixef_tol,
-                maxiter=_fixef_maxiter
+                maxiter=_fixef_maxiter,
             )
 
             # Step 4: compute (beta(r) - beta(r-1)) and check for convergence, _update beta(r-1) s(eq. 3.5)
@@ -314,7 +314,7 @@ class Feglm(Feols, ABC):
         flist: np.ndarray,
         weights: np.ndarray,
         tol: np.ndarray,
-        maxiter: int
+        maxiter: int,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
         if flist is None:
