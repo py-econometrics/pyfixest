@@ -15,6 +15,7 @@ def demean_model(
     lookup_demeaned_data: dict[str, Any],
     na_index_str: str,
     fixef_tol: float,
+    fixef_maxiter: int,
     demean_func: Callable,
     # demeaner_backend: Literal["numba", "jax", "rust"] = "numba",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -46,6 +47,8 @@ def demean_model(
         variables.
     fixef_tol: float
         The tolerance for the demeaning algorithm.
+    fixef_maxiter: int
+         The maximum number of iterations for the demeaning algorithm.
     demeaner_backend: DemeanerBackendOptions, optional
         The backend to use for demeaning. Can be either "numba", "jax", or "rust".
         Defaults to "numba".
@@ -106,10 +109,10 @@ def demean_model(
                     flist=fe_array.astype(np.uintp),
                     weights=weights,
                     tol=fixef_tol,
-                    maxiter=100_000,
+                    maxiter=fixef_maxiter,
                 )
                 if success is False:
-                    raise ValueError("Demeaning failed after 100_000 iterations.")
+                    raise ValueError(f"Demeaning failed after {fixef_maxiter} iterations.")
 
                 YX_demeaned = pd.DataFrame(YX_demean_new)
                 YX_demeaned = np.concatenate([YX_demeaned_old, YX_demean_new], axis=1)
@@ -133,10 +136,10 @@ def demean_model(
                 flist=fe_array.astype(np.uintp),
                 weights=weights,
                 tol=fixef_tol,
-                maxiter=100_000,
+                maxiter=fixef_maxiter,
             )
             if success is False:
-                raise ValueError("Demeaning failed after 100_000 iterations.")
+                raise ValueError(f"Demeaning failed after {fixef_maxiter} iterations.")
 
             YX_demeaned = pd.DataFrame(YX_demeaned)
             YX_demeaned.columns = yx_names
