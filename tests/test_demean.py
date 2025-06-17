@@ -269,7 +269,7 @@ def test_demean_model_maxiter_convergence_failure(demean_func):
      Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
      X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
      # Many fixed effects to make convergence difficult
-     fe = pd.DataFrame({"fe1": np.arange(N)})  # Each obs is its own FE
+     fe = pd.DataFrame({"fe1": rng.choice(N/2, N), "fe2": rng.choice(N/2, N)})  # Each obs is its own FE
      weights = np.ones(N)
      lookup_dict = {}
 
