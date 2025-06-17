@@ -1228,7 +1228,7 @@ def _estimation_input_checks(
     store_data: bool,
     lean: bool,
     fixef_tol: float,
-    fixef_maxiter=int,
+    fixef_maxiter: int,
     weights_type: str,
     use_compression: bool,
     reps: Optional[int],

@@ -71,7 +71,7 @@ def demean_jax(
     flist: np.ndarray,
     weights: np.ndarray,
     tol: float = 1e-08,
-    maxiter: int,
+    maxiter: int = 100_000,
 ) -> tuple[np.ndarray, bool]:
     """Fast and reliable JAX implementation with static shapes."""
     # Enable float64 precision

@@ -260,8 +260,8 @@ def test_demean_model_caching(benchmark, demean_func):
      argnames="demean_func",
      argvalues=[demean, demean_jax, demean_rs],
      ids=["demean_numba", "demean_jax", "demean_rs"],
- )
- def test_demean_model_maxiter_convergence_failure(demean_func):
+)
+def test_demean_model_maxiter_convergence_failure(demean_func):
      """Test that demean_model fails when maxiter is too small."""
      N = 100
      rng = np.random.default_rng(42)
@@ -288,12 +288,12 @@ def test_demean_model_caching(benchmark, demean_func):
          )
 
 
- @pytest.mark.parametrize(
+@pytest.mark.parametrize(
      argnames="demean_func",
      argvalues=[demean, demean_jax, demean_rs],
      ids=["demean_numba", "demean_jax", "demean_rs"],
- )
- def test_demean_model_custom_maxiter_success(demean_func):
+)
+def test_demean_model_custom_maxiter_success(demean_func):
      """Test that demean_model succeeds with reasonable maxiter."""
      N = 1000
      rng = np.random.default_rng(42)
@@ -324,7 +324,7 @@ def test_demean_model_caching(benchmark, demean_func):
      assert Xd.shape == X.shape
 
 
- def test_demean_maxiter_parameter():
+def test_demean_maxiter_parameter():
      """Test that the demean function respects maxiter parameter."""
      N = 100
      rng = np.random.default_rng(42)
@@ -343,7 +343,7 @@ def test_demean_model_caching(benchmark, demean_func):
      # May or may not converge, but shouldn't crash
 
 
- def test_feols_integration_maxiter():
+def test_feols_integration_maxiter():
      """Integration test: Test fixef_maxiter flows from feols to demean."""
      import pyfixest as pf
 
