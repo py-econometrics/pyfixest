@@ -435,66 +435,66 @@ class GelbachDecomposition2:
                     overlap = values1 & values2
                     raise ValueError(f"{overlap} is in both {key1} and {key2}.")
 
-def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
-    "Fit Linear Mediation Model."
-    if store:
-        self.X = X
-        self.N = X.shape[0]
-
-        self.X1 = self.X[:, ~self.mask]
-        self.X1 = hstack([np.ones((self.N, 1)), self.X1])
-        # Update names_X1 to include all X1 variables
-        self.names_X1 = ["Intercept"] + self.x1_vars
-        # Update to find index of decomp_var instead of param
-        self.param_in_X1_idx = self.names_X1.index(self.decomp_var)
-
-        self.X2 = self.X[:, self.mask]
-        self.Y = Y
-
-        results = self.compute_gelbach(
-            X1=self.X1,
-            X2=self.X2,
-            Y=self.Y,
-            X=self.X,
-            agg_first=self.agg_first,
-        )
-        
-        (    
-            self.direct_effect,
-            self.beta_full,
-            self.beta2,
-            self.contribution_dict,
-        ) = results
-
-        # Prepare cluster bootstrap if relevant
-        self.X_dict = {}
-        self.Y_dict = {}
-
-        if self.unique_clusters is not None and not self.only_coef:
-            for g in self.unique_clusters:
-                cluster_idx = np.where(self.cluster_df == g)[0]
-                self.X_dict[g] = self.X[cluster_idx]
-                self.Y_dict[g] = self.Y[cluster_idx]
-
-        return self.contribution_dict
-
-
-    else:
-        # Bootstrap part
-        X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
-        X2 = X[:, self.mask]
-
-        results = self.compute_gelbach(
-            X1=X1,
-            X2=X2,
-            Y=Y,
-            X=X,
-            agg_first=self.agg_first,
-        )
-
-        _, _, _, contribution_dict = results
-
-        return contribution_dict
+    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
+        "Fit Linear Mediation Model."
+        if store:
+            self.X = X
+            self.N = X.shape[0]
+    
+            self.X1 = self.X[:, ~self.mask]
+            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
+            # Update names_X1 to include all X1 variables
+            self.names_X1 = ["Intercept"] + self.x1_vars
+            # Update to find index of decomp_var instead of param
+            self.param_in_X1_idx = self.names_X1.index(self.decomp_var)
+    
+            self.X2 = self.X[:, self.mask]
+            self.Y = Y
+    
+            results = self.compute_gelbach(
+                X1=self.X1,
+                X2=self.X2,
+                Y=self.Y,
+                X=self.X,
+                agg_first=self.agg_first,
+            )
+            
+            (    
+                self.direct_effect,
+                self.beta_full,
+                self.beta2,
+                self.contribution_dict,
+            ) = results
+    
+            # Prepare cluster bootstrap if relevant
+            self.X_dict = {}
+            self.Y_dict = {}
+    
+            if self.unique_clusters is not None and not self.only_coef:
+                for g in self.unique_clusters:
+                    cluster_idx = np.where(self.cluster_df == g)[0]
+                    self.X_dict[g] = self.X[cluster_idx]
+                    self.Y_dict[g] = self.Y[cluster_idx]
+    
+            return self.contribution_dict
+    
+    
+        else:
+            # Bootstrap part
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+            X2 = X[:, self.mask]
+    
+            results = self.compute_gelbach(
+                X1=X1,
+                X2=X2,
+                Y=Y,
+                X=X,
+                agg_first=self.agg_first,
+            )
+    
+            _, _, _, contribution_dict = results
+    
+            return contribution_dict
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
