@@ -20,6 +20,8 @@ class GelbachDecomposition:
     """
 
     param: str
+    x1_vars: list[str]  # list of all X1 variables
+    decomp_var: str     # the specific X1 variable to decompose
     coefnames: list[str]
     nthreads: int = -1
     cluster_df: Optional[pd.Series] = None
@@ -40,17 +42,29 @@ class GelbachDecomposition:
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
-        param_idx = self.coefnames.index(self.param)
+        if self.decomp_var not in self.x1_vars:
+            raise ValueError("decomp_var must be one of x1_vars")
+            
+        # Create mask and handle decomp_var and other X1 variables
+        param_idx = self.coefnames.index(self.decomp_var)
         self.intercept_idx = self.coefnames.index("Intercept")
         self.coefnames_no_intercept = self.coefnames[~self.intercept_idx]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
         self.mask[param_idx] = False
-
+    
+        # Keep other X1 variables in both regressions
+        for var in self.x1_vars:
+            if var != self.decomp_var:
+                var_idx = self.coefnames.index(var)
+                self.mask[var_idx] = False
+    
+        # Mediator names are all names that aren't X1 variables
         self.mediator_names = [
-            name for name in self.coefnames if self.param not in name
+            name for name in self.coefnames 
+            if not any(p in name for p in self.x1_vars)
         ]
         self.intercept_in_mediator_idx = self.mediator_names.index("Intercept")
-
+    
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
             self.unique_clusters = self.cluster_df.unique()
@@ -61,14 +75,14 @@ class GelbachDecomposition:
         else:
             self.unique_clusters = None
             self.cluster_dict = None
-
+    
         if self.combine_covariates is None:
             self.combine_covariates_dict = {
                 x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
             self.combine_covariates_dict = self.combine_covariates
-
+    
         self._check_combine_covariates()
 
     def _check_combine_covariates(self):
@@ -91,64 +105,66 @@ class GelbachDecomposition:
                     overlap = values1 & values2
                     raise ValueError(f"{overlap} is in both {key1} and {key2}.")
 
-    def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
-        "Fit Linear Mediation Model."
-        if store:
-            self.X = X
-            self.N = X.shape[0]
+def fit(self, X: spmatrix, Y: np.ndarray, store: bool = True):
+    "Fit Linear Mediation Model."
+    if store:
+        self.X = X
+        self.N = X.shape[0]
 
-            self.X1 = self.X[:, ~self.mask]
-            self.X1 = hstack([np.ones((self.N, 1)), self.X1])
-            self.names_X1 = ["Intercept", self.param]
-            self.param_in_X1_idx = self.names_X1.index(self.param)
+        self.X1 = self.X[:, ~self.mask]
+        self.X1 = hstack([np.ones((self.N, 1)), self.X1])
+        # Update names_X1 to include all X1 variables
+        self.names_X1 = ["Intercept"] + self.x1_vars
+        # Update to find index of decomp_var instead of param
+        self.param_in_X1_idx = self.names_X1.index(self.decomp_var)
 
-            self.X2 = self.X[:, self.mask]
-            self.Y = Y
+        self.X2 = self.X[:, self.mask]
+        self.Y = Y
 
-            results = self.compute_gelbach(
-                X1=self.X1,
-                X2=self.X2,
-                Y=self.Y,
-                X=self.X,
-                agg_first=self.agg_first,
-            )
+        results = self.compute_gelbach(
+            X1=self.X1,
+            X2=self.X2,
+            Y=self.Y,
+            X=self.X,
+            agg_first=self.agg_first,
+        )
+        
+        (    
+            self.direct_effect,
+            self.beta_full,
+            self.beta2,
+            self.contribution_dict,
+        ) = results
 
-            (
-                self.direct_effect,
-                self.beta_full,
-                self.beta2,
-                self.contribution_dict,
-            ) = results
+        # Prepare cluster bootstrap if relevant
+        self.X_dict = {}
+        self.Y_dict = {}
 
-            # Prepare cluster bootstrap if relevant
-            self.X_dict = {}
-            self.Y_dict = {}
+        if self.unique_clusters is not None and not self.only_coef:
+            for g in self.unique_clusters:
+                cluster_idx = np.where(self.cluster_df == g)[0]
+                self.X_dict[g] = self.X[cluster_idx]
+                self.Y_dict[g] = self.Y[cluster_idx]
 
-            if self.unique_clusters is not None and not self.only_coef:
-                for g in self.unique_clusters:
-                    cluster_idx = np.where(self.cluster_df == g)[0]
-                    self.X_dict[g] = self.X[cluster_idx]
-                    self.Y_dict[g] = self.Y[cluster_idx]
+        return self.contribution_dict
 
-            return self.contribution_dict
 
-        else:
-            # need to compute X1, X2 in bootstrap sample
+    else:
+        # Bootstrap part
+        X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+        X2 = X[:, self.mask]
 
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
-            X2 = X[:, self.mask]
+        results = self.compute_gelbach(
+            X1=X1,
+            X2=X2,
+            Y=Y,
+            X=X,
+            agg_first=self.agg_first,
+        )
 
-            results = self.compute_gelbach(
-                X1=X1,
-                X2=X2,
-                Y=Y,
-                X=X,
-                agg_first=self.agg_first,
-            )
+        _, _, _, contribution_dict = results
 
-            _, _, _, contribution_dict = results
-
-            return contribution_dict
+        return contribution_dict
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -229,11 +245,12 @@ class GelbachDecomposition:
                 )
 
         if not self.only_coef:
-            index = [self.param, ""] + [
+            index = [self.decomp_var, ""] + [
                 item for mediator in mediators for item in [f"{mediator}", ""]
             ]
         else:
-            index = [self.param] + [mediator for mediator in mediators]
+            index = [self.decomp_var] + [mediator for mediator in mediators]
+
 
         columns = ["direct_effect", "full_effect", "explained_effect"]
 
