@@ -341,7 +341,7 @@ class GelbachDecomposition:
 
         return results
 
-
+@dataclass
 class GelbachDecomposition2:
     """
     Linear Mediation Model.
@@ -349,10 +349,9 @@ class GelbachDecomposition2:
     Initial implementation by Apoorva Lal at
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
     """
-
-    param: str
-    x1_vars: list[str]  # list of all X1 variables
-    decomp_var: str     # the specific X1 variable to decompose
+    
+    x1_vars: list[str]
+    decomp_var: str
     coefnames: list[str]
     nthreads: int = -1
     cluster_df: Optional[pd.Series] = None
