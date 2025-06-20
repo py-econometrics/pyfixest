@@ -16,6 +16,7 @@ from pyfixest.estimation.FormulaParser import FixestFormulaParser
 from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     QuantregMethodOptions,
+    QuantregMultiOptions,
     SolverOptions,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
@@ -44,6 +45,7 @@ class FixestMulti:
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
+        quantreg_multi_method: QuantregMultiOptions: "cfm1"
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -101,6 +103,7 @@ class FixestMulti:
         self._separation_check = separation_check
         self._context = capture_context(context)
         self._quantreg_method = quantreg_method
+        self._quantreg_multi_method = quantreg_multi_method
 
         self._run_split = split is not None or fsplit is not None
         self._run_full = not (split and not fsplit)
@@ -285,6 +288,7 @@ class FixestMulti:
         _splitvar = self._splitvar
         _context = self._context
         _quantreg_method = self._quantreg_method
+        _quantreg_multi_method = self._quantreg_multi_method
         _quantile = self._quantile
         _quantile_tol = self._quantile_tol
         _quantile_maxiter = self._quantile_maxiter
@@ -367,6 +371,7 @@ class FixestMulti:
                             {
                                 "quantile": _quantile,
                                 "method": _quantreg_method,
+                                "multi_method": _quantreg_multi_method,
                                 "quantile_tol": _quantile_tol,
                                 "quantile_maxiter": _quantile_maxiter,
                                 "seed": self._seed,

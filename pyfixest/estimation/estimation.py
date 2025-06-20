@@ -10,6 +10,7 @@ from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
     QuantregMethodOptions,
+    QuantregMultiOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
@@ -946,6 +947,7 @@ def quantreg(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = "nid",
     quantile: float = 0.5,
     method: QuantregMethodOptions = "fn",
+    multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
     maxiter: Optional[int] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
@@ -986,6 +988,13 @@ def quantreg(
         a) can speed up the algorithm if N is very large but b) assumes independent observations.
         For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
         by Chernozhukov, Fernández-Val, and Melly (2019).
+
+    multi_method: QuantregMultiMethodOpitons, optional
+        Controls the algorithm for running the quantile regression process.
+        Only relevant if more than one quantile regression is fit in one `quantreg` call.
+        Options are 'cmf1', which is the default and implements algorithm 2 from Chernozhukov et al,
+        'cmf2', which implements their algorithm 3, and 'none', which just loops over separate model
+        calls.
 
     tol : float, optional
         The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the
@@ -1166,11 +1175,19 @@ def quantreg(
         fsplit=fsplit,
         context=context,
         quantreg_method=method,
+        quantreg_multi_method=multi_method,
     )
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        estimation = "quantreg" if not isinstance(quantile, list) else "quantreg_multi", fml = fml, vcov = vcov, weights = weights, ssc = ssc, fixef_rm = fixef_rm, drop_intercept = drop_intercept,         quantile=quantile,
+        estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
+        fml=fml,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
+        quantile=quantile,
         quantile_tol=tol,
         quantile_maxiter=maxiter,
     )
@@ -1329,5 +1346,5 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
         raise ValueError("tol must be in (0, 1)")
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")
-    #if not 0 < quantile < 1:
+    # if not 0 < quantile < 1:
     #    raise ValueError("quantile must be between 0 and 1")
