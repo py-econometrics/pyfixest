@@ -767,10 +767,12 @@ def feglm(
         Options: "none" (default), "singleton".
 
     fixef_tol: float, optional
-        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+        Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08. 
+        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     fixef_maxiter: int, optional
          Maximum iterations for the demeaning algorithm.
+        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.

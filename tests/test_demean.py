@@ -257,110 +257,114 @@ def test_demean_model_caching(benchmark, demean_func):
 
 
 @pytest.mark.parametrize(
-     argnames="demean_func",
-     argvalues=[demean, demean_jax, demean_rs],
-     ids=["demean_numba", "demean_jax", "demean_rs"],
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
 )
 def test_demean_model_maxiter_convergence_failure(demean_func):
-     """Test that demean_model fails when maxiter is too small."""
-     N = 100
-     rng = np.random.default_rng(42)
+    """Test that demean_model fails when maxiter is too small."""
+    N = 100
+    rng = np.random.default_rng(42)
 
-     Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
-     X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
-     # Many fixed effects to make convergence difficult
-     fe = pd.DataFrame({"fe1": np.arange(N)})  # Each obs is its own FE
-     weights = np.ones(N)
-     lookup_dict = {}
+    Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
+    X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
+    # Many fixed effects to make convergence difficult
+    fe = pd.DataFrame(
+        {"fe1": rng.choice(N // 10, N), "fe2": rng.choice(N // 10, N)}
+    )  # Each obs is its own FE
+    weights = np.ones(N)
+    lookup_dict = {}
 
-     # Should fail with very small maxiter
-     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-         demean_model(
-             Y=Y,
-             X=X,
-             fe=fe,
-             weights=weights,
-             lookup_demeaned_data=lookup_dict,
-             na_index_str="test",
-             fixef_tol=1e-8,
-             fixef_maxiter=1,  # Very small limit
-             demean_func=demean_func,
-         )
+    # Should fail with very small maxiter
+    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+        demean_model(
+            Y=Y,
+            X=X,
+            fe=fe,
+            weights=weights,
+            lookup_demeaned_data=lookup_dict,
+            na_index_str="test",
+            fixef_tol=1e-8,
+            fixef_maxiter=1,  # Very small limit
+            demean_func=demean_func,
+        )
 
 
 @pytest.mark.parametrize(
-     argnames="demean_func",
-     argvalues=[demean, demean_jax, demean_rs],
-     ids=["demean_numba", "demean_jax", "demean_rs"],
+    argnames="demean_func",
+    argvalues=[demean, demean_jax, demean_rs],
+    ids=["demean_numba", "demean_jax", "demean_rs"],
 )
 def test_demean_model_custom_maxiter_success(demean_func):
-     """Test that demean_model succeeds with reasonable maxiter."""
-     N = 1000
-     rng = np.random.default_rng(42)
+    """Test that demean_model succeeds with reasonable maxiter."""
+    N = 1000
+    rng = np.random.default_rng(42)
 
-     Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
-     X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
-     fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
-     weights = np.ones(N)
-     lookup_dict = {}
+    Y = pd.DataFrame({"y": rng.normal(0, 1, N)})
+    X = pd.DataFrame({"x1": rng.normal(0, 1, N)})
+    fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
+    weights = np.ones(N)
+    lookup_dict = {}
 
-     # Should succeed with reasonable maxiter
-     Yd, Xd = demean_model(
-         Y=Y,
-         X=X,
-         fe=fe,
-         weights=weights,
-         lookup_demeaned_data=lookup_dict,
-         na_index_str="test",
-         fixef_tol=1e-8,
-         fixef_maxiter=5000,  # Custom limit
-         demean_func=demean_func,
-     )
+    # Should succeed with reasonable maxiter
+    Yd, Xd = demean_model(
+        Y=Y,
+        X=X,
+        fe=fe,
+        weights=weights,
+        lookup_demeaned_data=lookup_dict,
+        na_index_str="test",
+        fixef_tol=1e-8,
+        fixef_maxiter=5000,  # Custom limit
+        demean_func=demean_func,
+    )
 
-     # Just verify it returns valid results
-     assert isinstance(Yd, pd.DataFrame)
-     assert isinstance(Xd, pd.DataFrame)
-     assert Yd.shape == Y.shape
-     assert Xd.shape == X.shape
+    # Just verify it returns valid results
+    assert isinstance(Yd, pd.DataFrame)
+    assert isinstance(Xd, pd.DataFrame)
+    assert Yd.shape == Y.shape
+    assert Xd.shape == X.shape
 
 
 def test_demean_maxiter_parameter():
-     """Test that the demean function respects maxiter parameter."""
-     N = 100
-     rng = np.random.default_rng(42)
+    """Test that the demean function respects maxiter parameter."""
+    N = 100
+    rng = np.random.default_rng(42)
 
-     # Create data that's hard to converge
-     x = rng.normal(0, 1, N * 2).reshape((N, 2))
-     flist = np.arange(N).reshape((N, 1)).astype(np.uint)  # Many FEs
-     weights = np.ones(N)
+    # Create data that's hard to converge
+    x = rng.normal(0, 1, N * 2).reshape((N, 2))
+    flist = np.arange(N).reshape((N, 1)).astype(np.uint)  # Many FEs
+    weights = np.ones(N)
 
-     # Test with very small maxiter
-     result, success = demean(x, flist, weights, tol=1e-10, maxiter=1)
-     assert not success  # Should fail to converge
+    # Test with very small maxiter
+    result, success = demean(x, flist, weights, tol=1e-10, maxiter=1)
+    assert not success  # Should fail to converge
 
-     # Test with large maxiter
-     result, success = demean(x, flist, weights, tol=1e-10, maxiter=100_000)
-     # May or may not converge, but shouldn't crash
+    # Test with large maxiter
+    result, success = demean(x, flist, weights, tol=1e-10, maxiter=100_000)
+    # May or may not converge, but shouldn't crash
 
 
 def test_feols_integration_maxiter():
-     """Integration test: Test fixef_maxiter flows from feols to demean."""
-     import pyfixest as pf
+    """Integration test: Test fixef_maxiter flows from feols to demean."""
+    import pyfixest as pf
 
-     N = 1000  # More observations
-     rng = np.random.default_rng(42)
+    N = 1000  # More observations
+    rng = np.random.default_rng(42)
 
-     # Create data with many (but not N) fixed effects
-     data = pd.DataFrame({
-         'y': rng.normal(0, 1, N),
-         'x': rng.normal(0, 1, N),
-         'fe': rng.integers(0, 50, N)  # 50 fixed effects, not N
-     })
+    # Create data with many (but not N) fixed effects
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(0, 1, N),
+            "x": rng.normal(0, 1, N),
+            "fe": rng.integers(0, 50, N),  # 50 fixed effects, not N
+        }
+    )
 
-     # Should fail with tiny maxiter
-     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-         pf.feols("y ~ x | fe", data=data, fixef_maxiter=1)
+    # Should fail with tiny maxiter
+    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+        pf.feols("y ~ x | fe", data=data, fixef_maxiter=1)
 
-     # Should work with default
-     model = pf.feols("y ~ x | fe", data=data)
-     assert model is not None
+    # Should work with default
+    model = pf.feols("y ~ x | fe", data=data)
+    assert model is not None

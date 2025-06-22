@@ -286,7 +286,7 @@ class Fepois(Feols):
                     flist=_fe.astype(np.uintp),
                     weights=mu.flatten(),
                     tol=_fixef_tol,
-                    maxiter=_fixef_maxiter
+                    maxiter=_fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
