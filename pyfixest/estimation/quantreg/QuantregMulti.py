@@ -18,8 +18,8 @@ from pyfixest.utils.dev_utils import DataFrameType
 
 
 class QuantregMulti:
+    "Run the quantile regression process efficiently. Wrapper around Quantreg calls."
 
-    "Run the quantile regression process efficiently. Wrapper around Quantreg calls. "
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -142,7 +142,6 @@ class QuantregMulti:
         return self.all_quantregs
 
     def get_inference(self):
-
         "Compute inference for all models of the quantile regression process."
         [QuantReg.get_inference() for QuantReg in self.all_quantregs.values()]
 
