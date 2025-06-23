@@ -572,7 +572,7 @@ def _check_for_separation_fe(
     """
     separation_na: set[int] = set()
     if fe is not None and not (Y > 0).all(axis=0).all():
-        Y_help = (Y > 0).astype(int).squeeze()
+        Y_help = (Y.iloc[:, 0] > 0).astype(int)
 
         # loop over all elements of fe
         for x in fe.columns:
