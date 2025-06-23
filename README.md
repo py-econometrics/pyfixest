@@ -15,6 +15,9 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
+[![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest)](https://pypi.org/project/pyfixest/)
+[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
@@ -24,7 +27,7 @@
 
 `PyFixest` is a Python implementation of the formidable [fixest](https://github.com/lrberge/fixest) package for fast high-dimensional fixed effects regression.
 
-The package aims to mimic `fixest` syntax and functionality as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
+The package aims to mimic `fixest's` defaults as closely as Python allows: if you know `fixest` well, the goal is that you won't have to read the docs to get started! In particular, this means that all of `fixest's` defaults are mirrored by `PyFixest`.
 
 Nevertheless, for a quick introduction, you can take a look at the [documentation](https://py-econometrics.github.io/pyfixest/pyfixest.html) or the regression chapter of [Arthur Turrell's](https://github.com/aeturrell) book on [Coding for Economists](https://aeturrell.github.io/coding-for-economists/econmt-regression.html#imports).
 
@@ -306,3 +309,20 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 We thank all institutions that have funded or supported work on PyFixest!
 
 <img src="figures/aai-institute-logo.svg" width="185">
+
+We are immensely grateful to the following individuals for their invaluable feedback and contributions, which have greatly improved `pyfixest`:
+
+## How to Cite
+
+If you want to cite PyFixest, you can use the following BibTeX entry:
+
+```bibtex
+@software{pyfixest,
+  author  = {{The PyFixest Authors}},
+  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},
+  year    = {2025},
+  url     = {https://github.com/py-econometrics/pyfixest}
+}
+```
+
+## License

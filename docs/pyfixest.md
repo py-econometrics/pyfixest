@@ -257,3 +257,17 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 We thank all institutions that have funded or supported work on PyFixest!
 
 <img src="../figures/aai-institute-logo.svg" width="185">
+
+
+## How to Cite
+
+If you want to cite PyFixest, you can use the following BibTeX entry:
+
+```bibtex
+@software{pyfixest,
+  author  = {{The PyFixest Authors}},
+  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},
+  year    = {2025},
+  url     = {https://github.com/py-econometrics/pyfixest}
+}
+```
