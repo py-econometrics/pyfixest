@@ -216,3 +216,26 @@ def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
             atol=1e-06,
             err_msg=f"Quantile: {quantiles[q]}",
         )
+
+
+def test_pfn_seed():
+
+    "Test that calling method = "pfn" on the same seed leads to identical results."
+
+    data = pf.get_data(N=100, seed=3131).dropna()
+
+    fml = "Y ~ X1"
+    method = "pfn"
+    seed = "7272712"
+    fit1 = pf.quantreg(fml = fml, data = data, method = method, seed = seed)
+    fit2 = pf.quantreg(fml = fml, data = data, method = method, seed = seed)
+
+    fit1_coef = fit1.coef()
+    fit2_coef = fit2.coef()
+
+    np.testing.assert_allclose(
+            fit1_coef,
+            fit2_coef,
+            rtol=1e-09,
+            atol=1e-09,
+        )
