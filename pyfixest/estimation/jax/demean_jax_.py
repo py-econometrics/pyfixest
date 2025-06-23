@@ -89,4 +89,4 @@ def demean_jax(
     result_jax, converged = _demean_jax_impl(
         x_jax, flist_jax, weights_jax, n_groups, tol, maxiter
     )
-    return np.array(result_jax), converged
+    return np.array(result_jax), bool(converged)
