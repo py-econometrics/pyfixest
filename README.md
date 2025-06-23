@@ -322,5 +322,3 @@ If you want to cite PyFixest, you can use the following BibTeX entry:
   url     = {https://github.com/py-econometrics/pyfixest}
 }
 ```
-
-## License
