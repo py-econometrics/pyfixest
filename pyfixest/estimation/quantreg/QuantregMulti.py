@@ -108,11 +108,9 @@ class QuantregMulti:
                 h_G = get_hall_sheather_bandwidth(q=q[i - 1], N=N)
                 delta = kappa * (norm.ppf(q[i - 1] + h_G) - norm.ppf(q[i - 1] - h_G))
                 J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N * delta)
-                Jinv = np.linalg.inv(J)
-
-                beta_new = beta_hat_prev + Jinv @ np.mean(
-                    (q[i] - (u_hat_prev < 0))[:, None] * X, axis=0
-                )
+                import pdb; pdb.set_trace()
+                M = (X.T @ (q[i] - (u_hat_prev < 0))[:, None]) / N
+                beta_new = beta_hat_prev + np.linalg.solve(J, M)
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
                 self.all_quantregs[q[i]]._u_hat = (

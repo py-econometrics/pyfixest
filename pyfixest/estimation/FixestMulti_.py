@@ -45,7 +45,7 @@ class FixestMulti:
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
-        quantreg_multi_method: QuantregMultiOptions: "cfm1"
+        quantreg_multi_method: QuantregMultiOptions = "cfm1"
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
