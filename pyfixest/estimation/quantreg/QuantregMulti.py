@@ -18,6 +18,8 @@ from pyfixest.utils.dev_utils import DataFrameType
 
 
 class QuantregMulti:
+
+    "Run the quantile regression process efficiently. Wrapper around Quantreg calls. "
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -48,7 +50,9 @@ class QuantregMulti:
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
         args_dict = {
-            arg: values[arg] for arg in args if arg not in ("self", "quantile")
+            arg: values[arg]
+            for arg in args
+            if arg not in ("self", "quantile", "multi_method")
         }
 
         # initiate a list of Quantreg objects
@@ -108,11 +112,9 @@ class QuantregMulti:
                 h_G = get_hall_sheather_bandwidth(q=q[i - 1], N=N)
                 delta = kappa * (norm.ppf(q[i - 1] + h_G) - norm.ppf(q[i - 1] - h_G))
                 J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N * delta)
-                import pdb
 
-                pdb.set_trace()
-                M = (X.T @ (q[i] - (u_hat_prev < 0))[:, None]) / N
-                beta_new = beta_hat_prev + np.linalg.solve(J, M)
+                M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
+                beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
                 self.all_quantregs[q[i]]._u_hat = (
@@ -131,6 +133,7 @@ class QuantregMulti:
     def vcov(
         self, vcov: Union[str, dict[str, str]], data: Optional[DataFrameType] = None
     ):
+        "Compute variance-covariance matrices for all models in the quantile regression process."
         [
             QuantReg.vcov(vcov=vcov, data=data)
             for QuantReg in self.all_quantregs.values()
@@ -139,27 +142,30 @@ class QuantregMulti:
         return self.all_quantregs
 
     def get_inference(self):
+
+        "Compute inference for all models of the quantile regression process."
         [QuantReg.get_inference() for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs
 
     def prepare_model_matrix(self):
-        "Placeholder, only needed due to structure of execution of FixestMulti class."
+        "Prepare model matrix. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
     def to_array(self):
-        "Placeholder, only needed due to structure of execution of FixestMulti class."
+        "Covert to array. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
     def drop_multicol_vars(self):
-        "Placeholder, only needed due to structure of execution of FixestMulti class."
+        "Drop multicollinear variables. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
     def wls_transform(self):
-        "Placeholder, only needed due to structure of execution of FixestMulti class."
+        "Apply the WLS transform. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
 
     def _clear_attributes(self):
+        "Clear all large non-necessary attributes to free memory."
         [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
 
         return self.all_quantregs

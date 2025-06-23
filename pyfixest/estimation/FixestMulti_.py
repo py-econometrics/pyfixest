@@ -373,10 +373,15 @@ class FixestMulti:
                             {
                                 "quantile": _quantile,
                                 "method": _quantreg_method,
-                                "multi_method": _quantreg_multi_method,
                                 "quantile_tol": _quantile_tol,
                                 "quantile_maxiter": _quantile_maxiter,
                                 "seed": self._seed,
+                            }
+                        )
+                    if _method == "quantreg_multi":
+                        model_kwargs.update(
+                            {
+                                "multi_method": _quantreg_multi_method,
                             }
                         )
 
