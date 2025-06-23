@@ -310,8 +310,6 @@ We thank all institutions that have funded or supported work on PyFixest!
 
 <img src="figures/aai-institute-logo.svg" width="185">
 
-We are immensely grateful to the following individuals for their invaluable feedback and contributions, which have greatly improved `pyfixest`:
-
 ## How to Cite
 
 If you want to cite PyFixest, you can use the following BibTeX entry:
