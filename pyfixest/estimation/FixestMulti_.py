@@ -45,7 +45,7 @@ class FixestMulti:
         separation_check: Optional[list[str]] = None,
         context: Union[int, Mapping[str, Any]] = 0,
         quantreg_method: QuantregMethodOptions = "fn",
-        quantreg_multi_method: QuantregMultiOptions = "cfm1"
+        quantreg_multi_method: QuantregMultiOptions = "cfm1",
     ) -> None:
         """
         Initialize a class for multiple fixed effect estimations.
@@ -155,7 +155,6 @@ class FixestMulti:
         quantile: Optional[float] = None,
         quantile_tol: float = 1e-06,
         quantile_maxiter: Optional[int] = None,
-
     ) -> None:
         """
         Prepare model for estimation.
@@ -220,7 +219,11 @@ class FixestMulti:
 
         FML = FixestFormulaParser(fml)
         FML.set_fixest_multi_flag()
-        self._is_multiple_estimation = FML._is_multiple_estimation or self._run_split or (isinstance(quantile, list) and len(quantile) > 1)
+        self._is_multiple_estimation = (
+            FML._is_multiple_estimation
+            or self._run_split
+            or (isinstance(quantile, list) and len(quantile) > 1)
+        )
         self.FixestFormulaDict = FML.FixestFormulaDict
         self._method = estimation
         self._is_iv = FML.is_iv
@@ -292,7 +295,6 @@ class FixestMulti:
         _quantile = self._quantile
         _quantile_tol = self._quantile_tol
         _quantile_maxiter = self._quantile_maxiter
-
 
         FixestFormulaDict = self.FixestFormulaDict
         _fixef_keys = list(FixestFormulaDict.keys())
@@ -419,7 +421,12 @@ class FixestMulti:
                     if not FIT._X_is_empty:
                         # inference
                         vcov_type = _get_vcov_type(vcov, fval)
-                        FIT.vcov(vcov=vcov_type, data=FIT._data if not isinstance(FIT, QuantregMulti) else FIT.all_quantregs[FIT.quantiles[0]]._data) #  a little hacky, but works
+                        FIT.vcov(
+                            vcov=vcov_type,
+                            data=FIT._data
+                            if not isinstance(FIT, QuantregMulti)
+                            else FIT.all_quantregs[FIT.quantiles[0]]._data,
+                        )  #  a little hacky, but works
 
                         FIT.get_inference()
                         if _method == "feols" and not FIT._is_iv:
