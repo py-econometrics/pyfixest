@@ -39,9 +39,11 @@ You can also leave a message through the donation form - your support and encour
 
 -   **OLS**, **WLS** and **IV** Regression with Fixed-Effects Demeaning via [Frisch-Waugh-Lovell](https://bookdown.org/ts_robinson1994/10EconometricTheorems/frisch.html)
 -   **Poisson Regression** following the [pplmhdfe algorithm](https://journals.sagepub.com/doi/full/10.1177/1536867X20909691)
+-   Probit, Logit and Gaussian Family **GLMs** (currently without fixed effects demeaning, this is WIP)
+-   **Quantile Regression** using an Interior Point Solver
 -   Multiple Estimation Syntax
--   Probit, Logit and Gaussian Family GLMs (currently without fixed effects demeaning, this is WIP)
 -   Several **Robust** and **Cluster Robust Variance-Covariance** Estimators
+
 -   **Wild Cluster Bootstrap** Inference (via
     [wildboottest](https://github.com/py-econometrics/wildboottest))
 -   **Difference-in-Differences** Estimators:
@@ -249,3 +251,9 @@ Thanks goes to these wonderful people:
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+
+## Acknowledgements
+
+We thank all institutions that have funded or supported work on PyFixest!
+
+<img src="../figures/aai-institute-logo.svg" width="185">

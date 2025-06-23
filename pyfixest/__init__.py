@@ -20,10 +20,11 @@ from pyfixest.estimation import (
     feglm,
     feols,
     fepois,
+    quantreg,
     rwolf,
     wyoung,
 )
-from pyfixest.report import coefplot, dtable, etable, iplot, make_table, summary
+from pyfixest.report import coefplot, dtable, etable, iplot, make_table, qplot, summary
 from pyfixest.utils import (
     get_data,
     get_ssc,
@@ -50,6 +51,8 @@ __all__ = [
     "lpdid",
     "make_table",
     "panelview",
+    "qplot",
+    "quantreg",
     "report",
     "rwolf",
     "ssc",

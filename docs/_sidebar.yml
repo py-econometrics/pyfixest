@@ -6,6 +6,7 @@ website:
       - reference/estimation.estimation.feols.qmd
       - reference/estimation.estimation.fepois.qmd
       - reference/estimation.estimation.feglm.qmd
+      - reference/estimation.estimation.quantreg.qmd
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.estimation.event_study.qmd
@@ -21,6 +22,7 @@ website:
       - reference/estimation.feprobit_.Feprobit.qmd
       - reference/estimation.fegaussian_.Fegaussian.qmd
       - reference/estimation.feols_compressed_.FeolsCompressed.qmd
+      - reference/estimation.quantreg.quantreg_.qmd
       section: Estimation Classes
     - contents:
       - reference/did.visualize.panelview.qmd
@@ -29,6 +31,7 @@ website:
       - reference/report.dtable.qmd
       - reference/report.coefplot.qmd
       - reference/report.iplot.qmd
+      - reference/report.qplot.qmd
       - reference/did.visualize.panelview.qmd
       section: Summarize and Visualize
     - contents:

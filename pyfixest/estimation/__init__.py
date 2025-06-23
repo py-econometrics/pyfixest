@@ -9,6 +9,7 @@ from pyfixest.estimation.estimation import (
     feglm,
     feols,
     fepois,
+    quantreg,
 )
 from pyfixest.estimation.fegaussian_ import Fegaussian
 from pyfixest.estimation.feiv_ import (
@@ -33,6 +34,7 @@ from pyfixest.estimation.multcomp import (
     rwolf,
     wyoung,
 )
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
 __all__ = [
     "Fegaussian",
@@ -42,6 +44,7 @@ __all__ = [
     "Fepois",
     "Feprobit",
     "FixestMulti",
+    "Quantreg",
     "bonferroni",
     "demean",
     "detect_singletons",
@@ -50,6 +53,7 @@ __all__ = [
     "fepois",
     "literals",
     "model_matrix_fixest",
+    "quantreg",
     "rwolf",
     "wyoung",
 ]
