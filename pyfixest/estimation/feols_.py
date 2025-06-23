@@ -222,6 +222,18 @@ class Feols:
         the _model_name_plot attribute will be modified.
     _quantile: Optional[float]
         The quantile used for quantile regression. None if not a quantile regression.
+
+    # special for did
+    _res_cohort_eventtime_dict: Optional[dict[str, Any]]
+    _yname: Optional[str]
+    _gname: Optional[str]
+    _tname: Optional[str]
+    _idname: Optional[str]
+    _att: Optional[Any]
+    test_treatment_heterogeneity: Callable[..., Any]
+    aggregate: Callable[..., Any]
+    iplot_aggregate: Callable[..., Any]
+
     """
 
     def __init__(
@@ -358,6 +370,14 @@ class Feols:
         # special for poisson
         self.deviance = None
 
+        # special for did
+        self._res_cohort_eventtime_dict: Optional[dict[str, Any]] = None
+        self._yname: Optional[str] = None
+        self._gname: Optional[str] = None
+        self._tname: Optional[str] = None
+        self._idname: Optional[str] = None
+        self._att: Optional[bool] = None
+
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
         _tmp = _module.coefplot
@@ -369,6 +389,16 @@ class Feols:
         _tmp = _module.summary
         self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
+
+        # DiD methods - assign placeholder functions
+        def _not_implemented_did(*args, **kwargs):
+            raise NotImplementedError(
+                "This method is only available for DiD models, not for vanilla 'feols'."
+            )
+
+        self.test_treatment_heterogeneity = _not_implemented_did
+        self.aggregate = _not_implemented_did
+        self.iplot_aggregate = _not_implemented_did
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."

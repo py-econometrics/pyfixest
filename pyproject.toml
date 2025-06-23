@@ -225,7 +225,6 @@ docstring-code-format = true
 docstring-code-line-length = 88
 
 [tool.mypy]
-plugins = "numpy.typing.mypy_plugin"
 
 [[tool.mypy.overrides]]
 module = [
