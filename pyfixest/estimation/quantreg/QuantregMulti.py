@@ -24,6 +24,7 @@ class QuantregMulti:
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
+        quantile: list[float],
         ssc_dict: dict[str, Union[str, bool]],
         drop_singletons: bool,
         drop_intercept: bool,
@@ -40,7 +41,6 @@ class QuantregMulti:
         context: Union[int, Mapping[str, Any]] = 0,
         sample_split_var: Optional[str] = None,
         sample_split_value: Optional[Union[str, int]] = None,
-        quantile: float = 0.5,
         method: QuantregMethodOptions = "fn",
         multi_method: QuantregMultiOptions = "cfm1",
         quantile_tol: float = 1e-06,
@@ -48,6 +48,8 @@ class QuantregMulti:
         seed: Optional[int] = None,
     ):
         frame = inspect.currentframe()
+        if frame is None:
+            raise ValueError("The current frame is None.")
         args, _, _, values = inspect.getargvalues(frame)
         args_dict = {
             arg: values[arg]
@@ -61,6 +63,7 @@ class QuantregMulti:
             q: Quantreg(**args_dict, quantile=q) for q in self.quantiles
         }
         self.multi_method = multi_method
+        self._is_iv = False
 
         # TODO: call model_matrix(), to_array(), drop_multicol_vars() only once for model 0
         # and then copy the attributes to the other models (less robust? but faster)
@@ -162,6 +165,15 @@ class QuantregMulti:
     def wls_transform(self):
         "Apply the WLS transform. Placeholder, only needed due to structure of execution of FixestMulti class."
         pass
+
+    def demean(self):
+        "Demean the data. Placeholder, only needed due to structure of execution of FixestMulti class."
+        pass
+
+    def get_performance(self):
+        "Compute performance metrics for all models of the quantile regression process."
+        [QuantReg.get_performance() for QuantReg in self.all_quantregs.values()]
+        return self.all_quantregs
 
     def _clear_attributes(self):
         "Clear all large non-necessary attributes to free memory."

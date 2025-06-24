@@ -1342,9 +1342,14 @@ def _estimation_input_checks(
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
     "Run custom input checks for quantreg."
-    if not 0 < tol < 1:
-        raise ValueError("tol must be in (0, 1)")
+    if isinstance(quantile, list):
+        if not all(0.0 < q < 1.0 for q in quantile):
+            raise ValueError("quantile must be between 0 and 1")
+        if not all(isinstance(q, float) for q in quantile):
+            raise ValueError("quantile must be a list of floats")
+    else:
+        if not 0.0 < tol < 1.0:
+            raise ValueError("tol must be in (0, 1)")
+
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")
-    # if not 0 < quantile < 1:
-    #    raise ValueError("quantile must be between 0 and 1")

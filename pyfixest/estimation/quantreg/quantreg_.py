@@ -77,7 +77,7 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
-        #assert isinstance(quantile, float), "quantile must be a float."
+        # assert isinstance(quantile, float), "quantile must be a float."
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
@@ -260,6 +260,10 @@ class Quantreg(Feols):
             tol = 1e-06
         if maxiter is None:
             maxiter = N
+        if rng is None:
+            rng = np.random.default_rng()
+        if beta_init is None:
+            beta_init = np.zeros(k)
 
         max_bad_fixups = 3
         n_bad_fixups = 0
@@ -340,7 +344,6 @@ class Quantreg(Feols):
 
         return fn_res
 
-
     def _vcov_nid(self) -> np.ndarray:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
@@ -349,7 +352,6 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-
         q = self._quantile
         N = self._N
         X = self._X
@@ -424,6 +426,11 @@ class Quantreg(Feols):
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
+
+    def get_performance(self):
+        "Compute performance metrics for the quantile regression model."
+        pass
+        # self.objective_value
 
 
 @nb.njit(parallel=False)
