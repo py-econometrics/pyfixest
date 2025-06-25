@@ -14,9 +14,13 @@ PyFixest now experimentally supports quantile regression!
 %load_ext autoreload
 
 import pyfixest as pf
-import statsmodels.formula.api as smf
 import numpy as np
 import time
+import numpy as np
+import pandas as pd
+import itertools, time
+import matplotlib.pyplot as plt
+import math
 
 data = pf.get_data()
 ```
@@ -50,12 +54,14 @@ You can access the "preprocessing frisch-newton" algorithm by setting the `metho
 %%capture
 fit_fn = pf.quantreg(
   fml = "Y ~ X1",
-  method = "fn"     # standard frisch newton interior point solver
+  method = "fn",     # standard frisch newton interior point solver
+  data = data,
 )
 fit_pfn = pf.quantreg(
   fml = "Y ~ X1",
   method = "pfn",   # standard frisch newton interior point solver with pre-processing
-  seed = 92         # set a seed for reproducibility
+  seed = 92,         # set a seed for reproducibility
+  data = data,
 )
 
 pf.etable([fit_fn, fit_pfn])
@@ -66,109 +72,57 @@ pf.etable([fit_fn, fit_pfn])
 Instead of running multiple independent quantile regression as in the first regression above, the literature on quantile regression has developed multiple algorithms to speed up the "quantile regression process". Two such algorithms are described in detail in Chernozhukov, Fernandez-Val and Melly and are implemented in PyFixest. They can be accessed via the `multi_method` argument, and both can significantly speed up estimation time of the full quantile regression process.
 
 ```{python}
-%%capture
 fml = "Y~X1"
-method = method
+method = "pfn"
 seed = 929
 quantiles = [0.1, 0.5, 0.9]
 
 fit_multi1 = pf.quantreg(
   fml = fml,
+  data = data,
   method = method,
-  multi_method = "cmf1",
+  multi_method = "cfm1",
   seed = seed,
-  quantiles = quantiles
+  quantile = quantiles,
 )
 
 fit_multi2 = pf.quantreg(
   fml = fml,
+  data = data,
   method = method,
-  multi_method = "cmf2",
+  multi_method = "cfm2",
   seed = seed,
-  quantiles = quantiles
+  quantile = quantiles
 )
 
 pf.etable(fit_multi1.to_list() +  fit_multi2.to_list())
 ```
 
-Note that the first method `cmf1` is exactly identical to running separate regressions per quantile, while the second method `cmf2` is only **asymptotically** identical.
+Note that the first method `cfm1` is exactly identical to running separate regressions per quantile, while the second method `cfm2` is only **asymptotically** identical.
 
 You can combine different estimation `method`'s with different `multi_methods`:
 
 ```{python}
 fit_multi2a = pf.quantreg(
-  fml = fml,
+  fml = "Y~X1",
+  data = data,
   method = "fn",
-  multi_method = "cmf1",
-  seed = seed,
-  quantiles = [0.25, 0.75]
+  multi_method = "cfm1",
+  seed = 233,
+  quantile = [0.25, 0.75]
 )
 
 fit_multi2b = pf.quantreg(
-  fml = fml,
+  fml = "Y~X1",
+  data = data,
   method = "pfn",
-  multi_method = "cmf1",
-  seed = seed,
-  quantiles = [0.25, 0.75]
+  multi_method = "cfm1",
+  seed = 233,
+  quantile = [0.25, 0.75]
 )
 
 pf.etable(fit_multi2a.to_list() +  fit_multi2b.to_list())
 
-```
-
-## Performance
-
-### Different Solvers
-
-Here we benchmark the performance of the solvers accessible via the `method` argument. Tba.
-
-### Quantile Regression Process
-
-We will demonstrate the performance gains with three quick benchmarks:
-
-**Naive Loop**
-
-```{python}
-quantiles = np.arange(0.1, 1, 0.1)
-tic = time.time()
-for _ in range(10):
-  fits = [pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = q) for q in quantiles]
-toc = time.time()
-
-print("Time: ", toc - tic)
-```
-
-**Quantile Regression Process 1**
-```{python}
-tic = time.time()
-for _ in range(10):
-  fit_multi1 = pf.quantreg(
-    fml = fml,
-    method = method,
-    multi_method = "cmf1",
-    seed = seed,
-    quantiles = quantiles
-  )
-toc = time.time()
-
-print("Time: ", toc - tic)
-```
-
-**Quantile Regression Process 2**
-
-```{python}
-tic = time.time()
-for _ in range(10):
-  fit_multi1 = pf.quantreg(
-    fml = fml,
-    method = method,
-    multi_method = "cmf2",
-    seed = seed,
-    quantiles = quantiles
-  )
-toc = time.time()
-
-print("Time: ", toc - tic)
 ```
 
 ## Inference
@@ -181,3 +135,144 @@ or the [Journal of Econometrics paper](https://repository.essex.ac.uk/8976/1/dp7
 fit_nid = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = "nid")
 fit_crv = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = {"CRV1": "f1"})
 ```
+
+## Performance
+
+### Different Solvers
+
+Here we benchmark the performance of the solvers accessible via the `method` argument. Tba.
+
+### Quantile Regression Process
+
+We benchmark three estimation approaches—**naive loop**, **multi‑method `cfm1`**, and **multi‑method `cfm2`**—across combinations of:
+
+| Parameter | Values |
+|-----------|--------|
+| Sample size $N$ | 100, 1 000, 10 000, 100 000 |
+| Regressors $k$  | 5, 10 |
+| Number of quantiles $Q$ | 10 $(0.05\!–\!0.95)$, 25 $(0.04\!–\!0.96)$ |
+
+Each timing is the **total wall‑clock seconds** required to fit $Q$ quantiles **10 times**.
+
+```{python}
+#| code-fold: true
+#| eval: false
+#|
+np.random.seed(929291)
+
+Ns = [100, 1_000, 10_000]
+ks = [5, 10]
+quantile_sets = {
+    10: np.linspace(0.05, 0.95, 10).tolist(),
+    25: np.linspace(0.04, 0.96, 25).tolist(),
+}
+reps = 10
+run = False
+
+def generate_data(N: int, k: int) -> pd.DataFrame:
+    """Simulate t‑distributed noise linear model."""
+    X = np.random.randn(N, k)
+    beta = np.arange(1, k + 1)
+    y = X @ beta + np.random.standard_t(df=5, size=N)
+    data = pd.DataFrame(X, columns=[f"X{i+1}" for i in range(k)])
+    data["Y"] = y
+    return data
+
+if run:
+
+  records = []
+
+  for N, k, Q in itertools.product(Ns, ks, quantile_sets.keys()):
+      data = generate_data(N, k)
+      fml = "Y ~ " + " + ".join([f"X{i+1}" for i in range(k)])
+      quantiles = quantile_sets[Q]
+
+      t0 = time.time()
+      for _ in range(reps):
+          _ = [pf.quantreg(fml, data=data, quantile=q) for q in quantiles]
+      loop_time = time.time() - t0
+
+      t0 = time.time()
+      for _ in range(reps):
+          _ = pf.quantreg(
+              fml=fml,
+              method="pfn",
+              multi_method="cfm1",
+              seed=231,
+              quantile=quantiles,
+              data=data,
+          )
+      cfm1_time = time.time() - t0
+
+      t0 = time.time()
+      for _ in range(reps):
+          _ = pf.quantreg(
+              fml=fml,
+              method="pfn",
+              multi_method="cfm2",
+              seed=231,
+              quantile=quantiles,
+              data=data,
+          )
+      cfm2_time = time.time() - t0
+
+      records.extend(
+          [
+              {"N": N, "k": k, "Q": Q, "method": "Naive loop", "seconds": loop_time},
+              {"N": N, "k": k, "Q": Q, "method": "cfm1", "seconds": cfm1_time},
+              {"N": N, "k": k, "Q": Q, "method": "cfm2", "seconds": cfm2_time},
+          ]
+      )
+
+  benchmark_df = pd.DataFrame(records)
+
+  benchmark_df_pivot = (
+      benchmark_df
+      .pivot_table(index=["N", "k", "Q"], columns="method", values="seconds")
+  )
+
+  k_vals = ks
+  q_vals = sorted(quantile_sets.keys())
+
+  fig, axes = plt.subplots(
+      len(q_vals), len(k_vals), figsize=(12, 3 * len(q_vals)), sharex=True, sharey=True
+  )
+
+  for i, Q in enumerate(q_vals):
+      for j, k_val in enumerate(k_vals):
+          ax = axes[i][j] if len(q_vals) > 1 else axes[j]
+          subset = benchmark_df[(benchmark_df["k"] == k_val) & (benchmark_df["Q"] == Q)]
+          for mth in subset["method"].unique():
+              g = subset[subset["method"] == mth].sort_values("N")
+              ax.plot(g["N"], g["seconds"], marker="o", label=mth)
+          ax.set_xscale("log")
+          ax.set_yscale("log")
+          ax.grid(True, which="both", linestyle=":", linewidth=0.5)
+          if i == len(q_vals) - 1:
+              ax.set_xlabel("Sample size N (log‑scale)")
+          if j == 0:
+              ax.set_ylabel(f"Time (s) — Q={Q}")
+          ax.set_title(f"k = {k_val}")
+          if i == 0 and j == len(k_vals) - 1:
+              ax.legend(title="Procedure", bbox_to_anchor=(1.05, 1.0))
+
+  fig.suptitle("Quantile Regression Benchmarks", y=1.02)
+  plt.tight_layout()
+  plt.savefig("figures/quantile_benchmarks.png", dpi=300, bbox_inches="tight")
+
+else:
+
+  img = plt.imread("quantile_benchmarks.png")
+  plt.imshow(img)
+  plt.axis("off")  # Hide axis ticks
+  plt.title("Quantile Regression Process Benchmarks")
+  plt.show()
+```
+
+
+# Literature
+
+- Koenker and Ng (2004): A Frisch-Newton Algorithm for Sparse Quantile Regression - [link](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf)
+- Victor Chernozhukov, Iván Fernández-Val, Blaise Melly (2019): Fast Algorithms for the Quantile Regression Process - [link](https://arxiv.org/abs/1909.05782)
+- Parente & Santos Silva (2015): Quantile Regression with Clustered Data - [link](https://econpapers.repec.org/article/bpjjecome/v_3a5_3ay_3a2016_3ai_3a1_3ap_3a1-15_3an_3a5.htm)
+- Portnoy & Koenker (1997): The gaussian hare and the laplacian tortoise: Computability of squared-error versus absolute-error estimators [link](https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ)
