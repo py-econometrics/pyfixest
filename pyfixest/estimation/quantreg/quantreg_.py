@@ -327,11 +327,13 @@ class Quantreg(Feols):
 
                 if n_bad == 0:
                     has_converged = True
+                    break
                 elif n_bad > 0.1 * M:
                     warnings.warn("Too many bad fixups. Doubling m.")
                     n_init = min(N, 2 * n_init)
                     M = int(np.ceil(m * n_init))
                     n_bad_fixups += 1
+                    compute_beta_init = True
                     break
                 else:
                     JL = JL & ~mis_L
