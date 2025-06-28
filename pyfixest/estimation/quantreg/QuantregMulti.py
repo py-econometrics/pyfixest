@@ -89,7 +89,7 @@ class QuantregMulti:
         # fit first quantile regression using "pfn"
         beta_hat = self.all_quantregs[q[0]].fit_qreg_pfn(X=X, Y=Y, q=q[0], rng=rng)[0]
         self.all_quantregs[q[0]]._beta_hat = beta_hat
-        self.all_quantregs[q[0]]._u_hat = Y.flatten() - X @ beta_hat
+        self.all_quantregs[q[0]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
         self.all_quantregs[q[0]]._hessian = hessian
 
         if self.multi_method == "cfm1":
@@ -97,10 +97,10 @@ class QuantregMulti:
             for i in range(1, n_quantiles):
                 beta_hat_prev = self.all_quantregs[q[i - 1]]._beta_hat
                 beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
-                    X=X, Y=Y, q=q[i], beta_init=beta_hat_prev
+                    X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
                 )[0]
                 self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - X @ beta_hat
+                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
                 self.all_quantregs[q[i]]._hessian = hessian
 
         elif self.multi_method == "cfm2":

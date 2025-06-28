@@ -207,6 +207,7 @@ class Quantreg(Feols):
         # compute cholesky once outside of FN loop
         # if self._chol is None or self._P is None:
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
+        _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
         # if self._chol is None or self._P is None:
         #    raise ValueError("...")
@@ -240,10 +241,12 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
+        m: Optional[float] = None,
         tol: Optional[float] = None,
         maxiter: Optional[int] = None,
         beta_init: Optional[np.ndarray] = None,
         rng: Optional[np.random.Generator] = None,
+        eta: Optional[float] = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -264,6 +267,10 @@ class Quantreg(Feols):
             rng = np.random.default_rng()
         if beta_init is None:
             beta_init = np.zeros(k)
+        if m is None:
+            m = 0.8
+        if eta is None:
+            eta = 2 / 3
 
         max_bad_fixups = 3
         n_bad_fixups = 0
@@ -273,8 +280,8 @@ class Quantreg(Feols):
 
         # m constant should be set by user
         m = 0.8
-        n_init = int(np.ceil((k * N) ** (2 / 3)))
-        M = int(np.ceil(m * n_init))
+        n_init = int(np.ceil((k * N) ** (eta)))
+        M = int(np.maximum(N, np.ceil(m * n_init)))
 
         while not has_converged:
             if compute_beta_init:

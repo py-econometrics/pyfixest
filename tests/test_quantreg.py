@@ -167,16 +167,25 @@ def test_quantreg_crv(data, fml, quantile, stata_results_crv):
     np.testing.assert_allclose(se, exp_se, rtol=1e-6, atol=1e-6)
 
 
+def get_data2(N, seed):
+    "Generate data for testing."
+    rng = np.random.default_rng(seed)
+    X = rng.normal(size=(N, 2))
+    Y = 1 + 2 * X[:, 0] + 3 * X[:, 1] - 2 * X[:, 1] ** 2 + rng.normal(size=N)
+    f1 = rng.choice(range(10), size=N)
+    return pd.DataFrame({"Y": Y, "X1": X[:, 0], "X2": X[:, 1], "f1": f1})
+
+
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("data", [pf.get_data(N=1000, seed=3131).dropna()])
+@pytest.mark.parametrize("data", [get_data2(N=1000, seed=2141233)])
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
 @pytest.mark.parametrize("vcov", ["hetero", "nid", {"CRV1": "f1"}])
 @pytest.mark.parametrize("method", ["fn", "pfn"])
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
 def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
     "Test that multiple quantile syntax via QuantregMulti produces the same results as the single quantile syntax."
-    quantiles = [0.1, 0.25, 0.5, 0.75, 0.9]
-    seed = 99299
+    quantiles = list(np.linspace(0.05, 0.95, 10))
+    seed = 1231
 
     fit_single = [
         pf.quantreg(fml, data=data, quantile=q, method=method, vcov=vcov, seed=seed)
@@ -200,8 +209,8 @@ def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
         np.testing.assert_allclose(
             single_coef,
             multi_coef,
-            rtol=1e-02,  # is this too low?
-            atol=1e-02,  # is this too low?
+            rtol=1e-06,  # is this too low?
+            atol=1e-06,  # is this too low?
             err_msg=f"Quantile: {quantiles[q]} with method: {method} and multi_method: {multi_method}",
         )
 
@@ -212,8 +221,8 @@ def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
         np.testing.assert_allclose(
             single_se,
             multi_se,
-            rtol=1e-02,  # is this too low?
-            atol=1e-02,  # is this too low?
+            rtol=1e-06,  # is this too low?
+            atol=1e-06,  # is this too low?
             err_msg=f"Quantile: {quantiles[q]}",
         )
 
