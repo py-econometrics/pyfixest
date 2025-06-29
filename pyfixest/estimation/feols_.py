@@ -678,6 +678,18 @@ class Feols:
             self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
             self._vcov = self._ssc * self._vcov_nid()
 
+        elif self._vcov_type == "iid":
+            ssc_kwargs_ker = {
+                "k_fe_nested": 0,
+                "n_fe_fully_nested": 0,
+                "vcov_sign": 1,
+                "vcov_type": "hetero",
+                "G": self._N,
+            }
+            all_kwargs = {**ssc_kwargs, **ssc_kwargs_ker}
+            self._ssc, self._dof_k, self._df_t = get_ssc(**all_kwargs)
+            self._vcov = self._ssc * self._vcov_ker_iid()
+
         elif self._vcov_type == "CRV":
             if data is not None:
                 # use input data set
@@ -829,6 +841,11 @@ class Feols:
             "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
         )
 
+    def _vcov_ker_iid(self):
+        raise NotImplementedError(
+            "Only models of type Quantreg support a variance-covariance matrix of type 'ker'."
+        )
+
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         _is_iv = self._is_iv
         _tXZ = self._tXZ
@@ -955,6 +972,7 @@ class Feols:
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
         -
         """
+
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
@@ -2761,7 +2779,9 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC2",
             "HC3",
             "nid",
-        ], "vcov string must be iid, hetero, HC1, HC2, or HC3"
+            "iid",
+            "ker",
+        ], "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'ker' or 'nid'"
 
 
 def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):
@@ -2821,6 +2841,10 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
 
     elif vcov_type_detail == "nid":
         vcov_type = "nid"
+        is_clustered = False
+
+    elif vcov_type_detail == "iid":
+        vcov_type = "iid"
         is_clustered = False
 
     clustervar = deparse_vcov if is_clustered else None

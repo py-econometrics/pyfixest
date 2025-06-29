@@ -14,8 +14,13 @@ PyFixest now experimentally supports quantile regression!
 %load_ext autoreload
 
 import pyfixest as pf
-import statsmodels.formula.api as smf
 import numpy as np
+import time
+import numpy as np
+import pandas as pd
+import itertools, time
+import matplotlib.pyplot as plt
+import math
 
 data = pf.get_data()
 ```
@@ -37,7 +42,88 @@ We can inspect the quantile regression results using the dedicated `qplot()` fun
 pf.qplot(fits, nrow = 2)
 ```
 
-We observe some heterogeneity in the Intercept, but all other variants are homogeneous across users.
+We observe some heterogeneity in the intercept, but all other variants are homogeneous across users.
+
+## Solvers
+
+By default, `pf.quantreg` uses an interior-point solver as in Koenker and Ng. For big data sets with many observations, it is often sensible to use an interior-point solver with pre-processing (as in Portnoy and Koenker, see Chernozhukov et al for details), which can speed up the estimation time significantly. Because the pre-processing step requires taking a random sample, the method assumes that observations are independent. Additionally, for the purpose of reproducibility, it is advisable to set a seed.
+
+You can access the "preprocessing frisch-newton" algorithm by setting the `method` argument to `"pfn"`:
+
+```{python}
+%%capture
+fit_fn = pf.quantreg(
+  fml = "Y ~ X1",
+  method = "fn",     # standard frisch newton interior point solver
+  data = data,
+)
+fit_pfn = pf.quantreg(
+  fml = "Y ~ X1",
+  method = "pfn",   # standard frisch newton interior point solver with pre-processing
+  seed = 92,         # set a seed for reproducibility
+  data = data,
+)
+
+pf.etable([fit_fn, fit_pfn])
+```
+
+## Quantile Regression Process
+
+Instead of running multiple independent quantile regression as in the first regression above, the literature on quantile regression has developed multiple algorithms to speed up the "quantile regression process". Two such algorithms are described in detail in Chernozhukov, Fernandez-Val and Melly and are implemented in PyFixest. They can be accessed via the `multi_method` argument, and both can significantly speed up estimation time of the full quantile regression process.
+
+```{python}
+fml = "Y~X1"
+method = "pfn"
+seed = 929
+quantiles = [0.1, 0.5, 0.9]
+
+fit_multi1 = pf.quantreg(
+  fml = fml,
+  data = data,
+  method = method,
+  multi_method = "cfm1",
+  seed = seed,
+  quantile = quantiles,
+)
+
+fit_multi2 = pf.quantreg(
+  fml = fml,
+  data = data,
+  method = method,
+  multi_method = "cfm2",
+  seed = seed,
+  quantile = quantiles
+)
+
+pf.etable(fit_multi1.to_list() +  fit_multi2.to_list())
+```
+
+Note that the first method `cfm1` is exactly identical to running separate regressions per quantile, while the second method `cfm2` is only **asymptotically** identical.
+
+You can combine different estimation `method`'s with different `multi_methods`:
+
+```{python}
+fit_multi2a = pf.quantreg(
+  fml = "Y~X1",
+  data = data,
+  method = "fn",
+  multi_method = "cfm1",
+  seed = 233,
+  quantile = [0.25, 0.75]
+)
+
+fit_multi2b = pf.quantreg(
+  fml = "Y~X1",
+  data = data,
+  method = "pfn",
+  multi_method = "cfm1",
+  seed = 233,
+  quantile = [0.25, 0.75]
+)
+
+pf.etable(fit_multi2a.to_list() +  fit_multi2b.to_list())
+
+```
 
 ## Inference
 
@@ -49,3 +135,20 @@ or the [Journal of Econometrics paper](https://repository.essex.ac.uk/8976/1/dp7
 fit_nid = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = "nid")
 fit_crv = pf.quantreg("Y ~ X1 + X2 + f1", data = data, quantile = 0.5, vcov = {"CRV1": "f1"})
 ```
+
+## Performance
+
+### Different Solvers
+
+Here we benchmark the performance of the solvers accessible via the `method` argument. Tba.
+
+### Quantile Regression Process
+
+![](../benchmarks/quantreg_benchmark.png)
+
+# Literature
+
+- Koenker and Ng (2004): A Frisch-Newton Algorithm for Sparse Quantile Regression - [link](http://www.econ.uiuc.edu/~roger/research/sparse/fn3.pdf)
+- Victor Chernozhukov, Iván Fernández-Val, Blaise Melly (2019): Fast Algorithms for the Quantile Regression Process - [link](https://arxiv.org/abs/1909.05782)
+- Parente & Santos Silva (2015): Quantile Regression with Clustered Data - [link](https://econpapers.repec.org/article/bpjjecome/v_3a5_3ay_3a2016_3ai_3a1_3ap_3a1-15_3an_3a5.htm)
+- Portnoy & Koenker (1997): The gaussian hare and the laplacian tortoise: Computability of squared-error versus absolute-error estimators [link](https://experts.illinois.edu/en/publications/the-gaussian-hare-and-the-laplacian-tortoise-computability-of-squ)

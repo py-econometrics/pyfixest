@@ -10,6 +10,7 @@ from pyfixest.estimation.literals import (
     DemeanerBackendOptions,
     FixedRmOptions,
     QuantregMethodOptions,
+    QuantregMultiOptions,
     SolverOptions,
     VcovTypeOptions,
     WeightsTypeOptions,
@@ -966,6 +967,7 @@ def quantreg(
     vcov: Optional[Union[VcovTypeOptions, dict[str, str]]] = "nid",
     quantile: float = 0.5,
     method: QuantregMethodOptions = "fn",
+    multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
     maxiter: Optional[int] = None,
     ssc: Optional[dict[str, Union[str, bool]]] = None,
@@ -1007,6 +1009,13 @@ def quantreg(
         For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
         by Chernozhukov, Fernández-Val, and Melly (2019).
 
+    multi_method: QuantregMultiMethodOpitons, optional
+        Controls the algorithm for running the quantile regression process.
+        Only relevant if more than one quantile regression is fit in one `quantreg` call.
+        Options are 'cmf1', which is the default and implements algorithm 2 from Chernozhukov et al,
+        'cmf2', which implements their algorithm 3, and 'none', which just loops over separate model
+        calls.
+
     tol : float, optional
         The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the
         algorithm stops when the relative change in the duality gap is less than tol.
@@ -1016,9 +1025,12 @@ def quantreg(
         (as in R's quantreg package via nit(3) = n).
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Currently supported are "nid" and cluster robust errors.
+        Type of variance-covariance matrix for inference. Currently supported are
+        "iid", "nid", "ker" and cluster robust errors, "iid" by default.
+        All of "iid", "ker", and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
         The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "hetero" / HC1 / HC2 / HC3 also works and is equivalent to nid. Alternatively, cluster robust inference
+        Any of "hetero" / HC1 / HC2 / HC3 also works and is equivalent to "ker".
+        Cluster robust inference
         following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
         Only one-way clustering is supported.
 
@@ -1147,8 +1159,8 @@ def quantreg(
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
-    if isinstance(vcov, str) and vcov in ["hetero", "HC1", "HC2", "HC3"]:
-        vcov = "nid"
+    if isinstance(vcov, str) and vcov in ["ker", "HC1", "HC2", "HC3"]:
+        vcov = "hetero"
 
     _quantreg_input_checks(quantile, tol, maxiter)
 
@@ -1189,11 +1201,21 @@ def quantreg(
         fsplit=fsplit,
         context=context,
         quantreg_method=method,
+        quantreg_multi_method=multi_method,
     )
 
     # same checks as for Poisson regression
     fixest._prepare_estimation(
-        "quantreg", fml, vcov, weights, ssc, fixef_rm, drop_intercept
+        estimation="quantreg" if not isinstance(quantile, list) else "quantreg_multi",
+        fml=fml,
+        vcov=vcov,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        drop_intercept=drop_intercept,
+        quantile=quantile,
+        quantile_tol=tol,
+        quantile_maxiter=maxiter,
     )
     if fixest._is_iv:
         raise NotImplementedError(
@@ -1207,9 +1229,6 @@ def quantreg(
         collin_tol=collin_tol,
         separation_check=separation_check,
         solver=solver,
-        quantile=quantile,
-        quantile_tol=tol,
-        quantile_maxiter=maxiter,
     )
 
     if fixest._is_multiple_estimation:
@@ -1364,9 +1383,14 @@ def _estimation_input_checks(
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: Optional[int]):
     "Run custom input checks for quantreg."
-    if not 0 < tol < 1:
-        raise ValueError("tol must be in (0, 1)")
+    if isinstance(quantile, list):
+        if not all(0.0 < q < 1.0 for q in quantile):
+            raise ValueError("quantile must be between 0 and 1")
+        if not all(isinstance(q, float) for q in quantile):
+            raise ValueError("quantile must be a list of floats")
+    else:
+        if not 0.0 < tol < 1.0:
+            raise ValueError("tol must be in (0, 1)")
+
     if maxiter is not None and maxiter <= 0:
         raise ValueError("maxiter must be greater than 0")
-    if not 0 < quantile < 1:
-        raise ValueError("quantile must be between 0 and 1")

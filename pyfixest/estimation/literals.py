@@ -1,7 +1,7 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid", "iid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 SolverOptions = Literal[
@@ -13,7 +13,8 @@ SolverOptions = Literal[
 ]
 DemeanerBackendOptions = Literal["numba", "jax", "rust"]
 PredictionErrorOptions = Literal["prediction"]
-QuantregMethodOptions = Literal["fn", "pfn"]
+QuantregMethodOptions = Literal["fn", "pfn", "pfn_process"]
+QuantregMultiOptions = Literal["cfm1", "cfm2", "none"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:

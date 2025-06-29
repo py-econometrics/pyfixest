@@ -82,6 +82,7 @@ All non-pyfixest timings are taken from the `fixest` benchmarks.
 
 ![](figures/benchmarks_ols.svg)
 ![](figures/benchmarks_poisson.svg)
+![](../benchmarks/quantreg_benchmark.png)
 
 ## Quickstart
 
