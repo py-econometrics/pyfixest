@@ -1,4 +1,5 @@
 import inspect
+import gc
 from collections.abc import Mapping
 from typing import Any, Literal, Optional, Union
 
@@ -62,6 +63,7 @@ class QuantregMulti:
         self.all_quantregs = {
             q: Quantreg(**args_dict, quantile=q) for q in self.quantiles
         }
+        self.method = method
         self.multi_method = multi_method
         self._is_iv = False
 
@@ -79,23 +81,53 @@ class QuantregMulti:
         q = np.sort(self.quantiles)
         n_quantiles = len(q)
 
+        if n_quantiles % 2 == 1:
+            q_median_idx = n_quantiles // 2
+        else:
+            q_median_idx = (n_quantiles // 2) - 1
+
+        q_median = q[q_median_idx]
+
         # data fixed across qregs, just need take from first one
-        X = self.all_quantregs[q[0]]._X
-        Y = self.all_quantregs[q[0]]._Y
+        X = self.all_quantregs[q[q_median_idx]]._X
+        Y = self.all_quantregs[q[q_median_idx]]._Y
         hessian = X.T @ X
-        N = self.all_quantregs[q[0]]._N
-        rng = np.random.default_rng(self.all_quantregs[q[0]]._seed)
+        N = self.all_quantregs[q[q_median_idx]]._N
+        rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)
 
         # fit first quantile regression using "pfn"
-        beta_hat = self.all_quantregs[q[0]].fit_qreg_pfn(X=X, Y=Y, q=q[0], rng=rng)[0]
-        self.all_quantregs[q[0]]._beta_hat = beta_hat
-        self.all_quantregs[q[0]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
-        self.all_quantregs[q[0]]._hessian = hessian
+
+        fit_kwargs = {
+            "X": X,
+            "Y": Y,
+            "q": q_median, # first eval at the "central" quantile
+        }
+
+        if self.method == "pfn":
+            fit_kwargs["rng"] = rng
+        beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
+
+        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
+        self.all_quantregs[q[q_median_idx]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+        self.all_quantregs[q[q_median_idx]]._hessian = hessian
+
+        def _direction_helper(i, direction):
+            if direction == "left":
+                i_prev = i + 1
+            elif direction == "right":
+                i_prev = i - 1
+            else:
+                raise ValueError(f"Direction must be 'left' or 'right' but is {direction}.")
+
+            return i_prev
 
         if self.multi_method == "cfm1":
-            # sequentially loop over all other quantiles
-            for i in range(1, n_quantiles):
-                beta_hat_prev = self.all_quantregs[q[i - 1]]._beta_hat
+
+            def _cfm1_fun(i, direction):
+
+                i_prev = _direction_helper(i, direction)
+
+                beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
                 beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
                 )[0]
@@ -103,17 +135,24 @@ class QuantregMulti:
                 self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
                 self.all_quantregs[q[i]]._hessian = hessian
 
-        elif self.multi_method == "cfm2":
-            for i in range(1, n_quantiles):
-                # compute J
-                # cn in Koenker textbook p.81
-                beta_hat_prev = self.all_quantregs[q[i - 1]]._beta_hat
-                u_hat_prev = self.all_quantregs[q[i - 1]]._u_hat
+            for i in range(q_median_idx - 1, -1, -1):
+                _cfm1_fun(i, "left")
 
-                # compute inv(J)
+            for i in range(q_median_idx + 1, n_quantiles, 1):
+                _cfm1_fun(i, "right")
+
+        elif self.multi_method == "cfm2":
+
+            def _cfm2_fun(i, direction):
+
+                i_prev = _direction_helper(i, direction)
+
+                beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
+                u_hat_prev = self.all_quantregs[q[i_prev]]._u_hat
+
                 kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
-                h_G = get_hall_sheather_bandwidth(q=q[i - 1], N=N)
-                delta = kappa * (norm.ppf(q[i - 1] + h_G) - norm.ppf(q[i - 1] - h_G))
+                h_G = get_hall_sheather_bandwidth(q=q[i_prev], N=N)
+                delta = kappa * (norm.ppf(q[i_prev] + h_G) - norm.ppf(q[i_prev] - h_G))
                 J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N * delta)
 
                 M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
@@ -126,11 +165,19 @@ class QuantregMulti:
                 )
                 self.all_quantregs[q[i]]._hessian = hessian
 
+            for i in range(q_median_idx - 1, -1, -1):
+                _cfm2_fun(i, "left")
+
+            for i in range(q_median_idx + 1, n_quantiles, 1):
+                _cfm2_fun(i, "right")
+
         else:
             raise ValueError(
                 f"Multi method needs to be of type 'cfm1' or 'cfm2' but is {self.multi_method}."
             )
 
+        # sort self.all_quantregs by q
+        self.all_quantregs = dict(sorted(self.all_quantregs.items(), key=lambda item: item[0]))
         return self.all_quantregs
 
     def vcov(
@@ -178,5 +225,11 @@ class QuantregMulti:
     def _clear_attributes(self):
         "Clear all large non-necessary attributes to free memory."
         [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
+        del_attributes = ["_X","_Y"]
+        for QuantReg in self.all_quantregs.values():
+            for attr in del_attributes:
+                if hasattr(QuantReg, attr):
+                    delattr(QuantReg, attr)
+        gc.collect()
 
         return self.all_quantregs

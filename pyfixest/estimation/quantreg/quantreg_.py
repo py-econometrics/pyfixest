@@ -72,10 +72,10 @@ class Quantreg(Feols):
             demeaner_backend=demeaner_backend,
         )
 
-        warnings.warn(
-            "The Quantile Regression implementation is experimental and may change in future releases.",
-            FutureWarning,
-        )
+        #warnings.warn(
+        #    "The Quantile Regression implementation is experimental and may change in future releases.",
+        #    FutureWarning,
+        #)
 
         # assert isinstance(quantile, float), "quantile must be a float."
 
@@ -234,6 +234,7 @@ class Quantreg(Feols):
                 f"The Frisch-Newton Interior Point solver has not converged after {it} iterations."
             )
 
+
         return fn_res
 
     def fit_qreg_pfn(
@@ -342,6 +343,7 @@ class Quantreg(Feols):
                     n_bad_fixups += 1
                     compute_beta_init = True
                     break
+
                 else:
                     JL = JL & ~mis_L
                     JH = JH & ~mis_H
@@ -352,6 +354,52 @@ class Quantreg(Feols):
             )
 
         return fn_res
+
+    def _vcov_iid(self):
+
+        "Implements the kernel-based variance estimator from Powell (1991)."
+
+        q = self._quantile
+        N = self._N
+        X = self._X
+        Y = self._Y
+        u_hat = self._u_hat
+
+        h = get_hall_sheather_bandwidth(q=q, N=N)
+        # interquartile range of u_hat
+        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
+        sigma = np.std(Y)
+        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+        f_hat_0 = np.sum(np.abs(u_hat) < hk) / (2 * N * hk)
+        sparsity = 1 / f_hat_0
+
+        return q * (1-q) * sparsity ** 2 * np.linalg.inv(X.T @ X)
+
+    def _vcov_hetero(self):
+
+        "Implements the kernel-based variance estimator from Powell (1991) for heteroskedasticity robust inference."
+
+        q = self._quantile
+        N = self._N
+        X = self._X
+        Y = self._Y
+        u_hat = self._u_hat
+
+        h = get_hall_sheather_bandwidth(q=q, N=N)
+        # interquartile range of u_hat
+        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
+        sigma = np.std(Y)
+        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+        #f_hat_0 = np.sum(np.abs(u_hat) < hk) / (2 * N * hk)
+        f_hat_0 = np.sum(norm.ppf(u_hat / hk)) / (N * hk)
+
+        sparsity = 1 / f_hat_0
+        psi = q - (u_hat < 0).astype(float)
+        XXinv = np.linalg.inv(X.T @ X)
+        Xpsi = X * psi[:, np.newaxis]
+        meat = Xpsi.T @ Xpsi
+
+        return q * (1-q) * sparsity ** 2 * XXinv @ meat @ XXinv
 
     def _vcov_nid(self) -> np.ndarray:
         """
@@ -396,14 +444,11 @@ class Quantreg(Feols):
 
         return q * (1 - q) * Hinv @ J @ Hinv
 
-    def _vcov_hetero(self) -> np.ndarray:
-        return self._vcov_nid()
-
-    def _vcov_iid(self) -> np.ndarray:
-        raise NotImplementedError(
-            "The 'iid' vcov is not implemented for quantile regression. "
-            "Please use 'nid' instead, which is heteroskedasticity robust."
-        )
+    #def _vcov_iid(self) -> np.ndarray:
+    #    raise NotImplementedError(
+    #        "The 'iid' vcov is not implemented for quantile regression. "
+    #        "Please use 'nid' instead, which is heteroskedasticity robust."
+    #norm.ppf    )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """
@@ -438,6 +483,7 @@ class Quantreg(Feols):
 
     def get_performance(self):
         "Compute performance metrics for the quantile regression model."
+        #self._pseudo_r2 = 1 -
         pass
         # self.objective_value
 
