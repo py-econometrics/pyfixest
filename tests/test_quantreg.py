@@ -63,6 +63,7 @@ def stata_results_crv():
     [
         "hetero",
         "nid",
+        "iid",
     ],
 )
 @pytest.mark.parametrize("data", [pf.get_data(N=5_000, seed=3131)])
@@ -102,7 +103,15 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
 
     # compare standard errors
     py_se = fit_py.se().to_numpy()
-    r_summ = ro.r["summary"](fit_r, se="nid")
+    if vcov == "iid":
+        r_summ = ro.r["summary"](fit_r)
+    else:
+        if vcov == "hetero":
+            se = "ker"
+        else:
+            se = vcov
+        r_summ = ro.r["summary"](fit_r, se=se)
+
     coeff_mat = r_summ.rx2("coefficients")
     r_se = np.array(coeff_mat)[:, 1]
     np.testing.assert_allclose(py_se, r_se, rtol=1e-07, atol=1e-07)
@@ -179,7 +188,7 @@ def get_data2(N, seed):
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("data", [get_data2(N=1000, seed=2141233)])
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
-@pytest.mark.parametrize("vcov", ["hetero", "nid", {"CRV1": "f1"}])
+@pytest.mark.parametrize("vcov", ["iid","hetero", "nid", {"CRV1": "f1"}])
 @pytest.mark.parametrize("method", ["fn", "pfn"])
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
 def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
