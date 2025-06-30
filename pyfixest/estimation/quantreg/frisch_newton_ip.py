@@ -1,5 +1,4 @@
 from typing import Optional
-from tqdm import tqdm
 
 import numpy as np
 from scipy.linalg import lapack, solve_triangular

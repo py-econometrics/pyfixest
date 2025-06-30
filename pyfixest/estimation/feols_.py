@@ -939,7 +939,6 @@ class Feols:
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
         -
         """
-
         if len(self._vcov) == 0:
             raise EmptyVcovError()
         _beta_hat = self._beta_hat
@@ -2748,7 +2747,9 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "nid",
             "iid",
             "ker",
-        ], "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'ker' or 'nid'"
+        ], (
+            "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'ker' or 'nid'"
+        )
 
 
 def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv: bool):

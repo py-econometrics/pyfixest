@@ -1,5 +1,5 @@
-import inspect
 import gc
+import inspect
 from collections.abc import Mapping
 from typing import Any, Literal, Optional, Union
 
@@ -100,7 +100,7 @@ class QuantregMulti:
         fit_kwargs = {
             "X": X,
             "Y": Y,
-            "q": q_median, # first eval at the "central" quantile
+            "q": q_median,  # first eval at the "central" quantile
         }
 
         if self.method == "pfn":
@@ -108,7 +108,9 @@ class QuantregMulti:
         beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
 
         self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+        self.all_quantregs[q[q_median_idx]]._u_hat = (
+            Y.flatten() - (X @ beta_hat).flatten()
+        )
         self.all_quantregs[q[q_median_idx]]._hessian = hessian
 
         def _direction_helper(i, direction):
@@ -117,14 +119,15 @@ class QuantregMulti:
             elif direction == "right":
                 i_prev = i - 1
             else:
-                raise ValueError(f"Direction must be 'left' or 'right' but is {direction}.")
+                raise ValueError(
+                    f"Direction must be 'left' or 'right' but is {direction}."
+                )
 
             return i_prev
 
         if self.multi_method == "cfm1":
 
             def _cfm1_fun(i, direction):
-
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
@@ -144,7 +147,6 @@ class QuantregMulti:
         elif self.multi_method == "cfm2":
 
             def _cfm2_fun(i, direction):
-
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
@@ -177,7 +179,9 @@ class QuantregMulti:
             )
 
         # sort self.all_quantregs by q
-        self.all_quantregs = dict(sorted(self.all_quantregs.items(), key=lambda item: item[0]))
+        self.all_quantregs = dict(
+            sorted(self.all_quantregs.items(), key=lambda item: item[0])
+        )
         return self.all_quantregs
 
     def vcov(
@@ -225,7 +229,7 @@ class QuantregMulti:
     def _clear_attributes(self):
         "Clear all large non-necessary attributes to free memory."
         [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
-        del_attributes = ["_X","_Y"]
+        del_attributes = ["_X", "_Y"]
         for QuantReg in self.all_quantregs.values():
             for attr in del_attributes:
                 if hasattr(QuantReg, attr):

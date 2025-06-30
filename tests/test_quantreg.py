@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+import statsmodels.formula.api as smf
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
-import statsmodels.formula.api as smf
 
 import pyfixest as pf
 
@@ -183,7 +183,7 @@ def get_data2(N, seed):
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("data", [get_data2(N=1000, seed=2141233)])
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
-@pytest.mark.parametrize("vcov", ["iid","hetero", "nid", {"CRV1": "f1"}])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "nid", {"CRV1": "f1"}])
 @pytest.mark.parametrize("method", ["fn", "pfn"])
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
 def test_quantreg_multiple_quantiles(data, fml, vcov, method, multi_method):
@@ -277,7 +277,6 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
     Note: minor differences because pf uses uniform kernel, while statsmodels uses a epanechnikov kernel,
     plus the fact that pf uses a interior point solver while statsmodels uses IWLS.
     """
-
     rng = np.random.default_rng(3993)
     data["Y"] = 1 + 2 * data["X1"] + rng.normal(size=len(data))
     data["Y"] = data["Y"] + 3 * data["X2"] if "X2" in fml else data["Y"]
@@ -299,10 +298,14 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
 
     py_se = fit_py.se().to_numpy()
     if vcov == "iid":
-        fit_sm_iid = smf.quantreg(fml, data=data).fit(q=quantile, vcov="iid", kernel="cos", bandwidth="hsheather")
+        fit_sm_iid = smf.quantreg(fml, data=data).fit(
+            q=quantile, vcov="iid", kernel="cos", bandwidth="hsheather"
+        )
         sm_se = fit_sm_iid.bse.to_numpy()
         np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
     else:
-        fit_sm_robust = smf.quantreg(fml, data=data).fit(q=quantile, vcov="robust", kernel="cos", bandwidth="hsheather")
+        fit_sm_robust = smf.quantreg(fml, data=data).fit(
+            q=quantile, vcov="robust", kernel="cos", bandwidth="hsheather"
+        )
         sm_se = fit_sm_robust.bse.to_numpy()
-        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol = 1e-03)
+        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
