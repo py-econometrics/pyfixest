@@ -62,16 +62,18 @@ def stata_results_crv():
 @pytest.mark.parametrize(
     "vcov",
     [
-        "hetero",
         "nid",
-        "iid",
     ],
 )
 @pytest.mark.parametrize("data", [pf.get_data(N=5_000, seed=3131)])
 @pytest.mark.parametrize("quantile", [0.02, 0.35, 0.5, 0.9])
 @pytest.mark.parametrize("method", ["fn", "pfn"])
 def test_quantreg_vs_r(data, fml, vcov, quantile, method):
-    "Test that pyfixest's quantreg implementation equals R's quantreg implementation."
+    """
+    Test that pyfixest's quantreg implementation equals R's quantreg implementation.
+    Only tests nid errors as Powell sandwich errors are not implemented in quantreg.
+    Tested below against statsmodels.
+    """
     # Fit model in pyfixest
 
     rng = np.random.default_rng(3993)
@@ -102,16 +104,8 @@ def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     r_coef = np.array(fit_r.rx2("coefficients"))
     np.testing.assert_allclose(py_coef, r_coef, rtol=1e-08, atol=1e-08)
 
-    # compare standard errors
     py_se = fit_py.se().to_numpy()
-    if vcov == "iid":
-        r_summ = ro.r["summary"](fit_r)
-    else:
-        if vcov == "hetero":
-            se = "ker"
-        else:
-            se = vcov
-        r_summ = ro.r["summary"](fit_r, se=se)
+    r_summ = ro.r["summary"](fit_r, se=vcov)
 
     coeff_mat = r_summ.rx2("coefficients")
     r_se = np.array(coeff_mat)[:, 1]
@@ -284,6 +278,9 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
     plus the fact that pf uses a interior point solver while statsmodels uses IWLS.
     """
 
+    rng = np.random.default_rng(3993)
+    data["Y"] = 1 + 2 * data["X1"] + rng.normal(size=len(data))
+    data["Y"] = data["Y"] + 3 * data["X2"] if "X2" in fml else data["Y"]
 
     fit_py = pf.quantreg(
         fml,
