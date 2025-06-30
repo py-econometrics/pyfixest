@@ -4,6 +4,7 @@ import pytest
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
+import statsmodels.formula.api as smf
 
 import pyfixest as pf
 
@@ -256,3 +257,55 @@ def test_pfn_seed():
         rtol=1e-09,
         atol=1e-09,
     )
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1 + X2",
+    ],
+)
+@pytest.mark.parametrize(
+    "vcov",
+    [
+        "iid",
+        "hetero",
+    ],
+)
+@pytest.mark.parametrize("data", [pf.get_data(N=100_000, seed=4242)])
+@pytest.mark.parametrize("quantile", [0.25, 0.5, 0.75])
+@pytest.mark.parametrize("method", ["fn"])
+def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
+    """
+    Test that pyfixest's quantreg implementation equals statsmodels' quantreg implementation.
+    Used to verify correctness of iid and hetero standard errors.
+    Note: minor differences because pf uses uniform kernel, while statsmodels uses a epanechnikov kernel,
+    plus the fact that pf uses a interior point solver while statsmodels uses IWLS.
+    """
+
+
+    fit_py = pf.quantreg(
+        fml,
+        data=data,
+        vcov=vcov,
+        quantile=quantile,
+        method=method,
+        ssc=pf.ssc(adj=False, cluster_adj=False),
+    )
+
+    fit_sm = smf.quantreg(fml, data=data).fit(q=quantile)
+
+    py_coef = fit_py.coef().to_numpy()
+    sm_coef = fit_sm.params.to_numpy()
+    np.testing.assert_allclose(py_coef, sm_coef, rtol=0.01, atol=1e-03)
+
+    py_se = fit_py.se().to_numpy()
+    if vcov == "iid":
+        fit_sm_iid = smf.quantreg(fml, data=data).fit(q=quantile, vcov="iid", kernel="cos", bandwidth="hsheather")
+        sm_se = fit_sm_iid.bse.to_numpy()
+        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
+    else:
+        fit_sm_robust = smf.quantreg(fml, data=data).fit(q=quantile, vcov="robust", kernel="cos", bandwidth="hsheather")
+        sm_se = fit_sm_robust.bse.to_numpy()
+        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol = 1e-03)

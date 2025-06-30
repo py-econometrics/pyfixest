@@ -357,7 +357,7 @@ class Quantreg(Feols):
 
     def _vcov_iid(self):
 
-        "Implements the kernel-based variance estimator from Powell (1991)."
+        "Implements the kernel-based sandwich estimator from Powell (1991)."
 
         q = self._quantile
         N = self._N
@@ -370,14 +370,19 @@ class Quantreg(Feols):
         rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
         sigma = np.std(Y)
         hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-        f_hat_0 = np.sum(np.abs(u_hat) < hk) / (2 * N * hk)
-        sparsity = 1 / f_hat_0
 
-        return q * (1-q) * sparsity ** 2 * np.linalg.inv(X.T @ X)
+        # uniform kernel
+        f = 1 / (2 * N * hk) * np.sum( np.abs(u_hat) < hk)
+
+        D = X.T @ X
+        Dinv = np.linalg.inv(D)
+        C = f * D
+
+        return 1 / (f ** 2) * q * (1-q) * Dinv
 
     def _vcov_hetero(self):
 
-        "Implements the kernel-based variance estimator from Powell (1991) for heteroskedasticity robust inference."
+        "Implements the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
 
         q = self._quantile
         N = self._N
@@ -390,16 +395,15 @@ class Quantreg(Feols):
         rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
         sigma = np.std(Y)
         hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-        #f_hat_0 = np.sum(np.abs(u_hat) < hk) / (2 * N * hk)
-        f_hat_0 = np.sum(norm.ppf(u_hat / hk)) / (N * hk)
 
-        sparsity = 1 / f_hat_0
-        psi = q - (u_hat < 0).astype(float)
-        XXinv = np.linalg.inv(X.T @ X)
-        Xpsi = X * psi[:, np.newaxis]
-        meat = Xpsi.T @ Xpsi
+        # uniform kernel
+        f = 1 / (2 * N * hk) * np.sum( np.abs(u_hat) < hk)
 
-        return q * (1-q) * sparsity ** 2 * XXinv @ meat @ XXinv
+        D = X.T @ X
+        C = f * D
+        Cinv = np.linalg.inv(C)
+
+        return q * (1-q) * Cinv @ D @ Cinv
 
     def _vcov_nid(self) -> np.ndarray:
         """
