@@ -1006,10 +1006,10 @@ def quantreg(
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Currently supported are
-        "iid", "nid", "ker" and cluster robust errors, "iid" by default.
-        All of "iid", "ker", and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
+        "iid", "nid", and cluster robust errors, "iid" by default.
+        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
         The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "hetero" / HC1 / HC2 / HC3 also works and is equivalent to "ker".
+        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
         Cluster robust inference
         following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
         Only one-way clustering is supported.
@@ -1138,7 +1138,7 @@ def quantreg(
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
-    if isinstance(vcov, str) and vcov in ["ker", "HC1", "HC2", "HC3"]:
+    if isinstance(vcov, str) and vcov in ["HC1", "HC2", "HC3"]:
         vcov = "hetero"
 
     _quantreg_input_checks(quantile, tol, maxiter)

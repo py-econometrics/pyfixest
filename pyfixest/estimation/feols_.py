@@ -2746,7 +2746,6 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC3",
             "nid",
             "iid",
-            "ker",
         ], (
             "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'ker' or 'nid'"
         )
