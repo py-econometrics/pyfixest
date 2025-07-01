@@ -2761,9 +2761,8 @@ def _check_vcov_input(vcov: Union[str, dict[str, str]], data: pd.DataFrame):
             "HC2",
             "HC3",
             "nid",
-            "iid",
         ], (
-            "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'ker' or 'nid'"
+            "vcov string must be iid, hetero, HC1, HC2, or HC3, or for quantile regression, 'nid'."
         )
 
 
@@ -2824,10 +2823,6 @@ def _deparse_vcov_input(vcov: Union[str, dict[str, str]], has_fixef: bool, is_iv
 
     elif vcov_type_detail == "nid":
         vcov_type = "nid"
-        is_clustered = False
-
-    elif vcov_type_detail == "iid":
-        vcov_type = "iid"
         is_clustered = False
 
     clustervar = deparse_vcov if is_clustered else None

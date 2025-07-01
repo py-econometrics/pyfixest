@@ -74,12 +74,13 @@ class Quantreg(Feols):
             demeaner_backend=demeaner_backend,
         )
 
-        # warnings.warn(
-        #    "The Quantile Regression implementation is experimental and may change in future releases.",
-        #    FutureWarning,
-        # )
-
-        # assert isinstance(quantile, float), "quantile must be a float."
+        warnings.warn(
+            """
+           The Quantile Regression implementation is experimental and may change in future releases.
+           But mostly, we expect the API to remain unchanged.
+           """,
+            FutureWarning,
+        )
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
@@ -444,12 +445,6 @@ class Quantreg(Feols):
         Hinv = np.linalg.inv(H)
 
         return q * (1 - q) * Hinv @ J @ Hinv
-
-    # def _vcov_iid(self) -> np.ndarray:
-    #    raise NotImplementedError(
-    #        "The 'iid' vcov is not implemented for quantile regression. "
-    #        "Please use 'nid' instead, which is heteroskedasticity robust."
-    # norm.ppf    )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """
