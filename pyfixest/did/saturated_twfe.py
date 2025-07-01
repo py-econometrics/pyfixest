@@ -454,7 +454,7 @@ def compute_period_weights(
     if include_grid:
         all_periods = sorted(df[period].unique())
         grid = pd.MultiIndex.from_product(
-            [ever_treated, all_periods], names=[cohort, period]
+            [list(ever_treated), all_periods], names=[cohort, period]
         ).to_frame(index=False)
         out = grid.merge(out, on=[cohort, period], how="left")
         out["weight"] = out["weight"].fillna(0.0)

@@ -88,6 +88,7 @@ class Fepois(Feols):
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         tol: float,
         maxiter: int,
@@ -111,6 +112,7 @@ class Fepois(Feols):
             weights_type=weights_type,
             collin_tol=collin_tol,
             fixef_tol=fixef_tol,
+            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -231,6 +233,7 @@ class Fepois(Feols):
         _maxiter = self.maxiter
         _tol = self.tol
         _fixef_tol = self._fixef_tol
+        _fixef_maxiter = self._fixef_maxiter
         _solver = self._solver
 
         def compute_deviance(_Y: np.ndarray, mu: np.ndarray):
@@ -283,6 +286,7 @@ class Fepois(Feols):
                     flist=_fe.astype(np.uintp),
                     weights=mu.flatten(),
                     tol=_fixef_tol,
+                    maxiter=_fixef_maxiter,
                 )
                 if success is False:
                     raise ValueError("Demeaning failed after 100_000 iterations.")
@@ -572,7 +576,7 @@ def _check_for_separation_fe(
     """
     separation_na: set[int] = set()
     if fe is not None and not (Y > 0).all(axis=0).all():
-        Y_help = (Y > 0).astype(int).squeeze()
+        Y_help = (Y.iloc[:, 0] > 0).astype(int)
 
         # loop over all elements of fe
         for x in fe.columns:

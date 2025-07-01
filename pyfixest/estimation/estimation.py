@@ -28,6 +28,7 @@ def feols(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol=1e-08,
+    fixef_maxiter: int = 100_000,
     collin_tol: float = 1e-10,
     drop_intercept: bool = False,
     copy_data: bool = True,
@@ -79,6 +80,9 @@ def feols(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
+    fixef_maxiter: int, optional
+         Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -444,6 +448,7 @@ def feols(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -458,6 +463,7 @@ def feols(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=use_compression,
         reps=reps,
@@ -494,6 +500,7 @@ def fepois(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
+    fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
@@ -541,6 +548,9 @@ def fepois(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+
+    fixef_maxiter: int, optional
+         Maximum number of iterations for the demeaning algorithm. Defaults to 100,000.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -650,6 +660,7 @@ def fepois(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -665,6 +676,7 @@ def fepois(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -706,6 +718,7 @@ def feglm(
     ssc: Optional[dict[str, Union[str, bool]]] = None,
     fixef_rm: FixedRmOptions = "none",
     fixef_tol: float = 1e-08,
+    fixef_maxiter: int = 100_000,
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
     collin_tol: float = 1e-10,
@@ -756,6 +769,11 @@ def feglm(
 
     fixef_tol: float, optional
         Tolerance for the fixed effects demeaning algorithm. Defaults to 1e-08.
+        Currently does not do anything, as fixed effects are not supported for GLMs.
+
+    fixef_maxiter: int, optional
+         Maximum iterations for the demeaning algorithm.
+        Currently does not do anything, as fixed effects are not supported for GLMs.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -893,6 +911,7 @@ def feglm(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -908,6 +927,7 @@ def feglm(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -1135,6 +1155,7 @@ def quantreg(
 
     fixef_rm = "none"
     fixef_tol = 1e-08
+    fixef_maxiter = 100_000
     iwls_tol = 1e-08
     iwls_maxiter = 25
 
@@ -1150,6 +1171,7 @@ def quantreg(
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
+        fixef_maxiter=fixef_maxiter,
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -1170,6 +1192,7 @@ def quantreg(
         store_data=store_data,
         lean=lean,
         fixef_tol=fixef_tol,
+        fixef_maxiter=fixef_maxiter,
         weights_type=weights_type,
         use_compression=False,
         reps=None,
@@ -1226,6 +1249,7 @@ def _estimation_input_checks(
     store_data: bool,
     lean: bool,
     fixef_tol: float,
+    fixef_maxiter: int,
     weights_type: str,
     use_compression: bool,
     reps: Optional[int],
@@ -1282,6 +1306,20 @@ def _estimation_input_checks(
             """
             The function argument `fixef_tol` needs to be of
             strictly smaller than 1.
+            """
+        )
+
+    if not isinstance(fixef_maxiter, int):
+        raise TypeError(
+            """The function argument `fixef_maxiter` needs to be of
+            type int.
+            """
+        )
+    if fixef_maxiter <= 0:
+        raise ValueError(
+            """
+            The function argument `fixef_maxiter` needs to be of
+            strictly larger than 0.
             """
         )
 

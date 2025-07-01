@@ -13,7 +13,7 @@ def _demean_jax_impl(
     weights: jnp.ndarray,
     n_groups: int,
     tol: float,
-    maxiter: int,
+    maxiter: int = 100_000,
 ) -> tuple[jnp.ndarray, bool]:
     """JIT-compiled implementation of demeaning."""
     n_factors = flist.shape[1]
@@ -89,4 +89,4 @@ def demean_jax(
     result_jax, converged = _demean_jax_impl(
         x_jax, flist_jax, weights_jax, n_groups, tol, maxiter
     )
-    return np.array(result_jax), converged
+    return np.array(result_jax), bool(converged)

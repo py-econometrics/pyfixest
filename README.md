@@ -15,6 +15,9 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pixi Badge][pixi-badge]][pixi-url]
 [![Donate | GiveDirectly](https://img.shields.io/static/v1?label=GiveDirectly&message=Donate&color=blue&style=flat-square)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#support-pyfixest)
+[![PyPI](https://img.shields.io/pypi/v/pyfixest)](https://pypi.org/project/pyfixest)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfixest)](https://pypi.org/project/pyfixest/)
+[![Citation](https://img.shields.io/badge/Cite%20as-PyFixest-blue)](https://github.com/py-econometrics/pyfixest?tab=readme-ov-file#how-to-cite)
 
 [pixi-badge]:https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json&style=flat-square
 [pixi-url]: https://pixi.sh
@@ -292,6 +295,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="http://shapiromh.com"><img src="https://avatars.githubusercontent.com/u/2327833?v=4?s=100" width="100px;" alt="Matt Shapiro"/><br /><sub><b>Matt Shapiro</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=shapiromh" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/schroedk"><img src="https://avatars.githubusercontent.com/u/38397037?v=4?s=100" width="100px;" alt="Kristof Schröder"/><br /><sub><b>Kristof Schröder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=schroedk" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/WiktorTheScriptor"><img src="https://avatars.githubusercontent.com/u/162815872?v=4?s=100" width="100px;" alt="Wiktor "/><br /><sub><b>Wiktor </b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=WiktorTheScriptor" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://damandhaliwal.me"><img src="https://avatars.githubusercontent.com/u/48694192?v=4?s=100" width="100px;" alt="Daman Dhaliwal"/><br /><sub><b>Daman Dhaliwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=damandhaliwal" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
@@ -308,3 +312,16 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 We thank all institutions that have funded or supported work on PyFixest!
 
 <img src="figures/aai-institute-logo.svg" width="185">
+
+## How to Cite
+
+If you want to cite PyFixest, you can use the following BibTeX entry:
+
+```bibtex
+@software{pyfixest,
+  author  = {{The PyFixest Authors}},
+  title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},
+  year    = {2025},
+  url     = {https://github.com/py-econometrics/pyfixest}
+}
+```

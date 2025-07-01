@@ -36,3 +36,6 @@ target
 *.pyd
 *.dll
 *.dylib
+.idea/
+coverage.xml
+.DS_Store
