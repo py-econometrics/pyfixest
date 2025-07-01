@@ -33,6 +33,7 @@ class QuantregMulti:
         weights_type: Optional[str],
         collin_tol: float,
         fixef_tol: float,
+        fixef_maxiter: int,
         lookup_demeaned_data: dict[str, pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
         demeaner_backend: Literal["numba", "jax"] = "numba",
