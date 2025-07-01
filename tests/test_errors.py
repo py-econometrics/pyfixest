@@ -779,10 +779,6 @@ def test_empty_vcov_error():
 def test_errors_quantreg(data):
     data = data.dropna()
 
-    # error for iid errors
-    with pytest.raises(NotImplementedError):
-        pf.quantreg("Y ~ X1", data=data, vcov="iid")
-
     # error for CRV3
     with pytest.raises(VcovTypeNotSupportedError):
         pf.quantreg("Y ~ X1", data=data, vcov={"CRV3": "f1"})
